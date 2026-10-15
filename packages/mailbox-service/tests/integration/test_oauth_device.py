@@ -42,39 +42,23 @@ from benethos_mailbox_service.errors import (
     ProviderUnavailableError,
 )
 
+from ..clocks import Clock
 from ..conftest import ADMIN, admin_access
-from .test_oauth import (
-    Clock,
+from ..oauth_fake import (
+    NOW,
+    PENDING,
     TokenEndpoint,
+    code,
     granted,
     id_token,
     oauth_client,
     services_with,
+    signed_in,
 )
 
 pytestmark = pytest.mark.usefixtures("master_key")
 
 MS = ProviderType.MICROSOFT
-PENDING = (400, {"error": "authorization_pending"})
-
-
-def code(**changes: Any) -> tuple[int, dict[str, Any]]:
-    """The device endpoint's answer."""
-    body: dict[str, Any] = {
-        "device_code": "dc-secret",
-        "user_code": "ABCD-EFGH",
-        "verification_uri": "https://microsoft.com/devicelogin",
-        "expires_in": 900,
-        "interval": 5,
-        **changes,
-    }
-    return 200, {k: v for k, v in body.items() if v is not None}
-
-
-def signed_in(email: str = "me@example.org", **extra: Any) -> tuple[int, Any]:
-    return granted("at-1", "rt-1", id_token=id_token(email=email), **extra)
-
-
 # --- the protocol ---------------------------------------------------------------------
 
 
@@ -166,7 +150,7 @@ async def test_a_poll_that_ends_the_sign_in(error: str, message: str) -> None:
 
 
 async def test_connect_an_account_with_a_code() -> None:
-    clock = Clock()
+    clock = Clock(NOW)
     endpoint = TokenEndpoint(code(), PENDING, signed_in())
     services = services_with(endpoint, clock)
     oauth = services.oauth
@@ -190,7 +174,7 @@ async def test_connect_an_account_with_a_code() -> None:
 
 
 async def test_a_provider_that_asks_to_slow_down() -> None:
-    clock = Clock()
+    clock = Clock(NOW)
     endpoint = TokenEndpoint(code(), (400, {"error": "slow_down"}), signed_in())
     services = services_with(endpoint, clock)
     started = await services.oauth.start_device(ADMIN, MS)
@@ -211,7 +195,7 @@ async def test_a_provider_not_reached_keeps_the_code(
 ) -> None:
     """A poll that does not reach the provider ends nothing: the person
     may be entering the code. The next poll waits longer."""
-    clock = Clock()
+    clock = Clock(NOW)
     endpoint = TokenEndpoint(code(), failure, signed_in())
     services = services_with(endpoint, clock)
     started = await services.oauth.start_device(ADMIN, MS)
@@ -226,7 +210,7 @@ async def test_a_provider_not_reached_keeps_the_code(
 
 
 async def test_a_code_sign_in_belongs_to_who_started_it() -> None:
-    clock = Clock()
+    clock = Clock(NOW)
     services = services_with(TokenEndpoint(code(), signed_in()), clock)
     started = await services.oauth.start_device(ADMIN, MS)
     clock.now += timedelta(seconds=5)
@@ -244,7 +228,7 @@ async def test_a_code_sign_in_belongs_to_who_started_it() -> None:
 
 
 async def test_a_code_expires() -> None:
-    clock = Clock()
+    clock = Clock(NOW)
     services = services_with(TokenEndpoint(code(expires_in=60)), clock)
     started = await services.oauth.start_device(ADMIN, MS)
     clock.now += timedelta(seconds=61)
@@ -255,7 +239,7 @@ async def test_a_code_expires() -> None:
 
 
 async def test_a_declined_sign_in_ends() -> None:
-    clock = Clock()
+    clock = Clock(NOW)
     endpoint = TokenEndpoint(code(), (400, {"error": "authorization_declined"}))
     services = services_with(endpoint, clock)
     started = await services.oauth.start_device(ADMIN, MS)
@@ -268,7 +252,7 @@ async def test_a_declined_sign_in_ends() -> None:
 
 
 async def test_sign_in_again_with_a_code() -> None:
-    clock = Clock()
+    clock = Clock(NOW)
     endpoint = TokenEndpoint(
         code(),
         signed_in(),
@@ -301,7 +285,7 @@ async def test_a_code_needs_the_right() -> None:
 
 
 async def test_older_code_sign_ins_are_dropped() -> None:
-    clock = Clock()
+    clock = Clock(NOW)
     services = services_with(TokenEndpoint(*[code()] * 6), clock)
     first = await services.oauth.start_device(ADMIN, MS)
     for _ in range(5):
@@ -317,7 +301,7 @@ async def test_older_code_sign_ins_are_dropped() -> None:
 async def test_kinds_not_offered_cannot_be_connected(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    clock = Clock()
+    clock = Clock(NOW)
     endpoint = TokenEndpoint(code(), signed_in(), code(), signed_in())
     services = services_with(endpoint, clock)
     started = await services.oauth.start_device(ADMIN, MS)
@@ -396,7 +380,7 @@ def test_a_secret_without_its_app_is_refused(secret: dict[str, Any]) -> None:
 
 
 async def test_expired_sign_ins_are_dropped_when_another_starts() -> None:
-    clock = Clock()
+    clock = Clock(NOW)
     services = services_with(TokenEndpoint(code(expires_in=3600), code()), clock)
     first = await services.oauth.start_device(ADMIN, MS)
     services.oauth.start(ADMIN, MS, "http://localhost/ui/oauth/microsoft/callback")

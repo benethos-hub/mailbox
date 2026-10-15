@@ -7,7 +7,7 @@ holds its tools and their part of ``TOOLS``, the catalogue.
 from __future__ import annotations
 
 from . import accounts, drafts, reading, sending, writing
-from .base import MAX_LIMIT, Tool, calling, client, use_client
+from .base import MAX_LIMIT, Tool, calling, client
 
 TOOLS = (
     *accounts.TOOLS,
@@ -27,6 +27,5 @@ __all__ = [
     "drafts",
     "reading",
     "sending",
-    "use_client",
     "writing",
 ]

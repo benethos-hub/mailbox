@@ -33,12 +33,13 @@ from benethos_mailbox_service.errors import (
 )
 from benethos_mailbox_service.web import limits
 
+from ...clocks import Clock
 from ...conftest import ADMIN, CHEAP
 from ...imap_fake import FakeMailBox
-from ..conftest import Clock, Receiver
-from ..discovery.test_discovery import ISPDB, FakeSource, service
-from ..sync.test_worker import worker
-from ..webhooks.test_delivery import hook, mark_read
+from ..conftest import Receiver
+from ..discovery_fake import ISPDB, FakeSource, service
+from ..sync_helpers import worker
+from ..webhook_helpers import hook, mark_read
 
 WHO = "test admin (usr_test_admin)"
 

@@ -15,8 +15,8 @@ from benethos_mailbox_service.errors import (
     ProviderUnavailableError,
 )
 
+from ...imap_adapter import provider
 from ...imap_fake import FakeMailBox, make_message
-from .test_imap import provider
 
 INBOX = mappers.folder_id("INBOX")
 SENT = mappers.folder_id("Sent")

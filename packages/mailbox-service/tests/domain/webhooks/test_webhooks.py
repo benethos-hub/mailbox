@@ -3,9 +3,7 @@ secret is kept."""
 
 from __future__ import annotations
 
-from collections.abc import Iterator
 from datetime import UTC, datetime
-from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -14,11 +12,8 @@ from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import Grant, ProviderType, Webhook
 from benethos_mailbox_service.data.storage import (
     Attempt,
-    Database,
     Delivery,
-    InMemoryWebhookRepository,
     Sealed,
-    SqliteWebhookRepository,
     WebhookRecord,
     WebhookRepository,
 )
@@ -207,22 +202,6 @@ def test_webhooks_need_their_right(client: TestClient, ready: Services) -> None:
 # --- the store ----------------------------------------------------------------------
 
 AT = datetime(2026, 9, 26, 12, 0, tzinfo=UTC)
-
-
-@pytest.fixture(params=["memory", "sqlite"])
-def store(
-    request: pytest.FixtureRequest, tmp_path: Path
-) -> Iterator[WebhookRepository]:
-    if request.param == "memory":
-        yield InMemoryWebhookRepository()
-        return
-    db = Database(tmp_path / "hooks.db")
-    # The sealed secret names a data key that must exist.
-    db.execute(
-        "INSERT INTO keys (key_id, nonce, ciphertext) VALUES ('k1', x'00', x'00')"
-    )
-    yield SqliteWebhookRepository(db)
-    db.close()
 
 
 def record(n: int, accounts: list[str] | None = None) -> WebhookRecord:

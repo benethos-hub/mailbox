@@ -3,9 +3,7 @@
 
 from __future__ import annotations
 
-import importlib
 import logging
-import pkgutil
 import re
 import typing
 from dataclasses import dataclass, fields
@@ -31,7 +29,6 @@ from benethos_mailbox_service.domain.activity import (
     ActivityLog,
     Actor,
     Failure,
-    catalogue,
 )
 from benethos_mailbox_service.domain.activity.catalogue import users as said
 from benethos_mailbox_service.domain.rights.access import Access
@@ -39,6 +36,7 @@ from benethos_mailbox_service.errors import StorageError
 
 from ...conftest import ADMIN, admin_bearer, memory_of
 from ...ui_helpers import post
+from .activity_helpers import activities
 
 NOW = datetime(2026, 9, 28, 10, 0, tzinfo=UTC)
 LEVELS = {logging.DEBUG, logging.INFO, logging.WARNING, logging.ERROR}
@@ -57,20 +55,6 @@ FORBIDDEN_TYPES = {
     "Address",
 }
 FORBIDDEN_NAMES = {"password", "secret", "plain", "subject", "body", "url", "query"}
-
-
-def _catalogue() -> list[type[Activity]]:
-    found = []
-    for info in pkgutil.iter_modules(catalogue.__path__):
-        module = importlib.import_module(f"{catalogue.__name__}.{info.name}")
-        found += [
-            value
-            for value in vars(module).values()
-            if isinstance(value, type)
-            and issubclass(value, Activity)
-            and value.__module__ == module.__name__
-        ]
-    return found
 
 
 # The packages of docs/REFACTORING.md section 4 that record, and the two
@@ -92,11 +76,11 @@ LOGGING_MD = Path(__file__).resolve().parents[5] / "docs" / "LOGGING.md"
 
 
 def test_the_areas_are_the_packages_of_the_domain() -> None:
-    assert {cls.area for cls in _catalogue()} == AREAS
+    assert {cls.area for cls in activities()} == AREAS
 
 
 def test_each_name_is_unique_within_its_area() -> None:
-    sources = [cls.source() for cls in _catalogue()]
+    sources = [cls.source() for cls in activities()]
     assert len(sources) == len(set(sources))
 
 
@@ -105,10 +89,10 @@ def test_every_activity_is_listed_in_the_concept_and_nothing_else() -> None:
     text = LOGGING_MD.read_text(encoding="utf-8")
     section = text.partition("### 7.2 Names")[2].partition("\n## ")[0]
     listed = set(re.findall(r"^\| `(\w+\.\w+)` \|", section, re.MULTILINE))
-    assert listed == {f"{cls.area}.{cls.name}" for cls in _catalogue()}
+    assert listed == {f"{cls.area}.{cls.name}" for cls in activities()}
 
 
-@pytest.mark.parametrize("cls", _catalogue(), ids=lambda cls: cls.__name__)
+@pytest.mark.parametrize("cls", activities(), ids=lambda cls: cls.__name__)
 def test_each_activity_has_a_level_a_line_and_no_secret(cls: type[Activity]) -> None:
     assert cls.area == cls.__module__.rpartition(".")[2]
     # Set in the class, not taken from its name (docs/LOGGING.md 7.2).

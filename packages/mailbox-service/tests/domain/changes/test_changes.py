@@ -30,7 +30,7 @@ from benethos_mailbox_service.domain.changes import (
 
 from ...conftest import ADMIN
 from ...imap_fake import FakeFolder, FakeMailBox, make_message
-from ..sync.test_sync import ids_by_subject
+from ..sync_helpers import ids_by_subject
 
 ARCHIVE = mappers.folder_id("Archive")
 

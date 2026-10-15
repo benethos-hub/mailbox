@@ -8,7 +8,7 @@ import pytest
 
 from benethos_mailbox_common.values.secret import digest
 from benethos_mailbox_service.assembly import Services
-from benethos_mailbox_service.data.secrets import cipher
+from benethos_mailbox_service.data.secrets import cipher, totp
 from benethos_mailbox_service.data.storage import InMemoryRecoveryCodeRepository
 from benethos_mailbox_service.domain.auth import recovery
 from benethos_mailbox_service.domain.auth.recovery import (
@@ -169,7 +169,7 @@ async def test_a_code_of_the_step_before_still_signs_in(
 ) -> None:
     user, secret, _ = await with_factor(services, clock)
     late = now_code(secret, clock)
-    clock.step()
+    clock.tick(seconds=totp.STEP_SECONDS)
     services.auth.sign_in_with_code(user.id, late, source=SOURCE)
 
 

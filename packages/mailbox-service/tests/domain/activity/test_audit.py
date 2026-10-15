@@ -42,8 +42,9 @@ from benethos_mailbox_service.errors import (
     UnauthorizedError,
 )
 
+from ...clocks import Clock
 from ...conftest import ADMIN, bearer_for
-from .test_activity import _catalogue
+from .activity_helpers import activities
 
 AUDIT_MD = Path(__file__).parents[5] / "docs" / "AUDIT.md"
 NOW = datetime(2026, 10, 5, 12, 0, tzinfo=UTC)
@@ -59,7 +60,7 @@ def test_the_activities_kept_are_those_audit_md_names() -> None:
     text = AUDIT_MD.read_text(encoding="utf-8")
     section = text.partition("## 2. What is audited")[2].partition("\n## ")[0]
     named = set(re.findall(r"`(\w+\.\w+)`", section))
-    assert named == {cls.kind() for cls in _catalogue() if cls.audited}
+    assert named == {cls.kind() for cls in activities() if cls.audited}
 
 
 def test_what_a_person_did_is_kept_with_who_how_and_what(services: Services) -> None:
@@ -186,14 +187,6 @@ def test_audit_in_service_reads_it_and_audit_in_a_grant_does_not(
         services.audit.list_activity(users_read, limit=10)
 
 
-class Clock:
-    def __init__(self) -> None:
-        self.now = NOW
-
-    def __call__(self) -> datetime:
-        return self.now
-
-
 def created(clock: Clock) -> said.RoleDeleted:
     return said.RoleDeleted(by=Actor("Anna", "usr_a"), role_id="r", at=clock())
 
@@ -201,7 +194,7 @@ def created(clock: Clock) -> said.RoleDeleted:
 def test_old_records_are_purged_once_an_hour_at_most(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    clock = Clock()
+    clock = Clock(NOW)
     store = InMemoryAuditRepository()
     log = ActivityLog(clock, Audit(store, clock, days=1))
     log.record(created(clock))
@@ -218,7 +211,7 @@ def test_old_records_are_purged_once_an_hour_at_most(
 
 
 def test_zero_days_keeps_every_record() -> None:
-    clock = Clock()
+    clock = Clock(NOW)
     store = InMemoryAuditRepository()
     audit = Audit(store, clock, days=0)
     log = ActivityLog(clock, audit)
@@ -244,7 +237,7 @@ def test_a_cancelled_request_is_no_failure_to_keep_a_record(
 ) -> None:
     """A cancellation is a BaseException: the recorder lets it through
     instead of logging that a record was not kept."""
-    clock = Clock()
+    clock = Clock(NOW)
     log = ActivityLog(clock, Audit(Cancelled(), clock))
     with pytest.raises(asyncio.CancelledError):
         log.record(created(clock))
@@ -260,7 +253,7 @@ def test_a_cancelled_request_is_no_failure_to_keep_a_record(
 def test_a_record_that_cannot_be_kept_is_logged_not_raised(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    clock = Clock()
+    clock = Clock(NOW)
     log = ActivityLog(clock, Audit(Broken(), clock))
     with caplog.at_level(logging.INFO):
         log.record(created(clock))
@@ -303,7 +296,7 @@ def test_a_change_whose_record_cannot_be_kept_is_undone(
 def test_the_lines_of_a_block_wait_for_its_end(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    clock = Clock()
+    clock = Clock(NOW)
     log = ActivityLog(clock, Audit(InMemoryAuditRepository(), clock))
     with caplog.at_level(logging.INFO), log.atomic():
         log.record(said.RoleDeleted(by=Actor("Anna", "usr_a"), role_id="kept"))
@@ -320,7 +313,7 @@ def test_a_secret_noted_is_masked_in_the_record() -> None:
     from benethos_mailbox_common.log import redact
 
     redact.note("s3cret-in-an-error")
-    clock = Clock()
+    clock = Clock(NOW)
     store = InMemoryAuditRepository()
     ActivityLog(clock, Audit(store, clock)).record(
         said.RoleDeleted(by=Actor("A", "usr_a"), role_id="s3cret-in-an-error")
@@ -464,7 +457,7 @@ def test_every_audited_activity_about_a_record_names_it() -> None:
 
     from benethos_mailbox_service.domain.activity.base import Activity
 
-    for cls in _catalogue():
+    for cls in activities():
         fields = {f.name for f in dataclasses.fields(cls)}
         if cls.audited and fields & RECORD_FIELDS:
             assert cls.touched is not Activity.touched, cls.kind()

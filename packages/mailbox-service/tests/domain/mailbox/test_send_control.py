@@ -32,6 +32,8 @@ from benethos_mailbox_service.errors import (
     StorageError,
 )
 
+from ...clocks import Clock
+
 # --- no escalation --------------------------------------------------------------------
 
 
@@ -103,20 +105,12 @@ def test_limits_on_every_account() -> None:
 # --- the control itself ---------------------------------------------------------------
 
 
-class Clock:
-    def __init__(self) -> None:
-        self.now = datetime(2026, 9, 24, 12, tzinfo=UTC)
-
-    def __call__(self) -> datetime:
-        return self.now
-
-
 async def sent() -> SentMessage:
     return SentMessage()
 
 
 def test_the_limit_frees_up_after_24_hours() -> None:
-    clock = Clock()
+    clock = Clock(datetime(2026, 9, 24, 12, tzinfo=UTC))
     control = SendControl(InMemorySendLogRepository(), clock)
     access = Access(
         "usr_1", "u", [Grant(accounts=["acc_1"], allow=["send"], max_sends_per_day=1)]
@@ -190,7 +184,7 @@ def test_no_grant_at_all_allows_nothing() -> None:
 def test_sqlite_send_log(tmp_path: object) -> None:
     db = Database()
     try:
-        clock = Clock()
+        clock = Clock(datetime(2026, 9, 24, 12, tzinfo=UTC))
         store = SqliteSendLogRepository(db)
         control = SendControl(store, clock)
         access = Access(
@@ -277,7 +271,7 @@ def test_the_send_log_filters(kind: str) -> None:
 def test_old_records_are_purged_once_an_hour(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    clock = Clock()
+    clock = Clock(datetime(2026, 9, 24, 12, tzinfo=UTC))
     store = InMemorySendLogRepository()
     control = SendControl(store, clock, days=1)
     access = Access("usr_1", "u", [Grant(accounts=["acc_1"], allow=["send"])])
@@ -306,7 +300,7 @@ def test_old_records_are_purged_once_an_hour(
 
 
 def test_zero_keeps_every_record() -> None:
-    clock = Clock()
+    clock = Clock(datetime(2026, 9, 24, 12, tzinfo=UTC))
     store = InMemorySendLogRepository()
     control = SendControl(store, clock, days=0)
     access = Access("usr_1", "u", [Grant(accounts=["acc_1"], allow=["send"])])

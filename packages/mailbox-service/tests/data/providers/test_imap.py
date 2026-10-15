@@ -20,7 +20,6 @@ from benethos_mailbox_service.data.protocols.imap import (
     RawFolder,
     Server,
 )
-from benethos_mailbox_service.data.providers.guard import Pace
 from benethos_mailbox_service.data.providers.imap import ImapProvider, mappers, watch
 from benethos_mailbox_service.errors import (
     BadRequestError,
@@ -28,54 +27,8 @@ from benethos_mailbox_service.errors import (
     ProviderError,
 )
 
+from ...imap_adapter import INBOX, SETTINGS, provider
 from ...imap_fake import FakeFolder, FakeMailBox, make_message
-
-SETTINGS = {"host": "imap.example.com", "username": "me@example.com"}
-
-
-class FakeTime:
-    """A clock that only moves when something sleeps or a test advances it."""
-
-    def __init__(self) -> None:
-        self.now = 1000.0
-        self.sleeps: list[float] = []
-
-    def clock(self) -> float:
-        return self.now
-
-    def sleep(self, seconds: float) -> None:
-        self.sleeps.append(seconds)
-        self.now += seconds
-
-
-INBOX = mappers.folder_id("INBOX")
-
-
-def provider(
-    box: FakeMailBox,
-    time: FakeTime | None = None,
-    pace: Pace | None = None,
-    watchers: anyio.CapacityLimiter | None = None,
-    **overrides: Any,
-) -> ImapProvider:
-    def credentials(field: str) -> SecretStr:
-        assert field in ("password", "access_token")
-        return SecretStr("secret")
-
-    time = time or FakeTime()
-    return ImapProvider(
-        {**SETTINGS, **overrides},
-        credentials,
-        session_factory=lambda s: ImapSession(
-            s, client_factory=box, client_id=("benethos-mailbox-service", "1.0")
-        ),
-        clock=time.clock,
-        sleep=time.sleep,
-        jitter=lambda low, high: high,
-        pace=pace,
-        watchers=watchers,
-    )
-
 
 # --- settings -----------------------------------------------------------------
 

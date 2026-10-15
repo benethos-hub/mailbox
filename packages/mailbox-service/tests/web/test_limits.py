@@ -14,6 +14,7 @@ from benethos_mailbox_service.web import limits
 from benethos_mailbox_service.web.api import PREFIX as API_PREFIX
 from benethos_mailbox_service.web.limits import Buckets, RequestLimits
 
+from ..clocks import Seconds
 from ..conftest import METHODS, bearer_for, browser_admin
 from ..ui_helpers import csrf_of, sign_in
 
@@ -79,20 +80,12 @@ def test_an_upload_above_the_limit_is_a_page(ui: TestClient, account_id: str) ->
 # --- requests a minute --------------------------------------------------------
 
 
-class Clock:
-    def __init__(self) -> None:
-        self.now = 0.0
-
-    def __call__(self) -> float:
-        return self.now
-
-
 def limited(
     settings: Settings, services: Services, signed_in: int, anonymous: int
-) -> tuple[TestClient, Clock]:
+) -> tuple[TestClient, Seconds]:
     """A client of an app whose limits run on a clock the test moves."""
     app = create_app(settings, services)
-    clock = Clock()
+    clock = Seconds(0.0)
     app.state.request_limits = RequestLimits(signed_in, anonymous, clock)
     return TestClient(app), clock
 
@@ -259,7 +252,7 @@ def test_zero_switches_a_limit_off() -> None:
 
 
 def test_the_callers_are_capped() -> None:
-    clock = Clock()
+    clock = Seconds(0.0)
     buckets = Buckets(2, clock, max_callers=2)
     assert buckets.take("a") is None
     assert buckets.take("a") is not None

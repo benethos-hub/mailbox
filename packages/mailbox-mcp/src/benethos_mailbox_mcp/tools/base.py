@@ -26,14 +26,15 @@ MAX_LIMIT = 50
 # library runs a tool in the context of the transport that read the call,
 # not of the lifespan: the server sets it around each call.
 _calling: ContextVar[MailboxClient | None] = ContextVar("calling", default=None)
-# The client of a test that calls a tool without a server's lifespan.
-_for_tests: MailboxClient | None = None
 
 
 @contextmanager
 def calling(made: MailboxClient | None) -> Iterator[None]:
-    """``made`` for the tools called inside. None leaves the one of a
-    test."""
+    """``made`` for the tools called inside. None leaves the one around
+    it: a test's, which calls a tool without a server's lifespan."""
+    if made is None:
+        yield
+        return
     token = _calling.set(made)
     try:
         yield
@@ -41,17 +42,9 @@ def calling(made: MailboxClient | None) -> Iterator[None]:
         _calling.reset(token)
 
 
-def use_client(client: MailboxClient | None) -> MailboxClient | None:
-    """For tests: the client the tools call outside a server's lifespan.
-    Returns the one before, for its owner to close."""
-    global _for_tests
-    before, _for_tests = _for_tests, client
-    return before
-
-
 def client() -> MailboxClient:
     """The REST client of the server the tool runs in."""
-    found = _calling.get() or _for_tests
+    found = _calling.get()
     if found is None:
         raise RuntimeError("no REST client: a tool runs inside a server's lifespan")
     return found

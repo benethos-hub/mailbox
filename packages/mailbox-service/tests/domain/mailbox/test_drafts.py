@@ -36,8 +36,9 @@ from benethos_mailbox_service.errors import (
 )
 
 from ...conftest import ADMIN, bearer_for, create_account
-from ...data.providers.test_imap import provider
+from ...imap_adapter import provider
 from ...imap_fake import FakeFolder, FakeMailBox, make_message
+from .drafts_helpers import drafts_url
 
 SENDER = Recipient(email="me@example.com", name="Me")
 WHEN = datetime(2026, 9, 24, 12, 0, tzinfo=UTC)
@@ -208,10 +209,6 @@ async def test_memory_drafts_reach_no_other_mail() -> None:
 
 
 # --- the API ------------------------------------------------------------------------
-
-
-def drafts_url(account_id: str, draft_id: str = "") -> str:
-    return f"/v1/accounts/{account_id}/drafts" + (f"/{draft_id}" if draft_id else "")
 
 
 def test_a_draft_through_its_life(client: TestClient, account_id: str) -> None:

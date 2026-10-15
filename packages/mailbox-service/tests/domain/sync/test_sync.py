@@ -16,21 +16,9 @@ from benethos_mailbox_service.errors import NotFoundError, ProviderUnavailableEr
 
 from ...conftest import ADMIN
 from ...imap_fake import FakeFolder, FakeMailBox, make_message
+from ..sync_helpers import ids_by_subject
 
 ARCHIVE = mappers.folder_id("Archive")
-
-
-async def ids_by_subject(
-    imap_services: Services, imap_account_id: str
-) -> dict[str, str]:
-    page = await imap_services.mailbox.list_messages(
-        ADMIN,
-        imap_account_id,
-        folder_id=None,
-        limit=50,
-        cursor=None,
-    )
-    return {m.subject or "": m.id for m in page.items}
 
 
 async def subject(

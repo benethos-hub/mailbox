@@ -19,7 +19,7 @@ from benethos_mailbox_service.data.models import (
 from benethos_mailbox_service.domain.discovery import service as discovery_module
 from benethos_mailbox_service.domain.discovery.candidates import connectable
 
-from .test_discovery import (
+from ..discovery_fake import (
     ADMIN,
     AUTOCONFIG,
     ISPDB,

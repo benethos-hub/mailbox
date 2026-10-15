@@ -10,11 +10,9 @@ from benethos_mailbox_service.data.models import Grant, MessageUpdate
 from benethos_mailbox_service.data.providers.imap import mappers
 from benethos_mailbox_service.errors import MailboxServiceError, NotFoundError
 
+from ...clocks import Seconds
 from ...conftest import bearer_for
-from ...data.providers.test_imap import (
-    FakeTime,
-    provider,
-)
+from ...imap_adapter import provider
 from ...imap_fake import FakeMailBox, make_message
 
 SENT = mappers.folder_id("Sent")
@@ -81,7 +79,7 @@ async def test_a_batch_is_paced_per_folder_not_per_message(
 ) -> None:
     for uid in range(100, 200):
         server.add("INBOX", uid, make_message(f"Bulk {uid}"))
-    time = FakeTime()
+    time = Seconds()
     imap = provider(server, time, max_requests_per_minute=60)
     ids = [inbox(uid) for uid in range(100, 200)]
     results = await imap.update_messages(ids, MessageUpdate(unread=False))

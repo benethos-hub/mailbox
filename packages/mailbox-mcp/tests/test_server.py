@@ -206,10 +206,17 @@ async def test_each_server_has_a_client_of_its_own() -> None:
     assert all(client._http.is_closed for client in made)
 
 
-def test_use_client_hands_back_the_one_before(make_client: Callable) -> None:
-    first = make_client(lambda _: httpx.Response(200, json=[]))
-    assert catalogue.use_client(None) is first
-    assert catalogue.use_client(None) is None
+async def test_a_server_without_a_client_leaves_the_one_around(
+    make_client: Callable,
+) -> None:
+    test = make_client(lambda _: httpx.Response(200, json=[]))
+    with catalogue.calling(None):
+        assert catalogue.client() is test
+    own = MailboxClient(base_url="https://own.test", token="secret")
+    with catalogue.calling(own):
+        assert catalogue.client() is own
+    assert catalogue.client() is test
+    await own.aclose()
 
 
 def test_version(capsys: pytest.CaptureFixture[str]) -> None:

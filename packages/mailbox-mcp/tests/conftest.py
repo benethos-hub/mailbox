@@ -38,31 +38,33 @@ def made() -> list[MailboxClient]:
 
 @pytest.fixture(autouse=True)
 async def no_client_left_behind(made: list[MailboxClient]) -> AsyncIterator[None]:
-    """After each test its clients are closed, the one the tools used
-    among them, and the next test's tools make their own."""
+    """After each test its clients are closed."""
     yield
-    left = tools.use_client(None)
-    if left is not None and left not in made:
-        made.append(left)
     for client in made:
         await client.aclose()
 
 
 @pytest.fixture
-def make_client(made: list[MailboxClient]) -> Callable[[Handler], MailboxClient]:
-    """Build a client answered by ``handler`` and install it for the tools."""
+async def make_client(
+    made: list[MailboxClient],
+) -> AsyncIterator[Callable[[Handler], MailboxClient]]:
+    """The client the tools of the test call, as they call the one of
+    their server (``tools.calling``), answered by the last ``handler`` it
+    was made with."""
+    handlers: list[Handler] = []
+    client = MailboxClient(
+        base_url="https://mail.test",
+        token="secret",
+        transport=httpx.MockTransport(lambda request: handlers[-1](request)),
+    )
+    made.append(client)
 
     def make(handler: Handler) -> MailboxClient:
-        client = MailboxClient(
-            base_url="https://mail.test",
-            token="secret",
-            transport=httpx.MockTransport(handler),
-        )
-        tools.use_client(client)
-        made.append(client)
+        handlers.append(handler)
         return client
 
-    return make
+    with tools.calling(client):
+        yield make
 
 
 class Call(NamedTuple):

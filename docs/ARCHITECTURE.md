@@ -871,7 +871,12 @@ imapclient boundary), never by patching deep inside a library.
   `tests/integration/`. The fakes and `conftest.py` are at the top.
   A fixture that tests of more than one module take is in the
   `conftest.py` of their nearest common folder, never imported from a
-  test module.
+  test module. A helper they share is in a module of its own there,
+  named after its subject: a fake in `<subject>_fake.py`, an adapter on
+  its fake in `<kind>_adapter.py`, anything else in
+  `<subject>_helpers.py`. The clocks a test moves itself are in
+  `clocks.py`. No test module imports another, which
+  `test_code_rules.py` checks in all four packages.
 - Fakes plug in at a seam: the memory provider, `httpx.MockTransport`,
   a fake `IMAPClient` at the imapclient boundary. Nothing is patched
   deep inside a library.

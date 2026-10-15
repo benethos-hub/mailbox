@@ -20,7 +20,7 @@ from benethos_mailbox_service.data.protocols.oauth import App, OAuthClient
 from benethos_mailbox_service.data.providers.gmail import endpoints as gmail_endpoints
 
 from ...conftest import CHEAP, browser_admin
-from ...integration.test_oauth import TokenEndpoint, factory, granted
+from ...oauth_fake import TokenEndpoint, factory, granted
 from ...ui_helpers import post, sign_in
 
 pytestmark = pytest.mark.usefixtures("master_key")

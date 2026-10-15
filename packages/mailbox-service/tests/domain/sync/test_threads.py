@@ -19,12 +19,9 @@ from benethos_mailbox_service.errors import ProviderUnavailableError
 
 from ...conftest import ADMIN
 from ...imap_fake import FakeFolder, FakeMailBox, make_message
+from ..sync_helpers import header
 
 SENT = mappers.folder_id("Sent")
-
-
-def header(subject: str) -> str:
-    return f"<{abs(hash(subject))}@example.com>"
 
 
 def answer(subject: str, *to: str) -> bytes:

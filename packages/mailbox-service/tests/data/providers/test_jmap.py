@@ -39,24 +39,13 @@ from benethos_mailbox_service.errors import (
 )
 
 from ...imap_fake import make_message
+from ...jmap_adapter import NOW, adapter
 from ...jmap_fake import HOST, PASSWORD, TOKEN, USER, FakeJmap
-
-NOW = datetime(2026, 10, 6, 12, 0, tzinfo=UTC)
 
 
 @pytest.fixture
 def server() -> FakeJmap:
     return FakeJmap()
-
-
-def adapter(server: FakeJmap, **settings: Any) -> JmapProvider:
-    secrets = {"password": PASSWORD, "token": TOKEN}
-    return JmapProvider(
-        {"host": HOST, "username": USER, **settings},
-        lambda field: SecretStr(secrets[field]),
-        http=ServerClient(transport=httpx.MockTransport(server)),
-        now=lambda: NOW,
-    )
 
 
 @pytest.fixture

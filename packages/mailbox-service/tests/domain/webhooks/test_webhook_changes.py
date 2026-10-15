@@ -3,9 +3,7 @@ and a new signing secret (CONCEPT 6.5)."""
 
 from __future__ import annotations
 
-from collections.abc import Iterator
 from datetime import UTC, datetime
-from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -20,11 +18,8 @@ from benethos_mailbox_service.data.models import (
     WebhookUpdate,
 )
 from benethos_mailbox_service.data.storage import (
-    Database,
     Delivery,
-    InMemoryWebhookRepository,
     Sealed,
-    SqliteWebhookRepository,
     WebhookRecord,
     WebhookRepository,
 )
@@ -200,21 +195,6 @@ def test_a_new_secret_is_shown_once_and_the_old_one_stops(
 
 
 # --- the store --------------------------------------------------------------------
-
-
-@pytest.fixture(params=["memory", "sqlite"])
-def store(
-    request: pytest.FixtureRequest, tmp_path: Path
-) -> Iterator[WebhookRepository]:
-    if request.param == "memory":
-        yield InMemoryWebhookRepository()
-        return
-    db = Database(tmp_path / "hooks.db")
-    db.execute(
-        "INSERT INTO keys (key_id, nonce, ciphertext) VALUES ('k1', x'00', x'00')"
-    )
-    yield SqliteWebhookRepository(db)
-    db.close()
 
 
 def test_the_store_changes_a_webhook_and_its_secret(store: WebhookRepository) -> None:

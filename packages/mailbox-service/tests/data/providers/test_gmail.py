@@ -9,7 +9,6 @@ from email.policy import default
 
 import httpx
 import pytest
-from pydantic import SecretStr
 
 from benethos_mailbox_service.data.models import (
     FolderRole,
@@ -32,24 +31,7 @@ from benethos_mailbox_service.errors import (
 )
 
 from ...gmail_fake import TOKEN, FakeGmail
-
-
-class Tokens:
-    def __init__(self, *values: str) -> None:
-        self.values = list(values)
-        self.rejected = 0
-        self.forgotten = 0
-
-    async def access_token(self) -> SecretStr:
-        return SecretStr(self.values[0])
-
-    def reject(self) -> None:
-        self.rejected += 1
-        if len(self.values) > 1:
-            self.values.pop(0)
-
-    def forget_refusal(self) -> None:
-        self.forgotten += 1
+from ...oauth_fake import Tokens
 
 
 @pytest.fixture

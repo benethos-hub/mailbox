@@ -16,7 +16,7 @@ from benethos_mailbox_service.errors import (
 )
 
 from ...conftest import bearer_for
-from ...data.providers.test_imap import provider
+from ...imap_adapter import provider
 from ...imap_fake import FakeMailBox
 from ...provider_ops import update
 

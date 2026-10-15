@@ -20,13 +20,8 @@ from benethos_mailbox_service.errors import (
 )
 
 from ...graph_fake import TOKEN, FakeGraph
-from .test_microsoft import Tokens, adapter
-
-
-@pytest.fixture
-def graph() -> FakeGraph:
-    return FakeGraph()
-
+from ...microsoft_adapter import adapter
+from ...oauth_fake import Tokens
 
 # --- changing -------------------------------------------------------------------------
 

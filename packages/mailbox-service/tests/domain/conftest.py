@@ -22,6 +22,7 @@ from benethos_mailbox_service.data.providers.imap import ImapProvider
 from benethos_mailbox_service.data.providers.memory import MemoryProvider
 from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 
+from ..clocks import Clock
 from ..conftest import create_account
 from ..imap_fake import FakeFolder, FakeMailBox, make_message
 
@@ -95,14 +96,6 @@ class Receiver:
     def events(self, n: int = -1) -> list[dict[str, Any]]:
         events: list[dict[str, Any]] = json.loads(self.posts[n][1])["events"]
         return events
-
-
-class Clock:
-    def __init__(self) -> None:
-        self.now = datetime(2026, 9, 26, 12, 0, tzinfo=UTC)
-
-    def __call__(self) -> datetime:
-        return self.now
 
 
 @pytest.fixture

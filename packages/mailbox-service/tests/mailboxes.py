@@ -56,6 +56,7 @@ from .graph_fake import TOKEN as GRAPH_TOKEN
 from .graph_fake import FakeGraph
 from .imap_fake import FakeFolder, FakeMailBox
 from .jmap_fake import HOST, PASSWORD, USER, FakeJmap
+from .oauth_fake import Tokens
 from .pop3_fake import FakePop3Server
 from .smtp_fake import FakeSmtpServer
 
@@ -128,22 +129,6 @@ def box(kind: str, smtp: bool = True) -> Box:
 
 
 # --- each kind ------------------------------------------------------------------------
-
-
-class _Tokens:
-    """A token source that always has ``value``."""
-
-    def __init__(self, value: str) -> None:
-        self.value = value
-
-    async def access_token(self) -> SecretStr:
-        return SecretStr(self.value)
-
-    def reject(self) -> None:
-        pass
-
-    def forget_refusal(self) -> None:
-        pass
 
 
 def _memory() -> Box:
@@ -263,7 +248,7 @@ def _gmail() -> Box:
 
     def make() -> Reads:
         return GmailProvider(
-            _Tokens(GMAIL_TOKEN), ApiClient(transport=httpx.MockTransport(server))
+            Tokens(GMAIL_TOKEN), ApiClient(transport=httpx.MockTransport(server))
         )
 
     return Box(
@@ -290,7 +275,7 @@ def _microsoft() -> Box:
 
     def make() -> Reads:
         return MicrosoftProvider(
-            _Tokens(GRAPH_TOKEN), ApiClient(transport=httpx.MockTransport(server))
+            Tokens(GRAPH_TOKEN), ApiClient(transport=httpx.MockTransport(server))
         )
 
     return Box("microsoft", ProviderType.MICROSOFT, server, make, put)

@@ -39,7 +39,7 @@ from benethos_mailbox_service.errors import (
 )
 
 from ...gmail_fake import TOKEN, FakeGmail
-from .test_gmail import Tokens
+from ...oauth_fake import Tokens
 
 NOW = datetime(2026, 10, 9, 12, 0, tzinfo=UTC)
 

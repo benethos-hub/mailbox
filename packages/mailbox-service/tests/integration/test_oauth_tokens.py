@@ -35,15 +35,8 @@ from benethos_mailbox_service.errors import (
     ProviderUnavailableError,
 )
 
-from .test_oauth import (
-    NOW,
-    REDIRECT,
-    Clock,
-    TokenEndpoint,
-    granted,
-    id_token,
-    oauth_client,
-)
+from ..clocks import Clock
+from ..oauth_fake import NOW, REDIRECT, TokenEndpoint, granted, id_token, oauth_client
 
 # The vault needs a key to store refresh tokens.
 pytestmark = pytest.mark.usefixtures("master_key")
@@ -195,7 +188,7 @@ async def test_an_answer_too_large() -> None:
 
 
 async def test_the_access_token_is_refreshed_before_it_runs_out() -> None:
-    clock = Clock()
+    clock = Clock(NOW)
     endpoint = TokenEndpoint(granted("at-1", "rt-2"), granted("at-2", "rt-2"))
     stored: list[str] = []
     kept = {"refresh": SecretStr("rt-1")}

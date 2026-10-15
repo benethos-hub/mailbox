@@ -17,8 +17,7 @@ from pathlib import Path
 
 import pytest
 
-PACKAGE = "benethos_mailbox_service"
-ROOT = Path(__file__).resolve().parents[1] / "src" / PACKAGE
+from .source_helpers import HELPERS, PACKAGE, ROOT, module_name, modules, own_part
 
 # Lower number = lower layer. A module may import its own layer and everything
 # below it, never above.
@@ -30,7 +29,6 @@ CROSS_CUTTING = {"config", "errors", "common"}
 
 # Shared helpers: the standard library, anyio, the common package and each
 # other, nothing else.
-HELPERS = "common"
 HELPER_LIBRARIES = {"anyio", "benethos_mailbox_common"}
 
 # Assemble the app from the layers and may therefore reach anywhere.
@@ -62,17 +60,9 @@ LIBRARY_HOMES = {
 }
 
 
-def _module_name(path: Path) -> str:
-    rel = path.relative_to(ROOT.parent).with_suffix("")
-    parts = list(rel.parts)
-    if parts[-1] == "__init__":
-        parts.pop()
-    return ".".join(parts)
-
-
 def _from_imports(path: Path) -> list[tuple[str, ast.ImportFrom]]:
     """Every ``from ... import`` of this file, its module resolved."""
-    module = _module_name(path)
+    module = module_name(path)
     package = module if path.name == "__init__.py" else module.rsplit(".", 1)[0]
     found = []
     for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
@@ -101,26 +91,14 @@ def _imports(path: Path) -> list[tuple[str, int]]:
     return found
 
 
-def _own_part(module: str) -> str | None:
-    """'benethos_mailbox_service.domain.accounts' -> 'domain'."""
-    parts = module.split(".")
-    if parts[0] != PACKAGE or len(parts) < 2:
-        return None
-    return parts[1]
-
-
-def _modules() -> list[tuple[str, Path]]:
-    return [(_module_name(p), p) for p in sorted(ROOT.rglob("*.py"))]
-
-
 def test_no_module_imports_a_higher_layer() -> None:
     violations = []
-    for name, path in _modules():
-        own = LAYERS.get(_own_part(name) or "")
+    for name, path in modules():
+        own = LAYERS.get(own_part(name) or "")
         if own is None:
             continue
         for imported, line in _imports(path):
-            other = LAYERS.get(_own_part(imported) or "")
+            other = LAYERS.get(own_part(imported) or "")
             if other is not None and other > own:
                 violations.append(f"{name}:{line} imports {imported}")
     assert not violations, "import against the layering:\n  " + "\n  ".join(violations)
@@ -140,7 +118,7 @@ def test_cross_cutting_modules_import_no_layer() -> None:
             inside = [
                 imported
                 for imported, _ in _imports(path)
-                if _own_part(imported) in LAYERS or _own_part(imported) in ASSEMBLY
+                if own_part(imported) in LAYERS or own_part(imported) in ASSEMBLY
             ]
             assert not inside, f"{path.name} imports from the layers: {inside}"
 
@@ -165,8 +143,8 @@ def test_the_domain_picks_no_storage() -> None:
     """Which store is used is decided where the app is assembled. A domain
     service that makes its own would keep data where nobody looks."""
     violations = []
-    for name, path in _modules():
-        if _own_part(name) != "domain":
+    for name, path in modules():
+        if own_part(name) != "domain":
             continue
         for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
             if isinstance(node, ast.ImportFrom):
@@ -182,7 +160,7 @@ def test_the_database_stays_behind_the_storage_package() -> None:
     inside = f"{PACKAGE}.data.storage"
     violations = [
         f"{name}:{line} imports {imported}"
-        for name, path in _modules()
+        for name, path in modules()
         if not name.startswith(inside)
         for imported, line in _imports(path)
         if imported.startswith(f"{inside}.sqlite")
@@ -192,8 +170,8 @@ def test_the_database_stays_behind_the_storage_package() -> None:
 
 def test_web_framework_stays_in_the_web_layer() -> None:
     violations = []
-    for name, path in _modules():
-        part = _own_part(name)
+    for name, path in modules():
+        part = own_part(name)
         if part == "web" or part in ASSEMBLY:
             continue
         for imported, line in _imports(path):
@@ -206,7 +184,7 @@ def test_providers_are_reached_through_the_registry() -> None:
     """Outside data/providers/, only the package itself is imported."""
     prefix = f"{PACKAGE}.data.providers"
     violations = []
-    for name, path in _modules():
+    for name, path in modules():
         if name.startswith(prefix):
             continue
         for imported, line in _imports(path):
@@ -222,7 +200,7 @@ def test_concurrency_is_written_with_anyio() -> None:
     module imports asyncio, so every part runs on either event loop."""
     offenders = [
         f"{name}:{line}"
-        for name, path in _modules()
+        for name, path in modules()
         for module, line in _imports(path)
         if module == "asyncio" or module.startswith("asyncio.")
     ]
@@ -240,7 +218,7 @@ def test_every_layer_exists_and_is_documented() -> None:
 
 def test_each_wrapped_library_has_one_home() -> None:
     violations = []
-    for name, path in _modules():
+    for name, path in modules():
         for imported, line in _imports(path):
             home = LIBRARY_HOMES.get(imported.split(".")[0])
             if home is not None and name != home and not name.startswith(home + "."):
@@ -276,7 +254,7 @@ def test_a_package_is_imported_through_its_init() -> None:
     noticing: the other packages, the layers above and the assembly."""
     violations = [
         f"{name}:{line} imports {imported}"
-        for name, path in _modules()
+        for name, path in modules()
         for imported, line in _imports(path)
         if (other := _package_part(imported)) is not None
         and other != _package_part(name)
@@ -300,7 +278,7 @@ def test_a_package_exports_what_others_import() -> None:
     """What another part imports from a package is in its ``__all__``."""
     violations = [
         f"{name}:{node.lineno} imports {alias.name} from {imported}"
-        for name, path in _modules()
+        for name, path in modules()
         for imported, node in _from_imports(path)
         if (other := _package_part(imported)) is not None
         and imported == _dotted(other)
@@ -314,7 +292,7 @@ def test_a_package_exports_what_others_import() -> None:
 
 def _package_graph(layer: str) -> dict[str, set[str]]:
     graph: dict[str, set[str]] = {}
-    for name, path in _modules():
+    for name, path in modules():
         own = _package_part(name)
         if own is None or own[0] != layer:
             continue
@@ -413,10 +391,10 @@ def test_nothing_below_reaches_the_assembly_or_the_command_line() -> None:
     above = {"assembly", "cli", "__main__"}
     violations = [
         f"{name}:{line} imports {imported}"
-        for name, path in _modules()
-        if _own_part(name) not in ASSEMBLY
+        for name, path in modules()
+        if own_part(name) not in ASSEMBLY
         for imported, line in _imports(path)
-        if _own_part(imported) in above
+        if own_part(imported) in above
     ]
     assert not violations, "assembly reached from below:\n  " + "\n  ".join(violations)
 
@@ -424,10 +402,10 @@ def test_nothing_below_reaches_the_assembly_or_the_command_line() -> None:
 def test_the_assembly_knows_no_command() -> None:
     violations = [
         f"{name}:{line} imports {imported}"
-        for name, path in _modules()
-        if _own_part(name) == "assembly"
+        for name, path in modules()
+        if own_part(name) == "assembly"
         for imported, line in _imports(path)
-        if _own_part(imported) == "cli"
+        if own_part(imported) == "cli"
     ]
     assert not violations, "the assembly imports cli/:\n  " + "\n  ".join(violations)
 
@@ -440,7 +418,7 @@ def test_the_modules_of_the_assembly_keep_their_lines(part: str) -> None:
         p.stem for p in folder.glob("*.py") if p.stem != "__init__"
     }, f"a module of {part}/ outside the lines"
     violations = []
-    for name, path in _modules():
+    for name, path in modules():
         parts = name.split(".")
         if len(parts) != 3 or parts[1] != part:
             continue
