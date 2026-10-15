@@ -31,7 +31,6 @@ from benethos_mailbox_service.data.providers import (
     Watches,
     Writes,
     build_provider,
-    capabilities_of,
     probe_server,
     settings_from_servers,
 )
@@ -39,7 +38,6 @@ from benethos_mailbox_service.data.providers.pop3 import Pop3Provider, mappers
 from benethos_mailbox_service.data.providers.pop3 import provider as pop3_module
 from benethos_mailbox_service.errors import (
     BadRequestError,
-    ConflictError,
     NotSupportedError,
     ProviderAuthError,
     ProviderUnavailableError,
@@ -117,10 +115,16 @@ def test_the_default_ports(server: FakePop3Server) -> None:
         assert server.calls[0] == ("connect", "pop.example.com", port, security)
 
 
-def test_no_flags_folders_search_or_drafts(server: FakePop3Server) -> None:
-    assert provider(server).capabilities == frozenset()
-    with_smtp = provider(server, smtp=FakeSmtpServer())
-    assert with_smtp.capabilities == {Capability.SEND}
+async def test_no_flags_folders_search_or_drafts(server: FakePop3Server) -> None:
+    alone = await provider(server).abilities()
+    assert alone.capabilities == [Capability.PURGE]
+    assert alone.marks.read == []
+    with_smtp = await provider(server, smtp=FakeSmtpServer()).abilities()
+    assert set(with_smtp.capabilities) == {
+        Capability.PURGE,
+        Capability.SEND,
+        Capability.REFUSED,
+    }
 
 
 def test_the_registry_builds_it(server: FakePop3Server) -> None:
@@ -236,7 +240,6 @@ def test_it_reads_deletes_and_sends_and_nothing_else(
         assert isinstance(adapter, protocol)
     for protocol in (Writes, Drafts, Watches, Deltas):
         assert not isinstance(adapter, protocol)
-    assert capabilities_of(adapter) == {Capability.SEND}
 
 
 # --- sending ----------------------------------------------------------------------
@@ -253,7 +256,7 @@ async def test_sending_over_smtp_keeps_no_copy(server: FakePop3Server) -> None:
 
 
 async def test_without_smtp_it_cannot_send(server: FakePop3Server) -> None:
-    with pytest.raises(ConflictError, match="no SMTP server"):
+    with pytest.raises(NotSupportedError, match="no SMTP server"):
         await provider(server).send(b"", "me@example.com", ["you@example.org"])
 
 

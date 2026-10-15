@@ -1,13 +1,12 @@
-"""What each adapter can do beyond reading, as its protocols say: an
-adapter implements those it can and no other, and declares none of the
-capabilities they give."""
+"""What each adapter may do beyond reading, as its protocols say: an
+adapter implements those it may be able to do and no other. What its
+account can do it answers from the server (``abilities``)."""
 
 from __future__ import annotations
 
 import pytest
 
 from benethos_mailbox_service.data.providers import (
-    Capability,
     Deletes,
     Deltas,
     Drafts,
@@ -39,14 +38,6 @@ def test_each_adapter_implements_what_it_can(adapter: type, able: set[type]) -> 
 
 
 @pytest.mark.parametrize(("adapter", "able"), ADAPTERS, ids=lambda a: str(a))
-def test_no_adapter_declares_what_a_protocol_gives(
-    adapter: type, able: set[type]
-) -> None:
-    given = {
-        Capability.FLAGS,
-        Capability.FOLDERS,
-        Capability.DRAFTS,
-        Capability.PUSH,
-        Capability.DELTA,
-    }
-    assert not set(adapter.capabilities) & given
+def test_each_adapter_says_whether_its_ids_stay(adapter: type, able: set[type]) -> None:
+    # IMAP and POP3 ids name a place, and the domain maps them.
+    assert adapter.stable_ids is (adapter not in (ImapProvider, Pop3Provider))

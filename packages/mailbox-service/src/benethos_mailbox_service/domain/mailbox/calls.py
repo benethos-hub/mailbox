@@ -13,6 +13,7 @@ from collections.abc import Awaitable, Callable
 from typing import Any, TypeVar
 
 from ...data.models import (
+    Abilities,
     Account,
     AttachmentContent,
     Message,
@@ -23,7 +24,7 @@ from ...data.models import (
 from ...data.providers import Reads
 from ...data.storage import IndexEntry
 from ...errors import MailboxServiceError, MessageNotFoundError, missing_message
-from ..accounts import Adapters, deletes, writes
+from ..accounts import Adapters, Needs, deletes, writes
 from ..changes import MailboxChange, MessagesDeleted, MessagesUpdated
 from ..sync import SyncService
 
@@ -47,6 +48,15 @@ class Calls:
     async def resync(self, account_id: str) -> None:
         """Bring the account's id mapping up to date now."""
         await self._sync.sync_account(account_id)
+
+    # --- what the account can do -----------------------------------------------------
+
+    async def require(self, account_id: str, wanted: Needs) -> None:
+        """Refuse with ``501`` what the account cannot do (UNIFORM R3)."""
+        await self._adapters.require(account_id, wanted)
+
+    async def abilities(self, account_id: str) -> Abilities:
+        return await self._adapters.abilities(account_id)
 
     # --- one call ---------------------------------------------------------------------
 

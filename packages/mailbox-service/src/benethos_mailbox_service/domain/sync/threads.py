@@ -15,7 +15,7 @@ from collections.abc import Callable
 from benethos_mailbox_common.values import secret
 
 from ...common.chunks import batched
-from ...data.providers import Capability, ThreadHeaders
+from ...data.providers import Summaries, ThreadHeaders
 from ...data.storage import IndexEntry, MessageIndexRepository, ThreadChain
 from ...errors import MailboxServiceError
 from ..accounts import Adapters
@@ -48,8 +48,8 @@ class IndexThreads:
 
     def kept(self, account_id: str) -> bool:
         """Whether the index keeps the account's threads."""
-        able = self._adapters.capabilities(account_id)
-        return Capability.THREADS in able and Capability.STABLE_IDS not in able
+        adapter = self._adapters.get(account_id)
+        return isinstance(adapter, Summaries) and not adapter.stable_ids
 
     def of(self, account_id: str, message_ids: list[str]) -> dict[str, str]:
         """The thread of each message the index has one for. Empty where

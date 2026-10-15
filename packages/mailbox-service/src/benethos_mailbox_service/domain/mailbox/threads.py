@@ -26,7 +26,7 @@ from ...data.models import (
 )
 from ...data.providers import Reads
 from ...errors import MailboxServiceError, NotFoundError, missing
-from ..accounts import summaries, threads
+from ..accounts import NEEDS, summaries, threads
 from ..rights import Access
 from .calls import Calls, public
 from .folders import Folders
@@ -55,6 +55,7 @@ class Threads:
     ) -> Thread:
         """The thread with the messages the caller may see, oldest first."""
         access.require("get_thread", account_id)
+        await self._calls.require(account_id, NEEDS["get_thread"])
         reach = await reach_of(self._calls, access, "get_thread", account_id)
         thread = await self._visible(account_id, thread_id, reach)
         if thread is None:
@@ -76,6 +77,7 @@ class Threads:
         messages, so it may hold fewer threads than ``limit``. ``folder_id``
         may also be a role such as ``inbox``."""
         access.require("list_threads", account_id)
+        await self._calls.require(account_id, NEEDS["list_threads"])
         folder = await self._folders.by_role(account_id, folder_id) or folder_id
         reach = await reach_of(self._calls, access, "list_threads", account_id)
         if reach is not None:

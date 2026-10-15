@@ -7,9 +7,9 @@ from __future__ import annotations
 from fastapi.testclient import TestClient
 
 from benethos_mailbox_service.assembly import Services
-from benethos_mailbox_service.data.models import Folder, Grant
+from benethos_mailbox_service.data.models import Folder, FolderRole, Grant
 
-from ...conftest import browser_user, memory_of
+from ...conftest import browser_user, memory_of, relearn
 from ...ui_helpers import post, sign_in
 
 
@@ -49,7 +49,10 @@ def test_the_batch_bar_asks_a_folder_only_to_move(
 def test_the_message_header_holds_its_actions(
     ui: TestClient, services: Services, account_id: str
 ) -> None:
-    memory_of(services, account_id).folders.append(Folder(id="old", name="Old"))
+    memory = memory_of(services, account_id)
+    memory.folders.append(Folder(id="old", name="Old"))
+    memory.folders.append(Folder(id="trash", name="Trash", role=FolderRole.TRASH))
+    relearn(services, account_id)
     page = ui.get(f"/ui/accounts/{account_id}/mail/m1").text
     header = page[page.index('<header class="topbar">') : page.index("</header>")]
     for label in (

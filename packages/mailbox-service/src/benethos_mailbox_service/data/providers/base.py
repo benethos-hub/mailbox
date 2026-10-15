@@ -13,6 +13,7 @@ from pydantic import SecretStr
 from ...errors import MailboxServiceError
 from ..mail import ThreadHeaders
 from ..models import (
+    Abilities,
     AttachmentContent,
     Capability,
     Folder,
@@ -87,18 +88,24 @@ class Reads(Protocol):
     """What every adapter does: one connected account at one provider,
     read, and what the sync worker asks of it.
 
-    Message ids are the provider's own. Without ``STABLE_IDS`` they name a
+    Message ids are the provider's own. Without ``stable_ids`` they name a
     place, and the domain maps them to ids that survive a move. What an
     adapter does beyond reading is a protocol of its own below. An adapter
-    implements those it can and no other: the domain answers ``501`` where
-    one is missing, and the capabilities callers see follow from them
-    (``capabilities_of``).
+    implements those it may be able to do. What its account can do follows
+    from what the server offers (``abilities``), and the domain checks that
+    before it calls the adapter.
     """
 
-    # What the adapter declares beyond its protocols: SEARCH,
-    # SERVER_SEARCH, LABELS, STABLE_IDS, THREADS where the domain keeps
-    # them, and SEND where it has a server to send through.
-    capabilities: frozenset[Capability]
+    # A message keeps its id when it is moved. Without it the domain keeps
+    # an id mapping (CONCEPT 4.1).
+    stable_ids: bool
+
+    async def abilities(self) -> Abilities:
+        """What the account can do, as its server answers now: asked when
+        the account is connected or verified, and again when an answer of
+        the server contradicts what was stored (UNIFORM R4). Logs in where
+        it must."""
+        ...
 
     async def list_folders(self) -> list[Folder]: ...
 
@@ -177,7 +184,7 @@ class Deletes(Protocol):
 @runtime_checkable
 class Writes(Deletes, Protocol):
     """Changes messages and folders: read state, stars, keywords, moves,
-    and the folders themselves. Gives ``FLAGS`` and ``FOLDERS``."""
+    and the folders themselves."""
 
     async def update_messages(
         self, message_ids: list[str], changes: MessageUpdate
@@ -203,7 +210,7 @@ class Writes(Deletes, Protocol):
 
 @runtime_checkable
 class Drafts(Protocol):
-    """Keeps drafts. Gives ``DRAFTS``.
+    """Keeps drafts.
 
     A draft id names a message the provider keeps as a draft, on IMAP one
     in the folder with the drafts role. Any other id is not found, so that
@@ -229,8 +236,8 @@ class Drafts(Protocol):
 
 @runtime_checkable
 class Sends(Protocol):
-    """Sends mail. ``SEND`` stays declared by the adapter: IMAP and POP3
-    send only where the account names an SMTP server."""
+    """Sends mail. IMAP and POP3 send only where the account names an
+    SMTP server, and their ``abilities`` say so."""
 
     async def send(self, raw: bytes, sender: str, recipients: list[str]) -> SentMessage:
         """Send a composed message, and keep a copy where the provider does
@@ -241,8 +248,7 @@ class Sends(Protocol):
 
 @runtime_checkable
 class Watches(Protocol):
-    """Hears of changes as the server reports them, without polling.
-    Gives ``PUSH``."""
+    """Hears of changes as the server reports them, without polling."""
 
     async def wait_for_change(self, timeout: float) -> bool:
         """Wait until the server reports a change in the inbox, at most
@@ -253,7 +259,7 @@ class Watches(Protocol):
 @runtime_checkable
 class Deltas(Protocol):
     """Tells what changed in a folder since a token, instead of the sync
-    comparing the folder's contents. Gives ``DELTA``."""
+    comparing the folder's contents."""
 
     async def folder_changes(
         self, folder_id: str, token: str | None, since: datetime | None = None
@@ -269,7 +275,7 @@ class Deltas(Protocol):
 @runtime_checkable
 class Threads(Protocol):
     """Keeps the threads of its messages, each message's ``thread_id``
-    the provider's own. Gives ``THREADS``."""
+    the provider's own."""
 
     async def thread_messages(self, thread_id: str, limit: int) -> ThreadMessages:
         """The messages of a thread in every folder, at most ``limit``.
@@ -280,29 +286,29 @@ class Threads(Protocol):
 @runtime_checkable
 class Summaries(Protocol):
     """Reads the summaries of messages named by id, wherever they are. The
-    domain needs it for the threads it keeps itself (IMAP), which declare
-    ``THREADS`` beyond the protocols."""
+    domain needs it for the threads it keeps itself (IMAP)."""
 
     async def summaries(self, message_ids: list[str]) -> dict[str, MessageSummary]:
         """The summary of each message that is there, by id."""
         ...
 
 
-# What each protocol gives callers to see.
-_GIVES: tuple[tuple[type, frozenset[Capability]], ...] = (
-    (Writes, frozenset({Capability.FLAGS, Capability.FOLDERS})),
-    (Drafts, frozenset({Capability.DRAFTS})),
-    (Watches, frozenset({Capability.PUSH})),
-    (Deltas, frozenset({Capability.DELTA})),
-    (Threads, frozenset({Capability.THREADS})),
-)
-
-
-def capabilities_of(adapter: Reads) -> frozenset[Capability]:
-    """What an adapter can do, as callers see it: what its protocols give,
-    and what it declares beyond them."""
-    found = set(adapter.capabilities)
-    for protocol, gives in _GIVES:
-        if isinstance(adapter, protocol):
-            found |= gives
-    return frozenset(found)
+# The protocols an adapter implements where its account may have a
+# capability, any one of them. The domain threads an account of its own
+# where the adapter reads summaries.
+PROTOCOLS: Mapping[Capability, tuple[type, ...]] = {
+    Capability.READ_STATE: (Writes,),
+    Capability.STARS: (Writes,),
+    Capability.KEYWORDS: (Writes,),
+    Capability.FOLDERS: (Writes,),
+    Capability.MOVE: (Writes,),
+    Capability.LABELS: (Writes,),
+    Capability.TRASH: (Deletes,),
+    Capability.PURGE: (Deletes,),
+    Capability.DRAFTS: (Drafts,),
+    Capability.SEND: (Sends,),
+    Capability.SENT_COPY: (Sends,),
+    Capability.REFUSED: (Sends,),
+    Capability.PUSH: (Watches,),
+    Capability.THREADS: (Threads, Summaries),
+}

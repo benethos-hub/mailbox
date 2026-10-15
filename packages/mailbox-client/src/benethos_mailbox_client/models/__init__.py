@@ -3,7 +3,7 @@ a caller rather than the fields of the API."""
 
 from __future__ import annotations
 
-from .accounts import Account, StoredCredential
+from .accounts import Account, Marks, StoredCredential
 from .audit import Activity
 from .discovery import (
     Candidate,
@@ -44,6 +44,7 @@ from .users import NewPassword, User
 from .webhooks import NewWebhook, Webhook, WebhookDetail, WebhookPost, WebhookSecret
 
 __all__ = [
+    "Marks",
     "Health",
     "Permissions",
     "Worker",

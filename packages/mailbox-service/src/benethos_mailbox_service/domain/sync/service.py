@@ -23,7 +23,7 @@ already there are not new.
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable, Iterable
+from collections.abc import Awaitable, Callable, Iterable, Mapping
 from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import TypeVar
@@ -33,7 +33,7 @@ from benethos_mailbox_common.values import secret
 
 from ...common.clock import utc_now
 from ...common.locks import KeyedLocks
-from ...data.providers import Capability, FolderChanges, ThreadHeaders
+from ...data.providers import Deltas, FolderChanges, ThreadHeaders
 from ...data.storage import IndexChanges, IndexEntry, MessageIndexRepository
 from ...errors import (
     ChangesExpiredError,
@@ -109,13 +109,13 @@ class SyncService:
 
     def mapped(self, account_id: str) -> bool:
         """Whether the account's ids go through the index."""
-        return Capability.STABLE_IDS not in self._adapters.capabilities(account_id)
+        return not self._adapters.stable_ids(account_id)
 
     def watched(self, account_id: str) -> bool:
         """Whether a sync pass does anything for the account: keep its index,
         or ask its folders what changed."""
-        return self.mapped(account_id) or (
-            Capability.DELTA in self._adapters.capabilities(account_id)
+        return self.mapped(account_id) or isinstance(
+            self._adapters.get(account_id), Deltas
         )
 
     # --- ids ------------------------------------------------------------------------
@@ -321,6 +321,7 @@ class SyncService:
         now = self._clock()
         folders = await self._adapters.call(account_id, lambda p: p.folder_states())
         before = self._index.folder_states(account_id)
+        await self._other_folders(account_id, folders, before)
         states: dict[str, str] = {}
         found = DeltaPass()
         for folder_id in folders:
@@ -357,12 +358,26 @@ class SyncService:
             account_id, lambda p: deltas(p).folder_changes(folder_id, token, since)
         )
 
+    async def _other_folders(
+        self, account_id: str, now: Mapping[str, object], before: Mapping[str, object]
+    ) -> None:
+        """A folder came or went since the last pass: what the account can
+        do may have changed with it, such as a trash made in another mail
+        program. Its server is asked again (UNIFORM R4)."""
+        if set(now) == set(before):
+            return
+        try:
+            await self._adapters.learn(account_id)
+        except MailboxServiceError:
+            return  # asked again with the next change of folders
+
     async def _sync(self, account_id: str) -> Counts:
         """Compare the folders whose state changed with the index: what
         arrived, left, moved, or changed its flags. Then thread what
         arrived, and a portion of the entries without a thread."""
         states = await self._adapters.call(account_id, lambda p: p.folder_states())
         before = self._index.folder_states(account_id)
+        await self._other_folders(account_id, states, before)
         changed = [f for f, state in states.items() if before.get(f) != state]
         vanished = [f for f in before if f not in states]
         counts = Counts(len(states))

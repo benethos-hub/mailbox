@@ -21,7 +21,7 @@ from ...models import (
     Page,
 )
 from .. import rules
-from ..base import Capability, ThreadMessages
+from ..base import ThreadMessages
 from . import mappers, reading
 from .api import GmailApi, id_
 from .shapes import GmailMessage, GmailThread, Messages
@@ -102,7 +102,6 @@ async def _with_source(api: GmailApi, message_id: str) -> GmailMessage:
 
 async def update_messages(
     api: GmailApi,
-    capabilities: frozenset[Capability],
     message_ids: list[str],
     changes: MessageUpdate,
 ) -> dict[str, MessageSummary | MailboxServiceError]:
@@ -114,7 +113,7 @@ async def update_messages(
         return dict.fromkeys(message_ids, failure)
     known: set[str] = set()
     if changes.changes_folders:
-        rules.move_target(changes, capabilities)
+        rules.move_target(changes, labels=True)
         known = await reading.known_folders(api)
         named = changes.named_folders()
         unknown = next(

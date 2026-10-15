@@ -33,6 +33,7 @@ from .versions.v0017_activity import V0017Activity
 from .versions.v0018_second_factor import V0018SecondFactor
 from .versions.v0019_recovery_codes_keyed import V0019RecoveryCodesKeyed
 from .versions.v0020_threads import V0020Threads
+from .versions.v0021_abilities import V0021Abilities
 
 MIGRATIONS = MigrationRegistry(
     V0001AccountsUsers(),
@@ -55,6 +56,7 @@ MIGRATIONS = MigrationRegistry(
     V0018SecondFactor(),
     V0019RecoveryCodesKeyed(),
     V0020Threads(),
+    V0021Abilities(),
 )
 
 SCHEMA_VERSION = MIGRATIONS.schema_version

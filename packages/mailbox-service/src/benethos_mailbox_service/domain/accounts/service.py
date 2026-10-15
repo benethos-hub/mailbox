@@ -13,7 +13,7 @@ from pydantic import SecretStr
 from benethos_mailbox_common.values import secret as secret_values
 
 from ...common.hosts import address_problem
-from ...data.models import Account, AccountStatus, Page, ProviderType
+from ...data.models import Abilities, Account, AccountStatus, Page, ProviderType
 from ...data.protocols import HostCheck
 from ...data.providers import ProviderSettings, Tokens, settings_defaults
 from ...data.secrets import CredentialVault
@@ -162,7 +162,7 @@ class AccountService:
             # A throwaway adapter that reads the credential from the
             # request. An unsupported provider or bad settings fail here,
             # before anything is stored.
-            await self._checks.login(
+            found = await self._checks.login(
                 provider,
                 settings,
                 lambda field: pending(secrets, field),
@@ -178,6 +178,7 @@ class AccountService:
         host = settings.get("host")
         with self._activity.atomic():
             self._repository.add(account, dict(settings))
+            self._repository.set_abilities(account.id, found)
             try:
                 for field, value in secrets.items():
                     self._vault.store(account.id, field, value)
@@ -196,7 +197,7 @@ class AccountService:
             if self._on_connect is not None:
                 self._on_connect(access, account.id)
         self._ready(account.id)
-        return self._with_credentials(account)
+        return self._with_credentials(self._repository.get(account.id))
 
     async def update(
         self,
@@ -223,11 +224,13 @@ class AccountService:
         merged = merge_settings(before, defaults, settings or {})
         changed = merged != before
         secrets = dict(credentials or {})
-        await self._check_update(account, merged, changed, secrets, signed_in)
+        found = await self._check_update(account, merged, changed, secrets, signed_in)
         what = what_changed(account, display_name, rename, changed, secrets)
         if rename:
             account = account.model_copy(update={"display_name": display_name})
         self._store_update(access, account, merged, secrets, what)
+        if found is not None:
+            self._adapters.keep(account_id, found)
         if changed or secrets:
             # The live adapter still has the old settings: the next use
             # builds a new one.
@@ -243,23 +246,26 @@ class AccountService:
         changed: bool,
         secrets: dict[str, SecretStr],
         signed_in: Tokens | None,
-    ) -> None:
+    ) -> Abilities | None:
         """Log in with the changed settings and credentials before anything
-        is stored, as on create."""
+        is stored, as on create. What the account can do with them, where
+        it logged in."""
         # An OAuth probe may hand back a refresh token to store.
         if secrets or self.signs_in_with_oauth(account.provider):
             self._vault.require_ready()
         if changed:
             await self._checks.hosts(merged)
         if not changed and not secrets:
-            return
+            return None
 
         def read(field: str) -> SecretStr:
             if field in secrets:
                 return secrets[field]
             return self._vault.read(account.id, field)
 
-        await self._checks.login(account.provider, merged, read, secrets, signed_in)
+        return await self._checks.login(
+            account.provider, merged, read, secrets, signed_in
+        )
 
     def _store_update(
         self,
@@ -288,6 +294,8 @@ class AccountService:
         provider. Clears a rejected login and updates the status."""
         access.require("verify_account", account_id)
         await self._adapters.call(account_id, lambda p: p.verify())
+        # What the server offers may have changed with it (UNIFORM R4).
+        await self._adapters.learn(account_id)
         account = self._repository.get(account_id)
         self._activity.record(
             said.AccountVerified(by=Actor.of(access), account=account)
@@ -333,6 +341,5 @@ class AccountService:
             update={
                 "credentials": self._vault.info(account.id),
                 "settings": self._repository.settings(account.id),
-                "capabilities": self._adapters.offered(account.id),
             }
         )

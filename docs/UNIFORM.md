@@ -112,8 +112,9 @@ and its absence means nothing.
 
 `refused` (decision 6.1) needs a capability as well: whether the
 provider names the recipients it refuses while sending, as SMTP does.
-Gmail, Microsoft and JMAP report them later, as a bounce mail. Its name
-is settled with step 5 of section 5.
+Gmail, Microsoft and JMAP report them later, as a bounce mail. It is
+named `refused`, like the field it guards. The two lists of marks are
+`marks.read` and `marks.written` on the account.
 
 `stable_ids`, `delta` and `server_search` describe how the service works
 inside, not what a client can do. They leave the API (decision
@@ -137,7 +138,8 @@ larger piece that is neither, and runs on its own.
   (`gmail/messages.py:110`). The UI offers the keyword form on Gmail
   accounts, against CONCEPT 5 ("the UI offers no action an account
   cannot do"). Rule R3: the capability `keywords` is missing. *Concept
-  (section 3).*
+  (section 3).* Done: Gmail lacks `keywords`, and the UI offers no
+  keyword form there.
 - **`keywords: []` means "none" on IMAP and JMAP, but "not kept" on
   Gmail and POP3.** Microsoft never reads `$answered` or `$forwarded`.
   A client cannot tell "not answered" from "unknown". Rule R5. *Concept
@@ -222,7 +224,7 @@ larger piece that is neither, and runs on its own.
   way Microsoft documents.
 - **POP3 keeps no sent copy**, while `send_message` is documented as
   keeping one. JMAP without a sent folder keeps none either, without a
-  word. Capability `sent_copy`. *Concept (section 3).*
+  word. Capability `sent_copy`. *Concept (section 3).* Done.
 - **`refused` is always empty on Gmail, Microsoft and JMAP.** They report
   refused recipients later, as a bounce mail. Empty means "unknown"
   there, but "all accepted" on SMTP. *Concept (6.1).*
@@ -234,7 +236,8 @@ larger piece that is neither, and runs on its own.
   3,000,000 bytes goes in one request, a larger one through an upload
   session, in ranges.
 - **A send without SMTP answers `409`** on IMAP and POP3, JMAP without
-  submission `501`. Rule R2: `501` for both.
+  submission `501`. Rule R2: `501` for both. Done: such an account
+  lacks `send`.
 
 ### 4.6 Drafts
 
@@ -247,7 +250,7 @@ larger piece that is neither, and runs on its own.
   IMAP without UIDPLUS: the new one is stored before the old one is
   deleted. Rule R6. *Bug.*
 - **IMAP and JMAP announce `drafts` without a drafts folder** and answer
-  `409` later. Rule R4.
+  `409` later. Rule R4. Done: without one they lack `drafts`.
 
 ### 4.7 Folders
 
@@ -298,10 +301,10 @@ larger piece that is neither, and runs on its own.
 
 - **IMAP without CONDSTORE never reports read state, stars or keywords
   changed by another client.** Nothing tells a client. Capability
-  `external_changes`.
+  `external_changes`. Done.
 - **IMAP announces `push` without IDLE, and JMAP without an event
   source.** The worker quietly polls instead. IDLE watches the inbox
-  only. Rule R4.
+  only. Rule R4. Done: without them the account lacks `push`.
 - **A JMAP deletion carries no folder.** A message in several folders is
   reported with one of them.
 - **`message.updated` also means a thread merge**, documented as "moved
@@ -315,7 +318,8 @@ larger piece that is neither, and runs on its own.
   drafts without a folder, no trash), `400` (several folders without
   `labels`, Gmail's own folders), `404` (a missing role folder, POP3
   folder changes), `200` (POP3 `list_threads`, Microsoft `$` keywords).
-  Rule R2.
+  Rule R2. Done for every lack of a capability. A missing role folder
+  follows with step 6.
 - **An IMAP change of flags and folder in one request** stores the
   flags, then fails the move with `501`. IMAP has no transaction over
   both, so R6 can only order the steps: check the move first, then
@@ -330,11 +334,11 @@ larger piece that is neither, and runs on its own.
 - **The domain checks protocols, not capabilities.** `search`, `labels`
   and `send` are not checked by the domain at all. Each adapter refuses
   in its own way. With R3 the domain checks the capability once for
-  every operation.
+  every operation. Done.
 
 ## 5. Work in order
 
-Step 1 is done. Each step is one pull request or more.
+Steps 1 to 5 are done. Each step is one pull request or more.
 
 1. **Bugs without a live check**, together on a branch of their own,
    against today's documentation. Done:
@@ -378,7 +382,10 @@ Step 1 is done. Each step is one pull request or more.
 5. **Capabilities.** The finer set of section 3, read from the server
    (R4), stored as decision 6.11 says, checked by the domain for every
    operation (R3), `501` for every lack (R2). The client, the UI and
-   the MCP server follow them (section 7).
+   the MCP server follow them (section 7). Done. The server is asked
+   when the account is connected or verified, when the sync sees a
+   folder come or go, and when it refuses what was stored. Microsoft
+   reads `$draft` and writes no mark until the live check of 6.4.
 6. **Values.** The decisions of section 6: dates, the list without a
    folder, server notes, marks, the case of keywords, `has_attachments`.
 7. **IMAP emulates `all`** where the server has no `\All` (decision

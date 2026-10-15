@@ -41,9 +41,12 @@ from ....errors import (
 )
 from ...mail import ThreadHeaders, compose, convert, parse
 from ...models import (
+    Abilities,
     AttachmentContent,
+    Capability,
     Folder,
     FolderRole,
+    Mark,
     Message,
     MessageFilter,
     MessageSummary,
@@ -54,7 +57,6 @@ from ...models import (
 from ...protocols import ApiClient
 from .. import rules
 from ..base import (
-    Capability,
     ChangedMessage,
     FolderChanges,
     ThreadMessages,
@@ -69,15 +71,28 @@ from .shapes import Message as GraphMessage
 PAGE_SIZE = 250
 
 
+ABILITIES = Abilities.of(
+    {
+        Capability.READ_STATE,
+        Capability.STARS,
+        Capability.KEYWORDS,
+        Capability.FOLDERS,
+        Capability.MOVE,
+        Capability.TRASH,
+        Capability.PURGE,
+        Capability.SEARCH,
+        Capability.DRAFTS,
+        Capability.SEND,
+        Capability.SENT_COPY,
+        Capability.THREADS,
+        Capability.EXTERNAL_CHANGES,
+    },
+    read={Mark.DRAFT},
+)
+
+
 class MicrosoftProvider:
-    capabilities = frozenset(
-        {
-            Capability.SEND,
-            Capability.SEARCH,
-            Capability.SERVER_SEARCH,
-            Capability.STABLE_IDS,
-        }
-    )
+    stable_ids = True
 
     def __init__(
         self,
@@ -301,7 +316,7 @@ class MicrosoftProvider:
 
         async def one(message_id: str) -> MessageSummary:
             # Judged per id, as the other adapters answer it.
-            target = rules.move_target(changes, self.capabilities)
+            target = rules.move_target(changes, labels=False)
             path = f"/me/messages/{id_(message_id)}"
             item = None
             if mappers.touches_marks(changes):
@@ -466,6 +481,11 @@ class MicrosoftProvider:
         if not delta:
             raise ProviderError("microsoft answered a delta query without a link")
         return FolderChanges(own_path(delta), changed, removed)
+
+    async def abilities(self) -> Abilities:
+        """The same for every Microsoft account. Its keywords are Outlook's
+        categories. It reads ``$draft`` and writes no mark (UNIFORM 6.4)."""
+        return ABILITIES
 
     async def verify(self) -> None:
         self._graph.forget()

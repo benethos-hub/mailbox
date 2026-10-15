@@ -110,9 +110,19 @@ def test_the_account_names_its_capabilities(
     account = client.get(f"/v1/accounts/{jmap_account_id}").json()
     assert account["provider"] == "jmap"
     assert account["settings"] == {"host": HOST, "username": USER}
-    assert {"send", "drafts", "flags", "folders", "search", "push"} <= set(
-        account["capabilities"]
-    )
+    assert {
+        "send",
+        "drafts",
+        "read_state",
+        "keywords",
+        "folders",
+        "move",
+        "labels",
+        "search",
+        "threads",
+        "push",
+    } <= set(account["capabilities"])
+    assert len(account["marks"]["written"]) == 6
     assert [c["field"] for c in account["credentials"]] == ["password"]
 
 

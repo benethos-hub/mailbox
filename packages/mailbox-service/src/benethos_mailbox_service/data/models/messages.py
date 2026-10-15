@@ -158,7 +158,11 @@ class MessageUpdate(BaseModel):
     unread: bool | None = None
     starred: bool | None = None
     keywords: Keywords = Field(
-        default=None, description="Replaces the list of keywords."
+        default=None,
+        description=(
+            "Replaces the list of keywords. Needs `keywords`. A mark such as "
+            "`$answered` needs to be among the account's `marks.written`."
+        ),
     )
     add_keywords: Keywords = Field(
         default=None, description="Added to the keywords it has. Not beside `keywords`."
@@ -173,8 +177,8 @@ class MessageUpdate(BaseModel):
         max_length=20,
         description=(
             "The folders the message is to be in, by id or by a role such as "
-            "`archive`. A change moves it, and the id stays. An IMAP message is "
-            "in exactly one folder."
+            "`archive`. A change moves it, and the id stays. Needs `move`, and "
+            "more than one folder `labels`."
         ),
     )
     add_folder_ids: FolderIds = Field(

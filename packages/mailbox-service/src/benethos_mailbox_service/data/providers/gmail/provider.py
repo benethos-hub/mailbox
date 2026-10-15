@@ -26,8 +26,11 @@ from ....common.clock import utc_now
 from ....errors import MailboxServiceError
 from ...mail import ThreadHeaders
 from ...models import (
+    Abilities,
     AttachmentContent,
+    Capability,
     Folder,
+    Mark,
     Message,
     MessageFilter,
     MessageSummary,
@@ -36,23 +39,34 @@ from ...models import (
     SentMessage,
 )
 from ...protocols import ApiClient
-from ..base import Capability, FolderChanges, ThreadMessages, TokenSource
+from ..base import FolderChanges, ThreadMessages, TokenSource
 from . import folders, messages, sending
 from .api import GmailApi
 from .changes import Changes
 from .shapes import Profile
 
+ABILITIES = Abilities.of(
+    {
+        Capability.READ_STATE,
+        Capability.STARS,
+        Capability.FOLDERS,
+        Capability.MOVE,
+        Capability.TRASH,
+        Capability.PURGE,
+        Capability.LABELS,
+        Capability.SEARCH,
+        Capability.DRAFTS,
+        Capability.SEND,
+        Capability.SENT_COPY,
+        Capability.THREADS,
+        Capability.EXTERNAL_CHANGES,
+    },
+    read={Mark.DRAFT},
+)
+
 
 class GmailProvider:
-    capabilities = frozenset(
-        {
-            Capability.SEND,
-            Capability.SEARCH,
-            Capability.SERVER_SEARCH,
-            Capability.LABELS,
-            Capability.STABLE_IDS,
-        }
-    )
+    stable_ids = True
 
     def __init__(
         self,
@@ -108,6 +122,12 @@ class GmailProvider:
         """Gmail reports changes since a history id instead."""
         return []
 
+    async def abilities(self) -> Abilities:
+        """The same for every Gmail account. Its labels are the folders,
+        and it keeps no keywords. A draft shows by its label, but no mark
+        can be set (UNIFORM 6.4)."""
+        return ABILITIES
+
     async def verify(self) -> None:
         self._api.forget()
         self._api.tokens.forget_refusal()
@@ -132,9 +152,7 @@ class GmailProvider:
     async def update_messages(
         self, message_ids: list[str], changes: MessageUpdate
     ) -> dict[str, MessageSummary | MailboxServiceError]:
-        return await messages.update_messages(
-            self._api, self.capabilities, message_ids, changes
-        )
+        return await messages.update_messages(self._api, message_ids, changes)
 
     async def delete_messages(
         self, message_ids: list[str], permanent: bool

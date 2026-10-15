@@ -538,6 +538,7 @@ and that each is listed here.
 | `accounts.reachable` | an account reached again |
 | `accounts.needs_sign_in` | an account needs a new sign-in |
 | `accounts.unreachable` | an account could not be reached |
+| `accounts.capabilities` | an account's server answered other capabilities than were stored |
 | `accounts.oauth_started` | an OAuth sign-in started |
 | `accounts.oauth_finished` | an OAuth sign-in finished |
 | `accounts.oauth_failed` | an OAuth sign-in failed |

@@ -10,13 +10,9 @@ from typing import Any, TypeVar
 import httpx
 import pytest
 
-from benethos_mailbox_service.data.models import Account, ProviderType
+from benethos_mailbox_service.data.models import Abilities, Account, ProviderType
 from benethos_mailbox_service.data.protocols.http import ApiClient
-from benethos_mailbox_service.data.providers import (
-    Capability,
-    Reads,
-    capabilities_of,
-)
+from benethos_mailbox_service.data.providers import Reads
 from benethos_mailbox_service.data.providers.microsoft import MicrosoftProvider
 from benethos_mailbox_service.data.storage import (
     InMemoryChangeLogRepository,
@@ -39,8 +35,14 @@ class OneAdapter:
     def __init__(self, provider: Reads) -> None:
         self.provider = provider
 
-    def capabilities(self, account_id: str) -> frozenset[Capability]:
-        return capabilities_of(self.provider)
+    def get(self, account_id: str) -> Reads:
+        return self.provider
+
+    def stable_ids(self, account_id: str) -> bool:
+        return self.provider.stable_ids
+
+    async def learn(self, account_id: str) -> Abilities:
+        return await self.provider.abilities()
 
     async def call(
         self, account_id: str, operation: Callable[[Reads], Awaitable[T]]

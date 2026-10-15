@@ -15,8 +15,10 @@
 {{ link_button(compose ~ ([('original', message.id), ('action', 'forward')] | urlencode), "Forward", "forward", alone=True) }}
 {% endif %}
 {% if can_raw %}{{ link_button(url ~ "/raw", "Download original", "download", alone=True, word=True) }}{% endif %}
-{% if can.flag %}
+{% if can.read_state %}
 {{ action(url ~ "/flags", "Mark read" if message.unread else "Mark unread", fields={"unread": "0" if message.unread else "1"}, icon="envelope-open" if message.unread else "envelope", alone=True, word=True) }}
+{% endif %}
+{% if can.star %}
 {{ action(url ~ "/flags", "Unstar" if message.starred else "Star", fields={"starred": "0" if message.starred else "1"}, icon="star-fill" if message.starred else "star", alone=True) }}
 {% endif %}
 {% if can.move and tree %}{{ dialog_button("move-message", "Move", "folder-symlink", danger=False) }}{% endif %}
@@ -36,7 +38,7 @@
       {% if message.reply_to %}<dt>Reply to</dt><dd>{{ message.reply_to | addresses }}</dd>{% endif %}
       <dt>Date</dt><dd>{{ message.date | when }}</dd>
       {% set own = message.keywords | own_keywords %}
-      {% if "flags" in account.capabilities %}
+      {% if can.shows_flags %}
       <dt>Flags</dt>
       <dd>
         {{ "unread" if message.unread else "read" }}{% if message.starred %}, starred{% endif %}
@@ -48,12 +50,12 @@
   </div>
 </section>
 
-{% if "flags" in account.capabilities and (own or can.flag) %}
+{% if can.shows_keywords and (own or can.keywords) %}
 <section class="card">
   <header><h2>Keywords</h2></header>
   <div class="body keywords">
-    {% for keyword in own %}<span class="chip">{{ keyword }}{% if can.flag %}{{ action(url ~ "/keywords", "Remove", fields={"remove": keyword}, cls="small", icon="x-lg", alone=True, name="Remove the keyword " ~ keyword) }}{% endif %}</span>{% else %}{% if not can.flag %}—{% endif %}{% endfor %}
-    {% if can.flag %}
+    {% for keyword in own %}<span class="chip">{{ keyword }}{% if can.keywords %}{{ action(url ~ "/keywords", "Remove", fields={"remove": keyword}, cls="small", icon="x-lg", alone=True, name="Remove the keyword " ~ keyword) }}{% endif %}</span>{% else %}{% if not can.keywords %}—{% endif %}{% endfor %}
+    {% if can.keywords %}
     <form class="inline toolbar" method="post" action="{{ url }}/keywords">
       {{ csrf_field() }}
       <input name="add" aria-label="New keyword" placeholder="New keyword" maxlength="100" />

@@ -9,7 +9,6 @@ from benethos_mailbox_service.data.providers import (
     Capability,
     Summaries,
     Threads,
-    capabilities_of,
 )
 from benethos_mailbox_service.data.providers.imap import mappers
 from benethos_mailbox_service.data.providers.microsoft import (
@@ -37,7 +36,7 @@ async def test_gmail_reads_a_thread_oldest_first() -> None:
     gmail.add_message(subject="Other")
     adapter = test_gmail.adapter(gmail)
     assert isinstance(adapter, Threads)
-    assert Capability.THREADS in capabilities_of(adapter)
+    assert (await adapter.abilities()).has(Capability.THREADS)
     found = await adapter.thread_messages(thread, 500)
     assert [m.id for m in found.messages] == [first, second]
     assert "SENT" in found.messages[1].folder_ids
@@ -62,7 +61,7 @@ async def test_jmap_reads_a_thread_by_its_emails() -> None:
     server.add_email(make_message("Other"))
     second = server.add_email(make_message("Re: Hello"), mailbox="sent", thread="T1")
     adapter = test_jmap.adapter(server)
-    assert Capability.THREADS in capabilities_of(adapter)
+    assert (await adapter.abilities()).has(Capability.THREADS)
     found = await adapter.thread_messages("T1", 500)
     assert [m.id for m in found.messages] == [first, second]
     assert [m.thread_id for m in found.messages] == ["T1", "T1"]
@@ -88,7 +87,7 @@ async def test_graph_reads_a_conversation_across_folders() -> None:
         conversationId="c'1", receivedDateTime="2026-08-01T10:00:00Z"
     )
     adapter = test_microsoft.adapter(graph)
-    assert Capability.THREADS in capabilities_of(adapter)
+    assert (await adapter.abilities()).has(Capability.THREADS)
     found = await adapter.thread_messages("c'1", 500)
     assert [m.id for m in found.messages] == [first, later]
     assert other not in [m.id for m in found.messages]
@@ -126,7 +125,7 @@ async def test_imap_reads_summaries_in_any_folder(server: FakeMailBox) -> None:
     imap = provider(server)
     assert isinstance(imap, Summaries)
     assert not isinstance(imap, Threads)
-    assert Capability.THREADS in capabilities_of(imap)
+    assert (await imap.abilities()).has(Capability.THREADS)
     wanted = [
         mappers.message_id("INBOX", 7, 1),
         mappers.message_id("Sent", 1, 4),

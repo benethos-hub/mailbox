@@ -39,9 +39,9 @@ async def test_list_accounts_says_what_is_allowed(api: Callable) -> None:
 
 
 async def test_list_accounts_names_what_an_account_cannot_do(api: Callable) -> None:
-    """A POP3 mailbox: no folders, no flags, no search, no drafts. The
-    drafts tools are not offered there, the rest is named."""
-    pop3 = {**ME["accounts"][0], "capabilities": ["send"]}
+    """A POP3 mailbox: no folders, no read state, no search, no drafts.
+    The drafts tools are not offered there, the rest is named."""
+    pop3 = {**ME["accounts"][0], "capabilities": ["purge", "send"]}
     api(routes={"/v1/me": {**ME, "accounts": [pop3]}})
     assert await accounts.list_accounts() == [
         {
@@ -50,8 +50,12 @@ async def test_list_accounts_names_what_an_account_cannot_do(api: Callable) -> N
             "name": "Me",
             "can": ["read"],
             "unsupported": [
-                "read state, stars and keywords",
-                "folders, moving and the trash",
+                "read state",
+                "stars",
+                "keywords",
+                "creating, renaming and deleting folders",
+                "moving mail",
+                "the trash",
                 "search and filters",
                 "drafts",
             ],
@@ -64,7 +68,17 @@ async def test_an_account_that_can_do_everything_names_no_limits(
 ) -> None:
     full = {
         **ME["accounts"][0],
-        "capabilities": ["drafts", "flags", "folders", "search", "send"],
+        "capabilities": [
+            "read_state",
+            "stars",
+            "keywords",
+            "folders",
+            "move",
+            "trash",
+            "search",
+            "drafts",
+            "send",
+        ],
     }
     api(routes={"/v1/me": {**ME, "accounts": [full]}})
     [shown] = await accounts.list_accounts()

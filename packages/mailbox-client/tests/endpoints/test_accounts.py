@@ -6,7 +6,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import UTC, datetime
 
-from benethos_mailbox_client import Account, Paged, StoredCredential
+from benethos_mailbox_client import Account, Marks, Paged, StoredCredential
 
 from ..fake_api import ACCOUNT, FakeApi
 
@@ -32,7 +32,11 @@ async def test_list_accounts(make_client: Callable) -> None:
                     StoredCredential("password", datetime(2026, 10, 1, tzinfo=UTC)),
                 ),
                 settings={"host": "imap.example.com", "port": 993},
-                capabilities=frozenset({"flags", "folders"}),
+                capabilities=frozenset({"keywords", "folders"}),
+                marks=Marks(
+                    read=frozenset({"$answered", "$draft"}),
+                    written=frozenset({"$answered"}),
+                ),
             )
         ],
         next_cursor="c2",

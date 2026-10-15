@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import sqlite3
 
-from ...models import Account, AccountStatus
+from ...models import Abilities, Account, AccountStatus
 from ..accounts import SettingsDict
 from .database import Database
 from .rows import SqliteRows
@@ -49,6 +49,17 @@ class SqliteAccountRepository:
             account_id,
         )
 
+    def abilities(self, account_id: str) -> Abilities | None:
+        return _abilities(self._rows.row(account_id))
+
+    def set_abilities(self, account_id: str, abilities: Abilities) -> None:
+        self._db.must_change(
+            "UPDATE accounts SET abilities = ? WHERE id = ?",
+            (abilities.model_dump_json(), account_id),
+            "account",
+            account_id,
+        )
+
     def update(self, account: Account, settings: SettingsDict) -> None:
         self._db.must_change(
             "UPDATE accounts SET display_name = ?, settings = ? WHERE id = ?",
@@ -62,10 +73,18 @@ class SqliteAccountRepository:
 
 
 def _account(row: sqlite3.Row) -> Account:
+    found = _abilities(row) or Abilities()
     return Account(
         id=row["id"],
         provider=row["provider"],
         email=row["email"],
         display_name=row["display_name"],
         status=row["status"],
+        capabilities=found.capabilities,
+        marks=found.marks,
     )
+
+
+def _abilities(row: sqlite3.Row) -> Abilities | None:
+    stored = row["abilities"]
+    return None if stored is None else Abilities.model_validate_json(stored)

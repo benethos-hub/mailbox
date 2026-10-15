@@ -138,6 +138,23 @@ class AccountUnreachable(Activity):
 
 
 @dataclass(frozen=True, kw_only=True)
+class AbilitiesChanged(Activity):
+    """The account's server answered other capabilities than were stored,
+    e.g. after it stopped offering IDLE. Logged when they change."""
+
+    name: ClassVar[str] = "capabilities"
+
+    account: Account
+    gained: tuple[str, ...]
+    lost: tuple[str, ...]
+
+    def says(self) -> str:
+        changed = [f"+{c}" for c in self.gained] + [f"-{c}" for c in self.lost]
+        what = ", ".join(changed) or "other marks"
+        return f"account {account(self.account)} can do otherwise now: {what}"
+
+
+@dataclass(frozen=True, kw_only=True)
 class OAuthStarted(Activity):
     name: ClassVar[str] = "oauth_started"
     audited: ClassVar[bool] = True

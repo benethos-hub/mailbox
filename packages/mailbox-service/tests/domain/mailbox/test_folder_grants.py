@@ -18,11 +18,10 @@ from benethos_mailbox_service.data.models import (
     FolderRole,
     Grant,
 )
-from benethos_mailbox_service.data.providers.base import Capability
 from benethos_mailbox_service.domain.mailbox.reach import Reach
 from benethos_mailbox_service.domain.rights.access import Access
 
-from ...conftest import bearer_for, memory_of
+from ...conftest import bearer_for, memory_of, relearn
 
 INVOICES = Folder(id="f_inv", name="Invoices")
 YEAR = Folder(id="f_2026", name="2026", parent_id="f_inv")
@@ -36,6 +35,7 @@ PLACES = {"m0": "inbox", "m1": "f_inv", "m2": "f_2026", "m3": "f_priv"}
 def mailbox(services: Services, account_id: str) -> str:
     memory = memory_of(services, account_id)
     memory.folders += [INVOICES, YEAR, PRIVATE, TRASH]
+    relearn(services, account_id)
     memory.messages = [
         m.model_copy(update={"folder_ids": [PLACES.get(m.id, "inbox")]})
         for m in memory.messages
@@ -150,8 +150,9 @@ def test_labels_stay_among_the_folders_of_one_grant(
     app_client: TestClient, services: Services, mailbox: str
 ) -> None:
     memory = memory_of(services, mailbox)
-    memory.capabilities = memory.capabilities | {Capability.LABELS}
+    memory.labels = True
     memory.folders.append(Folder(id="f_arch", name="Archive", role=FolderRole.ARCHIVE))
+    relearn(services, mailbox)
     writer = caller(
         app_client, services, mailbox, (["mail.read", "mail.write"], ["Invoices"])
     )

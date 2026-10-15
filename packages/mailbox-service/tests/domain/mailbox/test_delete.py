@@ -113,10 +113,11 @@ async def test_for_good_needs_uidplus(server: FakeMailBox) -> None:
 
 
 def test_delete_without_a_trash_folder(client: TestClient, account_id: str) -> None:
-    # The memory account has an inbox and a sent folder only.
+    # The memory account has an inbox and a sent folder only: it lacks
+    # the trash (UNIFORM R2).
     answer = client.delete(f"/v1/accounts/{account_id}/messages/m0")
-    assert answer.status_code == 409
-    assert answer.json()["error"]["code"] == "conflict"
+    assert answer.status_code == 501
+    assert answer.json()["error"]["code"] == "not_supported"
 
 
 def test_deleting_for_good_is_its_own_right(

@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import UTC, datetime
 
-from benethos_mailbox_client import Me, MeAccount, Permissions, Sending
+from benethos_mailbox_client import Marks, Me, MeAccount, Permissions, Sending
 
 from ..fake_api import ME, FakeApi
 
@@ -25,7 +25,8 @@ async def test_me(make_client: Callable) -> None:
                 operations=frozenset({"list_messages"}),
                 warnings=frozenset({"reads_and_sends"}),
                 sending=(Sending(("a@x.org",), 5, 4),),
-                capabilities=frozenset({"flags"}),
+                capabilities=frozenset({"read_state"}),
+                marks=Marks(read=frozenset({"$draft"})),
                 status="needs_reauth",
                 last_sync_at=datetime(2026, 10, 1, 8, 0, tzinfo=UTC),
                 attention=True,

@@ -18,7 +18,7 @@ from ...models import (
 )
 from ...protocols import jmap
 from .. import rules
-from ..base import Capability, ThreadMessages
+from ..base import ThreadMessages
 from . import mappers
 from .account import JmapAccount
 from .shapes import Email, Thread
@@ -125,12 +125,11 @@ async def get_attachment(
 
 async def update_messages(
     account: JmapAccount,
-    capabilities: frozenset[Capability],
     message_ids: list[str],
     changes: MessageUpdate,
 ) -> dict[str, MessageSummary | MailboxServiceError]:
     if changes.changes_folders:
-        rules.move_target(changes, capabilities)
+        rules.move_target(changes, labels=True)
         known = {f.id for f in await account.folders()}
         unknown = next((t for t in changes.named_folders() if t not in known), None)
         if unknown is not None:

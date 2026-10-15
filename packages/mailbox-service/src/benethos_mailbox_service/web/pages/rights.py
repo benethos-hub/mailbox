@@ -1,5 +1,5 @@
 """What the mail pages offer, by the caller's rights on an account and by
-what the account can do: a POP3 account has no flags, folders, search,
+what the account can do: a POP3 account keeps no read state, folders,
 drafts or threads, so their actions are not offered there."""
 
 from __future__ import annotations
@@ -17,17 +17,26 @@ def mail_rights(
     able = set(capabilities)
     drafts = Capability.DRAFTS in able
     folders = Capability.FOLDERS in able
-    flag = "update_message" in allowed and Capability.FLAGS in able
-    move = "update_message" in allowed and folders
+    sends = "send_message" in allowed and Capability.SEND in able
+    changes = "update_message" in allowed
+    read_state = changes and Capability.READ_STATE in able
+    star = changes and Capability.STARS in able
+    keywords = changes and Capability.KEYWORDS in able
+    move = changes and Capability.MOVE in able
     return {
-        "write": "send_message" in allowed or ("create_draft" in allowed and drafts),
-        "send": "send_message" in allowed,
+        "write": sends or ("create_draft" in allowed and drafts),
+        "send": sends,
         "drafts": "list_drafts" in allowed and drafts,
-        "flag": flag,
+        # What a message shows: its read state and stars, its keywords.
+        "shows_flags": Capability.READ_STATE in able,
+        "shows_keywords": Capability.KEYWORDS in able,
+        "read_state": read_state,
+        "star": star,
+        "keywords": keywords,
         "move": move,
-        "change": flag or move,
-        "trash": "delete_message" in allowed and folders,
-        "purge": "delete_message_permanent" in allowed,
+        "change": read_state or star or keywords or move,
+        "trash": "delete_message" in allowed and Capability.TRASH in able,
+        "purge": "delete_message_permanent" in allowed and Capability.PURGE in able,
         "create_folder": "create_folder" in allowed and folders,
         "update_folder": "update_folder" in allowed and folders,
         "delete_folder": "delete_folder" in allowed and folders,

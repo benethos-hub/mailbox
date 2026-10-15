@@ -10,14 +10,12 @@ from ....errors import missing
 from ...models import Folder, FolderRole
 from ...protocols import ImapSession
 from .. import rules
-from ..base import Capability
 from . import mappers
 
 
 class Mailbox:
-    def __init__(self, session: ImapSession, capabilities: frozenset[Capability]):
+    def __init__(self, session: ImapSession):
         self.session = session
-        self.capabilities = capabilities
         self._folders: list[Folder] | None = None
 
     def fresh(self) -> None:

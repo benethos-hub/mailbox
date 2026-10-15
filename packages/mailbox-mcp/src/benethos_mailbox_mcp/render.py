@@ -220,13 +220,18 @@ READ_AND_SEND_WARNING = (
 )
 
 
-# What an account may lack, as the model reads it: a POP3 mailbox has none
-# of these, and the tools that need them fail there.
+# What an account may lack, by its capability, as the model reads it. The
+# tools that need one fail where it is missing.
 ACCOUNT_LIMITS = {
-    "flags": "read state, stars and keywords",
-    "folders": "folders, moving and the trash",
+    "read_state": "read state",
+    "stars": "stars",
+    "keywords": "keywords",
+    "folders": "creating, renaming and deleting folders",
+    "move": "moving mail",
+    "trash": "the trash",
     "search": "search and filters",
     "drafts": "drafts",
+    "send": "sending",
 }
 
 
@@ -244,8 +249,9 @@ ATTENTION = {
 
 def account(found: MeAccount, can: list[str]) -> dict[str, Any]:
     able = found.capabilities
-    if able is not None and "drafts" not in able:
-        can = [kind for kind in can if kind != "drafts"]
+    if able is not None:
+        # A kind of tool the account cannot use at all.
+        can = [kind for kind in can if kind not in ("drafts", "send") or kind in able]
     shown: dict[str, Any] = {
         "id": found.id,
         "email": found.email,

@@ -98,7 +98,8 @@ async def test_a_graph_message_is_in_one_folder(graph: FakeGraph) -> None:
             [message_id], MessageUpdate(add_folder_ids=[archive])
         )
     ).values()
-    assert isinstance(refused, BadRequestError)
+    # The account lacks labels (UNIFORM R2).
+    assert isinstance(refused, NotSupportedError)
 
 
 async def test_trash_then_for_good(graph: FakeGraph) -> None:

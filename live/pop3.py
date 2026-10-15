@@ -116,9 +116,11 @@ def check_inbox(run: Run, client: TestClient, receiver_id: str) -> None:
     account = client.get(base).json()
     run.check(
         "the account names what it can do",
-        account["capabilities"] == ["send"],
+        account["capabilities"] == ["purge", "refused", "send"],
         str(account["capabilities"]),
     )
+    renamed = client.patch(f"{base}/folders/inbox", json={"name": "Elsewhere"})
+    run.check("what it lacks answers 501", renamed.status_code == 501, str(renamed))
     run.check(
         "its one folder is the inbox",
         [f["role"] for f in client.get(f"{base}/folders").json()] == ["inbox"],

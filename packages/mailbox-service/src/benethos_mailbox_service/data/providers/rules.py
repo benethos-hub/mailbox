@@ -22,12 +22,12 @@ from ...errors import (
     BadRequestError,
     ConflictError,
     MailboxServiceError,
+    NotSupportedError,
     ProviderAuthError,
     ProviderError,
     ProviderUnavailableError,
 )
 from ..models import Folder, FolderRole, MessageFilter, MessageUpdate
-from .base import Capability
 
 R = TypeVar("R")
 
@@ -133,20 +133,20 @@ def require_role_folder(folders: list[Folder], role: FolderRole) -> Folder:
     return folder
 
 
-def move_target(
-    changes: MessageUpdate, capabilities: frozenset[Capability]
-) -> str | None:
+def move_target(changes: MessageUpdate, labels: bool) -> str | None:
     """The folder ``changes`` move a message to, or None to stay. Several
-    folders at once need ``LABELS``, and so does adding or removing one."""
-    if changes.adds_or_removes_folders and Capability.LABELS not in capabilities:
-        raise BadRequestError(
+    folders at once need ``labels``, and so does adding or removing one.
+    The domain checks that first."""
+    if not labels and (
+        changes.adds_or_removes_folders
+        or (changes.folder_ids is not None and len(set(changes.folder_ids)) != 1)
+    ):
+        raise NotSupportedError(
             "a message of this account is in exactly one folder: "
-            "move it with folder_ids"
+            "move it with one folder in folder_ids"
         )
     if changes.folder_ids is None:
         return None
-    if len(set(changes.folder_ids)) != 1 and Capability.LABELS not in capabilities:
-        raise BadRequestError("a message of this account is in exactly one folder")
     return changes.folder_ids[0]
 
 

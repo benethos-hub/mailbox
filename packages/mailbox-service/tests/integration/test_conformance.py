@@ -22,10 +22,7 @@ from ..mailboxes import ADDRESS, KINDS, Box, box, mail, services_of
 
 PDF = b"%PDF-1.4 conformance"
 # What UNIFORM.md names as work, where a test meets it.
-NO_KEYWORDS = "UNIFORM 4.1: Gmail keeps no keywords, `flags` says otherwise (step 5)"
-NO_MARKS = "UNIFORM 4.1: Outlook keeps no marks, `flags` says otherwise (step 5)"
 ALL_FOLDERS = "UNIFORM 6, decision 5: a list without a folder is the inbox (step 6)"
-NO_SMTP = "UNIFORM 4.5: without SMTP a send answers 409 (R2)"
 
 
 def kinds(**known: str) -> list[Any]:
@@ -44,6 +41,7 @@ class Account:
     client: TestClient
     base: str
     capabilities: set[str]
+    marks: dict[str, list[str]]
     box: Box
 
     def find(self, subject: str, folder: str = "inbox") -> dict[str, Any]:
@@ -65,8 +63,10 @@ def account(kind: str, monkeypatch: pytest.MonkeyPatch) -> Account:
         create_app(Settings(storage="memory"), services), headers=admin_bearer(services)
     )
     base = f"/v1/accounts/{account_id}"
-    capabilities = set(client.get(base).json()["capabilities"])
-    return Account(client, base, capabilities, found)
+    described = client.get(base).json()
+    return Account(
+        client, base, set(described["capabilities"]), described["marks"], found
+    )
 
 
 def lacks(answer: Any) -> bool:
@@ -115,7 +115,7 @@ def test_a_mail_reads_alike(account: Account) -> None:
     account.box.put(mail("Read me", text="Hello there"))
     summary = account.find("Read me")
     assert summary["from"]["email"] == "alice@example.com"
-    if account.has("flags"):
+    if account.has("read_state"):
         # Without it the fields carry nothing (UNIFORM R5, decision 6.1).
         assert summary["unread"] is True and summary["starred"] is False
     assert not summary["has_attachments"]
@@ -190,7 +190,7 @@ def test_read_state_and_star(account: Account) -> None:
     account.box.put(mail("Mark me"))
     url = f"{account.base}/messages/{account.find('Mark me')['id']}"
     changed = account.client.patch(url, json={"unread": False, "starred": True})
-    if not account.has("flags"):
+    if not account.has("read_state") or not account.has("stars"):
         assert lacks(changed), changed.text
         return
     assert changed.status_code == 200, changed.text
@@ -199,15 +199,12 @@ def test_read_state_and_star(account: Account) -> None:
     assert (again["unread"], again["starred"]) == (False, True)
 
 
-@pytest.mark.parametrize(
-    "kind",
-    kinds(gmail=NO_KEYWORDS),
-)
+@pytest.mark.parametrize("kind", kinds())
 def test_a_keyword_added_and_taken_off(account: Account) -> None:
     account.box.put(mail("Tag me"))
     url = f"{account.base}/messages/{account.find('Tag me')['id']}"
     added = account.client.patch(url, json={"add_keywords": ["work"]})
-    if not account.has("flags"):
+    if not account.has("keywords"):
         assert lacks(added), added.text
         return
     assert added.status_code == 200, added.text
@@ -222,7 +219,7 @@ def test_a_move_to_a_folder(account: Account) -> None:
     account.box.put(mail("Move me"))
     summary = account.find("Move me")
     url = f"{account.base}/messages/{summary['id']}"
-    if not account.has("folders"):
+    if not account.has("move"):
         moved = account.client.patch(url, json={"folder_ids": ["elsewhere"]})
         assert lacks(moved), moved.text
         return
@@ -241,7 +238,7 @@ def test_a_delete_puts_it_in_the_trash(account: Account) -> None:
     account.box.put(mail("Throw me"))
     url = f"{account.base}/messages/{account.find('Throw me')['id']}"
     trashed = account.client.delete(url)
-    if not account.has("folders"):
+    if not account.has("trash"):
         assert lacks(trashed), trashed.text
         return
     assert trashed.status_code == 204, trashed.text
@@ -314,25 +311,42 @@ def test_a_mail_is_in_its_thread(account: Account) -> None:
     assert summary["id"] in [m["id"] for m in thread.json()["messages"]]
 
 
-# --- what UNIFORM.md names as work ----------------------------------------------------
-
-
-@pytest.mark.parametrize(
-    "kind",
-    kinds(
-        gmail=NO_KEYWORDS,
-        microsoft=NO_MARKS,
-    ),
-)
+@pytest.mark.parametrize("kind", kinds())
 def test_a_mark_is_kept_or_lacks(account: Account) -> None:
     account.box.put(mail("Junk me"))
     url = f"{account.base}/messages/{account.find('Junk me')['id']}"
     marked = account.client.patch(url, json={"add_keywords": ["$junk"]})
-    if not account.has("flags"):
+    if "$junk" not in account.marks["written"]:
         assert lacks(marked), marked.text
         return
     assert marked.status_code == 200, marked.text
     assert "$junk" in marked.json()["keywords"]
+
+
+@pytest.mark.parametrize("kind", kinds())
+def test_what_lacks_is_refused_before_anything_changes(account: Account) -> None:
+    """One change with something the account lacks changes nothing (R6)."""
+    account.box.put(mail("Keep me"))
+    url = f"{account.base}/messages/{account.find('Keep me')['id']}"
+    lacking = next(
+        (
+            change
+            for capability, change in (
+                ("keywords", {"add_keywords": ["work"]}),
+                ("move", {"folder_ids": ["inbox"]}),
+            )
+            if not account.has(capability)
+        ),
+        None,
+    )
+    if lacking is None or not account.has("stars"):
+        return
+    changed = account.client.patch(url, json={"starred": True, **lacking})
+    assert lacks(changed), changed.text
+    assert account.client.get(url).json()["starred"] is False
+
+
+# --- what UNIFORM.md names as work ----------------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -357,13 +371,13 @@ def test_a_list_without_a_folder_is_the_inbox(account: Account) -> None:
 
 
 @pytest.mark.parametrize("kind", ["imap", "pop3"])
-@pytest.mark.xfail(reason=NO_SMTP, strict=True)
 def test_a_send_without_smtp_lacks(kind: str, monkeypatch: pytest.MonkeyPatch) -> None:
     found = box(kind, smtp=False)
     services, account_id = services_of(found, monkeypatch)
     client = TestClient(
         create_app(Settings(storage="memory"), services), headers=admin_bearer(services)
     )
+    assert "send" not in client.get(f"/v1/accounts/{account_id}").json()["capabilities"]
     sent = client.post(
         f"/v1/accounts/{account_id}/send",
         json={"to": [{"email": "bob@example.com"}], "subject": "Hi", "text": "Hello"},

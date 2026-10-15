@@ -276,6 +276,8 @@ async def test_the_trash_keeps_the_id_and_for_good_forgets_it(
     imap_services: Services, imap_account_id: str, imap_server: FakeMailBox
 ) -> None:
     imap_server.folders["Trash"] = FakeFolder(flags=("\\Trash",))
+    # The sync sees the new folder, and with it the trash (UNIFORM R4).
+    await imap_services.sync.sync_account(imap_account_id)
     ids = await ids_by_subject(imap_services, imap_account_id)
     await imap_services.mailbox.delete_message(
         ADMIN, imap_account_id, ids["Mail 3"], False

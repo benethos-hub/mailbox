@@ -20,7 +20,7 @@ in [CONCEPT.md](CONCEPT.md). The section numbers below point there.
 | [4b](#phase-4b--ui-rework) | UI rework | **done** |
 | [4c](#phase-4c--api-users) | API users | **done** |
 | [5](#phase-5--more-providers-and-the-configuration-ui) | More providers and the configuration UI | in progress |
-| [5a](#phase-5a--one-way-to-operate-every-mailbox) | One way to operate every mailbox | planned |
+| [5a](#phase-5a--one-way-to-operate-every-mailbox) | One way to operate every mailbox | in progress |
 
 Undecided ideas wait in [IDEAS.md](IDEAS.md) until they are designed.
 
@@ -415,7 +415,7 @@ order, each step one pull request or more:
    orders the steps of a change of flags and folder, done
 4. **One test suite for all adapters**, done
 5. **The finer capabilities**, read from the server and stored with the
-   account, checked by the domain for every operation
+   account, checked by the domain for every operation, done
 6. **The values**: `date` and `received`, the inbox as the list without a
    folder and the role `all`, server notes out of `keywords`, the lists
    of marks, the provider's spelling of keywords, `has_attachments`

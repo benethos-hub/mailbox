@@ -58,7 +58,7 @@ import httpx
 from checks.accounts import accounts, read_env, register
 from checks.admin import Admin, bootstrap
 from checks.mail import (
-    delete_for_good,
+    sweep,
 )
 from checks.microsoft_mail import inline, large, send_and_check
 from checks.processes import service_env, start_service, stop
@@ -284,7 +284,7 @@ def _sending(
         sending = (ms_id, since, subject)
         send_and_check(run, client, mailbox, sending, bot, bot_id, 4 * SYNC_INTERVAL)
     finally:
-        _sweep(mailbox, [(bot_id, "inbox"), (ms_id, "sent"), (ms_id, "trash")])
+        sweep(mailbox, [(bot_id, "inbox"), (ms_id, "sent"), (ms_id, "trash")], SUBJECT)
 
 
 def _large_only(
@@ -303,20 +303,7 @@ def _large_only(
     try:
         large(run, client, mailbox, base, bot, bot_id, subject)
     finally:
-        _sweep(mailbox, [(bot_id, "inbox"), (ms_id, "sent"), (ms_id, "trash")])
-
-
-def _sweep(mailbox: SyncMailboxClient, places: list[tuple[str, str | None]]) -> None:
-    """What this check left of its mails, deleted for good: a mail that
-    arrived after the check gave up, or one of an earlier run."""
-    removed = delete_for_good(
-        mailbox,
-        places,
-        SUBJECT,
-        matches=lambda found: found.removeprefix("Re: ").startswith(SUBJECT),
-    )
-    if removed:
-        print(f"      cleanup: {removed} mail(s) of the check deleted for good")
+        sweep(mailbox, [(bot_id, "inbox"), (ms_id, "sent"), (ms_id, "trash")], SUBJECT)
 
 
 def main() -> int:

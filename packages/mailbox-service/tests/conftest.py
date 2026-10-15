@@ -10,6 +10,7 @@ from collections.abc import Iterator
 from datetime import UTC, datetime
 from typing import Any
 
+import anyio
 import httpx
 import pytest
 from fastapi.testclient import TestClient
@@ -207,6 +208,12 @@ def memory_of(services: Services, account_id: str) -> MemoryProvider:
     provider = services.adapters.get(account_id)
     assert isinstance(provider, MemoryProvider)
     return provider
+
+
+def relearn(services: Services, account_id: str) -> None:
+    """What the account can do asked anew, after a test gave it a folder
+    such as the trash, as the next sync would."""
+    anyio.run(services.adapters.learn, account_id)
 
 
 @pytest.fixture

@@ -16,7 +16,7 @@ from benethos_mailbox_common.log import redact
 from benethos_mailbox_common.values import text
 
 from ...common.hosts import is_server
-from ...data.models import Account, ProviderType
+from ...data.models import Abilities, Account, ProviderType
 from ...data.protocols import HostCheck
 from ...data.providers import (
     CredentialReader,
@@ -54,9 +54,10 @@ class AccountChecks:
         read: CredentialReader,
         secrets: dict[str, SecretStr],
         signed_in: Tokens | None = None,
-    ) -> None:
-        """Log in once with a throwaway adapter. A refresh token it is
-        handed lands in ``secrets``, to be stored with the rest."""
+    ) -> Abilities:
+        """Log in once with a throwaway adapter, and ask the server what
+        the account can do. A refresh token it is handed lands in
+        ``secrets``, to be stored with the rest."""
         for value in secrets.values():
             # Typed in just now: a failed login must not show it.
             redact.note(value.get_secret_value())
@@ -69,6 +70,7 @@ class AccountChecks:
         )
         try:
             await probe.verify()
+            return await probe.abilities()
         finally:
             await probe.close()
 

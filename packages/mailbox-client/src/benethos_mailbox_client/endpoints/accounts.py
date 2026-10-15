@@ -7,7 +7,7 @@ from types import EllipsisType
 from typing import Any
 
 from ..calls import Call, given, nothing, path
-from ..models import Account, Paged, StoredCredential
+from ..models import Account, Marks, Paged, StoredCredential
 from .readings import paged, time
 
 
@@ -107,4 +107,12 @@ def account(item: dict[str, Any]) -> Account:
         ),
         settings=dict(item.get("settings", {})),
         capabilities=frozenset(item.get("capabilities", [])),
+        marks=marks(item.get("marks") or {}),
+    )
+
+
+def marks(item: dict[str, Any]) -> Marks:
+    return Marks(
+        read=frozenset(item.get("read", [])),
+        written=frozenset(item.get("written", [])),
     )

@@ -6,9 +6,14 @@ caller's rights (``AccountService``), the live adapter of each
 from __future__ import annotations
 
 from .abilities import (
+    NEEDS,
+    Needs,
     deletes,
     deltas,
     drafts,
+    for_delete,
+    for_list,
+    for_update,
     sends,
     summaries,
     threads,
@@ -21,13 +26,18 @@ from .oauth import OAuthService
 from .service import AccountService
 
 __all__ = [
+    "NEEDS",
     "AccountService",
     "Adapters",
     "DeviceSignIn",
+    "Needs",
     "OAuthService",
     "deletes",
     "deltas",
     "drafts",
+    "for_delete",
+    "for_list",
+    "for_update",
     "sends",
     "summaries",
     "threads",

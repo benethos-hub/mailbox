@@ -49,12 +49,13 @@ from pathlib import Path
 from typing import Any
 
 import httpx
+from checks import capabilities
 from checks.accounts import accounts, read_env, register
 from checks.admin import Admin, bootstrap
 from checks.mail import (
-    delete_for_good,
     feed_types,
     messages_with_subject,
+    sweep,
     thread_holds,
 )
 from checks.processes import service_env, start_service, stop
@@ -162,6 +163,7 @@ def check(
     ):
         print("connect the account again with --connect, then run this again")
         return
+    capabilities.named(run, verified.json(), capabilities.GMAIL)
     folders = client.get(f"{base}/folders").json()
     roles = {f.get("role") for f in folders}
     run.check(
@@ -177,6 +179,9 @@ def check(
         run.check("a message opens", one.status_code == 200)
         raw = client.get(f"{base}/messages/{items[0]['id']}/raw")
         run.check("its source", raw.status_code == 200 and b":" in raw.content[:200])
+        # Gmail keeps no keywords: its labels are the folders.
+        url = f"{base}/messages/{items[0]['id']}"
+        capabilities.refused(run, client, url, {"add_keywords": ["mailbox-live"]})
     searched = client.get(f"{base}/messages", params={"q": "zz-no-such-mail-zz"})
     run.check("a search", searched.status_code == 200 and not searched.json()["items"])
     _folders(run, client, base)
@@ -188,7 +193,7 @@ def check(
     try:
         _send_and_check(run, client, mailbox, gmail_id, bot, bot_id, since, subject)
     finally:
-        _sweep(mailbox, [(bot_id, "inbox"), (gmail_id, None)])
+        sweep(mailbox, [(bot_id, "inbox"), (gmail_id, None)], SUBJECT)
 
     print("\n== receiving, from the first test account only")
     since = client.get(f"{base}/changes").json()["state"]
@@ -196,7 +201,7 @@ def check(
     try:
         _receive_and_check(run, client, mailbox, gmail, bot_id, since, subject)
     finally:
-        _sweep(mailbox, [(bot_id, "sent"), (bot_id, "inbox"), (gmail_id, None)])
+        sweep(mailbox, [(bot_id, "sent"), (bot_id, "inbox"), (gmail_id, None)], SUBJECT)
 
 
 def _folders(run: Run, client: httpx.Client, base: str) -> None:
@@ -242,19 +247,6 @@ def _drafts(run: Run, client: httpx.Client, base: str) -> None:
     run.check("its source is the new one", b"Changed." in source.content)
     deleted = client.delete(f"{base}/drafts/{current}")
     run.check("delete it", deleted.status_code == 204)
-
-
-def _sweep(mailbox: SyncMailboxClient, places: list[tuple[str, str | None]]) -> None:
-    """What this check left of its mails, deleted for good: a mail that
-    arrived after the check gave up, or one of an earlier run."""
-    removed = delete_for_good(
-        mailbox,
-        places,
-        SUBJECT,
-        matches=lambda found: found.removeprefix("Re: ").startswith(SUBJECT),
-    )
-    if removed:
-        print(f"      cleanup: {removed} mail(s) of the check deleted for good")
 
 
 def _send_and_check(

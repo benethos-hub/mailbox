@@ -239,21 +239,19 @@ Ids are opaque strings to clients. Nothing may parse them.
 ## 5. Provider adapters and libraries
 
 Every adapter implements `Reads` of `data.providers.base`, and of the
-protocols beyond it those it can: `Writes` (flags and folders),
-`Deletes`, `Drafts`, `Sends`, `Watches` (push) and `Deltas` (changes
-since a token). One protocol per ability, checked with `isinstance`,
-was **decided 2026-10-07**. It declares only what no
-protocol says: search, labels, stable ids, and sending where it has a
-server to send through. The capabilities follow from both. The API
-answers `501 not_supported` for what an adapter does not implement, the
-domain decides that, and `GET /v1/accounts/{id}` lists the capabilities
-so a client can tell in advance. `/v1/me` names them per account as well. Since
-2026-10-06 they include `flags` (read state, stars, keywords), `folders`
-(more than the inbox: folders, moving, the trash) and `search` (a filtered
-list). Every adapter but `pop3` has all three. Gmail has `flags` but
-keeps no keywords (5.5), one of the gaps 5.11 closes. The UI offers no action an
-account cannot do, and the MCP server's `list_accounts` names what an
-account lacks.
+protocols beyond it those it may be able to do: `Writes` (flags and
+folders), `Deletes`, `Drafts`, `Sends`, `Watches` (push) and `Deltas`
+(changes since a token). One protocol per ability, checked with
+`isinstance`, was **decided 2026-10-07**. What an account can do follows
+from what its server answers (5.11, R4): asked when the account is
+connected or verified, when the sync sees a folder come or go, and when
+the server refuses what was stored. The capabilities and the marks the
+account reads and writes are stored with it. The domain checks what each
+operation needs before it calls the adapter, the same way for every
+account, and answers `501 not_supported` for a lack.
+`GET /v1/accounts/{id}` and `/v1/me` list them, so a client can tell in
+advance. The UI offers no action an account cannot do, and the MCP
+server's `list_accounts` names what an account lacks.
 
 | Adapter | Covers | Library | Licence | Notes |
 |---|---|---|---|---|
@@ -319,9 +317,9 @@ POP3 where a provider has no IMAP at all, which is rare today.
 - **Search, folders and drafts** answer `501`. The one folder is the inbox.
 - **The sync polls** the list of unique ids at the sync interval and
   compares it, as for IMAP without IDLE. The change feed, `whats_new` and
-  webhooks report what arrived and what left. The adapter does not claim
-  `stable_ids`, so the domain keeps the id mapping and the sync runs. The
-  ids never move, so the mapping stays as it was.
+  webhooks report what arrived and what left. Its ids are not stable
+  ids of a message, so the domain keeps the id mapping and the sync runs.
+  The ids never move, so the mapping stays as it was.
 - **Discovery** offers POP3 only where it finds no IMAP. A POP3 account
   can always be set up by hand, in the UI with the protocol to choose.
 - **A server without `UIDL`** is refused when the account connects:
@@ -499,7 +497,7 @@ live against a Gmail account (`live/gmail.py`):
   is the folder `ALL_MAIL` with the role `all`. A message in the trash or
   the spam is in that folder alone. `STARRED` and `UNREAD` are flags.
   `IMPORTANT`, the categories and the chats are left out. Gmail has no
-  keywords: setting one answers 501. A draft reads `$draft`, from its
+  keywords and lacks `keywords`: setting one answers 501. A draft reads `$draft`, from its
   label `DRAFT`, as on the other providers.
 - A reply and its draft name the thread of the mail they answer, found
   by its `Message-ID` (`rfc822msgid:`). Gmail threads a reply only when
@@ -789,12 +787,13 @@ the API as it is. The rules:
 8. **Provider specifics stay out of the common fields.** Notes a server
    keeps for itself, such as `$hasnoattachment`, leave `keywords`.
 
-The capabilities become finer, each guarding one thing: `read_state`,
-`stars`, `keywords`, `marks` (two lists, the marks of RFC 8621 an
-account reads and those it writes), `folders`, `move`, `trash`, `purge`,
-`labels`, `search`, `drafts`, `send`, `sent_copy`, `threads`, `push`
-and `external_changes`, and one for `refused`, named with the work.
-`flags` goes. `stable_ids`, `delta` and `server_search` leave the API.
+The capabilities are finer, each guarding one thing: `read_state`,
+`stars`, `keywords`, `folders`, `move`, `trash`, `purge`, `labels`,
+`search`, `drafts`, `send`, `sent_copy`, `threads`, `push`,
+`external_changes` and `refused`. The marks are two lists on the
+account, `marks.read` and `marks.written`: the marks of RFC 8621 it
+reads and those it writes. `flags` is gone. `stable_ids`, `delta` and
+`server_search` left the API.
 
 Further decisions: `date` is the Date header everywhere, and a new
 field `received` carries the received time, by which lists sort and
@@ -886,9 +885,10 @@ Rules of the implementation (phase 2):
 - `PATCH` answers the changed message as a summary, with the same id.
 - Moving needs `MOVE` or `UIDPLUS` on an IMAP server. Without both, a move
   would have to expunge the whole folder, other clients' deleted messages
-  included, so it answers `501 not_supported`.
-- `DELETE` without a folder with the trash role answers `409`, instead of
-  deleting for good.
+  included, so the account lacks `move` and a move answers
+  `501 not_supported`.
+- `DELETE` without a folder with the trash role answers `501`: the account
+  lacks `trash`. It never deletes for good instead.
 - Permanent deletion is the right `delete_message_permanent` in the group
   `mail.delete`, so it can also be granted on its own.
 
@@ -968,7 +968,8 @@ cannot be set, the send still counts as done.
 Rules of the implementation for drafts (phase 2):
 
 - A draft lives where mail clients keep drafts: on IMAP in the folder with
-  the drafts role, flagged `\Draft`. An account without one answers `409`.
+  the drafts role, flagged `\Draft`. An account without one lacks `drafts`
+  and answers `501`.
 - Its id is a message id, so `get_message` and the raw source read it. The
   draft routes reach only messages in the drafts folder: any other id
   answers `404`, so the right `drafts` cannot touch other mail.
