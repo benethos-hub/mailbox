@@ -24,6 +24,7 @@ from ..activity import ActivityLog, Actor
 from ..activity import accounts as said
 from ..changes import ChangeFeed
 from ..rights import Access
+from . import abilities
 from .adapters import Adapters
 from .checks import (
     AccountChecks,
@@ -88,7 +89,7 @@ class AccountService:
         the address regardless of case, the provider, the status."""
         wanted = (address or "").casefold()
         return [
-            self._with_credentials(account)
+            self._as_seen(access, account)
             for account in self._repository.list()
             if access.allows("list_accounts", account.id)
             and (may is None or access.allows(may, account.id))
@@ -113,14 +114,14 @@ class AccountService:
 
     def get(self, access: Access, account_id: str) -> Account:
         access.require("get_account", account_id)
-        return self._with_credentials(self._repository.get(account_id))
+        return self._as_seen(access, self._repository.get(account_id))
 
     def visible(self, access: Access, account_id: str) -> Account:
         """The account as whoever may do anything on it sees it, as in
         ``/v1/me``: whoever may only write drafts there sees its address."""
         if not access.operations_on(account_id):
             access.require("get_account", account_id)
-        return self._with_credentials(self._repository.get(account_id))
+        return self._as_seen(access, self._repository.get(account_id))
 
     async def create(
         self,
@@ -197,7 +198,7 @@ class AccountService:
             if self._on_connect is not None:
                 self._on_connect(access, account.id)
         self._ready(account.id)
-        return self._with_credentials(self._repository.get(account.id))
+        return self._as_seen(access, self._repository.get(account.id))
 
     async def update(
         self,
@@ -237,7 +238,7 @@ class AccountService:
             await self._adapters.drop(account_id)
             self._adapters.set_status(account_id, AccountStatus.CONNECTED)
             self._ready(account_id)
-        return self._with_credentials(self._repository.get(account_id))
+        return self._as_seen(access, self._repository.get(account_id))
 
     async def _check_update(
         self,
@@ -302,7 +303,7 @@ class AccountService:
         )
         # A rejected login left the account alone until now.
         self._ready(account_id)
-        return self._with_credentials(account)
+        return self._as_seen(access, account)
 
     async def delete(self, access: Access, account_id: str) -> None:
         access.require("delete_account", account_id)
@@ -334,12 +335,15 @@ class AccountService:
         this deployment."""
         return self._adapters.signs_in_with_oauth(provider)
 
-    def _with_credentials(self, account: Account) -> Account:
-        """The account as callers see it: which credentials are stored, and
-        its settings."""
+    def _as_seen(self, access: Access, account: Account) -> Account:
+        """The account as the caller sees it: which credentials are stored,
+        its settings, and the operations the caller can run there."""
         return account.model_copy(
             update={
                 "credentials": self._vault.info(account.id),
                 "settings": self._repository.settings(account.id),
+                "operations": abilities.operations(
+                    access.operations_on(account.id), abilities.of_account(account)
+                ),
             }
         )

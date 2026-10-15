@@ -2,7 +2,9 @@
 asked to do it (docs/UNIFORM.md, rule R3).
 
 ``NEEDS`` is the one table of what each operation needs, and
-``lacking`` names what an account's stored abilities leave out. The
+``lacking`` names what an account's stored abilities leave out.
+``operations`` answers, from the same table, which of the operations a
+caller may run on an account the account can do (UNIFORM U1). The
 domain answers ``501 not_supported`` for it, the same for every kind of
 account. An adapter implements only the protocols of ``data.providers``
 it can, and the functions below hand them out, answering ``501`` too
@@ -16,6 +18,7 @@ from dataclasses import dataclass
 
 from ...data.models import (
     Abilities,
+    Account,
     Capability,
     Mark,
     MessageFilter,
@@ -90,6 +93,46 @@ _CANNOT: Mapping[Capability, str] = {
 }
 
 _MARKS = frozenset(Mark)
+# The parts of a change of messages, any one of which makes it worth
+# offering.
+_CHANGES = (
+    Capability.READ_STATE,
+    Capability.STARS,
+    Capability.KEYWORDS,
+    Capability.MOVE,
+)
+
+
+def offered(operation: str, abilities: Abilities) -> bool:
+    """Whether the account can do ``operation`` at all. A change of
+    messages where it can change one part of them, a delete where it has
+    the trash or deletes for good, a batch where it can do either."""
+    if operation in NEEDS:
+        return lacking(abilities, NEEDS[operation]) is None
+    if operation == "update_message":
+        changes = any(abilities.has(c) for c in _CHANGES)
+        return changes or bool(abilities.marks.written)
+    if operation == "delete_message":
+        return abilities.has(Capability.TRASH)
+    if operation == "delete_message_permanent":
+        return abilities.has(Capability.PURGE)
+    if operation == "batch_messages":
+        return any(
+            offered(o, abilities)
+            for o in ("update_message", "delete_message", "delete_message_permanent")
+        )
+    return True
+
+
+def operations(allowed: Iterable[str], abilities: Abilities) -> list[str]:
+    """Of the operations a caller may run on an account, those the account
+    can do, sorted: its rights and its abilities together."""
+    return sorted(o for o in allowed if offered(o, abilities))
+
+
+def of_account(account: Account) -> Abilities:
+    """What an account answered it can do, as it is stored with it."""
+    return Abilities(capabilities=account.capabilities, marks=account.marks)
 
 
 def for_update(changes: MessageUpdate) -> Needs:

@@ -42,3 +42,6 @@ class Account:
     # "move", "search", "drafts". Empty until its server was asked once.
     capabilities: frozenset[str]
     marks: Marks = Marks()
+    # The operations the caller can run on it: its rights there that the
+    # account can do as well, e.g. "list_messages", "create_draft".
+    operations: frozenset[str] = frozenset()

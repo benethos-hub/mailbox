@@ -422,7 +422,7 @@ order, each step one pull request or more:
    done
 7. **IMAP emulates `all`** where the server has no `\All`, done
 8. **The UI and the MCP server know no providers**: the operations of
-   an account from the API, the marks from `mailbox-common`
+   an account from the API, the marks from `mailbox-common`, done
 9. **Setting up an account, described by the domain**
 
 Steps 5 to 8 change the contract and ship together as 0.5.0.

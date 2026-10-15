@@ -8,6 +8,13 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- An account answers `operations`, in `GET /v1/accounts/{id}`, the list
+  and `GET /v1/me`: the operations the caller can run there, its rights
+  and what the account can do together, by their names in the catalogue
+  of rights. A client offers what is in it and needs no knowledge of
+  providers. The Python client reads it as `Account.operations`.
+- The MCP server shows a mail's marks in words, such as `answered`,
+  apart from its keywords, and its tools name no provider.
 - A send of a reply or a forward answers `original_marked`: whether the
   original carries `$answered` or `$forwarded` now. False where the
   account does not write that mark, as on Gmail, or the mark failed.
@@ -72,6 +79,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Breaking:** `operations` of an account in `GET /v1/me` leaves out
+  what the account cannot do, such as `list_threads` on POP3. It named
+  the caller's rights alone.
 - **Breaking:** the capabilities of an account are finer, each guarding
   one thing: `read_state`, `stars`, `keywords`, `folders`, `move`,
   `trash`, `purge`, `labels`, `search`, `drafts`, `send`, `sent_copy`,

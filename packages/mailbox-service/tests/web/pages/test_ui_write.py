@@ -52,12 +52,12 @@ def test_keywords_on_a_message(
 
     held().append("$answered")
     url = f"/ui/accounts/{account_id}/mail/m3"
-    # Flags in words, a server's own note left out.
-    held().append("$HasNoAttachment")
+    # A mark in its words, another keyword of the protocol by its name.
+    held().append("$Important")
     flags = ui.get(url).text
     assert '<span class="tag">answered</span>' in flags
-    assert "hasnoattachment" not in flags.lower()
-    held().remove("$HasNoAttachment")
+    assert '<span class="tag">Important</span>' in flags
+    held().remove("$Important")
     post(ui, f"{url}/keywords", {"add": "  project-x "})
     post(ui, f"{url}/keywords", {"add": "later"})
     post(ui, f"{url}/keywords", {"add": "LATER"})  # held already

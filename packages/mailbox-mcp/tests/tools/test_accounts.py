@@ -39,9 +39,14 @@ async def test_list_accounts_says_what_is_allowed(api: Callable) -> None:
 
 
 async def test_list_accounts_names_what_an_account_cannot_do(api: Callable) -> None:
-    """A POP3 mailbox: no folders, no read state, no search, no drafts.
-    The drafts tools are not offered there, the rest is named."""
-    pop3 = {**ME["accounts"][0], "capabilities": ["purge", "send"]}
+    """A mailbox without folders, read state, search or drafts. The API
+    answers no drafts operation there, so the drafts tools are not
+    offered, and the rest is named."""
+    pop3 = {
+        **ME["accounts"][0],
+        "operations": READ,
+        "capabilities": ["purge", "send"],
+    }
     api(routes={"/v1/me": {**ME, "accounts": [pop3]}})
     assert await accounts.list_accounts() == [
         {

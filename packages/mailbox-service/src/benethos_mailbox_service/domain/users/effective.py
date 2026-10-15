@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 from ...data.models import AccountStatus, Capability, Marks
-from ..accounts import Adapters
+from ..accounts import Adapters, of_account, operations
 from ..rights import Access
 from ..sync import SyncState
 
@@ -29,11 +29,14 @@ class Sending:
 
 @dataclass(frozen=True, slots=True)
 class AccountRights:
-    """One account the caller may act on, and what it may do there."""
+    """One account the caller may act on, and what it may do there:
+    ``rights`` what its grants allow, ``operations`` those of them the
+    account can do as well."""
 
     id: str
     email: str
     display_name: str | None
+    rights: list[str]
     operations: list[str]
     warnings: list[str]
     # One entry per grant that allows sending here. A send passes when one
@@ -80,8 +83,8 @@ class Effective:
         for account_id in self._adapters.ids():
             if visible_to is not None and not visible_to.sees(account_id):
                 continue
-            operations = access.operations_on(account_id)
-            if operations:
+            allowed = access.operations_on(account_id)
+            if allowed:
                 account = self._adapters.record(account_id)
                 sync = self._synced(account_id) if self._synced else SyncState()
                 accounts.append(
@@ -89,8 +92,9 @@ class Effective:
                         id=account.id,
                         email=account.email,
                         display_name=account.display_name,
-                        operations=sorted(operations),
-                        warnings=_warnings(access, account_id, operations),
+                        rights=sorted(allowed),
+                        operations=operations(allowed, of_account(account)),
+                        warnings=_warnings(access, account_id, allowed),
                         sending=self._sending(access, account_id),
                         status=account.status,
                         capabilities=account.capabilities,

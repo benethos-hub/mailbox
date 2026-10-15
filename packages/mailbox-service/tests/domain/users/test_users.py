@@ -52,7 +52,11 @@ def test_me_for_a_limited_user(app_client: TestClient, services: Services) -> No
             "id": a,
             "email": "a@example.com",
             "display_name": None,
-            "operations": sorted(permissions.GROUPS["mail.read"]),
+            # What mail.read allows that the account can do: it keeps no
+            # threads.
+            "operations": sorted(
+                set(permissions.GROUPS["mail.read"]) - {"list_threads", "get_thread"}
+            ),
             "warnings": [],
             "sending": [],
             "capabilities": [
