@@ -228,6 +228,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+- The UI shows a refusal when an account is connected, and one of a
+  send or a draft, with every secret masked, as every other page
+  does. A server that echoed a password showed it there.
 - A sent draft marks the message it answers or forwards only where the
   caller may change that message, with `update_message` and a grant
   that reaches its folder. Any client that writes drafts could name a

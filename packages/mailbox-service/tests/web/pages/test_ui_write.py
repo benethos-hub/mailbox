@@ -7,11 +7,14 @@ import html
 import re
 from email import message_from_bytes
 
+import pytest
 from fastapi.testclient import TestClient
 
+from benethos_mailbox_common.log import redact
 from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import Folder, FolderRole, Grant
 from benethos_mailbox_service.data.providers.memory import MemoryProvider
+from benethos_mailbox_service.errors import ProviderError
 
 from ...conftest import browser_user, memory_of, relearn
 from ...ui_helpers import csrf_of, post, sign_in
@@ -314,6 +317,25 @@ def test_a_failed_send_keeps_what_was_typed(
     )
     assert "my long text" in answer.text and 'value="Keep"' in answer.text
     assert memory_of(services, account_id).outbox == []
+
+
+def test_a_failed_send_shows_no_secret(
+    ui: TestClient, account_id: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A server's refusal may echo a credential: the page shows it redacted."""
+    redact.note("s3cret-pw")
+
+    async def refused(*args: object, **kwargs: object) -> None:
+        raise ProviderError("the server said: s3cret-pw is wrong")
+
+    monkeypatch.setattr(MemoryProvider, "send", refused)
+    answer = post(
+        ui,
+        f"/ui/accounts/{account_id}/compose",
+        {"to": "bob@example.com", "subject": "Hi", "text": "x", "do": "send"},
+    )
+    assert "the server said" in answer.text
+    assert "s3cret-pw" not in answer.text
 
 
 def test_a_bad_address_is_named(ui: TestClient, account_id: str) -> None:

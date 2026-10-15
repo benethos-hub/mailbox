@@ -9,6 +9,8 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, Response
 from pydantic import SecretStr
 
+from benethos_mailbox_common.log import redact
+
 from ....data.models import AccountStatus, ProviderType
 from ....domain.accounts import AccountService, connection_of, connections
 from ....domain.discovery import connectable, sign_ins
@@ -221,7 +223,7 @@ async def create_account(
             "provider": provider.value,
             "settings": settings,
             "display_name": display_name,
-            "error": exc.message,
+            "error": redact.redact(exc.message),
         }
         return _connect_page(request, email, status_of(exc), retry=retry)
     return back(request, f"/ui/accounts/{account.id}", f"{account.email} connected.")
