@@ -148,7 +148,21 @@ class ParsedMessage:
                 disposition=(part.content_disposition or "").lower(),
             )
             for part in self._parsed.attachments
+            if not _body(part)
         ]
+
+
+def _body(part: Any) -> bool:
+    """Whether a part imap-tools lists as an attachment is the text of the
+    body. It lists every part with a Content-ID, and Exchange gives the
+    body one when files are added to a draft one by one. Without a name
+    and not marked as an attachment, such a text is the body, as
+    ``text`` and ``html`` read it."""
+    return (
+        part.content_type in ("text/plain", "text/html")
+        and not part.filename
+        and (part.content_disposition or "").lower() != "attachment"
+    )
 
 
 # Headers that hold addresses: a name in them is encoded on its own.
