@@ -87,8 +87,8 @@ Two kinds of right, kept in two lists of a user or a role (8.1):
   holds that there already.
 
 Two operations are open to every user: `get_me` and `list_permissions`.
-One takes no token: `get_linked_attachment`, whose secret is the
-credential. Its `x-permission` is `link`, and it acts with the rights
+A third takes no token at all: `get_linked_attachment`, whose secret is
+the credential. Its `x-permission` is `link`, and it acts with the rights
 of the token that made the link, `get_attachment` and
 `share_attachment`, as they are when it is used.
 

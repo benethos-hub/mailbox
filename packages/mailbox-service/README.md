@@ -172,6 +172,7 @@ names the settings file it read and the database at start.
 | `MAILBOX_SERVICE_THREAD_MESSAGES` | `500` | the messages a thread lists at most, the newest |
 | `MAILBOX_SERVICE_THREAD_REFERENCES` | `20` | threads the service keeps itself (IMAP): of the `References` of a message, the last ones kept to find its thread |
 | `MAILBOX_SERVICE_CHANGES_DAYS` | `7` | days the change feed keeps a change |
+| `MAILBOX_SERVICE_LINK_SECONDS` | `120` | seconds a link to an attachment holds at most, any value from 1 on. 60 to 300 is the range to keep to: whoever holds the URL fetches the file, and the URL stands in access logs, such as a reverse proxy's |
 | `MAILBOX_SERVICE_AUDIT_DAYS` | `90` | days the audits of sends and of administration keep a record. `0` keeps every record. |
 | `MAILBOX_SERVICE_WEBHOOK_ATTEMPTS` | `8` | tries of a webhook post before its events are dropped |
 | `MAILBOX_SERVICE_WEBHOOK_FIRST_RETRY` | `30` | seconds before the second try, doubled for each further one |
@@ -273,8 +274,11 @@ restored one opens with that key alone. Note its recovery key, then pass
 
 ## Users, rights and tokens
 
-Every route under `/v1` needs `Authorization: Bearer <token>`. Only
-`/health` is open. A token belongs to a user. The user's grants decide
+Every route under `/v1` needs `Authorization: Bearer <token>`, but
+`GET /v1/links/{secret}`: a link to an attachment that
+`share_attachment` made for another service, whose secret is the
+credential. It hands the file out once, until it ends. `/health` is
+open. A token belongs to a user. The user's grants decide
 what it may do, per account and per operation: for example read mail,
 write drafts, send, manage accounts. Grants can limit sending to certain
 recipients and to a number of mails per day. Every send is recorded in an

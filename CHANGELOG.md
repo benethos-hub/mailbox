@@ -18,7 +18,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   act and hold `get_attachment` and `share_attachment` on the message.
   Every refusal answers the same `404`. Whoever holds the URL fetches the
   file. The service logs its path masked, but a reverse proxy in front
-  keeps the URL in its access log for a moment. The Python client has
+  writes the whole URL into its access log, where it opens the file
+  until the link is used or ends. The Python client has
   `share_attachment`, the MCP server a tool of the same name.
 - An account answers `operations`, in `GET /v1/accounts/{id}`, the list
   and `GET /v1/me`: the operations the caller can run there, its rights

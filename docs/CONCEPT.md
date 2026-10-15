@@ -1532,6 +1532,7 @@ with the role
   | `mail.delete` | `delete_message_permanent` (`delete_message` with `permanent=true`), `delete_folder` |
   | `drafts` | `list_drafts`, `create_draft`, `update_draft`, `delete_draft` |
   | `send` | `send_message`, `send_draft` |
+  | `mail.share` | `share_attachment`: a link to an attachment for another service (6.3), in no role template |
   | `audit` | `list_sends`, `list_all_sends` on accounts, `list_activity` in `service` |
   | `accounts.manage` | `update_account`, `delete_account`, `verify_account`, credentials of mail accounts |
   | `accounts.connect` | `discover_account`, `start_device_oauth`, `poll_device_oauth`, `create_account`. Of the service |
@@ -1872,6 +1873,7 @@ one or two `operationId`s.
 | `get_message` | read | `get_message`, body shortened, `max_chars` param |
 | `get_thread` | read | `get_thread`, then `get_message` for the newest 20 mails: a conversation as text, from a mail of it or its thread id (6.3) |
 | `get_attachment` | read | `get_attachment`: images as images, PDF pages as images, text types as text, other types by name only |
+| `share_attachment` | share | `share_attachment`: a link to an attachment for another service, which fetches the file itself (6.3) |
 | `whats_new` | read | `list_all_changes` across accounts, or `list_changes` for one, the "what came in since" tool |
 | `update_messages` | write | `batch_messages`: mark read, star, move, archive, trash, add and take off keywords and labels |
 | `create_folder` | write | `create_folder` |
