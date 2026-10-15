@@ -33,7 +33,13 @@ from benethos_mailbox_common.values import secret
 
 from ...common.clock import utc_now
 from ...common.locks import KeyedLocks
-from ...data.providers import Deltas, FolderChanges, ThreadHeaders
+from ...data.providers import (
+    Deltas,
+    FlagChanges,
+    FolderChanges,
+    Reads,
+    ThreadHeaders,
+)
 from ...data.storage import IndexChanges, IndexEntry, MessageIndexRepository
 from ...errors import (
     ChangesExpiredError,
@@ -210,9 +216,12 @@ class SyncService:
     async def _flag_changes(
         self, account_id: str, folder_id: str, since: str, natives: list[str]
     ) -> list[str]:
-        return await self._adapters.call(
-            account_id, lambda p: p.flag_changes(folder_id, since, natives)
-        )
+        async def asked(adapter: Reads) -> list[str]:
+            if not isinstance(adapter, FlagChanges):
+                return []  # the adapter tells no flag changes this way
+            return await adapter.flag_changes(folder_id, since, natives)
+
+        return await self._adapters.call(account_id, asked)
 
     def thread_ids(self, account_id: str, message_ids: list[str]) -> dict[str, str]:
         """The thread of each message the index has one for. Empty where

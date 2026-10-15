@@ -8,6 +8,7 @@ from pydantic import SecretStr
 
 from benethos_mailbox_service.data.models import MessageFilter
 from benethos_mailbox_service.data.protocols.pop3 import Pop3Session
+from benethos_mailbox_service.data.providers import FlagChanges
 from benethos_mailbox_service.data.providers.pop3 import Pop3Provider, mappers
 from benethos_mailbox_service.data.providers.pop3 import provider as pop3_module
 from benethos_mailbox_service.errors import (
@@ -240,4 +241,4 @@ async def test_contents_and_headers(
 
 async def test_no_flags_to_compare(server: FakePop3Server) -> None:
     adapter = provider(server)
-    assert await adapter.flag_changes(INBOX, "x", [mappers.message_id("uid-1")]) == []
+    assert not isinstance(adapter, FlagChanges)

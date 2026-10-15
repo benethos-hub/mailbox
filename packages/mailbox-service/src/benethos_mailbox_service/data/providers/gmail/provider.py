@@ -119,12 +119,6 @@ class GmailProvider:
     async def thread_messages(self, thread_id: str, limit: int) -> ThreadMessages:
         return await messages.thread_messages(self._api, thread_id, limit)
 
-    async def flag_changes(
-        self, folder_id: str, since: str, message_ids: list[str]
-    ) -> list[str]:
-        """Gmail reports changes since a history id instead."""
-        return []
-
     async def abilities(self) -> Abilities:
         """The same for every Gmail account. Its labels are the folders,
         and it keeps no keywords. A draft shows by its label, but no mark

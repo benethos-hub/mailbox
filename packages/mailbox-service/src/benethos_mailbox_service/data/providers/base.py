@@ -150,14 +150,6 @@ class Reads(Protocol):
         gone are left out."""
         ...
 
-    async def flag_changes(
-        self, folder_id: str, since: str, message_ids: list[str]
-    ) -> list[str]:
-        """Those of ``message_ids``, all in the folder, whose flags changed
-        since the folder had the state ``since``. Empty where the provider
-        cannot tell."""
-        ...
-
     async def verify(self) -> None:
         """Log in afresh and forget an earlier rejected login. Raises
         ``ProviderAuthError`` if the credential does not work."""
@@ -269,6 +261,22 @@ class Deltas(Protocol):
         raises ``ChangesExpiredError``. Without a token but with ``since``,
         after such an error, the messages that arrived since then carry
         ``created``."""
+        ...
+
+
+@runtime_checkable
+class FlagChanges(Protocol):
+    """Tells which messages of a folder had their flags changed, where the
+    server counts its changes (IMAP with CONDSTORE). Where an adapter has
+    no such count, a change of flags reaches the sync another way: a
+    provider's changes since a point (``Deltas``), or not at all."""
+
+    async def flag_changes(
+        self, folder_id: str, since: str, message_ids: list[str]
+    ) -> list[str]:
+        """Those of ``message_ids``, all in the folder, whose flags changed
+        since the folder had the state ``since``. Empty where the server
+        cannot tell this time."""
         ...
 
 

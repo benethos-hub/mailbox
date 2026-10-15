@@ -121,12 +121,6 @@ class JmapProvider:
     async def thread_messages(self, thread_id: str, limit: int) -> ThreadMessages:
         return await messages.thread_messages(self._account, thread_id, limit)
 
-    async def flag_changes(
-        self, folder_id: str, since: str, message_ids: list[str]
-    ) -> list[str]:
-        """JMAP reports changes since a state instead."""
-        return []
-
     async def abilities(self) -> Abilities:
         """From the session and the folders: sending needs the server's
         submission and a drafts or sent folder to send from, push its
