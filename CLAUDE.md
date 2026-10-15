@@ -227,6 +227,18 @@ packages/
                             #   of this file lead somewhere, and a
                             #   README of two sections or more lists
                             #   them in its contents at the top
+      test_module_tree.py   # the trees of docs/ARCHITECTURE.md
+                            #   section 3 against the disk
+      test_openapi.py       # docs/openapi.json equals the code's
+      test_packaging.py     # the LICENSE copies, the Python versions,
+                            #   one version and its examples in the
+                            #   documentation
+      test_mcp_registry.py  # the MCP Registry entry held to the package
+      test_mcpb.py          # the Claude Desktop bundle held to the package
+      test_cli.py           # the command line
+      test_errors.py        # the errors every layer raises
+      test_logs.py          # the log of serve: what reaches it, in
+                            #   which form
   mailbox-client/         # the Python client of the REST API, async and
                           #   sync, no image
     src/benethos_mailbox_client/    # modules: docs/ARCHITECTURE.md

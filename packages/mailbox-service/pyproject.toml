@@ -77,7 +77,7 @@ dependencies = [
     "cryptography>=50",
     # The OS credential store that holds the master key on a host.
     "keyring>=25",
-    # IMAP: search builder, message parsing, folder name decoding.
+    # The mail parser of data/mail/parse.py.
     "imap-tools>=1.10",
     # Worker threads for the synchronous IMAP library.
     "anyio>=4.14.2",

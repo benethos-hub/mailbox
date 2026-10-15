@@ -1,13 +1,14 @@
 """The wire, one library each: ``imap`` (IMAPClient), ``smtp`` (smtplib),
 ``http`` (httpx), ``oauth`` (OAuth 2.0 over ``http``), ``pop3``
-(poplib), ``jmap`` (JMAP over ``http``). ``transport`` holds TLS, the
+(poplib), ``jmap`` (JMAP over ``http``). ``imap``, ``http``, ``oauth``
+and ``jmap`` are packages, one module per part. ``transport`` holds TLS, the
 timeouts and the failures below every library. ``wire`` reads the JSON
 a server sends into shapes, for the protocols here and the adapters.
 
 Each module speaks its protocol and nothing else: no ids, no folders of the
 API, no decisions. Library errors leave it as ``MailboxServiceError``. It
 imports nothing of ``providers``: the adapters there build on it, and
-``discovery`` reads HTTP through it.
+``discovery`` reads HTTP and JMAP through it.
 """
 
 from __future__ import annotations

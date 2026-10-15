@@ -1,11 +1,16 @@
-"""Provider adapters and their registry.
+"""Provider adapters and what they share.
+
+``base`` holds the contract, ``rules`` what every adapter answers the
+same way, ``connections`` how each kind of account is connected, and
+``guard``, ``settings``, ``sender`` and ``mailserver`` what several
+adapters build on. ``registry`` picks the adapter of an account.
 
 One directory per provider, named like its registry key. Inside it:
 ``provider.py`` (the adapter), ``mappers.py`` where a foreign format is
-translated (pure functions, testable offline), and a narrow export in
-``__init__.py``. ``registry`` picks the adapter of an account. Everything
-outside ``data/providers/`` reaches an adapter through
-:func:`build_provider`, never by importing a provider module.
+translated (pure functions, testable offline), the rest one module per
+subject, and a narrow export in ``__init__.py``. Everything outside
+``data/providers/`` reaches an adapter through :func:`build_provider`,
+never by importing a provider module.
 """
 
 from __future__ import annotations
