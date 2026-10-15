@@ -349,6 +349,7 @@ def _summary_fields(found: dict[str, Any]) -> dict[str, Any]:
         "sender": _address(sender) if sender else None,
         "to": addresses(found.get("to")),
         "date": maybe_time(found.get("date")),
+        "received": maybe_time(found.get("received")),
         "snippet": found.get("snippet"),
         "unread": bool(found.get("unread")),
         "starred": bool(found.get("starred")),

@@ -383,7 +383,9 @@ def test_dates_the_server_writes_oddly() -> None:
     email = Email.model_validate(
         {"id": "e", "sentAt": "soon", "receivedAt": "2026-10-06T10:00:00Z"}
     )
-    assert mappers.summary(email).date == datetime(2026, 10, 6, 10, tzinfo=UTC)
+    summary = mappers.summary(email)
+    assert summary.date is None
+    assert summary.received == datetime(2026, 10, 6, 10, tzinfo=UTC)
 
 
 def test_what_is_odd_in_an_email_is_left_out() -> None:

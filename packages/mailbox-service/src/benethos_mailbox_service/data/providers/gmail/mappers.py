@@ -102,14 +102,13 @@ def summary(message: GmailMessage, known: set[str]) -> MessageSummary:
     headers = message.payload.headers if message.payload else []
     parsed = parse.from_headers((h.name, h.value) for h in headers)
     fields = convert.summary_fields(parsed)
-    if fields.get("date") is None:
-        fields["date"] = received(message)
     return MessageSummary.model_validate(
         {
             "id": message.id,
             "thread_id": message.thread_id,
             **_labels(message, known),
             "snippet": html.unescape(message.snippet) if message.snippet else None,
+            "received": received(message),
             **fields,
         }
     )
@@ -119,14 +118,13 @@ def message(meta: GmailMessage, raw: bytes, known: set[str]) -> Message:
     """The whole message: what Gmail knows of it, and what its source says."""
     parsed = parse.ParsedMessage(raw)
     fields = {**convert.summary_fields(parsed), **convert.message_fields(parsed)}
-    if fields.get("date") is None:
-        fields["date"] = received(meta)
     return Message.model_validate(
         {
             "id": meta.id,
             "thread_id": meta.thread_id,
             **_labels(meta, known),
             "snippet": html.unescape(meta.snippet) if meta.snippet else None,
+            "received": received(meta),
             **fields,
         }
     )

@@ -23,6 +23,7 @@ from ...data.models import (
     Page,
     Thread,
     ThreadSummary,
+    received_or_written,
 )
 from ...data.providers import Reads
 from ...errors import MailboxServiceError, NotFoundError, missing
@@ -238,7 +239,7 @@ def thread_of(
 
 
 def _oldest_first(messages: list[MessageSummary]) -> list[MessageSummary]:
-    """By date, those without one last. The order they came stays among
+    """By when they came, those without a time last. The order they came stays among
     those of the same date."""
     return sorted(messages, key=lambda m: _when(m) or _LAST)
 
@@ -248,8 +249,8 @@ _LAST = datetime.max.replace(tzinfo=UTC)
 
 
 def _when(message: MessageSummary) -> datetime | None:
-    """The date, in UTC where it names no zone."""
-    date = message.date
+    """When it came, in UTC where it names no zone."""
+    date = received_or_written(message)
     if date is None:
         return None
     return date if date.tzinfo else date.replace(tzinfo=UTC)

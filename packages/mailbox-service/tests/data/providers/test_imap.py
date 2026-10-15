@@ -175,6 +175,19 @@ async def test_summary_fields(server: FakeMailBox) -> None:
     assert ("fetch", ("9", "5", "4", "3", "2", "1"), "header") in server.calls
 
 
+async def test_date_is_the_header_and_received_the_internal_date(
+    server: FakeMailBox,
+) -> None:
+    arrived = datetime(2026, 9, 2, 8, 30, tzinfo=UTC)
+    server.arrivals[("INBOX", 1)] = arrived
+    adapter = provider(server)
+    page = await adapter.list_messages(None, limit=10, cursor=None, search=None)
+    oldest = page.items[-1]
+    assert oldest.date == datetime(2026, 9, 1, 10, 0, tzinfo=UTC)
+    assert oldest.received == arrived
+    assert (await adapter.get_message(oldest.id)).received == arrived
+
+
 async def test_filters(server: FakeMailBox) -> None:
     imap = provider(server)
     unread = await imap.list_messages(

@@ -3,6 +3,7 @@ read from its MIME, and a mail sent as a draft whose copy keeps its id."""
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from email import message_from_bytes
 from email.message import EmailMessage
 from email.policy import default
@@ -62,6 +63,17 @@ async def test_a_message(graph: FakeGraph) -> None:
     content = await provider.get_attachment(message_id, message.attachments[0].id)
     assert content.data == b"%PDF"
     assert (await provider.get_raw(message_id)).startswith(b"Subject:")
+
+
+async def test_date_is_when_it_was_sent_and_received_when_it_came(
+    graph: FakeGraph,
+) -> None:
+    message_id = graph.add_message(
+        sentDateTime="2026-09-01T09:59:00Z", receivedDateTime="2026-09-01T10:00:00Z"
+    )
+    message = await adapter(graph).get_message(message_id)
+    assert message.date == datetime(2026, 9, 1, 9, 59, tzinfo=UTC)
+    assert message.received == datetime(2026, 9, 1, 10, tzinfo=UTC)
 
 
 async def test_a_plain_text_mail_has_no_html(graph: FakeGraph) -> None:

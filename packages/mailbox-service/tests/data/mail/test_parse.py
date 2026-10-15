@@ -3,6 +3,7 @@ attached."""
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from email.message import EmailMessage
 
 from benethos_mailbox_service.data.mail.parse import ParsedMessage
@@ -53,3 +54,21 @@ def test_an_image_in_the_html_is_listed() -> None:
     html.add_related(b"\x89PNG", "image", "png", cid="<logo@example.com>")
     [image] = ParsedMessage(mail.as_bytes()).attachments
     assert image.content_type == "image/png" and not image.attached
+
+
+def test_received_is_the_time_of_the_topmost_received_header() -> None:
+    raw = (
+        b"Received: from relay.example.org by mx.example.org;\r\n"
+        b" Tue, 01 Sep 2026 12:00:05 +0200\r\n"
+        b"Received: from client by relay.example.org;\r\n"
+        b" Tue, 01 Sep 2026 09:59:00 +0000\r\n"
+        b"Date: Tue, 01 Sep 2026 09:58:00 +0000\r\n"
+        b"Subject: Hi\r\n\r\nHello\r\n"
+    )
+    assert ParsedMessage(raw).received == datetime(2026, 9, 1, 10, 0, 5, tzinfo=UTC)
+
+
+def test_received_is_none_without_a_readable_header() -> None:
+    assert ParsedMessage(b"Subject: Hi\r\n\r\nHello\r\n").received is None
+    odd = b"Received: from relay.example.org; not a date\r\nSubject: Hi\r\n\r\n"
+    assert ParsedMessage(odd).received is None

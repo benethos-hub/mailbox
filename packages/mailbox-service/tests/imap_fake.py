@@ -84,6 +84,8 @@ class FakeMailBox(FolderCommands):
         # CONDSTORE: one sequence across the mailbox. Only answered when
         # "CONDSTORE" is announced.
         self.modseq = 0
+        # INTERNALDATE by folder and UID, where it is not the Date header.
+        self.arrivals: dict[tuple[str, int], datetime] = {}
         # imaplib's store of response codes, which IMAPClient keeps in _imap.
         self._imap = SimpleNamespace(untagged_responses={})
 
@@ -299,6 +301,9 @@ class FakeMailBox(FolderCommands):
             data: dict[bytes, Any] = {b"SEQ": number + 1}
             if "FLAGS" in items:
                 data[b"FLAGS"] = tuple(f.encode() for f in flags)
+            if "INTERNALDATE" in items:
+                arrived = self.arrivals.get((self.selected, uid))
+                data[b"INTERNALDATE"] = _local(arrived or _received(head))
             if kind == "message-id":
                 [asked] = [i for i in items if "HEADER.FIELDS" in i]
                 names = asked.split("(", 1)[1].rstrip(")]").split()
@@ -443,6 +448,19 @@ def _matches(
             return False
         negate = False
     return True
+
+
+def _received(head: bytes) -> datetime:
+    """When the fake server received a message: at its Date header, or at
+    a fixed time without one."""
+    mail = BytesParser(policy=default).parsebytes(head)
+    sent = mail["Date"].datetime if mail["Date"] else None
+    return sent if sent else datetime(2026, 1, 1, tzinfo=UTC)
+
+
+def _local(when: datetime) -> datetime:
+    """INTERNALDATE as IMAPClient answers it: local time without a zone."""
+    return when.astimezone().replace(tzinfo=None)
 
 
 def _partial(items: list[str], section: str) -> int:

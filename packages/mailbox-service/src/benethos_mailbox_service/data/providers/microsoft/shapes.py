@@ -65,6 +65,7 @@ class Message(wire.CamelShape):
     subject: Text = None
     sender: Annotated[Recipient | None, wire.OrNone] = Field(None, alias="from")
     to_recipients: Recipients = []
+    sent_date_time: When = None
     received_date_time: When = None
     created_date_time: When = None
     body_preview: Text = None

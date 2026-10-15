@@ -3,7 +3,7 @@ changing, folders, drafts and sending."""
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import UTC, date, datetime
 from email import message_from_bytes
 from email.policy import default
 
@@ -182,6 +182,17 @@ async def test_a_summary_from_the_headers(gmail: FakeGmail) -> None:
     assert summary.folder_ids == ["INBOX", "ALL_MAIL"]
     assert summary.snippet == "Hi & there"
     assert summary.thread_id and summary.date is not None
+
+
+async def test_date_is_the_header_and_received_gmails_time(gmail: FakeGmail) -> None:
+    gmail.add_message()
+    gmail.add_message(raw=b"From: a@example.com\r\nSubject: Undated\r\n\r\nHi")
+    page = await adapter(gmail).list_messages("INBOX", limit=5, cursor=None)
+    undated, dated = page.items
+    assert dated.date == datetime(2026, 9, 1, 10, tzinfo=UTC)
+    assert dated.received is not None and dated.received != dated.date
+    assert undated.subject == "Undated"
+    assert undated.date is None and undated.received is not None
 
 
 async def test_all_mail_leaves_out_the_trash_and_no_folder_does_not(

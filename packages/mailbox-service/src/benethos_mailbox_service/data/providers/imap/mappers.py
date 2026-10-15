@@ -239,6 +239,7 @@ def _imap_fields(msg: FetchedMessage, folder: str, uidvalidity: int) -> dict[str
         "unread": "\\seen" not in flags,
         "starred": "\\flagged" in flags,
         "keywords": keywords(msg.flags),
+        "received": msg.internal_date,
     }
 
 

@@ -49,7 +49,8 @@ class MessageSummary:
     subject: str | None
     sender: Address | None  # "from" in the API
     to: list[Address]
-    date: datetime | None
+    date: datetime | None  # the Date header
+    received: datetime | None  # when the account received it
     snippet: str | None
     unread: bool
     starred: bool

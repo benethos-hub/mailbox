@@ -14,7 +14,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from email.header import Header
-from email.utils import formataddr, getaddresses
+from email.utils import formataddr, getaddresses, parsedate_to_datetime
 from functools import cached_property
 from typing import Any
 
@@ -104,6 +104,19 @@ class ParsedMessage:
 
     def header(self, name: str) -> str | None:
         return self.headers.get(name.lower())
+
+    @property
+    def received(self) -> datetime | None:
+        """The time of the topmost ``Received`` header: when the last server
+        took the message in. None without one, or where it cannot be read."""
+        value = self.header("received")
+        if not value or ";" not in value:
+            return None
+        try:
+            when = parsedate_to_datetime(" ".join(value.rsplit(";", 1)[1].split()))
+        except (TypeError, ValueError, IndexError):
+            return None
+        return when if when.tzinfo is not None else when.replace(tzinfo=UTC)
 
     @property
     def message_id(self) -> str | None:
