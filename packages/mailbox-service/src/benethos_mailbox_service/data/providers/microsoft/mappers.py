@@ -84,8 +84,8 @@ def _addresses(values: Recipients) -> list[Address]:
 
 
 def keywords(item: GraphMessage) -> list[str]:
-    """Lower case, as the other adapters answer keywords."""
-    found = [c.lower() for c in item.categories if c]
+    """The categories as Outlook spells them, and ``$draft`` for a draft."""
+    found = [c for c in item.categories if c]
     if item.is_draft:
         found.append(DRAFT_KEYWORD)
     return found

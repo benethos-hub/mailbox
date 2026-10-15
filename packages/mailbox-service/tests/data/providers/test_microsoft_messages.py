@@ -55,7 +55,7 @@ async def test_a_message(graph: FakeGraph) -> None:
     provider = adapter(graph)
     message = await provider.get_message(message_id)
     assert message.sender is not None and message.sender.email == "alice@example.com"
-    assert message.unread and message.starred and message.keywords == ["work"]
+    assert message.unread and message.starred and message.keywords == ["Work"]
     assert message.text_body == "Hi\n" and message.html_body == "<p>Hi</p>\n"
     assert message.in_reply_to == "<original@example.com>"
     assert [a.filename for a in message.attachments] == ["offer.pdf"]

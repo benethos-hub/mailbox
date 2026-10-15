@@ -24,6 +24,7 @@ from ...models import (
     Message,
     MessageSummary,
     MessageUpdate,
+    as_keyword,
 )
 from ...protocols import FetchedMessage, RawFolder
 from .. import rules
@@ -260,17 +261,23 @@ _IMAP_SPELLING = {
 
 
 def keywords(flags: Any) -> list[str]:
-    """The API's keywords of a message's IMAP flags, sorted."""
-    found = set()
+    """The API's keywords of a message's IMAP flags, sorted without case:
+    the marks as RFC 8621 spells them, the others as the server does."""
+    found: dict[str, str] = {}
     for flag in flags:
-        lowered = str(flag).lower()
+        text = str(flag)
+        lowered = text.lower()
         if lowered in _NOT_KEYWORDS:
             continue
         if lowered in _SYSTEM_KEYWORDS:
-            found.add(_SYSTEM_KEYWORDS[lowered])
-        elif not lowered.startswith("\\"):
-            found.add(lowered)
-    return sorted(found)
+            keyword: str | None = _SYSTEM_KEYWORDS[lowered]
+        elif lowered.startswith("\\"):
+            continue
+        else:
+            keyword = as_keyword(text)
+        if keyword is not None:
+            found.setdefault(keyword.lower(), keyword)
+    return sorted(found.values(), key=str.lower)
 
 
 def imap_flag(keyword: str) -> str:
@@ -310,20 +317,18 @@ def flag_changes(
         (remove if changes.unread else add).append("\\Seen")
     if changes.starred is not None:
         (add if changes.starred else remove).append("\\Flagged")
-    # Each keyword the message has, with the flag as the server spells it.
+    # Each keyword the message has, by its lower case, with the flag as
+    # the server spells it.
     present: dict[str, str] = {}
     for flag in current:
         for keyword in keywords([flag]):
-            present[keyword] = str(flag)
-    after = changes.keywords_after(present)
+            present[keyword.lower()] = str(flag)
+    after = changes.keywords_after(keywords(current))
     if after is not None:
-        # The new ones as the caller spelled them, in the order given.
-        spelled = {
-            k.lower(): k for k in (changes.keywords or changes.add_keywords or [])
-        }
-        new = [imap_flag(k) for lower, k in spelled.items() if lower not in present]
+        rules.atoms_only(changes)
+        new = [imap_flag(k) for lower, k in after.items() if lower not in present]
         if not _kept(new, permanent):
             raise NotSupportedError("the mail server keeps no new keywords")
         add += new
-        remove += [flag for k, flag in present.items() if k not in after]
+        remove += [flag for lower, flag in present.items() if lower not in after]
     return add, remove

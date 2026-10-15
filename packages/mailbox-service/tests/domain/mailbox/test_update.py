@@ -10,6 +10,7 @@ from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import Grant, MessageUpdate
 from benethos_mailbox_service.data.providers.imap import mappers
 from benethos_mailbox_service.errors import (
+    BadRequestError,
     NotFoundError,
     NotSupportedError,
 )
@@ -25,8 +26,27 @@ ANY_KEYWORD = frozenset({"\\Seen", "\\Flagged", "\\*"})
 
 
 def test_keywords_of_flags() -> None:
+    """The marks as RFC 8621 spells them, the others as the server does,
+    and no note the server keeps for itself."""
     flags = ("\\Seen", "\\Answered", "\\Flagged", "$Forwarded", "Work", "\\Recent")
-    assert mappers.keywords(flags) == ["$answered", "$forwarded", "work"]
+    notes = ("$HasNoAttachment", "$MDNSent", "$Submitted")
+    assert mappers.keywords(flags + notes) == ["$answered", "$forwarded", "Work"]
+
+
+def test_a_note_of_the_server_stays_when_the_keywords_are_replaced() -> None:
+    add, remove = mappers.flag_changes(
+        ("$HasAttachment", "Work"), MessageUpdate(keywords=["Later"]), ANY_KEYWORD
+    )
+    assert (add, remove) == (["Later"], ["Work"])
+
+
+def test_an_imap_keyword_is_an_atom() -> None:
+    for changes in (
+        MessageUpdate(add_keywords=["two words"]),
+        MessageUpdate(keywords=["a(b"]),
+    ):
+        with pytest.raises(BadRequestError, match="without spaces"):
+            mappers.flag_changes(("Work",), changes, ANY_KEYWORD)
 
 
 def test_flag_changes() -> None:
@@ -102,17 +122,23 @@ def test_a_list_is_replaced_or_changed_not_both(fields: dict[str, list[str]]) ->
 
 def test_what_a_message_has_once_changed() -> None:
     change = MessageUpdate(add_keywords=["Work"], remove_keywords=["$junk"])
-    assert change.keywords_after(["$junk", "$answered"]) == {"$answered", "work"}
+    assert change.keywords_after(["$junk", "$answered"]) == {
+        "$answered": "$answered",
+        "work": "Work",
+    }
     assert change.folders_after(["inbox"]) is None
     labels = MessageUpdate(add_folder_ids=["f2", "f1"], remove_folder_ids=["inbox"])
     assert labels.folders_after(["inbox", "f1"]) == ["f1", "f2"]
     assert labels.keywords_after(["work"]) is None
     assert labels.named_folders() == ["f2", "f1", "inbox"]
     assert MessageUpdate(folder_ids=["a", "a"]).folders_after(["b"]) == ["a"]
-    assert MessageUpdate(keywords=["Work"]).keywords_after(["x"]) == {"work"}
+    assert MessageUpdate(keywords=["Work"]).keywords_after(["x"]) == {"work": "Work"}
+    # A keyword it has keeps its spelling, compared without case.
+    kept = MessageUpdate(add_keywords=["WORK"]).keywords_after(["Work"])
+    assert kept == {"work": "Work"}
 
 
-@pytest.mark.parametrize("keyword", ["two words", "\\Seen", "a(b", "", "x" * 101])
+@pytest.mark.parametrize("keyword", ["a\nb", "\\Seen", "", "x" * 101])
 def test_invalid_keywords_are_refused(keyword: str) -> None:
     with pytest.raises(ValueError):
         MessageUpdate(keywords=[keyword])
@@ -153,7 +179,7 @@ async def test_keywords_added_on_the_server_keep_the_others(
         message_id,
         MessageUpdate(add_keywords=["Urgent"], remove_keywords=["$forwarded"]),
     )
-    assert summary.keywords == ["urgent", "work"]
+    assert summary.keywords == ["Urgent", "work"]
     assert set(server.folders["INBOX"].messages[3][1]) == {"Urgent", "work"}
 
 
@@ -199,14 +225,14 @@ def test_patch_adds_and_takes_off_keywords(client: TestClient, account_id: str) 
         url, json={"add_keywords": ["Urgent"], "remove_keywords": ["$junk"]}
     )
     assert answer.status_code == 200
-    assert answer.json()["keywords"] == ["urgent", "work"]
+    assert answer.json()["keywords"] == ["Urgent", "work"]
     mixed = client.patch(url, json={"keywords": ["a"], "add_keywords": ["b"]})
     assert mixed.status_code == 422
 
 
 def test_patch_refuses_a_bad_keyword(client: TestClient, account_id: str) -> None:
     answer = client.patch(
-        f"/v1/accounts/{account_id}/messages/m0", json={"keywords": ["two words"]}
+        f"/v1/accounts/{account_id}/messages/m0", json={"keywords": ["a\tb"]}
     )
     assert answer.status_code == 422
 

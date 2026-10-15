@@ -172,11 +172,11 @@ async def test_flags_and_keywords(jmap: JmapProvider, server: FakeJmap) -> None:
         MessageUpdate(unread=False, starred=True, keywords=["Work", "$forwarded"]),
     )
     assert changed.unread is False and changed.starred
-    assert changed.keywords == ["$forwarded", "work"]
+    assert changed.keywords == ["$forwarded", "Work"]
     assert server.emails[email_id]["keywords"] == {
         "$seen": True,
         "$flagged": True,
-        "work": True,
+        "Work": True,
         "$forwarded": True,
     }
     again = await update(jmap, email_id, MessageUpdate(unread=True, starred=False))
@@ -207,13 +207,13 @@ async def test_labels_and_keywords_added_and_taken_off(
         jmap, email_id, MessageUpdate(add_folder_ids=[work], add_keywords=["Urgent"])
     )
     assert labelled.folder_ids == sorted(["inbox", work])
-    assert labelled.keywords == ["$junk", "urgent"]
+    assert labelled.keywords == ["$junk", "Urgent"]
     left = await update(
         jmap,
         email_id,
         MessageUpdate(remove_folder_ids=["inbox"], remove_keywords=["$junk"]),
     )
-    assert (left.folder_ids, left.keywords) == ([work], ["urgent"])
+    assert (left.folder_ids, left.keywords) == ([work], ["Urgent"])
     with pytest.raises(BadRequestError, match="one folder at least"):
         await update(jmap, email_id, MessageUpdate(remove_folder_ids=[work]))
     with pytest.raises(NotFoundError, match="folder"):

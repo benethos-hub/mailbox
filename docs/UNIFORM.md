@@ -148,11 +148,13 @@ larger piece that is neither, and runs on its own.
   `$hasnoattachment`, `$mdnsent`, `$submitpending` and `$submitted` come
   through from IMAP and JMAP. `$hasattachment` repeats
   `has_attachments`, the others are the server's own bookkeeping. Rule
-  R8: they leave `keywords`. *Concept (6.2).*
+  R8: they leave `keywords`. *Concept (6.2).* Done.
 - **Keywords come back in lower case**, also Outlook categories with
   spaces or other letters. Such a category cannot be sent back through
   `add_keywords`, because the keyword pattern refuses it (422). *Concept
-  (6.3).*
+  (6.3).* Done: keywords keep the provider's spelling, the marks that of
+  RFC 8621, and the pattern takes any keyword on one line. IMAP and JMAP
+  answer `400` for one that is no atom.
 - **One vocabulary for display.** The words for the marks live in the
   UI only (`web/pages/templates.py`). The MCP server shows them raw.
   With the fixed list of marks, the list and its words move to
@@ -393,7 +395,8 @@ Steps 1 to 5 are done. Each step is one pull request or more.
    reads `$draft` and writes no mark until the live check of 6.4.
 6. **Values.** The decisions of section 6: dates, the list without a
    folder, server notes, marks, the case of keywords, `has_attachments`.
-   Dates and the list without a folder done.
+   Dates, the list without a folder, server notes and the case of
+   keywords done.
 7. **IMAP emulates `all`** where the server has no `\All` (decision
    6.5), a piece of its own.
 8. **The UI and the MCP server** (section 8, U1 to U5): the vocabulary

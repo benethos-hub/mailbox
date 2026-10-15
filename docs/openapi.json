@@ -12126,7 +12126,7 @@
             },
             "type": "array",
             "title": "Keywords",
-            "description": "Further flags, named as in JMAP: `$answered`, `$forwarded`, `$draft`, and the provider's own keywords."
+            "description": "Further flags, the marks named as in JMAP: `$answered`, `$forwarded`, `$draft`, and the provider's own keywords as it spells them, compared without case. Notes a server keeps for itself, such as `$hasnoattachment`, are left out."
           },
           "has_attachments": {
             "type": "boolean",
@@ -12460,7 +12460,7 @@
             },
             "type": "array",
             "title": "Keywords",
-            "description": "Further flags, named as in JMAP: `$answered`, `$forwarded`, `$draft`, and the provider's own keywords."
+            "description": "Further flags, the marks named as in JMAP: `$answered`, `$forwarded`, `$draft`, and the provider's own keywords as it spells them, compared without case. Notes a server keeps for itself, such as `$hasnoattachment`, are left out."
           },
           "has_attachments": {
             "type": "boolean",
@@ -12504,7 +12504,7 @@
               {
                 "items": {
                   "type": "string",
-                  "pattern": "^[!#$&'+\\-.0-9A-Z^_a-z|~]{1,100}$"
+                  "pattern": "^[^\\x00-\\x1f\\x7f\\\\][^\\x00-\\x1f\\x7f]{0,99}$"
                 },
                 "type": "array",
                 "maxItems": 50
@@ -12521,7 +12521,7 @@
               {
                 "items": {
                   "type": "string",
-                  "pattern": "^[!#$&'+\\-.0-9A-Z^_a-z|~]{1,100}$"
+                  "pattern": "^[^\\x00-\\x1f\\x7f\\\\][^\\x00-\\x1f\\x7f]{0,99}$"
                 },
                 "type": "array",
                 "maxItems": 50
@@ -12538,7 +12538,7 @@
               {
                 "items": {
                   "type": "string",
-                  "pattern": "^[!#$&'+\\-.0-9A-Z^_a-z|~]{1,100}$"
+                  "pattern": "^[^\\x00-\\x1f\\x7f\\\\][^\\x00-\\x1f\\x7f]{0,99}$"
                 },
                 "type": "array",
                 "maxItems": 50

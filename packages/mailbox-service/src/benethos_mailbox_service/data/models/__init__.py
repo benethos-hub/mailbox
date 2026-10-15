@@ -55,6 +55,7 @@ from .messages import (
     MessageFilter,
     MessageSummary,
     MessageUpdate,
+    as_keyword,
     received_or_written,
 )
 from .paging import AccountFailure, Before, MessagePage, Page
@@ -135,6 +136,7 @@ __all__ = [
     "MessagePage",
     "MessageReference",
     "MessageSummary",
+    "as_keyword",
     "received_or_written",
     "MessageUpdate",
     "OutgoingAttachment",

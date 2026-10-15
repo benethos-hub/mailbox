@@ -8,6 +8,10 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from .accounts import Mark
+
+MARKS = frozenset(m.value for m in Mark)
+
 
 class MessageReference(BaseModel):
     """Reply to or forward a message of the same account. The service sets
@@ -66,8 +70,10 @@ class MessageSummary(BaseModel):
     keywords: list[str] = Field(
         default_factory=list,
         description=(
-            "Further flags, named as in JMAP: `$answered`, `$forwarded`, "
-            "`$draft`, and the provider's own keywords."
+            "Further flags, the marks named as in JMAP: `$answered`, "
+            "`$forwarded`, `$draft`, and the provider's own keywords as it "
+            "spells them, compared without case. Notes a server keeps for "
+            "itself, such as `$hasnoattachment`, are left out."
         ),
     )
     has_attachments: bool = Field(
@@ -155,9 +161,27 @@ class MessageFilter(BaseModel):
         )
 
 
-# A keyword as IMAP allows it: an atom, no spaces, brackets, quotes or
-# wildcards, and no system flag (those start with a backslash).
-KEYWORD_PATTERN = r"^[!#$&'+\-.0-9A-Z^_a-z|~]{1,100}$"
+# A keyword on one line, not a system flag (those start with a
+# backslash). An Outlook category may hold spaces: IMAP and JMAP take an
+# atom alone, and answer anything else with 400.
+KEYWORD_PATTERN = r"^[^\x00-\x1f\x7f\\][^\x00-\x1f\x7f]{0,99}$"
+# Notes a server keeps for itself, not keywords of the message (UNIFORM
+# 6.2): one repeats has_attachments, the others are its bookkeeping.
+SERVER_NOTES = frozenset(
+    {"$hasattachment", "$hasnoattachment", "$mdnsent", "$submitpending", "$submitted"}
+)
+
+
+def as_keyword(found: str) -> str | None:
+    """A provider's keyword as the API answers it: a mark in the spelling
+    of RFC 8621, any other as the provider spells it, a server note not
+    at all. Keywords compare without case."""
+    lowered = found.lower()
+    if lowered in SERVER_NOTES:
+        return None
+    return lowered if lowered in MARKS else found
+
+
 # Keywords that would bypass unread, starred or deletion.
 RESERVED_KEYWORDS = frozenset({"$seen", "$flagged", "$deleted", "$recent"})
 
@@ -270,16 +294,24 @@ class MessageUpdate(BaseModel):
             *(self.remove_folder_ids or []),
         ]
 
-    def keywords_after(self, current: Iterable[str]) -> set[str] | None:
-        """The keywords, in lower case, of a message that has ``current``
-        once changed. None where the keywords stay as they are."""
+    def keywords_after(self, current: Iterable[str]) -> dict[str, str] | None:
+        """The keywords of a message that has ``current`` once changed, by
+        their lower case: one it has as it is spelled there, a new one as
+        the caller spelled it. None where the keywords stay as they are."""
         if not self.changes_keywords:
             return None
+        have = {k.lower(): k for k in current}
         if self.keywords is not None:
-            return {k.lower() for k in self.keywords}
-        added = {k.lower() for k in self.add_keywords or []}
-        removed = {k.lower() for k in self.remove_keywords or []}
-        return ({k.lower() for k in current} - removed) | added
+            return {k.lower(): have.get(k.lower(), k) for k in self.keywords}
+        for keyword in self.remove_keywords or []:
+            have.pop(keyword.lower(), None)
+        for keyword in self.add_keywords or []:
+            have.setdefault(keyword.lower(), keyword)
+        return have
+
+    def new_keywords(self) -> list[str]:
+        """Every keyword the change sets or adds, as the caller spelled it."""
+        return [*(self.keywords or []), *(self.add_keywords or [])]
 
     def folders_after(self, current: Iterable[str]) -> list[str] | None:
         """The folders of a message that is in ``current`` once changed, in

@@ -95,6 +95,15 @@ adheres to [Semantic Versioning](https://semver.org/).
   not_supported`, in a list, a move or as a parent, and names the
   account in `incomplete` across accounts. It answered `404`, and an
   adapter `409`.
+- **Breaking:** keywords keep the provider's spelling, such as an
+  Outlook category `Work`, and compare without case. They came in lower
+  case. The marks keep the spelling of RFC 8621, such as `$answered`.
+  A keyword may hold spaces and other characters, on one line and up to
+  100 characters, so an Outlook category goes back as it came. IMAP and
+  JMAP keep atoms only and answer anything else with `400`.
+- **Breaking:** notes a server keeps for itself leave `keywords`:
+  `$hasattachment`, `$hasnoattachment`, `$mdnsent`, `$submitpending`
+  and `$submitted`. A change of the keywords leaves them on the message.
 - An account's capabilities follow from what its server answers, asked
   when it is connected or verified, when a folder comes or goes, and
   when the server refuses what they promised. They are stored with the
