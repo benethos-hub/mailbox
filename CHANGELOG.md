@@ -228,6 +228,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+- Under `/v1`, a request counts against the limit of its client address
+  unless a valid token counted it. Any `Authorization` header took it
+  off that count before, and another scheme than `Bearer` or an empty
+  bearer counted no failure of the address either. Now both count.
 - A change of an account's settings that names a server it did not
   name before, another `host`, `port`, `smtp_host` or `smtp_port`, no
   longer tries the stored credentials there. Whoever may change an

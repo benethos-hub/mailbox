@@ -97,7 +97,13 @@ async def authenticate(
 ) -> Access:
     # On the event loop, not in a worker thread: two requests never check
     # a token and count a failed attempt at the same time.
-    presented = credentials.credentials if credentials else None
+    # Any other Authorization, another scheme or an empty bearer, is a
+    # wrong token: it counts a failure of the address as well.
+    presented = (
+        credentials.credentials
+        if credentials
+        else request.headers.get("authorization") or None
+    )
     access = auth.authenticate(presented, source=client_address(request))
     signed_in(request, f"token:{access.credential_id}", access)
     return access

@@ -24,7 +24,7 @@ from ..errors import MailboxServiceError, RateLimitedError
 from . import api, pages
 from .api.errors import api_error, http_error, validation_error
 from .errors import status_of
-from .limits import BodyLimit, RequestLimit, RequestLimits
+from .limits import BodyLimit, Credential, RequestLimit, RequestLimits
 from .pages.errors import error_page
 from .pages.session import carries_session
 from .state import app_settings
@@ -70,13 +70,14 @@ def _answer(request: Request, exc: MailboxServiceError) -> Response:
     return page
 
 
-def _credential(request: Request) -> bool:
-    """Whether a request carries a credential, counted where it is checked:
-    a known session for the UI, a bearer token for the API under its
-    prefix, where every route checks it."""
+def _credential(request: Request) -> Credential:
+    """What a request carries: a session of the UI the service knows, or
+    any Authorization header under the API's prefix, where every route
+    checks it and counts it where it is valid."""
     if pages.owns(request):
-        return carries_session(request)
-    return (
-        request.url.path.startswith(f"{api.PREFIX}/")
-        and "authorization" in request.headers
-    )
+        return Credential.KNOWN if carries_session(request) else Credential.NONE
+    if request.url.path.startswith(f"{api.PREFIX}/") and (
+        "authorization" in request.headers
+    ):
+        return Credential.CLAIMED
+    return Credential.NONE

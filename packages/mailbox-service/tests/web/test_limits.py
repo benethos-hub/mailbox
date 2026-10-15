@@ -175,13 +175,52 @@ def test_a_bearer_outside_the_api_counts_by_the_address(
 def test_a_wrong_token_is_left_to_the_sign_in_throttle(
     settings: Settings, services: Services
 ) -> None:
-    client, _ = limited(settings, services, signed_in=2, anonymous=2)
+    client, _ = limited(settings, services, signed_in=2, anonymous=0)
     bearer_for(services)  # a service without users answers 503
     wrong = {"Authorization": "Bearer nope"}
     assert [client.get("/v1/me", headers=wrong).status_code for _ in range(10)] == [
         401
     ] * 10
     assert client.get("/v1/me", headers=wrong).status_code == 429
+
+
+@pytest.mark.parametrize(
+    "authorization",
+    ["Basic YWRtaW46c2VjcmV0", "Bearer", "Bearer ", "Token nope", "Bearer nope"],
+)
+def test_any_other_authorization_counts_by_the_address(
+    settings: Settings, services: Services, authorization: str
+) -> None:
+    """Only a valid token takes a request off the address's count."""
+    client, _ = limited(settings, services, signed_in=0, anonymous=2)
+    token = bearer_for(services)
+    claimed = {"Authorization": authorization}
+    assert client.get("/v1/me", headers=claimed).status_code == 401
+    refused = client.get("/v1/me", headers=claimed)
+    assert refused.status_code == 429
+    assert refused.headers["Retry-After"] == "30"
+    assert refused.json()["error"]["code"] == "rate_limited"
+    # A valid token from the same address passes.
+    assert client.get("/v1/me", headers=token).status_code == 200
+
+
+def test_a_path_under_the_api_that_checks_nothing_counts_by_the_address(
+    settings: Settings, services: Services
+) -> None:
+    client, _ = limited(settings, services, signed_in=0, anonymous=2)
+    token = bearer_for(services)
+    assert client.get("/v1/nothing-here", headers=token).status_code == 404
+    assert client.get("/v1/nothing-here", headers=token).status_code == 429
+
+
+def test_another_scheme_counts_a_failure_of_the_address(
+    settings: Settings, services: Services
+) -> None:
+    client, _ = limited(settings, services, signed_in=0, anonymous=0)
+    bearer_for(services)
+    basic = {"Authorization": "Basic YWRtaW46c2VjcmV0"}
+    answers = [client.get("/v1/me", headers=basic).status_code for _ in range(11)]
+    assert answers == [401] * 10 + [429]
 
 
 def test_a_ui_session_counts_as_signed_in(
