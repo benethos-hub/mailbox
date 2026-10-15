@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import Any
 
 from ....errors import MailboxServiceError, missing, missing_message
-from ...mail import convert, parse
+from ...mail import convert
 from ...models import (
     AttachmentContent,
     FolderRole,
@@ -35,7 +35,7 @@ async def list_messages(
 ) -> Page[MessageSummary]:
     if not mappers.is_id(folder_id):
         raise missing("folder", folder_id)
-    scope = mappers.scope(folder_id, search)
+    scope = rules.cursor_scope(folder_id, search)
     query: dict[str, Any] = {
         "filter": mappers.query_filter(folder_id, search),
         "sort": mappers.SORT,
@@ -116,7 +116,7 @@ async def get_attachment(
     account: JmapAccount, message_id: str, attachment_id: str
 ) -> AttachmentContent:
     raw = await get_raw(account, message_id)
-    return convert.attachment(parse.ParsedMessage(raw), attachment_id)
+    return convert.attachment_of(raw, attachment_id)
 
 
 # --- changing ---------------------------------------------------------------------

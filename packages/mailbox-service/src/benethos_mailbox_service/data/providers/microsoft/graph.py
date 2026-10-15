@@ -10,7 +10,7 @@ import logging
 import time
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping
 from typing import Any, TypeVar
-from urllib.parse import quote, urlsplit
+from urllib.parse import urlsplit
 
 import anyio
 from pydantic import BaseModel
@@ -18,15 +18,18 @@ from pydantic import BaseModel
 from ....common.chunks import batched
 from ....common.ratelimit import backoff
 from ....errors import (
-    BadRequestError,
     ChangesExpiredError,
-    ConflictError,
     MailboxServiceError,
     NotFoundError,
-    ProviderAuthError,
 )
 from ...models import FolderRole
-from ...protocols import Answer, ApiClient, refused, wire
+from ...protocols import (
+    Answer,
+    ApiClient,
+    refused,
+    standard_refusals,
+    wire,
+)
 from .. import rules
 from ..base import TokenSource
 from . import mappers
@@ -262,11 +265,6 @@ class Graph:
         await self._http.close()
 
 
-def id_(value: str | None) -> str:
-    """An id as one part of a path."""
-    return quote(str(value), safe="")
-
-
 def own_path(link: str) -> str:
     """The path of a Graph link, e.g. a next page, below ``/v1.0``. Refuses
     any other host: a cursor comes back from the caller, and a forged one
@@ -298,12 +296,7 @@ def _failure(answer: Answer) -> MailboxServiceError:
         "microsoft",
         text,
         {
-            401: lambda _: ProviderAuthError(
-                "microsoft refused the access token: sign in again"
-            ),
-            400: BadRequestError,
-            404: NotFoundError,
-            409: ConflictError,
+            **standard_refusals("microsoft refused the access token: sign in again"),
             # A delta token Graph no longer keeps.
             410: ChangesExpiredError,
         },

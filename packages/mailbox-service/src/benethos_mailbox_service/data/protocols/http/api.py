@@ -15,13 +15,18 @@ import json
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 
 from benethos_mailbox_common.values import sizes
 
 from ....errors import (
+    BadRequestError,
+    ConflictError,
     MailboxServiceError,
+    NotFoundError,
+    ProviderAuthError,
     ProviderError,
     ProviderUnavailableError,
 )
@@ -61,11 +66,33 @@ class Answer:
             raise ProviderError("the provider answered with no valid JSON") from None
 
 
+# What makes this project's error of a refusal's text.
+Make = Callable[[str], MailboxServiceError]
+
+
+def standard_refusals(credential: str) -> dict[int, Make]:
+    """What a refusal means alike on every provider's API: 401 the
+    credential, said in ``credential``, 400 and 409 the request, 404
+    nothing there. A 403 is none of these: the server took the credential
+    and refused the request, a ``ProviderError`` as any other refusal."""
+    return {
+        401: lambda _: ProviderAuthError(credential),
+        400: BadRequestError,
+        404: NotFoundError,
+        409: ConflictError,
+    }
+
+
+def path_part(value: object) -> str:
+    """A value as one part of a path, every reserved character quoted."""
+    return quote(str(value), safe="")
+
+
 def refused(
     answer: Answer,
     who: str,
     text: str,
-    errors: Mapping[int, Callable[[str], MailboxServiceError]],
+    errors: Mapping[int, Make],
     code: object = None,
 ) -> MailboxServiceError:
     """A request the server refused, as this project's error: what

@@ -49,18 +49,18 @@ class SqliteCredentialRepository:
         )
 
     def get(self, account_id: str, field: str) -> EncryptedCredential | None:
-        row = self._db.one(
+        return self._db.one_as(
+            _credential,
             "SELECT * FROM credentials WHERE account_id = ? AND field = ?",
             (account_id, field),
         )
-        return _credential(row) if row is not None else None
 
     def list_for_account(self, account_id: str) -> list[EncryptedCredential]:
-        rows = self._db.query(
+        return self._db.query_as(
+            _credential,
             "SELECT * FROM credentials WHERE account_id = ? ORDER BY field",
             (account_id,),
         )
-        return [_credential(r) for r in rows]
 
     def delete_for_account(self, account_id: str) -> None:
         self._db.execute("DELETE FROM credentials WHERE account_id = ?", (account_id,))

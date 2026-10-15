@@ -18,8 +18,9 @@ from ....common.opaque import to_base64
 from ....errors import MailboxServiceError, NotFoundError, missing
 from ...mail import compose, parse
 from ...models import MessageSummary, Page, SentMessage
+from ...protocols import path_part
 from . import mappers, reading
-from .api import GmailApi, id_
+from .api import GmailApi
 from .messages import list_messages
 from .shapes import Draft, Drafts, GmailMessage, Messages
 
@@ -54,7 +55,9 @@ async def save_draft(api: GmailApi, raw: bytes, replaces: str | None) -> Message
         draft = await api.read(Draft, "POST", "/drafts", json_body=body)
     else:
         draft_id = await _draft_id(api, replaces)
-        draft = await api.read(Draft, "PUT", f"/drafts/{id_(draft_id)}", json_body=body)
+        draft = await api.read(
+            Draft, "PUT", f"/drafts/{path_part(draft_id)}", json_body=body
+        )
     stored = await reading.summary(api, draft.message.id) if draft.message else None
     if stored is None:
         raise NotFoundError("the draft was stored but cannot be found again")
@@ -69,7 +72,7 @@ async def get_draft(api: GmailApi, draft_id: str) -> bytes:
 async def delete_draft(api: GmailApi, draft_id: str) -> None:
     gmail_id = await _draft_id(api, draft_id)
     try:
-        await api.call("DELETE", f"/drafts/{id_(gmail_id)}")
+        await api.call("DELETE", f"/drafts/{path_part(gmail_id)}")
     except NotFoundError:
         raise missing("draft", draft_id) from None
 

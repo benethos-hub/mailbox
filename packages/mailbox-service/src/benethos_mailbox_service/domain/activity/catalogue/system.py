@@ -7,15 +7,10 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime
 from typing import ClassVar
 
-from benethos_mailbox_common.log import lines
-
 # Named apart from a text of its own.
-from benethos_mailbox_common.values import text as text_values
-
-from ..base import Activity, Failure
+from ..base import Activity, Failure, Purged
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -172,20 +167,12 @@ class BackupRestored(Activity):
 
 
 @dataclass(frozen=True, kw_only=True)
-class AuditPurged(Activity):
+class AuditPurged(Purged):
     """Records older than the audit keeps are gone. The normal course,
     once an hour at most."""
 
     name: ClassVar[str] = "audit_purged"
-
-    count: int
-    before: datetime
-
-    def says(self) -> str:
-        return (
-            f"purged {text_values.plural(self.count, 'record')} older than "
-            f"{lines.log_time(self.before)} from the audit"
-        )
+    purged_from: ClassVar[str] = "the audit"
 
 
 @dataclass(frozen=True, kw_only=True)

@@ -10,7 +10,7 @@ keywords. Graph has no place for them: setting or taking one off answers
 
 from __future__ import annotations
 
-from datetime import date, datetime, time
+from datetime import UTC, datetime
 from typing import Any
 
 from ....errors import BadRequestError, NotSupportedError
@@ -25,6 +25,7 @@ from ...models import (
     MessageSummary,
     MessageUpdate,
 )
+from .. import rules
 from . import marks
 from .shapes import MailFolder, Recipient, Recipients
 from .shapes import Message as GraphMessage
@@ -206,8 +207,9 @@ def categories_after(item: GraphMessage, changes: MessageUpdate) -> list[str]:
     return kept + added
 
 
-def _graph_day(value: date) -> str:
-    return datetime.combine(value, time.min).strftime("%Y-%m-%dT%H:%M:%SZ")
+def _graph_day(moment: datetime) -> str:
+    """A moment in UTC as Graph's ``$filter`` takes it."""
+    return moment.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _quoted(value: str) -> str:
@@ -276,9 +278,13 @@ def _filtered(search: MessageFilter) -> dict[str, str]:
     """``$filter`` and ``$orderby``, newest first."""
     filters = ["receivedDateTime ge 1900-01-01T00:00:00Z"]
     if search.after:
-        filters.append(f"receivedDateTime ge {_graph_day(search.after)}")
+        filters.append(
+            f"receivedDateTime ge {_graph_day(rules.day_start(search.after))}"
+        )
     if search.before:
-        filters.append(f"receivedDateTime lt {_graph_day(search.before)}")
+        filters.append(
+            f"receivedDateTime lt {_graph_day(rules.day_start(search.before))}"
+        )
     if search.unread is not None:
         filters.append(f"isRead eq {'false' if search.unread else 'true'}")
     if search.starred is not None:

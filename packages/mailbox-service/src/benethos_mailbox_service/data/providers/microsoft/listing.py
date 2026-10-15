@@ -6,9 +6,10 @@ from __future__ import annotations
 from urllib.parse import urlencode
 
 from ...models import MessageFilter, MessageSummary, Page
+from ...protocols import path_part
 from .. import rules
 from . import mappers
-from .graph import Graph, id_, own_path
+from .graph import Graph, own_path
 from .shapes import Batch, Listing
 from .shapes import Message as GraphMessage
 
@@ -32,7 +33,7 @@ async def list_messages(
         path = (
             "/me/messages"
             if folder_id == mappers.ALL
-            else f"/me/mailFolders/{id_(folder_id)}/messages"
+            else f"/me/mailFolders/{path_part(folder_id)}/messages"
         )
         params = {**mappers.SUMMARY_PARAMS, "$top": str(limit), **query}
         body = await graph.read(Listing[GraphMessage], "GET", path, params=params)

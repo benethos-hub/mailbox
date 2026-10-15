@@ -11,7 +11,8 @@ tools in a package, one module per kind. Section 11, a proposal of
 2026-10-05, is the migrations of the schema: one class per step.
 Section 12 is the work list of 2026-10: the client as a package, the
 adapters in parts, and limits on the size of the code. Section 13 is
-the client package in parts, of 2026-10-07.
+the client package in parts, of 2026-10-07. Section 17 is the review
+of 2026-10-15.
 Behaviour, the API and the
 OpenAPI document stay as they are
 throughout. The rules that came out of it, in short, are
@@ -1166,3 +1167,42 @@ Decided by the user on 2026-10-10, built as #132.
   exception stands in `ALLOWED` with its reason, and an entry that
   no longer matches fails. The tuples of the domain became
   `IssuedToken`, `OneTimePassword`, `TotpSetup` and `TotpConfirmed`.
+
+## 17. The review of 2026-10-15
+
+A review of `main` at e044c1d8 found code written more than once and
+tests that lean on each other. The user decided the order of the work
+and that a provider's 403 answers with one error class.
+
+### 17.1 Tests
+
+Built as #180.
+
+- **A home for what tests share.** A fixture that tests of several
+  modules take is in the `conftest.py` of their nearest common folder,
+  a helper in a module of its subject there: `<kind>_adapter.py` for
+  an adapter on its fake, `<subject>_fake.py`, `<subject>_helpers.py`.
+  `clocks.py` holds one `Clock` and one `Seconds`, where twelve copies
+  stood. No test module imports another.
+- **No hook for tests in the MCP server.** The tests enter
+  `tools.calling` with their client, as a server does.
+
+### 17.2 The adapters' duplicates
+
+- **Cursors.** JMAP's copy of `rules.cursor_scope` goes. The IMAP
+  folder `all` reads its cursor with `opaque.fields`, in the shape it
+  had.
+- **Requests.** `path_part` and `standard_refusals` beside `refused`
+  in `data/protocols/http`, for Gmail, Graph and JMAP. A 403 is a
+  `ProviderError` on every provider: the server took the credential
+  and refused the request.
+- **Days.** `rules.day_start` is where a filter's day begins, midnight
+  in UTC, for JMAP, Graph and Gmail alike.
+- **Files.** `convert.attachment_of` reads one file of a message's
+  source, for every adapter that has nothing else to read it from.
+- **Servers that take a login.** `mailserver.py` holds the probe
+  without a login and the settings from discovered servers, for IMAP
+  and POP3.
+- **SQLite.** `Database.one_as`, `query_as` and `scalar` read rows into
+  records and a number. The three activities of a purge have one base,
+  `Purged`.

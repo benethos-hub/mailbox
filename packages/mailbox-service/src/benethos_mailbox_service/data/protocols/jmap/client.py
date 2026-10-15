@@ -9,7 +9,7 @@ from collections.abc import AsyncIterator, Callable, Iterable, Mapping
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from typing import Any
-from urllib.parse import quote, urlsplit
+from urllib.parse import urlsplit
 
 import anyio
 
@@ -17,14 +17,12 @@ from ....common.urls import path_and_query
 from ....errors import (
     BadRequestError,
     MailboxServiceError,
-    NotFoundError,
     NotSupportedError,
-    ProviderAuthError,
     ProviderError,
     ProviderUnavailableError,
 )
 from .. import wire
-from ..http import Answer, ServerClient, refused
+from ..http import Answer, ServerClient, path_part, refused, standard_refusals
 from ..transport import Pick
 from .shapes import (
     AccountShape,
@@ -312,7 +310,7 @@ def _expand(template: str, **values: str) -> str:
     """A URL template of the session with its variables filled in (RFC
     6570, level 1)."""
     for name, value in values.items():
-        template = template.replace("{" + name + "}", quote(value, safe=""))
+        template = template.replace("{" + name + "}", path_part(value))
     return template
 
 
@@ -346,11 +344,7 @@ def _failure(answer: Answer, what: str) -> MailboxServiceError:
         "the JMAP server",
         text,
         {
-            401: lambda _: ProviderAuthError("the JMAP server refused the credential"),
-            403: lambda _: ProviderAuthError(
-                f"the JMAP server refused access ({what})"
-            ),
-            404: NotFoundError,
+            **standard_refusals("the JMAP server refused the credential"),
             413: BadRequestError,
         },
     )

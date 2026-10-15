@@ -50,6 +50,7 @@ ALLOWED = {
     "service domain/sync/service.py SyncService.natives": "provider id per message id",
     "service domain/sync/service.py SyncService.thread_ids": "thread per message id",
     "service domain/system/status.py StatusService.healths": "health per account id",
+    "service data/protocols/http/api.py standard_refusals": "error per status",
     # Free JSON: the settings of an account as the API and the store hold
     # them, and an answer of a JMAP server.
     "service data/providers/registry.py settings_defaults": "account settings",

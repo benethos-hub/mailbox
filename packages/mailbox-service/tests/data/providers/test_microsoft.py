@@ -388,3 +388,24 @@ async def test_a_search_result_in_two_folders_keeps_its_own(graph: FakeGraph) ->
         mappers.ALL, limit=10, cursor=None, search=MessageFilter(subject="to me")
     )
     assert {m.id for m in found.items} == {inbox, sent}
+
+
+@pytest.mark.parametrize(
+    ("status", "error", "message"),
+    [
+        (401, ProviderAuthError, "sign in again"),
+        (403, ProviderError, "Access is denied"),
+        (404, NotFoundError, "ErrorItemNotFound"),
+    ],
+)
+async def test_what_graph_refuses(
+    status: int, error: type[Exception], message: str
+) -> None:
+    """A 403 is a refused request, as on every provider: the token
+    passed."""
+    code = {403: "ErrorAccessDenied", 404: "ErrorItemNotFound"}.get(status, "x")
+    body = {"error": {"code": code, "message": "Access is denied."}}
+    answer = httpx.MockTransport(lambda _: httpx.Response(status, json=body))
+    graph = MicrosoftProvider(Tokens(TOKEN), ApiClient(transport=answer))
+    with pytest.raises(error, match=message):
+        await graph.get_raw("AAMk")

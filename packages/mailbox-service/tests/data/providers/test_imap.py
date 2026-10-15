@@ -10,6 +10,7 @@ import anyio
 import pytest
 from pydantic import SecretStr
 
+from benethos_mailbox_service.common import opaque
 from benethos_mailbox_service.data.models import (
     FolderRole,
     MessageFilter,
@@ -20,6 +21,7 @@ from benethos_mailbox_service.data.protocols.imap import (
     RawFolder,
     Server,
 )
+from benethos_mailbox_service.data.providers import rules
 from benethos_mailbox_service.data.providers.imap import ImapProvider, mappers, watch
 from benethos_mailbox_service.errors import (
     BadRequestError,
@@ -126,6 +128,47 @@ async def test_all_mail_is_every_folder_but_the_trash_newest_first(
         )
     ).values()
     assert isinstance(moved, BadRequestError)
+
+
+@pytest.mark.parametrize(
+    ("places", "subjects"),
+    [
+        ({"INBOX": [7, 3]}, ["Hello 2", "Invoice 1"]),
+        ({}, []),
+    ],
+)
+async def test_a_cursor_of_all_as_it_was_written_reads(
+    server: FakeMailBox, places: dict[str, list[int]], subjects: list[str]
+) -> None:
+    """Per folder with hits left its UIDVALIDITY and the UID below which
+    its next page looks: a cursor handed out before still reads."""
+    scope = rules.cursor_scope(mappers.ALL, MessageFilter())
+    cursor = opaque.encode("a_", [scope, places])
+    page = await provider(server).list_messages(mappers.ALL, limit=10, cursor=cursor)
+    assert [m.subject for m in page.items] == subjects
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        ["other scope", {}],
+        ["SCOPE", {"INBOX": [7]}],
+        ["SCOPE", {"INBOX": [7, -1]}],
+        ["SCOPE", {"INBOX": [True, 3]}],
+        ["SCOPE", []],
+        "SCOPE",
+    ],
+)
+async def test_a_cursor_of_all_made_up_is_refused(
+    server: FakeMailBox, value: object
+) -> None:
+    scope = rules.cursor_scope(mappers.ALL, MessageFilter())
+    if isinstance(value, list) and value[0] == "SCOPE":
+        value = [scope, value[1]]
+    with pytest.raises(BadRequestError, match="invalid cursor"):
+        await provider(server).list_messages(
+            mappers.ALL, limit=10, cursor=opaque.encode("a_", value)
+        )
 
 
 async def test_a_server_with_all_shows_its_own(server: FakeMailBox) -> None:

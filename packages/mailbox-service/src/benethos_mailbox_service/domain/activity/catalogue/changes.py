@@ -4,28 +4,17 @@ activity: only what the service does to the feed."""
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
 from typing import ClassVar
 
-from benethos_mailbox_common.log import lines
-from benethos_mailbox_common.values import text
-
-from ..base import Activity
+from ..base import Purged
 
 
 @dataclass(frozen=True, kw_only=True)
-class ChangesPurged(Activity):
+class ChangesPurged(Purged):
     """Changes older than the feed keeps are gone: a client or webhook
     that had not read them yet starts after them. The normal course, once
     an hour at most, so no warning."""
 
     name: ClassVar[str] = "purged"
-
-    count: int
-    before: datetime
-
-    def says(self) -> str:
-        return (
-            f"purged {text.plural(self.count, 'change')} older than "
-            f"{lines.log_time(self.before)} from the change log"
-        )
+    record: ClassVar[str] = "change"
+    purged_from: ClassVar[str] = "the change log"

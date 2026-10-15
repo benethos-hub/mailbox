@@ -16,11 +16,11 @@ class SqliteTotpRepository:
         self._db = db
 
     def devices(self, user_id: str) -> list[StoredTotpDevice]:
-        rows = self._db.query(
+        return self._db.query_as(
+            _device,
             "SELECT * FROM totp_devices WHERE user_id = ? ORDER BY created_at, id",
             (user_id,),
         )
-        return [_device(row) for row in rows]
 
     def add(self, user_id: str, device: StoredTotpDevice) -> None:
         self._db.execute(

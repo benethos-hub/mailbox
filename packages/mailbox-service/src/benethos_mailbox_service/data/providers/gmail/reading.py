@@ -18,9 +18,9 @@ import anyio
 from ....common.opaque import from_base64
 from ....errors import MailboxServiceError, NotFoundError, ProviderError
 from ...models import MessageSummary
-from ...protocols import Params
+from ...protocols import Params, path_part
 from . import mappers
-from .api import GmailApi, id_
+from .api import GmailApi
 from .shapes import GmailMessage, Messages
 
 # Requests in flight at once for one account. Gmail allows 250 units a
@@ -58,7 +58,7 @@ def _missing_folder(folder_id: str) -> NotFoundError:
 async def get(api: GmailApi, message_id: str, params: Params) -> GmailMessage:
     """One message. Raises ``NotFoundError`` when it is not there."""
     return await api.read(
-        GmailMessage, "GET", f"/messages/{id_(message_id)}", params=params
+        GmailMessage, "GET", f"/messages/{path_part(message_id)}", params=params
     )
 
 

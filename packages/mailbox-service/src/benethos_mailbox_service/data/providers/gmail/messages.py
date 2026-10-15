@@ -11,7 +11,7 @@ from ....errors import (
     missing,
     missing_message,
 )
-from ...mail import convert, parse
+from ...mail import convert
 from ...models import (
     AttachmentContent,
     Message,
@@ -20,10 +20,11 @@ from ...models import (
     MessageUpdate,
     Page,
 )
+from ...protocols import path_part
 from .. import rules
 from ..base import ThreadMessages
 from . import mappers, reading
-from .api import GmailApi, id_
+from .api import GmailApi
 from .shapes import GmailMessage, GmailThread, Messages
 
 
@@ -60,7 +61,7 @@ async def thread_messages(api: GmailApi, thread_id: str, limit: int) -> ThreadMe
     params = reading.summary_params("messages")
     try:
         found = await api.read(
-            GmailThread, "GET", f"/threads/{id_(thread_id)}", params=params
+            GmailThread, "GET", f"/threads/{path_part(thread_id)}", params=params
         )
     except NotFoundError:
         raise missing("thread", thread_id) from None
@@ -83,7 +84,7 @@ async def get_attachment(
     api: GmailApi, message_id: str, attachment_id: str
 ) -> AttachmentContent:
     raw = await get_raw(api, message_id)
-    return convert.attachment(parse.ParsedMessage(raw), attachment_id)
+    return convert.attachment_of(raw, attachment_id)
 
 
 async def _with_source(api: GmailApi, message_id: str) -> GmailMessage:
@@ -181,7 +182,7 @@ async def _modify(
     try:
         await api.call(
             "POST",
-            f"/messages/{id_(message_id)}/modify",
+            f"/messages/{path_part(message_id)}/modify",
             json_body={"addLabelIds": add, "removeLabelIds": remove},
         )
     except NotFoundError:
@@ -202,7 +203,7 @@ async def delete_messages(
         if not reading.is_id(message_id):
             raise missing_message(message_id)
         try:
-            await api.call("DELETE", f"/messages/{id_(message_id)}")
+            await api.call("DELETE", f"/messages/{path_part(message_id)}")
         except NotFoundError:
             raise missing_message(message_id) from None
         return None
@@ -211,7 +212,7 @@ async def delete_messages(
         if mappers.TRASH in await _labels(api, message_id):
             raise rules.in_trash_already()
         try:
-            await api.call("POST", f"/messages/{id_(message_id)}/trash")
+            await api.call("POST", f"/messages/{path_part(message_id)}/trash")
         except NotFoundError:
             raise missing_message(message_id) from None
         return await reading.summary(api, message_id)

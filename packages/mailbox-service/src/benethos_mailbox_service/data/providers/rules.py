@@ -3,9 +3,9 @@
 The contract in ``base`` says what an adapter does. This says how the
 adapters agree on the situations each of them meets: a folder with a role
 the account lacks, a cursor the caller made up, a move to several folders,
-and the outcome per id of a batch. An adapter uses these instead of
-raising an error of its own choosing, so callers see one behaviour
-whatever the provider.
+the outcome per id of a batch, and where a filter's day begins. An
+adapter uses these instead of raising an error of its own choosing, so
+callers see one behaviour whatever the provider.
 """
 
 from __future__ import annotations
@@ -14,6 +14,7 @@ import math
 import re
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
+from datetime import UTC, date, datetime, time
 from typing import TypeVar
 
 from benethos_mailbox_common.values import canonical, secret
@@ -85,6 +86,12 @@ def no_folder_left() -> BadRequestError:
 def invalid_cursor() -> BadRequestError:
     """A cursor the adapter did not hand out, or one from another list."""
     return BadRequestError("invalid cursor")
+
+
+def day_start(day: date) -> datetime:
+    """Where a filter's day begins: midnight in UTC. ``after`` counts from
+    there, ``before`` up to there, on every provider."""
+    return datetime.combine(day, time(), UTC)
 
 
 def cursor_scope(folder_id: str | None, search: MessageFilter | None) -> str:

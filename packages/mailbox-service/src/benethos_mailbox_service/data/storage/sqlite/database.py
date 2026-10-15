@@ -14,18 +14,20 @@ import sqlite3
 import stat
 import tempfile
 import threading
-from collections.abc import Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 from ....common.chunks import batched
 from ....common.clock import iso
 from ....errors import ConflictError, StorageError, missing
 from ...files import LockedError, create_private, exclusive_lock
 from .migrations import MIGRATIONS, SCHEMA_VERSION
+
+T = TypeVar("T")
 
 # Stays below SQLite's limit of host parameters in one statement.
 IN_CHUNK = 500
@@ -196,6 +198,25 @@ class Database:
         with self._lock, translated():
             row: sqlite3.Row | None = self._connection.execute(sql, params).fetchone()
             return row
+
+    def one_as(
+        self, read: Callable[[sqlite3.Row], T], sql: str, params: tuple[Any, ...] = ()
+    ) -> T | None:
+        """The first row as ``read`` makes it a record, or None."""
+        row = self.one(sql, params)
+        return None if row is None else read(row)
+
+    def query_as(
+        self, read: Callable[[sqlite3.Row], T], sql: str, params: tuple[Any, ...] = ()
+    ) -> list[T]:
+        """Every row as ``read`` makes it a record."""
+        return [read(row) for row in self.query(sql, params)]
+
+    def scalar(self, sql: str, params: tuple[Any, ...] = (), default: int = 0) -> int:
+        """The first value of the first row, a number, or ``default``
+        without a row."""
+        row = self.one(sql, params)
+        return default if row is None or row[0] is None else int(row[0])
 
     def must_find(
         self, sql: str, params: tuple[Any, ...], what: str, row_id: str

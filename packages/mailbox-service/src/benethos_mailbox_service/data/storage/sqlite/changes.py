@@ -51,12 +51,10 @@ class SqliteChangeLogRepository:
         return sorted(map(_logged, rows), key=lambda e: e.seq)[:limit]
 
     def last(self) -> int:
-        row = self._db.one("SELECT seq FROM sqlite_sequence WHERE name = 'changes'")
-        return int(row["seq"]) if row is not None else 0
+        return self._db.scalar("SELECT seq FROM sqlite_sequence WHERE name = 'changes'")
 
     def horizon(self) -> int:
-        row = self._db.one("SELECT value FROM meta WHERE key = ?", (_HORIZON,))
-        return int(row["value"]) if row is not None else 0
+        return self._db.scalar("SELECT value FROM meta WHERE key = ?", (_HORIZON,))
 
     def purge(self, before: datetime) -> int:
         removed = self._purge(before)

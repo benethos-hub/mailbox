@@ -352,7 +352,9 @@ packages/mailbox-service/
                         #   discovered servers
         sender.py       # SmtpSender: sending for IMAP, POP3, ...
         mailserver.py   # MailServerAdapter: what IMAP and POP3 share,
-                        #   the server, the login, the guard, SMTP
+                        #   the server, the login, the guard, SMTP,
+                        #   a probe without a login, the settings from
+                        #   discovered servers
         imap/, memory/, # one directory per provider (adapter),
         microsoft/,     #   provider.py the adapter, mappers.py the
         pop3/, jmap/,   #   translation, shapes.py what the provider

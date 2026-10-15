@@ -82,6 +82,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- A provider that refuses a request with `403` answers
+  `provider_error` on every kind of account: the server took the
+  credential and refused the request. A JMAP server's `403` answered
+  `provider_auth_failed` and marked the account as needing a new
+  sign-in. A JMAP server's `400` and `409` answer `bad_request` and
+  `conflict`, as Gmail's and Microsoft's do.
 - **Breaking:** `PATCH /v1/accounts/{account_id}` with settings that
   name a new server needs every credential of the account in the same
   request, else it answers `400`. A server removed needs none. The UI
