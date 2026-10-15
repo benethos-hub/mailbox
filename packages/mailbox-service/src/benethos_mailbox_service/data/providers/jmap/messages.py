@@ -20,7 +20,7 @@ from ...protocols import jmap
 from .. import rules
 from ..base import ThreadMessages
 from . import mappers
-from .account import JmapAccount
+from .api import JmapAccount
 from .shapes import Email, Thread
 
 # --- listing and reading ----------------------------------------------------------

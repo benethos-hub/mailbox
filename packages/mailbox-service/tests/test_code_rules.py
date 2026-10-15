@@ -218,8 +218,11 @@ def test_no_test_module_imports_another() -> None:
     violations = []
     for path in sorted((REPOSITORY / "packages").glob("*/tests/**/*.py")):
         for node in ast.walk(ast.parse(path.read_text("utf-8"))):
-            if isinstance(node, ast.ImportFrom) and node.level and node.module:
-                if node.module.split(".")[-1].startswith("test_"):
-                    name = path.relative_to(REPOSITORY).as_posix()
-                    violations.append(f"{name}:{node.lineno} from {node.module}")
+            if not (isinstance(node, ast.ImportFrom) and node.level):
+                continue
+            # from .test_x import y, and from . import test_x
+            named = [node.module or ""] + [a.name for a in node.names]
+            if any(n.split(".")[-1].startswith("test_") for n in named):
+                name = path.relative_to(REPOSITORY).as_posix()
+                violations.append(f"{name}:{node.lineno} from {node.module or '.'}")
     assert not violations, "imports a test module:\n  " + "\n  ".join(violations)

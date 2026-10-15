@@ -7,7 +7,6 @@ from datetime import UTC, date, datetime
 from email import message_from_bytes
 from email.policy import default
 
-import httpx
 import pytest
 
 from benethos_mailbox_service.data.models import (
@@ -17,7 +16,6 @@ from benethos_mailbox_service.data.models import (
     MessageSummary,
     MessageUpdate,
 )
-from benethos_mailbox_service.data.protocols.http import ApiClient
 from benethos_mailbox_service.data.providers import Deltas, rules
 from benethos_mailbox_service.data.providers.base import Capability
 from benethos_mailbox_service.data.providers.gmail import GmailProvider, mappers
@@ -30,6 +28,7 @@ from benethos_mailbox_service.errors import (
     NotSupportedError,
 )
 
+from ...gmail_adapter import adapter
 from ...gmail_fake import TOKEN, FakeGmail
 from ...oauth_fake import Tokens
 
@@ -37,12 +36,6 @@ from ...oauth_fake import Tokens
 @pytest.fixture
 def gmail() -> FakeGmail:
     return FakeGmail()
-
-
-def adapter(gmail: FakeGmail, tokens: Tokens | None = None) -> GmailProvider:
-    return GmailProvider(
-        tokens or Tokens(TOKEN), ApiClient(transport=httpx.MockTransport(gmail))
-    )
 
 
 # --- mappers --------------------------------------------------------------------------

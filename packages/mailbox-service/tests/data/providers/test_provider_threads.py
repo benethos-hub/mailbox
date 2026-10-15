@@ -12,16 +12,16 @@ from benethos_mailbox_service.data.providers import (
 )
 from benethos_mailbox_service.data.providers.imap import mappers
 from benethos_mailbox_service.data.providers.microsoft import (
-    provider as microsoft_provider,
+    messages as microsoft_messages,
 )
 from benethos_mailbox_service.errors import NotFoundError
 
+from ... import gmail_adapter, jmap_adapter, microsoft_adapter
 from ...gmail_fake import FakeGmail
 from ...graph_fake import FakeGraph
 from ...imap_adapter import provider
 from ...imap_fake import FakeMailBox, make_message
 from ...jmap_fake import FakeJmap
-from . import test_gmail, test_jmap, test_microsoft
 
 # --- Gmail ---------------------------------------------------------------------------
 
@@ -34,7 +34,7 @@ async def test_gmail_reads_a_thread_oldest_first() -> None:
         labels=("SENT",), thread=thread, subject="Re: Hello", sender="me@example.com"
     )
     gmail.add_message(subject="Other")
-    adapter = test_gmail.adapter(gmail)
+    adapter = gmail_adapter.adapter(gmail)
     assert isinstance(adapter, Threads)
     assert (await adapter.abilities()).has(Capability.THREADS)
     found = await adapter.thread_messages(thread, 500)
@@ -49,7 +49,7 @@ async def test_gmail_reads_a_thread_oldest_first() -> None:
 @pytest.mark.parametrize("thread_id", ["00000000000000aa", "not an id"])
 async def test_gmail_answers_a_missing_thread_as_not_found(thread_id: str) -> None:
     with pytest.raises(NotFoundError, match="thread"):
-        await test_gmail.adapter(FakeGmail()).thread_messages(thread_id, 500)
+        await gmail_adapter.adapter(FakeGmail()).thread_messages(thread_id, 500)
 
 
 # --- JMAP ----------------------------------------------------------------------------
@@ -60,7 +60,7 @@ async def test_jmap_reads_a_thread_by_its_emails() -> None:
     first = server.add_email(make_message("Hello"), thread="T1")
     server.add_email(make_message("Other"))
     second = server.add_email(make_message("Re: Hello"), mailbox="sent", thread="T1")
-    adapter = test_jmap.adapter(server)
+    adapter = jmap_adapter.adapter(server)
     assert (await adapter.abilities()).has(Capability.THREADS)
     found = await adapter.thread_messages("T1", 500)
     assert [m.id for m in found.messages] == [first, second]
@@ -73,7 +73,7 @@ async def test_jmap_reads_a_thread_by_its_emails() -> None:
 @pytest.mark.parametrize("thread_id", ["T9", "not an id!"])
 async def test_jmap_answers_a_missing_thread_as_not_found(thread_id: str) -> None:
     with pytest.raises(NotFoundError, match="thread"):
-        await test_jmap.adapter(FakeJmap()).thread_messages(thread_id, 500)
+        await jmap_adapter.adapter(FakeJmap()).thread_messages(thread_id, 500)
 
 
 # --- Microsoft -----------------------------------------------------------------------
@@ -86,7 +86,7 @@ async def test_graph_reads_a_conversation_across_folders() -> None:
     first = graph.add_message(
         conversationId="c'1", receivedDateTime="2026-08-01T10:00:00Z"
     )
-    adapter = test_microsoft.adapter(graph)
+    adapter = microsoft_adapter.adapter(graph)
     assert (await adapter.abilities()).has(Capability.THREADS)
     found = await adapter.thread_messages("c'1", 500)
     assert [m.id for m in found.messages] == [first, later]
@@ -97,7 +97,7 @@ async def test_graph_reads_a_conversation_across_folders() -> None:
 async def test_graph_keeps_the_newest_of_a_long_conversation() -> None:
     graph = FakeGraph()
     ids = [graph.add_message(conversationId="long") for _ in range(5)]
-    adapter = test_microsoft.adapter(graph)
+    adapter = microsoft_adapter.adapter(graph)
     found = await adapter.thread_messages("long", 2)
     assert ([m.id for m in found.messages], found.truncated) == (ids[-2:], True)
 
@@ -105,16 +105,16 @@ async def test_graph_keeps_the_newest_of_a_long_conversation() -> None:
 async def test_graph_reads_every_page_up_to_the_limit(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(microsoft_provider, "PAGE_SIZE", 2)
+    monkeypatch.setattr(microsoft_messages, "PAGE_SIZE", 2)
     graph = FakeGraph()
     ids = [graph.add_message(conversationId="paged") for _ in range(5)]
-    found = await test_microsoft.adapter(graph).thread_messages("paged", 500)
+    found = await microsoft_adapter.adapter(graph).thread_messages("paged", 500)
     assert ([m.id for m in found.messages], found.truncated) == (ids, False)
 
 
 async def test_graph_answers_a_missing_conversation_as_not_found() -> None:
     with pytest.raises(NotFoundError, match="thread"):
-        await test_microsoft.adapter(FakeGraph()).thread_messages("none", 500)
+        await microsoft_adapter.adapter(FakeGraph()).thread_messages("none", 500)
 
 
 # --- IMAP ----------------------------------------------------------------------------

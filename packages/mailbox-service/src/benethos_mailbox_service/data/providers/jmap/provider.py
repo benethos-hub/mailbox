@@ -8,7 +8,7 @@ event source, where it has one, tells when something did (``push``).
 
 The account signs in with a password (HTTP Basic, e.g. Stalwart or Cyrus)
 or an API token (Bearer, e.g. Fastmail). The credential is decrypted for
-each request and not kept. The parts are in ``account`` (the wire),
+each request and not kept. The parts are in ``api`` (the wire),
 ``messages``, ``folders``, ``drafts``, ``sending`` and ``changes``.
 """
 
@@ -44,7 +44,7 @@ from ..base import (
     ThreadMessages,
 )
 from . import drafts, folders, messages, sending
-from .account import JmapAccount
+from .api import JmapAccount
 from .changes import Changes
 from .connect import read_settings
 

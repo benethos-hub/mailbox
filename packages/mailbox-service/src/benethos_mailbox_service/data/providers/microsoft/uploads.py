@@ -16,7 +16,7 @@ from ....errors import MailboxServiceError
 from ...mail import compose
 from ...protocols import path_part
 from . import mappers
-from .graph import Graph
+from .api import Graph
 from .shapes import Message as GraphMessage
 from .shapes import UploadSession
 

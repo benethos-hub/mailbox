@@ -28,6 +28,10 @@ from .. import rules
 from . import mappers
 from .mailbox import Mailbox, names
 
+# Messages whose headers or summaries one request fetches, so a long
+# first sync never holds the connection for long.
+HEADER_BATCH = 200
+
 # --- listing and reading ----------------------------------------------------------
 
 

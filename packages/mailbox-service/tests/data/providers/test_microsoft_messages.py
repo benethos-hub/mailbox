@@ -7,10 +7,14 @@ from datetime import UTC, datetime
 from email import message_from_bytes
 from email.message import EmailMessage
 from email.policy import default
+from typing import Any
 
 import httpx
 import pytest
 
+from benethos_mailbox_service.data.providers.microsoft import (
+    messages as microsoft_messages,
+)
 from benethos_mailbox_service.errors import (
     BadRequestError,
     NotFoundError,
@@ -139,10 +143,10 @@ async def test_a_draft_not_sent_goes_again(
         await provider.send(SENT, "me@example.org", ["bob@example.org"])
     assert graph.messages == {} and graph.sent == []
 
-    async def stuck(message_id: str, trash: str | None = None) -> None:
+    async def stuck(graph: Any, message_id: str, trash: str | None = None) -> None:
         raise ProviderUnavailableError("graph is busy")
 
-    monkeypatch.setattr(provider, "_delete_for_good", stuck)
+    monkeypatch.setattr(microsoft_messages, "delete_for_good", stuck)
     graph.send_answer = httpx.Response(
         400, json={"error": {"code": "ErrorInvalidRecipients", "message": "no"}}
     )

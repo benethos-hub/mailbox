@@ -34,6 +34,9 @@ from benethos_mailbox_service.data.providers.microsoft import MicrosoftProvider,
 from benethos_mailbox_service.data.providers.microsoft import (
     endpoints as microsoft_endpoints,
 )
+from benethos_mailbox_service.data.providers.microsoft import (
+    messages as microsoft_messages,
+)
 from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 from benethos_mailbox_service.errors import (
     BadRequestError,
@@ -209,20 +212,22 @@ async def test_a_draft_not_replaced_leaves_one(
     provider = adapter(graph)
     raw = b"Subject: Plan\r\nContent-Type: text/plain\r\n\r\nFirst\r\n"
     saved = await provider.save_draft(raw, None)
-    real = provider._delete_for_good
+    real = microsoft_messages.delete_for_good
     stuck = {saved.id}
 
-    async def delete(message_id: str, trash: str | None = None) -> None:
+    async def delete(graph: Any, message_id: str, trash: str | None = None) -> None:
         if message_id in stuck:
             raise ProviderUnavailableError("graph is busy")
-        await real(message_id, trash)
+        await real(graph, message_id, trash)
 
-    monkeypatch.setattr(provider, "_delete_for_good", delete)
+    monkeypatch.setattr(microsoft_messages, "delete_for_good", delete)
     with pytest.raises(ProviderUnavailableError, match="busy"):
         await provider.save_draft(raw, saved.id)
     assert list(graph.messages) == [saved.id]
     # Even the new one cannot go.
-    monkeypatch.setattr(provider, "_delete_for_good", lambda *_: delete(saved.id))
+    monkeypatch.setattr(
+        microsoft_messages, "delete_for_good", lambda graph, *_: delete(graph, saved.id)
+    )
     with pytest.raises(ProviderError, match="replacing it stays beside it"):
         await provider.save_draft(raw, saved.id)
     assert len(graph.messages) == 2

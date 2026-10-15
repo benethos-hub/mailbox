@@ -9,7 +9,7 @@ from ...models import FolderRole, MessageSummary, Page
 from ...protocols import jmap
 from .. import rules
 from . import mappers
-from .account import JmapAccount
+from .api import JmapAccount
 from .messages import get_raw, list_messages
 
 
