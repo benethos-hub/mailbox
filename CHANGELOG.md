@@ -91,6 +91,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- A Gmail account tries a request again, twice at most with a short
+  pause, when Gmail answers with an error of its own side, such as
+  `500 backendError`, as Gmail asks. Only requests that change nothing
+  more when they run twice are tried again, never a send or a new
+  draft. Such an error ended the operation at once.
 - A text part without a file name, not marked as an attachment, is
   the body and no longer listed in `attachments`, also where it carries
   a Content-ID. Exchange gives the body one when a large mail's files

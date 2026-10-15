@@ -173,6 +173,45 @@ async def test_a_quota_refusal_is_a_busy_gmail(gmail: FakeGmail) -> None:
         await adapter(gmail).list_folders()
 
 
+def backend_error() -> httpx.Response:
+    return httpx.Response(
+        500,
+        json={
+            "error": {
+                "code": 500,
+                "message": "Backend Error",
+                "errors": [{"reason": "backendError"}],
+            }
+        },
+    )
+
+
+async def test_an_error_of_gmails_side_is_tried_again(gmail: FakeGmail) -> None:
+    pauses: list[float] = []
+
+    async def pause(seconds: float) -> None:
+        pauses.append(seconds)
+
+    provider = GmailProvider(
+        Tokens(TOKEN), ApiClient(transport=httpx.MockTransport(gmail)), sleep=pause
+    )
+    gmail.failing = [backend_error(), backend_error()]
+    assert await provider.list_folders()
+    assert len(pauses) == 2 and pauses[0] <= 1.0 and pauses[1] <= 2.0
+    gmail.failing = [backend_error()] * 3
+    with pytest.raises(ProviderError, match="backendError"):
+        await provider.list_folders()
+    assert len(pauses) == 4
+
+
+async def test_a_send_is_not_tried_again(gmail: FakeGmail) -> None:
+    gmail.failing = [backend_error()]
+    raw = b"From: me@gmail.com\r\nTo: a@example.com\r\nSubject: Hi\r\n\r\nHello"
+    with pytest.raises(ProviderError, match="backendError"):
+        await adapter(gmail).send(raw, "me@gmail.com", ["a@example.com"])
+    assert gmail.sent == [] and len(gmail.requests) == 1
+
+
 async def test_a_pause_gmail_asks_for_is_kept(gmail: FakeGmail) -> None:
     clock = [100.0]
     provider = adapter(gmail, clock=clock)

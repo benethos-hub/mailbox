@@ -72,6 +72,8 @@ class FakeGmail:
         self.tokens = {TOKEN}
         # Given once to the next request instead of an answer of its own.
         self.next_answer: httpx.Response | None = None
+        # Answers given first, one per request, before any other.
+        self.failing: list[httpx.Response] = []
         self.history_id = 1000
         self.history: list[dict[str, Any]] = []
         # History ids older than this are no longer kept: 404.
@@ -121,6 +123,8 @@ class FakeGmail:
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
         self.requests.append(request)
+        if self.failing:
+            return self.failing.pop(0)
         if self.next_answer is not None:
             answer, self.next_answer = self.next_answer, None
             return answer
