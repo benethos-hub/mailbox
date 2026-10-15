@@ -16,7 +16,7 @@ from ..data.protocols import Lookup, Resolve, SafeFetcher
 from ..data.providers import OAuthClient, ProviderFactory
 from ..data.secrets import CredentialVault, KeyProvider, PasswordHasher
 from ..data.storage import Repositories, open_repositories
-from ..domain.accounts import AccountService, Adapters, OAuthService
+from ..domain.accounts import AccountHooks, AccountService, Adapters, OAuthService
 from ..domain.activity import ActivityLog
 from ..domain.auth import (
     HASH_LABEL,
@@ -243,14 +243,17 @@ class _Domain:
             if worker is not None:
                 worker.forget(account_id)
 
-        return AccountService(
-            self._base.repositories.accounts,
-            self._vault,
-            self._adapters,
+        hooks = AccountHooks(
             on_delete=deleted,
             on_connect=self.users.connected,
             on_ready=worker.take_up if worker is not None else None,
             check_host=self._fetcher.checked_address,
+        )
+        return AccountService(
+            self._base.repositories.accounts,
+            self._vault,
+            self._adapters,
+            hooks,
             idempotency=self._base.repositories.idempotency,
             changes=self._changes,
             activity=self._base.activity,

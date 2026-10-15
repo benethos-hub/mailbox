@@ -9,6 +9,7 @@ adapter.
 from __future__ import annotations
 
 from collections.abc import Mapping
+from typing import TYPE_CHECKING
 
 from pydantic import SecretStr
 
@@ -26,6 +27,9 @@ from ...data.providers import (
 )
 from ...errors import BadRequestError, MailboxServiceError
 from .adapters import REFRESH_TOKEN, Adapters
+
+if TYPE_CHECKING:
+    from .service import Rename
 
 # The display name goes into the From of every send, on one line, and
 # into the log. No line break, no other control character.
@@ -140,14 +144,13 @@ def moved_to(before: Mapping[str, object], after: Mapping[str, object]) -> str |
 
 def what_changed(
     account: Account,
-    display_name: str | None,
-    rename: bool,
+    rename: Rename | None,
     changed: bool,
     secrets: Mapping[str, SecretStr],
 ) -> list[str]:
     """What an update changes, for the audit: never a secret's value."""
     what = []
-    if rename and display_name != account.display_name:
+    if rename is not None and rename.display_name != account.display_name:
         what.append("display name")
     if changed:
         what.append("settings")

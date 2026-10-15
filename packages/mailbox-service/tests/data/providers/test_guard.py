@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from benethos_mailbox_service.data.providers.guard import Guard
+from benethos_mailbox_service.data.providers import Timing
+from benethos_mailbox_service.data.providers.guard import Guard, Pace
 from benethos_mailbox_service.errors import (
     ProviderAuthError,
     ProviderError,
@@ -19,12 +20,8 @@ def guard(
 ) -> Guard:
     """A guard with room for every request, on ``time``."""
     return Guard(
-        6000,
-        clock=time,
-        sleep=time.sleep,
-        jitter=lambda low, high: high,
-        first_pause=first_pause,
-        longest_pause=longest_pause,
+        Pace(per_minute=6000, first_pause=first_pause, longest_pause=longest_pause),
+        Timing(clock=time, sleep=time.sleep, jitter=lambda low, high: high),
     )
 
 

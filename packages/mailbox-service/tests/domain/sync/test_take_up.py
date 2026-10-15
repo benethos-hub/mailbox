@@ -12,6 +12,7 @@ from pydantic import SecretStr
 
 from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import AccountStatus, ProviderType
+from benethos_mailbox_service.domain.accounts import Rename
 from benethos_mailbox_service.domain.sync.worker import SyncWorker
 
 from ...conftest import ADMIN, jmap_services_for
@@ -65,13 +66,11 @@ async def test_connecting_changing_and_verifying_take_it_up(
 ) -> None:
     account_id = await connect(services)
     assert taken == [account_id]
-    await services.accounts.update(ADMIN, account_id, display_name="Me", rename=True)
+    await services.accounts.update(ADMIN, account_id, rename=Rename("Me"))
     assert taken == [account_id], "a new name changes nothing for the sync"
     await services.accounts.update(
         ADMIN,
         account_id,
-        display_name=None,
-        rename=False,
         settings={"port": 443},
         # Another port is another server.
         credentials={"password": SecretStr(PASSWORD)},
@@ -79,8 +78,6 @@ async def test_connecting_changing_and_verifying_take_it_up(
     await services.accounts.update(
         ADMIN,
         account_id,
-        display_name=None,
-        rename=False,
         credentials={"password": SecretStr(PASSWORD)},
     )
     await services.accounts.verify(ADMIN, account_id)

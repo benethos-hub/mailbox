@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import builtins
 from collections.abc import Callable, Iterable, Mapping, Sequence
+from dataclasses import dataclass
 
 from pydantic import SecretStr
 
@@ -39,26 +40,43 @@ from .checks import (
 BY_ADDRESS = paging.Order[Account]("ac_", lambda a: (a.email.casefold(), a.id))
 
 
+@dataclass(frozen=True, slots=True)
+class AccountHooks:
+    """Who hears of an account. ``on_delete`` of one deleted, with its id:
+    the sync forgets its state there. ``on_connect`` of one connected,
+    with the caller and its id: the caller gets ``accounts.manage``
+    there. ``on_ready`` of one connected, changed or verified, with its
+    id: the sync worker takes it up at once. ``check_host`` checks a host
+    a user typed before anything connects to it."""
+
+    on_delete: Callable[[str], None] | None = None
+    on_connect: Callable[[Access, str], None] | None = None
+    on_ready: Callable[[str], None] | None = None
+    check_host: HostCheck | None = None
+
+
+NO_HOOKS = AccountHooks()
+
+
+@dataclass(frozen=True, slots=True)
+class Rename:
+    """A new display name of an account, None to take it off."""
+
+    display_name: str | None
+
+
 class AccountService:
     """Records live in the repository, credentials in the vault, the live
     adapters in ``adapters``. Every method checks the caller's right.
-    ``on_delete`` hears of an account deleted, with its id: the sync
-    forgets its state there. ``on_connect`` hears of an account connected,
-    with the caller and its id: the caller gets ``accounts.manage`` there.
-    ``on_ready`` hears of an account connected, changed or verified, with
-    its id: the sync worker takes it up at once. ``offered`` are the kinds
-    of account that can be connected, None for every kind. Accounts of
-    other kinds connected before keep working."""
+    ``offered`` are the kinds of account that can be connected, None for
+    every kind. Accounts of other kinds connected before keep working."""
 
     def __init__(
         self,
         repository: AccountRepository,
         vault: CredentialVault,
         adapters: Adapters,
-        on_delete: Callable[[str], None] | None = None,
-        on_connect: Callable[[Access, str], None] | None = None,
-        on_ready: Callable[[str], None] | None = None,
-        check_host: HostCheck | None = None,
+        hooks: AccountHooks = NO_HOOKS,
         idempotency: IdempotencyRepository | None = None,
         changes: ChangeFeed | None = None,
         activity: ActivityLog | None = None,
@@ -69,12 +87,12 @@ class AccountService:
         self._offered = frozenset(offered) if offered is not None else None
         self._vault = vault
         self._adapters = adapters
-        self._on_delete = on_delete
-        self._on_connect = on_connect
-        self._on_ready = on_ready
+        self._on_delete = hooks.on_delete
+        self._on_connect = hooks.on_connect
+        self._on_ready = hooks.on_ready
         self._idempotency = idempotency
         self._changes = changes
-        self._checks = AccountChecks(adapters, check_host)
+        self._checks = AccountChecks(adapters, hooks.check_host)
 
     def list(
         self,
@@ -206,20 +224,19 @@ class AccountService:
         access: Access,
         account_id: str,
         *,
-        display_name: str | None,
-        rename: bool,
+        rename: Rename | None = None,
         settings: Mapping[str, str | int | bool | None] | None = None,
         credentials: Mapping[str, SecretStr] | None = None,
         signed_in: Tokens | None = None,
     ) -> Account:
-        """Change the display name, settings (``None`` removes one) or
-        credentials. A change of settings or credentials logs in first, as on
+        """Change the display name (``rename``), settings (``None`` removes
+        one) or credentials. A change of settings or credentials logs in first, as on
         create: nothing is stored unless the provider accepts it. Settings
         sent as they are stored change nothing and log in nowhere."""
         access.require("update_account", account_id)
         no_secrets_in(settings)
-        if rename:
-            one_line_name(display_name)
+        if rename is not None:
+            one_line_name(rename.display_name)
         account = self._repository.get(account_id)
         defaults = settings_defaults(account.provider, account.email)
         before = {**defaults, **self._repository.settings(account_id)}
@@ -227,9 +244,9 @@ class AccountService:
         changed = merged != before
         secrets = dict(credentials or {})
         found = await self._check_update(account, before, merged, secrets, signed_in)
-        what = what_changed(account, display_name, rename, changed, secrets)
-        if rename:
-            account = account.model_copy(update={"display_name": display_name})
+        what = what_changed(account, rename, changed, secrets)
+        if rename is not None:
+            account = account.model_copy(update={"display_name": rename.display_name})
         self._store_update(access, account, merged, secrets, what)
         if found is not None:
             self._adapters.keep(account_id, found)

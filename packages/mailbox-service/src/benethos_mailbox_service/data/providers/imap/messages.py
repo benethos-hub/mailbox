@@ -4,6 +4,7 @@ of flag changes, one MOVE."""
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 
 from ....errors import (
@@ -211,27 +212,26 @@ def _store(
     return bool(plans)
 
 
+Deleted = dict[int, MessageSummary | None | MailboxServiceError]
+
+
 def delete_in_folder(
-    box: Mailbox,
-    folder: str,
-    validity: int,
-    uids: list[int],
-    permanent: bool,
-    retried: bool = False,
-) -> dict[int, MessageSummary | None | MailboxServiceError]:
-    found, _ = open_writable(box, folder, validity, uids)
-    results: dict[int, MessageSummary | None | MailboxServiceError] = dict(
-        _missing(uids, found)
-    )
-    if retried:
-        # Gone from the folder: the first try deleted or moved them,
-        # to a place this try cannot name.
-        results = {uid: None for uid in results}
-    if not found:
-        return results
-    if permanent:
+    box: Mailbox, folder: str, validity: int, uids: list[int], retried: bool = False
+) -> Deleted:
+    """For good."""
+    found, results = _to_delete(box, folder, validity, uids, retried)
+    if found:
         box.session.messages.expunge(list(found))
         results.update({uid: None for uid in found})
+    return results
+
+
+def trash_in_folder(
+    box: Mailbox, folder: str, validity: int, uids: list[int], retried: bool = False
+) -> Deleted:
+    """Into the trash."""
+    found, results = _to_delete(box, folder, validity, uids, retried)
+    if not found:
         return results
     trash = box.required_folder(FolderRole.TRASH)
     if trash == folder:
@@ -239,6 +239,19 @@ def delete_in_folder(
     moved = _move(box, found, trash)
     results.update({uid: moved.get(uid) for uid in found})
     return results
+
+
+def _to_delete(
+    box: Mailbox, folder: str, validity: int, uids: list[int], retried: bool
+) -> tuple[dict[int, Any], Deleted]:
+    """The messages still there, and what answers for the others."""
+    found, _ = open_writable(box, folder, validity, uids)
+    results: Deleted = dict(_missing(uids, found))
+    if retried:
+        # Gone from the folder: the first try deleted or moved them,
+        # to a place this try cannot name.
+        results = {uid: None for uid in results}
+    return found, results
 
 
 def open_writable(
@@ -296,22 +309,26 @@ def _move_target(box: Mailbox, changes: MessageUpdate, current: str) -> str | No
 # --- ids --------------------------------------------------------------------------
 
 
-def by_folder(
-    message_ids: list[str],
-) -> tuple[dict[tuple[str, int], dict[int, str]], dict[str, NotFoundError]]:
-    """The ids by folder and UIDVALIDITY, as UID -> id, and those that are
-    no id of this adapter."""
-    folders: dict[tuple[str, int], dict[int, str]] = {}
-    unknown: dict[str, NotFoundError] = {}
+@dataclass(frozen=True)
+class ByFolder:
+    """Message ids by folder and UIDVALIDITY, as UID -> id, and those that
+    are no id of this adapter."""
+
+    folders: dict[tuple[str, int], dict[int, str]]
+    unknown: dict[str, NotFoundError]
+
+
+def by_folder(message_ids: list[str]) -> ByFolder:
+    found = ByFolder({}, {})
     for message_id in message_ids:
         try:
             place = mappers.parse_message_id(message_id)
         except NotFoundError as exc:
-            unknown[message_id] = exc
+            found.unknown[message_id] = exc
             continue
         at = (place.folder, place.uidvalidity)
-        folders.setdefault(at, {})[place.uid] = message_id
-    return folders, unknown
+        found.folders.setdefault(at, {})[place.uid] = message_id
+    return found
 
 
 def _missing(

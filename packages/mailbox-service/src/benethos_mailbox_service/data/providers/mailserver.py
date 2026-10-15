@@ -13,18 +13,17 @@ from __future__ import annotations
 
 import itertools
 import threading
-import time
 from collections.abc import Callable, Mapping
+from dataclasses import replace
 from typing import Protocol, TypeVar
 
 import anyio
 
-from ...common.ratelimit import Clock, Sleep
 from ...errors import BadRequestError, NotSupportedError
 from ..models import MailServer
 from ..protocols import Pick, Server, SmtpSession
 from .base import CredentialReader, ProviderSettings
-from .guard import Guard, Pace
+from .guard import REAL_TIME, Guard, Pace, Timing
 from .sender import SmtpFactory, SmtpSender, smtp_settings
 from .settings import mail_server, rate_of
 
@@ -91,9 +90,7 @@ class MailServerAdapter:
         settings: ProviderSettings,
         credentials: CredentialReader,
         *,
-        clock: Clock = time.monotonic,
-        sleep: Sleep = time.sleep,
-        jitter: Callable[[float, float], float] | None = None,
+        timing: Timing = REAL_TIME,
         smtp_factory: SmtpFactory = SmtpSession,
         pick: Pick | None = None,
         pace: Pace | None = None,
@@ -109,16 +106,9 @@ class MailServerAdapter:
         self._username = login.username
         self._credentials = credentials
         pace = pace or Pace()
+        rate = rate_of(settings, "max_requests_per_minute", pace.per_minute)
         self._guard = Guard(
-            rate_of(settings, "max_requests_per_minute", pace.per_minute),
-            pace.burst,
-            clock=clock,
-            sleep=sleep,
-            jitter=jitter,
-            attempts=pace.attempts,
-            first_pause=pace.first_pause,
-            longest_pause=pace.longest_pause,
-            name=f"requests to {login.host}",
+            replace(pace, per_minute=rate), timing, name=f"requests to {login.host}"
         )
         self._smtp = SmtpSender.from_settings(
             settings,

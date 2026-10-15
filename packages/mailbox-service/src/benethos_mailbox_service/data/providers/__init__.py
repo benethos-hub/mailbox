@@ -47,7 +47,7 @@ from .base import (
     Writes,
 )
 from .connections import CONNECTIONS, connection_of
-from .guard import Pace
+from .guard import Pace, Timing
 from .registry import (
     ProviderFactory,
     ServerProbe,
@@ -77,6 +77,7 @@ __all__ = [
     "PROTOCOLS",
     "OAuthClient",
     "Pace",
+    "Timing",
     "Pick",
     "ProviderFactory",
     "ProviderSettings",

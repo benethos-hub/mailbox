@@ -12,7 +12,7 @@ from pydantic import SecretStr
 from benethos_mailbox_common.log import redact
 
 from ....data.models import AccountStatus, ProviderType
-from ....domain.accounts import AccountService, connection_of, connections
+from ....domain.accounts import AccountService, Rename, connection_of, connections
 from ....domain.discovery import connectable, sign_ins
 from ....domain.rights import Access
 from ....domain.system import StatusService
@@ -283,12 +283,9 @@ async def update_account(
 ) -> Response:
     form = await request.form()
     here = f"/ui/accounts/{account_id}"
-    changes: dict[str, Any] = {"display_name": None, "rename": False}
+    rename = None
     if "display_name" in form:
-        changes = {
-            "display_name": _typed_account(form)["display_name"] or None,
-            "rename": True,
-        }
+        rename = Rename(_typed_account(form)["display_name"] or None)
     with failing(
         here,
         again=lambda err: _account_page(
@@ -300,7 +297,7 @@ async def update_account(
             account_id,
             settings=_submitted(form),
             credentials=_credentials(form),
-            **changes,
+            rename=rename,
         )
     return back(request, here, "Saved.")
 

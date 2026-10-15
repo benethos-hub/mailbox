@@ -1,5 +1,7 @@
 """Sending and drafts: a message composed from the account's address, a
 reply or forward made from its original, drafts kept until they are sent.
+Composing is in ``composing``, handing a message to the provider and
+what follows in ``delivering``.
 
 ``MailboxService`` holds it as ``outgoing``, where both front ends reach
 it.
@@ -7,47 +9,31 @@ it.
 
 from __future__ import annotations
 
-import base64
 from collections.abc import Callable
-from contextlib import AbstractContextManager
 from datetime import datetime
-from typing import TypeVar
 
 from pydantic import BaseModel
-
-from benethos_mailbox_common.values import text
 
 from ...common.clock import utc_now
 from ...data.mail import compose, convert
 from ...data.models import (
-    Account,
     DraftMessage,
-    Message,
-    MessageReference,
     MessageSummary,
-    MessageUpdate,
-    OutgoingAttachment,
     OutgoingMessage,
     Page,
-    Recipient,
     SendFilter,
     SendRecord,
     SendResult,
-    SentMessage,
 )
-from ...errors import MailboxServiceError, missing_message
-from .. import changes
-from ..accounts import NEEDS, drafts, sends
-from ..activity import ActivityLog, Actor
-from ..activity import mailbox as said
+from ..accounts import NEEDS, drafts
+from ..activity import ActivityLog
 from ..rights import Access
-from . import checks, replies
+from . import checks
 from .calls import Calls
+from .composing import Composer
+from .delivering import Delivery
 from .idempotency import Idempotency
-from .reach import reach_of
-from .sending import Operation, SendControl
-
-M = TypeVar("M", bound=DraftMessage)
+from .sending import SendControl
 
 
 class Outgoing:
@@ -62,8 +48,8 @@ class Outgoing:
         self._calls = calls
         self._idempotency = idempotency
         self._sends = sends
-        self._clock = clock
-        self._activity = activity or ActivityLog(clock)
+        self._composer = Composer(calls, clock)
+        self._delivery = Delivery(calls, sends, activity or ActivityLog(clock))
 
     # --- sending --------------------------------------------------------------------
 
@@ -92,85 +78,30 @@ class Outgoing:
     async def _send(
         self, access: Access, account_id: str, message: OutgoingMessage
     ) -> SendResult:
-        message = await self._with_sources(access, account_id, message)
-        raw, message_id, message, original = await self._compose(
-            access, account_id, message, draft=False
-        )
+        message = await self._composer.with_sources(access, account_id, message)
+        composed = await self._composer.make(access, account_id, message, draft=False)
+        message, original = composed.message, composed.original
         # Checked once composed: a reply finds its recipients in the original.
         recipients = checks.addressed(message.recipients())
         account = self._calls.record(account_id)
-        result = await self._deliver(
-            access, "send_message", account, raw, recipients, message_id
+        result = await self._delivery.deliver(
+            access,
+            "send_message",
+            account,
+            composed.raw,
+            recipients,
+            composed.message_id,
         )
         if message.reference is not None and original is not None:
             marked = False
-            with self._after_sending(access, account, "the original is not marked"):
-                marked = await self._mark_answered(
+            with self._delivery.after_sending(
+                access, account, "the original is not marked"
+            ):
+                marked = await self._delivery.mark_answered(
                     account_id, message.reference, original
                 )
             result = result.model_copy(update={"original_marked": marked})
         return result
-
-    async def _deliver(
-        self,
-        access: Access,
-        operation: Operation,
-        account: Account,
-        raw: bytes,
-        recipients: list[str],
-        message_id: str,
-    ) -> SendResult:
-        """Hand a composed message to the provider, under the grants'
-        constraints and recorded in the audit."""
-        account_id = account.id
-        sent = await self._sends.send(
-            access,
-            operation,
-            account_id,
-            recipients,
-            lambda: self._calls.call(
-                account_id, lambda p: sends(p).send(raw, account.email, recipients)
-            ),
-            message_id,
-        )
-        result = await self._send_result(access, account, message_id, sent)
-        self._activity.record(
-            said.MessageSent(
-                by=Actor.of(access),
-                account=account,
-                recipients=len(recipients),
-                message=result.sent_copy_id or message_id,
-            )
-        )
-        return result
-
-    async def _send_result(
-        self, access: Access, account: Account, message_id: str, sent: SentMessage
-    ) -> SendResult:
-        """What the caller learns of a send. The message is sent already: the
-        bookkeeping here is logged when it fails, never raised, or a client
-        would send again."""
-        account_id = account.id
-        if sent.copy_error is not None:
-            self._activity.record(
-                said.SentBut(
-                    by=Actor.of(access),
-                    account=account,
-                    what="no copy is in the sent folder",
-                    error=MailboxServiceError(sent.copy_error),
-                )
-            )
-        copy_id = None
-        with self._after_sending(
-            access, account, "the sent copy or the change is not recorded"
-        ):
-            if sent.sent_copy is not None:
-                copy = await self._calls.published_one(account_id, sent.sent_copy)
-                copy_id = copy.id
-            self._calls.changed(changes.MessageSent(account_id, copy_id or message_id))
-        return SendResult(
-            message_id_header=message_id, sent_copy_id=copy_id, refused=sent.refused
-        )
 
     def list_sends(
         self,
@@ -205,98 +136,6 @@ class Outgoing:
             matching=matching,
         )
 
-    # --- composing ------------------------------------------------------------------
-
-    async def _compose(
-        self, access: Access, account_id: str, message: M, *, draft: bool
-    ) -> tuple[bytes, str, M, Message | None]:
-        """The message as bytes, from the account's address, with a fresh
-        Date and Message-ID. A reference is filled in from the original,
-        which must be in a folder the caller may read. Returns the bytes,
-        the Message-ID, the message as filled in and the original, if any."""
-        account = self._calls.record(account_id)
-        extras = compose.NO_EXTRAS
-        original: Message | None = None
-        reference = message.reference
-        if reference is not None:
-            original = await self._calls.message(account_id, reference.message_id)
-            reach = await reach_of(self._calls, access, "get_message", account_id)
-            if reach is not None and not reach.sees(original.folder_ids):
-                raise missing_message(reference.message_id)
-            message, extras = await self._answer(
-                account_id, account.email, message, reference, original
-            )
-        message_id = compose.new_message_id(account.email)
-        raw = compose.message(
-            message,
-            # One stored before names were checked may break a line.
-            Recipient.model_construct(
-                email=account.email,
-                name=text.joined(account.display_name or "") or None,
-            ),
-            self._date(),
-            message_id,
-            extras,
-            draft=draft,
-            reference=compose.write_reference(reference) if reference else None,
-        )
-        return raw, message_id, message, original
-
-    def _date(self) -> datetime:
-        """Now, in local time with its offset, as mail clients write it."""
-        return self._clock().astimezone()
-
-    async def _answer(
-        self,
-        account_id: str,
-        own_address: str,
-        message: M,
-        reference: MessageReference,
-        original: Message,
-    ) -> tuple[M, compose.Extras]:
-        """Fetch what the reply or forward needs of the original. ``replies``
-        makes it."""
-        raw = await self._calls.on_message(
-            account_id, reference.message_id, lambda p, native: p.get_raw(native)
-        )
-        if reference.action != "forward":
-            return replies.reply(
-                message, reference.action, original, raw, own_address, reference.quote
-            )
-        files: list[replies.AttachedFile] = []
-        if reference.forward_as == "inline" and reference.quote:
-            for attachment in original.attachments:
-                content = await self._calls.attachment(
-                    account_id, reference.message_id, attachment.id
-                )
-                files.append(
-                    (
-                        attachment.filename or attachment.id,
-                        attachment.content_type,
-                        content.data,
-                    )
-                )
-        return replies.forward(
-            message, reference.forward_as, original, raw, files, reference.quote
-        )
-
-    async def _mark_answered(
-        self, account_id: str, reference: MessageReference, original: Message
-    ) -> bool:
-        """``$answered`` or ``$forwarded`` on the original, so other clients
-        show it too, where the account writes that mark. Called after the
-        message went out, where a failure is logged. Whether the original
-        carries the mark now."""
-        keyword = replies.answered_keyword(reference)
-        if keyword in original.keywords:
-            return True
-        able = await self._calls.abilities(account_id)
-        if keyword not in able.marks.written:
-            return False
-        changes = MessageUpdate(add_keywords=[keyword])
-        await self._calls.update_one(account_id, reference.message_id, changes)
-        return True
-
     # --- drafts ---------------------------------------------------------------------
 
     async def list_drafts(
@@ -316,11 +155,11 @@ class Outgoing:
         send. A reference is filled in now and remembered for the send."""
         checks.require(access, "create_draft", account_id, draft)
         await self._calls.require(account_id, NEEDS["create_draft"])
-        draft = await self._with_sources(access, account_id, draft)
-        raw, _, composed, _ = await self._compose(access, account_id, draft, draft=True)
-        checks.limited(composed.recipients())
+        draft = await self._composer.with_sources(access, account_id, draft)
+        composed = await self._composer.make(access, account_id, draft, draft=True)
+        checks.limited(composed.message.recipients())
         saved = await self._calls.call(
-            account_id, lambda p: drafts(p).save_draft(raw, None)
+            account_id, lambda p: drafts(p).save_draft(composed.raw, None)
         )
         return await self._calls.published_one(account_id, saved)
 
@@ -350,55 +189,22 @@ class Outgoing:
             # Stored as it is: the provider is left alone.
             stored = await self._calls.message(account_id, draft_id)
             return await self._calls.published_one(account_id, stored)
-        draft = await self._with_sources(access, account_id, draft)
+        draft = await self._composer.with_sources(access, account_id, draft)
         if keep_attachments:
             kept = [
-                await self._attachment(account_id, draft_id, attachment_id)
+                await self._composer.attachment(account_id, draft_id, attachment_id)
                 for attachment_id in keep_attachments
             ]
             draft = draft.model_copy(update={"attachments": kept + draft.attachments})
-        raw, _, composed, _ = await self._compose(access, account_id, draft, draft=True)
-        checks.limited(composed.recipients())
+        composed = await self._composer.make(access, account_id, draft, draft=True)
+        checks.limited(composed.message.recipients())
         saved = await self._calls.on_message(
-            account_id, draft_id, lambda p, native: drafts(p).save_draft(raw, native)
+            account_id,
+            draft_id,
+            lambda p, native: drafts(p).save_draft(composed.raw, native),
         )
         self._calls.relocate(account_id, draft_id, saved)
         return await self._calls.published_one(account_id, saved)
-
-    async def _with_sources(self, access: Access, account_id: str, message: M) -> M:
-        """``message`` with the attachments it names of other messages
-        fetched, before its own. Each message must be in a folder the
-        caller may read attachments in."""
-        if not message.attachments_from:
-            return message
-        reach = await reach_of(self._calls, access, "get_attachment", account_id)
-        fetched = []
-        for source in message.attachments_from:
-            if reach is not None:
-                holder = await self._calls.message(account_id, source.message_id)
-                if not reach.sees(holder.folder_ids):
-                    raise missing_message(source.message_id)
-            fetched.append(
-                await self._attachment(
-                    account_id, source.message_id, source.attachment_id
-                )
-            )
-        attachments = [*fetched, *message.attachments]
-        checks.sized(attachments)
-        return message.model_copy(
-            update={"attachments": attachments, "attachments_from": []}
-        )
-
-    async def _attachment(
-        self, account_id: str, message_id: str, attachment_id: str
-    ) -> OutgoingAttachment:
-        """An attachment of a stored message, to attach again."""
-        found = await self._calls.attachment(account_id, message_id, attachment_id)
-        return OutgoingAttachment(
-            filename=found.filename or attachment_id,
-            content_type=found.content_type,
-            data=base64.b64encode(found.data),
-        )
 
     async def send_draft(
         self,
@@ -431,48 +237,25 @@ class Outgoing:
             account_id, draft_id, lambda p, native: drafts(p).get_draft(native)
         )
         out = compose.outgoing(
-            stored, self._date(), compose.new_message_id(account.email)
+            stored, self._composer.date(), compose.new_message_id(account.email)
         )
         recipients = checks.addressed(out.recipients)
-        result = await self._deliver(
+        result = await self._delivery.deliver(
             access, "send_draft", account, out.raw, recipients, out.message_id
         )
         # Sent: from here on nothing may fail, or a client would send again.
-        with self._after_sending(access, account, "the draft is still there"):
+        with self._delivery.after_sending(access, account, "the draft is still there"):
             await self._delete_draft(account_id, draft_id)
         if out.reference is not None:
             marked = False
-            with self._after_sending(access, account, "the original is not marked"):
-                marked = await self._mark_from_draft(access, account_id, out.reference)
+            with self._delivery.after_sending(
+                access, account, "the original is not marked"
+            ):
+                marked = await self._delivery.mark_from_draft(
+                    access, account_id, out.reference
+                )
             result = result.model_copy(update={"original_marked": marked})
         return result
-
-    async def _mark_from_draft(
-        self, access: Access, account_id: str, header: str
-    ) -> bool:
-        """Mark the original the sent draft answered or forwarded. Any
-        client that writes drafts may have named it, so only where the
-        caller may change that message itself."""
-        reference = compose.read_reference(header)
-        if reference is None or not access.allows("update_message", account_id):
-            return False
-        original = await self._calls.message(account_id, reference.message_id)
-        reach = await reach_of(self._calls, access, "update_message", account_id)
-        if reach is not None and not reach.sees(original.folder_ids):
-            return False
-        return await self._mark_answered(account_id, reference, original)
-
-    def _after_sending(
-        self, access: Access, account: Account, what: str
-    ) -> AbstractContextManager[None]:
-        """A step after the message went out. It may fail, but only into
-        the log: the send succeeded, and a client told otherwise sends
-        again."""
-        return self._activity.fail_quietly(
-            lambda exc: said.SentBut(
-                by=Actor.of(access), account=account, what=what, error=exc
-            )
-        )
 
     async def delete_draft(
         self, access: Access, account_id: str, draft_id: str

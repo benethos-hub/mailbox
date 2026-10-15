@@ -9,6 +9,7 @@ a code).
 from __future__ import annotations
 
 from contextlib import AbstractContextManager
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol, TypeVar
 
@@ -20,6 +21,15 @@ from ..activity import accounts as said
 from ..rights import Access
 from .adapters import REFRESH_TOKEN, Adapters
 from .service import AccountService
+
+
+@dataclass(frozen=True, slots=True)
+class Connected:
+    """The account a sign-in connected, and whether it signed in again."""
+
+    account: Account
+    again: bool
+
 
 # Sign-ins a user may have open at once, each way. Older ones are dropped.
 OPEN_PER_USER = 5
@@ -116,9 +126,9 @@ class SignIns:
         provider: ProviderType,
         tokens: Tokens,
         account_id: str | None,
-    ) -> tuple[Account, bool]:
+    ) -> Connected:
         """The account the tokens connect, or ``account_id`` signed in
-        again, and whether it signed in again."""
+        again."""
         if tokens.refresh_token is None:
             raise BadRequestError(
                 f"{provider} gave no refresh token: the app must ask for offline_access"
@@ -139,12 +149,10 @@ class SignIns:
             updated = await self._accounts.update(
                 access,
                 account_id,
-                display_name=None,
-                rename=False,
                 credentials=credentials,
                 signed_in=tokens,
             )
-            return updated, True
+            return Connected(updated, again=True)
         name = tokens.identity.name if tokens.identity else None
         created = await self._accounts.create(
             access,
@@ -154,16 +162,16 @@ class SignIns:
             credentials=credentials,
             signed_in=tokens,
         )
-        return created, False
+        return Connected(created, again=False)
 
     def finished(
-        self, access: Access, provider: ProviderType, account: Account, again: bool
+        self, access: Access, provider: ProviderType, connected: Connected
     ) -> None:
         self._activity.record(
             said.OAuthFinished(
                 by=Actor.of(access),
                 provider=provider.value,
-                account=account,
-                again=again,
+                account=connected.account,
+                again=connected.again,
             )
         )

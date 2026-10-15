@@ -1,6 +1,7 @@
 """What one pass of the sync finds, as values and pure functions: the
 folders' contents against the index, the moves among them, what the
-index becomes, and the counts for the log."""
+index becomes, what the change feed hears of it, and the counts for the
+log."""
 
 from __future__ import annotations
 
@@ -12,6 +13,12 @@ from datetime import datetime
 from ...common.clock import iso, parse_iso
 from ...data.providers import FolderChanges, ThreadHeaders
 from ...data.storage import IndexChanges, IndexEntry, ThreadChain
+from ..changes import (
+    MailboxChange,
+    MessagesCreated,
+    MessagesDeleted,
+    MessagesUpdated,
+)
 
 
 @dataclass(frozen=True)
@@ -195,3 +202,45 @@ def chain(message_id: str, headers: ThreadHeaders, references: int) -> ThreadCha
     kept = headers.references[-references:] if references > 0 else ()
     named = (headers.message_id, *kept, headers.in_reply_to)
     return ThreadChain(message_id, tuple(dict.fromkeys(h for h in named if h)))
+
+
+@dataclass(frozen=True)
+class Report:
+    """What a pass tells the change feed, and its counts for the log."""
+
+    changes: list[MailboxChange]
+    counts: Counts
+
+
+def report(
+    account_id: str,
+    seen: Seen,
+    moved: dict[IndexEntry, str],
+    changes: IndexChanges,
+    flagged: list[str],
+    folders: int,
+) -> Report:
+    """The changes of a pass, as the change feed hears of them."""
+    present = seen.present
+    # A message renumbered in its folder (a new UIDVALIDITY) did not
+    # change for the caller. One that went to another folder did.
+    elsewhere = [e.id for e, n in moved.items() if present[n] != e.folder_id]
+    now_in = {e.id: present[n] for e, n in moved.items()}
+    now_in.update((e.id, e.folder_id) for e in seen.stayed.values())
+    told: list[MailboxChange] = [
+        MessagesCreated(
+            account_id,
+            [e.id for e in changes.added],
+            {e.id: e.folder_id for e in changes.added},
+        ),
+        MessagesUpdated(account_id, elsewhere + flagged, now_in),
+        MessagesDeleted(
+            account_id,
+            changes.removed,
+            {e.id: e.folder_id for e in seen.left if e not in moved},
+        ),
+    ]
+    counts = Counts(
+        folders, len(changes.added), len(elsewhere + flagged), len(changes.removed)
+    )
+    return Report(told, counts)

@@ -47,7 +47,7 @@ from ..rights import Access
 from .adapters import Adapters
 from .device import DeviceSignIn, DeviceSignIns
 from .service import AccountService
-from .signin import UNKNOWN, SignIns, forget_beyond
+from .signin import UNKNOWN, Connected, SignIns, forget_beyond
 
 VALID_FOR = timedelta(minutes=10)
 
@@ -126,14 +126,13 @@ class OAuthService:
         user's sign-in answers as an unknown one and stays open for its
         owner."""
         with self._sign_ins.failing(access, provider):
-            account, again = await self._finish(access, provider, state, code)
-        self._sign_ins.finished(access, provider, account, again)
-        return account
+            connected = await self._finish(access, provider, state, code)
+        self._sign_ins.finished(access, provider, connected)
+        return connected.account
 
     async def _finish(
         self, access: Access, provider: ProviderType, state: str, code: str
-    ) -> tuple[Account, bool]:
-        """The account, and whether it signed in again."""
+    ) -> Connected:
         pending = self._pending.get(state)
         if pending is None or pending.user_id != access.user_id:
             raise BadRequestError(UNKNOWN)

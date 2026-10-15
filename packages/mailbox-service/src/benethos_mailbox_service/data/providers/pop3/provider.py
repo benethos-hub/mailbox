@@ -15,7 +15,6 @@ paces the steps as for IMAP (CONCEPT 5.9).
 
 from __future__ import annotations
 
-import time
 from collections.abc import Callable
 from functools import partial
 from typing import TypeVar
@@ -23,7 +22,6 @@ from typing import TypeVar
 from benethos_mailbox_common.values import secret
 
 from ....common.chunks import batched
-from ....common.ratelimit import Clock, Sleep
 from ....errors import (
     MailboxServiceError,
     NotSupportedError,
@@ -46,7 +44,7 @@ from ...models import (
 )
 from ...protocols import POP3_PORTS, Pick, Pop3Session, Server, SmtpSession
 from ..base import CredentialReader, ProviderSettings
-from ..guard import Pace
+from ..guard import REAL_TIME, Pace, Timing
 from ..mailserver import (
     PROBE_TIMEOUT,
     MailServerAdapter,
@@ -112,9 +110,7 @@ class Pop3Provider(MailServerAdapter):
         settings: ProviderSettings,
         credentials: CredentialReader,
         session_factory: SessionFactory = Pop3Session,
-        clock: Clock = time.monotonic,
-        sleep: Sleep = time.sleep,
-        jitter: Callable[[float, float], float] | None = None,
+        timing: Timing = REAL_TIME,
         smtp_factory: SmtpFactory = SmtpSession,
         pick: Pick | None = None,
         pace: Pace | None = None,
@@ -124,9 +120,7 @@ class Pop3Provider(MailServerAdapter):
         super().__init__(
             settings,
             credentials,
-            clock=clock,
-            sleep=sleep,
-            jitter=jitter,
+            timing=timing,
             smtp_factory=smtp_factory,
             pick=pick,
             pace=pace,

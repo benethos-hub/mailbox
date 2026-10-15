@@ -38,6 +38,7 @@ from benethos_mailbox_service.data.providers import (
     CredentialReader,
     ProviderSettings,
     Reads,
+    Timing,
     TokenSource,
     sign_in,
 )
@@ -182,7 +183,7 @@ def _imap() -> Box:
             lambda field: SecretStr("secret"),
             session_factory=lambda s: ImapSession(s, client_factory=server),
             smtp_factory=lambda s: SmtpSession(s, connection_factory=smtp),
-            sleep=lambda seconds: None,
+            timing=Timing(sleep=lambda seconds: None),
         )
 
     return Box(
@@ -208,7 +209,7 @@ def _pop3() -> Box:
             lambda field: SecretStr("secret"),
             session_factory=lambda s: Pop3Session(s, connection_factory=server),
             smtp_factory=lambda s: SmtpSession(s, connection_factory=smtp),
-            sleep=lambda seconds: None,
+            timing=Timing(sleep=lambda seconds: None),
         )
 
     return Box(
