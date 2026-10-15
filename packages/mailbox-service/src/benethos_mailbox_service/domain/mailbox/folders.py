@@ -8,6 +8,8 @@ too.
 
 from __future__ import annotations
 
+from collections.abc import Callable, Iterable
+
 from ...data.models import (
     Folder,
     FolderCreate,
@@ -178,6 +180,17 @@ class Folders:
                 "it stays as it is"
             )
         return folder, folders, reach
+
+
+def holder(folders: list[Folder], folder_id: str) -> Callable[[Iterable[str]], bool]:
+    """Whether a message in these folders is in ``folder_id``. The folder
+    with the role ``all`` holds every message but those in the trash and
+    junk, which carry no id of it."""
+    found = find_folder(folders, folder_id)
+    if found is None or found.role is not FolderRole.ALL:
+        return lambda folder_ids: folder_id in folder_ids
+    outside = {f.id for f in folders if f.role in (FolderRole.TRASH, FolderRole.JUNK)}
+    return lambda folder_ids: not outside.intersection(folder_ids)
 
 
 def is_role(folder: str) -> bool:

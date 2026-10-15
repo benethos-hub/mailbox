@@ -157,6 +157,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `GET /v1/accounts/{account_id}/threads` shows each thread once, page
+  by page. In the folder `all` a thread came again on later pages, as
+  in the UI's conversations of All Mail, and so did one whose messages
+  came in the same second at the end of a page. A cursor of the list
+  made before is refused once.
 - A list across accounts, `GET /v1/messages`, gives every message once
   when a client asks the next page for fewer messages than the one
   before. It gave some twice, as the MCP server's `search_messages`

@@ -213,6 +213,51 @@ async def test_the_threads_of_a_folder_page_by_page(
     assert shown == [threads[f"Mail {n}"] for n in (1, 4, 3, 2)]
 
 
+async def every_thread(
+    services: Services, account_id: str, folder: str, limit: int
+) -> list[str]:
+    """The ids of the threads of a folder, page by page."""
+    shown: list[str] = []
+    cursor = None
+    while True:
+        page = await services.mailbox.list_threads(
+            ADMIN, account_id, folder_id=folder, limit=limit, cursor=cursor
+        )
+        shown += [t.id for t in page.items]
+        cursor = page.next_cursor
+        if cursor is None:
+            return shown
+
+
+@pytest.mark.parametrize("folder", ["inbox", "all"])
+@pytest.mark.parametrize("limit", [1, 2, 3])
+async def test_each_thread_once_page_by_page(
+    imap_services: Services,
+    imap_account_id: str,
+    conversation: FakeMailBox,
+    folder: str,
+    limit: int,
+) -> None:
+    """In the folder all too, whose id no message carries."""
+    threads = await synced(imap_services, imap_account_id)
+    shown = await every_thread(imap_services, imap_account_id, folder, limit)
+    assert len(shown) == len(set(shown))
+    wanted = {threads[f"Mail {n}"] for n in (1, 2, 3, 4)}
+    if folder == "all":
+        wanted.add(threads["Kept"])
+    assert set(shown) == wanted
+
+
+async def test_a_thread_in_the_last_second_of_a_page_shows_once(
+    imap_services: Services, imap_account_id: str, imap_server: FakeMailBox
+) -> None:
+    """Mail 2 and its answer came in the same second, one on each page."""
+    imap_server.add("INBOX", 6, answer("Re: Mail 2", 2, "Mail 2"))
+    await imap_services.sync.sync_account(imap_account_id)
+    shown = await every_thread(imap_services, imap_account_id, "inbox", 4)
+    assert len(shown) == len(set(shown)) == 4
+
+
 async def test_an_imap_list_reads_every_thread_in_one_go(
     imap_services: Services, imap_account_id: str, conversation: FakeMailBox
 ) -> None:

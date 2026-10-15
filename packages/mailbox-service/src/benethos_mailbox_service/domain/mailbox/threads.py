@@ -13,6 +13,8 @@ every thread on the page in one go, elsewhere a few threads at a time.
 
 from __future__ import annotations
 
+from collections.abc import Callable, Iterable
+from dataclasses import dataclass
 from datetime import UTC, datetime
 
 import anyio
@@ -27,16 +29,19 @@ from ...data.models import (
 )
 from ...data.providers import Reads
 from ...errors import MailboxServiceError, NotFoundError, missing
+from .. import paging
 from ..accounts import NEEDS, summaries, threads
 from ..rights import Access
 from .calls import Calls, public
-from .folders import Folders
+from .folders import Folders, holder
 from .reach import Reach, reach_of, require_folder
 
 # The messages a thread lists at most, the newest.
 THREAD_MESSAGES = 500
 # Threads read from the provider at once, for a list of them.
 AT_ONCE = 4
+
+_CURSOR_PREFIX = "t_"
 
 # The newest messages of each thread, oldest first, and whether it holds
 # more, by thread.
@@ -84,20 +89,22 @@ class Threads:
         if reach is not None:
             require_folder(reach, folder)
         keeps = self._calls.keeps_threads(account_id)
+        before = _Before.of(cursor)
         page = await self._calls.call(
             account_id,
             lambda p: _threaded(p, keeps).list_messages(
-                folder, limit=limit, cursor=cursor
+                folder, limit=limit, cursor=before.cursor if before else None
             ),
         )
         listed = (await self._calls.published_page(account_id, page)).items
         ids = list(dict.fromkeys(m.thread_id for m in listed if m.thread_id))
         own = self._calls.record(account_id).email
         read = await self._read(account_id, ids)
+        holds = holder(await self._folders.all(account_id), folder)
         found: list[ThreadSummary] = []
         for thread_id in ids:
             thread = _visible(account_id, thread_id, read, reach, own)
-            if thread is None or (cursor and _listed_before(thread, folder, listed)):
+            if thread is None or (before and before.listed(thread, holds, listed)):
                 continue
             # Its row shows the newest message in the folder, where it stands.
             here = next(m for m in listed if m.thread_id == thread_id)
@@ -111,7 +118,9 @@ class Threads:
                     }
                 )
             )
-        return Page[ThreadSummary](items=found, next_cursor=page.next_cursor)
+        return Page[ThreadSummary](
+            items=found, next_cursor=_Before.after(page.next_cursor, listed)
+        )
 
     async def _visible(
         self, account_id: str, thread_id: str, reach: Reach | None
@@ -256,17 +265,48 @@ def _when(message: MessageSummary) -> datetime | None:
     return date if date.tzinfo else date.replace(tzinfo=UTC)
 
 
-def _listed_before(thread: Thread, folder: str, listed: list[MessageSummary]) -> bool:
-    """Whether a page before this one listed the thread: it has a message
-    in the folder, not on this page, newer than the newest one here."""
-    top = _when(listed[0]) if listed else None
-    if top is None:
-        return False
-    here = {m.id for m in listed}
-    return any(
-        folder in m.folder_ids
-        and m.id not in here
-        and (when := _when(m)) is not None
-        and when > top
-        for m in thread.messages
-    )
+@dataclass(frozen=True)
+class _Before:
+    """What a cursor of a list of threads carries: the cursor of the
+    folder's messages, and the messages of the page before that came in
+    its last second. One of them may share that second with this page."""
+
+    cursor: str
+    last: frozenset[str]
+
+    @classmethod
+    def of(cls, cursor: str | None) -> _Before | None:
+        if cursor is None:
+            return None
+        return paging.decode_cursor(
+            _CURSOR_PREFIX, cursor, lambda c: cls(str(c[0]), frozenset(map(str, c[1])))
+        )
+
+    @staticmethod
+    def after(cursor: str | None, listed: list[MessageSummary]) -> str | None:
+        """The cursor of the next page, after ``listed``."""
+        if cursor is None:
+            return None
+        times = [when for m in listed if (when := _when(m)) is not None]
+        last = [m.id for m in listed if times and _when(m) == min(times)]
+        return paging.encode_cursor(_CURSOR_PREFIX, [cursor, last])
+
+    def listed(
+        self,
+        thread: Thread,
+        holds: Callable[[Iterable[str]], bool],
+        listed: list[MessageSummary],
+    ) -> bool:
+        """Whether a page before this one listed the thread: it has a
+        message in the folder, not on this page, newer than the newest one
+        here or listed in the last second of the page before."""
+        top = _when(listed[0]) if listed else None
+        if top is None:
+            return False
+        here = {m.id for m in listed}
+        return any(
+            holds(m.folder_ids)
+            and m.id not in here
+            and (m.id in self.last or ((when := _when(m)) is not None and when > top))
+            for m in thread.messages
+        )
