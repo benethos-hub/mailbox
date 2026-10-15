@@ -135,7 +135,10 @@ An import or a line that breaks a rule fails the suite.
 ## 3. The code, module by module
 
 What each package and module of the service holds. A new module gets
-its line here in the same commit.
+its line here in the same commit. `tests/test_module_tree.py` of the
+service checks that every path named here is there, that every package
+is named, and that a folder which lists some of its modules as lines
+lists all of them.
 
 ```
 packages/mailbox-service/
@@ -262,7 +265,9 @@ packages/mailbox-service/
                         #   before they are stored. OAuthService signs
                         #   in in the browser (oauth.py), with a code
                         #   in device.py, what both ways share in
-                        #   signin.py
+                        #   signin.py. connections: how each kind of
+                        #   account is connected, as the UI draws its
+                        #   forms
       discovery/        # DiscoveryService: trust, ranking, cache, limits,
                         #   candidates.py: an address read, candidates
                         #   merged and filled in, what can be connected
@@ -302,7 +307,7 @@ packages/mailbox-service/
       models/           # provider-neutral types, one module per subject:
                         #   accounts, users, folders, messages, batch,
                         #   sending, paging, discovery, audit,
-                        #   changes, webhooks
+                        #   changes, webhooks, threads, connections
       mail/             # messages in RFC 5322, whatever protocol carries
                         #   them. __init__.py offers the modules
         compose.py      # outgoing messages as bytes (email)
@@ -332,10 +337,15 @@ packages/mailbox-service/
                         #   server.py (JSON to a server an account
                         #   names, at the checked address),
                         #   post.py (posts to webhook receivers)
-      providers/        # the adapters: base.py, rules.py, registry.py
-                        #   (build_provider, sign_in, probe_server),
-                        #   connections.py (how each kind of account is
-                        #   connected, as the UI draws its forms)
+      providers/        # the adapters, one directory each, and what
+                        #   they share
+        base.py         # the contract: Reads, and one protocol for each
+                        #   thing an adapter may do beyond it
+        rules.py        # what every adapter answers the same way
+        registry.py     # build_provider, sign_in, probe_server: the
+                        #   adapter of a kind, its settings by default
+        connections.py  # how each kind of account is connected, as the
+                        #   UI draws its forms
         guard.py        # pacing, retries, blocked logins, for any adapter
         settings.py     # an account's settings read once into named
                         #   values (Login, Host), server_of for
@@ -350,7 +360,9 @@ packages/mailbox-service/
                         #   subject.
                         #   imap: connect.py, mailbox.py (one session
                         #   and its folders), folders, messages, drafts,
-                        #   sync, watch (IDLE).
+                        #   sync, watch (IDLE), abilities (what the
+                        #   server announces), everywhere (the folder
+                        #   all where the server has no \All).
                         #   jmap: over data/protocols/jmap/,
                         #   connect.py (its settings),
                         #   account.py (one account's calls), folders,
@@ -359,13 +371,17 @@ packages/mailbox-service/
                         #   data/protocols/http), signin.py its
                         #   endpoints and the scopes it needs,
                         #   uploads.py (a draft too large for one
-                        #   request, its files one by one).
+                        #   request, its files one by one), listing.py
+                        #   (a folder's messages, the search), marks.py
+                        #   (answered and forwarded as Outlook keeps
+                        #   them).
                         #   gmail: api.py (the Gmail API over
                         #   data/protocols/http), signin.py,
                         #   reading.py (what the parts read alike),
                         #   folders (labels), messages, sending
                         #   (with the drafts), changes (history).
-                        #   pop3: one inbox, a session per step
+                        #   pop3: one inbox, a session per step,
+                        #   mappers.py its ids and cursors
       storage/          # own records, one module per subject, table.py
                         #   for the in-memory ones, sqlite/ the database
                         #   (database.py) and its rows read typed

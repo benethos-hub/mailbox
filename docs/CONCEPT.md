@@ -763,16 +763,15 @@ To be kept in mind from the first IMAP line on, and covered by tests:
 
 ### 5.11 One way to operate every mailbox
 
-**Decided 2026-10-12, not built yet.** From outside, every mailbox is
+**Decided 2026-10-12, built in phase 5a.** From outside, every mailbox is
 operated the same way. Whatever is common behaves identically on every
 account. Whatever an account cannot do answers an error, and the
 account says so in advance. Nothing is silently ignored, and no value
 silently means something else.
 
-An inventory of every adapter found where the API breaks this today.
+An inventory of every adapter found where the API broke this.
 [UNIFORM.md](UNIFORM.md) holds it, with the decisions, the reasons and
-the work in order. Until that work is done, sections 5 and 6 describe
-the API as it is. The rules:
+the work in order. The rules:
 
 1. **One meaning.** Every field, filter and operation means the same on
    every account. Where a provider cannot deliver it, the adapter does
@@ -1701,7 +1700,10 @@ included for a grant on every account. `user`, `outcome`, `recipient`
 ### 7.6 Other rules
 
 - **Transport:** binds to `127.0.0.1` by default. Exposure beyond localhost
-  only behind a TLS reverse proxy.
+  only behind a TLS reverse proxy. There `MAILBOX_SERVICE_FORWARDED_ALLOW_IPS`
+  names the proxy, so the service takes the scheme from
+  `X-Forwarded-Proto` and marks the session cookie `Secure`, and
+  `MAILBOX_SERVICE_PUBLIC_URL` names the address the outside sees.
 - **Logging:** never content, subjects or the addresses of people, at any
   level (LOGGING.md 4).
 - **Sending is the dangerous verb:** separate right, idempotency key, and
