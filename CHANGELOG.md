@@ -228,6 +228,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+- A sent draft marks the message it answers or forwards only where the
+  caller may change that message, with `update_message` and a grant
+  that reaches its folder. Any client that writes drafts could name a
+  message there, and the send marked it.
 - A change or delete of a folder with a role, such as the trash,
   answers `404` to a caller whose grants do not reach it. It answered
   `409` with the folder's name before.

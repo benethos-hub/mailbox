@@ -443,16 +443,23 @@ class Outgoing:
         if out.reference is not None:
             marked = False
             with self._after_sending(access, account, "the original is not marked"):
-                marked = await self._mark_from_draft(account_id, out.reference)
+                marked = await self._mark_from_draft(access, account_id, out.reference)
             result = result.model_copy(update={"original_marked": marked})
         return result
 
-    async def _mark_from_draft(self, account_id: str, header: str) -> bool:
-        """Mark the original the sent draft answered or forwarded."""
+    async def _mark_from_draft(
+        self, access: Access, account_id: str, header: str
+    ) -> bool:
+        """Mark the original the sent draft answered or forwarded. Any
+        client that writes drafts may have named it, so only where the
+        caller may change that message itself."""
         reference = compose.read_reference(header)
-        if reference is None:
+        if reference is None or not access.allows("update_message", account_id):
             return False
         original = await self._calls.message(account_id, reference.message_id)
+        reach = await reach_of(self._calls, access, "update_message", account_id)
+        if reach is not None and not reach.sees(original.folder_ids):
+            return False
         return await self._mark_answered(account_id, reference, original)
 
     def _after_sending(
