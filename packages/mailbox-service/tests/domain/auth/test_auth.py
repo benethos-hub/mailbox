@@ -35,22 +35,15 @@ from benethos_mailbox_service.errors import (
     UnauthorizedError,
 )
 
+from ...clocks import Clock
 from ...conftest import ADMIN, CHEAP, bearer_for, create_account
 
 NOW = datetime(2026, 9, 24, 12, 0, tzinfo=UTC)
 
 
-class Clock:
-    def __init__(self) -> None:
-        self.now = NOW
-
-    def __call__(self) -> datetime:
-        return self.now
-
-
 @pytest.fixture
 def clock() -> Clock:
-    return Clock()
+    return Clock(NOW)
 
 
 def passwords() -> Passwords:

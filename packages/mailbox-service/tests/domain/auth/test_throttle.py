@@ -14,26 +14,16 @@ from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.domain.auth.throttle import SignInThrottle
 from benethos_mailbox_service.errors import RateLimitedError, UnauthorizedError
 
+from ...clocks import Clock
 from ...conftest import CHEAP, admin_bearer, browser_admin
 from ...ui_helpers import try_sign_in
 
 NOW = datetime(2026, 9, 25, 12, 0, tzinfo=UTC)
 
 
-class Clock:
-    def __init__(self) -> None:
-        self.now = NOW
-
-    def __call__(self) -> datetime:
-        return self.now
-
-    def tick(self, **delta: float) -> None:
-        self.now += timedelta(**delta)
-
-
 @pytest.fixture
 def clock() -> Clock:
-    return Clock()
+    return Clock(NOW)
 
 
 @pytest.fixture

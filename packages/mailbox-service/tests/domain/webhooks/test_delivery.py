@@ -24,25 +24,12 @@ from benethos_mailbox_service.domain.changes import MessagesUpdated
 from benethos_mailbox_service.domain.webhooks.delivery import BATCH, Retries, signature
 from benethos_mailbox_service.errors import ProviderError, ProviderUnavailableError
 
+from ...clocks import Clock
 from ...conftest import ADMIN, bearer_for, memory_of
-from ..conftest import Clock, Receiver
+from ..conftest import Receiver
+from ..webhook_helpers import URL, hook, mark_read
 
 pytestmark = pytest.mark.usefixtures("master_key")
-URL = "https://hooks.example.com/mail"
-
-
-def mark_read(client: TestClient, account_id: str, message_id: str) -> None:
-    answer = client.patch(
-        f"/v1/accounts/{account_id}/messages/{message_id}", json={"unread": False}
-    )
-    assert answer.status_code == 200
-
-
-def hook(client: TestClient, **fields: Any) -> dict[str, Any]:
-    answer = client.post("/v1/webhooks", json={"url": URL, **fields})
-    assert answer.status_code == 201, answer.text
-    created: dict[str, Any] = answer.json()
-    return created
 
 
 def stored(services: Services, webhook_id: str) -> Any:

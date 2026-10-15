@@ -6,10 +6,9 @@ from __future__ import annotations
 
 from benethos_mailbox_service.data.models import Capability, Mark
 
-from ...domain.mailbox.test_send import adapter
+from ...imap_adapter import provider, sending
 from ...imap_fake import FakeFolder, FakeMailBox
 from ...smtp_fake import FakeSmtpServer
-from .test_imap import provider
 
 EVERY_SERVER = {
     Capability.READ_STATE,
@@ -25,7 +24,7 @@ async def test_a_full_server(server: FakeMailBox) -> None:
     server.folders["Trash"] = FakeFolder(flags=("\\Trash",))
     server.folders["Drafts"] = FakeFolder(flags=("\\Drafts",))
     server.folders["Sent"] = FakeFolder(flags=("\\Sent",))
-    found = await adapter(server, FakeSmtpServer()).abilities()
+    found = await sending(server, FakeSmtpServer()).abilities()
     assert set(found.capabilities) == EVERY_SERVER | {
         Capability.KEYWORDS,
         Capability.MOVE,

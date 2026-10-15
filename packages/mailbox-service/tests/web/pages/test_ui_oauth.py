@@ -28,15 +28,18 @@ from benethos_mailbox_service.data.providers.microsoft import (
     endpoints as microsoft_endpoints,
 )
 
+from ...clocks import Clock
 from ...conftest import CHEAP, admin_bearer, bearer_for, browser_admin
-from ...integration.test_oauth import (
-    Clock,
+from ...oauth_fake import (
+    NOW,
+    PENDING,
     TokenEndpoint,
+    code,
     factory,
     granted,
     id_token,
+    signed_in,
 )
-from ...integration.test_oauth_device import PENDING, code, signed_in
 from ...ui_helpers import csrf_of, post, sign_in
 
 pytestmark = pytest.mark.usefixtures("master_key")
@@ -274,7 +277,7 @@ def test_the_api_needs_the_right(endpoint: TokenEndpoint) -> None:
 
 
 def test_the_api_signs_in_with_a_code() -> None:
-    clock = Clock()
+    clock = Clock(NOW)
     client, services = build(TokenEndpoint(code(), PENDING, signed_in()), clock)
     headers = admin_bearer(services)
     started = client.post("/v1/oauth/microsoft/device", json={}, headers=headers)
@@ -307,7 +310,7 @@ def test_the_api_signs_in_with_a_code() -> None:
 def _with_code(
     endpoint: TokenEndpoint, **settings: Any
 ) -> tuple[TestClient, Services, Clock]:
-    clock = Clock()
+    clock = Clock(NOW)
     client, services = build(endpoint, clock, **settings)
     sign_in(client, *browser_admin(services))
     return client, services, clock
@@ -434,7 +437,7 @@ def test_the_connect_page_offers_what_the_deployment_does(
 def test_with_the_project_app_away_from_localhost_only_the_code() -> None:
     project = App(microsoft_endpoints(), "project-app", loopback_only=True)
     endpoint = TokenEndpoint(code(), signed_in())
-    clock = Clock()
+    clock = Clock(NOW)
     client, services = build(
         endpoint, clock, app=project, public_url="https://mail.example.org"
     )

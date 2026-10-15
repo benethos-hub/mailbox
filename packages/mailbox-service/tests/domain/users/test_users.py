@@ -16,9 +16,9 @@ from benethos_mailbox_service.domain.users.effective import Effective
 
 from ...conftest import bearer_for, create_account
 from ...ui_helpers import sign_in
+from .rights_helpers import READ_A
 
 AT = datetime(2026, 10, 6, 12, 0, tzinfo=UTC)
-READ_A = {"accounts": ["acc_a"], "allow": ["mail.read"]}
 # As the API answers it: constraints not set are null.
 READ_A_OUT = {
     **READ_A,

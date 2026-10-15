@@ -9,7 +9,7 @@ import ast
 import re
 from pathlib import Path
 
-from .test_architecture import HELPERS, PACKAGE, ROOT, _modules, _own_part
+from .source_helpers import HELPERS, PACKAGE, ROOT, modules, own_part
 
 # The calls that write a line at INFO or above (docs/LOGGING.md rule 6.2).
 LOUD = {"info", "warning", "error", "exception", "critical"}
@@ -40,8 +40,8 @@ def test_the_data_layer_logs_nothing_above_debug() -> None:
     notices goes up as a result or an error, and the domain logs it."""
     loud = [
         f"{name}:{line}"
-        for name, path in _modules()
-        if _own_part(name) == "data"
+        for name, path in modules()
+        if own_part(name) == "data"
         for line in _loud_calls(path)
     ]
     assert loud == []
@@ -66,8 +66,8 @@ def test_the_domain_logs_through_activities() -> None:
     activity = f"{PACKAGE}.domain.activity"
     found = [
         f"{name}:{line}"
-        for name, path in _modules()
-        if _own_part(name) == "domain"
+        for name, path in modules()
+        if own_part(name) == "domain"
         and name != activity
         and not name.startswith(activity + ".")
         for line in _gets_a_logger(path) + _loud_calls(path)
@@ -111,7 +111,7 @@ def test_a_broad_handler_raises_or_records() -> None:
     """A handler of any failure raises on, or records what it swallows.
     One of BaseException always raises, so a cancellation goes through."""
     silent = []
-    for name, path in _modules():
+    for name, path in modules():
         for handler in _broad_handlers(path):
             catches_all = handler.type is None or (
                 isinstance(handler.type, ast.Name)
@@ -208,3 +208,18 @@ def test_templates_ask_operations_not_providers() -> None:
         for found in named.finditer(path.read_text(encoding="utf-8"))
     ]
     assert not violations, "a template names a provider:\n  " + "\n  ".join(violations)
+
+
+def test_no_test_module_imports_another() -> None:
+    """What tests of several modules share is a fixture in the conftest.py
+    of their nearest common folder, or a helper in a module of its own
+    there (docs/ARCHITECTURE.md 13): a test module is no library. In the
+    tests of all four packages."""
+    violations = []
+    for path in sorted((REPOSITORY / "packages").glob("*/tests/**/*.py")):
+        for node in ast.walk(ast.parse(path.read_text("utf-8"))):
+            if isinstance(node, ast.ImportFrom) and node.level and node.module:
+                if node.module.split(".")[-1].startswith("test_"):
+                    name = path.relative_to(REPOSITORY).as_posix()
+                    violations.append(f"{name}:{node.lineno} from {node.module}")
+    assert not violations, "imports a test module:\n  " + "\n  ".join(violations)

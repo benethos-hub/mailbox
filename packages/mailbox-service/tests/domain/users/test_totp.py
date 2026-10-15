@@ -132,7 +132,7 @@ async def test_a_code_of_any_device_signs_in(services: Services, clock: Clock) -
     tablet, _ = await add_device(
         services, user, clock, "Tablet", now_code(phone, clock)
     )
-    clock.step()
+    clock.tick(seconds=totp.STEP_SECONDS)
     services.auth.sign_in_with_code(user.id, now_code(tablet, clock), source=SOURCE)
     # Each device keeps its own steps: the phone's code of this step works.
     services.auth.sign_in_with_code(user.id, now_code(phone, clock), source=SOURCE)
@@ -226,7 +226,7 @@ async def test_the_owner_removes_a_device_with_password_and_code(
         await services.totp.remove_own(
             access, tablet, "not the password at all", codes[1]
         )
-    clock.step()
+    clock.tick(seconds=totp.STEP_SECONDS)
     stamp = await services.totp.remove_own(
         access, tablet, SECRET, now_code(phone, clock)
     )

@@ -33,6 +33,7 @@ from benethos_mailbox_service.errors import (
     StorageError,
 )
 
+from ...clocks import Clock
 from ...conftest import bearer_for
 
 BODY = {"to": [{"email": "you@example.com"}], "subject": "Once", "text": "Hallo"}
@@ -128,19 +129,11 @@ def test_an_empty_key_is_refused(client: TestClient, account_id: str) -> None:
 # --- the rules ------------------------------------------------------------
 
 
-class Clock:
-    def __init__(self) -> None:
-        self.now = datetime(2026, 9, 24, 12, 0, tzinfo=UTC)
-
-    def __call__(self) -> datetime:
-        return self.now
-
-
 RESULT = SendResult(message_id_header="<1@example.com>")
 
 
 async def test_a_key_counts_for_24_hours() -> None:
-    clock = Clock()
+    clock = Clock(datetime(2026, 9, 24, 12, 0, tzinfo=UTC))
     idempotency = Idempotency(InMemoryIdempotencyRepository(), clock)
     calls = []
 

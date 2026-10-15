@@ -17,7 +17,7 @@ from benethos_mailbox_service.domain.sync.worker import SyncWorker
 from ...conftest import ADMIN, jmap_services_for
 from ...imap_fake import make_message
 from ...jmap_fake import HOST, PASSWORD, USER, FakeJmap
-from .test_jmap_sync import recorded
+from ..sync_helpers import recorded
 
 # The tests switch the worker off unless asked.
 WITH_WORKER = {"sync_interval": 300}

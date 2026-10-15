@@ -19,8 +19,7 @@ from benethos_mailbox_service.errors import (
 )
 
 from ...imap_fake import make_message
-from ...pop3_fake import FakePop3Server
-from .test_pop3 import (
+from ...pop3_adapter import (
     INBOX,
     SETTINGS,
     filled_server,
@@ -28,6 +27,7 @@ from .test_pop3 import (
     provider,
     subjects,
 )
+from ...pop3_fake import FakePop3Server
 
 
 @pytest.fixture

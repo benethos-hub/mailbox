@@ -29,6 +29,7 @@ from benethos_mailbox_service.errors import (
     UnauthorizedError,
 )
 
+from ...clocks import Clock
 from ...conftest import ADMIN, CHEAP
 from ...factor_helpers import credentials
 
@@ -219,16 +220,8 @@ async def test_names_are_unique_regardless_of_case(services: Services) -> None:
 # --- guessing ------------------------------------------------------------------------
 
 
-class Clock:
-    def __init__(self) -> None:
-        self.now = datetime(2026, 9, 27, 12, 0, tzinfo=UTC)
-
-    def __call__(self) -> datetime:
-        return self.now
-
-
 async def test_a_name_guessed_at_from_many_addresses_waits_a_minute() -> None:
-    clock = Clock()
+    clock = Clock(datetime(2026, 9, 27, 12, 0, tzinfo=UTC))
     users = InMemoryUserRepository()
     users.save(User(id="usr_a", name="anna", ui_sign_in=True))
     passwords = Passwords(InMemoryPasswordRepository(), CHEAP, clock)

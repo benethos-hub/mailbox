@@ -19,8 +19,9 @@ from benethos_mailbox_service.errors import (
     ProviderUnavailableError,
 )
 
+from ...clocks import Seconds
+from ...imap_adapter import INBOX, provider
 from ...imap_fake import FakeMailBox
-from .test_imap import INBOX, FakeTime, provider
 
 
 async def test_one_login_for_many_calls(server: FakeMailBox) -> None:
@@ -72,7 +73,7 @@ async def test_the_next_page_asks_the_server_for_older_uids_only(
 async def test_a_dropped_connection_is_retried_in_the_same_call(
     server: FakeMailBox,
 ) -> None:
-    time = FakeTime()
+    time = Seconds()
     imap = provider(server, time)
     await imap.list_folders()
     server.failures = [OSError("connection reset")]
@@ -92,7 +93,7 @@ async def test_a_dropped_connection_is_retried_in_the_same_call(
 async def test_other_errors_are_not_retried(
     server: FakeMailBox, error: Exception, message: str
 ) -> None:
-    time = FakeTime()
+    time = Seconds()
     imap = provider(server, time)
     server.failures = [error]
     with pytest.raises(ProviderError, match=message) as caught:
@@ -106,7 +107,7 @@ async def test_other_errors_are_not_retried(
 async def test_an_unreachable_server_is_paused_and_the_pause_grows(
     server: FakeMailBox,
 ) -> None:
-    time = FakeTime()
+    time = Seconds()
     imap = provider(server, time)
     server.failures = [TimeoutError()] * 3
     with pytest.raises(ProviderUnavailableError, match="did not answer"):
@@ -137,7 +138,7 @@ async def test_an_unreachable_server_is_paused_and_the_pause_grows(
 async def test_the_retries_and_the_rest_come_from_the_pace(
     server: FakeMailBox,
 ) -> None:
-    time = FakeTime()
+    time = Seconds()
     imap = provider(
         server,
         time,
@@ -160,7 +161,7 @@ async def test_the_retries_and_the_rest_come_from_the_pace(
 async def test_a_wait_names_the_server(
     server: FakeMailBox, caplog: pytest.LogCaptureFixture
 ) -> None:
-    imap = provider(server, FakeTime(), Pace(per_minute=60, burst=1))
+    imap = provider(server, Seconds(), Pace(per_minute=60, burst=1))
     with caplog.at_level(logging.DEBUG, logger="benethos_mailbox_service.common"):
         await imap.list_folders()
         await imap.list_folders()
@@ -168,8 +169,8 @@ async def test_a_wait_names_the_server(
 
 
 def test_a_pause_of_the_mail_server_holds_no_send_back() -> None:
-    time = FakeTime()
-    guard = Guard(60, clock=time.clock, sleep=time.sleep)
+    time = Seconds()
+    guard = Guard(60, clock=time, sleep=time.sleep)
 
     def unreachable() -> None:
         raise ProviderUnavailableError("the server did not answer")
@@ -301,7 +302,7 @@ def test_a_rate_given_as_text(server: FakeMailBox) -> None:
 
 
 async def test_requests_are_paced(server: FakeMailBox) -> None:
-    time = FakeTime()
+    time = Seconds()
     imap = provider(server, time, max_requests_per_minute=60)
     for _ in range(10):
         await imap.list_folders()
@@ -311,7 +312,7 @@ async def test_requests_are_paced(server: FakeMailBox) -> None:
 
 
 async def test_the_pace_of_the_service_is_the_default(server: FakeMailBox) -> None:
-    time = FakeTime()
+    time = Seconds()
     imap = provider(server, time, Pace(per_minute=30, burst=3))
     for _ in range(3):
         await imap.list_folders()
@@ -321,7 +322,7 @@ async def test_the_pace_of_the_service_is_the_default(server: FakeMailBox) -> No
 
 
 async def test_an_account_rate_wins_over_the_pace(server: FakeMailBox) -> None:
-    time = FakeTime()
+    time = Seconds()
     imap = provider(
         server, time, Pace(per_minute=30, burst=1), max_requests_per_minute=60
     )

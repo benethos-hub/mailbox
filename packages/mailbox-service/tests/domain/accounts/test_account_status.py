@@ -4,25 +4,12 @@ from fastapi.testclient import TestClient
 
 from benethos_mailbox_service.assembly import build_services, create_app
 from benethos_mailbox_service.config import Settings
-from benethos_mailbox_service.data.models import Folder, ProviderType
+from benethos_mailbox_service.data.models import ProviderType
 from benethos_mailbox_service.data.providers import CredentialReader, ProviderSettings
-from benethos_mailbox_service.data.providers.memory import MemoryProvider
 from benethos_mailbox_service.errors import ProviderAuthError, ProviderUnavailableError
 
 from ...conftest import admin_bearer, create_account
-
-
-class FlakyProvider(MemoryProvider):
-    """Fails the way the next test tells it to."""
-
-    def __init__(self) -> None:
-        super().__init__()
-        self.fail: Exception | None = None
-
-    async def list_folders(self) -> list[Folder]:
-        if self.fail is not None:
-            raise self.fail
-        return await super().list_folders()
+from ..provider_fake import FlakyProvider
 
 
 def test_status_follows_what_the_provider_reports() -> None:

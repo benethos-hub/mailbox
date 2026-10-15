@@ -20,9 +20,9 @@ from benethos_mailbox_service.errors import (
 )
 
 from ...imap_fake import make_message
+from ...jmap_adapter import NOW, adapter
 from ...jmap_fake import USER, FakeJmap
 from ...provider_ops import delete, update
-from .test_jmap import NOW, adapter
 
 
 @pytest.fixture

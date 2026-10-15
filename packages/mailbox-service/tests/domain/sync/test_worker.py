@@ -25,19 +25,7 @@ from benethos_mailbox_service.errors import (
 
 from ...conftest import ADMIN
 from ...imap_fake import FakeMailBox, make_message
-
-
-def worker(imap_services: Services, **options: object) -> SyncWorker:
-    async def no_sleep(seconds: float) -> None:
-        return None
-
-    return SyncWorker(
-        imap_services.adapters,
-        imap_services.sync,
-        interval=300,
-        sleep=no_sleep,
-        **options,  # type: ignore[arg-type]
-    )
+from ..sync_helpers import worker
 
 
 def indexed(imap_services: Services, imap_account_id: str) -> dict[str, str]:

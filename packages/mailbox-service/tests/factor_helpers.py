@@ -5,7 +5,7 @@ page adds them."""
 from __future__ import annotations
 
 from collections.abc import Iterator
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
 import pytest
 
@@ -15,6 +15,7 @@ from benethos_mailbox_service.data.models import ActivityFilter, Grant, User
 from benethos_mailbox_service.data.secrets import totp
 from benethos_mailbox_service.domain.rights import Access
 
+from .clocks import Clock
 from .conftest import ADMIN, CHEAP
 
 SECRET = "correct horse battery staple"
@@ -23,20 +24,9 @@ READER = Grant(accounts=["*"], allow=["mail.read"])
 START = datetime(2026, 10, 9, 12, 0, 5, tzinfo=UTC)
 
 
-class Clock:
-    def __init__(self) -> None:
-        self.now = START
-
-    def __call__(self) -> datetime:
-        return self.now
-
-    def step(self) -> None:
-        self.now += timedelta(seconds=totp.STEP_SECONDS)
-
-
 @pytest.fixture
 def clock() -> Clock:
-    return Clock()
+    return Clock(START)
 
 
 @pytest.fixture
@@ -87,7 +77,7 @@ async def with_factor(
     user = await anna(services)
     secret, codes = await add_device(services, user, clock, "Phone")
     # The code of setup is taken: the sign-in needs the next one.
-    clock.step()
+    clock.tick(seconds=totp.STEP_SECONDS)
     return user, secret, codes
 
 

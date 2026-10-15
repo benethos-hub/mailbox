@@ -29,7 +29,7 @@ from benethos_mailbox_service.errors import (
 from ...conftest import ADMIN, admin_bearer
 from ...imap_fake import FakeFolder, FakeMailBox, make_message
 from ...jmap_fake import FakeJmap
-from ..sync.test_threads import header
+from ..sync_helpers import header
 
 SENT = mappers.folder_id("Sent")
 INBOX = mappers.folder_id("INBOX")

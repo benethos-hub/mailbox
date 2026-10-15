@@ -13,9 +13,7 @@ from benethos_mailbox_service.data.storage import (
     ThreadChain,
 )
 
-from .test_index_storage import ACC, entry, index
-
-__all__ = ["index"]
+from .index_helpers import ACC, entry
 
 
 def threads() -> Callable[[], str]:

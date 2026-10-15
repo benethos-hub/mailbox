@@ -15,7 +15,7 @@ from benethos_mailbox_service.data.protocols.imap import (
 )
 from benethos_mailbox_service.errors import BadRequestError
 
-from ...data.providers.test_imap import INBOX, provider
+from ...imap_adapter import INBOX, provider
 from ...imap_fake import FakeFolder, FakeMailBox, make_message
 
 

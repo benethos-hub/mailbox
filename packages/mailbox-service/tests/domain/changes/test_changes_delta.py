@@ -22,8 +22,8 @@ from benethos_mailbox_service.domain.changes import ChangeFeed
 from benethos_mailbox_service.domain.sync.service import SyncService
 from benethos_mailbox_service.errors import ChangesExpiredError
 
-from ...data.providers.test_microsoft import Tokens
 from ...graph_fake import TOKEN, FakeGraph
+from ...oauth_fake import Tokens
 
 T = TypeVar("T")
 ACC = "acc_ms"

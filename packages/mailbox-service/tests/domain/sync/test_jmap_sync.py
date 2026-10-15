@@ -17,19 +17,13 @@ from benethos_mailbox_service.data.models import ProviderType
 from ...conftest import admin_bearer, create_account
 from ...imap_fake import make_message
 from ...jmap_fake import HOST, TOKEN, USER, FakeJmap
+from ..sync_helpers import recorded
 
 
 @pytest.fixture
 def client(jmap_services: Services) -> TestClient:
     app = create_app(Settings(storage="memory"), jmap_services)
     return TestClient(app, headers=admin_bearer(jmap_services))
-
-
-def recorded(services: Services, account_id: str) -> list[tuple[str, str, str | None]]:
-    return [
-        (e.record.type, e.record.id, e.record.folder_id)
-        for e in services.changes.after([account_id], 0, limit=1000)
-    ]
 
 
 async def test_the_sync_keeps_no_index_for_it(

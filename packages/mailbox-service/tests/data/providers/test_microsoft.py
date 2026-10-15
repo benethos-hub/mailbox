@@ -46,39 +46,8 @@ from benethos_mailbox_service.errors import (
 
 from ...conftest import admin_bearer
 from ...graph_fake import TOKEN, FakeGraph
-from ...integration.test_oauth import TokenEndpoint, granted, id_token, state_of
-
-
-class Tokens:
-    """A token source handing out ``values`` in turn, one per rejection."""
-
-    def __init__(self, *values: str) -> None:
-        self.values = list(values)
-        self.rejected = 0
-        self.forgotten = 0
-
-    async def access_token(self) -> SecretStr:
-        return SecretStr(self.values[0])
-
-    def reject(self) -> None:
-        self.rejected += 1
-        if len(self.values) > 1:
-            self.values.pop(0)
-
-    def forget_refusal(self) -> None:
-        self.forgotten += 1
-
-
-@pytest.fixture
-def graph() -> FakeGraph:
-    return FakeGraph()
-
-
-def adapter(graph: FakeGraph, tokens: TokenSource | None = None) -> MicrosoftProvider:
-    return MicrosoftProvider(
-        tokens or Tokens(TOKEN), ApiClient(transport=httpx.MockTransport(graph))
-    )
-
+from ...microsoft_adapter import adapter
+from ...oauth_fake import TokenEndpoint, Tokens, granted, id_token, state_of
 
 # --- mappers --------------------------------------------------------------------------
 

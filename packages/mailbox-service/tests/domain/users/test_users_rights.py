@@ -16,7 +16,7 @@ from benethos_mailbox_service.domain.rights import permissions
 from benethos_mailbox_service.domain.rights.access import ADMIN_SERVICE
 
 from ...conftest import ADMIN, bearer_for, browser_user
-from .test_users import READ_A
+from .rights_helpers import READ_A
 
 # --- no escalation ---------------------------------------------------------
 

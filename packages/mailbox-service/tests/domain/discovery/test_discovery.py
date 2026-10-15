@@ -3,155 +3,35 @@ The fakes here serve the other discovery tests too."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any
-
-import anyio
 import pytest
 
 from benethos_mailbox_service.data.discovery import (
     Finding,
-    Query,
 )
 from benethos_mailbox_service.data.models import (
-    Candidate,
     CredentialKind,
     DiscoverySourceName,
     Hint,
-    MailServer,
-    ProviderType,
-    Security,
-    ServerProtocol,
 )
 from benethos_mailbox_service.domain.discovery import service as discovery_module
-from benethos_mailbox_service.domain.discovery.service import DiscoveryService
 from benethos_mailbox_service.errors import (
-    ProviderError,
     ProviderUnavailableError,
 )
 
+from ...clocks import Seconds
 from ...conftest import admin_access
-
-PRESET = DiscoverySourceName.PRESET
-AUTOCONFIG = DiscoverySourceName.AUTOCONFIG
-ISPDB = DiscoverySourceName.ISPDB
-MX = DiscoverySourceName.MX
-
-ADMIN = admin_access("usr_admin", "admin")
-
-
-def imap(
-    host: str,
-    source: DiscoverySourceName,
-    *,
-    port: int = 993,
-    credential: CredentialKind = CredentialKind.PASSWORD,
-    username: str | None = "%EMAILADDRESS%",
-    smtp: str | None = None,
-) -> Candidate:
-    servers = [
-        MailServer(
-            protocol=ServerProtocol.IMAP,
-            host=host,
-            port=port,
-            security=Security.TLS,
-            username=username,
-        )
-    ]
-    if smtp:
-        servers.append(
-            MailServer(
-                protocol=ServerProtocol.SMTP,
-                host=smtp,
-                port=465,
-                security=Security.TLS,
-                username=username,
-            )
-        )
-    return Candidate(
-        provider=ProviderType.IMAP,
-        name=host,
-        credential=credential,
-        servers=servers,
-        source=source,
-    )
-
-
-@dataclass
-class FakeSource:
-    name: DiscoverySourceName
-    answer: Finding | Exception = field(default_factory=Finding)
-    delay: float = 0.0
-    queries: list[Query] = field(default_factory=list)
-
-    async def lookup(self, query: Query) -> Finding:
-        self.queries.append(query)
-        if self.delay:
-            await anyio.sleep(self.delay)
-        if isinstance(self.answer, Exception):
-            raise self.answer
-        return self.answer
-
-
-class Network:
-    """Answers the host check and the probe."""
-
-    def __init__(self) -> None:
-        self.private: set[str] = set()
-        self.missing: set[str] = set()
-        self.down: set[str] = set()
-        self.capabilities: dict[str, frozenset[str]] = {}
-        self.probed: list[str] = []
-        self.connected_to: list[str] = []
-
-    async def check(self, host: str, port: int) -> str | None:
-        if host in self.private:
-            raise ProviderError(f"refused to connect to {host}")
-        return None if host in self.missing else "93.184.215.14"
-
-    async def probe(
-        self,
-        protocol: ServerProtocol,
-        host: str,
-        port: int,
-        security: Security,
-        address: str,
-    ) -> frozenset[str]:
-        self.probed.append(host)
-        self.connected_to.append(address)
-        if host in self.down:
-            raise ProviderUnavailableError("not reachable")
-        return self.capabilities.get(host, frozenset({"IMAP4REV1", "IDLE"}))
-
-
-class Clock:
-    def __init__(self) -> None:
-        self.now = 1000.0
-
-    def __call__(self) -> float:
-        return self.now
-
-
-def service(
-    *sources: FakeSource,
-    network: Network | None = None,
-    clock: Clock | None = None,
-    **kwargs: Any,
-) -> DiscoveryService:
-    network = network or Network()
-    return DiscoveryService(
-        sources,
-        probe=network.probe,
-        check_host=network.check,
-        trusted_hosts=kwargs.pop("trusted_hosts", {"imap.bigmail.example"}),
-        clock=clock or Clock(),
-        **kwargs,
-    )
-
-
-def found(*candidates: Candidate, by: str | None = None, **kw: Any) -> Finding:
-    return Finding(candidates=candidates, answered_by=by, **kw)
-
+from ..discovery_fake import (
+    ADMIN,
+    AUTOCONFIG,
+    ISPDB,
+    MX,
+    PRESET,
+    FakeSource,
+    Network,
+    found,
+    imap,
+    service,
+)
 
 # --- trust and ranking ----------------------------------------------------------
 
@@ -295,7 +175,7 @@ async def test_hints_about_the_address() -> None:
 
 
 async def test_findings_are_cached_per_domain_for_a_day() -> None:
-    clock = Clock()
+    clock = Seconds()
     source = FakeSource(ISPDB, found(imap("imap.firma.example", ISPDB)))
     s = service(source, clock=clock, per_user=100)
     first = await s.discover(ADMIN, "a@firma.example")
@@ -310,7 +190,7 @@ async def test_findings_are_cached_per_domain_for_a_day() -> None:
 
 async def test_the_cache_is_bounded(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(discovery_module, "MAX_CACHED", 2)
-    clock = Clock()
+    clock = Seconds()
     source = FakeSource(ISPDB, found(imap("imap.firma.example", ISPDB)))
     s = service(source, clock=clock, per_user=100)
     for domain in ("one", "two", "three"):
@@ -328,7 +208,7 @@ async def test_the_callers_counted_are_bounded(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(discovery_module, "MAX_CALLERS", 2)
-    clock = Clock()
+    clock = Seconds()
     s = service(FakeSource(ISPDB), clock=clock, per_user=100)
     for user in ("a", "b", "c"):
         clock.now += 1
