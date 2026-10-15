@@ -42,29 +42,40 @@ class Pace:
     longest_pause: float = LONGEST_PAUSE
 
 
+@dataclass(frozen=True, slots=True)
+class Timing:
+    """How time passes for an adapter: its clock, its sleep, and the
+    jitter of a backoff, None for the usual one. Tests pass their own."""
+
+    clock: Clock = time.monotonic
+    sleep: Sleep = time.sleep
+    jitter: Callable[[float, float], float] | None = None
+
+
+# The defaults: time as it passes, and a pace for servers nobody has told
+# us about.
+REAL_TIME = Timing()
+CAUTIOUS = Pace()
+
+
 class Guard:
     """The state of one account towards its server, shared by all the
     adapter's connections to it."""
 
     def __init__(
         self,
-        per_minute: float,
-        burst: int = BURST,
-        clock: Clock = time.monotonic,
-        sleep: Sleep = time.sleep,
-        jitter: Callable[[float, float], float] | None = None,
-        attempts: int = ATTEMPTS,
-        first_pause: float = FIRST_PAUSE,
-        longest_pause: float = LONGEST_PAUSE,
+        pace: Pace = CAUTIOUS,
+        timing: Timing = REAL_TIME,
         name: str = "a request",
     ) -> None:
         """``name`` says whose requests are paced, in the log."""
+        clock, sleep, jitter = timing.clock, timing.sleep, timing.jitter
         self._bucket = TokenBucket(
-            per_minute, burst, clock=clock, sleep=sleep, name=name
+            pace.per_minute, pace.burst, clock=clock, sleep=sleep, name=name
         )
-        self._attempts = attempts
-        self._first_pause = first_pause
-        self._longest_pause = longest_pause
+        self._attempts = pace.attempts
+        self._first_pause = pace.first_pause
+        self._longest_pause = pace.longest_pause
         self._clock = clock
         self._sleep = sleep
         self._backoff = partial(backoff, jitter=jitter) if jitter else backoff

@@ -28,7 +28,11 @@ from benethos_mailbox_service.data.models import (
 )
 from benethos_mailbox_service.data.protocols.imap import ImapSession
 from benethos_mailbox_service.data.protocols.smtp import SmtpSession
-from benethos_mailbox_service.data.providers import CredentialReader, ProviderSettings
+from benethos_mailbox_service.data.providers import (
+    CredentialReader,
+    ProviderSettings,
+    Timing,
+)
 from benethos_mailbox_service.data.providers.imap import ImapProvider
 from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 
@@ -138,7 +142,7 @@ def imap_services(
             credentials,
             session_factory=lambda s: ImapSession(s, client_factory=box),
             smtp_factory=lambda server: SmtpSession(server, connection_factory=smtp),
-            sleep=lambda seconds: None,
+            timing=Timing(sleep=lambda seconds: None),
         )
 
     imap_services = build_services(Settings(storage="memory"), provider_factory=factory)

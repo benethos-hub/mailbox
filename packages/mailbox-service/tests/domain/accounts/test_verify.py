@@ -11,7 +11,11 @@ from benethos_mailbox_service.assembly import Services, build_services, create_a
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import ProviderType
 from benethos_mailbox_service.data.protocols.imap import ImapSession
-from benethos_mailbox_service.data.providers import CredentialReader, ProviderSettings
+from benethos_mailbox_service.data.providers import (
+    CredentialReader,
+    ProviderSettings,
+    Timing,
+)
 from benethos_mailbox_service.data.providers.imap import ImapProvider
 from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 
@@ -48,7 +52,7 @@ def world(server: FakeMailBox, monkeypatch: pytest.MonkeyPatch) -> Iterator[Worl
             settings,
             credentials,
             session_factory=lambda s: ImapSession(s, client_factory=server),
-            sleep=lambda seconds: None,
+            timing=Timing(sleep=lambda seconds: None),
         )
 
     settings = Settings(storage="memory")

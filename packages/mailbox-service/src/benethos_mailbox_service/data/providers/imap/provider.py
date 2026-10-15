@@ -13,7 +13,6 @@ the requests, blocks a rejected login and pauses an unreachable server.
 
 from __future__ import annotations
 
-import time
 from collections.abc import Callable
 from functools import partial
 from typing import Protocol, TypeVar
@@ -21,7 +20,6 @@ from typing import Protocol, TypeVar
 import anyio
 
 from ....common.chunks import batched
-from ....common.ratelimit import Clock, Sleep
 from ....errors import BadRequestError, MailboxServiceError, NotSupportedError
 from ...mail import ThreadHeaders
 from ...models import (
@@ -39,7 +37,7 @@ from ...models import (
 from ...protocols import IMAP_PORTS, ImapSession, Pick, SmtpSession
 from .. import rules
 from ..base import CredentialReader, ProviderSettings
-from ..guard import Pace
+from ..guard import REAL_TIME, Pace, Timing
 from ..mailserver import MailServerAdapter
 from ..sender import SmtpFactory
 from . import drafts, everywhere, folders, mappers, messages
@@ -69,9 +67,7 @@ class ImapProvider(MailServerAdapter):
         settings: ProviderSettings,
         credentials: CredentialReader,
         session_factory: SessionFactory = default_session,
-        clock: Clock = time.monotonic,
-        sleep: Sleep = time.sleep,
-        jitter: Callable[[float, float], float] | None = None,
+        timing: Timing = REAL_TIME,
         smtp_factory: SmtpFactory = SmtpSession,
         pick: Pick | None = None,
         pace: Pace | None = None,
@@ -84,9 +80,7 @@ class ImapProvider(MailServerAdapter):
         super().__init__(
             settings,
             credentials,
-            clock=clock,
-            sleep=sleep,
-            jitter=jitter,
+            timing=timing,
             smtp_factory=smtp_factory,
             pick=pick,
             pace=pace,
@@ -179,7 +173,9 @@ class ImapProvider(MailServerAdapter):
     async def summaries(self, message_ids: list[str]) -> dict[str, MessageSummary]:
         """Folder by folder, in batches like the headers."""
         found: dict[str, MessageSummary] = {}
-        for (folder, validity), by_uid in messages.by_folder(message_ids)[0].items():
+        for (folder, validity), by_uid in messages.by_folder(
+            message_ids
+        ).folders.items():
             for batch in batched(list(by_uid), messages.HEADER_BATCH):
                 wanted = {uid: by_uid[uid] for uid in batch}
                 found.update(
@@ -274,13 +270,11 @@ class ImapProvider(MailServerAdapter):
     async def delete_messages(
         self, message_ids: list[str], permanent: bool
     ) -> dict[str, MessageSummary | None | MailboxServiceError]:
-        return await _per_folder(
-            self._retried,
-            message_ids,
-            lambda box, folder, validity, uids, retried: messages.delete_in_folder(
-                box, folder, validity, uids, permanent, retried
-            ),
-        )
+        if permanent:
+            return await _per_folder(
+                self._retried, message_ids, messages.delete_in_folder
+            )
+        return await _per_folder(self._retried, message_ids, messages.trash_in_folder)
 
     # --- Watches ----------------------------------------------------------------------
 
@@ -340,10 +334,11 @@ async def _per_folder(
     a folder is done, it is the failure of the folders left, so the
     answer names what was done. Any other failure answers for that
     folder's messages only."""
-    found, unknown = messages.by_folder(message_ids)
+    found = messages.by_folder(message_ids)
+    unknown = found.unknown
     results: dict[str, T | MailboxServiceError] = dict(unknown)
     stopped: MailboxServiceError | None = None
-    for (folder, validity), by_uid in found.items():
+    for (folder, validity), by_uid in found.folders.items():
         step = _in_folder(work, folder, validity, list(by_uid))
         done: dict[int, T | MailboxServiceError] = (
             dict.fromkeys(by_uid, stopped) if stopped else {}

@@ -34,6 +34,7 @@ from benethos_mailbox_service.data.providers import (
     CredentialReader,
     ProviderSettings,
     Reads,
+    Timing,
     build_provider,
 )
 from benethos_mailbox_service.data.providers.jmap import JmapProvider
@@ -382,7 +383,7 @@ def pop3_services(
             settings,
             credentials,
             session_factory=lambda s: Pop3Session(s, connection_factory=pop3_server),
-            sleep=lambda seconds: None,
+            timing=Timing(sleep=lambda seconds: None),
         )
 
     services = build_services(Settings(storage="memory"), provider_factory=factory)

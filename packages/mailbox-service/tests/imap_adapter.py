@@ -12,6 +12,7 @@ from benethos_mailbox_service.data.protocols.imap import (
     ImapSession,
 )
 from benethos_mailbox_service.data.protocols.smtp import SmtpSession
+from benethos_mailbox_service.data.providers import Timing
 from benethos_mailbox_service.data.providers.guard import Pace
 from benethos_mailbox_service.data.providers.imap import ImapProvider, mappers
 
@@ -43,9 +44,7 @@ def provider(
         session_factory=lambda s: ImapSession(
             s, client_factory=box, client_id=("benethos-mailbox-service", "1.0")
         ),
-        clock=time,
-        sleep=time.sleep,
-        jitter=lambda low, high: high,
+        timing=Timing(clock=time, sleep=time.sleep, jitter=lambda low, high: high),
         pace=pace,
         watchers=watchers,
     )

@@ -153,7 +153,7 @@ class DeviceSignIns:
                         device.interval += SLOWER
                     device.next_at = self._clock() + device.interval
                     return None
-                account, again = await self._sign_ins.connect(
+                connected = await self._sign_ins.connect(
                     access, provider, answer, device.account_id
                 )
         except ProviderUnavailableError:
@@ -168,9 +168,9 @@ class DeviceSignIns:
             raise
         finally:
             device.asking = False
-        device.done = account
-        self._sign_ins.finished(access, provider, account, again)
-        return account
+        device.done = connected.account
+        self._sign_ins.finished(access, provider, connected)
+        return connected.account
 
     def forget_expired(self, now: datetime) -> None:
         for sign_in_id, device in list(self._devices.items()):

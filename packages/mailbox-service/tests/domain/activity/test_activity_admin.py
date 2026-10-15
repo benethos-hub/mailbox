@@ -14,6 +14,7 @@ from benethos_mailbox_service.assembly import Services, build_services
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import Grant, ProviderType
 from benethos_mailbox_service.data.providers import CredentialReader, ProviderSettings
+from benethos_mailbox_service.domain.accounts import Rename
 from benethos_mailbox_service.errors import (
     BadRequestError,
     ProviderAuthError,
@@ -130,8 +131,7 @@ async def test_an_account_from_connect_to_remove(
         await services.accounts.update(
             ADMIN,
             account.id,
-            display_name="Me",
-            rename=True,
+            rename=Rename("Me"),
             credentials={"password": SecretStr("a secret password")},
         )
         await services.accounts.verify(ADMIN, account.id)

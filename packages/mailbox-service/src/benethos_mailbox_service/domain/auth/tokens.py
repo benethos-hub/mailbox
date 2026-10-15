@@ -38,6 +38,14 @@ class IssuedToken:
     plain: str
 
 
+@dataclass(frozen=True, slots=True)
+class Presented:
+    """A token a caller presented, and its user."""
+
+    token: ApiToken
+    user: User
+
+
 def hash_token(token: str) -> str:
     return secret.digest(token)
 
@@ -99,7 +107,7 @@ class ApiTokens:
             return "expired"
         return "active"
 
-    def presented(self, presented: str, source: str | None) -> tuple[ApiToken, User]:
+    def presented(self, presented: str, source: str | None) -> Presented:
         """The token a caller presented and its user, the token's use
         noted. ``UnauthorizedError`` for an unknown, revoked or expired
         token, or one whose user is gone or disabled."""
@@ -121,7 +129,7 @@ class ApiTokens:
             self._refused(token, source, "its user is disabled")
             raise UnauthorizedError("user is disabled")
         self._tokens.touch(token.id, now)
-        return token, user
+        return Presented(token, user)
 
     def _refused(self, token: ApiToken, source: str | None, reason: str) -> None:
         self._activity.record(

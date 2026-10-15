@@ -1219,3 +1219,19 @@ Built as #180.
 - **The memory adapter in parts.** `messages`, `folders` and `drafts`
   work on what it holds, `store.Store`, which the adapter keeps itself,
   where tests look at it.
+
+### 17.4 The domain's sizes
+
+- **Outgoing in parts.** `outgoing.py` keeps the operations. Composing
+  a message is `composing.Composer`, which answers a `Composed` record
+  instead of four values, and handing it to the provider with what
+  follows is `delivering.Delivery`.
+- **The sync's report.** What a pass tells the change feed is
+  `passes.report`, a `Report` of the changes and the counts.
+- **Records, not tuples.** `by_folder` of IMAP answers `ByFolder`, a
+  sign-in `Connected`, a presented token `Presented`.
+- **Fewer parameters.** `AccountHooks` carries who hears of an
+  account. `Timing` carries the clock, the sleep and the jitter of an
+  adapter, and `Guard` takes a `Pace` and a `Timing`.
+- **No switches.** A new display name is a `Rename`, not a flag beside
+  it. IMAP deletes for good and into the trash in two functions.

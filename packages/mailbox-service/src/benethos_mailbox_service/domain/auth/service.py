@@ -308,8 +308,8 @@ class AuthService:
         return user
 
     def _access_for_token(self, presented: str, source: str | None) -> Access:
-        token, user = self._api_tokens.presented(presented, source)
-        return self._access(user, token, source)
+        found = self._api_tokens.presented(presented, source)
+        return self._access(found.user, found.token, source)
 
     def _check_source(self, source: str) -> None:
         """``RateLimitedError`` while the source is locked out. A lockout

@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Query, status
 
 from ....data.models import Account, AccountStatus, Page, ProviderType
+from ....domain.accounts import Rename
 from ..deps import Accounts, Caller, Limit
 from ..schemas import AccountCreate, AccountUpdate
 
@@ -65,8 +66,11 @@ async def update_account(
     return await accounts.update(
         caller,
         account_id,
-        display_name=data.display_name,
-        rename="display_name" in data.model_fields_set,
+        rename=(
+            Rename(data.display_name)
+            if "display_name" in data.model_fields_set
+            else None
+        ),
         settings=data.settings,
         credentials=data.credentials,
     )

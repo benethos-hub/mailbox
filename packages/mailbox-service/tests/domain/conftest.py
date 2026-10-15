@@ -17,6 +17,7 @@ from benethos_mailbox_service.data.providers import (
     CredentialReader,
     ProviderSettings,
     Reads,
+    Timing,
 )
 from benethos_mailbox_service.data.providers.imap import ImapProvider
 from benethos_mailbox_service.data.providers.memory import MemoryProvider
@@ -57,7 +58,7 @@ def imap_services(
             settings,
             credentials,
             session_factory=lambda s: ImapSession(s, client_factory=imap_server),
-            sleep=lambda seconds: None,
+            timing=Timing(sleep=lambda seconds: None),
         )
 
     imap_services = build_services(Settings(storage="memory"), provider_factory=factory)

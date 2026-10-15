@@ -57,6 +57,7 @@ from .passes import (
     delta_state,
     index_changes,
     moves,
+    report,
 )
 from .threads import REFERENCES, IndexThreads, new_thread_id
 
@@ -365,9 +366,10 @@ class SyncService:
             changes = index_changes(states, seen, moved, self._new_id)
             self._index.apply(account_id, changes)
             if before:
-                counts = self._report(
-                    account_id, seen, moved, changes, flagged, len(states)
-                )
+                found = report(account_id, seen, moved, changes, flagged, len(states))
+                for change in found.changes:
+                    self.changed(change)
+                counts = found.counts
             merged = self._threads.join(account_id, changes.added, seen.headers)
             created = {e.id for e in changes.added}
         merged.update(await self._threads.backfill(account_id))
@@ -428,44 +430,6 @@ class SyncService:
                 )
                 flagged += [stayed[n].id for n in natives if n in stayed]
         return flagged
-
-    def _report(
-        self,
-        account_id: str,
-        seen: Seen,
-        moved: dict[IndexEntry, str],
-        changes: IndexChanges,
-        flagged: list[str],
-        folders: int,
-    ) -> Counts:
-        """The changes of a pass in the change feed."""
-        present = seen.present
-        self.changed(
-            MessagesCreated(
-                account_id,
-                [e.id for e in changes.added],
-                {e.id: e.folder_id for e in changes.added},
-            )
-        )
-        # A message renumbered in its folder (a new UIDVALIDITY) did not
-        # change for the caller. One that went to another folder did.
-        elsewhere = [e.id for e, n in moved.items() if present[n] != e.folder_id]
-        now_in = {e.id: present[n] for e, n in moved.items()}
-        now_in.update((e.id, e.folder_id) for e in seen.stayed.values())
-        self.changed(MessagesUpdated(account_id, elsewhere + flagged, now_in))
-        self.changed(
-            MessagesDeleted(
-                account_id,
-                changes.removed,
-                {e.id: e.folder_id for e in seen.left if e not in moved},
-            )
-        )
-        return Counts(
-            folders,
-            len(changes.added),
-            len(elsewhere + flagged),
-            len(changes.removed),
-        )
 
 
 def _message_id(headers: ThreadHeaders | None) -> str | None:

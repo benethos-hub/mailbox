@@ -10,6 +10,7 @@ from pydantic import SecretStr
 
 from benethos_mailbox_service.data.protocols.pop3 import Pop3Session
 from benethos_mailbox_service.data.protocols.smtp import SmtpSession
+from benethos_mailbox_service.data.providers import Timing
 from benethos_mailbox_service.data.providers.pop3 import Pop3Provider, mappers
 
 from .imap_fake import make_message
@@ -45,7 +46,7 @@ def provider(
         settings,
         credentials,
         session_factory=lambda s: Pop3Session(s, connection_factory=box),
-        sleep=lambda seconds: None,
+        timing=Timing(sleep=lambda seconds: None),
         smtp_factory=lambda s: SmtpSession(s, connection_factory=smtp),
     )
 

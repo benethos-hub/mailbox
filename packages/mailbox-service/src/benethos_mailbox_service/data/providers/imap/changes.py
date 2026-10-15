@@ -59,7 +59,7 @@ class ImapChanges:
         # Ids that are no id of this adapter are left out, like messages
         # that are gone.
         found: dict[str, ThreadHeaders] = {}
-        for (folder, validity), by_uid in by_folder(message_ids)[0].items():
+        for (folder, validity), by_uid in by_folder(message_ids).folders.items():
             # One request per batch, so a long first sync never holds the
             # connection for long.
             for batch in batched(list(by_uid), HEADER_BATCH):
@@ -98,7 +98,7 @@ def _flags(
         return []
     folder = mappers.folder_name(folder_id)
     validity = int(parts[0])
-    by_uid = by_folder(message_ids)[0].get((folder, validity), {})
+    by_uid = by_folder(message_ids).folders.get((folder, validity), {})
     if not by_uid or box.session.select(folder) != validity:
         return []
     changed = box.session.messages.changed_since(sorted(by_uid), int(parts[3]))

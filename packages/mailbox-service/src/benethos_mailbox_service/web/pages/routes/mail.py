@@ -271,7 +271,11 @@ async def message(
     folder = found.folder_ids[0] if found.folder_ids else None
     trail = mail_trail(account, (folder, names.get(folder, folder)) if folder else None)
     can = mail_rights(account)
-    thread = await _conversation(caller, account_id, found, mailbox, can["thread"])
+    thread = (
+        await _conversation(caller, account_id, found, mailbox)
+        if can["thread"]
+        else None
+    )
     return render(
         request,
         "pages/message.html",
@@ -333,12 +337,11 @@ async def _conversation(
     account_id: str,
     message: Message,
     mailbox: MailboxService,
-    allowed: bool,
 ) -> Thread | None:
     """The conversation of a message, for the card of its other messages.
     None where there is none to show, or it cannot be read now: the
     message shows without it."""
-    if not allowed or message.thread_id is None:
+    if message.thread_id is None:
         return None
     try:
         return await mailbox.get_thread(caller, account_id, message.thread_id)

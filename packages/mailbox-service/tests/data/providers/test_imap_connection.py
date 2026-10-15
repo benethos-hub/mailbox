@@ -10,7 +10,7 @@ import ssl
 import pytest
 
 from benethos_mailbox_service.data.protocols.imap import ImapSession, Server
-from benethos_mailbox_service.data.providers.guard import Guard, Pace
+from benethos_mailbox_service.data.providers.guard import Guard, Pace, Timing
 from benethos_mailbox_service.errors import (
     BadRequestError,
     NotSupportedError,
@@ -170,7 +170,7 @@ async def test_a_wait_names_the_server(
 
 def test_a_pause_of_the_mail_server_holds_no_send_back() -> None:
     time = Seconds()
-    guard = Guard(60, clock=time, sleep=time.sleep)
+    guard = Guard(Pace(per_minute=60), Timing(clock=time, sleep=time.sleep))
 
     def unreachable() -> None:
         raise ProviderUnavailableError("the server did not answer")

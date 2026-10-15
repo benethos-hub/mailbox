@@ -276,9 +276,10 @@ packages/mailbox-service/
                         #   roles (folders), the folders a grant
                         #   reaches (reach),
                         #   lists across accounts (across, merge),
-                        #   replies, sending and drafts (outgoing, its
-                        #   checks), grant limits and the send audit
-                        #   (sending), Idempotency-Key and the
+                        #   replies, sending and drafts (outgoing, with
+                        #   composing, delivering and checks), grant
+                        #   limits and the send audit (sending),
+                        #   Idempotency-Key and the
                         #   fingerprint of a request (idempotency,
                         #   fingerprint)
       sync/             # SyncService (stable message ids, the sync pass),
