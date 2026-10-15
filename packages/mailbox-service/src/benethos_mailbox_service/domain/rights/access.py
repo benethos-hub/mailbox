@@ -321,13 +321,19 @@ def _service_operations(names: Iterable[str]) -> frozenset[str]:
 def recipient_matches(pattern: str, address: str) -> bool:
     """An address against ``*``, ``*@domain`` or an address, ignoring case.
     A local part with ``%`` or ``!`` matches no domain: some servers route
-    ``bob%evil.org@domain`` on to evil.org. Only its exact address does."""
+    ``bob%evil.org@domain`` on to evil.org. Only its exact address does.
+    Nor does an address without a local part or with a second ``@``."""
     pattern, address = pattern.casefold(), address.casefold()
     if pattern == ANY_RECIPIENT:
         return True
     if pattern.startswith("*@"):
-        local, _, domain = address.rpartition("@")
-        return domain == pattern[2:] and not any(c in local for c in _ROUTING)
+        # Split at the first "@": the domain after a second one is no match.
+        local, _, domain = address.partition("@")
+        return (
+            bool(local)
+            and domain == pattern[2:]
+            and not any(c in local for c in _ROUTING)
+        )
     return address == pattern
 
 

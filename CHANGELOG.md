@@ -228,6 +228,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+- A grant's recipient pattern `*@domain` matches only an address with
+  one `@` and a local part. It matched `domain` alone and
+  `a@b@domain` as well.
 - The UI shows a refusal when an account is connected, and one of a
   send or a draft, with every secret masked, as every other page
   does. A server that echoed a password showed it there.

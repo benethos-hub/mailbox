@@ -53,6 +53,10 @@ def sender(services: Services, account_id: str, **limits: object) -> dict[str, s
         ("*@example.org", "bob%evil.org@example.org", False),
         ("*@example.org", "evil.org!bob@example.org", False),
         ("bob%evil.org@example.org", "bob%evil.org@example.org", True),
+        # Not one address of the domain.
+        ("*@example.org", "example.org", False),
+        ("*@example.org", "@example.org", False),
+        ("*@example.org", "a@b@example.org", False),
     ],
 )
 def test_recipient_matches(pattern: str, address: str, matches: bool) -> None:
