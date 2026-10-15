@@ -279,15 +279,6 @@ async def test_a_server_that_caps_the_page(
     assert len(page.items) == 2 and page.next_cursor
 
 
-async def test_without_a_folder_every_folder(
-    jmap: JmapProvider, server: FakeJmap
-) -> None:
-    server.add_email(make_message("In"))
-    server.add_email(make_message("Gone"), "trash")
-    page = await jmap.list_messages(None, limit=10, cursor=None)
-    assert {m.subject for m in page.items} == {"In", "Gone"}
-
-
 async def test_summary_fields(jmap: JmapProvider, server: FakeJmap) -> None:
     server.add_email(
         make_message("Hello", text="Hi there", date=NOW),

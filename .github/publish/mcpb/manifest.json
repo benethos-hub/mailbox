@@ -42,7 +42,7 @@
     },
     {
       "name": "list_folders",
-      "description": "The folders of an account: id, name, role (inbox, sent, drafts, trash, junk, archive) and counts."
+      "description": "The folders of an account: id, name, role (inbox, sent, drafts, trash, junk, archive, all) and counts."
     },
     {
       "name": "search_messages",

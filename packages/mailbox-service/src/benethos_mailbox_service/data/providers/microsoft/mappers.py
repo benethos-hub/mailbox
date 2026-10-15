@@ -27,6 +27,10 @@ from .shapes import MailFolder, Recipient, Recipients
 from .shapes import Message as GraphMessage
 
 DRAFT_KEYWORD = "$draft"
+# The folder with the role ``all``, which Exchange does not have: every
+# folder but the trash and junk, as Gmail's All Mail (UNIFORM 6.5).
+ALL = "all"
+OUTSIDE_ALL = frozenset({FolderRole.TRASH, FolderRole.JUNK})
 
 # Graph's well-known folder names, and the role each one has here.
 WELL_KNOWN: dict[str, FolderRole] = {
@@ -46,6 +50,11 @@ SUMMARY_FIELDS = (
 FOLDER_FIELDS = (
     "id,displayName,parentFolderId,totalItemCount,unreadItemCount,childFolderCount"
 )
+
+
+def all_mail() -> Folder:
+    """The folder ``all``, which only this service shows."""
+    return Folder(id=ALL, name="All Mail", role=FolderRole.ALL)
 
 
 def folder(item: MailFolder, roles: dict[str, FolderRole], root: str) -> Folder:

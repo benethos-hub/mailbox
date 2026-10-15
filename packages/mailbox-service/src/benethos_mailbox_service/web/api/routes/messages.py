@@ -23,7 +23,11 @@ async def list_all_messages(
         Query(description="Account ids. Without: every account the caller may read"),
     ] = None,
     folder: Annotated[
-        FolderRole | None, Query(description="A folder role, e.g. inbox")
+        FolderRole | None,
+        Query(
+            description="A folder role, e.g. all. Left out: the inbox. An account "
+            "without such a folder is named in incomplete"
+        ),
     ] = None,
     limit: Limit = 50,
     cursor: str | None = None,

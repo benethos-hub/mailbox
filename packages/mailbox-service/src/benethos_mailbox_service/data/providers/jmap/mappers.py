@@ -163,12 +163,10 @@ def _addresses(values: Addresses) -> list[dict[str, str | None]]:
 # --- lists ------------------------------------------------------------------------
 
 
-def query_filter(folder_id: str | None, search: MessageFilter | None) -> dict[str, Any]:
+def query_filter(folder_id: str, search: MessageFilter | None) -> dict[str, Any]:
     """The API's filter as a JMAP FilterOperator: every condition must hold."""
     search = search or MessageFilter()
-    conditions: list[dict[str, Any]] = []
-    if folder_id is not None:
-        conditions.append({"inMailbox": folder_id})
+    conditions: list[dict[str, Any]] = [{"inMailbox": folder_id}]
     for field, name in (
         ("text", "text"),
         ("sender", "from"),
@@ -204,7 +202,7 @@ def utc_date(moment: datetime) -> str:
 SORT = [{"property": "receivedAt", "isAscending": False}]
 
 
-def scope(folder_id: str | None, search: MessageFilter | None) -> str:
+def scope(folder_id: str, search: MessageFilter | None) -> str:
     """What a cursor belongs to: the folder and the search. Shortened to
     16 hex digits, 64 bits, to keep the cursor short. It only tells one
     search of a caller from another, so two that collide cost a cursor

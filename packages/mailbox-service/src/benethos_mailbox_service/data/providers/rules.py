@@ -32,14 +32,14 @@ from ..models import Folder, FolderRole, MessageFilter, MessageUpdate
 R = TypeVar("R")
 
 
-def no_folder(role: FolderRole) -> ConflictError:
-    """The account has no folder with this role: the operation cannot
-    happen until it does."""
+def no_folder(role: FolderRole) -> NotSupportedError:
+    """The account has no folder with this role: what needs it is not
+    supported there (UNIFORM R2)."""
     if role is FolderRole.TRASH:
-        return ConflictError(
+        return NotSupportedError(
             "the account has no trash folder: a message can only be deleted for good"
         )
-    return ConflictError(f"the account has no {role} folder")
+    return NotSupportedError(f"the account has no {role} folder")
 
 
 def resting(reason: str, wait: float) -> ProviderUnavailableError:

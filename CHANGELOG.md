@@ -83,6 +83,18 @@ adheres to [Semantic Versioning](https://semver.org/).
   received the message: INTERNALDATE on IMAP, the topmost `Received`
   header on POP3. Lists sort by it, `after` and `before` compare it, and
   the list across accounts merges by it.
+- **Breaking:** a list without a folder is the inbox on every account.
+  It was every folder on Gmail, Microsoft and JMAP, the trash and junk
+  among them. The role `all` lists every folder but the trash and junk
+  where the account has such a folder: Gmail's All Mail, a JMAP or IMAP
+  server's, and on Microsoft a folder "All Mail" the service shows. A
+  grant narrowed to folders lists `all` within them. The list across
+  accounts takes the inbox without `folder` as well. A cursor of a list
+  without a folder handed out before this version is refused once.
+- **Breaking:** a role the account has no folder for answers `501
+  not_supported`, in a list, a move or as a parent, and names the
+  account in `incomplete` across accounts. It answered `404`, and an
+  adapter `409`.
 - An account's capabilities follow from what its server answers, asked
   when it is connected or verified, when a folder comes or goes, and
   when the server refuses what they promised. They are stored with the

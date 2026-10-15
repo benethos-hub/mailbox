@@ -59,7 +59,7 @@ class MemoryProvider:
 
     async def list_messages(
         self,
-        folder_id: str | None,
+        folder_id: str,
         *,
         limit: int,
         cursor: str | None,
@@ -69,7 +69,7 @@ class MemoryProvider:
         found = [
             m
             for m in self.messages
-            if (folder_id is None or folder_id in m.folder_ids) and _matches(m, search)
+            if _within(m, folder_id, self.folders) and _matches(m, search)
         ]
         try:
             start = int(cursor) if cursor else 0
@@ -307,6 +307,16 @@ class MemoryProvider:
 
     async def close(self) -> None:
         return None
+
+
+def _within(message: Message, folder_id: str, folders: list[Folder]) -> bool:
+    """Whether the message is in the folder. The folder with the role
+    ``all`` holds every message but those in the trash and junk."""
+    roles = {f.id: f.role for f in folders}
+    if roles.get(folder_id) is not FolderRole.ALL:
+        return folder_id in message.folder_ids
+    outside = (FolderRole.TRASH, FolderRole.JUNK)
+    return not any(roles.get(f) in outside for f in message.folder_ids)
 
 
 def _matches(message: Message, search: MessageFilter) -> bool:

@@ -29,15 +29,13 @@ from .shapes import GmailMessage, GmailThread, Messages
 
 async def list_messages(
     api: GmailApi,
-    folder_id: str | None,
+    folder_id: str,
     limit: int,
     cursor: str | None,
     search: MessageFilter | None,
 ) -> Page[MessageSummary]:
-    """Newest first. Without a folder: every message, the trash and the
-    spam among them."""
-    if folder_id is not None:
-        await reading.require_folder(api, folder_id)
+    """Newest first."""
+    await reading.require_folder(api, folder_id)
     scope = rules.cursor_scope(folder_id, search)
     params = [("maxResults", str(limit)), *reading.folder_params(folder_id)]
     if cursor:

@@ -37,7 +37,7 @@ def server() -> FakePop3Server:
 
 async def test_newest_first_with_a_cursor(server: FakePop3Server) -> None:
     adapter = provider(server)
-    first = await adapter.list_messages(None, limit=2, cursor=None)
+    first = await adapter.list_messages(INBOX, limit=2, cursor=None)
     assert subjects(first.items) == ["Mail 5", "Mail 4"]
     assert first.items[0].folder_ids == [INBOX]
     assert not first.items[0].unread and not first.items[0].starred
@@ -51,9 +51,9 @@ async def test_a_cursor_holds_when_messages_arrive_or_leave(
     server: FakePop3Server,
 ) -> None:
     adapter = provider(server)
-    first = await adapter.list_messages(None, limit=2, cursor=None)
+    first = await adapter.list_messages(INBOX, limit=2, cursor=None)
     server.add("uid-6", make_message("Mail 6"))
-    following = await adapter.list_messages(None, limit=2, cursor=first.next_cursor)
+    following = await adapter.list_messages(INBOX, limit=2, cursor=first.next_cursor)
     assert subjects(following.items) == ["Mail 3", "Mail 2"]
 
 
@@ -61,14 +61,14 @@ async def test_a_cursor_whose_message_is_gone_goes_on_from_its_place(
     server: FakePop3Server,
 ) -> None:
     adapter = provider(server)
-    first = await adapter.list_messages(None, limit=2, cursor=None)
+    first = await adapter.list_messages(INBOX, limit=2, cursor=None)
     del server.messages["uid-4"]
-    following = await adapter.list_messages(None, limit=2, cursor=first.next_cursor)
+    following = await adapter.list_messages(INBOX, limit=2, cursor=first.next_cursor)
     assert subjects(following.items) == ["Mail 3", "Mail 2"]
 
 
 async def test_lists_read_headers_only(server: FakePop3Server) -> None:
-    await provider(server).list_messages(None, limit=2, cursor=None)
+    await provider(server).list_messages(INBOX, limit=2, cursor=None)
     names = {call[0] for call in server.calls}
     assert "top" in names and "retr" not in names
 
@@ -78,14 +78,14 @@ async def test_without_top_the_whole_message_gives_the_headers(
 ) -> None:
     server.top = False
     server.capabilities = ["UIDL", "USER"]
-    page = await provider(server).list_messages(None, limit=1, cursor=None)
+    page = await provider(server).list_messages(INBOX, limit=1, cursor=None)
     assert subjects(page.items) == ["Mail 5"]
 
 
 @pytest.mark.parametrize("cursor", ["junk", mappers.message_id("uid-1")])
 async def test_an_invalid_cursor(server: FakePop3Server, cursor: str) -> None:
     with pytest.raises(BadRequestError, match="invalid cursor"):
-        await provider(server).list_messages(None, limit=2, cursor=cursor)
+        await provider(server).list_messages(INBOX, limit=2, cursor=cursor)
 
 
 async def test_another_folder_is_not_found(server: FakePop3Server) -> None:
@@ -97,11 +97,11 @@ async def test_a_search_is_not_supported(server: FakePop3Server) -> None:
     adapter = provider(server)
     with pytest.raises(NotSupportedError, match="searched"):
         await adapter.list_messages(
-            None, limit=2, cursor=None, search=MessageFilter(unread=True)
+            INBOX, limit=2, cursor=None, search=MessageFilter(unread=True)
         )
     # An empty filter narrows nothing.
     page = await adapter.list_messages(
-        None, limit=2, cursor=None, search=MessageFilter()
+        INBOX, limit=2, cursor=None, search=MessageFilter()
     )
     assert len(page.items) == 2
 
@@ -150,9 +150,9 @@ async def test_every_step_sees_the_mailbox_as_it_is_now(
     """A POP3 session sees the mailbox as at its login: each step logs in
     afresh and quits at once, so the server is never held locked."""
     adapter = provider(server)
-    await adapter.list_messages(None, limit=1, cursor=None)
+    await adapter.list_messages(INBOX, limit=1, cursor=None)
     server.add("uid-6", make_message("Mail 6"))
-    page = await adapter.list_messages(None, limit=1, cursor=None)
+    page = await adapter.list_messages(INBOX, limit=1, cursor=None)
     assert subjects(page.items) == ["Mail 6"]
     assert server.connections == 2
     assert [c[0] for c in server.calls].count("quit") == 2

@@ -18,7 +18,7 @@ from .base import MAX_LIMIT, ToolResult, client, reads, result
 
 async def list_folders(account_id: str) -> list[dict[str, Any]]:
     """The folders of an account: id, name, role (inbox, sent, drafts, trash,
-    junk, archive) and counts."""
+    junk, archive, all) and counts."""
     return [render.folder(f) for f in await client().list_folders(account_id)]
 
 
@@ -28,15 +28,21 @@ async def search_messages(
     ] = None,
     folder: Annotated[
         str | None,
-        Field(description="Folder id, or a role such as inbox, sent, archive"),
+        Field(
+            description="Folder id, or a role such as inbox, sent, archive. "
+            "Left out: the inbox. all: every folder but the trash and junk, "
+            "where the account has it"
+        ),
     ] = None,
     text: Annotated[str | None, Field(description="Anywhere in the mail")] = None,
     sender: Annotated[str | None, Field(description="Part of From")] = None,
     to: Annotated[str | None, Field(description="Part of To")] = None,
     subject: Annotated[str | None, Field(description="Part of the subject")] = None,
-    after: Annotated[str | None, Field(description="From this day, YYYY-MM-DD")] = None,
+    after: Annotated[
+        str | None, Field(description="Received from this day, YYYY-MM-DD")
+    ] = None,
     before: Annotated[
-        str | None, Field(description="Before this day, YYYY-MM-DD")
+        str | None, Field(description="Received before this day, YYYY-MM-DD")
     ] = None,
     unread: bool | None = None,
     starred: bool | None = None,
@@ -46,9 +52,10 @@ async def search_messages(
         str | None, Field(description="next_cursor of the previous call")
     ] = None,
 ) -> dict[str, Any]:
-    """Find mail, newest first. All filters narrow together. Without an
-    account it searches every account you may read, and folder must be a
-    role. Answers summaries. get_message reads one message."""
+    """Find mail, newest first. All filters narrow together. To search every
+    folder, give folder all. Without an account it searches every account
+    you may read, and folder must be a role. Answers summaries. get_message
+    reads one message."""
     filters: dict[str, Any] = dict(
         folder=folder,
         text=text,

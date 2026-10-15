@@ -214,7 +214,7 @@ def test_a_role_names_a_folder(messages: list[Message]) -> None:
     moved = client.post(f"{url}/messages/batch", json=batch).json()["results"][0]
     assert moved["message"]["folder_ids"] == ["f2"]
     missing = client.patch(f"{url}/messages/m2", json={"folder_ids": ["junk"]})
-    assert missing.status_code == 404
+    assert missing.status_code == 501
     assert "no junk folder" in missing.json()["error"]["message"]
 
 
