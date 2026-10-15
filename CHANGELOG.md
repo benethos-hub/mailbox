@@ -82,6 +82,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `benethos-mailbox-mcp` requires mcp 2.3 and uvicorn 0.38 at least,
+  the versions the workspace and the service already ask for.
 - **Breaking:** `operations` of an account in `GET /v1/me` leaves out
   what the account cannot do, such as `list_threads` on POP3. It named
   the caller's rights alone.
