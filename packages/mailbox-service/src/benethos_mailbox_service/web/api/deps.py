@@ -148,7 +148,13 @@ def message_filter(
     ] = None,
     unread: bool | None = None,
     starred: bool | None = None,
-    has_attachments: bool | None = None,
+    has_attachments: Annotated[
+        bool | None,
+        Query(
+            description="The provider's own search for files, near to the "
+            "field has_attachments but not always the same"
+        ),
+    ] = None,
 ) -> MessageFilter:
     return MessageFilter(
         text=q,

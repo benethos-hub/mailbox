@@ -67,11 +67,15 @@ class FetchedMessage(parse.ParsedMessage):
         flags: tuple[str, ...],
         raw: bytes,
         received: datetime | None = None,
+        parts: tuple[parse.PartShape, ...] | None = None,
     ) -> None:
         super().__init__(raw)
         self.uid = str(uid)
         self.flags = flags
         self.internal_date = received
+        # Of a list, where only the headers were read: what BODYSTRUCTURE
+        # said of the parts.
+        self.parts = parts
 
 
 @dataclass(frozen=True, slots=True)

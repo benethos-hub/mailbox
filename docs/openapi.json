@@ -4405,8 +4405,10 @@
                   "type": "null"
                 }
               ],
+              "description": "The provider's own search for files, near to the field has_attachments but not always the same",
               "title": "Has Attachments"
-            }
+            },
+            "description": "The provider's own search for files, near to the field has_attachments but not always the same"
           }
         ],
         "responses": {
@@ -5943,8 +5945,10 @@
                   "type": "null"
                 }
               ],
+              "description": "The provider's own search for files, near to the field has_attachments but not always the same",
               "title": "Has Attachments"
-            }
+            },
+            "description": "The provider's own search for files, near to the field has_attachments but not always the same"
           }
         ],
         "responses": {
@@ -12131,7 +12135,7 @@
           "has_attachments": {
             "type": "boolean",
             "title": "Has Attachments",
-            "description": "Whether the message has a part a person sees as an attachment, not one the body shows in its place such as an image in the HTML. In a list of an IMAP account it is read from the header: whether the message is multipart/mixed.",
+            "description": "Whether the message has a part a person sees as an attachment, not one the body shows in its place such as an image in the HTML. Counted the same way in a list and in a whole message, except in a list of a POP3 account, which reads the headers alone and guesses from them: whether the message is multipart/mixed.",
             "default": false
           },
           "cc": {
@@ -12465,7 +12469,7 @@
           "has_attachments": {
             "type": "boolean",
             "title": "Has Attachments",
-            "description": "Whether the message has a part a person sees as an attachment, not one the body shows in its place such as an image in the HTML. In a list of an IMAP account it is read from the header: whether the message is multipart/mixed.",
+            "description": "Whether the message has a part a person sees as an attachment, not one the body shows in its place such as an image in the HTML. Counted the same way in a list and in a whole message, except in a list of a POP3 account, which reads the headers alone and guesses from them: whether the message is multipart/mixed.",
             "default": false
           }
         },

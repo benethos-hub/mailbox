@@ -128,6 +128,17 @@ class MailMethods:
             "preview": text[:50],
             "text": text,
             "attached": any(True for _ in msg.iter_attachments()),
+            "attachments": [
+                {
+                    "type": part.get_content_type(),
+                    "name": part.get_filename(),
+                    "disposition": part.get_content_disposition(),
+                    "cid": part.get("Content-ID"),
+                }
+                for part in msg.walk()
+                if not part.is_multipart()
+                and (part.get_filename() or part.get("Content-ID"))
+            ],
         }
 
     def email_json(
@@ -143,6 +154,7 @@ class MailMethods:
             "sentAt": parsed["sentAt"],
             "preview": parsed["preview"],
             "hasAttachment": parsed["attached"],
+            "attachments": parsed["attachments"],
         }
         return {p: full.get(p) for p in ["id", *properties]}
 

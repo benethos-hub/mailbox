@@ -17,7 +17,7 @@ from typing import Any
 from ...mail import convert, parse
 from ...models import Folder, FolderRole, Message, MessageFilter, MessageSummary
 from .. import rules
-from .shapes import GmailMessage, Label
+from .shapes import GmailMessage, Label, Part
 
 INBOX = "INBOX"
 SENT = "SENT"
@@ -98,10 +98,16 @@ def in_folder(folder_id: str, label_ids: set[str]) -> bool:
 
 
 def summary(message: GmailMessage, known: set[str]) -> MessageSummary:
-    """A message in the format ``metadata``."""
+    """A message in the format ``full`` without its contents, or
+    ``metadata``."""
     headers = message.payload.headers if message.payload else []
-    parsed = parse.from_headers((h.name, h.value) for h in headers)
+    wanted = {name.lower() for name in SUMMARY_HEADERS}
+    parsed = parse.from_headers(
+        (h.name, h.value) for h in headers if h.name.lower() in wanted
+    )
     fields = convert.summary_fields(parsed)
+    if message.payload is not None:
+        fields["has_attachments"] = parse.has_attachments(_shapes(message.payload))
     return MessageSummary.model_validate(
         {
             "id": message.id,
@@ -112,6 +118,25 @@ def summary(message: GmailMessage, known: set[str]) -> MessageSummary:
             **fields,
         }
     )
+
+
+def _shapes(part: Part) -> list[parse.PartShape]:
+    """The part and every part inside it, as ``parse`` counts them."""
+    named = {h.name.lower(): h.value for h in part.headers}
+    found = [
+        parse.PartShape(
+            content_type=(part.mime_type or "").lower(),
+            filename=part.filename or None,
+            disposition=named.get("content-disposition", "")
+            .split(";")[0]
+            .strip()
+            .lower(),
+            content_id=named.get("content-id") or None,
+        )
+    ]
+    for inner in part.parts:
+        found += _shapes(inner)
+    return found
 
 
 def message(meta: GmailMessage, raw: bytes, known: set[str]) -> Message:

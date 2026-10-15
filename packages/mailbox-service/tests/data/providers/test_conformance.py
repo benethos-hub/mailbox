@@ -18,7 +18,7 @@ from benethos_mailbox_service.data.providers import (
 )
 from benethos_mailbox_service.errors import MailboxServiceError, NotFoundError
 
-from ...mailboxes import KINDS, Box, box, mail
+from ...mailboxes import KINDS, Box, box, file_alone, inline_only, mail
 
 
 @pytest.fixture(params=KINDS)
@@ -53,6 +53,22 @@ async def test_a_summary_and_its_message_agree(found: Box) -> None:
     assert message.message_id_header == "<Agree@example.com>"
     raw = await adapter.get_raw(summary.id)
     assert b"<Agree@example.com>" in raw
+
+
+@pytest.mark.parametrize("kind", [k for k in KINDS if k != "pop3"])
+async def test_a_list_counts_attachments_as_the_message_does(kind: str) -> None:
+    """A real attachment, not an image the body shows (UNIFORM 6.10).
+    A POP3 list reads the headers alone and guesses from them."""
+    found = box(kind)
+    found.put(inline_only("Inline"))
+    found.put(file_alone("File"))
+    adapter = found.make()
+    page = await adapter.list_messages(await inbox_of(adapter), limit=10, cursor=None)
+    listed = {m.subject: m for m in page.items}
+    for subject, real in (("Inline", False), ("File", True)):
+        assert listed[subject].has_attachments is real, subject
+        message = await adapter.get_message(listed[subject].id)
+        assert message.has_attachments is real, subject
 
 
 async def test_pages_hand_on_each_mail_once(found: Box) -> None:

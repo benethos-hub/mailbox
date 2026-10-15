@@ -212,7 +212,10 @@ larger piece that is neither, and runs on its own.
 - **`has_attachments` can come out three ways for one message.** The
   field in a list is a header guess (`multipart/mixed`), `get_message`
   counts the parts, and the filter is the provider's own. *Concept
-  (6.10).*
+  (6.10).* Done: a list counts as `get_message` does, from IMAP's
+  BODYSTRUCTURE, Gmail's parts and JMAP's attachments. Microsoft's
+  `hasAttachments` leaves inline parts out already. A POP3 list keeps
+  the guess, decided 2026-10-15.
 
 ### 4.5 Sending
 
@@ -347,7 +350,7 @@ larger piece that is neither, and runs on its own.
 
 ## 5. Work in order
 
-Steps 1 to 5 are done. Each step is one pull request or more.
+Steps 1 to 6 are done. Each step is one pull request or more.
 
 1. **Bugs without a live check**, together on a branch of their own,
    against today's documentation. Done:
@@ -397,8 +400,7 @@ Steps 1 to 5 are done. Each step is one pull request or more.
    read `$draft` and wrote no mark until the live check of 6.4.
 6. **Values.** The decisions of section 6: dates, the list without a
    folder, server notes, marks, the case of keywords, `has_attachments`.
-   Dates, the list without a folder, server notes, the case of keywords
-   and the marks done.
+   Done.
 7. **IMAP emulates `all`** where the server has no `\All` (decision
    6.5), a piece of its own.
 8. **The UI and the MCP server** (section 8, U1 to U5): the vocabulary

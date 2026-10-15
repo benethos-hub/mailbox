@@ -57,7 +57,7 @@ async def thread_messages(api: GmailApi, thread_id: str, limit: int) -> ThreadMe
     """Gmail answers every message of a thread at once, in every label."""
     if not reading.is_id(thread_id):
         raise missing("thread", thread_id)
-    params = reading.metadata_params(mappers.SUMMARY_HEADERS)
+    params = reading.summary_params("messages")
     try:
         found = await api.read(
             GmailThread, "GET", f"/threads/{id_(thread_id)}", params=params

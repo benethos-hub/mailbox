@@ -1123,8 +1123,10 @@ Rules of the implementation (built before phase 3):
   but keep line breaks, which would end the command and start another.
 - `after` and `before` are days, as IMAP searches by day: `after` includes
   its day, `before` does not.
-- `has_attachments` on IMAP is a `multipart/mixed` message, the same rule
-  as the field in a summary.
+- `has_attachments` searches with the provider's own rule: on IMAP a
+  `multipart/mixed` message, elsewhere the provider's index. It comes
+  near the field of the same name, which every account counts alike,
+  but is not always the same.
 - `native` is not built yet.
 
 #### The service's own lists
