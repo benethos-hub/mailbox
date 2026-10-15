@@ -109,7 +109,7 @@ PAGE = {
     "incomplete": [{"account_id": "acc_2", "message": "timed out"}],
 }
 
-SENT = {"message_id_header": "<m@x>", "refused": ["b@x.org"]}
+SENT = {"message_id_header": "<m@x>", "refused": ["b@x.org"], "original_marked": True}
 
 BODY = message_body(
     to=[("a@x.org", "A")],

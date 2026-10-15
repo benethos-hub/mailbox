@@ -217,6 +217,28 @@ async def test_reply(
     assert "\\Answered" in box.folders["INBOX"].messages[1][1]
 
 
+async def test_the_send_says_whether_the_original_is_marked(
+    imap_services: Services, imap_account_id: str, box: FakeMailBox
+) -> None:
+    outgoing = imap_services.mailbox.outgoing
+
+    async def sent(**fields: object) -> bool | None:
+        message = OutgoingMessage.model_validate(fields)
+        result = await outgoing.send_message(ADMIN, imap_account_id, message)
+        return result.original_marked
+
+    to = [{"email": "bob@example.com"}]
+    assert await sent(to=to, subject="Hi", text="Hello") is None
+    message_id = await original_id(imap_services, imap_account_id)
+    reply = {"message_id": message_id, "action": "reply"}
+    assert await sent(reference=reply, text="Danke!") is True
+    # A server that keeps no $Forwarded: the forward goes out unmarked.
+    box.permanent_flags = ["\\Answered", "\\Seen", "\\Flagged"]
+    await imap_services.adapters.learn(imap_account_id)
+    forward = {"message_id": message_id, "action": "forward"}
+    assert await sent(reference=forward, to=to, text="FYI") is False
+
+
 async def test_reply_all_leaves_out_this_account(
     send: Sender, smtp: FakeSmtpServer, imap_services: Services, imap_account_id: str
 ) -> None:

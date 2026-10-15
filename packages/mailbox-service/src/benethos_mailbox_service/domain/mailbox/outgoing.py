@@ -103,8 +103,12 @@ class Outgoing:
             access, "send_message", account, raw, recipients, message_id
         )
         if message.reference is not None and original is not None:
+            marked = False
             with self._after_sending(access, account, "the original is not marked"):
-                await self._mark_answered(account_id, message.reference, original)
+                marked = await self._mark_answered(
+                    account_id, message.reference, original
+                )
+            result = result.model_copy(update={"original_marked": marked})
         return result
 
     async def _deliver(
@@ -278,16 +282,20 @@ class Outgoing:
 
     async def _mark_answered(
         self, account_id: str, reference: MessageReference, original: Message
-    ) -> None:
+    ) -> bool:
         """``$answered`` or ``$forwarded`` on the original, so other clients
         show it too, where the account writes that mark. Called after the
-        message went out, where a failure is logged."""
+        message went out, where a failure is logged. Whether the original
+        carries the mark now."""
         keyword = replies.answered_keyword(reference)
+        if keyword in original.keywords:
+            return True
         able = await self._calls.abilities(account_id)
-        if keyword in original.keywords or keyword not in able.marks.written:
-            return
+        if keyword not in able.marks.written:
+            return False
         changes = MessageUpdate(add_keywords=[keyword])
         await self._calls.update_one(account_id, reference.message_id, changes)
+        return True
 
     # --- drafts ---------------------------------------------------------------------
 
@@ -433,17 +441,19 @@ class Outgoing:
         with self._after_sending(access, account, "the draft is still there"):
             await self._delete_draft(account_id, draft_id)
         if out.reference is not None:
+            marked = False
             with self._after_sending(access, account, "the original is not marked"):
-                await self._mark_from_draft(account_id, out.reference)
+                marked = await self._mark_from_draft(account_id, out.reference)
+            result = result.model_copy(update={"original_marked": marked})
         return result
 
-    async def _mark_from_draft(self, account_id: str, header: str) -> None:
+    async def _mark_from_draft(self, account_id: str, header: str) -> bool:
         """Mark the original the sent draft answered or forwarded."""
         reference = compose.read_reference(header)
         if reference is None:
-            return
+            return False
         original = await self._calls.message(account_id, reference.message_id)
-        await self._mark_answered(account_id, reference, original)
+        return await self._mark_answered(account_id, reference, original)
 
     def _after_sending(
         self, access: Access, account: Account, what: str

@@ -36,10 +36,13 @@ and its conversation must hold it. ``--large`` reads, then sends one mail
 of about 7 MB alone, beyond one Graph request: one file goes in one
 request, the other through an upload session, and both sides must hold
 them whole. Outlook.com blocked the test account once after several
-sends in a day, so it stays a run of its own. At the end every mail of this check
-left in either account, of this run or an earlier one, is deleted for
-good, found by the subject. The change feed must name the copy in
-Sent Items, which the service learns of through Graph delta queries only.
+sends in a day, so it stays a run of its own. ``--marks`` reads, then
+puts ``$answered`` and ``$forwarded`` on the newest mail of the inbox and
+takes them off, one right after the other, and sends nothing. At the
+end every mail of this check left in either account, of this run or an
+earlier one, is deleted for good, found by the subject. The change feed
+must name the copy in Sent Items, which the service learns of through
+Graph delta queries only.
 For that the worker polls every 20 seconds while the check runs, without
 IMAP IDLE. Credentials and mail content are never printed.
 """
@@ -60,7 +63,7 @@ from checks.admin import Admin, bootstrap
 from checks.mail import (
     sweep,
 )
-from checks.microsoft_mail import bounces, inline, large, send_and_check
+from checks.microsoft_mail import bounces, inline, large, marks, send_and_check
 from checks.processes import service_env, start_service, stop
 from checks.run import Run
 from checks.service import Service
@@ -185,10 +188,12 @@ def check(
     bot: dict[str, str],
     bot_id: str,
     large_only: bool = False,
+    marks_only: bool = False,
 ) -> None:
     """What the API answers is checked with ``client``. ``mailbox``, the
     Python client, finds and deletes the test mail. ``large_only`` reads,
-    then sends the large mail alone."""
+    then sends the large mail alone. ``marks_only`` reads, then marks the
+    newest mail of the inbox and takes the marks off, and sends nothing."""
     base = f"/v1/accounts/{ms_id}"
     print("\n== reading")
     verified = client.post(f"{base}/verify")
@@ -200,33 +205,15 @@ def check(
     ):
         print("connect the account again with --connect, then run this again")
         return
-    folders = client.get(f"{base}/folders").json()
-    roles = {f.get("role") for f in folders}
-    run.check("folders with their roles", {"inbox", "sent", "drafts", "trash"} <= roles)
-    inbox = client.get(f"{base}/messages", params={"folder": "inbox", "limit": 5})
-    run.check("the inbox lists", inbox.status_code == 200)
-    items = inbox.json().get("items", [])
-    if items:
-        one = client.get(f"{base}/messages/{items[0]['id']}")
-        run.check("a message opens", one.status_code == 200)
-        raw = client.get(f"{base}/messages/{items[0]['id']}/raw")
-        run.check("its source", raw.status_code == 200 and b":" in raw.content[:200])
-    searched = client.get(f"{base}/messages", params={"q": "zz-no-such-mail-zz"})
-    run.check("a search", searched.status_code == 200)
-    everywhere = client.get(f"{base}/messages", params={"folder": "all", "limit": 20})
-    outside = {f["id"] for f in folders if f.get("role") in ("trash", "junk")}
-    listed = everywhere.json().get("items", []) if everywhere.status_code == 200 else []
-    run.check(
-        "All Mail leaves out the trash and junk",
-        everywhere.status_code == 200
-        and not any(outside & set(m["folder_ids"]) for m in listed),
-        f"{everywhere.status_code}, {len(listed)} listed",
-    )
+    items = _reading(run, client, base)
     inline(run, client, base)
     # One that came back late, after an earlier run had ended.
     bounces(mailbox, ms_id, SUBJECT)
     if large_only:
         _large_only(run, client, mailbox, ms_id, bot, bot_id)
+        return
+    if marks_only:
+        marks(run, client, base)
         return
 
     print("\n== folders")
@@ -275,6 +262,34 @@ def check(
                 run.check("delete it", deleted.status_code == 204)
 
     _sending(run, client, mailbox, ms_id, bot, bot_id)
+
+
+def _reading(run: Run, client: httpx.Client, base: str) -> list[dict[str, Any]]:
+    """Folders, the inbox, a message and its source, a search, All Mail.
+    The first mails of the inbox."""
+    folders = client.get(f"{base}/folders").json()
+    roles = {f.get("role") for f in folders}
+    run.check("folders with their roles", {"inbox", "sent", "drafts", "trash"} <= roles)
+    inbox = client.get(f"{base}/messages", params={"folder": "inbox", "limit": 5})
+    run.check("the inbox lists", inbox.status_code == 200)
+    items = inbox.json().get("items", [])
+    if items:
+        one = client.get(f"{base}/messages/{items[0]['id']}")
+        run.check("a message opens", one.status_code == 200)
+        raw = client.get(f"{base}/messages/{items[0]['id']}/raw")
+        run.check("its source", raw.status_code == 200 and b":" in raw.content[:200])
+    searched = client.get(f"{base}/messages", params={"q": "zz-no-such-mail-zz"})
+    run.check("a search", searched.status_code == 200)
+    everywhere = client.get(f"{base}/messages", params={"folder": "all", "limit": 20})
+    outside = {f["id"] for f in folders if f.get("role") in ("trash", "junk")}
+    listed = everywhere.json().get("items", []) if everywhere.status_code == 200 else []
+    run.check(
+        "All Mail leaves out the trash and junk",
+        everywhere.status_code == 200
+        and not any(outside & set(m["folder_ids"]) for m in listed),
+        f"{everywhere.status_code}, {len(listed)} listed",
+    )
+    return list(items)
 
 
 def _sending(
@@ -326,6 +341,11 @@ def main() -> int:
     parser.add_argument(
         "--large", action="store_true", help="read, then send the large mail alone"
     )
+    parser.add_argument(
+        "--marks",
+        action="store_true",
+        help="read, then mark and unmark the newest inbox mail; sends nothing",
+    )
     options = parser.parse_args()
     env = read_env()
     email = (env.get("LIVE_MICROSOFT_EMAIL") or "").strip().lower()
@@ -361,7 +381,16 @@ def main() -> int:
             ):
                 return 1
             assert bot_id is not None
-            check(run, client, mailbox, account["id"], bot, bot_id, options.large)
+            check(
+                run,
+                client,
+                mailbox,
+                account["id"],
+                bot,
+                bot_id,
+                options.large,
+                options.marks,
+            )
     finally:
         stop(process)
     return run.finish()

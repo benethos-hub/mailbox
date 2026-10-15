@@ -58,6 +58,14 @@ class Flag(wire.CamelShape):
     flag_status: Text = None
 
 
+class ExtendedProperty(wire.CamelShape):
+    """A MAPI property Graph has no field for, by its id such as
+    ``Integer 0x1081``, its value as text."""
+
+    id: Text = None
+    value: Text = None
+
+
 class Message(wire.CamelShape):
     id: str
     conversation_id: Text = None
@@ -75,6 +83,7 @@ class Message(wire.CamelShape):
     has_attachments: Yes = None
     is_draft: Yes = None
     internet_message_id: Text = None
+    single_value_extended_properties: list[ExtendedProperty] = []
     # In a delta query: the message left the folder or is gone.
     removed: dict[str, object] | None = Field(None, alias="@removed")
 

@@ -12,6 +12,8 @@ Recipient = tuple[str, str | None]
 class Sent:
     message_id_header: str | None
     refused: list[str]
+    # Of a reply or a forward: whether the original carries the mark now.
+    original_marked: bool | None = None
 
 
 @dataclass(frozen=True, slots=True)

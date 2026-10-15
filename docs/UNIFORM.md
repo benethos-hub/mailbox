@@ -143,7 +143,8 @@ larger piece that is neither, and runs on its own.
 - **`keywords: []` means "none" on IMAP and JMAP, but "not kept" on
   Gmail and POP3.** Microsoft never reads `$answered` or `$forwarded`.
   A client cannot tell "not answered" from "unknown". Rule R5. *Concept
-  (6.1).*
+  (6.1).* Done: the account's `marks` say what it reads, and Microsoft
+  reads both as the verb Outlook last carried out.
 - **Server notes travel as keywords.** `$hasattachment`,
   `$hasnoattachment`, `$mdnsent`, `$submitpending` and `$submitted` come
   through from IMAP and JMAP. `$hasattachment` repeats
@@ -219,7 +220,8 @@ larger piece that is neither, and runs on its own.
   Gmail and POP3 the mark answers `501`, on Microsoft it is dropped. The
   send answers success either way, and only the log knows
   (`domain/mailbox/outgoing.py:446-456`). Rule R6: the answer says
-  whether the original was marked. *Concept (6.4).*
+  whether the original was marked. *Concept (6.4).* Done:
+  `original_marked`, and Microsoft writes both marks.
 - **A reply through Gmail starts a new Gmail thread.** The send and the
   draft pass no `threadId` (`gmail/sending.py:28, 45`). Gmail's
   documentation asks for it besides the headers, so a reply lands outside
@@ -392,11 +394,11 @@ Steps 1 to 5 are done. Each step is one pull request or more.
    the MCP server follow them (section 7). Done. The server is asked
    when the account is connected or verified, when the sync sees a
    folder come or go, and when it refuses what was stored. Microsoft
-   reads `$draft` and writes no mark until the live check of 6.4.
+   read `$draft` and wrote no mark until the live check of 6.4.
 6. **Values.** The decisions of section 6: dates, the list without a
    folder, server notes, marks, the case of keywords, `has_attachments`.
-   Dates, the list without a folder, server notes and the case of
-   keywords done.
+   Dates, the list without a folder, server notes, the case of keywords
+   and the marks done.
 7. **IMAP emulates `all`** where the server has no `\All` (decision
    6.5), a piece of its own.
 8. **The UI and the MCP server** (section 8, U1 to U5): the vocabulary
@@ -439,7 +441,8 @@ Decided 2026-10-12, each with the options weighed and why.
    *Decided: (a), subject to a live check* against the Microsoft
    test account. If it fails, (b) holds for Microsoft. Either way, the
    send answers whether the original was marked, and the account's
-   lists of marks (section 3) say so in advance.
+   lists of marks (section 3) say so in advance. Checked live on
+   2026-10-15: Microsoft reads and writes both, so (a) holds.
 5. **A list without a folder.** (a) The inbox, on every account. (b)
    Every folder, on every account, which IMAP would have to emulate
    folder by folder. (c) The folder becomes required.
