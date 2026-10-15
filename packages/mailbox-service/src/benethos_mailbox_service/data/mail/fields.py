@@ -17,7 +17,7 @@ def message_id(value: object) -> str | None:
     """A ``Message-ID`` as one token: the first ``<...>`` of the header,
     without the spaces and line breaks a fold left in it. A header without
     one is taken whole, without spaces. None for an empty value."""
-    return next(iter(message_ids(value)), None) or _joined(value)
+    return next(iter(message_ids(value)), None) or _without_spaces(value)
 
 
 def message_ids(value: object) -> list[str]:
@@ -26,7 +26,7 @@ def message_ids(value: object) -> list[str]:
     leaving out comments and words between them. A header without one
     is split at its spaces."""
     text = str(value or "")
-    found = [_joined(token) for token in _BRACKETED.findall(text)]
+    found = [_without_spaces(token) for token in _BRACKETED.findall(text)]
     return [token for token in found if token] or text.split()
 
 
@@ -34,7 +34,7 @@ def message_ids(value: object) -> list[str]:
 _BRACKETED = re.compile(r"<[^<>]*>")
 
 
-def _joined(value: object) -> str | None:
+def _without_spaces(value: object) -> str | None:
     return "".join(str(value or "").split()) or None
 
 
