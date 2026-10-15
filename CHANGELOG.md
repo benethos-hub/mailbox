@@ -157,6 +157,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- A list across accounts, `GET /v1/messages`, gives every message once
+  when a client asks the next page for fewer messages than the one
+  before. It gave some twice, as the MCP server's `search_messages`
+  could. The cursor carries the size the accounts are read in.
 - The Python client names a charset of an attachment only where it
   decodes text. `charset=base64` came through, and the MCP server's
   `get_attachment` failed on it. The MCP server reads a text whose

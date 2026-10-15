@@ -49,16 +49,16 @@ class AcrossAccounts:
         folder_role = folder_role or FolderRole.INBOX
         query = fingerprint(folder_role, search)
         if cursor:
-            positions = {
-                a: p
-                for a, p in merge.decode_cursor(cursor, query).items()
-                if a in visible
-            }
+            carried = merge.decode_cursor(cursor, query)
+            positions = {a: p for a, p in carried.at.items() if a in visible}
+            size = carried.size
         else:
             positions = await self._start(visible, folder_role, failures, reaches)
+            size = limit
+        window = merge.Window(size, limit)
         chunks = await merge.per_account(
             [a for a, p in positions.items() if not p.done],
-            lambda a: self._window(a, positions[a], search, limit, reaches.get(a)),
+            lambda a: self._window(a, positions[a], search, window, reaches.get(a)),
             failures,
         )
         # An account that failed is named in ``failures`` and keeps its place
@@ -74,7 +74,11 @@ class AcrossAccounts:
         more = any(not p.done for p in positions.values())
         return MessagePage(
             items=items,
-            next_cursor=merge.encode_cursor(positions, query) if more else None,
+            next_cursor=(
+                merge.encode_cursor(merge.Positions(positions, size), query)
+                if more
+                else None
+            ),
             incomplete=failures,
         )
 
@@ -137,14 +141,15 @@ class AcrossAccounts:
         account_id: str,
         position: merge.Position,
         search: MessageFilter | None,
-        limit: int,
+        window: merge.Window,
         reach: Reach | None = None,
     ) -> list[merge.Chunk]:
-        """At least ``limit`` of the account's next messages, or all it has
-        left, so that merging by date cannot skip a newer one. Out of
-        ``reach`` left out: the same each time a page is read, so the
-        offsets into it hold. An account that cannot search fails, and is
-        named in ``incomplete``."""
+        """At least ``window.limit`` of the account's next messages, or all
+        it has left, so that merging by date cannot skip a newer one. Read
+        in pages of ``window.size`` always, so the offsets into them hold,
+        whatever the limit of each page of the list. Out of ``reach`` left
+        out: the same each time a page is read. An account that cannot
+        search fails, and is named in ``incomplete``."""
         await self._calls.require(account_id, for_list(search))
 
         async def page(cursor: str | None) -> Page[MessageSummary]:
@@ -152,7 +157,7 @@ class AcrossAccounts:
                 account_id,
                 lambda p: p.list_messages(
                     position.folder_id,
-                    limit=limit,
+                    limit=window.size,
                     cursor=cursor,
                     search=search,
                 ),
@@ -168,11 +173,12 @@ class AcrossAccounts:
                 first.next_cursor,
             )
         ]
-        if len(chunks[0].items) < limit and first.next_cursor:
-            second = await page(first.next_cursor)
-            chunks.append(
-                merge.Chunk(first.next_cursor, 0, second.items, second.next_cursor)
-            )
+        while chunks[-1].next_cursor and (
+            sum(len(c.items) for c in chunks) < window.limit
+        ):
+            cursor = chunks[-1].next_cursor
+            more = await page(cursor)
+            chunks.append(merge.Chunk(cursor, 0, more.items, more.next_cursor))
         return chunks
 
     async def _merged(

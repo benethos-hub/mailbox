@@ -28,6 +28,15 @@ class Position:
     done: bool = False
 
 
+@dataclass(frozen=True)
+class Window:
+    """How an account is read for one page of the list: in pages of
+    ``size``, until ``limit`` messages are at hand."""
+
+    size: int
+    limit: int
+
+
 @dataclass
 class Chunk:
     cursor: str | None
@@ -83,24 +92,43 @@ def advance(position: Position, window: list[Chunk], consumed: int) -> Position:
     return Position(position.folder_id, last, 0)
 
 
-def encode_cursor(positions: dict[str, Position], query: str) -> str:
-    state = {a: [p.folder_id, p.cursor, p.offset, p.done] for a, p in positions.items()}
-    return paging.encode_cursor(_CURSOR_PREFIX, {"q": query, "at": state})
+@dataclass(frozen=True)
+class Positions:
+    """Where each account stands, and the size of the pages its offsets
+    count in: the limit of the first page of the list."""
+
+    at: dict[str, Position]
+    size: int
 
 
-def decode_cursor(value: str, query: str) -> dict[str, Position]:
+def encode_cursor(positions: Positions, query: str) -> str:
+    state = {
+        a: [p.folder_id, p.cursor, p.offset, p.done] for a, p in positions.at.items()
+    }
+    return paging.encode_cursor(
+        _CURSOR_PREFIX, {"q": query, "at": state, "size": positions.size}
+    )
+
+
+def decode_cursor(value: str, query: str) -> Positions:
     """Where each account stands. A cursor of another search, folder or
     filter is refused: its positions mean nothing for this one."""
 
-    def positions(state: Any) -> dict[str, Position]:
+    def positions(state: Any) -> Positions:
         if state["q"] != query:
             raise BadRequestError(
                 "the cursor belongs to another search: start without it"
             )
-        return {
-            account_id: Position(folder_id, cursor, int(offset), bool(done))
-            for account_id, (folder_id, cursor, offset, done) in state["at"].items()
-        }
+        size = int(state["size"])
+        if size < 1:
+            raise ValueError(size)
+        return Positions(
+            {
+                account_id: Position(folder_id, cursor, int(offset), bool(done))
+                for account_id, (folder_id, cursor, offset, done) in state["at"].items()
+            },
+            size,
+        )
 
     return paging.decode_cursor(_CURSOR_PREFIX, value, positions)
 
