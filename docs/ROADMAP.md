@@ -20,7 +20,7 @@ in [CONCEPT.md](CONCEPT.md). The section numbers below point there.
 | [4b](#phase-4b--ui-rework) | UI rework | **done** |
 | [4c](#phase-4c--api-users) | API users | **done** |
 | [5](#phase-5--more-providers-and-the-configuration-ui) | More providers and the configuration UI | in progress |
-| [5a](#phase-5a--one-way-to-operate-every-mailbox) | One way to operate every mailbox | in progress |
+| [5a](#phase-5a--one-way-to-operate-every-mailbox) | One way to operate every mailbox | done |
 
 Undecided ideas wait in [IDEAS.md](IDEAS.md) until they are designed.
 
@@ -423,7 +423,7 @@ order, each step one pull request or more:
 7. **IMAP emulates `all`** where the server has no `\All`, done
 8. **The UI and the MCP server know no providers**: the operations of
    an account from the API, the marks from `mailbox-common`, done
-9. **Setting up an account, described by the domain**
+9. **Setting up an account, described by the domain**, done
 
 Steps 5 to 8 change the contract and ship together as 0.5.0.
 

@@ -39,6 +39,8 @@ from .imap import (
     RawFolder,
     SearchCriteria,
 )
+from .jmap import DEFAULT_PATH as JMAP_PATH
+from .jmap import DEFAULT_PORT as JMAP_PORT
 from .oauth import (
     App,
     DeviceCode,
@@ -107,4 +109,6 @@ __all__ = [
     "new_pkce",
     "refused",
     "wire",
+    "JMAP_PATH",
+    "JMAP_PORT",
 ]

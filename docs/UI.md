@@ -563,8 +563,10 @@ These rules bind every page, the reworked ones and the ones to come.
    `operations` name, the caller's rights and what the account can do
    together (`web/pages/rights.py`, UNIFORM U1). Which parts of a change
    they offer and what a message shows follow its `capabilities`. A
-   template asks `can` alone, never a capability or a kind of account,
-   but where an account is set up (U2, held by `test_code_rules.py`).
+   template asks `can` alone, never a capability or a kind of account
+   (U2, held by `test_code_rules.py`). The forms that connect an account
+   are drawn from the description of its kind (U6,
+   `components/connection.html`).
    Marks show in the words of `mailbox-common` (`mail/marks.py`), and no
    template spells a `$` keyword (U3). After a change a page takes the
    id the answer brings, never the one it had (U4). A page is tested by

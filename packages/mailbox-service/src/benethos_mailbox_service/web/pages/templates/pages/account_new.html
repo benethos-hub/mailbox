@@ -5,31 +5,22 @@
 {% block heading %}Connect an account{% endblock %}
 {% block subheading %}{{ breadcrumb([("Accounts", "/ui/accounts"), ("Connect an account", None)]) }}{% endblock %}
 {% block content %}
-{# Connect with a password: ``settings`` fill the server fields, a
-   ``provider`` names the candidate's, ``suffix`` keeps ids apart,
+{# Connect with a password: ``connection`` describes the kind of
+   account, ``settings`` fill its fields, ``suffix`` keeps ids apart,
    ``error`` shows under the password why the last try was refused. #}
-{% macro connect_form(email, settings, suffix="", provider=None, password_label="Password", hint=None, folded=True, primary=True, display_name="", error=None) %}
+{% macro connect_form(email, settings, connection, suffix="", password_label=None, hint=None, folded=True, primary=True, display_name="", error=None) %}
 {% set ids = "-" ~ suffix if suffix else "" %}
 <form method="post" action="/ui/accounts">
   {{ csrf_field() }}
   <input type="hidden" name="email" value="{{ email }}" />
-  {% if provider %}<input type="hidden" name="provider" value="{{ provider }}" />{% endif %}
+  <input type="hidden" name="provider" value="{{ connection.kind }}" />
   <div class="form-grid">
-    {% if not provider %}
-    <div class="field">
-      <label for="f-provider{{ ids }}">Protocol</label>
-      <select id="f-provider{{ ids }}" name="provider">
-        {% if "imap" in offers %}<option value="imap" selected>IMAP</option>{% endif %}
-        {% if "pop3" in offers %}<option value="pop3">POP3: the inbox only, no folders, no read state</option>{% endif %}
-      </select>
-    </div>
-    {% endif %}
     <div class="field">
       <label for="f-display_name{{ ids }}">Display name</label>
       <input id="f-display_name{{ ids }}" name="display_name" value="{{ display_name }}" placeholder="optional" />
     </div>
     <div class="field{{ ' invalid' if error }}">
-      <label for="f-password{{ ids }}">{{ password_label }}</label>
+      <label for="f-password{{ ids }}">{{ password_label or connection.secret }}</label>
       <input id="f-password{{ ids }}" name="password" type="password" autocomplete="new-password" required{% if error %} autofocus aria-describedby="e-password{{ ids }}"{% endif %} />
       {% if error %}<span class="field-error" id="e-password{{ ids }}" role="alert">{{ error }}</span>{% endif %}
       {% if hint %}<span class="hint">{{ hint }}</span>{% endif %}
@@ -38,10 +29,10 @@
   {% if folded %}
   <details class="fold">
     <summary>Servers</summary>
-    {{ connection_fields(settings, security, suffix=suffix, protocol=provider) }}
+    {{ connection_fields(connection, settings, suffix=suffix) }}
   </details>
   {% else %}
-  <div class="fold">{{ connection_fields(settings, security, suffix=suffix, protocol=provider) }}</div>
+  <div class="fold">{{ connection_fields(connection, settings, suffix=suffix) }}</div>
   {% endif %}
   <div class="form-actions"><button{% if primary %} class="primary"{% endif %} type="submit">Connect</button></div>
 </form>
@@ -83,7 +74,7 @@
 <section class="card">
   <header><h2>2. Your servers</h2><span class="meta">The provider refused. Nothing was stored.</span></header>
   <div class="body">
-    {{ connect_form(email, retry.settings, provider=retry.provider, password_label="API token" if retry.settings.get("auth") == "token" else "Password", folded=False, display_name=retry.display_name, error=retry.error, hint="Tried against the provider first, then stored encrypted. Never shown again.") }}
+    {{ connect_form(email, retry.settings, connections[retry.provider], password_label="API token" if retry.settings.get("auth") == "token" else "Password", folded=False, display_name=retry.display_name, error=retry.error, hint="Tried against the provider first, then stored encrypted. Never shown again.") }}
   </div>
 </section>
 {% endif %}
@@ -126,7 +117,7 @@
     {% for hint in candidate.hints %}
     <p class="muted">{{ hint.text }}{% if hint.url %} <a href="{{ hint.url }}" rel="noreferrer">More</a>{% endif %}</p>
     {% endfor %}
-    {{ connect_form(discovery.email, candidate.settings, suffix=loop.index, provider=candidate.provider.value, password_label={"app_password": "App password", "api_token": "API token"}.get(candidate.credential.value, "Password"), hint="Tried against the provider first, then stored encrypted. Never shown again.") }}
+    {{ connect_form(discovery.email, candidate.settings, connections[candidate.provider.value], suffix=loop.index, password_label={"app_password": "App password", "api_token": "API token"}.get(candidate.credential.value, "Password"), hint="Tried against the provider first, then stored encrypted. Never shown again.") }}
   </div>
 </section>
 {% endfor %}
@@ -140,24 +131,16 @@
 </section>
 {% endif %}
 
-{% if "imap" in offers or "pop3" in offers %}
-<details class="card way"{% if not usable and not sign_ins %} open{% endif %}>
-  <summary class="card-summary"><h2>Set up by hand</h2></summary>
+{% set nothing_found = not usable and not sign_ins %}
+{% for connection in by_hand %}
+<details class="card way"{% if nothing_found and loop.first %} open{% endif %}>
+  <summary class="card-summary"><h2>Set up {{ connection.name }} by hand</h2>{% if connection.about %}<span class="meta">{{ connection.about }}</span>{% endif %}</summary>
   <div class="body">
-    {% if not usable and not sign_ins %}<p class="muted">No way to connect {{ discovery.email }} over JMAP, IMAP or POP3 was found. Enter your provider's servers.</p>{% endif %}
-    {{ connect_form(discovery.email, {}, suffix="hand", folded=False, primary=not usable and not sign_ins) }}
+    {% if nothing_found and loop.first %}<p class="muted">No way to connect {{ discovery.email }} was found. Enter your provider's servers.</p>{% endif %}
+    {{ connect_form(discovery.email, {}, connection, suffix="hand-" ~ connection.kind, folded=False, primary=nothing_found and loop.first, hint="Tried against the server first, then stored encrypted. Never shown again.") }}
   </div>
 </details>
-{% endif %}
-
-{% if "jmap" in offers %}
-<details class="card way">
-  <summary class="card-summary"><h2>Set up a JMAP server by hand</h2></summary>
-  <div class="body">
-    {{ connect_form(discovery.email, {}, suffix="jmap", provider="jmap", password_label="Password or API token", folded=False, primary=False, hint="Choose below which one it is. Tried against the server first, then stored encrypted.") }}
-  </div>
-</details>
-{% endif %}
+{% endfor %}
 
 <details class="card">
   <summary class="card-summary"><h2>What the sources answered</h2></summary>

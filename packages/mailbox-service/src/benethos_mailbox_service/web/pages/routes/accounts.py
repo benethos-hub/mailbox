@@ -10,7 +10,7 @@ from fastapi.responses import HTMLResponse, Response
 from pydantic import SecretStr
 
 from ....data.models import AccountStatus, ProviderType
-from ....domain.accounts import AccountService
+from ....domain.accounts import AccountService, connection_of, connections
 from ....domain.discovery import connectable, sign_ins
 from ....domain.rights import Access
 from ....domain.system import StatusService
@@ -25,22 +25,11 @@ from ..templates import PAGE_SIZE, back, page_links, render
 
 router = APIRouter()
 
-# Connection settings a form may carry, and which of them are numbers.
-SETTING_FIELDS = (
-    "host",
-    "port",
-    "security",
-    "username",
-    "smtp_host",
-    "smtp_port",
-    "smtp_security",
-    "smtp_username",
-    # JMAP: where the session is, and whether a password or a token signs in.
-    "path",
-    "auth",
-)
-NUMBERS = {"port", "smtp_port"}
-SECURITY = ("tls", "starttls")
+# Connection settings a form may carry, as the kinds of account describe
+# them (UNIFORM U6), and which of them are numbers.
+_FIELDS = {f.name: f for c in connections() for f in c.fields}
+SETTING_FIELDS = tuple(_FIELDS)
+NUMBERS = {name for name, field in _FIELDS.items() if field.number}
 
 
 def _settings(form: Any) -> dict[str, str | int | bool]:
@@ -154,11 +143,15 @@ def _connect_page(
         page="accounts",
         status_code=status_code,
         email=email,
-        security=SECURITY,
         oauth_providers=_oauth_providers(request),
         in_browser=_in_browser(request, *get_oauth(request).providers()),
         with_code=_with_code(request, *get_oauth(request).providers()),
-        offers={p.value for p in ProviderType if get_accounts(request).offers(p)},
+        connections={p.value: connection_of(p) for p in ProviderType},
+        by_hand=[
+            c
+            for c in connections()
+            if c.by_hand and get_accounts(request).offers(ProviderType(c.kind))
+        ],
         **context,
     )
 
@@ -273,7 +266,7 @@ def _account_page(
         signs_in_with_oauth=accounts.signs_in_with_oauth(found.provider),
         in_browser=_in_browser(request, found.provider),
         with_code=_with_code(request, found.provider),
-        security=SECURITY,
+        connection=connection_of(found.provider),
         sync=status.sync_of(caller, account_id),
     )
 

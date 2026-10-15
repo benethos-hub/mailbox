@@ -398,13 +398,17 @@ def test_a_code_the_provider_refuses_to_hand_out() -> None:
 @pytest.mark.parametrize(
     ("offered", "shown", "hidden"),
     [
-        (["microsoft"], [], ["Set up by hand", "Set up a JMAP server by hand"]),
+        (["microsoft"], [], ["by hand"]),
         (
             ["pop3"],
-            ['value="pop3"', "Set up by hand"],
-            ['value="imap"', "JMAP server by hand"],
+            ['value="pop3"', "Set up POP3 by hand"],
+            ['value="imap"', "Set up IMAP by hand", "Set up JMAP by hand"],
         ),
-        (["imap", "jmap"], ['value="imap"', "JMAP server by hand"], ['"pop3"']),
+        (
+            ["imap", "jmap"],
+            ['value="imap"', "Set up IMAP by hand", "Set up JMAP by hand"],
+            ['"pop3"'],
+        ),
     ],
 )
 def test_the_connect_page_offers_what_the_deployment_does(

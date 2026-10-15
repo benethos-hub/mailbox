@@ -49,8 +49,8 @@ def test_connect_by_hand_with_a_token(
         discovery=NothingFound(),
     )
     page = post(browser, "/ui/accounts/discover", {"email": "me@example.org"}).text
-    assert "over JMAP, IMAP or POP3 was found" in page
-    assert "Set up a JMAP server by hand" in page
+    assert "No way to connect me@example.org was found" in page
+    assert "Set up JMAP by hand" in page
     assert 'name="provider" value="jmap"' in page
     done = post(
         browser,

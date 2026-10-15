@@ -13,6 +13,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   and what the account can do together, by their names in the catalogue
   of rights. A client offers what is in it and needs no knowledge of
   providers. The Python client reads it as `Account.operations`.
+- The connect page of the UI offers one form per kind of account to
+  set up by hand, IMAP, POP3 and JMAP, each with what to know of it.
+  The forms follow from each kind's description of its connection.
 - The MCP server shows a mail's marks in words, such as `answered`,
   apart from its keywords, and its tools name no provider.
 - A send of a reply or a forward answers `original_marked`: whether the

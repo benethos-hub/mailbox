@@ -350,7 +350,7 @@ larger piece that is neither, and runs on its own.
 
 ## 5. Work in order
 
-Steps 1 to 8 are done. Each step is one pull request or more.
+Steps 1 to 9 are done. Each step is one pull request or more.
 
 1. **Bugs without a live check**, together on a branch of their own,
    against today's documentation. Done:
@@ -412,6 +412,11 @@ Steps 1 to 8 are done. Each step is one pull request or more.
    messages the UI offers still follows the capabilities, since one
    operation, `update_message`, holds them all.
 9. **Setting up an account, described by the domain** (section 8, U6).
+   Done. Each kind of account describes its connection beside its
+   adapter (`data/providers/connections.py`): the settings with their
+   words, hints and choices, the secret, where a person signs in
+   instead, and what its page sums up. The connect page offers one form
+   per kind to set up by hand, and no template names a kind.
 
 Steps 5 and 6 change the contract. With 7 and 8 they ship together as
 0.5.0, marked as breaking in the changelog. Steps 1 to 4 can ship
