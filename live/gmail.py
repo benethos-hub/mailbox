@@ -397,7 +397,9 @@ def _reply_and_check(
         held, said = thread_holds(client, base, original["id"])
         run.check("the thread holds both", held, said)
         purged = client.delete(f"{base}/messages/{copy}", params={"permanent": "true"})
-        run.check("the copy deleted for good", purged.status_code == 204)
+        run.check(
+            "the copy deleted for good", purged.status_code == 204, purged.text[:200]
+        )
     back = messages_with_subject(
         mailbox, bot_id, f"Re: {original['subject']}", folder="inbox", tries=40, pause=5
     )
