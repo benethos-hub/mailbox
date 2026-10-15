@@ -420,7 +420,7 @@ order, each step one pull request or more:
    folder and the role `all`, server notes out of `keywords`, the lists
    of marks, the provider's spelling of keywords, `has_attachments`,
    done
-7. **IMAP emulates `all`** where the server has no `\All`
+7. **IMAP emulates `all`** where the server has no `\All`, done
 8. **The UI and the MCP server know no providers**: the operations of
    an account from the API, the marks from `mailbox-common`
 9. **Setting up an account, described by the domain**

@@ -1100,7 +1100,7 @@ not followed.
 
 | Parameter | Meaning |
 |---|---|
-| `folder` | folder id, or a role such as `inbox`. Left out: the inbox, on every account. The role `all` lists every folder but the trash and junk where the account has such a folder (Gmail's All Mail, a JMAP or IMAP server's, on Microsoft one the adapter shows), and answers `501` elsewhere. A grant narrowed to folders lists `all` within them |
+| `folder` | folder id, or a role such as `inbox`. Left out: the inbox, on every account. The role `all` lists every folder but the trash and junk where the account has such a folder (Gmail's All Mail, a JMAP or IMAP server's, on Microsoft and on an IMAP server without `\All` one the adapter shows), and answers `501` elsewhere. A grant narrowed to folders lists `all` within them |
 | `q` | free text (subject, addresses, body where the provider can) |
 | `from`, `to`, `subject` | structured filters |
 | `after`, `before` | days, `YYYY-MM-DD`: `after` includes its day, `before` does not. The audits take a time with a zone instead |

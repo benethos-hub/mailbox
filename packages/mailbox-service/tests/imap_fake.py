@@ -281,16 +281,7 @@ class FakeMailBox(FolderCommands):
         if modifiers:
             return self._changed_since(uids, items, modifiers)
         assert not isinstance(uids, str)
-        for item in items:
-            reads = item.startswith(("BODY[", "BODY."))
-            assert not reads or "PEEK" in item, "a read must never set \\Seen"
-        kind = (
-            "message-id"
-            if any("MESSAGE-ID" in i for i in items)
-            else "header"
-            if any(i.startswith("BODY.PEEK[HEADER]") for i in items)
-            else "full"
-        )
+        kind = _kind(items)
         self.calls.append(("fetch", tuple(str(u) for u in uids), kind))
         folder = self.folders[self.selected]
         found: dict[int, dict[bytes, Any]] = {}
@@ -315,7 +306,7 @@ class FakeMailBox(FolderCommands):
                 data[key] = _fields_block(head, names)
             elif kind == "header":
                 data[b"BODY[HEADER]<0>"] = head[: _partial(items, "BODY.PEEK[HEADER]")]
-            else:
+            elif kind == "full":
                 data[b"BODY[]<0>"] = raw[: _partial(items, "BODY.PEEK[]")]
             found[uid] = data
         return found
@@ -465,6 +456,21 @@ def _received(head: bytes) -> datetime:
 def _local(when: datetime) -> datetime:
     """INTERNALDATE as IMAPClient answers it: local time without a zone."""
     return when.astimezone().replace(tzinfo=None)
+
+
+def _kind(items: list[str]) -> str:
+    """What a FETCH reads, as the calls record it. A read never sets
+    \\Seen."""
+    for item in items:
+        reads = item.startswith(("BODY[", "BODY."))
+        assert not reads or "PEEK" in item, "a read must never set \\Seen"
+    if any("MESSAGE-ID" in i for i in items):
+        return "message-id"
+    if any(i.startswith("BODY.PEEK[HEADER]") for i in items):
+        return "header"
+    if any(i.startswith("BODY.PEEK[]") for i in items):
+        return "full"
+    return "dates"
 
 
 def _partial(items: list[str], section: str) -> int:

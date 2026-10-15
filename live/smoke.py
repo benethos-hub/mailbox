@@ -108,6 +108,18 @@ def smoke_account(
     listing = client.get(f"/v1/accounts/{account_id}/messages", params={"limit": 5})
     items = listing.json().get("items", [])
     run.check("messages", listing.status_code == 200, f"{len(items)} on the first page")
+    everywhere = client.get(
+        f"/v1/accounts/{account_id}/messages", params={"folder": "all", "limit": 10}
+    )
+    outside = {f["id"] for f in folders.json() if f.get("role") in ("trash", "junk")}
+    listed = everywhere.json().get("items", []) if everywhere.status_code == 200 else []
+    run.check(
+        "All Mail: every folder but the trash and junk",
+        everywhere.status_code == 200
+        and not any(outside & set(m["folder_ids"]) for m in listed),
+        f"{everywhere.status_code}, {len(listed)} listed, "
+        f"from {len({f for m in listed for f in m['folder_ids']})} folder(s)",
+    )
     if items:
         first = items[0]["id"]
         message = client.get(f"/v1/accounts/{account_id}/messages/{first}")

@@ -4,6 +4,7 @@ stored and deleted. Nothing here sets ``\\Seen`` by reading."""
 from __future__ import annotations
 
 import re
+from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from ....common.chunks import batched
@@ -92,6 +93,13 @@ class Messages:
                 uids, ["FLAGS", "INTERNALDATE", "BODYSTRUCTURE", _HEADER]
             ).items()
         ]
+
+    def fetch_dates(self, uids: list[int]) -> dict[int, datetime | None]:
+        """When each message arrived (INTERNALDATE), nothing else."""
+        return {
+            uid: received(data)
+            for uid, data in self._fetch(uids, ["INTERNALDATE"]).items()
+        }
 
     def fetch_message(self, uid: int) -> FetchedMessage | None:
         found = self._fetch([uid], ["FLAGS", "INTERNALDATE", self._whole()]).get(uid)
