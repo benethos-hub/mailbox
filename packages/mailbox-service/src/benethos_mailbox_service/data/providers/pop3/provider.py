@@ -214,11 +214,6 @@ class Pop3Provider(MailServerAdapter):
             found.update(await self._run(partial(_thread_headers, wanted=batch)))
         return found
 
-    async def flag_changes(
-        self, folder_id: str, since: str, message_ids: list[str]
-    ) -> list[str]:
-        return []  # POP3 has no flags
-
     async def abilities(self) -> Abilities:
         """Deleting for good, and with an SMTP server sending, which names
         the recipients it refused at once. Nothing else: POP3 keeps no

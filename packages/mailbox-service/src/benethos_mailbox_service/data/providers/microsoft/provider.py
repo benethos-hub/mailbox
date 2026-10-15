@@ -128,12 +128,6 @@ class MicrosoftProvider:
     async def message_headers(self, message_ids: list[str]) -> dict[str, ThreadHeaders]:
         return await changes.message_headers(self._graph, message_ids)
 
-    async def flag_changes(
-        self, folder_id: str, since: str, message_ids: list[str]
-    ) -> list[str]:
-        """Graph reports changes through delta queries instead."""
-        return []
-
     async def abilities(self) -> Abilities:
         """The same for every Microsoft account. Its keywords are Outlook's
         categories. It reads ``$draft``, and reads and writes ``$answered``
