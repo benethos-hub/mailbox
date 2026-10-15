@@ -10,17 +10,11 @@ import pytest
 
 from benethos_mailbox_service.data.models import FolderRole, MessageUpdate
 from benethos_mailbox_service.data.providers import (
+    PROTOCOLS,
     Capability,
     Deletes,
-    Deltas,
-    Drafts,
     Reads,
-    Sends,
-    Summaries,
-    Threads,
-    Watches,
     Writes,
-    capabilities_of,
 )
 from benethos_mailbox_service.errors import MailboxServiceError, NotFoundError
 
@@ -93,7 +87,9 @@ async def test_a_change_answers_every_id_it_was_given(found: Box) -> None:
     adapter = found.make()
     if not isinstance(adapter, Writes):
         # POP3: it deletes, and changes nothing else.
-        assert Capability.FLAGS not in capabilities_of(adapter)
+        able = await adapter.abilities()
+        assert not able.has(Capability.READ_STATE)
+        assert not able.has(Capability.MOVE)
         return
     found.put(mail("Change"))
     page = await adapter.list_messages(await inbox_of(adapter), limit=10, cursor=None)
@@ -109,17 +105,14 @@ async def test_a_change_answers_every_id_it_was_given(found: Box) -> None:
 
 async def test_each_capability_has_its_protocol(found: Box) -> None:
     adapter = found.make()
-    capabilities = capabilities_of(adapter)
-    protocols = {
-        Capability.FLAGS: Writes,
-        Capability.FOLDERS: Writes,
-        Capability.DRAFTS: Drafts,
-        Capability.SEND: Sends,
-        Capability.DELTA: Deltas,
-        Capability.PUSH: Watches,
-    }
-    for capability, protocol in protocols.items():
-        if capability in capabilities:
-            assert isinstance(adapter, protocol), capability
-    if Capability.THREADS in capabilities:
-        assert isinstance(adapter, Threads | Summaries)
+    able = await adapter.abilities()
+    assert able.capabilities, "every kind of mailbox can do something"
+    for capability in able.capabilities:
+        assert isinstance(adapter, PROTOCOLS.get(capability, Reads)), capability
+
+
+async def test_what_is_written_is_read(found: Box) -> None:
+    able = await found.make().abilities()
+    assert set(able.marks.written) <= set(able.marks.read)
+    if able.marks.written:
+        assert able.has(Capability.READ_STATE)

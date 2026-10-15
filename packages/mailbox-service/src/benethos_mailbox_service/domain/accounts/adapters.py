@@ -14,9 +14,8 @@ from typing import TypeVar
 
 from pydantic import SecretStr
 
-from ...data.models import Account, AccountStatus, ProviderType
+from ...data.models import Abilities, Account, AccountStatus, Capability, ProviderType
 from ...data.providers import (
-    Capability,
     CredentialReader,
     OAuthClient,
     ProviderFactory,
@@ -26,14 +25,19 @@ from ...data.providers import (
     Tokens,
     TokenSource,
     build_provider,
-    capabilities_of,
 )
 from ...data.secrets import CredentialVault
 from ...data.storage import AccountRepository
-from ...errors import MailboxServiceError, ProviderAuthError, ProviderUnavailableError
+from ...errors import (
+    MailboxServiceError,
+    NotSupportedError,
+    ProviderAuthError,
+    ProviderUnavailableError,
+)
 from ..activity import SERVICE, Activity, ActivityLog
 from ..activity import accounts as said
 from ..changes import AccountNeedsSignIn, ChangeFeed
+from .abilities import NOTHING, Needs, lacking
 
 T = TypeVar("T")
 
@@ -126,25 +130,95 @@ class Adapters:
             self._providers[account_id] = adapter
         return adapter
 
-    def capabilities(self, account_id: str) -> frozenset[Capability]:
-        """What the account's adapter can do, as its protocols say."""
-        return capabilities_of(self.get(account_id))
+    # --- what the account can do ----------------------------------------------------
 
-    def offered(self, account_id: str) -> list[Capability]:
-        """The capabilities as callers see them, sorted. None where the
-        adapter cannot be built, e.g. without the OAuth app of its provider:
-        a list of accounts never fails for one of them."""
-        try:
-            return sorted(self.capabilities(account_id))
-        except MailboxServiceError:
-            return []
+    def stored(self, account_id: str) -> Abilities | None:
+        """What the account can do, as stored. None until its server was
+        asked once."""
+        return self._repository.abilities(account_id)
+
+    def has(self, account_id: str, capability: Capability) -> bool:
+        """Whether the account can, as stored. False while unknown."""
+        found = self.stored(account_id)
+        return found is not None and found.has(capability)
+
+    def stable_ids(self, account_id: str) -> bool:
+        """Whether a message keeps its id when it is moved. Without it the
+        domain keeps an id mapping."""
+        return self.get(account_id).stable_ids
+
+    async def abilities(self, account_id: str) -> Abilities:
+        """What the account can do: as stored, or asked of its server once
+        where nothing is stored yet, as for an account connected before."""
+        found = self.stored(account_id)
+        if found is None:
+            found = await self.learn(account_id)
+        return found
+
+    async def require(self, account_id: str, wanted: Needs) -> None:
+        """Refuse with ``501`` what the account cannot do, before its
+        adapter is asked."""
+        if wanted == NOTHING:
+            return
+        refused = lacking(await self.abilities(account_id), wanted)
+        if refused is not None:
+            raise refused
+
+    async def learn(self, account_id: str) -> Abilities:
+        """Ask the account's server what it can do now, and store it."""
+        found = await self._called(account_id, lambda p: p.abilities())
+        self.keep(account_id, found)
+        return found
+
+    def keep(self, account_id: str, found: Abilities) -> None:
+        """Store what the server answered, and log a change once."""
+        before = self.stored(account_id)
+        if found == before:
+            return
+        self._repository.set_abilities(account_id, found)
+        if before is not None:
+            self._activity.record(
+                said.AbilitiesChanged(
+                    by=SERVICE,
+                    account=self.record(account_id),
+                    gained=tuple(
+                        sorted(set(found.capabilities) - set(before.capabilities))
+                    ),
+                    lost=tuple(
+                        sorted(set(before.capabilities) - set(found.capabilities))
+                    ),
+                )
+            )
+
+    # --- calls --------------------------------------------------------------------
 
     async def call(
         self, account_id: str, operation: Callable[[Reads], Awaitable[T]]
     ) -> T:
         """Run one operation on the account's adapter and record what it
         says about the account: a rejected login needs a new credential, an
-        unreachable server is marked as such, and success clears both."""
+        unreachable server is marked as such, and success clears both. An
+        operation the adapter refuses with ``501``, although the stored
+        abilities let it pass, has the server asked again (UNIFORM R4):
+        it may have stopped offering something, such as IDLE."""
+        try:
+            return await self._called(account_id, operation)
+        except NotSupportedError:
+            if self.stored(account_id) is not None:
+                await self._relearn(account_id)
+            raise
+
+    async def _relearn(self, account_id: str) -> None:
+        try:
+            await self.learn(account_id)
+        except MailboxServiceError:
+            # The refusal is the answer. What the server can do is asked
+            # again with the next refusal or verification.
+            return
+
+    async def _called(
+        self, account_id: str, operation: Callable[[Reads], Awaitable[T]]
+    ) -> T:
         try:
             result = await operation(self.get(account_id))
         except ProviderAuthError as exc:

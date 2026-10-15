@@ -36,6 +36,7 @@ import tempfile
 from typing import Any
 
 import httpx
+from checks import capabilities
 from checks.accounts import read_env, test_server_accounts
 from checks.admin import bootstrap
 from checks.mail import delete_for_good, messages_with_subject, thread_holds
@@ -49,17 +50,6 @@ JMAP_PORT = 30443
 TITLE = "jmap live check"
 # Long enough that only a push brings a change in time.
 INTERVAL = 600
-CAPABILITIES = {
-    "send",
-    "drafts",
-    "flags",
-    "folders",
-    "search",
-    "labels",
-    "push",
-    "delta",
-    "stable_ids",
-}
 
 
 def settings(account: dict[str, str]) -> dict[str, Any]:
@@ -124,6 +114,17 @@ def connect(
     return ids[0], ids[1]
 
 
+def _described(run: Run, client: httpx.Client, base: str) -> None:
+    """What the server offers, as the account names it (UNIFORM R4)."""
+    described = client.get(base).json()
+    capabilities.named(run, described, capabilities.JMAP)
+    run.check(
+        "and every mark it reads and writes",
+        len(described["marks"]["written"]) == 6,
+        str(described["marks"]),
+    )
+
+
 def checks(
     run: Run,
     client: httpx.Client,
@@ -135,12 +136,7 @@ def checks(
     Python client, finds and deletes the test mail."""
     sender_id, receiver_id = ids
     base = f"/v1/accounts/{receiver_id}"
-    offered = set(client.get(base).json()["capabilities"])
-    run.check(
-        "the account names what it can do",
-        CAPABILITIES <= offered,
-        ", ".join(sorted(CAPABILITIES - offered)),
-    )
+    _described(run, client, base)
 
     for account_id in ids:
         clean_up(mailbox, account_id)

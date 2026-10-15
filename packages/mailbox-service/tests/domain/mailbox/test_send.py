@@ -26,7 +26,7 @@ from benethos_mailbox_service.data.providers.imap import ImapProvider, mappers
 from benethos_mailbox_service.domain.mailbox import checks
 from benethos_mailbox_service.errors import (
     BadRequestError,
-    ConflictError,
+    NotSupportedError,
     ProviderAuthError,
 )
 
@@ -192,7 +192,7 @@ async def test_no_sent_folder_no_copy() -> None:
 
 async def test_no_smtp_server_no_sending(box: FakeMailBox) -> None:
     provider = adapter(box, FakeSmtpServer(), smtp_host="")
-    with pytest.raises(ConflictError, match="smtp_host"):
+    with pytest.raises(NotSupportedError, match="smtp_host"):
         await provider.send(RAW, "me@example.com", TO)
 
 

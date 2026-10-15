@@ -19,9 +19,9 @@ from typing import Protocol, TypeVar
 import anyio
 
 from ...common.ratelimit import Clock, Sleep
-from ...errors import BadRequestError, ConflictError
+from ...errors import BadRequestError, NotSupportedError
 from ..protocols import Pick, Server, SmtpSession
-from .base import Capability, CredentialReader, ProviderSettings
+from .base import CredentialReader, ProviderSettings
 from .guard import Guard, Pace
 from .sender import SmtpFactory, SmtpSender
 from .settings import mail_server, rate_of
@@ -38,7 +38,6 @@ class MailServerAdapter:
     protocol = ""
     account = ""
     ports: Mapping[str, int] = {}
-    capabilities: frozenset[Capability] = frozenset()
 
     def __init__(
         self,
@@ -83,8 +82,6 @@ class MailServerAdapter:
             smtp_factory,
             pick,
         )
-        if self._smtp is not None:
-            self.capabilities = self.capabilities | {Capability.SEND}
         self._lock = threading.Lock()
 
     def _check_auth(self, auth: str) -> None:
@@ -97,7 +94,7 @@ class MailServerAdapter:
         """Send through the account's SMTP server. The recipients it
         refused."""
         if self._smtp is None:
-            raise ConflictError(
+            raise NotSupportedError(
                 "the account has no SMTP server: its settings name no smtp_host"
             )
         return await anyio.to_thread.run_sync(self._smtp.send, raw, sender, recipients)

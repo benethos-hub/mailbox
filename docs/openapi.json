@@ -10303,7 +10303,11 @@
             },
             "type": "array",
             "title": "Capabilities",
-            "description": "What the account can do beyond reading its inbox. A POP3 account has no `flags`, `folders` or `search`: those operations answer `501`. Empty where the account cannot be reached through its settings."
+            "description": "What the account can do beyond reading its inbox, as its server answered when the account was connected or verified. An operation that needs a capability the account lacks answers `501`. A POP3 account has no `read_state`, `folders` or `search`, for example. Empty until the server was asked once."
+          },
+          "marks": {
+            "$ref": "#/components/schemas/Marks",
+            "description": "The marks of RFC 8621 the account reads and those it writes, such as `$answered`. Adding or taking off a mark it does not write answers `501`."
           }
         },
         "type": "object",
@@ -10858,20 +10862,25 @@
       "Capability": {
         "type": "string",
         "enum": [
-          "send",
-          "drafts",
-          "flags",
+          "read_state",
+          "stars",
+          "keywords",
           "folders",
-          "search",
+          "move",
+          "trash",
+          "purge",
           "labels",
-          "server_search",
+          "search",
+          "drafts",
+          "send",
+          "sent_copy",
+          "threads",
           "push",
-          "stable_ids",
-          "delta",
-          "threads"
+          "external_changes",
+          "refused"
         ],
         "title": "Capability",
-        "description": "What an account's adapter can do beyond reading its inbox. Where one\nis missing, the operations that need it answer `501 not_supported`."
+        "description": "What an account can do beyond reading its inbox, each guarding one\nthing (docs/UNIFORM.md section 3). Where one is missing, the operations\nthat need it answer `501 not_supported`. They follow from what the\naccount's server offers."
       },
       "Change": {
         "properties": {
@@ -11788,6 +11797,40 @@
         ],
         "title": "MailServer"
       },
+      "Mark": {
+        "type": "string",
+        "enum": [
+          "$answered",
+          "$forwarded",
+          "$draft",
+          "$junk",
+          "$notjunk",
+          "$phishing"
+        ],
+        "title": "Mark",
+        "description": "The keywords of RFC 8621 besides `$seen` and `$flagged`, which are\n`unread` and `starred`. Other `$` keywords are keywords."
+      },
+      "Marks": {
+        "properties": {
+          "read": {
+            "items": {
+              "$ref": "#/components/schemas/Mark"
+            },
+            "type": "array",
+            "title": "Read"
+          },
+          "written": {
+            "items": {
+              "$ref": "#/components/schemas/Mark"
+            },
+            "type": "array",
+            "title": "Written"
+          }
+        },
+        "type": "object",
+        "title": "Marks",
+        "description": "Which marks an account reads and which it writes. A mark it does not\nread never appears, and its absence means nothing. Writing one it does\nnot write answers `501`."
+      },
       "Me": {
         "properties": {
           "user_id": {
@@ -11876,7 +11919,11 @@
             },
             "type": "array",
             "title": "Capabilities",
-            "description": "What the account can do beyond reading its inbox, as in `Account`. Without `flags`, `folders` or `search` (a POP3 account) those operations answer `501`."
+            "description": "What the account can do beyond reading its inbox, as in `Account`. An operation that needs one it lacks answers `501`."
+          },
+          "marks": {
+            "$ref": "#/components/schemas/Marks",
+            "description": "The marks it reads and writes, as in `Account`."
           },
           "status": {
             "$ref": "#/components/schemas/AccountStatus",
@@ -12439,7 +12486,7 @@
               }
             ],
             "title": "Keywords",
-            "description": "Replaces the list of keywords."
+            "description": "Replaces the list of keywords. Needs `keywords`. A mark such as `$answered` needs to be among the account's `marks.written`."
           },
           "add_keywords": {
             "anyOf": [
@@ -12490,7 +12537,7 @@
               }
             ],
             "title": "Folder Ids",
-            "description": "The folders the message is to be in, by id or by a role such as `archive`. A change moves it, and the id stays. An IMAP message is in exactly one folder."
+            "description": "The folders the message is to be in, by id or by a role such as `archive`. A change moves it, and the id stays. Needs `move`, and more than one folder `labels`."
           },
           "add_folder_ids": {
             "anyOf": [

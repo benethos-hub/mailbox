@@ -35,7 +35,7 @@ from ...data.models import (
     ThreadSummary,
 )
 from ...errors import BadRequestError, MailboxServiceError, missing_message
-from ..accounts import Adapters
+from ..accounts import Adapters, for_delete, for_list, for_update
 from ..activity import ActivityLog
 from ..rights import Access
 from ..sync import SyncService
@@ -171,6 +171,7 @@ class MailboxService:
         """One account's messages, newest first. ``folder_id`` may also be a
         role such as ``inbox``."""
         access.require("list_messages", account_id)
+        await self._calls.require(account_id, for_list(search))
         folder = await self._folders.by_role(account_id, folder_id)
         reach = await self._reach(access, "list_messages", account_id)
         if reach is not None and folder is not None:
@@ -228,6 +229,7 @@ class MailboxService:
         changes: MessageUpdate,
     ) -> MessageSummary:
         access.require("update_message", account_id)
+        await self._calls.require(account_id, for_update(changes))
         changes = await self._folders.with_roles_resolved(account_id, changes)
         await self._require_reached(
             access, "update_message", account_id, message_id, changes.named_folders()
@@ -241,6 +243,7 @@ class MailboxService:
         Into the trash from any folder the grants reach, whether they reach
         the trash or not."""
         access.require(_delete_right(permanent), account_id)
+        await self._calls.require(account_id, for_delete(permanent))
         await self._require_reached(
             access, _delete_right(permanent), account_id, message_id
         )
@@ -257,6 +260,7 @@ class MailboxService:
             access.require("update_message", account_id)
             if batch.changes is None:
                 raise BadRequestError("an update needs changes")
+            await self._calls.require(account_id, for_update(batch.changes))
             changes = await self._folders.with_roles_resolved(account_id, batch.changes)
             outcomes = dict(
                 await self._outside(
@@ -273,6 +277,7 @@ class MailboxService:
         else:
             operation = _delete_right(batch.permanent)
             access.require(operation, account_id)
+            await self._calls.require(account_id, for_delete(batch.permanent))
             outcomes = dict(
                 await self._outside(access, operation, account_id, batch.ids)
             )

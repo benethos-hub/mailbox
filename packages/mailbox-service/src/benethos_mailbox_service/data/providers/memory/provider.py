@@ -10,9 +10,12 @@ from ....errors import (
 )
 from ...mail import ThreadHeaders, convert, parse
 from ...models import (
+    Abilities,
     AttachmentContent,
+    Capability,
     Folder,
     FolderRole,
+    Mark,
     Message,
     MessageFilter,
     MessageSummary,
@@ -21,23 +24,22 @@ from ...models import (
     SentMessage,
 )
 from .. import rules
-from ..base import Capability
 
 
 class MemoryProvider:
-    capabilities = frozenset(
-        {
-            Capability.SEND,
-            Capability.SEARCH,
-            Capability.STABLE_IDS,
-        }
-    )
+    stable_ids = True
 
     def __init__(
         self,
         folders: list[Folder] | None = None,
         messages: list[Message] | None = None,
+        abilities: Abilities | None = None,
     ) -> None:
+        """``abilities``: what the account answers it can do, by default
+        what its folders allow."""
+        self.given = abilities
+        # Whether a message may sit in several folders.
+        self.labels = False
         self.folders = folders or [
             Folder(id="inbox", name="Inbox", role=FolderRole.INBOX),
             Folder(id="sent", name="Sent", role=FolderRole.SENT),
@@ -111,7 +113,7 @@ class MemoryProvider:
     ) -> MessageSummary:
         message = await self.get_message(message_id)
         fields = changes.model_dump(include={"unread", "starred"}, exclude_none=True)
-        rules.move_target(changes, self.capabilities)
+        rules.move_target(changes, labels=self.labels)
         known = {folder.id for folder in self.folders}
         for folder_id in changes.named_folders():
             if folder_id not in known:
@@ -273,6 +275,31 @@ class MemoryProvider:
             for m in self.messages
             if m.id in wanted
         }
+
+    async def abilities(self) -> Abilities:
+        if self.given is not None:
+            return self.given
+        roles = {folder.role for folder in self.folders}
+        found = {
+            Capability.READ_STATE,
+            Capability.STARS,
+            Capability.KEYWORDS,
+            Capability.FOLDERS,
+            Capability.MOVE,
+            Capability.PURGE,
+            Capability.SEARCH,
+            Capability.SEND,
+        }
+        for role, capability in (
+            (FolderRole.TRASH, Capability.TRASH),
+            (FolderRole.DRAFTS, Capability.DRAFTS),
+            (FolderRole.SENT, Capability.SENT_COPY),
+        ):
+            if role in roles:
+                found.add(capability)
+        if self.labels:
+            found.add(Capability.LABELS)
+        return Abilities.of(found, written=set(Mark))
 
     async def verify(self) -> None:
         return None

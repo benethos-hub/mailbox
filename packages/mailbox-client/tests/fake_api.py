@@ -45,7 +45,8 @@ ME = {
             "sending": [
                 {"recipients": ["a@x.org"], "max_sends_per_day": 5, "sends_left": 4}
             ],
-            "capabilities": ["flags"],
+            "capabilities": ["read_state"],
+            "marks": {"read": ["$draft"], "written": []},
             "status": "needs_reauth",
             "last_sync_at": "2026-10-01T08:00:00Z",
             "attention": True,
@@ -127,7 +128,8 @@ ACCOUNT = {
     "status": "connected",
     "credentials": [{"field": "password", "updated_at": "2026-10-01T00:00:00Z"}],
     "settings": {"host": "imap.example.com", "port": 993},
-    "capabilities": ["flags", "folders"],
+    "capabilities": ["keywords", "folders"],
+    "marks": {"read": ["$answered", "$draft"], "written": ["$answered"]},
 }
 
 USER = {

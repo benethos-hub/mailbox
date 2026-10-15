@@ -19,6 +19,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   attached as they are. It needs the right to read that mail.
 - `/v1/me` says per account its `status`, whether it needs `attention`
   and when its last sync succeeded (`last_sync_at`).
+- An account and the accounts of `/v1/me` carry `marks`: the marks of
+  RFC 8621, such as `$answered` or `$junk`, it reads (`marks.read`) and
+  those it writes (`marks.written`). Setting or taking off a mark it
+  does not write answers `501`. The Python client has them as `Marks`.
 - Messages of IMAP accounts carry a `thread_id`. The service threads
   them itself, across folders, by `Message-ID`, `In-Reply-To` and
   `References`. Mail already known is threaded over the next sync
@@ -60,6 +64,24 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Breaking:** the capabilities of an account are finer, each guarding
+  one thing: `read_state`, `stars`, `keywords`, `folders`, `move`,
+  `trash`, `purge`, `labels`, `search`, `drafts`, `send`, `sent_copy`,
+  `threads`, `push`, `external_changes` and `refused`. `flags` is gone,
+  and `stable_ids`, `delta` and `server_search` left the API. A client
+  that checks the values strictly fails on the new ones.
+- **Breaking:** what an account lacks answers `501 not_supported`, the
+  same on every account, before the provider is asked: a send without
+  an SMTP server, a draft without a drafts folder and a delete without a
+  trash answered `409`, several folders without `labels` `400`. A
+  change with something the account lacks changes nothing, also where
+  the rest of it would work.
+- An account's capabilities follow from what its server answers, asked
+  when it is connected or verified, when a folder comes or goes, and
+  when the server refuses what they promised. They are stored with the
+  account and answered while its server cannot be reached. The database
+  moves to schema 21. An account connected before is asked once when
+  the service takes it up.
 - After a reply or a forward the service adds `$answered` or
   `$forwarded` to the original instead of writing its keywords anew, so
   a keyword another client set meanwhile stays.

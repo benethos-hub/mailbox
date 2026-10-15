@@ -18,6 +18,7 @@ from ...data.models import (
     Page,
 )
 from ...errors import NotFoundError
+from ..accounts import for_list
 from ..rights import Access
 from . import merge
 from .calls import Calls
@@ -141,7 +142,9 @@ class AcrossAccounts:
         """At least ``limit`` of the account's next messages, or all it has
         left, so that merging by date cannot skip a newer one. Out of
         ``reach`` left out: the same each time a page is read, so the
-        offsets into it hold."""
+        offsets into it hold. An account that cannot search fails, and is
+        named in ``incomplete``."""
+        await self._calls.require(account_id, for_list(search))
 
         async def page(cursor: str | None) -> Page[MessageSummary]:
             found = await self._calls.call(

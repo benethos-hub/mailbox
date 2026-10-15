@@ -12,6 +12,7 @@ from ....data.models import (
     AccountStatus,
     Capability,
     Grant,
+    Marks,
     User,
 )
 from ....domain.auth import SignInState
@@ -58,9 +59,12 @@ class MeAccount(BaseModel):
         default_factory=list,
         description=(
             "What the account can do beyond reading its inbox, as in "
-            "`Account`. Without `flags`, `folders` or `search` (a POP3 "
-            "account) those operations answer `501`."
+            "`Account`. An operation that needs one it lacks answers `501`."
         ),
+    )
+    marks: Marks = Field(
+        default_factory=Marks,
+        description="The marks it reads and writes, as in `Account`.",
     )
     status: AccountStatus = Field(
         default=AccountStatus.CONNECTED,

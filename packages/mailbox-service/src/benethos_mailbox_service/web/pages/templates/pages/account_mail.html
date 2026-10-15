@@ -88,9 +88,11 @@
       <input type="hidden" name="back" value="{{ here }}" />
       <label for="f-batch-action">Ticked messages</label>
       <select id="f-batch-action" name="action">
-        {% if can.flag %}
+        {% if can.read_state %}
         <option value="read">mark read</option>
         <option value="unread">mark unread</option>
+        {% endif %}
+        {% if can.star %}
         <option value="star">star</option>
         <option value="unstar">unstar</option>
         {% endif %}

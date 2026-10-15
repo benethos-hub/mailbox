@@ -23,6 +23,7 @@ from ..protocols import (
     new_pkce,
 )
 from .base import (
+    PROTOCOLS,
     Capability,
     CredentialReader,
     Deletes,
@@ -39,7 +40,6 @@ from .base import (
     TokenSource,
     Watches,
     Writes,
-    capabilities_of,
 )
 from .guard import Pace
 from .registry import (
@@ -68,7 +68,7 @@ __all__ = [
     "Sends",
     "Watches",
     "Writes",
-    "capabilities_of",
+    "PROTOCOLS",
     "OAuthClient",
     "Pace",
     "Pick",

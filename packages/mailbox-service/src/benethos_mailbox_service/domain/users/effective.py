@@ -7,7 +7,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from ...data.models import AccountStatus, Capability
+from ...data.models import AccountStatus, Capability, Marks
 from ..accounts import Adapters
 from ..rights import Access
 from ..sync import SyncState
@@ -41,6 +41,7 @@ class AccountRights:
     sending: list[Sending]
     status: AccountStatus = AccountStatus.CONNECTED
     capabilities: list[Capability] = field(default_factory=list)
+    marks: Marks = field(default_factory=Marks)
     # The last sync pass that succeeded since the start, None for none.
     last_sync_at: datetime | None = None
     # Not connected, or its last sync pass failed: a person should look.
@@ -92,7 +93,8 @@ class Effective:
                         warnings=_warnings(access, account_id, operations),
                         sending=self._sending(access, account_id),
                         status=account.status,
-                        capabilities=self._adapters.offered(account_id),
+                        capabilities=account.capabilities,
+                        marks=account.marks,
                         last_sync_at=sync.last_sync_at,
                         attention=account.status is not AccountStatus.CONNECTED
                         or sync.last_error is not None,

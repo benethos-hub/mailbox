@@ -1,10 +1,10 @@
 """JMAP servers (RFC 8620, 8621): Fastmail, Stalwart, Cyrus (CONCEPT 5.6).
 
 JSON over HTTPS. Ids are the server's own and stay when a message moves
-(``STABLE_IDS``), and a message can be in several folders (``LABELS``).
-Each message names its thread, which the server reads (``THREADS``).
-The sync asks what changed since a state (``DELTA``), and the server's
-event source tells when something did (``PUSH``).
+(``stable_ids``), and a message can be in several folders (``labels``).
+Each message names its thread, which the server reads (``threads``).
+The sync asks what changed since a state (``Deltas``), and the server's
+event source, where it has one, tells when something did (``push``).
 
 The account signs in with a password (HTTP Basic, e.g. Stalwart or Cyrus)
 or an API token (Bearer, e.g. Fastmail). The credential is decrypted for
@@ -22,8 +22,12 @@ from ....common.clock import utc_now
 from ....errors import MailboxServiceError, ProviderError
 from ...mail import ThreadHeaders
 from ...models import (
+    Abilities,
     AttachmentContent,
+    Capability,
     Folder,
+    FolderRole,
+    Mark,
     Message,
     MessageFilter,
     MessageSummary,
@@ -32,8 +36,8 @@ from ...models import (
     SentMessage,
 )
 from ...protocols import Pick, ServerClient, jmap
+from .. import rules
 from ..base import (
-    Capability,
     CredentialReader,
     FolderChanges,
     ProviderSettings,
@@ -46,15 +50,7 @@ from .connect import read_settings
 
 
 class JmapProvider:
-    capabilities = frozenset(
-        {
-            Capability.SEND,
-            Capability.SEARCH,
-            Capability.SERVER_SEARCH,
-            Capability.LABELS,
-            Capability.STABLE_IDS,
-        }
-    )
+    stable_ids = True
 
     def __init__(
         self,
@@ -131,6 +127,41 @@ class JmapProvider:
         """JMAP reports changes since a state instead."""
         return []
 
+    async def abilities(self) -> Abilities:
+        """From the session and the folders: sending needs the server's
+        submission and a drafts or sent folder to send from, push its
+        event source. Every mark and keyword is kept (RFC 8621)."""
+        session = await self._account.client.session()
+        folders = await self._account.folders()
+        has = {
+            role: rules.role_folder(folders, role) is not None for role in FolderRole
+        }
+        found = {
+            Capability.READ_STATE,
+            Capability.STARS,
+            Capability.KEYWORDS,
+            Capability.FOLDERS,
+            Capability.MOVE,
+            Capability.PURGE,
+            Capability.LABELS,
+            Capability.SEARCH,
+            Capability.THREADS,
+            Capability.EXTERNAL_CHANGES,
+        }
+        if has[FolderRole.TRASH]:
+            found.add(Capability.TRASH)
+        if has[FolderRole.DRAFTS]:
+            found.add(Capability.DRAFTS)
+        if session.offers(jmap.SUBMISSION) and (
+            has[FolderRole.DRAFTS] or has[FolderRole.SENT]
+        ):
+            found.add(Capability.SEND)
+            if has[FolderRole.SENT]:
+                found.add(Capability.SENT_COPY)
+        if session.events is not None:
+            found.add(Capability.PUSH)
+        return Abilities.of(found, written=set(Mark))
+
     async def verify(self) -> None:
         """A fresh session, then one call: both need the credential."""
         session = await self._account.client.session(fresh=True)
@@ -160,9 +191,7 @@ class JmapProvider:
     async def update_messages(
         self, message_ids: list[str], changes: MessageUpdate
     ) -> dict[str, MessageSummary | MailboxServiceError]:
-        return await messages.update_messages(
-            self._account, self.capabilities, message_ids, changes
-        )
+        return await messages.update_messages(self._account, message_ids, changes)
 
     async def delete_messages(
         self, message_ids: list[str], permanent: bool

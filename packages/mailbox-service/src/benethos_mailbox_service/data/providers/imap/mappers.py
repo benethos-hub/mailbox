@@ -20,6 +20,7 @@ from ...mail import convert
 from ...models import (
     Folder,
     FolderRole,
+    Mark,
     Message,
     MessageSummary,
     MessageUpdate,
@@ -275,6 +276,16 @@ def imap_flag(keyword: str) -> str:
     """The IMAP flag of an API keyword."""
     lowered = keyword.lower()
     return _IMAP_SPELLING.get(lowered, keyword)
+
+
+def keywords_kept(permanent: frozenset[str]) -> bool:
+    """Whether the server keeps keywords of its users' own."""
+    return not permanent or "\\*" in permanent
+
+
+def marks_kept(permanent: frozenset[str]) -> set[Mark]:
+    """The marks the server keeps."""
+    return {mark for mark in Mark if _kept([imap_flag(mark)], permanent)}
 
 
 def _kept(flags: list[str], permanent: frozenset[str]) -> bool:

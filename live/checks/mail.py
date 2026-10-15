@@ -92,3 +92,21 @@ def delete_for_good(
                 mailbox.delete_message(account_id, message.id, permanent=True)
                 removed += 1
     return removed
+
+
+def sweep(
+    mailbox: SyncMailboxClient,
+    places: Sequence[tuple[str, str | None]],
+    subject: str,
+) -> None:
+    """What a check left of its mails, deleted for good: a mail that
+    arrived after the check gave up, or one of an earlier run. Its mails
+    start with ``subject``, a reply with "Re: " before it."""
+    removed = delete_for_good(
+        mailbox,
+        places,
+        subject,
+        matches=lambda found: found.removeprefix("Re: ").startswith(subject),
+    )
+    if removed:
+        print(f"      cleanup: {removed} mail(s) of the check deleted for good")

@@ -178,7 +178,10 @@ def test_the_list_pages_by_address(client: TestClient) -> None:
 
 def test_accounts_name_their_capabilities(client: TestClient, account_id: str) -> None:
     account = client.get(f"/v1/accounts/{account_id}").json()
-    assert {"flags", "folders", "search"} <= set(account["capabilities"])
+    assert {"read_state", "stars", "keywords", "folders", "move", "search"} <= set(
+        account["capabilities"]
+    )
+    assert "$answered" in account["marks"]["written"]
 
 
 def test_an_account_without_an_adapter_names_none(

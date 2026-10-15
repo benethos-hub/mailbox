@@ -198,11 +198,12 @@ async def account_mail_page(
     # The ticked messages: only what the caller may do to many at once.
     batch = caller.batches("update_message", account_id)
     can.update(
-        flag=can["flag"] and batch,
+        read_state=can["read_state"] and batch,
+        star=can["star"] and batch,
         move=can["move"] and batch,
         change=can["change"] and batch,
         trash=can["trash"] and caller.batches("delete_message", account_id),
-        purge=caller.batches("delete_message_permanent", account_id),
+        purge=can["purge"] and caller.batches("delete_message_permanent", account_id),
     )
     cursor = request.query_params.get("cursor")
     by_threads = can["threads"] and request.query_params.get("view") == "threads"

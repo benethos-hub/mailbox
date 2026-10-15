@@ -25,6 +25,7 @@ from ....common.ratelimit import Clock, Sleep
 from ....errors import BadRequestError, MailboxServiceError, NotSupportedError
 from ...mail import ThreadHeaders
 from ...models import (
+    Abilities,
     AttachmentContent,
     Folder,
     Message,
@@ -36,11 +37,12 @@ from ...models import (
 )
 from ...protocols import IMAP_PORTS, Pick, SmtpSession
 from .. import rules
-from ..base import Capability, CredentialReader, ProviderSettings
+from ..base import CredentialReader, ProviderSettings
 from ..guard import Pace
 from ..mailserver import MailServerAdapter
 from ..sender import SmtpFactory
 from . import drafts, folders, messages, sync
+from .abilities import abilities as imap_abilities
 from .connect import SessionFactory, default_session
 from .mailbox import Mailbox
 from .watch import Idle
@@ -55,11 +57,7 @@ class ImapProvider(MailServerAdapter):
     protocol = "IMAP"
     account = "an IMAP account"
     ports = IMAP_PORTS
-    # PUSH needs IDLE, which wait_for_change finds out after the login.
-    # THREADS: the domain threads the messages in its index.
-    capabilities = frozenset(
-        {Capability.SEARCH, Capability.SERVER_SEARCH, Capability.THREADS}
-    )
+    stable_ids = False
 
     def __init__(
         self,
@@ -89,7 +87,7 @@ class ImapProvider(MailServerAdapter):
             pace=pace,
         )
         self._session = session_factory(self._server)
-        self._box = Mailbox(self._session, self.capabilities)
+        self._box = Mailbox(self._session)
         # IDLE blocks its connection, so it gets one of its own.
         self._idle = Idle(
             session_factory(self._server), self._guard, self._login, watchers
@@ -163,6 +161,11 @@ class ImapProvider(MailServerAdapter):
                 )
                 found.update(await self._run(headers))
         return found
+
+    async def abilities(self) -> Abilities:
+        return await self._run(
+            lambda box: imap_abilities(box, sends=self._smtp is not None)
+        )
 
     async def verify(self) -> None:
         await self._in_thread(

@@ -34,7 +34,9 @@ from ....errors import (
 )
 from ...mail import ThreadHeaders, convert, parse
 from ...models import (
+    Abilities,
     AttachmentContent,
+    Capability,
     CredentialKind,
     Folder,
     MailServer,
@@ -46,7 +48,7 @@ from ...models import (
     ServerProtocol,
 )
 from ...protocols import POP3_PORTS, Pick, Pop3Session, Server, SmtpSession
-from ..base import Capability, CredentialReader, ProviderSettings
+from ..base import CredentialReader, ProviderSettings
 from ..guard import Pace
 from ..mailserver import MailServerAdapter
 from ..rules import After
@@ -112,10 +114,10 @@ class Pop3Provider(MailServerAdapter):
     protocol = "POP3"
     account = "a POP3 account"
     ports = POP3_PORTS
-    # Without STABLE_IDS the sync polls the mailbox and compares its unique
+    # Without stable ids the sync polls the mailbox and compares its unique
     # ids, as for IMAP without IDLE. The ids never move, so the mapping the
     # domain keeps stays as it was.
-    capabilities: frozenset[Capability] = frozenset()
+    stable_ids = False
 
     def __init__(
         self,
@@ -234,6 +236,15 @@ class Pop3Provider(MailServerAdapter):
         self, folder_id: str, since: str, message_ids: list[str]
     ) -> list[str]:
         return []  # POP3 has no flags
+
+    async def abilities(self) -> Abilities:
+        """Deleting for good, and with an SMTP server sending, which names
+        the recipients it refused at once. Nothing else: POP3 keeps no
+        flags, folders or copies."""
+        found = {Capability.PURGE}
+        if self._smtp is not None:
+            found |= {Capability.SEND, Capability.REFUSED}
+        return Abilities.of(found)
 
     async def verify(self) -> None:
         await self._in_thread(lambda: self._verified(self._session, self._check))

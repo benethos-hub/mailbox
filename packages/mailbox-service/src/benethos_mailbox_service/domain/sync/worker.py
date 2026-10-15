@@ -26,8 +26,7 @@ from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStre
 
 from ...common.clock import utc_now
 from ...common.ratelimit import backoff
-from ...data.models import Account, AccountStatus
-from ...data.providers import Capability
+from ...data.models import Account, AccountStatus, Capability
 from ...errors import NotFoundError, NotSupportedError, ProviderAuthError
 from ..accounts import Adapters, watches
 from ..activity import WORKER, Activity, ActivityLog
@@ -158,6 +157,8 @@ class SyncWorker:
         try:
             if not self._wanted(account_id):
                 return
+            # An account connected before the service stored what it can do.
+            await self._adapters.abilities(account_id)
             if watchers is not None and self._push_for(account_id):
                 self._start_watching(watchers, account_id)
             await self._sync.sync_account(account_id)
@@ -250,5 +251,5 @@ class SyncWorker:
             self._push
             and account_id not in self._watching
             and account_id not in self._no_push
-            and Capability.PUSH in self._adapters.capabilities(account_id)
+            and self._adapters.has(account_id, Capability.PUSH)
         )

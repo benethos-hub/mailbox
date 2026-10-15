@@ -13,12 +13,13 @@ from pydantic import SecretStr
 
 from benethos_mailbox_service.data.models import (
     FolderRole,
+    Mark,
     MessageFilter,
     MessageSummary,
     MessageUpdate,
 )
 from benethos_mailbox_service.data.protocols.http import ApiClient
-from benethos_mailbox_service.data.providers import capabilities_of, rules
+from benethos_mailbox_service.data.providers import Deltas, rules
 from benethos_mailbox_service.data.providers.base import Capability
 from benethos_mailbox_service.data.providers.gmail import GmailProvider, mappers
 from benethos_mailbox_service.data.providers.gmail.shapes import Label
@@ -130,17 +131,22 @@ def test_a_cursor_belongs_to_its_list() -> None:
 # --- reading --------------------------------------------------------------------------
 
 
-def test_the_adapter_offers_what_gmail_can() -> None:
-    found = capabilities_of(GmailProvider(Tokens(TOKEN)))
+async def test_the_adapter_offers_what_gmail_can() -> None:
+    adapter = GmailProvider(Tokens(TOKEN))
+    found = set((await adapter.abilities()).capabilities)
     assert {
         Capability.LABELS,
-        Capability.DELTA,
         Capability.DRAFTS,
         Capability.FOLDERS,
-        Capability.STABLE_IDS,
+        Capability.MOVE,
         Capability.SEND,
+        Capability.SENT_COPY,
     } <= found
-    assert Capability.PUSH not in found
+    # No keywords and no push (UNIFORM 4.1).
+    assert not found & {Capability.KEYWORDS, Capability.PUSH, Capability.REFUSED}
+    marks = (await adapter.abilities()).marks
+    assert (marks.read, marks.written) == ([Mark.DRAFT], [])
+    assert adapter.stable_ids and isinstance(adapter, Deltas)
 
 
 async def test_folders_with_their_counts(gmail: FakeGmail) -> None:

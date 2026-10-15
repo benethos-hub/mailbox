@@ -8,10 +8,13 @@ Callers import from here, not the modules.
 from __future__ import annotations
 
 from .accounts import (
+    Abilities,
     Account,
     AccountStatus,
     Capability,
     CredentialInfo,
+    Mark,
+    Marks,
     ProviderType,
 )
 from .audit import (
@@ -86,6 +89,7 @@ from .webhooks import (
 )
 
 __all__ = [
+    "Abilities",
     "ActivityFilter",
     "ActivityOutcome",
     "ActivityRecord",
@@ -122,6 +126,8 @@ __all__ = [
     "Hint",
     "ItemError",
     "MailServer",
+    "Mark",
+    "Marks",
     "Message",
     "MessageBatch",
     "MessageFilter",

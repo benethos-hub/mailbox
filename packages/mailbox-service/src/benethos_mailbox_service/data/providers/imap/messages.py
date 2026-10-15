@@ -276,7 +276,7 @@ def _move(
 
 def _move_target(box: Mailbox, changes: MessageUpdate, current: str) -> str | None:
     """The folder to move to, or None to stay."""
-    wanted = rules.move_target(changes, box.capabilities)
+    wanted = rules.move_target(changes, labels=False)
     if wanted is None:
         return None
     target = mappers.folder_name(wanted)

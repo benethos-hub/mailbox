@@ -10,7 +10,6 @@ from benethos_mailbox_service.data.models import MessageUpdate
 from benethos_mailbox_service.data.protocols.imap.responses import new_uids, uid_set
 from benethos_mailbox_service.data.providers.imap import mappers
 from benethos_mailbox_service.errors import (
-    BadRequestError,
     NotFoundError,
     NotSupportedError,
     ProviderError,
@@ -159,7 +158,7 @@ async def test_moving_into_its_own_folder_changes_nothing(
 @pytest.mark.parametrize(
     ("folder_ids", "error"),
     [
-        ([SENT, mappers.folder_id("INBOX")], BadRequestError),
+        ([SENT, mappers.folder_id("INBOX")], NotSupportedError),
         ([mappers.folder_id("Nowhere")], NotFoundError),
     ],
 )
@@ -183,6 +182,6 @@ async def test_bad_targets(
 async def test_an_imap_message_is_moved_not_given_more_folders(
     server: FakeMailBox, change: MessageUpdate
 ) -> None:
-    with pytest.raises(BadRequestError, match="exactly one folder"):
+    with pytest.raises(NotSupportedError, match="exactly one folder"):
         await update(provider(server), MESSAGE, change)
     assert 3 in server.folders["INBOX"].messages

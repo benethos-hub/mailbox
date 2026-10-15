@@ -13,7 +13,7 @@ from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import Folder, FolderRole, Grant
 from benethos_mailbox_service.data.providers.memory import MemoryProvider
 
-from ...conftest import browser_user, memory_of
+from ...conftest import browser_user, memory_of, relearn
 from ...ui_helpers import csrf_of, post, sign_in
 
 
@@ -21,6 +21,7 @@ def _with_trash(services: Services, account_id: str) -> MemoryProvider:
     adapter = memory_of(services, account_id)
     adapter.folders.append(Folder(id="trash", name="Trash", role=FolderRole.TRASH))
     adapter.folders.append(Folder(id="archive", name="Archive"))
+    relearn(services, account_id)
     return adapter
 
 

@@ -88,9 +88,10 @@ def test_the_account_names_its_capabilities(
     pop3_client: TestClient, pop3_account_id: str
 ) -> None:
     account = pop3_client.get(f"/v1/accounts/{pop3_account_id}").json()
-    assert account["provider"] == "pop3" and account["capabilities"] == []
+    assert account["provider"] == "pop3" and account["capabilities"] == ["purge"]
+    assert account["marks"] == {"read": [], "written": []}
     [mine] = pop3_client.get("/v1/me").json()["accounts"]
-    assert mine["capabilities"] == []
+    assert mine["capabilities"] == ["purge"]
 
 
 def test_what_pop3_cannot_do_answers_501(

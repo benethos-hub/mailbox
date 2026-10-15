@@ -255,7 +255,8 @@ packages/mailbox-service/
                         #   rules they share in rules.py, effective
                         #   rights in effective.py
       accounts/         # AccountService, Adapters (the live adapter per
-                        #   account), OAuthService, abilities: 501 for
+                        #   account), OAuthService, abilities: what each
+                        #   operation needs of an account, 501 for a lack or
                         #   what an adapter does not implement, checks:
                         #   what settings and credentials must pass
                         #   before they are stored. OAuthService signs
@@ -731,7 +732,7 @@ noticing. Every change is measured against that.
 
 | Seam | Defined in | Implementations | Exchangeable for |
 |---|---|---|---|
-| Mail provider | `data/providers/base.py` (`Reads`, which every adapter implements, and `Writes`, `Deletes`, `Drafts`, `Sends`, `Watches`, `Deltas` for what it can beyond; `Capability` of `data/models/accounts.py`, `capabilities_of`), registry in `data/providers/registry.py`. The domain answers 501 for a missing protocol (`domain/accounts/abilities.py`) | memory, imap, microsoft, pop3, jmap, gmail | another protocol or library, e.g. `aioimaplib` for IMAPClient |
+| Mail provider | `data/providers/base.py` (`Reads`, which every adapter implements, and `Writes`, `Deletes`, `Drafts`, `Sends`, `Watches`, `Deltas` for what it may do beyond, `PROTOCOLS` for the protocol behind each capability; `Capability` and `Abilities` of `data/models/accounts.py`, answered by each adapter's `abilities()` from its server), registry in `data/providers/registry.py`. The domain checks what each operation needs and answers 501 for a lack (`domain/accounts/abilities.py`, `NEEDS`) | memory, imap, microsoft, pop3, jmap, gmail | another protocol or library, e.g. `aioimaplib` for IMAPClient |
 | Sending | `data/protocols/smtp.py` (`SmtpSession`), and `data/providers/sender.py` (`SmtpSender`), which adapters without sending of their own (IMAP, POP3) hold | stdlib smtplib | e.g. aiosmtplib |
 | Web layer | `web/` | FastAPI, Jinja2 for the UI | another framework, as long as the OpenAPI document stays the same |
 | Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `PasswordRepository`, `KeyRepository`, `CredentialRepository`, `MessageIndexRepository`, `IdempotencyRepository`, `SendLogRepository`, `ChangeLogRepository`, `WebhookRepository`, `AuditRepository`) | in-memory, SQLite | another database |

@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 
+from .accounts import Marks
+
 
 @dataclass(frozen=True, slots=True)
 class Sending:
@@ -24,9 +26,11 @@ class MeAccount:
     operations: frozenset[str]
     warnings: frozenset[str]
     sending: tuple[Sending, ...] = ()
-    # What the account can do beyond reading its inbox, e.g. "flags",
-    # "folders", "search", "drafts". None: a service that does not say.
+    # What the account can do beyond reading its inbox, e.g. "read_state",
+    # "move", "search", "drafts". None: a service that does not say.
     capabilities: frozenset[str] | None = None
+    # The marks it reads and writes. None: a service that does not say.
+    marks: Marks | None = None
     # "connected", "needs_reauth" or "unreachable".
     status: str = "connected"
     # The last sync pass that succeeded, None for none since the start.

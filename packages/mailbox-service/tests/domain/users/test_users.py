@@ -28,6 +28,8 @@ READ_A_OUT = {
     "expires_at": None,
 }
 
+MARKS = ["$answered", "$draft", "$forwarded", "$junk", "$notjunk", "$phishing"]
+
 
 def test_me_for_an_admin(client: TestClient, account_id: str) -> None:
     me = client.get("/v1/me").json()
@@ -55,12 +57,17 @@ def test_me_for_a_limited_user(app_client: TestClient, services: Services) -> No
             "sending": [],
             "capabilities": [
                 "drafts",
-                "flags",
                 "folders",
+                "keywords",
+                "move",
+                "purge",
+                "read_state",
                 "search",
                 "send",
-                "stable_ids",
+                "sent_copy",
+                "stars",
             ],
+            "marks": {"read": MARKS, "written": MARKS},
             "status": "connected",
             "last_sync_at": None,
             "attention": False,

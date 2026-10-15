@@ -37,7 +37,7 @@ from ...data.models import (
 )
 from ...errors import MailboxServiceError, missing_message
 from .. import changes
-from ..accounts import drafts, sends
+from ..accounts import NEEDS, drafts, sends
 from ..activity import ActivityLog, Actor
 from ..activity import mailbox as said
 from ..rights import Access
@@ -78,6 +78,7 @@ class Outgoing:
         Message-ID. Its own right: sending cannot be taken back. With an
         ``idempotency_key`` a retry returns the first result."""
         checks.require(access, "send_message", account_id, message)
+        await self._calls.require(account_id, NEEDS["send_message"])
         return await self._idempotency.run(
             account_id,
             idempotency_key,
@@ -279,10 +280,11 @@ class Outgoing:
         self, account_id: str, reference: MessageReference, original: Message
     ) -> None:
         """``$answered`` or ``$forwarded`` on the original, so other clients
-        show it too. Called after the message went out, where a failure is
-        logged."""
+        show it too, where the account writes that mark. Called after the
+        message went out, where a failure is logged."""
         keyword = replies.answered_keyword(reference)
-        if keyword in original.keywords:
+        able = await self._calls.abilities(account_id)
+        if keyword in original.keywords or keyword not in able.marks.written:
             return
         changes = MessageUpdate(add_keywords=[keyword])
         await self._calls.update_one(account_id, reference.message_id, changes)
@@ -293,6 +295,7 @@ class Outgoing:
         self, access: Access, account_id: str, *, limit: int, cursor: str | None
     ) -> Page[MessageSummary]:
         access.require("list_drafts", account_id)
+        await self._calls.require(account_id, NEEDS["list_drafts"])
         page = await self._calls.call(
             account_id, lambda p: drafts(p).list_drafts(limit=limit, cursor=cursor)
         )
@@ -304,6 +307,7 @@ class Outgoing:
         """Store a draft in the drafts folder, composed like a message to
         send. A reference is filled in now and remembered for the send."""
         checks.require(access, "create_draft", account_id, draft)
+        await self._calls.require(account_id, NEEDS["create_draft"])
         draft = await self._with_sources(access, account_id, draft)
         raw, _, composed, _ = await self._compose(access, account_id, draft, draft=True)
         checks.limited(composed.recipients())
@@ -328,6 +332,7 @@ class Outgoing:
         the stored draft that go into the new one, before those the draft
         brings."""
         checks.require(access, "update_draft", account_id, draft)
+        await self._calls.require(account_id, NEEDS["update_draft"])
         # The draft, before anything of it is read: whoever may write
         # drafts may not read other mail this way.
         raw = await self._calls.on_message(
@@ -399,6 +404,7 @@ class Outgoing:
         write drafts. With an ``idempotency_key`` a retry returns the first
         result."""
         access.require("send_draft", account_id)
+        await self._calls.require(account_id, NEEDS["send_draft"])
         return await self._idempotency.run(
             account_id,
             idempotency_key,
@@ -456,6 +462,7 @@ class Outgoing:
     ) -> None:
         """For good: a draft is not kept in the trash."""
         access.require("delete_draft", account_id)
+        await self._calls.require(account_id, NEEDS["delete_draft"])
         await self._delete_draft(account_id, draft_id)
 
     async def _delete_draft(self, account_id: str, draft_id: str) -> None:

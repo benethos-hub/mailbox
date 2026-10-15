@@ -16,7 +16,7 @@ from ...data.models import (
     MessageUpdate,
 )
 from ...errors import ConflictError, MailboxServiceError, NotFoundError, missing
-from ..accounts import writes
+from ..accounts import NEEDS, writes
 from ..rights import Access
 from .calls import Calls
 from .reach import Reach, outside, reach_of, require_folder
@@ -42,6 +42,7 @@ class Folders:
     ) -> Folder:
         """Where the grants name folders, only inside one of them."""
         access.require("create_folder", account_id)
+        await self._calls.require(account_id, NEEDS["create_folder"])
         parent = await self.by_role(account_id, new.parent_id)
         reach = await self._reach(access, "create_folder", account_id)
         if reach is not None:
@@ -58,6 +59,7 @@ class Folders:
         """Rename or move. Folders with a role stay where mail clients expect
         them. The messages inside keep their ids: a sync follows them."""
         access.require("update_folder", account_id)
+        await self._calls.require(account_id, NEEDS["update_folder"])
         folder, folders = await self._own_folder(account_id, folder_id)
         reach = await self._reach(access, "update_folder", account_id, folders)
         if reach is not None:
@@ -90,6 +92,7 @@ class Folders:
         """Only an empty folder without subfolders: deleting a folder takes
         its messages with it on many servers, and they cannot be taken back."""
         access.require("delete_folder", account_id)
+        await self._calls.require(account_id, NEEDS["delete_folder"])
         folder, folders = await self._own_folder(account_id, folder_id)
         reach = await self._reach(access, "delete_folder", account_id, folders)
         if reach is not None:

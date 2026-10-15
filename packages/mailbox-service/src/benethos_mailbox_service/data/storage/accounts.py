@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from ..models import Account, AccountStatus
+from ..models import Abilities, Account, AccountStatus
 from .table import Table
 
 SettingsDict = dict[str, str | int | bool]
@@ -27,6 +27,13 @@ class AccountRepository(Protocol):
 
     def set_status(self, account_id: str, status: AccountStatus) -> None: ...
 
+    def abilities(self, account_id: str) -> Abilities | None:
+        """What the account can do, as stored. None until its server was
+        asked once."""
+        ...
+
+    def set_abilities(self, account_id: str, abilities: Abilities) -> None: ...
+
     def update(self, account: Account, settings: SettingsDict) -> None:
         """Replace the display name and the settings of an account."""
         ...
@@ -40,6 +47,7 @@ class InMemoryAccountRepository:
     def __init__(self) -> None:
         self._accounts: Table[Account] = Table("account")
         self._settings: dict[str, SettingsDict] = {}
+        self._abilities: dict[str, Abilities] = {}
 
     def list(self) -> list[Account]:
         return self._accounts.list()
@@ -59,6 +67,23 @@ class InMemoryAccountRepository:
         account = self.get(account_id)
         self._accounts.put(account_id, account.model_copy(update={"status": status}))
 
+    def abilities(self, account_id: str) -> Abilities | None:
+        self.get(account_id)
+        return self._abilities.get(account_id)
+
+    def set_abilities(self, account_id: str, abilities: Abilities) -> None:
+        account = self.get(account_id)
+        self._abilities[account_id] = abilities
+        self._accounts.put(
+            account_id,
+            account.model_copy(
+                update={
+                    "capabilities": abilities.capabilities,
+                    "marks": abilities.marks,
+                }
+            ),
+        )
+
     def update(self, account: Account, settings: SettingsDict) -> None:
         current = self.get(account.id)
         self._accounts.put(
@@ -70,3 +95,4 @@ class InMemoryAccountRepository:
     def delete(self, account_id: str) -> None:
         self._accounts.delete(account_id)
         del self._settings[account_id]
+        self._abilities.pop(account_id, None)

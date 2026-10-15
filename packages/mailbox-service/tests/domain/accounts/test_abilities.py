@@ -22,7 +22,7 @@ from benethos_mailbox_service.errors import NotSupportedError
 class OnlyReads:
     """An adapter that reads and does nothing else."""
 
-    capabilities = frozenset()
+    stable_ids = True
 
     def __getattr__(self, name: str) -> Any:
         raise AttributeError(name)
