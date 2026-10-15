@@ -24,6 +24,13 @@ def parse_day(value: str) -> datetime | None:
     return start_of_day(date.fromisoformat(value)) if value else None
 
 
+def parse_local(value: str) -> datetime | None:
+    """A date and a time as a browser's field sends them, such as
+    ``2026-10-07T18:30``: without a zone, the local time of this machine.
+    None for no value. Raises ``ValueError`` for text that names none."""
+    return datetime.fromisoformat(value).astimezone() if value else None
+
+
 @overload
 def iso(value: datetime) -> str: ...
 @overload

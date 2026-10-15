@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import Request
+from starlette.datastructures import FormData
 
 from ...data.models import Grant
 from ...domain.rights import Access
@@ -30,7 +31,7 @@ def editor(
     caller: Access,
     service: list[str],
     grants: list[Grant],
-    form: Any = None,
+    form: FormData | None = None,
 ) -> dict[str, Any]:
     """What the editor of rights needs: the service rights and the grant
     rows, as ``form`` held them, else those of ``service`` and ``grants``."""

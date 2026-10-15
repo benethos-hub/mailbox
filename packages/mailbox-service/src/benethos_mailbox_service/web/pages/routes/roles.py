@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, Response
+from starlette.datastructures import FormData
 
 from ....data.models import Role
 from ....domain.rights import Access
@@ -48,7 +47,7 @@ async def new_role(
 def _new_role_page(
     request: Request,
     caller: Access,
-    form: Any = None,
+    form: FormData | None = None,
     err: str | None = None,
     template: str = "",
 ) -> HTMLResponse:
@@ -119,7 +118,7 @@ def _role_page(
     caller: Access,
     role_id: str,
     roles: RoleService,
-    form: Any = None,
+    form: FormData | None = None,
     err: str | None = None,
 ) -> HTMLResponse:
     """A role's page. With ``form`` its editor shows what was typed."""

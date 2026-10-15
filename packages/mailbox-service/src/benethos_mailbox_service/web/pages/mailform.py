@@ -15,7 +15,7 @@ from typing import Any
 from fastapi import Request
 from fastapi.responses import HTMLResponse
 from pydantic import ValidationError
-from starlette.datastructures import UploadFile
+from starlette.datastructures import FormData, UploadFile
 
 from benethos_mailbox_common.log import redact
 from benethos_mailbox_common.mail import addresses
@@ -70,7 +70,7 @@ def recipients(field: str, value: str) -> list[Recipient]:
     return found
 
 
-def uploads(form: Any) -> list[UploadFile]:
+def uploads(form: FormData) -> list[UploadFile]:
     """The files chosen in the form."""
     return [
         u
@@ -79,7 +79,7 @@ def uploads(form: Any) -> list[UploadFile]:
     ]
 
 
-async def read_fields(form: Any) -> dict[str, Any]:
+async def read_fields(form: FormData) -> dict[str, Any]:
     """The message fields of a submitted form."""
     fields: dict[str, Any] = {
         field: recipients(field.capitalize(), text_of(form, field, strip=False))
@@ -99,7 +99,7 @@ async def read_fields(form: Any) -> dict[str, Any]:
     return fields
 
 
-def reference_of(form: Any) -> MessageReference | None:
+def reference_of(form: FormData) -> MessageReference | None:
     """The message a new mail answers or forwards, from the form."""
     original = text_of(form, "original", strip=False)
     action = text_of(form, "action", strip=False)
@@ -180,7 +180,7 @@ async def show_again(
     request: Request,
     caller: Access,
     account: Account,
-    form: Any,
+    form: FormData,
     exc: ComposeError | MailboxServiceError,
     draft_id: str | None = None,
     stored: Message | None = None,

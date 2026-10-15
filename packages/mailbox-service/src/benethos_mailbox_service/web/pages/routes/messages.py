@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from typing import Literal
+
 from fastapi import APIRouter, Request
 from fastapi.responses import Response
 from pydantic import ValidationError
@@ -10,19 +13,28 @@ from ....data.models import MessageBatch, MessageUpdate
 from ...services import Mailbox
 from ..deps import Actor
 from ..forms import FormError, failing, model_of, text_of
-from ..navigation import mail_url
+from ..navigation import mail_url, message_url
 from ..templates import back, local_path
 
 router = APIRouter()
 
-# What the list's action menu offers, and the batch each one is.
-BATCH_ACTIONS: dict[str, tuple[str, MessageUpdate | None, bool]] = {
-    "read": ("update", MessageUpdate(unread=False), False),
-    "unread": ("update", MessageUpdate(unread=True), False),
-    "star": ("update", MessageUpdate(starred=True), False),
-    "unstar": ("update", MessageUpdate(starred=False), False),
-    "trash": ("delete", None, False),
-    "delete": ("delete", None, True),
+
+@dataclass(frozen=True, slots=True)
+class BatchAction:
+    """The batch one entry of the list's action menu is."""
+
+    action: Literal["update", "delete"]
+    changes: MessageUpdate | None = None
+    permanent: bool = False
+
+
+BATCH_ACTIONS = {
+    "read": BatchAction("update", MessageUpdate(unread=False)),
+    "unread": BatchAction("update", MessageUpdate(unread=True)),
+    "star": BatchAction("update", MessageUpdate(starred=True)),
+    "unstar": BatchAction("update", MessageUpdate(starred=False)),
+    "trash": BatchAction("delete"),
+    "delete": BatchAction("delete", permanent=True),
 }
 
 
@@ -31,7 +43,7 @@ async def set_flags(
     request: Request, caller: Actor, account_id: str, message_id: str, mailbox: Mailbox
 ) -> Response:
     form = await request.form()
-    here = f"/ui/accounts/{account_id}/mail/{message_id}"
+    here = message_url(account_id, message_id)
     changes = MessageUpdate(
         unread=form["unread"] == "1" if "unread" in form else None,
         starred=form["starred"] == "1" if "starred" in form else None,
@@ -49,22 +61,21 @@ async def keywords(
     request: Request, caller: Actor, account_id: str, message_id: str, mailbox: Mailbox
 ) -> Response:
     """Add a keyword or remove one. The others stay as the message has
-    them now, those of the mail protocol among them."""
+    them, those of the mail protocol among them."""
     form = await request.form()
-    here = f"/ui/accounts/{account_id}/mail/{message_id}"
+    here = message_url(account_id, message_id)
     adding = text_of(form, "add")
     removing = text_of(form, "remove", strip=False)
     with failing(here):
         if adding.startswith("$"):
             raise FormError("Keywords starting with $ belong to the mail protocol.")
-        if not adding and not removing:
+        if adding:
+            fields = {"add_keywords": [adding]}
+        elif removing:
+            fields = {"remove_keywords": [removing]}
+        else:
             raise FormError("Type a keyword.")
-        found = await mailbox.get_message(caller, account_id, message_id)
-        held = {keyword.casefold() for keyword in found.keywords}
-        wanted = [k for k in found.keywords if k != removing]
-        if adding and adding.casefold() not in held:
-            wanted.append(adding)
-        changes = model_of(MessageUpdate, {"keywords": wanted}, message=KEYWORD_RULE)
+        changes = model_of(MessageUpdate, fields, message=KEYWORD_RULE)
         await mailbox.update_message(caller, account_id, message_id, changes)
     return back(request, here)
 
@@ -74,7 +85,7 @@ async def move(
     request: Request, caller: Actor, account_id: str, message_id: str, mailbox: Mailbox
 ) -> Response:
     form = await request.form()
-    here = f"/ui/accounts/{account_id}/mail/{message_id}"
+    here = message_url(account_id, message_id)
     folder = text_of(form, "folder", strip=False)
     if not folder:
         return back(request, here, error="Choose a folder.")
@@ -93,7 +104,7 @@ async def delete(
     form = await request.form()
     permanent = form.get("permanent") == "1"
     listing = local_path(text_of(form, "back", strip=False), mail_url(account_id))
-    with failing(f"/ui/accounts/{account_id}/mail/{message_id}"):
+    with failing(message_url(account_id, message_id)):
         await mailbox.delete_message(caller, account_id, message_id, permanent)
     return back(
         request, listing, "Deleted for good." if permanent else "Moved to the trash."
@@ -124,12 +135,12 @@ async def batch(
                 changes=MessageUpdate(folder_ids=[folder]),
             )
         elif action in BATCH_ACTIONS:
-            kind, changes, permanent = BATCH_ACTIONS[action]
+            chosen = BATCH_ACTIONS[action]
             request_batch = MessageBatch(
                 ids=ids,
-                action=kind,
-                changes=changes,
-                permanent=permanent,
+                action=chosen.action,
+                changes=chosen.changes,
+                permanent=chosen.permanent,
             )
         else:
             return back(request, listing, error="Choose an action.")
