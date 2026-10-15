@@ -157,6 +157,19 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- A reply joins the thread of the mail it answers also where its
+  `In-Reply-To` holds a comment beside the id, or its `References`
+  are folded inside an id. The ids are read between their angle
+  brackets.
+- `GET /v1/accounts/{account_id}/threads` shows each thread once, page
+  by page. In the folder `all` a thread came again on later pages, as
+  in the UI's conversations of All Mail, and so did one whose messages
+  came in the same second at the end of a page. A cursor of the list
+  made before is refused once.
+- A list across accounts, `GET /v1/messages`, gives every message once
+  when a client asks the next page for fewer messages than the one
+  before. It gave some twice, as the MCP server's `search_messages`
+  could. The cursor carries the size the accounts are read in.
 - The Python client names a charset of an attachment only where it
   decodes text. `charset=base64` came through, and the MCP server's
   `get_attachment` failed on it. The MCP server reads a text whose

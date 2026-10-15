@@ -140,6 +140,24 @@ def test_an_account_not_listed_by_date_loses_nothing(world: World, limit: int) -
         assert hours == sorted(hours, reverse=True)
 
 
+@pytest.mark.parametrize("limits", [[4, 1, 10], [1, 4, 2], [3, 3, 1, 50]])
+def test_a_cursor_holds_under_another_limit(world: World, limits: list[int]) -> None:
+    """A client may ask each page for another number of messages: every
+    message still comes once, in order."""
+    _, client, _, _ = world
+    seen: list[str] = []
+    cursor = None
+    for n, limit in enumerate([*limits, *[limits[-1]] * 10]):
+        query = {"limit": limit, "folder": "all", **({"cursor": cursor} if n else {})}
+        body = client.get("/v1/messages", params=query).json()
+        assert len(body["items"]) <= limit
+        seen += [m["subject"] for m in body["items"]]
+        cursor = body["next_cursor"]
+        if cursor is None:
+            break
+    assert seen == ["b10", "a9", "b8", "a7", "c6", "a5", "c4", "a3", "b2", "a1"]
+
+
 def test_without_a_folder_the_inbox(world: World) -> None:
     _, client, ids, _ = world
     body = client.get("/v1/messages", params={"limit": 50}).json()
