@@ -7,6 +7,7 @@ import imaplib
 import re
 import time
 from collections.abc import Callable
+from contextlib import suppress
 from typing import Any
 
 from imapclient import IMAPClient
@@ -216,10 +217,8 @@ def _send_id(client: Any, name: str, version: str) -> None:
     """RFC 2971 ID, where the server offers it. Some servers require it."""
     if b"ID" not in client.capabilities():
         return
-    try:
+    with suppress(imaplib.IMAP4.error, OSError):
         client.id_({"name": name, "version": version})
-    except (imaplib.IMAP4.error, OSError):
-        pass
 
 
 def _login_refused(exc: LoginError, what: str) -> Exception:

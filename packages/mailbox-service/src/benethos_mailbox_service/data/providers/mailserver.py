@@ -78,12 +78,13 @@ async def capabilities_of(
 
 class MailServerAdapter:
     """The base of the IMAP and POP3 adapters. A subclass names its
-    ``protocol``, an ``account`` of it and the default ``ports``, and
-    checks ``auth`` in ``_check_auth``."""
+    ``protocol``, an ``account`` of it and the default ``ports``, and in
+    ``not_yet`` a way of ``auth`` it knows but cannot use yet, with why."""
 
     protocol = ""
     account = ""
     ports: Mapping[str, int] = {}
+    not_yet: Mapping[str, str] = {}
 
     def __init__(
         self,
@@ -122,6 +123,8 @@ class MailServerAdapter:
         self._lock = threading.Lock()
 
     def _check_auth(self, auth: str) -> None:
+        if auth in self.not_yet:
+            raise NotSupportedError(self.not_yet[auth])
         if auth != "password":
             raise BadRequestError("settings.auth must be 'password'")
 

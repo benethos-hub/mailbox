@@ -12,7 +12,6 @@ import hashlib
 import importlib.util
 import json
 import re
-import tomllib
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -21,11 +20,12 @@ import pytest
 
 from benethos_mailbox_client import environment
 
+from .publish_helpers import project_of, workflow_job
+
 ROOT = Path(__file__).resolve().parents[3]
 ENTRY = ROOT / ".github" / "publish" / "mcp-registry" / "server.json"
 FILL = ENTRY.parent / "fill_bundle_checksum.py"
 MCP = ROOT / "packages" / "mailbox-mcp"
-WORKFLOW = ROOT / ".github" / "workflows" / "publish.yml"
 OWNER = "benethos-hub"
 RAW = f"https://raw.githubusercontent.com/{OWNER}/mailbox/main/"
 
@@ -34,16 +34,12 @@ def _entry() -> dict[str, Any]:
     return dict(json.loads(ENTRY.read_text("utf-8")))
 
 
-def _project() -> dict[str, Any]:
-    return dict(tomllib.loads((MCP / "pyproject.toml").read_text("utf-8"))["project"])
-
-
 def _packages(kind: str) -> list[dict[str, Any]]:
     return [p for p in _entry()["packages"] if p["registryType"] == kind]
 
 
 def test_the_entry_names_the_packages_version() -> None:
-    version = _project()["version"]
+    version = project_of(MCP)["version"]
     assert _entry()["version"] == version
     assert [p["version"] for p in _packages("pypi")] == [version]
 
@@ -53,7 +49,7 @@ def test_the_entry_lists_pypi_and_the_bundle() -> None:
     machine of the service. The image stays the way over HTTP."""
     assert [p["registryType"] for p in _entry()["packages"]] == ["pypi", "mcpb"]
     (package,) = _packages("pypi")
-    assert package["identifier"] == _project()["name"]
+    assert package["identifier"] == project_of(MCP)["name"]
     assert package["registryBaseUrl"] == "https://pypi.org"
     assert package["transport"] == {"type": "stdio"}
 
@@ -61,11 +57,11 @@ def test_the_entry_lists_pypi_and_the_bundle() -> None:
 def test_the_bundle_is_the_one_the_release_carries() -> None:
     """The release job fills in the checksum of the very file it
     attached. Until then the entry holds the placeholder."""
-    version = _project()["version"]
+    version = project_of(MCP)["version"]
     (bundle,) = _packages("mcpb")
     assert bundle["identifier"] == (
         f"https://github.com/{OWNER}/mailbox/releases/download/v{version}/"
-        f"{_project()['name']}-{version}.mcpb"
+        f"{project_of(MCP)['name']}-{version}.mcpb"
     )
     assert bundle["fileSha256"] == _fill().PLACEHOLDER
     assert bundle["transport"] == {"type": "stdio"}
@@ -115,13 +111,13 @@ def test_without_the_bundle_the_rest_is_kept(tmp_path: Path) -> None:
 
 def test_the_description_is_the_packages() -> None:
     description = _entry()["description"]
-    assert description == _project()["description"]
+    assert description == project_of(MCP)["description"]
     assert len(description) <= 100
 
 
 def test_the_name_lies_in_the_owners_namespace() -> None:
     entry = _entry()
-    assert entry["name"] == f"io.github.{OWNER}/{_project()['name']}"
+    assert entry["name"] == f"io.github.{OWNER}/{project_of(MCP)['name']}"
     assert entry["repository"] == {
         "url": f"https://github.com/{OWNER}/mailbox",
         "source": "github",
@@ -131,7 +127,7 @@ def test_the_name_lies_in_the_owners_namespace() -> None:
 def test_the_readme_on_pypi_proves_the_name_once() -> None:
     """The registry reads the README of the version on PyPI. The name
     ends at a space, a line end or the end of the comment."""
-    readme = (MCP / _project()["readme"]).read_text("utf-8")
+    readme = (MCP / project_of(MCP)["readme"]).read_text("utf-8")
     found = re.findall(r"mcp-name: (\S+?)(?=\s|-->|$)", readme, re.M)
     assert found == [_entry()["name"]]
     assert f"<!-- mcp-name: {_entry()['name']} -->" in readme
@@ -174,19 +170,12 @@ def test_each_icon_is_a_file_of_the_repository() -> None:
             assert icon["sizes"] == ["{}x{}".format(*size)]
 
 
-def _job(name: str) -> str:
-    text = WORKFLOW.read_text("utf-8")
-    found = re.search(rf"^  {name}:\n((?:    .*\n|\n)+)", text, re.M)
-    assert found, name
-    return found.group(1)
-
-
 def test_the_job_waits_for_the_packages_and_checks_the_tag() -> None:
     """The registry checks the package on PyPI and the bundle on the
     release when it takes the entry, and a pre-release is never listed.
     The checksum goes in before the entry, and a refused entry goes
     again without the bundle."""
-    job = _job("mcp-registry")
+    job = workflow_job("mcp-registry")
     assert re.search(r"^    needs: \[pypi-mcp, mcpb-bundle\]$", job, re.M)
     filled = job.index('fill_bundle_checksum.py "$ENTRY"')
     assert filled < job.index("mcp-publisher publish")

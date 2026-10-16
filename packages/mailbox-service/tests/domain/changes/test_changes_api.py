@@ -13,6 +13,7 @@ from benethos_mailbox_service.data.models import AccountStatus, Grant, ProviderT
 from benethos_mailbox_service.domain.changes.feed import STATE
 
 from ...conftest import bearer_for, create_account
+from ..webhook_helpers import mark_read
 
 
 def state_now(client: TestClient, url: str = "/v1/changes") -> str:
@@ -21,13 +22,6 @@ def state_now(client: TestClient, url: str = "/v1/changes") -> str:
     assert answer.json()["changes"] == []
     assert answer.json()["more"] is False
     return str(answer.json()["state"])
-
-
-def mark_read(client: TestClient, account_id: str, message_id: str) -> None:
-    answer = client.patch(
-        f"/v1/accounts/{account_id}/messages/{message_id}", json={"unread": False}
-    )
-    assert answer.status_code == 200
 
 
 def test_without_since_only_the_current_state(

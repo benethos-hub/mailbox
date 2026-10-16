@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -35,15 +35,8 @@ from benethos_mailbox_service.errors import (
     UnauthorizedError,
 )
 
-from ...clocks import Clock
+from ...clocks import NOW, Clock
 from ...conftest import ADMIN, CHEAP, bearer_for, create_account
-
-NOW = datetime(2026, 9, 24, 12, 0, tzinfo=UTC)
-
-
-@pytest.fixture
-def clock() -> Clock:
-    return Clock(NOW)
 
 
 def passwords() -> Passwords:

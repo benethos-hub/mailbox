@@ -249,7 +249,9 @@ packages/mailbox-service/
       rights/           # who may do what: permissions (the catalogue of
                         #   rights and groups), Access (one caller)
       auth/             # proving who calls: AuthService, Passwords,
-                        #   SignInThrottle, SecondFactors (the frame of
+                        #   SignInThrottle, Lockouts (lockouts.py: the
+                        #   brakes on an address and a name, logged),
+                        #   SecondFactors (the frame of
                         #   the second factor), Totp and RecoveryCodes,
                         #   ApiTokens (tokens.py: issued, revoked, the
                         #   one presented), what a sign-in to the UI
@@ -402,7 +404,8 @@ packages/mailbox-service/
       secrets/          # envelope encryption, key providers, password
                         #   hashes, the vault of the credentials, TOTP
       backup.py         # encrypted backups of the database, restore
-      files.py          # files for the owner alone (0600): database, backup, key
+      files.py          # files for the owner alone (0600): database, backup, key,
+                        #   a copy removed with its journal
       logbook.py        # the newest log lines in memory, for the log page
       discovery/        # autodiscovery sources and their helpers:
                         #   base.py the protocol of a source, the
@@ -560,7 +563,8 @@ packages/mailbox-mcp/
                         #   one way to the REST API
     models.py           # the client package's records
     errors.py           # ToolError, and the client's errors turned
-                        #   into one for the model
+                        #   into one for the model, what one tells of
+                        #   the token's rights
     config.py           # Settings (MAILBOX_MCP_* and the service's
                         #   address and token), the optional .env and
                         #   the folder of the system, from mailbox-common

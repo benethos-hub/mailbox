@@ -21,18 +21,15 @@ from typing import Any
 from benethos_mailbox_client import environment
 from benethos_mailbox_mcp.tools import TOOLS
 
+from .publish_helpers import project_of, workflow_job
+
 ROOT = Path(__file__).resolve().parents[3]
 BUNDLE = ROOT / ".github" / "publish" / "mcpb"
 MCP = ROOT / "packages" / "mailbox-mcp"
-WORKFLOW = ROOT / ".github" / "workflows" / "publish.yml"
 
 
 def _manifest() -> dict[str, Any]:
     return dict(json.loads((BUNDLE / "manifest.json").read_text("utf-8")))
-
-
-def _project() -> dict[str, Any]:
-    return dict(tomllib.loads((MCP / "pyproject.toml").read_text("utf-8"))["project"])
 
 
 def _build() -> ModuleType:
@@ -52,7 +49,7 @@ def _first_sentence(text: str) -> str:
 
 
 def test_the_bundle_has_the_packages_version_and_metadata() -> None:
-    manifest, project = _manifest(), _project()
+    manifest, project = _manifest(), project_of(MCP)
     assert manifest["name"] == project["name"]
     assert manifest["version"] == project["version"]
     assert manifest["description"] == project["description"]
@@ -119,7 +116,7 @@ def test_the_settings_are_the_clients() -> None:
 
 
 def test_the_staged_bundle_pins_the_package_on_pypi(tmp_path: Path) -> None:
-    build, project = _build(), _project()
+    build, project = _build(), project_of(MCP)
     target = tmp_path / "bundle"
     build.stage(target)
     assert sorted(p.name for p in target.iterdir()) == [
@@ -141,15 +138,8 @@ def test_the_staged_bundle_pins_the_package_on_pypi(tmp_path: Path) -> None:
     assert (target / _manifest()["icon"]).is_file()
 
 
-def _job(name: str) -> str:
-    text = WORKFLOW.read_text("utf-8")
-    found = re.search(rf"^  {name}:\n((?:    .*\n|\n)+)", text, re.M)
-    assert found, name
-    return found.group(1)
-
-
 def test_the_job_packs_after_the_upload_and_attaches_twice() -> None:
-    job = _job("mcpb-bundle")
+    job = workflow_job("mcpb-bundle")
     assert re.search(r"^    needs: \[pypi-mcp\]$", job, re.M)
     assert "does not match the bundle's version" in job
     assert "contents: write" in job and "persist-credentials: false" in job

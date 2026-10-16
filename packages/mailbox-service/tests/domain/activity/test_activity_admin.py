@@ -5,6 +5,7 @@ which record, and never a secret."""
 from __future__ import annotations
 
 import logging
+from contextlib import suppress
 
 import pytest
 from fastapi.testclient import TestClient
@@ -172,10 +173,8 @@ def test_a_status_is_logged_when_it_changes(caplog: pytest.LogCaptureFixture) ->
     caplog.clear()
 
     async def folders() -> None:
-        try:
+        with suppress(ProviderAuthError, ProviderUnavailableError):
             await services.mailbox.list_folders(ADMIN, account_id)
-        except (ProviderAuthError, ProviderUnavailableError):
-            pass
 
     import anyio
 

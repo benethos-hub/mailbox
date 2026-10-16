@@ -4,7 +4,7 @@ and through the API and the UI."""
 from __future__ import annotations
 
 import asyncio
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -17,13 +17,6 @@ from benethos_mailbox_service.errors import RateLimitedError, UnauthorizedError
 from ...clocks import Clock
 from ...conftest import CHEAP, admin_bearer, browser_admin
 from ...ui_helpers import try_sign_in
-
-NOW = datetime(2026, 9, 25, 12, 0, tzinfo=UTC)
-
-
-@pytest.fixture
-def clock() -> Clock:
-    return Clock(NOW)
 
 
 @pytest.fixture

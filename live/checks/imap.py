@@ -6,6 +6,7 @@ from __future__ import annotations
 import imaplib
 import re
 import ssl
+from contextlib import suppress
 from typing import Any
 
 
@@ -124,10 +125,8 @@ class OtherClient:
         return len(found)
 
     def close(self) -> None:
-        try:
+        with suppress(imaplib.IMAP4.error, OSError):
             self.conn.logout()
-        except (imaplib.IMAP4.error, OSError):
-            pass
 
 
 def _quoted(value: str) -> str:

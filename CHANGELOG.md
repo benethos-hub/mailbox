@@ -195,6 +195,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `GET /v1/accounts/{account_id}/messages` for a grant that names
+  folders asks the mail server for the account's folders once. It asked
+  up to three times, with the folder `all` or a role.
 - A message id that the index still holds but the server no longer
   finds starts one sync pass of its account until the next pass, not
   one per request.

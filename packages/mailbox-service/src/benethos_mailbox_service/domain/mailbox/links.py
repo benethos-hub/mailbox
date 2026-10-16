@@ -139,7 +139,7 @@ class AttachmentLinks:
         """The attachment of the link whose secret ``presented`` is, used up.
         ``source`` is the client address that asks. Anything else is
         ``NotFoundError``, always the same."""
-        if self._auth.is_locked_out(source):
+        if self._auth.lockouts.is_locked_out(source):
             raise NotFoundError(LINK_GONE)
         link = (
             self._store.find(secret.digest(presented))
@@ -210,7 +210,7 @@ class AttachmentLinks:
         ``source`` unless the mail server failed. A secret that is no
         link's writes no line."""
         if counted:
-            self._auth.failed_from(source)
+            self._auth.lockouts.failed(source)
         if link is not None:
             self._activity.record(
                 said.LinkRefused(by=someone(source), link_id=link.id, reason=why)

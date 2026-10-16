@@ -20,7 +20,7 @@ from benethos_mailbox_service.errors import (
 )
 
 from ...imap_fake import make_message
-from ...jmap_adapter import NOW, adapter
+from ...jmap_adapter import NOW
 from ...jmap_fake import USER, FakeJmap
 from ...provider_ops import delete, update
 
@@ -28,11 +28,6 @@ from ...provider_ops import delete, update
 @pytest.fixture
 def server() -> FakeJmap:
     return FakeJmap()
-
-
-@pytest.fixture
-def jmap(server: FakeJmap) -> JmapProvider:
-    return adapter(server)
 
 
 # --- sending --------------------------------------------------------------------------

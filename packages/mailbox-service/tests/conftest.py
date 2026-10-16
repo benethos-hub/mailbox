@@ -51,6 +51,7 @@ from benethos_mailbox_service.domain.auth.service import AuthService
 from benethos_mailbox_service.domain.rights import ADMIN_SERVICE, permissions
 from benethos_mailbox_service.domain.rights.access import Access
 
+from .clocks import Clock
 from .imap_fake import FakeMailBox, filled_server, make_message
 from .jmap_fake import HOST, PASSWORD, USER, FakeJmap
 from .pop3_fake import FakePop3Server
@@ -144,6 +145,12 @@ def no_configuration_from_this_machine(
 @pytest.fixture
 def settings() -> Settings:
     return Settings(storage="memory")
+
+
+@pytest.fixture
+def clock() -> Clock:
+    """A clock that moves only when the test moves it."""
+    return Clock()
 
 
 @pytest.fixture

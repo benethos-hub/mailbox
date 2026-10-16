@@ -30,13 +30,15 @@ from ..sync import SyncService
 
 T = TypeVar("T")
 S = TypeVar("S", bound=MessageSummary)
+# The outcome of an operation per message: what it answered, or why not.
+Outcomes = dict[str, T | MailboxServiceError]
 
 
 class Calls:
     def __init__(self, adapters: Adapters, sync: SyncService) -> None:
         self._adapters = adapters
         self._sync = sync
-        self._gone = Gone()
+        self._gone = Gone(sync)
 
     # --- the accounts -----------------------------------------------------------------
 
@@ -89,7 +91,7 @@ class Calls:
         try:
             return await run(native)
         except MessageNotFoundError:
-            moved = await self._after_a_pass(account_id, {message_id: native})
+            moved = await self._gone.after_a_pass(account_id, {message_id: native})
             if message_id not in moved:
                 raise missing_message(message_id) from None
             return await run(moved[message_id])
@@ -204,7 +206,7 @@ class Calls:
             if isinstance(outcome, MailboxServiceError):
                 results[message_id] = outcome
                 continue
-            self._follow(account_id, message_id, natives[message_id], outcome)
+            _follow(self._sync, account_id, message_id, natives[message_id], outcome)
             results[message_id] = public(
                 outcome, message_id, account_id, threads.get(message_id)
             )
@@ -238,7 +240,9 @@ class Calls:
                 folders[message_id] = self._sync.folder_of(account_id, message_id) or ""
                 self._sync.forget(account_id, message_id)
             elif outcome is not None:
-                self._follow(account_id, message_id, natives[message_id], outcome)
+                _follow(
+                    self._sync, account_id, message_id, natives[message_id], outcome
+                )
                 folders[message_id] = folder_of(outcome)
             results[message_id] = None
         done = _done(results)
@@ -256,31 +260,21 @@ class Calls:
         if isinstance(outcome, MailboxServiceError):
             raise outcome
 
-    def _follow(
-        self, account_id: str, message_id: str, native: str, now: MessageSummary
-    ) -> None:
-        """A message the provider moved: its id points to the new place.
-        The caller records the change."""
-        if now.id != native:
-            self._sync.relocate(account_id, message_id, now.id, folder_of(now))
-
     async def _on_messages(
         self,
         account_id: str,
         ids: list[str],
-        run: Callable[[Reads, list[str]], Awaitable[dict[str, Any]]],
-    ) -> tuple[dict[str, Any], dict[str, str]]:
+        run: Callable[[Reads, list[str]], Awaitable[Outcomes[T]]],
+    ) -> tuple[Outcomes[T], dict[str, str]]:
         """Run a provider operation on the messages behind ``ids``. Those
         the provider does not find where the index says get one sync and a
         second try. Returns the outcome per id and the provider id used."""
         natives = {i: n for i, n in self._sync.natives(account_id, ids).items() if n}
-        outcomes: dict[str, Any] = {
-            i: missing_message(i) for i in ids if i not in natives
-        }
+        outcomes: Outcomes[T] = {i: missing_message(i) for i in ids if i not in natives}
         outcomes.update(await self._run_on(account_id, natives, run))
         missing = [i for i in natives if isinstance(outcomes[i], MessageNotFoundError)]
         if missing and self._sync.mapped(account_id):
-            moved = await self._after_a_pass(
+            moved = await self._gone.after_a_pass(
                 account_id, {i: natives[i] for i in missing}
             )
             outcomes.update(await self._run_on(account_id, moved, run))
@@ -292,34 +286,12 @@ class Calls:
                 )
         return outcomes, natives
 
-    async def _after_a_pass(
-        self, account_id: str, natives: dict[str, str]
-    ) -> dict[str, str]:
-        """Messages the provider did not find where the index says: one sync
-        pass, and the new place of those that moved. One looked up in vain
-        since the last pass gets no pass of its own: a caller that names a
-        stale id again and again does not sync the account each time."""
-        if self._gone.known(account_id, self._passes(account_id), natives):
-            return {}
-        await self._sync.sync_account(account_id)
-        now = self._sync.natives(account_id, list(natives))
-        moved = {i: n for i, n in now.items() if n and n != natives[i]}
-        self._gone.note(
-            account_id,
-            self._passes(account_id),
-            {i: n for i, n in natives.items() if i not in moved},
-        )
-        return moved
-
-    def _passes(self, account_id: str) -> int:
-        return self._sync.state(account_id).passes
-
     async def _run_on(
         self,
         account_id: str,
         natives: dict[str, str],
-        run: Callable[[Reads, list[str]], Awaitable[dict[str, Any]]],
-    ) -> dict[str, Any]:
+        run: Callable[[Reads, list[str]], Awaitable[Outcomes[T]]],
+    ) -> Outcomes[T]:
         if not natives:
             return {}
         by_native = await self.call(
@@ -333,10 +305,33 @@ class Gone:
     """Per account, the messages looked up in vain after a pass: our id
     and the provider's. Forgotten with the next pass."""
 
-    def __init__(self) -> None:
+    def __init__(self, sync: SyncService) -> None:
+        self._sync = sync
         self._after: dict[str, tuple[int, set[tuple[str, str]]]] = {}
 
-    def known(self, account_id: str, passes: int, natives: dict[str, str]) -> bool:
+    async def after_a_pass(
+        self, account_id: str, natives: dict[str, str]
+    ) -> dict[str, str]:
+        """Messages the provider did not find where the index says: one sync
+        pass, and the new place of those that moved. One looked up in vain
+        since the last pass gets no pass of its own: a caller that names a
+        stale id again and again does not sync the account each time."""
+        if self._known(account_id, self._passes(account_id), natives):
+            return {}
+        await self._sync.sync_account(account_id)
+        now = self._sync.natives(account_id, list(natives))
+        moved = {i: n for i, n in now.items() if n and n != natives[i]}
+        self._note(
+            account_id,
+            self._passes(account_id),
+            {i: n for i, n in natives.items() if i not in moved},
+        )
+        return moved
+
+    def _passes(self, account_id: str) -> int:
+        return self._sync.state(account_id).passes
+
+    def _known(self, account_id: str, passes: int, natives: dict[str, str]) -> bool:
         """Whether every one of them was looked up in vain since pass
         ``passes``."""
         noted = self._after.get(account_id)
@@ -346,12 +341,25 @@ class Gone:
             and set(natives.items()) <= noted[1]
         )
 
-    def note(self, account_id: str, passes: int, natives: dict[str, str]) -> None:
+    def _note(self, account_id: str, passes: int, natives: dict[str, str]) -> None:
         noted = self._after.get(account_id)
         if noted is None or noted[0] != passes:
             noted = (passes, set())
             self._after[account_id] = noted
         noted[1].update(natives.items())
+
+
+def _follow(
+    sync: SyncService,
+    account_id: str,
+    message_id: str,
+    native: str,
+    now: MessageSummary,
+) -> None:
+    """A message the provider moved: its id points to the new place. The
+    caller records the change."""
+    if now.id != native:
+        sync.relocate(account_id, message_id, now.id, folder_of(now))
 
 
 def _done(results: dict[str, Any]) -> list[str]:

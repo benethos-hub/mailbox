@@ -17,6 +17,8 @@ from pathlib import Path
 
 import pytest
 
+from .publish_helpers import project_of
+
 ROOT = Path(__file__).resolve().parents[3]
 PACKAGES = [
     ROOT / "packages" / "mailbox-service",
@@ -27,17 +29,12 @@ PACKAGES = [
 SERVICE, CLIENT, MCP, COMMON = PACKAGES
 
 
-def _project(package: Path) -> dict[str, object]:
-    data = tomllib.loads((package / "pyproject.toml").read_text("utf-8"))
-    return dict(data["project"])
-
-
 def _version() -> str:
-    return str(_project(PACKAGES[0])["version"])
+    return str(project_of(PACKAGES[0])["version"])
 
 
 def _module(package: Path) -> str:
-    return str(_project(package)["name"]).replace("-", "_")
+    return str(project_of(package)["name"]).replace("-", "_")
 
 
 def test_every_package_of_the_workspace_is_checked() -> None:
@@ -53,16 +50,16 @@ def test_every_package_of_the_workspace_is_checked() -> None:
 @pytest.mark.parametrize("package", PACKAGES, ids=lambda p: p.name)
 def test_the_license_is_the_repositorys(package: Path) -> None:
     assert (package / "LICENSE").read_bytes() == (ROOT / "LICENSE").read_bytes()
-    assert _project(package)["license-files"] == ["LICENSE"]
+    assert project_of(package)["license-files"] == ["LICENSE"]
 
 
 def test_the_packages_share_one_version() -> None:
-    versions = {_project(package)["version"] for package in PACKAGES}
+    versions = {project_of(package)["version"] for package in PACKAGES}
     assert len(versions) == 1, versions
 
 
 def _needs(package: Path) -> list[str]:
-    needs = _project(package)["dependencies"]
+    needs = project_of(package)["dependencies"]
     assert isinstance(needs, list)
     return [str(need) for need in needs]
 
@@ -78,13 +75,13 @@ def test_a_package_needs_another_of_its_own_version(
     """They are released together. A package of the workspace pins
     another to the version beside it, so an install never mixes two
     releases. The pin may name extras: ``name[paths]==X.Y.Z``."""
-    pin = rf"{re.escape(str(_project(needed)['name']))}(\[[\w,]+\])?=={_version()}"
+    pin = rf"{re.escape(str(project_of(needed)['name']))}(\[[\w,]+\])?=={_version()}"
     assert any(re.fullmatch(pin, need) for need in _needs(package))
 
 
 def _workspace_needs(package: Path) -> set[str]:
     """The packages of the workspace that ``package`` depends on."""
-    names = {str(_project(p)["name"]) for p in PACKAGES}
+    names = {str(project_of(p)["name"]) for p in PACKAGES}
     return {
         name
         for need in _needs(package)
@@ -95,7 +92,7 @@ def _workspace_needs(package: Path) -> set[str]:
 def test_a_pin_inside_the_workspace_is_exact() -> None:
     """Every dependency on another package of the workspace names its
     version with ``==``."""
-    names = {str(_project(p)["name"]) for p in PACKAGES}
+    names = {str(project_of(p)["name"]) for p in PACKAGES}
     loose = [
         f"{package.name}: {need}"
         for package in PACKAGES
@@ -110,7 +107,7 @@ def test_a_pin_inside_the_workspace_is_exact() -> None:
 def test_the_installed_version_is_the_projects(package: Path) -> None:
     """After a version bump without ``uv sync``, the code still reports
     the old version in /health, the OpenAPI document and ``--version``."""
-    project = _project(package)
+    project = project_of(package)
     assert version(str(project["name"])) == project["version"]
 
 
@@ -119,7 +116,7 @@ def test_the_module_reports_the_projects_version(package: Path) -> None:
     """``__version__``, which ``--version`` and a caller of the client
     read."""
     module = importlib.import_module(_module(package))
-    assert module.__version__ == _project(package)["version"]
+    assert module.__version__ == project_of(package)["version"]
 
 
 @pytest.mark.parametrize("package", PACKAGES, ids=lambda p: p.name)
@@ -145,7 +142,7 @@ SHARED_CLASSIFIERS = (
 def test_the_packages_describe_themselves_alike() -> None:
     """The same Python versions, author, status and links, so that PyPI
     shows the four as one release. Each points to its own README."""
-    projects = [_project(package) for package in PACKAGES]
+    projects = [project_of(package) for package in PACKAGES]
     for key in ("requires-python", "authors"):
         values = {json.dumps(project[key]) for project in projects}
         assert len(values) == 1, f"{key} differs: {sorted(values)}"
@@ -190,7 +187,7 @@ def _tested() -> list[str]:
 def test_the_classifiers_name_the_tested_versions() -> None:
     """The four name the same, as test_the_packages_describe_themselves_alike
     checks, so the service stands for all."""
-    classifiers = _project(SERVICE)["classifiers"]
+    classifiers = project_of(SERVICE)["classifiers"]
     assert isinstance(classifiers, list)
     named = [
         found.group(1)
@@ -204,7 +201,7 @@ def test_the_lowest_tested_version_is_the_floor() -> None:
     """requires-python allows the lowest version of the matrix, and each
     step of lowest-versions installs on it."""
     lowest = _tested()[0]
-    assert _project(SERVICE)["requires-python"] == f">={lowest}"
+    assert project_of(SERVICE)["requires-python"] == f">={lowest}"
     assert set(re.findall(r"uv venv -p (\S+) /tmp/lowest", _ci())) == {lowest}
 
 
@@ -261,9 +258,9 @@ def test_every_package_is_published() -> None:
     its own, named after the package, since PyPI takes a pending
     publisher for one project only."""
     jobs = _publish_jobs()
-    assert set(jobs) == {str(_project(p)["name"]) for p in PACKAGES}
+    assert set(jobs) == {str(project_of(p)["name"]) for p in PACKAGES}
     for package in PACKAGES:
-        name = str(_project(package)["name"])
+        name = str(project_of(package)["name"])
         assert jobs[name]["module"] == _module(package)
         assert jobs[name]["environment"] == f"pypi-{name}"
 
@@ -286,10 +283,10 @@ def test_a_package_is_published_after_those_it_needs() -> None:
     it may come to need it without a change here."""
     jobs = _publish_jobs()
     for package in PACKAGES:
-        name = str(_project(package)["name"])
+        name = str(project_of(package)["name"])
         needed = _workspace_needs(package)
         if package == CLIENT:
-            needed.add(str(_project(COMMON)["name"]))
+            needed.add(str(project_of(COMMON)["name"]))
         wanted = {"checks"} | {str(jobs[n]["job"]) for n in needed}
         assert jobs[name]["needs"] == wanted, name
 
@@ -423,7 +420,7 @@ def test_the_openapi_document_has_the_version() -> None:
 
 def test_the_lockfile_has_the_version_of_every_package() -> None:
     lock = tomllib.loads((ROOT / "uv.lock").read_text("utf-8"))
-    names = {str(_project(package)["name"]) for package in PACKAGES}
+    names = {str(project_of(package)["name"]) for package in PACKAGES}
     locked = {p["name"]: p["version"] for p in lock["package"] if p["name"] in names}
     assert locked == dict.fromkeys(names, _version())
 
@@ -445,7 +442,7 @@ def test_the_status_follows_the_classifier() -> None:
     and in SECURITY.md."""
     statuses = set()
     for package in PACKAGES:
-        classifiers = _project(package)["classifiers"]
+        classifiers = project_of(package)["classifiers"]
         assert isinstance(classifiers, list)
         statuses |= {
             c.rpartition(" - ")[2].lower()
@@ -480,8 +477,8 @@ def _badges(relative: str) -> set[str]:
 def test_the_badges_name_the_packages() -> None:
     """The repository README shows a PyPI badge per package, each
     package README the badge of its own, labelled with the package name."""
-    names = {str(_project(package)["name"]) for package in PACKAGES}
+    names = {str(project_of(package)["name"]) for package in PACKAGES}
     assert _badges("README.md") == names
     for package in PACKAGES:
-        name = str(_project(package)["name"])
+        name = str(project_of(package)["name"])
         assert _badges(f"packages/{package.name}/README.md") == {name}

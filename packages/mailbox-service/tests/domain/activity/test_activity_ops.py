@@ -4,6 +4,7 @@ discovery, the log page and the limits (docs/LOGGING.md 5.5 to 5.9)."""
 from __future__ import annotations
 
 import logging
+from contextlib import suppress
 from datetime import UTC, datetime, timedelta
 
 import anyio
@@ -283,10 +284,8 @@ async def test_a_lockout_and_the_name_brake_are_logged_when_they_engage(
     )
     caplog.set_level(logging.INFO)
     for _ in range(12):
-        try:
+        with suppress(UnauthorizedError, RateLimitedError):
             await services.auth.sign_in("Anna", "wrong", source="10.0.0.9")
-        except (UnauthorizedError, RateLimitedError):
-            pass
     now.now += timedelta(minutes=16)
     await services.auth.sign_in("Anna", "a long password", source="10.0.0.9")
     found = [
