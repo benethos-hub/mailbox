@@ -92,6 +92,36 @@ hundreds, or when the IMAP session is rebuilt anyway.
   an invoice without a download. Today `get_attachment` hands the pages
   of a PDF over as images, text types as text and images as images
   (CONCEPT 8), with limits on size, pages and characters.
+- **Attachments in the summaries.** A listed message says only
+  `has_attachments`. Naming its attachments, with name, type, size, id
+  and whether inline, would show in search results what is attached
+  without opening the mail, in the MCP server and in the UI. IMAP reads
+  BODYSTRUCTURE while listing anyway, JMAP has the property on
+  `Email/get`, Graph needs `$expand`, Gmail the full form of every
+  message, and POP3 cannot, so it would answer an empty list, as
+  UNIFORM.md handles such differences. It changes the summary's
+  contract and belongs in a version of its own.
+- **Attachments as MCP resources.** A person picks an attachment in the
+  client and attaches it to the message, with no download and no tool
+  call. It needs the item above: the server lists the newest N messages
+  with attachments across the token's accounts, fresh on every
+  `resources/list`, without a copy of its own, bounded in messages and
+  entries, and only with `get_attachment` in the grant. Reading goes
+  through the REST API with the token's rights and a size limit of its
+  own, since a resource reaches the model whole, where the tool renders
+  pages. The name carries account and subject before the sender's
+  filename, since no marker separates sender content from the person's.
+  Measured on 2026-10-16: Claude Desktop lists resources once at start,
+  does not re-list on `resources/list_changed`, and starts a stdio
+  server twice, one process for the lists and one for the calls. In
+  such a client the list is the state of the start, and a list filled
+  from the session's tool calls would never be seen. Notifications are
+  not worth building until a client re-lists.
+- **An attachment on disk.** `save_attachment` writes an attachment
+  unchanged into a directory of the configuration, for a person who
+  needs the file, or a program on the same machine that takes paths
+  only. The link of `share_attachment` covers service to service over
+  the network.
 
 ## The standard library's mail parser instead of imap-tools
 
