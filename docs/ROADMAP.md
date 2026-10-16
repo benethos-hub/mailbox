@@ -1,6 +1,6 @@
 # Roadmap
 
-> **Beta, version 0.4.1.** Usable with real accounts. A breaking change
+> **Beta, version 0.5.0.** Usable with real accounts. A breaking change
 > of the API or the configuration is announced in the changelog. Stored
 > data is carried forward by migrations.
 
@@ -432,7 +432,7 @@ order, each step one pull request or more:
    an account from the API, the marks from `mailbox-common`, done
 9. **Setting up an account, described by the domain**, done
 
-Steps 5 to 8 change the contract and ship together as 0.5.0.
+Steps 5 to 8 change the contract and shipped together as 0.5.0.
 
 ## Keeping this file current
 

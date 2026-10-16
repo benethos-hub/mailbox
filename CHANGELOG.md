@@ -6,6 +6,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-16
+
 ### Added
 
 - The MCP server asks what its token may do every
@@ -1833,7 +1835,8 @@ the configuration may change without notice.
 - One error envelope `{"error": {"code", "message"}}`, authentication errors
   included.
 
-[Unreleased]: https://github.com/benethos-hub/mailbox/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/benethos-hub/mailbox/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/benethos-hub/mailbox/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/benethos-hub/mailbox/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/benethos-hub/mailbox/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/benethos-hub/mailbox/compare/v0.3.0...v0.3.1
