@@ -942,6 +942,12 @@ server gets `get_thread` alone, which takes a message id or a thread id.
 The UI gets a card with the conversation on the message page and a list
 of the messages by threads.
 
+**Decided 2026-10-16, a message without a thread:** where the index
+keeps the threads (IMAP) and has none for a message yet, as when its
+headers could not be read, the list of threads shows it as a thread of
+its own under the message's id. That id finds the message alone, and
+once the index has threaded it, the thread it is in.
+
 **Decided 2026-10-15, links to attachments:** another service takes over
 an attachment without the file passing through the model and without a
 token of this service. The MCP server asks for a link, the model carries
