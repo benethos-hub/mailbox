@@ -50,8 +50,9 @@ def build_server(
 ) -> MCPServer:
     """A server with the tools ``operations`` allow. While it runs, its
     tools call a client of its own that ``connect`` makes. It asks what
-    the token may do every ``every`` seconds, if above 0, and when a tool
-    is refused for want of a right, and serves the tools that allows."""
+    the token may do every ``every`` seconds and when a tool is refused for
+    want of a right, if ``every`` is above 0, and serves the tools that
+    allows."""
     held = _Held()
     listeners = Listeners()
 
@@ -76,7 +77,7 @@ def build_server(
         middleware=[listeners.middleware],
         subscriptions=listeners.bus,
     )
-    rights = held.rights = _Rights(server, held, listeners)
+    rights = held.rights = _Rights(server, held, listeners, every)
     _serve(server, held, _chosen(set(operations)))
     return server
 
@@ -126,8 +127,11 @@ class _Rights:
     does not answer leaves the tools as they are. Each trouble is logged
     once."""
 
-    def __init__(self, server: MCPServer, held: _Held, listeners: Listeners) -> None:
+    def __init__(
+        self, server: MCPServer, held: _Held, listeners: Listeners, every: float
+    ) -> None:
         self.server, self.held, self.listeners = server, held, listeners
+        self.every = every
         self.refused = False
         self._trouble: str | None = None
         self._asked_at: float | None = None
@@ -140,12 +144,13 @@ class _Rights:
 
     async def after(self, exc: MailboxError) -> None:
         """What a tool's error tells of the token's rights: a refused
-        token, or a right missing, which may have been taken away."""
+        token, or a right missing, which may have been taken away. Without
+        an interval it asks only at start, so a missing right asks nothing."""
         if self.refused or not isinstance(exc, ApiError):
             return
         if exc.status == _REFUSED:
             await self._refuse()
-        elif exc.status == _FORBIDDEN and exc.code == _MISSING_RIGHT:
+        elif exc.status == _FORBIDDEN and exc.code == _MISSING_RIGHT and self.every > 0:
             asked = self._asked_at
             if asked is None or anyio.current_time() - asked >= _SOON:
                 await self.ask()

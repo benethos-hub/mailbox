@@ -71,10 +71,10 @@ provider has, and what a server notes for itself, stays out of the API.
 
 ## 3. Capabilities
 
-Today one capability often covers things that differ per provider.
-`flags` covers read state, stars and keywords, although Gmail has no
-keywords and Microsoft has no `$` keywords. The finer set, where each
-one guards exactly one thing:
+Before 0.5.0 one capability often covered things that differ per
+provider. `flags` covered read state, stars and keywords, although Gmail
+has no keywords and Microsoft has no `$` keywords. The finer set, where
+each one guards exactly one thing:
 
 | Capability | Means | IMAP | POP3 | Gmail | Microsoft | JMAP |
 |---|---|---|---|---|---|---|
@@ -84,12 +84,12 @@ one guards exactly one thing:
 | `marks` | which marks of RFC 8621 the account reads, and which it writes | those the server keeps | none | reads `$draft` | reads `$draft`, `$answered` and `$forwarded` after a live check (6.4), writes the last two | all |
 | `folders` | folders: create, rename, delete | yes | no | yes | yes | yes |
 | `move` | moving messages | with MOVE or UIDPLUS | no | yes | yes | yes |
-| `trash` | delete into the trash | with a trash folder and `move` | no | yes | yes | yes |
+| `trash` | delete into the trash | with a trash folder and `move` | no | yes | yes | with a trash folder |
 | `purge` | delete for good | with UIDPLUS | yes | yes | yes | yes |
 | `labels` | a message in several folders | no | no | yes | no | yes |
 | `search` | the filters of `list_messages` | yes | no | yes | yes | yes |
-| `drafts` | drafts | with a drafts folder | no | yes | yes | yes |
-| `send` | sending | with SMTP | with SMTP | yes | yes | with submission |
+| `drafts` | drafts | with a drafts folder | no | yes | yes | with a drafts folder |
+| `send` | sending | with SMTP | with SMTP | yes | yes | with submission and a drafts or sent folder |
 | `sent_copy` | a sent mail is kept and its id answered | with a sent folder | no | yes | yes | with a sent folder |
 | `threads` | `thread_id`, `list_threads`, `get_thread` | yes, the service's own | no | yes | yes | yes |
 | `push` | changes arrive within seconds | with IDLE | no | no | no | with an event source |
@@ -102,9 +102,9 @@ draws the line between a mark and a server note (4.1). Other `$`
 keywords, such as `$important` or Thunderbird's `$label1`, pass as
 keywords, as today.
 
-A yes or no would be too coarse for `marks`, as it is for `flags`
-today. Microsoft could keep `$answered` and `$forwarded` but no
-`$junk`, and Gmail shows a draft by its label but cannot set `$draft`.
+A yes or no would be too coarse for `marks`, as it was for `flags`.
+Microsoft keeps `$answered` and `$forwarded` but no `$junk`, and Gmail
+shows a draft by its label but cannot set `$draft`.
 So `marks` is not one capability but two lists on the account: the
 marks it reads and the marks it writes. Writing a mark outside the
 second list answers `501`. A mark outside the first list never appears,
@@ -133,7 +133,9 @@ larger piece that is neither, and runs on its own.
 - **Microsoft drops `$` keywords without an error.** Setting `$answered`
   or `$junk` answers `200`, and nothing is stored
   (`microsoft/mappers.py:149`). A `message.updated` record is written
-  anyway. Rule R2: `501`. *Bug.*
+  anyway. Rule R2: `501`. *Bug.* Done: `$answered` and `$forwarded`
+  are kept as the verb Outlook last carried out (6.4), and every other
+  `$` keyword answers `501`.
 - **Gmail announces `flags`, and every keyword change answers `501`**
   (`gmail/messages.py:110`). The UI offers the keyword form on Gmail
   accounts, against CONCEPT 5 ("the UI offers no action an account
@@ -159,7 +161,8 @@ larger piece that is neither, and runs on its own.
 - **One vocabulary for display.** The words for the marks live in the
   UI only (`web/pages/templates.py`). The MCP server shows them raw.
   With the fixed list of marks, the list and its words move to
-  `mailbox-common`, used by the UI and the MCP server.
+  `mailbox-common`, used by the UI and the MCP server. Done: its
+  `mail/marks.py` holds the marks with their words and icons.
 
 ### 4.2 Listing without a folder, and across accounts
 
@@ -171,7 +174,8 @@ larger piece that is neither, and runs on its own.
   junk, which Microsoft and IMAP without `\All` emulate.
 - **`list_all_messages` with a role leaves out an account that has no
   such folder**, without naming it in `incomplete`
-  (`domain/mailbox/across.py:111-116`). *Bug.*
+  (`domain/mailbox/across.py:111-116`). *Bug.* Done: it is named there
+  with `not_supported`.
 - **An account without the folder a role names answers `404` from the
   domain and `409` from the adapters**, for the same situation. Gmail
   has no `archive`, Microsoft no `all` folder. Rule R2: `501`, except
@@ -194,6 +198,9 @@ larger piece that is neither, and runs on its own.
   Microsoft sort by received time. Since the list across accounts merges
   by `date` and pages by count, IMAP messages whose UID order differs
   from their date order can be skipped or repeated between pages. *Bug.*
+  Done: each account's place counts what it gave, and of the accounts'
+  next messages the newest comes first. None is skipped or given twice,
+  though a page may hold a message older than one of the next page.
 - **Days count in UTC** on Gmail, Microsoft and JMAP, and in the
   server's day on IMAP.
 
@@ -209,7 +216,9 @@ larger piece that is neither, and runs on its own.
   a `next_cursor`. Documented with 6.7.
 - **A Microsoft cursor keeps its first query.** Sent with another folder
   or filter, it answers the old query's next page, without
-  `invalid_cursor` (`microsoft/provider.py:147-151`). *Bug.*
+  `invalid_cursor` (`microsoft/provider.py:147-151`). *Bug.* Done: the
+  cursor is bound to the folder and the search, and another list's
+  answers `invalid_cursor`.
 - **`has_attachments` can come out three ways for one message.** The
   field in a list is a header guess (`multipart/mixed`), `get_message`
   counts the parts, and the filter is the provider's own. *Concept
@@ -229,7 +238,8 @@ larger piece that is neither, and runs on its own.
 - **A reply through Gmail starts a new Gmail thread.** The send and the
   draft pass no `threadId` (`gmail/sending.py:28, 45`). Gmail's
   documentation asks for it besides the headers, so a reply lands outside
-  the original's thread. To confirm live. *Bug.*
+  the original's thread. To confirm live. *Bug.* Done: the send and the
+  draft pass the original's `threadId`, checked live.
 - **Microsoft answers no `sent_copy_id`**, although Exchange keeps the
   copy (`microsoft/provider.py:259`). The `message.sent` record then
   carries the Message-ID header in place of a message id. *Bug.* Done:
@@ -240,7 +250,9 @@ larger piece that is neither, and runs on its own.
   word. Capability `sent_copy`. *Concept (section 3).* Done.
 - **`refused` is always empty on Gmail, Microsoft and JMAP.** They report
   refused recipients later, as a bounce mail. Empty means "unknown"
-  there, but "all accepted" on SMTP. *Concept (6.1).*
+  there, but "all accepted" on SMTP. *Concept (6.1).* Done: the
+  capability `refused` says whether a send names them. IMAP and POP3
+  have it where they send through SMTP.
 - **Microsoft refuses mail above about 3 MB** with a general provider
   error, while the domain allows 25 MiB of attachments. Graph takes at
   most 4 MB per request, and the MIME travels in base64. Larger mail
@@ -256,12 +268,15 @@ larger piece that is neither, and runs on its own.
 
 - **A Gmail draft never shows its `reference`.** The domain keeps it only
   where `$draft` is among the keywords (`domain/mailbox/service.py:196`),
-  and Gmail has no keywords. *Bug.*
+  and Gmail has no keywords. *Bug.* Done: Gmail names `$draft` for a
+  message with the label `DRAFT`, so its draft keeps the `reference`.
 - **A replaced draft keeps its id on IMAP and gets a new one elsewhere.**
   Documented with the draft id.
 - **Replacing a draft can leave two**, with an error, on Microsoft and on
   IMAP without UIDPLUS: the new one is stored before the old one is
-  deleted. Rule R6. *Bug.*
+  deleted. Rule R6. *Bug.* Done: where the old one cannot be deleted,
+  the new one is taken back, and only where that fails too the error
+  names it. IMAP without UIDPLUS refuses before it stores the new one.
 - **IMAP and JMAP announce `drafts` without a drafts folder** and answer
   `409` later. Rule R4. Done: without one they lack `drafts`.
 
@@ -278,7 +293,8 @@ larger piece that is neither, and runs on its own.
   without a role**, as if a person had made them. Renaming them fails at
   Graph with a general error.
 - **IMAP drops `\Noselect` folders but keeps them as `parent_id`** of
-  their children. *Bug.*
+  their children. *Bug.* Done: the subfolders go below the nearest
+  listed folder, or to the top.
 
 ### 4.8 Message fields
 
@@ -300,7 +316,7 @@ larger piece that is neither, and runs on its own.
 
 - **`list_threads` answers an empty page on POP3**, while the route
   documents `501`. No capability check runs (`domain/mailbox/threads.py`).
-  *Bug.*
+  *Bug.* Done: the domain checks `threads` first and answers `501`.
 - **Providers group differently.** The service threads IMAP by headers
   only. Gmail and Exchange use their own rules, which include the
   subject. JMAP depends on the server. *Concept (6.9).*
@@ -324,7 +340,8 @@ larger piece that is neither, and runs on its own.
 - **`message.updated` also means a thread merge**, documented as "moved
   or flags changed".
 - **After an expired JMAP state, messages that arrived in the gap are
-  never reported as created.** *Bug.*
+  never reported as created.** *Bug.* Done: they are reported as
+  created, for Gmail and Microsoft as well.
 
 ### 4.11 Errors and partial effects
 
@@ -332,8 +349,8 @@ larger piece that is neither, and runs on its own.
   drafts without a folder, no trash), `400` (several folders without
   `labels`, Gmail's own folders), `404` (a missing role folder, POP3
   folder changes), `200` (POP3 `list_threads`, Microsoft `$` keywords).
-  Rule R2. Done for every lack of a capability. A missing role folder
-  follows with step 6.
+  Rule R2. Done for every lack of a capability, and since step 6 a
+  missing role folder answers `501` as well.
 - **An IMAP change of flags and folder in one request** stores the
   flags, then fails the move with `501`. IMAP has no transaction over
   both, so R6 can only order the steps: check the move first, then
@@ -342,6 +359,9 @@ larger piece that is neither, and runs on its own.
 - **Other partial effects with an error**: a batch across IMAP folders
   fails after earlier folders are done. Microsoft's delete for good moves
   to the trash, then deletes, and can stop in between. Rule R6. *Bug.*
+  Done: a batch on every adapter answers what was done before a step
+  failed. Microsoft's delete for good says so when the message stayed
+  in the trash.
 - **A JMAP `forbidden`**, as from a read-only token, became
   `502 provider_auth_failed` and set the account to `needs_reauth`.
   *Bug.* Done: the method error is a `ProviderError`, as an HTTP `403`
@@ -392,8 +412,9 @@ Steps 1 to 9 are done. Each step is one pull request or more.
    capabilities. Done: `tests/integration/test_conformance.py` holds
    every kind of mailbox to the rules through the API, and
    `tests/data/providers/test_conformance.py` holds each adapter to its
-   contract towards the domain. What falls short today is a strict
-   expected failure that names its place here.
+   contract towards the domain. A test that falls short is marked as a
+   strict expected failure that names its place here. None is marked
+   now.
 5. **Capabilities.** The finer set of section 3, read from the server
    (R4), stored as decision 6.11 says, checked by the domain for every
    operation (R3), `501` for every lack (R2). The client, the UI and
@@ -469,9 +490,8 @@ Decided 2026-10-12, each with the options weighed and why.
    and across accounts it is named in `incomplete`.
    **Microsoft emulates `all`:** every folder but the trash and junk, as
    Gmail's All Mail, so Microsoft keeps the search across folders it has
-   today. Whether Graph leaves out those two folders together with
-   `$search` is to be checked first. If it cannot, the adapter leaves
-   them out after each page, as it does for `unread` today.
+   today. The adapter leaves those two folders out after each page, as
+   it does for `unread`, so a page can come back short.
    **IMAP emulates `all` too**, where the server has no `\All`: one
    `SEARCH` in every folder but the trash and junk, the hits merged by
    date, as the list across accounts merges its accounts. The result is
@@ -485,8 +505,8 @@ Decided 2026-10-12, each with the options weighed and why.
    everywhere.
    *Decided: (a).* `date` is what people see in every mail program,
    `received` is reliable for order and ranges. On IMAP it is
-   INTERNALDATE. On POP3 it is null, or read from the topmost `Received`
-   header.
+   INTERNALDATE. On POP3 it is read from the topmost `Received` header,
+   and null only where there is none or it cannot be read.
 7. **Search semantics.** (a) The contract promises whole words, which
    every provider can keep. IMAP matches more. (b) Parts of words stay
    the promise, and providers that cannot keep it lack `search` for
@@ -585,26 +605,31 @@ server then know nothing about providers either: what they show and offer follow
 answers alone. A new adapter, or a capability that changes, then needs
 no change in either.
 
-### 8.1 Where they know providers today
+### 8.1 Where they knew providers before 0.5.0
 
-- **Three tables of what an operation needs.** The domain checks
-  protocols (`domain/accounts/abilities.py`), the UI maps capabilities
-  to its actions (`web/pages/rights.py`), and the MCP server maps them
-  to what it names as lacking (`mailbox-mcp/render.py`). The three can
-  disagree. The UI's table already sends the trash with `folders` and
-  the keyword form with `flags`, which Gmail announces and refuses.
+- **Three tables of what an operation needs.** The domain checked
+  protocols (`domain/accounts/abilities.py`), the UI mapped capabilities
+  to its actions (`web/pages/rights.py`), and the MCP server mapped them
+  to what it names as lacking (`mailbox-mcp/render.py`). The three could
+  disagree. The UI's table sent the trash with `folders` and the keyword
+  form with `flags`, which Gmail announced and refused.
 - **Templates read capabilities themselves**, beside the table:
   `"flags" in account.capabilities` in `pages/message.html`.
-- **Mark names are spelled in the UI.** `"$answered"` in
+- **Mark names were spelled in the UI.** `"$answered"` in
   `partials/message_list.html`, the words for the marks in
-  `web/pages/templates.py`. The MCP server shows them raw.
-- **Tool descriptions of the MCP server speak per provider**: "on IMAP
+  `web/pages/templates.py`. The MCP server showed them raw.
+- **Tool descriptions of the MCP server spoke per provider**: "on IMAP
   it follows the name", Gmail's way to archive, "such as a POP3
   mailbox".
-- **Setting up an account** knows each kind: the connection fields of
+- **Setting up an account** knew each kind: the connection fields of
   IMAP, POP3 and JMAP, ports, the OAuth sign-ins
   (`components/connection.html`, `routes/accounts.py`). That lies in
   its nature, since a connection is what differs.
+
+Steps 8 and 9 of section 5 put the rules of 8.2 in their place. The
+message page now asks
+`can.shows_flags`, the tool descriptions name no provider, and rule U2
+stands in `test_code_rules.py`.
 
 The UI's comments on ids (a draft's new id, an IMAP folder's id after a
 rename) are harmless: the code already takes the id the answer brings.

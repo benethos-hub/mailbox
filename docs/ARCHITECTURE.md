@@ -404,8 +404,15 @@ packages/mailbox-service/
       backup.py         # encrypted backups of the database, restore
       files.py          # files for the owner alone (0600): database, backup, key
       logbook.py        # the newest log lines in memory, for the log page
-      discovery/        # autodiscovery sources and their helpers,
-                        #   sources.py puts them in order
+      discovery/        # autodiscovery sources and their helpers:
+                        #   base.py the protocol of a source, the
+                        #   sources presets.py (with presets.json),
+                        #   isp.py (ISP autoconfig), jmap.py (JMAP
+                        #   well-known), ispdb.py and mx.py, their
+                        #   helpers autoconfig.py (the file format),
+                        #   placeholders.py, dns.py and suffix.py
+                        #   (where a domain ends). sources.py puts
+                        #   them in order
 ```
 
 The Python client of the REST API is a package of its own. It cannot
@@ -437,8 +444,8 @@ packages/mailbox-client/
       messages.py       # lists and search in one account or across,
                         #   changes, a message and its source, an
                         #   attachment and a link to it, flags, keywords
-                        #   and moves for one or many, deleting; the
-                        #   page the drafts read too
+                        #   and moves for one or many, deleting, and
+                        #   the page the drafts read too
       threads.py        # the threads of a folder, one thread
       drafts.py         # list, write, replace, delete drafts
       sending.py        # send a message, send a draft
@@ -462,7 +469,7 @@ packages/mailbox-client/
                         #   environment (from_environment) or given,
                         #   checked before a client is made
     calls.py            # Call: the request an endpoint describes,
-                        #   its path below /v1, the timeouts; awaiting
+                        #   its path below /v1, the timeouts. Awaiting
                         #   and blocking make a client's method of it
     models/             # the records the clients answer with, one
                         #   module per resource as in endpoints/, every
@@ -768,7 +775,7 @@ noticing. Every change is measured against that.
 
 | Seam | Defined in | Implementations | Exchangeable for |
 |---|---|---|---|
-| Mail provider | `data/providers/base.py` (`Reads`, which every adapter implements, and `Writes`, `Deletes`, `Drafts`, `Sends`, `Watches`, `Deltas`, `FlagChanges` for what it may do beyond, `PROTOCOLS` for the protocol behind each capability; `Capability` and `Abilities` of `data/models/accounts.py`, answered by each adapter's `abilities()` from its server), registry in `data/providers/registry.py`. The domain checks what each operation needs and answers 501 for a lack (`domain/accounts/abilities.py`, `NEEDS`) | memory, imap, microsoft, pop3, jmap, gmail | another protocol or library, e.g. `aioimaplib` for IMAPClient |
+| Mail provider | `data/providers/base.py` (`Reads`, which every adapter implements, and `Writes`, `Deletes`, `Drafts`, `Sends`, `Watches`, `Deltas`, `FlagChanges` for what it may do beyond, `PROTOCOLS` for the protocol behind each capability. `Capability` and `Abilities` of `data/models/accounts.py`, answered by each adapter's `abilities()` from its server), registry in `data/providers/registry.py`. The domain checks what each operation needs and answers 501 for a lack (`domain/accounts/abilities.py`, `NEEDS`) | memory, imap, microsoft, pop3, jmap, gmail | another protocol or library, e.g. `aioimaplib` for IMAPClient |
 | Sending | `data/protocols/smtp.py` (`SmtpSession`), and `data/providers/sender.py` (`SmtpSender`), which adapters without sending of their own (IMAP, POP3) hold | stdlib smtplib | e.g. aiosmtplib |
 | Web layer | `web/` | FastAPI, Jinja2 for the UI | another framework, as long as the OpenAPI document stays the same |
 | Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `PasswordRepository`, `KeyRepository`, `CredentialRepository`, `MessageIndexRepository`, `IdempotencyRepository`, `SendLogRepository`, `ChangeLogRepository`, `WebhookRepository`, `AuditRepository`, `LinkRepository`) | in-memory, SQLite | another database |

@@ -23,8 +23,9 @@ and extras may change between versions without notice. It carries the
 version of the other packages, and the service and the MCP server pin
 it to their own.
 
-Its modules are in five groups, one per concern: `mail` (addresses
-and the plain text of an HTML body), `log` (the log line and the
+Its modules are in five groups, one per concern: `mail` (addresses,
+the plain text of an HTML body and the marks a person sees on a
+message), `log` (the log line and the
 masking of secrets), `paths` (the folders of the operating system),
 `settings` (a program's settings from the environment and a file)
 and `values` (secrets, sizes, text and canonical JSON).

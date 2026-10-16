@@ -9,9 +9,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 
 - The MCP server asks what its token may do every
-  `MAILBOX_MCP_RIGHTS_SECONDS`, 60 by default, and `0` only at start,
-  and at once when a tool is refused with `403 forbidden`, a right
-  missing.
+  `MAILBOX_MCP_RIGHTS_SECONDS`, 60 by default, and at once when a tool
+  is refused with `403 forbidden`, a right missing. With `0` it asks
+  only at start.
   When its tools change it tells its clients with
   `notifications/tools/list_changed` and announces `tools.listChanged`,
   so a right granted or taken away shows without a restart. When the
@@ -37,7 +37,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   until the link is used or ends. The Python client has
   `share_attachment`, the MCP server a tool of the same name. The tool
   is not marked read-only, and `list_accounts` names `share` as a kind
-  of its own.
+  of its own. The database moves to schema 22.
 - An account answers `operations`, in `GET /v1/accounts/{id}`, the list
   and `GET /v1/me`: the operations the caller can run there, its rights
   and what the account can do together, by their names in the catalogue
@@ -112,7 +112,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- A provider that refuses a request with `403` answers
+- **Breaking:** a provider that refuses a request with `403` answers
   `provider_error` on every kind of account: the server took the
   credential and refused the request. A JMAP server's `403` answered
   `provider_auth_failed` and marked the account as needing a new

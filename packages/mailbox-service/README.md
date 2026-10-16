@@ -57,8 +57,8 @@ The container image is `ghcr.io/benethos-hub/benethos-mailbox-service`. See
 ## First start
 
 ```sh
-benethos-mailbox-service keys init              # once: the keys; prints the recovery key
-benethos-mailbox-service users create-admin     # once: a user with every right; prints a one-time password
+benethos-mailbox-service keys init              # once: the keys, prints the recovery key
+benethos-mailbox-service users create-admin     # once: a user with every right, prints a one-time password
 benethos-mailbox-service serve
 ```
 
