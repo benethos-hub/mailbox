@@ -10,14 +10,14 @@ from .base import Tool, client
 
 # What list_accounts reports a caller may do, in this order: what the
 # tools of that kind need.
-CAPABILITIES = ("read", "write", "drafts", "send")
+CAPABILITIES = ("read", "write", "drafts", "send", "share")
 # The tools of every kind, whose needs name the kinds.
 _KINDS = (*reading.TOOLS, *writing.TOOLS, *drafts.TOOLS, *sending.TOOLS)
 
 
 async def list_accounts() -> list[dict[str, Any]]:
     """The mail accounts you may use: id, address and what you may do there
-    (read, write, drafts, send). Other tools take the account id. Where you
+    (read, write, drafts, send, share). Other tools take the account id. Where you
     may send, `sending` names the limits, one entry per grant: to whom, how
     many a day and how many are left. A send passes when one of them
     allows it. `warning` marks an account where you may read mail and send

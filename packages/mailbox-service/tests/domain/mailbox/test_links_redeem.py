@@ -13,7 +13,7 @@ import pytest
 from benethos_mailbox_service.data.models import Grant
 from benethos_mailbox_service.data.storage import InMemoryLinkRepository, StoredLink
 from benethos_mailbox_service.domain.mailbox import AttachmentLinks
-from benethos_mailbox_service.errors import NotFoundError
+from benethos_mailbox_service.errors import NotFoundError, ProviderUnavailableError
 
 from ...conftest import ADMIN
 from .links_helpers import PDF, Linked, linked
@@ -217,3 +217,27 @@ def test_the_purge_takes_the_links_used_and_ended(
         link.services.links.purge()
     assert "purged 2 links to attachments" in caplog.text
     assert kept and store.purge(link.clock.now) == 0
+
+
+def test_a_mail_server_that_fails_hands_the_link_back(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Nothing was fetched: the link holds again, the audit says so, and
+    the address that asked counts no failure."""
+    link = linked(sign_in_failures=1)
+    plain = link.secret()
+    adapter = link.services.adapters.get(link.account_id)
+    real = adapter.get_attachment
+
+    async def down(*args: object, **kwargs: object) -> object:
+        raise ProviderUnavailableError("the mail server does not answer")
+
+    monkeypatch.setattr(adapter, "get_attachment", down)
+    assert link.fetch(plain).json() == GONE
+    assert "mailbox.link_used" in kinds(link)
+    assert "mailbox.link_returned" in kinds(link)
+    monkeypatch.setattr(adapter, "get_attachment", real)
+    answer = link.fetch(plain)
+    assert answer.status_code == 200
+    assert answer.content == PDF
+    assert link.fetch(plain).json() == GONE

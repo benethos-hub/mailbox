@@ -69,9 +69,13 @@ async def test_the_tool_needs_share_attachment() -> None:
     assert "share_attachment" in shares
 
 
-async def test_the_tool_changes_nothing_in_the_mailbox() -> None:
+async def test_the_tool_is_marked_as_one_that_changes_things() -> None:
+    """It makes a link that hands mail out, so a client may ask the
+    person first. It removes and overwrites nothing."""
     tools = await server.build_server(["share_attachment"]).list_tools()
     [tool] = [t for t in tools if t.name == "share_attachment"]
     assert tool.annotations is not None
-    assert tool.annotations.read_only_hint is True
+    assert tool.annotations.read_only_hint is False
+    assert tool.annotations.destructive_hint is False
+    assert tool.annotations.idempotent_hint is False
     assert tool.title == "Share an attachment"

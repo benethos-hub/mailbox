@@ -44,6 +44,10 @@ class LinkRepository(Protocol):
         wins."""
         ...
 
+    def release(self, link_id: str) -> None:
+        """Mark the link not used again."""
+        ...
+
     def purge(self, now: datetime) -> int:
         """Remove every link used or ended by ``now``: how many."""
         ...
@@ -68,6 +72,11 @@ class InMemoryLinkRepository:
             return False
         self._links[link_id] = replace(link, redeemed_at=at, redeemed_by=by)
         return True
+
+    def release(self, link_id: str) -> None:
+        link = self._links.get(link_id)
+        if link is not None:
+            self._links[link_id] = replace(link, redeemed_at=None, redeemed_by=None)
 
     def purge(self, now: datetime) -> int:
         return drop_where(

@@ -339,7 +339,9 @@ missing right, and tells its client when the tools change
 in the service shows without a restart. Claude Desktop lists the tools
 anew when told. When the service refuses the token, every tool goes away
 and the server asks no more, since each refusal counts against the
-address like a wrong token. A new token then needs a restart. The tools:
+address like a wrong token. A new token then needs a restart. A user
+that may do nothing keeps `list_accounts` alone, which lists no
+account. The tools:
 
 | Tool | Needs | What it does |
 |---|---|---|
@@ -364,7 +366,8 @@ address like a wrong token. A new token then needs a restart. The tools:
 Each tool has a title for display and the standard MCP hints. Clients
 can use them to decide when to ask the person before a call.
 
-- **Read-only:** the tools that only read.
+- **Read-only:** the tools that only read. `share_attachment` is not
+  among them: it makes a link that hands mail out.
 - **Destructive:** `update_messages`, `update_folder`, `update_draft`,
   `delete_draft` and both send tools. They can move mail to the trash,
   rename a folder, overwrite or delete a draft, or send mail.

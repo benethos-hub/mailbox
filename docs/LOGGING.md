@@ -568,6 +568,7 @@ and that each is listed here.
 | `mailbox.result_not_kept` | a result not kept for its Idempotency-Key |
 | `mailbox.link_shared` | a link to an attachment made |
 | `mailbox.link_used` | a link to an attachment used |
+| `mailbox.link_returned` | a link to an attachment used, but the mail server failed: it holds again |
 | `mailbox.link_refused` | a link to an attachment refused |
 | `mailbox.links_purged` | links to attachments used or ended, purged |
 | `sync.worker_started` | the worker started |

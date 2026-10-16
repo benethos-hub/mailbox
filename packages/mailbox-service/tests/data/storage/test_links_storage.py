@@ -68,6 +68,15 @@ def test_a_link_is_used_once(links: LinkRepository) -> None:
     assert found.redeemed_at == NOW and found.redeemed_by == "203.0.113.1"
 
 
+def test_a_link_released_holds_again(links: LinkRepository) -> None:
+    links.add(link("a"))
+    links.redeem("lnk_a", NOW, "203.0.113.1")
+    links.release("lnk_a")
+    assert links.find("hash-a") == link("a")
+    assert links.redeem("lnk_a", NOW, "203.0.113.2") is True
+    links.release("lnk_unknown")
+
+
 def test_a_link_cannot_be_used_once_it_ended(links: LinkRepository) -> None:
     links.add(link("a", seconds=60))
     assert links.redeem("lnk_a", NOW + timedelta(seconds=60), "x") is False

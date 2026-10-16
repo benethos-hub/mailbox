@@ -121,7 +121,8 @@ class _Rights:
     right. A refusal of the token counts against this address like a
     wrong token, and ten lock it, the UI's sign-in included. So a refused
     token takes every tool away and is asked for no more: a new one needs
-    a restart. A user that may do nothing gets no tools. A service that
+    a restart. A user that may do nothing keeps the tools that need no
+    right, ``list_accounts``. A service that
     does not answer leaves the tools as they are. Each trouble is logged
     once."""
 
