@@ -195,9 +195,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   at most. A client that asked again and again made a round trip to
   the mail server each time.
 - `GET /v1/changes` with `since` answers for a grant that names
-  folders also while one of its accounts does not answer. That account
-  gives only its changes that are not about a message, as webhooks
-  already did. One account down failed the whole request.
+  folders also while one of its accounts does not answer. One account
+  down failed the whole request. The page ends before that account's
+  first change of a message, with `state` before it, and that change
+  comes once the account answers again. A webhook of such a grant
+  waits there too. Webhooks left those changes out for good.
 - A reply joins the thread of the mail it answers also where its
   `In-Reply-To` holds a comment beside the id, or its `References`
   are folded inside an id. The ids are read between their angle

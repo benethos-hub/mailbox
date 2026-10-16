@@ -417,3 +417,54 @@ async def test_a_creator_narrowed_to_folders_hears_of_them_alone(
     # Nothing to hear of: no post, and the cursor moves past it.
     assert len(receiver.posts) == 1
     assert stored(services, created["id"]).delivery.cursor == services.changes.last()
+
+
+async def test_an_account_whose_folders_fail_holds_the_post_until_back(
+    client: TestClient,
+    services: Services,
+    account_id: str,
+    receiver: Receiver,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The post ends before the first change of a message of an account
+    whose folders cannot be read now, and that change comes once they can."""
+    other = (
+        await services.accounts.create(ADMIN, ProviderType.MEMORY, "b@example.com")
+    ).id
+    limited = TestClient(
+        client.app,
+        headers=bearer_for(
+            services,
+            Grant(accounts=[account_id, other], allow=["mail.read"], folders=["inbox"]),
+            service=["webhooks.manage"],
+        ),
+    )
+    created = hook(limited)
+    memory = memory_of(services, other)
+    real = memory.list_folders
+
+    async def down() -> list[Folder]:
+        raise ProviderUnavailableError("the server does not answer")
+
+    monkeypatch.setattr(memory, "list_folders", down)
+    mark_read(client, account_id, "m0")
+    mark_read(client, other, "m0")
+    mark_read(client, account_id, "m1")
+    await services.deliveries.deliver_due()
+    [(_, body, _)] = receiver.posts
+    posted = json.loads(body)
+    assert [(e["account_id"], e["id"]) for e in posted["events"]] == [
+        (account_id, "m0")
+    ]
+    assert posted["more"] is True
+    # Still down: no post, and the cursor waits before the change.
+    cursor = stored(services, created["id"]).delivery.cursor
+    await services.deliveries.deliver_due()
+    assert len(receiver.posts) == 1
+    assert stored(services, created["id"]).delivery.cursor == cursor
+    monkeypatch.setattr(memory, "list_folders", real)
+    await services.deliveries.deliver_due()
+    assert [(e["account_id"], e["id"]) for e in receiver.events()] == [
+        (other, "m0"),
+        (account_id, "m1"),
+    ]

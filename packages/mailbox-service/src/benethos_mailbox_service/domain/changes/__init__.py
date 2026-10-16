@@ -16,7 +16,7 @@ from .catalogue import (
     MessageSent,
     MessagesUpdated,
 )
-from .feed import ChangeFeed
+from .feed import ChangeFeed, decided
 
 __all__ = [
     "AccountNeedsSignIn",
@@ -27,4 +27,5 @@ __all__ = [
     "MessagesCreated",
     "MessagesDeleted",
     "MessagesUpdated",
+    "decided",
 ]

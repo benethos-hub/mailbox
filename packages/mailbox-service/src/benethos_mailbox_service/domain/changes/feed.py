@@ -13,6 +13,7 @@ feed across accounts mean the same point.
 from __future__ import annotations
 
 from collections.abc import Callable, Collection, Iterable
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
@@ -69,12 +70,14 @@ class ChangeFeed:
         since: str | None,
         *,
         limit: int,
-        keep: Callable[[ChangeRecord], bool] | None = None,
+        keep: Callable[[ChangeRecord], bool | None] | None = None,
     ) -> ChangePage:
         """The changes of these accounts after the point ``since``, at most
         ``limit``. Without ``since`` only the current point. ``keep``
         leaves out what the caller may not hear of: a page may then hold
-        fewer, and the state still moves past them."""
+        fewer, and the state still moves past them. Where ``keep`` does
+        not know yet, None, the page ends before that change and its
+        state stays before it, to be asked again later."""
         # Read first: a change recorded meanwhile is in the answer or after
         # the state it hands out, never skipped.
         last = self._log.last()
@@ -91,6 +94,11 @@ class ChangeFeed:
         )
         end = found[-1].seq if more else max([last, *(e.seq for e in found)])
         if keep is not None:
+            known = decided(found, keep)
+            found = known.changes
+            if known.held:
+                end = found[-1].seq if found else seq
+                more = bool(found)
             found = [e for e in found if keep(e.record)]
         return ChangePage(
             changes=[Change.model_validate(e.record.model_dump()) for e in found],
@@ -130,6 +138,25 @@ class ChangeFeed:
 
     def forget_account(self, account_id: str) -> None:
         self._log.forget_account(account_id)
+
+
+@dataclass(frozen=True, slots=True)
+class Decided:
+    """The changes up to the first one not known yet, and whether there
+    was one."""
+
+    changes: list[LoggedChange]
+    held: bool
+
+
+def decided(
+    found: list[LoggedChange], keep: Callable[[ChangeRecord], bool | None]
+) -> Decided:
+    """The changes up to the first one ``keep`` does not know of yet."""
+    for at, logged in enumerate(found):
+        if keep(logged.record) is None:
+            return Decided(found[:at], held=True)
+    return Decided(found, held=False)
 
 
 def _state(seq: int) -> str:
