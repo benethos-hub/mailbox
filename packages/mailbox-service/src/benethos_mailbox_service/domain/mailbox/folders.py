@@ -9,6 +9,7 @@ too.
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable
+from contextlib import suppress
 
 from ...data.models import (
     Folder,
@@ -41,7 +42,7 @@ class Folders:
         folders."""
         access.require("list_folders", account_id)
         folders = await self.all(account_id)
-        reach = await self._reach(access, "list_folders", account_id, folders)
+        reach = await reach_of(self._calls, access, "list_folders", account_id, folders)
         return folders if reach is None else [f for f in folders if f.id in reach.ids]
 
     async def create_folder(
@@ -51,7 +52,7 @@ class Folders:
         access.require("create_folder", account_id)
         await self._calls.require(account_id, NEEDS["create_folder"])
         parent = await self.by_role(account_id, new.parent_id)
-        reach = await self._reach(access, "create_folder", account_id)
+        reach = await reach_of(self._calls, access, "create_folder", account_id)
         if reach is not None:
             if parent is None:
                 raise outside("create_folder", "at the top")
@@ -86,10 +87,9 @@ class Folders:
             account_id, lambda p: writes(p).update_folder(folder_id, name, parent)
         )
         if updated.id != folder_id:
-            try:
+            # Where it fails, the next sync, or the next lookup, follows them.
+            with suppress(MailboxServiceError):
                 await self._calls.resync(account_id)
-            except MailboxServiceError:
-                pass  # the next sync, or the next lookup, follows them
         return updated
 
     async def delete_folder(
@@ -122,17 +122,30 @@ class Folders:
         """A folder id, or the id of the folder with that role."""
         return None if folder is None else await self.resolved(account_id, folder)
 
-    async def is_all(self, account_id: str, folder_id: str) -> bool:
-        """Whether the folder is the one with the role ``all``."""
-        found = find_folder(await self.all(account_id), folder_id)
-        return found is not None and found.role is FolderRole.ALL
-
     async def resolved(self, account_id: str, folder: str) -> str:
         """A folder id, or the id of the folder with that role: ``501``
         where the account has none."""
         if not is_role(folder):
             return folder
         return _resolved(await self.all(account_id), folder)
+
+    async def listed(
+        self, access: Access, account_id: str, folder: str
+    ) -> tuple[str, Reach | None]:
+        """The folder whose messages are listed, a role resolved, and what
+        the grants reach. One out of reach is missing, but the folder
+        ``all``, which lists what they reach of every folder. The account's
+        folders are asked for once, and only where a role or the grants
+        need them."""
+        narrowed = access.folder_scopes("list_messages", account_id) is not None
+        folders = await self.all(account_id) if narrowed or is_role(folder) else []
+        folder = _resolved(folders, folder)
+        reach = await reach_of(
+            self._calls, access, "list_messages", account_id, folders
+        )
+        if reach is not None and not _is_all(folders, folder):
+            require_folder(reach, folder)
+        return folder, reach
 
     async def with_roles_resolved(
         self, account_id: str, changes: MessageUpdate
@@ -151,15 +164,6 @@ class Folders:
             }
         )
 
-    async def _reach(
-        self,
-        access: Access,
-        operation: str,
-        account_id: str,
-        folders: list[Folder] | None = None,
-    ) -> Reach | None:
-        return await reach_of(self._calls, access, operation, account_id, folders)
-
     async def _own_folder(
         self, access: Access, operation: str, account_id: str, folder_id: str
     ) -> tuple[Folder, list[Folder], Reach | None]:
@@ -171,7 +175,7 @@ class Folders:
         folder = next((f for f in folders if f.id == folder_id), None)
         if folder is None:
             raise missing("folder", folder_id)
-        reach = await self._reach(access, operation, account_id, folders)
+        reach = await reach_of(self._calls, access, operation, account_id, folders)
         if reach is not None:
             require_folder(reach, folder_id)
         if folder.role is not None:
@@ -203,6 +207,12 @@ def find_folder(folders: list[Folder], wanted: str) -> Folder | None:
         (f for f in folders if f.id == wanted or (f.role and f.role.value == wanted)),
         None,
     )
+
+
+def _is_all(folders: list[Folder], folder_id: str) -> bool:
+    """Whether the folder is the one with the role ``all``."""
+    found = find_folder(folders, folder_id)
+    return found is not None and found.role is FolderRole.ALL
 
 
 def _resolved(folders: list[Folder], folder: str) -> str:

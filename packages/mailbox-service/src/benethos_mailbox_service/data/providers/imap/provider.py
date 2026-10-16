@@ -20,7 +20,7 @@ from typing import Protocol, TypeVar
 import anyio
 
 from ....common.chunks import batched
-from ....errors import BadRequestError, MailboxServiceError, NotSupportedError
+from ....errors import MailboxServiceError
 from ...mail import ThreadHeaders
 from ...models import (
     Abilities,
@@ -61,6 +61,13 @@ class ImapProvider(MailServerAdapter):
     account = "an IMAP account"
     ports = IMAP_PORTS
     stable_ids = False
+    # Nothing renews the access token yet (CONCEPT 5.1): the login would be
+    # rejected within the hour.
+    not_yet = {
+        "xoauth2": "IMAP with OAuth (settings.auth 'xoauth2') is not supported "
+        "yet: the service cannot renew the token. Use a password or an app "
+        "password."
+    }
 
     def __init__(
         self,
@@ -92,18 +99,6 @@ class ImapProvider(MailServerAdapter):
             session_factory(self._server), self._guard, self._login, watchers
         )
         self._changes = ImapChanges(self._run, self._idle)
-
-    def _check_auth(self, auth: str) -> None:
-        if auth == "xoauth2":
-            # Nothing renews the access token yet (CONCEPT 5.1): the login
-            # would be rejected within the hour.
-            raise NotSupportedError(
-                "IMAP with OAuth (settings.auth 'xoauth2') is not supported yet: "
-                "the service cannot renew the token. Use a password or an app "
-                "password."
-            )
-        if auth != "password":
-            raise BadRequestError("settings.auth must be 'password'")
 
     # --- Reads ------------------------------------------------------------------------
 
@@ -192,7 +187,8 @@ class ImapProvider(MailServerAdapter):
 
     async def close(self) -> None:
         self._idle.closing()
-        await self._in_thread(self._close)
+        await self._in_thread(lambda: self._closed(self._session))
+        await self._in_thread(self._idle.close)
 
     # --- Sends ------------------------------------------------------------------------
 
@@ -294,10 +290,6 @@ class ImapProvider(MailServerAdapter):
                 self._session, partial(_step, self._box, self._login, operation)
             )
         )
-
-    def _close(self) -> None:
-        self._closed(self._session)
-        self._idle.close()
 
 
 def _step(

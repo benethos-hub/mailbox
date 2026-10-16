@@ -4,6 +4,7 @@ took it. Without a sent folder no copy is kept."""
 
 from __future__ import annotations
 
+from contextlib import suppress
 from typing import Any
 
 from ....errors import (
@@ -150,10 +151,9 @@ async def _identity(account: JmapAccount, sender: str) -> str:
 
 async def _forget(account: JmapAccount, email_id: str) -> None:
     """Remove a message that was stored to be sent and was not."""
-    try:
+    # A stray draft is better than hiding why the send failed.
+    with suppress(MailboxServiceError):
         await account.one("Email/set", {"destroy": [email_id]}, jmap.Anything)
-    except MailboxServiceError:
-        pass  # a stray draft is better than hiding why the send failed
 
 
 def _submission_failure(answers: list[jmap.Invocation]) -> MailboxServiceError | None:

@@ -6,7 +6,7 @@ from __future__ import annotations
 import imaplib
 import re
 from collections.abc import Callable
-from contextlib import AbstractContextManager
+from contextlib import AbstractContextManager, suppress
 from datetime import datetime
 from email.parser import BytesHeaderParser
 from typing import Any
@@ -154,17 +154,13 @@ def thread_headers(header_block: bytes) -> fields.ThreadHeaders:
 def quietly(command: Callable[[], Any]) -> None:
     """A command whose failure changes nothing, e.g. dropping a subscription
     that does not exist."""
-    try:
+    with suppress(imaplib.IMAP4.error):
         command()
-    except imaplib.IMAP4.error:
-        pass
 
 
 def quietly_logout(client: Any) -> None:
-    try:
+    with suppress(imaplib.IMAP4.error, OSError):
         client.logout()
-    except (imaplib.IMAP4.error, OSError):
-        pass
 
 
 def uidvalidity(answer: Any) -> int:

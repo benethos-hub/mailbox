@@ -44,11 +44,6 @@ from ...oauth_fake import Tokens
 NOW = datetime(2026, 10, 9, 12, 0, tzinfo=UTC)
 
 
-@pytest.fixture
-def gmail() -> FakeGmail:
-    return FakeGmail()
-
-
 def adapter(
     gmail: FakeGmail, tokens: Tokens | None = None, clock: list[float] | None = None
 ) -> GmailProvider:

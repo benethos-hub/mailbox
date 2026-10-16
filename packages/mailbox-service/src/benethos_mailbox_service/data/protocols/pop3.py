@@ -15,7 +15,7 @@ from __future__ import annotations
 import poplib
 import re
 from collections.abc import Callable
-from contextlib import AbstractContextManager
+from contextlib import AbstractContextManager, suppress
 from typing import Any
 
 from benethos_mailbox_common.values import sizes
@@ -173,10 +173,8 @@ class Pop3Session:
         connection, self._connection = self._connection, None
         if connection is None:
             return
-        try:
+        with suppress(poplib.error_proto, OSError):
             connection.rset()
-        except (poplib.error_proto, OSError):
-            pass
         _quietly_quit(connection)
 
     def _require(self) -> Any:
@@ -236,10 +234,8 @@ def _quietly_quit(connection: Any) -> None:
 
 
 def _quietly_close(connection: Any) -> None:
-    try:
+    with suppress(OSError):
         connection.close()
-    except OSError:
-        pass
 
 
 def translated() -> AbstractContextManager[None]:

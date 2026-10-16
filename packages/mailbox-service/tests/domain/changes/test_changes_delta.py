@@ -4,7 +4,7 @@ the real adapter against a fake Graph."""
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import Any, TypeVar
 
 import httpx
@@ -22,6 +22,7 @@ from benethos_mailbox_service.domain.changes import ChangeFeed
 from benethos_mailbox_service.domain.sync.service import SyncService
 from benethos_mailbox_service.errors import ChangesExpiredError
 
+from ...clocks import Clock
 from ...graph_fake import TOKEN, FakeGraph
 from ...oauth_fake import Tokens
 
@@ -54,16 +55,10 @@ class OneAdapter:
         return Account(id=account_id, provider=ProviderType.MICROSOFT, email="me@x.org")
 
 
-class Clock:
-    def __init__(self) -> None:
-        self.now = datetime(2026, 9, 26, 10, 0, tzinfo=UTC)
-
-    def __call__(self) -> datetime:
-        return self.now
-
-    def later(self, graph: FakeGraph, minutes: int = 5) -> None:
-        self.now += timedelta(minutes=minutes)
-        graph.clock = self.now.strftime("%Y-%m-%dT%H:%M:%SZ")  # type: ignore[attr-defined]
+def move_on(clock: Clock, graph: FakeGraph, minutes: int = 5) -> None:
+    """The service's clock and Graph's on by ``minutes``."""
+    clock.tick(minutes=minutes)
+    graph.clock = clock.now.strftime("%Y-%m-%dT%H:%M:%SZ")  # type: ignore[attr-defined]
 
 
 @pytest.fixture
@@ -77,7 +72,7 @@ def graph() -> FakeGraph:
 
 @pytest.fixture
 def clock() -> Clock:
-    return Clock()
+    return Clock(datetime(2026, 9, 26, 10, 0, tzinfo=UTC))
 
 
 @pytest.fixture
@@ -110,7 +105,7 @@ async def test_the_first_pass_records_nothing(sync: SyncService) -> None:
 
 async def test_a_new_mail(sync: SyncService, graph: FakeGraph, clock: Clock) -> None:
     await sync.sync_account(ACC)
-    clock.later(graph)
+    move_on(clock, graph)
     new = graph.add_message(subject="New")
     await sync.sync_account(ACC)
     assert recorded(sync) == [("message.created", new)]
@@ -121,7 +116,7 @@ async def test_a_flag_set_by_another_client(
 ) -> None:
     [old, _] = graph.messages
     await sync.sync_account(ACC)
-    clock.later(graph)
+    move_on(clock, graph)
     graph.other_client_changes(old, isRead=True)
     await sync.sync_account(ACC)
     assert recorded(sync) == [("message.updated", old)]
@@ -132,7 +127,7 @@ async def test_a_move_is_an_update_not_a_deletion(
 ) -> None:
     [old, _] = graph.messages
     await sync.sync_account(ACC)
-    clock.later(graph)
+    move_on(clock, graph)
     graph.other_client_changes(old, parentFolderId=graph.well_known["junkemail"])
     await sync.sync_account(ACC)
     assert recorded(sync) == [("message.updated", old)]
@@ -143,7 +138,7 @@ async def test_a_move_into_a_new_folder_is_an_update(
 ) -> None:
     [old, _] = graph.messages
     await sync.sync_account(ACC)
-    clock.later(graph)
+    move_on(clock, graph)
     folder = graph.new_folder("Projects", graph.root)
     graph.other_client_changes(old, parentFolderId=folder)
     await sync.sync_account(ACC)
@@ -153,7 +148,7 @@ async def test_a_move_into_a_new_folder_is_an_update(
 async def test_a_deletion(sync: SyncService, graph: FakeGraph, clock: Clock) -> None:
     [old, _] = graph.messages
     await sync.sync_account(ACC)
-    clock.later(graph)
+    move_on(clock, graph)
     del graph.messages[old]
     await sync.sync_account(ACC)
     assert recorded(sync) == [("message.deleted", old)]
@@ -163,7 +158,7 @@ async def test_nothing_changed(
     sync: SyncService, graph: FakeGraph, clock: Clock
 ) -> None:
     await sync.sync_account(ACC)
-    clock.later(graph)
+    move_on(clock, graph)
     await sync.sync_account(ACC)
     assert recorded(sync) == []
 
@@ -174,12 +169,12 @@ async def test_a_token_graph_no_longer_keeps_starts_the_folder_again(
     [old, _] = graph.messages
     await sync.sync_account(ACC)
     graph.delta_links.clear()
-    clock.later(graph)
+    move_on(clock, graph)
     graph.other_client_changes(old, isRead=True)
     await sync.sync_account(ACC)
     # Nothing to tell for that pass, and the next one works again.
     assert recorded(sync) == []
-    clock.later(graph)
+    move_on(clock, graph)
     graph.other_client_changes(old, isRead=False)
     await sync.sync_account(ACC)
     assert recorded(sync) == [("message.updated", old)]
@@ -229,7 +224,7 @@ async def test_a_change_names_its_folder(
     sync: SyncService, graph: FakeGraph, clock: Clock
 ) -> None:
     await sync.sync_account(ACC)
-    clock.later(graph)
+    move_on(clock, graph)
     graph.add_message(subject="New")
     await sync.sync_account(ACC)
     [logged] = sync.feed.after([ACC], 0, limit=100)

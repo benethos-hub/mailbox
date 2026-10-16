@@ -4,7 +4,7 @@ The database, a backup and a key file each hold secrets or their hashes.
 They are created readable by their owner only (0600), never over an
 existing file. Windows has no such modes, but there the exclusive
 create still holds. A lock file tells a running service from a stopped
-one.
+one. A copy of the database goes with the journal SQLite left beside it.
 """
 
 from __future__ import annotations
@@ -23,6 +23,12 @@ def create_private(path: Path, data: bytes = b"") -> None:
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     with os.fdopen(fd, "wb") as file:
         file.write(data)
+
+
+def remove_with_journal(path: Path) -> None:
+    """Remove a database file and its ``-journal``, where they exist."""
+    for leftover in (path, path.with_name(path.name + "-journal")):
+        leftover.unlink(missing_ok=True)
 
 
 class LockedError(Exception):

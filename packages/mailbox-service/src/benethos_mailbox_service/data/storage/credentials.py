@@ -39,7 +39,7 @@ class CredentialRepository(Protocol):
 
     def list_for_account(self, account_id: str) -> list[EncryptedCredential]: ...
 
-    def delete_for_account(self, account_id: str) -> None: ...
+    def forget_account(self, account_id: str) -> None: ...
 
 
 class InMemoryKeyRepository:
@@ -67,5 +67,5 @@ class InMemoryCredentialRepository:
     def list_for_account(self, account_id: str) -> list[EncryptedCredential]:
         return [c for (a, _), c in sorted(self._items.items()) if a == account_id]
 
-    def delete_for_account(self, account_id: str) -> None:
+    def forget_account(self, account_id: str) -> None:
         drop_where(self._items, lambda key, _: key[0] == account_id)

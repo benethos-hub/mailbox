@@ -28,7 +28,12 @@ from typing import BinaryIO
 from benethos_mailbox_common.values import sizes
 
 from ..common.clock import iso, utc_now
-from .files import LockedError, create_private, exclusive_lock
+from .files import (
+    LockedError,
+    create_private,
+    exclusive_lock,
+    remove_with_journal,
+)
 from .secrets import cipher
 from .storage import SCHEMA_VERSION, Store, inspect_file, migrate_file, service_lock
 
@@ -147,10 +152,10 @@ def restore_backup(source: Path, master_key: bytes, target: Path) -> Manifest:
     staged = target.with_name(target.name + ".restoring")
     try:
         with exclusive_lock(service_lock(target)):
-            _remove(staged)  # from a restore that crashed
+            remove_with_journal(staged)  # from a restore that crashed
             manifest = read_backup(source, master_key, staged)
             if manifest.schema_version > SCHEMA_VERSION:
-                _remove(staged)
+                remove_with_journal(staged)
                 raise BackupError(
                     f"the backup has schema {manifest.schema_version}, this "
                     f"version supports up to {SCHEMA_VERSION}: update the "
@@ -266,7 +271,7 @@ def _replace(target: Path, staged: Path) -> None:
     try:
         migrate_file(staged)
     except BaseException:
-        _remove(staged)
+        remove_with_journal(staged)
         raise
     if target.exists():
         stamp = utc_now().strftime("%Y%m%dT%H%M%SZ")
@@ -284,11 +289,6 @@ def _replace(target: Path, staged: Path) -> None:
             if journal.exists():
                 journal.replace(kept.with_name(kept.name + suffix))
     staged.replace(target)
-
-
-def _remove(path: Path) -> None:
-    for leftover in (path, path.with_name(path.name + "-journal")):
-        leftover.unlink(missing_ok=True)
 
 
 def _backup_key(master_key: bytes) -> bytes:

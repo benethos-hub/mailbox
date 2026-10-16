@@ -32,12 +32,6 @@ from ...gmail_adapter import adapter
 from ...gmail_fake import TOKEN, FakeGmail
 from ...oauth_fake import Tokens
 
-
-@pytest.fixture
-def gmail() -> FakeGmail:
-    return FakeGmail()
-
-
 # --- mappers --------------------------------------------------------------------------
 
 

@@ -15,7 +15,7 @@ import stat
 import tempfile
 import threading
 from collections.abc import Callable, Iterable, Iterator
-from contextlib import ExitStack, contextmanager
+from contextlib import ExitStack, contextmanager, suppress
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -24,7 +24,12 @@ from typing import Any, TypeVar
 from ....common.chunks import batched
 from ....common.clock import iso
 from ....errors import ConflictError, StorageError, missing
-from ...files import LockedError, create_private, exclusive_lock
+from ...files import (
+    LockedError,
+    create_private,
+    exclusive_lock,
+    remove_with_journal,
+)
 from .migrations import MIGRATIONS, SCHEMA_VERSION
 
 T = TypeVar("T")
@@ -164,10 +169,8 @@ class Database:
     def _rollback(self, statement: str) -> None:
         """Undo as far as possible. A failure here would only hide the
         one being raised."""
-        try:
+        with suppress(sqlite3.Error):
             self._connection.execute(statement)
-        except sqlite3.Error:
-            pass
 
     def query(self, sql: str, params: tuple[Any, ...] = ()) -> list[sqlite3.Row]:
         with self._lock, translated():
@@ -276,7 +279,7 @@ class Database:
             path = self._path.with_name(self._path.name + ".snapshot")
         try:
             with exclusive_lock(path.with_name(path.name + ".lock")):
-                _remove_copy(path)
+                remove_with_journal(path)
                 create_private(path)
                 try:
                     with self._lock, translated():
@@ -287,7 +290,7 @@ class Database:
                             copy.close()
                     yield path
                 finally:
-                    _remove_copy(path)
+                    remove_with_journal(path)
         except LockedError:
             raise StorageError("another backup of this database is running") from None
         finally:
@@ -352,11 +355,6 @@ def _owner_only(path: Path) -> None:
         create_private(path)
     if os.name == "posix" and stat.S_IMODE(path.stat().st_mode) & 0o077:
         path.chmod(0o600)
-
-
-def _remove_copy(path: Path) -> None:
-    for leftover in (path, path.with_name(path.name + "-journal")):
-        leftover.unlink(missing_ok=True)
 
 
 def inspect_file(path: Path) -> int:

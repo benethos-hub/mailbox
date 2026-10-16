@@ -8,7 +8,7 @@ themselves are ``tokens``.
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from ...common.clock import utc_now
 from ...data.models import ApiToken, User
@@ -16,7 +16,6 @@ from ...data.storage import RoleRepository, TokenRepository, UserRepository
 from ...errors import (
     BadRequestError,
     NotFoundError,
-    RateLimitedError,
     SetupRequiredError,
     UnauthorizedError,
 )
@@ -25,17 +24,12 @@ from ..activity import auth as said
 from ..activity import users as users_said
 from ..rights import Access
 from .factors import SecondFactors, Taken
+from .lockouts import Lockouts
 from .passwords import MAX_LENGTH, Passwords
 from .signin import SignedIn, SignInState
 from .throttle import SignInThrottle
 from .tokens import ApiTokens, IssuedToken, TokenState
 
-# A user name that fails this often in the window waits this long, from
-# any address: slower guessing at one account from many addresses, and
-# never a long lockout of its owner.
-NAME_LIMIT = 10
-NAME_WINDOW = timedelta(minutes=15)
-NAME_LOCKOUT = timedelta(minutes=1)
 WRONG = "wrong user name or password"
 WRONG_CODE = "the code is not right"
 MAX_NAME = 200
@@ -64,13 +58,10 @@ class AuthService:
         self._users = users
         self._roles = roles
         self._clock = clock
-        self._throttle = throttle or SignInThrottle(clock=clock)
-        self._names = names or SignInThrottle(
-            limit=NAME_LIMIT, window=NAME_WINDOW, lockout=NAME_LOCKOUT, clock=clock
-        )
         self.passwords = passwords
         self.factors = factors
         self.activity = activity or ActivityLog(clock)
+        self.lockouts = Lockouts(self.activity, throttle, names, clock)
         self._api_tokens = ApiTokens(tokens, users, clock, self.activity)
         # The unknown rights already logged, per user and names.
         self._told_unknown: set[tuple[str, frozenset[str]]] = set()
@@ -83,20 +74,20 @@ class AuthService:
         ``sign_in_with_code`` next."""
         self._require_users()
         key = _name_key(name)
-        self._check_source(source)
-        self._names.check(key)
+        self.lockouts.check(source)
+        self.lockouts.check_name(key)
         if len(password) > MAX_LENGTH or len(name) > MAX_NAME:
             # No password is that long: not worth a hash.
-            self._failed_source(source)
-            self._failed_name(key, None, someone(source))
+            self.lockouts.failed(source)
+            self.lockouts.failed_name(key, None, someone(source))
             raise UnauthorizedError(WRONG)
         user = self.user_named(name)
         matched = await self.passwords.matches(user.id if user else None, password)
         stored = self.passwords.stored(user.id) if user is not None else None
         refused = _refused(user, matched, stored is not None)
         if user is None or stored is None or refused is not None:
-            self._failed_source(source)
-            self._failed_name(key, user, someone(source))
+            self.lockouts.failed(source)
+            self.lockouts.failed_name(key, user, someone(source))
             # The name only when it is a user's: a password typed into the
             # name field must not end up in the log.
             self.activity.record(
@@ -118,18 +109,18 @@ class AuthService:
         """The second step of a sign-in, after the password: a code of the
         user's app, or one of its recovery codes. A wrong one counts as a
         failed sign-in for the source and the name."""
-        self._check_source(source)
+        self.lockouts.check(source)
         user = self._live_user(user_id)
         key = _name_key(user.name)
-        self._names.check(key)
+        self.lockouts.check_name(key)
         taken = (
             self.factors.check(user.id, code)
             if self.factors is not None and len(code) <= MAX_CODE and user.ui_sign_in
             else None
         )
         if taken is None:
-            self._failed_source(source)
-            self._failed_name(key, user, someone(source))
+            self.lockouts.failed(source)
+            self.lockouts.failed_name(key, user, someone(source))
             self.activity.record(said.CodeFailed(by=someone(source), user=user))
             raise UnauthorizedError(WRONG_CODE)
         return self._signed_in(user, key, source, PASSWORD, taken)
@@ -147,8 +138,7 @@ class AuthService:
         stored = self.passwords.stored(user.id)
         if stored is None:
             raise UnauthorizedError(WRONG)
-        self._throttle.succeeded(source)
-        self._names.succeeded(key)
+        self.lockouts.succeeded(source, key)
         if taken is not None:
             credential = WITH_FACTOR[taken.kind]
         by = Actor.signed_in(user.name, user.id, source, credential)
@@ -178,12 +168,12 @@ class AuthService:
         client address as a failed sign-in does."""
         user = self._users.get(access.user_id)
         key = _name_key(user.name)
-        self._check_caller(access, key)
+        self.lockouts.check_caller(access, key)
         matched = len(password) <= MAX_LENGTH and await self.passwords.matches(
             user.id, password
         )
         if not matched:
-            self._failed_caller(access, key, user)
+            self.lockouts.failed_caller(access, key, user)
             self.activity.record(said.ConfirmFailed(by=Actor.of(access)))
             raise BadRequestError("the password is not right")
 
@@ -193,29 +183,16 @@ class AuthService:
         the client address as a wrong password does."""
         user = self._users.get(access.user_id)
         key = _name_key(user.name)
-        self._check_caller(access, key)
+        self.lockouts.check_caller(access, key)
         right = (
             self.factors is not None
             and len(code) <= MAX_CODE
             and self.factors.check(user.id, code) is not None
         )
         if not right:
-            self._failed_caller(access, key, user)
+            self.lockouts.failed_caller(access, key, user)
             self.activity.record(said.ConfirmFailed(by=Actor.of(access), what="code"))
             raise BadRequestError(WRONG_CODE)
-
-    def _check_caller(self, access: Access, key: str) -> None:
-        """``RateLimitedError`` while the caller's address or name is
-        locked out."""
-        if access.source is not None:
-            self._check_source(access.source)
-        self._names.check(key)
-
-    def _failed_caller(self, access: Access, key: str, user: User) -> None:
-        """A wrong confirmation, counted for the address and the name."""
-        if access.source is not None:
-            self._failed_source(access.source)
-        self._failed_name(key, user, Actor.of(access))
 
     def session_access(
         self,
@@ -266,8 +243,8 @@ class AuthService:
             return self._access_for_token(presented, source)
         except UnauthorizedError:
             if source is not None:
-                self._check_source(source)
-                self._failed_source(source)
+                self.lockouts.check(source)
+                self.lockouts.failed(source)
             raise
 
     def token_access(self, token_id: str, source: str) -> Access | None:
@@ -279,20 +256,6 @@ class AuthService:
         if found is None:
             return None
         return self._access(found.user, found.token, source)
-
-    def is_locked_out(self, source: str) -> bool:
-        """Whether ``source`` failed too often to sign in, for a check that
-        refuses it without telling why."""
-        try:
-            self._check_source(source)
-        except RateLimitedError:
-            return True
-        return False
-
-    def failed_from(self, source: str) -> None:
-        """A failure of ``source`` beside a sign-in, such as a link that
-        does not hold. It counts as a wrong token does."""
-        self._failed_source(source)
 
     def access_of(self, user_id: str) -> Access | None:
         """What a user may do now, for work done on its behalf outside a
@@ -335,25 +298,6 @@ class AuthService:
     def _access_for_token(self, presented: str, source: str | None) -> Access:
         found = self._api_tokens.presented(presented, source)
         return self._access(found.user, found.token, source)
-
-    def _check_source(self, source: str) -> None:
-        """``RateLimitedError`` while the source is locked out. A lockout
-        that ran out is logged here, at the next attempt."""
-        if self._throttle.check(source):
-            self.activity.record(said.LockoutEnded(by=someone(source)))
-
-    def _failed_source(self, source: str) -> None:
-        if self._throttle.failed(source):
-            minutes = int(self._throttle.lockout.total_seconds() // 60)
-            self.activity.record(
-                said.SourceLockedOut(by=someone(source), minutes=minutes)
-            )
-
-    def _failed_name(self, key: str, user: User | None, by: Actor) -> None:
-        """The name as typed is logged only as the user it names."""
-        if self._names.failed(key):
-            seconds = int(self._names.lockout.total_seconds())
-            self.activity.record(said.NameBraked(by=by, user=user, seconds=seconds))
 
     def sessions_ended(
         self, user_id: str, *, source: str, ended: int, limit: int

@@ -45,7 +45,7 @@ from .calls import Calls, public
 from .folders import Folders
 from .idempotency import Idempotency
 from .outgoing import Outgoing
-from .reach import Reach, of_the_account, outside, reach_of, require_folder
+from .reach import of_the_account, outside, reach_of
 from .sending import SendControl
 from .threads import THREAD_MESSAGES, Threads
 
@@ -105,15 +105,6 @@ class MailboxService:
 
     # --- the folders the grants reach -------------------------------------------------
 
-    async def _reach(
-        self,
-        access: Access,
-        operation: str,
-        account_id: str,
-        folders: list[Folder] | None = None,
-    ) -> Reach | None:
-        return await reach_of(self._calls, access, operation, account_id, folders)
-
     async def _outside(
         self,
         access: Access,
@@ -126,7 +117,7 @@ class MailboxService:
         from, each with its error: one in no folder they reach answers as
         not found, a move ``into`` other folders as forbidden. Empty where
         the grants reach every folder."""
-        reach = await self._reach(access, operation, account_id)
+        reach = await reach_of(self._calls, access, operation, account_id)
         if reach is None:
             return {}
         places = await self._calls.places(account_id, ids)
@@ -156,7 +147,7 @@ class MailboxService:
     ) -> Callable[[ChangeRecord], bool] | None:
         """What of the account's changes the caller may hear of, None for
         all: the change feed and the webhooks."""
-        reach = await self._reach(access, "list_changes", account_id)
+        reach = await reach_of(self._calls, access, "list_changes", account_id)
         return reach.hears if reach is not None else None
 
     async def hearing_now(
@@ -186,11 +177,9 @@ class MailboxService:
         role such as ``inbox``. Without one: the inbox."""
         access.require("list_messages", account_id)
         await self._calls.require(account_id, for_list(search))
-        folder = await self._folders.resolved(account_id, folder_id or FolderRole.INBOX)
-        reach = await self._reach(access, "list_messages", account_id)
-        # The folder all lists what the grants reach of every folder.
-        if reach is not None and not await self._folders.is_all(account_id, folder):
-            require_folder(reach, folder)
+        folder, reach = await self._folders.listed(
+            access, account_id, folder_id or FolderRole.INBOX
+        )
         page = await self._calls.call(
             account_id,
             lambda p: p.list_messages(
@@ -206,7 +195,7 @@ class MailboxService:
     ) -> Message:
         access.require("get_message", account_id)
         message = await self._calls.message(account_id, message_id)
-        reach = await self._reach(access, "get_message", account_id)
+        reach = await reach_of(self._calls, access, "get_message", account_id)
         if reach is not None and not reach.sees(message.folder_ids):
             raise missing_message(message_id)
         if message.reference is not None and DRAFT_KEYWORD not in message.keywords:
@@ -329,7 +318,7 @@ class MailboxService:
             access.require(operation, account_id)
         message = await self._calls.message(account_id, message_id)
         for operation in SHARING:
-            reach = await self._reach(access, operation, account_id)
+            reach = await reach_of(self._calls, access, operation, account_id)
             if reach is not None and not reach.sees(message.folder_ids):
                 raise missing_message(message_id)
         found = next((a for a in message.attachments if a.id == attachment_id), None)

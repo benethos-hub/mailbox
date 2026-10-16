@@ -62,7 +62,7 @@ class SqliteCredentialRepository:
             (account_id,),
         )
 
-    def delete_for_account(self, account_id: str) -> None:
+    def forget_account(self, account_id: str) -> None:
         self._db.execute("DELETE FROM credentials WHERE account_id = ?", (account_id,))
 
 

@@ -11,7 +11,7 @@ from __future__ import annotations
 import re
 import smtplib
 from collections.abc import Callable, Iterator
-from contextlib import AbstractContextManager, contextmanager
+from contextlib import AbstractContextManager, contextmanager, suppress
 from dataclasses import dataclass
 from typing import Any
 
@@ -145,10 +145,8 @@ class SmtpSession:
                     connection.login(login.username, login.secret)
             yield connection
         finally:
-            try:
+            with suppress(smtplib.SMTPException, OSError):
                 connection.quit()
-            except (smtplib.SMTPException, OSError):
-                pass
 
 
 def translated() -> AbstractContextManager[None]:

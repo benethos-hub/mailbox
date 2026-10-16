@@ -147,7 +147,7 @@ class CredentialVault:
         ]
 
     def delete(self, account_id: str) -> None:
-        self._credentials.delete_for_account(account_id)
+        self._credentials.forget_account(account_id)
 
     # --- other secrets --------------------------------------------------------
 

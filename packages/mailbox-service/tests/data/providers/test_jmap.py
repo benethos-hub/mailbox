@@ -48,11 +48,6 @@ def server() -> FakeJmap:
     return FakeJmap()
 
 
-@pytest.fixture
-def jmap(server: FakeJmap) -> JmapProvider:
-    return adapter(server)
-
-
 def sent_auth(server: FakeJmap) -> str:
     return server.requests[-1].headers["authorization"]
 

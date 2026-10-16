@@ -8,6 +8,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
+import anyio
 import pytest
 from fastapi.testclient import TestClient
 
@@ -129,6 +130,35 @@ def test_a_grant_on_every_folder_is_not_narrowed(
     assert reader.get(f"/v1/accounts/{mailbox}/messages/m3").status_code == 200
     listed = reader.get(f"/v1/accounts/{mailbox}/messages", params={"folder": "all"})
     assert ids(listed) == ["m1", "m2"]
+
+
+@pytest.mark.parametrize(("folder", "seen"), [("all", ["m1", "m2"]), ("f_inv", ["m1"])])
+def test_a_narrowed_list_asks_for_the_folders_once(
+    services: Services,
+    mailbox: str,
+    monkeypatch: pytest.MonkeyPatch,
+    folder: str,
+    seen: list[str],
+) -> None:
+    memory = memory_of(services, mailbox)
+    real = memory.list_folders
+    asked: list[None] = []
+
+    async def counted() -> list[Folder]:
+        asked.append(None)
+        return await real()
+
+    monkeypatch.setattr(memory, "list_folders", counted)
+    grant = Grant(accounts=[mailbox], allow=["list_messages"], folders=["Invoices"])
+
+    async def listed() -> list[str]:
+        page = await services.mailbox.list_messages(
+            Access("u", "u", [grant]), mailbox, folder_id=folder, limit=10, cursor=None
+        )
+        return sorted(m.id for m in page.items)
+
+    assert anyio.run(listed) == seen
+    assert len(asked) == 1
 
 
 # --- writing --------------------------------------------------------------------
