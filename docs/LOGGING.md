@@ -318,6 +318,11 @@ Its own process, its own log on stderr, its own rules, the same spirit:
 - `INFO` at start: transport, the service's URL, which tools were
   registered, and before it a `WARNING` per account that reads mail
   and sends anywhere.
+- `INFO` when the tools changed while it runs: which came and went, and
+  how many clients were told, with the same `WARNING`s after it.
+  `WARNING` once when the service could not be asked, `INFO` when it
+  answers again. `WARNING` when it refused the token or its user may do
+  nothing.
 - `WARNING` for a tool that failed, with the tool's name and the code of
   the service's error and its HTTP status, not its message: a message
   may repeat an address or a search term the model sent. A refusal of

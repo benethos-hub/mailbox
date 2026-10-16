@@ -233,21 +233,24 @@ def test_main_runs_stdio_with_the_allowed_tools(
     async def operations() -> set[str]:
         return set(READ)
 
-    runs: list[tuple[set[str], str]] = []
+    runs: list[tuple[set[str], float, str]] = []
 
     class Recorded:
-        def __init__(self, allowed: set[str]) -> None:
+        def __init__(self, allowed: set[str], every: float) -> None:
             self.allowed = allowed
+            self.every = every
 
         def run(self, transport: str) -> None:
-            runs.append((self.allowed, transport))
+            runs.append((self.allowed, self.every, transport))
 
     monkeypatch.setattr(server, "allowed_operations", operations)
     monkeypatch.setattr(
-        server, "build_server", lambda ops, connect=None: Recorded(set(ops))
+        server,
+        "build_server",
+        lambda ops, connect=None, every=0: Recorded(set(ops), every),
     )
     cli.main([])
-    assert runs == [(set(READ), "stdio")]
+    assert runs == [(set(READ), 60, "stdio")]
 
 
 def test_the_log_names_no_request_url(
@@ -306,7 +309,9 @@ def test_the_start_leaves_no_client_behind(monkeypatch: pytest.MonkeyPatch) -> N
         made.append(catalogue.client())
         return set(READ)
 
-    def build(ops: set[str], connect: Callable[[], MailboxClient]) -> object:
+    def build(
+        ops: set[str], connect: Callable[[], MailboxClient], every: float
+    ) -> object:
         built.append(connect)
         return type("S", (), {"run": lambda self, transport: None})()
 
@@ -384,7 +389,7 @@ def test_the_start_names_the_service_and_the_tools(
     monkeypatch.setattr(
         server,
         "build_server",
-        lambda ops, connect=None: type(
+        lambda ops, connect=None, every=0: type(
             "S", (), {"run": lambda self, transport: None}
         )(),
     )

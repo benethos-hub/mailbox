@@ -8,6 +8,17 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- The MCP server asks what its token may do every
+  `MAILBOX_MCP_RIGHTS_SECONDS`, 60 by default, and `0` only at start,
+  and at once when a tool is refused with `403 forbidden`, a right
+  missing.
+  When its tools change it tells its clients with
+  `notifications/tools/list_changed` and announces `tools.listChanged`,
+  so a right granted or taken away shows without a restart. When the
+  service refuses the token or its user may do nothing, every tool goes
+  away, also when a tool is refused with `401`. A refused token is asked
+  for no more, since each refusal counts against the address, and a new
+  one needs a restart.
 - `POST /v1/accounts/{id}/messages/{id}/attachments/{id}/links`
   (`share_attachment`) makes a link to an attachment for another
   service, which fetches the file itself with `GET /v1/links/{secret}`:

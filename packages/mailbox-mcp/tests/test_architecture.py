@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[1] / "src" / PACKAGE
 LINES = (
     {"cli"},
     {"server", "transport"},
-    {"tools"},
+    {"tools", "listeners"},
     {"client", "render", "pdf"},
     {"models", "errors", "config"},
 )
@@ -39,7 +39,7 @@ LIBRARY_HOMES = {
     "pypdfium2": {"pdf"},
     "starlette": {"transport"},
     "uvicorn": {"transport"},
-    "mcp": {"server", "transport", "errors", "tools.base"},
+    "mcp": {"server", "transport", "listeners", "errors", "tools.base"},
     # The folders of the operating system and the settings file come from
     # the common package.
     "platformdirs": set(),

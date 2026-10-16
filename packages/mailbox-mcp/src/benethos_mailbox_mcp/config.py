@@ -42,6 +42,8 @@ class Settings(files.FileSettings):
     allowed_hosts: str = ""
     allowed_origins: str = ""
     log_level: LogLevel = "INFO"
+    # How often the server asks what its token may do. 0: only at start.
+    rights_seconds: int = Field(default=60, ge=0)
     # The one token callers over HTTP bring. None: no guard.
     bearer_token: SecretStr | None = None
     # None: the client's default address.

@@ -160,6 +160,8 @@ def test_the_app_speaks_mcp_behind_the_guard() -> None:
         )
         assert served.status_code == 200
         assert "benethos-mailbox-mcp" in served.text
+        # The tool list may change while the server runs.
+        assert '"tools":{"listChanged":true}' in served.text.replace(" ", "")
 
 
 def test_a_foreign_host_is_refused() -> None:
@@ -205,7 +207,7 @@ def started(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     monkeypatch.setattr(
         server,
         "build_server",
-        lambda ops, connect=None: (
+        lambda ops, connect=None, every=0: (
             Stdio() if seen.get("want_stdio") else real_build(ops)
         ),
     )
