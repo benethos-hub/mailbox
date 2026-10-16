@@ -250,7 +250,7 @@ def test_main_runs_stdio_with_the_allowed_tools(
         lambda ops, connect=None, every=0: Recorded(set(ops), every),
     )
     cli.main([])
-    assert runs == [(set(READ), 30, "stdio")]
+    assert runs == [(set(READ), 60, "stdio")]
 
 
 def test_the_log_names_no_request_url(

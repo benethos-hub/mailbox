@@ -121,3 +121,58 @@ async def test_without_an_interval_it_asks_only_at_start() -> None:
         await client.tools()
         await anyio.sleep(0.05)
     assert service.asked == 0
+
+
+# --- a tool's error ---------------------------------------------------------------
+
+MESSAGE = {"account_id": "acc_1", "message_id": "msg_1"}
+
+
+async def test_a_tool_refused_for_a_missing_right_asks_at_once() -> None:
+    """The right may have been taken away a moment ago: the next tick
+    would be up to a minute away."""
+    service = Service(me_with(SHARE))
+    async with connected(following(service, [*READ, SHARE], every=0)) as client:
+        service.me = ME
+        refused = await client.session.call_tool("get_message", MESSAGE)
+        assert refused.is_error
+        await client.told()
+        assert service.asked == 1
+        assert SHARE not in await client.tools()
+
+
+async def test_a_refused_token_on_a_tool_takes_every_tool() -> None:
+    """The model would try again, and each try counts against the
+    address. The token is not asked for again either."""
+    service = Service(ME)
+    service.refusal = (401, "unauthorized")
+    async with connected(following(service, READ)) as client:
+        await client.session.call_tool("get_message", MESSAGE)
+        await client.told()
+        assert await client.tools() == []
+        asked = service.asked
+        await anyio.sleep(0.1)
+        assert service.asked == asked
+
+
+@pytest.mark.parametrize(
+    "refusal",
+    [(403, "recipient_not_allowed"), (404, "not_found"), (502, "provider_error")],
+)
+async def test_other_refusals_ask_nothing(refusal: tuple[int, str]) -> None:
+    """A grant's limit, an unknown message or a mail server: no right
+    is missing."""
+    service = Service(ME)
+    service.refusal = refusal
+    async with connected(following(service, READ, every=0)) as client:
+        await client.session.call_tool("get_message", MESSAGE)
+        assert service.asked == 0
+        assert client.received == []
+
+
+async def test_refusals_in_a_row_ask_once() -> None:
+    service = Service(ME)
+    async with connected(following(service, READ, every=0)) as client:
+        for _ in range(3):
+            await client.session.call_tool("get_message", MESSAGE)
+        assert service.asked == 1

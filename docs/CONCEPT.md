@@ -1732,14 +1732,19 @@ included for a grant on every account. `user`, `outcome`, `recipient`
 - At start it calls `/v1/me` and registers **only the tools its user can
   use**. The user's rights decide what is offered to the model.
 - **Decided 2026-10-16:** while it runs it asks `/v1/me` again every
-  `MAILBOX_MCP_RIGHTS_SECONDS`, 30 by default, over stdio and HTTP. When
-  the tools change it tells its clients with
+  `MAILBOX_MCP_RIGHTS_SECONDS`, 60 by default, over stdio and HTTP, and
+  at once when a tool is refused with `403 forbidden`, a right missing.
+  When the tools change it tells its clients with
   `notifications/tools/list_changed`, so a right granted or taken away
   shows without a restart. When the service refuses the token or its
   user may do nothing, every tool goes away.
 - A refused token is asked for no more, since each refusal counts
-  against the address like a wrong token (LIMITS.md). A new token needs
-  a restart.
+  against the address like a wrong token (LIMITS.md). A tool refused
+  with `401` counts as such a refusal. A new token needs a restart.
+  A tool refused for a missing right asks at most every 5 seconds.
+  Only the rights checks answer `403 forbidden`. A grant's limits have
+  codes of their own, such as `recipient_not_allowed`, and a mail
+  server's refusal answers `502`.
 - **Decided 2026-10-12:** `/v1/me` says how each account fares, its
   `status`, whether it needs a person's `attention` and its last
   successful sync, so a model learns of a problem before a tool fails.

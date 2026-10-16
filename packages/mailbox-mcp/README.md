@@ -206,7 +206,7 @@ MAILBOX_SERVICE_URL=http://127.0.0.1:8080 MAILBOX_SERVICE_TOKEN=<token> benethos
 | `--allowed-hosts` | `MAILBOX_MCP_ALLOWED_HOSTS` | none, comma-separated Host values |
 | `--allowed-origins` | `MAILBOX_MCP_ALLOWED_ORIGINS` | none, comma-separated |
 | `--log-level` | `MAILBOX_MCP_LOG_LEVEL` | `INFO` |
-| – | `MAILBOX_MCP_RIGHTS_SECONDS` | `30`, how often it asks what its token may do. `0` asks only at start |
+| – | `MAILBOX_MCP_RIGHTS_SECONDS` | `60`, how often it asks what its token may do. `0` asks only at start |
 | – | `MAILBOX_MCP_BEARER_TOKEN` | none, what HTTP clients must send |
 | `--env-file` | `MAILBOX_MCP_ENV_FILE` | a settings file, see below |
 
@@ -333,7 +333,8 @@ starts it beside a service built from the repository, with the profile
 
 At start the server asks `/v1/me` what its token may do and offers only
 the tools that fit. While it runs it asks again every
-`MAILBOX_MCP_RIGHTS_SECONDS` and tells its client when the tools change
+`MAILBOX_MCP_RIGHTS_SECONDS`, and at once when a tool is refused for a
+missing right, and tells its client when the tools change
 (`notifications/tools/list_changed`), so a right granted or taken away
 in the service shows without a restart. Claude Desktop lists the tools
 anew when told. When the service refuses the token, every tool goes away
