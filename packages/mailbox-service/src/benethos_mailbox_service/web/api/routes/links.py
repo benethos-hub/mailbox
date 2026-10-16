@@ -29,7 +29,8 @@ async def get_linked_attachment(
     """The attachment a link from `share_attachment` hands out, once. No
     Authorization: whoever holds the URL fetches it. A link unknown,
     used, ended or no longer allowed answers the same `404`, and so does
-    an address that failed too often."""
+    an address that failed too often. Where the mail server fails, the
+    link holds and the answer is `502 provider_unavailable`: try again."""
     found = await links.redeem(secret, client_address(request))
     response = download(found.data, found.filename or "attachment", found.content_type)
     # A credential in a URL: nothing on the way keeps the answer.

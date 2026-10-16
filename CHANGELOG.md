@@ -29,9 +29,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   is in no role template. When the link is used, its token must still
   act and hold `get_attachment` and `share_attachment` on the message.
   Every refusal answers the same `404`. When the mail server fails to
-  hand out the file, the link holds again for the rest of its time, the
-  audit says `mailbox.link_returned`, and the address that asked counts
-  no failure. Whoever holds the URL fetches the
+  hand out the file, the link holds for the rest of its time, the answer
+  is `502 provider_unavailable` to try again, the audit says
+  `mailbox.link_returned`, and the address that asked counts no
+  failure. Whoever holds the URL fetches the
   file. The service logs its path masked, but a reverse proxy in front
   writes the whole URL into its access log, where it opens the file
   until the link is used or ends. The Python client has

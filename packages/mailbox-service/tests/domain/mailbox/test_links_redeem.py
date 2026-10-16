@@ -222,8 +222,9 @@ def test_the_purge_takes_the_links_used_and_ended(
 def test_a_mail_server_that_fails_hands_the_link_back(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Nothing was fetched: the link holds again, the audit says so, and
-    the address that asked counts no failure."""
+    """Nothing was fetched: the answer says to try again, the link holds
+    again, the audit says so, and the address that asked counts no
+    failure."""
     link = linked(sign_in_failures=1)
     plain = link.secret()
     adapter = link.services.adapters.get(link.account_id)
@@ -233,7 +234,12 @@ def test_a_mail_server_that_fails_hands_the_link_back(
         raise ProviderUnavailableError("the mail server does not answer")
 
     monkeypatch.setattr(adapter, "get_attachment", down)
-    assert link.fetch(plain).json() == GONE
+    failed = link.fetch(plain)
+    assert failed.status_code == 502
+    assert failed.json()["error"] == {
+        "code": "provider_unavailable",
+        "message": "the mail server did not hand out the attachment: try again",
+    }
     assert "mailbox.link_used" in kinds(link)
     assert "mailbox.link_returned" in kinds(link)
     monkeypatch.setattr(adapter, "get_attachment", real)

@@ -74,7 +74,14 @@ LINK_ERRORS: dict[int | str, dict[str, Any]] = {
             "No attachment for this link: unknown, used, ended, or no longer "
             "allowed. One answer for every case"
         ),
-    }
+    },
+    502: {
+        "model": ErrorResponse,
+        "description": (
+            "The mail server did not hand out the attachment "
+            "(`provider_unavailable`). The link holds: try again before it ends"
+        ),
+    },
 }
 
 # A grant may narrow sending (CONCEPT 7.5).
