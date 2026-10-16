@@ -224,7 +224,7 @@ async def test_uploads_and_downloads_the_server_refuses() -> None:
         ("rateLimit", ProviderUnavailableError),
         ("unknownMethod", NotSupportedError),
         ("invalidArguments", BadRequestError),
-        ("forbidden", ProviderAuthError),
+        ("forbidden", ProviderError),
         ("serverFail", ProviderError),
     ],
 )

@@ -35,9 +35,14 @@ async def list_messages(
 ) -> Page[MessageSummary]:
     if not mappers.is_id(folder_id):
         raise missing("folder", folder_id)
+    outside = None
+    if folder_id == mappers.ALL:
+        folders = await account.folders()
+        if mappers.emulates_all(folders):
+            outside = [f.id for f in folders if f.role in mappers.OUTSIDE_ALL]
     scope = rules.cursor_scope(folder_id, search)
     query: dict[str, Any] = {
-        "filter": mappers.query_filter(folder_id, search),
+        "filter": mappers.query_filter(folder_id, search, outside),
         "sort": mappers.SORT,
         # One more, to tell whether a next page follows.
         "limit": limit + 1,
@@ -129,7 +134,10 @@ async def update_messages(
 ) -> dict[str, MessageSummary | MailboxServiceError]:
     if changes.changes_folders:
         rules.move_target(changes, labels=True)
-        known = {f.id for f in await account.folders()}
+        folders = await account.folders()
+        if mappers.ALL in changes.named_folders() and mappers.emulates_all(folders):
+            return dict.fromkeys(message_ids, rules.into_all())
+        known = {f.id for f in folders}
         unknown = next((t for t in changes.named_folders() if t not in known), None)
         if unknown is not None:
             return dict.fromkeys(message_ids, missing("folder", unknown))

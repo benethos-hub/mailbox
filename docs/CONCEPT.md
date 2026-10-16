@@ -781,7 +781,10 @@ the work in order. The rules:
    `404` or `409` for "the provider cannot".
 3. **Announced in advance.** Every `501` follows from a missing
    capability. The domain checks it once for every operation, from one
-   table of what each operation needs.
+   table of what each operation needs. Only what a server refuses on
+   the call itself answers `501` without one: an IMAP `update_draft`
+   without UIDPLUS, an IMAP sign-in with `xoauth2`, a JMAP method or
+   filter the server does not know.
 4. **Capabilities follow the server.** IMAP and JMAP servers are asked
    what they offer when an account connects and when it is verified.
    The capabilities are stored with the account.
@@ -791,8 +794,8 @@ the work in order. The rules:
    nothing. Where that cannot be guaranteed, the answer names what was
    done.
 7. **The service fills gaps only where the result is the same.** It
-   emulates the folder `all` on Microsoft and on IMAP servers without
-   `\All`.
+   emulates the folder `all` on Microsoft, on IMAP servers without
+   `\All` and on JMAP servers without a mailbox of that role.
 8. **Provider specifics stay out of the common fields.** Notes a server
    keeps for itself, such as `$hasnoattachment`, leave `keywords`.
 
@@ -1143,7 +1146,7 @@ not followed.
 
 | Parameter | Meaning |
 |---|---|
-| `folder` | folder id, or a role such as `inbox`. Left out: the inbox, on every account. The role `all` lists every folder but the trash and junk where the account has such a folder (Gmail's All Mail, a JMAP or IMAP server's, on Microsoft and on an IMAP server without `\All` one the adapter shows), and answers `501` elsewhere. A grant narrowed to folders lists `all` within them |
+| `folder` | folder id, or a role such as `inbox`. Left out: the inbox, on every account. The role `all` lists every folder but the trash and junk where the account has such a folder (Gmail's All Mail, a JMAP or IMAP server's, on Microsoft and on an IMAP or JMAP server without one the adapter shows), and answers `501` elsewhere. A grant narrowed to folders lists `all` within them |
 | `q` | free text (subject, addresses, body where the provider can) |
 | `from`, `to`, `subject` | structured filters |
 | `after`, `before` | days, `YYYY-MM-DD`: `after` includes its day, `before` does not. The audits take a time with a zone instead |

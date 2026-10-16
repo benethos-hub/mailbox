@@ -150,9 +150,9 @@ done. Update the roadmap in the same commit that finishes an item.
   the second, read, found by the sync and deleted for good.
   `uv run python live/jmap.py` checks the JMAP adapter against it, with a
   service of its own as a process: one mail from the first account to the
-  second, reported by push, its thread read, changed, put in a folder
-  and back, a draft,
-  then deleted for good on both sides.
+  second, reported by push, found in the folder `all`, its thread read,
+  changed, put in a folder and back, a draft, left out of `all` in the
+  trash, then deleted for good on both sides.
 ## Project layout
 
 A uv workspace with four distributions and one lockfile.
