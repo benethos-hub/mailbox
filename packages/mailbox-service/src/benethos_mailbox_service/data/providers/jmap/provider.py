@@ -43,7 +43,7 @@ from ..base import (
     ProviderSettings,
     ThreadMessages,
 )
-from . import drafts, folders, messages, sending
+from . import drafts, folders, mappers, messages, sending
 from .api import JmapAccount
 from .changes import Changes
 from .connect import read_settings
@@ -84,7 +84,13 @@ class JmapProvider:
     # --- Reads ------------------------------------------------------------------------
 
     async def list_folders(self) -> list[Folder]:
-        return await self._account.folders()
+        """The server's mailboxes, and where it has no ``all`` the folder
+        ``all`` the adapter emulates: a query of every mailbox but the
+        trash and junk."""
+        found = await self._account.folders()
+        if mappers.emulates_all(found):
+            return [*found, mappers.all_mail()]
+        return found
 
     async def list_messages(
         self,

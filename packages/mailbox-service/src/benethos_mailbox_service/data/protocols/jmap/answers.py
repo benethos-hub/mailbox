@@ -15,7 +15,6 @@ from ....errors import (
     MailboxServiceError,
     NotFoundError,
     NotSupportedError,
-    ProviderAuthError,
     ProviderError,
     ProviderUnavailableError,
 )
@@ -66,8 +65,8 @@ def method_error(args: Mapping[str, Any]) -> MailboxServiceError:
         return NotSupportedError(text)
     if kind in ("invalidArguments", "requestTooLarge", "anchorNotFound"):
         return BadRequestError(text)
-    if kind == "forbidden":
-        return ProviderAuthError(text)
+    # forbidden as well: the server took the credential and refused the
+    # call, as an HTTP 403 (``http.standard_refusals``).
     return ProviderError(text)
 
 

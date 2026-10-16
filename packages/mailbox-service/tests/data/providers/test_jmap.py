@@ -173,6 +173,35 @@ async def test_folders_with_roles(jmap: JmapProvider, server: FakeJmap) -> None:
     assert folders["inbox"].subscribed is True
 
 
+async def test_all_is_every_mailbox_but_the_trash_and_junk(
+    jmap: JmapProvider, server: FakeJmap
+) -> None:
+    """Where the server has no mailbox of the role ``all``, the adapter
+    shows one, a query without a mailbox (UNIFORM 6.5)."""
+    archive = server.add_mailbox("Archive")
+    kept = [server.add_email(make_message("In"))]
+    kept.append(server.add_email(make_message("Filed"), archive))
+    server.add_email(make_message("Thrown"), "trash")
+    server.add_email(make_message("Spam"), "junk")
+    [everywhere] = [f for f in await jmap.list_folders() if f.role is FolderRole.ALL]
+    assert (everywhere.id, everywhere.name) == ("all", "All Mail")
+    listed = await jmap.list_messages("all", limit=10, cursor=None)
+    assert sorted(m.id for m in listed.items) == sorted(kept)
+    first = await jmap.list_messages("all", limit=1, cursor=None)
+    rest = await jmap.list_messages("all", limit=1, cursor=first.next_cursor)
+    assert [m.id for m in first.items + rest.items] == [m.id for m in listed.items]
+    moved = await jmap.update_messages(kept[:1], MessageUpdate(folder_ids=["all"]))
+    assert isinstance(moved[kept[0]], BadRequestError)
+
+
+async def test_a_server_with_its_own_all_keeps_it(
+    jmap: JmapProvider, server: FakeJmap
+) -> None:
+    server.add_mailbox("Everything", role="all")
+    found = [f for f in await jmap.list_folders() if f.role is FolderRole.ALL]
+    assert [f.name for f in found] == ["Everything"]
+
+
 async def test_create_rename_move_and_delete_a_folder(
     jmap: JmapProvider, server: FakeJmap
 ) -> None:
@@ -217,9 +246,11 @@ async def test_a_folder_with_mail_is_not_deleted(
 async def test_a_folder_the_server_refuses_to_create(
     jmap: JmapProvider, server: FakeJmap
 ) -> None:
+    """The credential holds: a refusal of the call, not of the sign-in."""
     server.method_errors["Mailbox/set"] = "forbidden"
-    with pytest.raises(ProviderAuthError):
+    with pytest.raises(ProviderError) as refused:
         await jmap.create_folder("No", None)
+    assert not isinstance(refused.value, ProviderAuthError)
 
 
 # --- listing and reading --------------------------------------------------------------

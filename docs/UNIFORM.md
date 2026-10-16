@@ -175,7 +175,8 @@ larger piece that is neither, and runs on its own.
 - **An account without the folder a role names answers `404` from the
   domain and `409` from the adapters**, for the same situation. Gmail
   has no `archive`, Microsoft no `all` folder. Rule R2: `501`, except
-  for Microsoft's `all`, which the adapter emulates. *Concept (6.5).*
+  for `all`, which the adapters of Microsoft, IMAP and JMAP emulate.
+  *Concept (6.5).*
   Done.
 
 ### 4.3 Dates and order
@@ -341,9 +342,10 @@ larger piece that is neither, and runs on its own.
 - **Other partial effects with an error**: a batch across IMAP folders
   fails after earlier folders are done. Microsoft's delete for good moves
   to the trash, then deletes, and can stop in between. Rule R6. *Bug.*
-- **A JMAP `forbidden`**, as from a read-only token, likely becomes
-  `502 provider_auth_failed` and sets the account to `needs_reauth`.
-  To verify.
+- **A JMAP `forbidden`**, as from a read-only token, became
+  `502 provider_auth_failed` and set the account to `needs_reauth`.
+  *Bug.* Done: the method error is a `ProviderError`, as an HTTP `403`
+  is.
 - **The domain checks protocols, not capabilities.** `search`, `labels`
   and `send` are not checked by the domain at all. Each adapter refuses
   in its own way. With R3 the domain checks the capability once for
@@ -474,7 +476,9 @@ Decided 2026-10-12, each with the options weighed and why.
    `SEARCH` in every folder but the trash and junk, the hits merged by
    date, as the list across accounts merges its accounts. The result is
    the same as with `\All`, only slower: one `SEARCH` per folder and
-   page. So every account but POP3 searches everywhere.
+   page. **JMAP emulates `all` too**, where the server has no mailbox
+   of that role: one `Email/query` with `inMailboxOtherThan` the trash
+   and junk. So every account but POP3 searches everywhere.
 6. **Dates.** (a) `date` is the Date header everywhere, Microsoft
    included, and a new field `received` carries the received time, by
    which lists sort and filter. (b) `date` is the received time

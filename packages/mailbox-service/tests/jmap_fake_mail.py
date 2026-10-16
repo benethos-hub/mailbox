@@ -294,6 +294,9 @@ def _contains(field: str) -> Callable[[dict[str, Any], dict[str, Any], Any], boo
 # with what its source says, meets each.
 _CONDITIONS: dict[str, Callable[[dict[str, Any], dict[str, Any], Any], bool]] = {
     "inMailbox": lambda email, parsed, value: value in email["mailboxIds"],
+    "inMailboxOtherThan": lambda email, parsed, value: any(
+        m not in value for m in email["mailboxIds"]
+    ),
     "text": _contains("text"),
     "from": _contains("from"),
     "to": _contains("to"),

@@ -110,8 +110,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   `provider_error` on every kind of account: the server took the
   credential and refused the request. A JMAP server's `403` answered
   `provider_auth_failed` and marked the account as needing a new
-  sign-in. A JMAP server's `400` and `409` answer `bad_request` and
-  `conflict`, as Gmail's and Microsoft's do.
+  sign-in. The same holds for a JMAP method error `forbidden`, as from
+  a read-only token. A JMAP server's `400` and `409` answer
+  `bad_request` and `conflict`, as Gmail's and Microsoft's do.
 - **Breaking:** `PATCH /v1/accounts/{account_id}` with settings that
   name a new server needs every credential of the account in the same
   request, else it answers `400`. A server removed needs none. The UI
@@ -144,7 +145,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   It was every folder on Gmail, Microsoft and JMAP, the trash and junk
   among them. The role `all` lists every folder but the trash and junk
   where the account has such a folder: Gmail's All Mail, a JMAP or IMAP
-  server's, and on Microsoft a folder "All Mail" the service shows. A
+  server's, and on Microsoft, and on JMAP and IMAP without one, a folder
+  "All Mail" the service shows. A
   grant narrowed to folders lists `all` within them. The list across
   accounts takes the inbox without `folder` as well. A cursor of a list
   without a folder handed out before this version is refused once.

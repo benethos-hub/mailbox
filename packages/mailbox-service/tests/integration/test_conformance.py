@@ -363,12 +363,13 @@ def test_a_list_without_a_folder_is_the_inbox(account: Account) -> None:
 
 @pytest.mark.parametrize("kind", kinds())
 def test_all_lists_every_folder_where_there_is_one(account: Account) -> None:
-    """The role all: the server's own folder, or on IMAP and Microsoft one
-    the adapter emulates. Without one it lacks (UNIFORM 6.5)."""
+    """The role all: the server's own folder, or on IMAP, JMAP and
+    Microsoft one the adapter emulates. Without one it lacks (UNIFORM
+    6.5)."""
     account.box.put(mail("Everywhere"))
     folders = account.client.get(f"{account.base}/folders").json()
     there = any(f["role"] == "all" for f in folders)
-    assert there == (account.box.kind in ("imap", "gmail", "microsoft"))
+    assert there == (account.box.kind in ("imap", "jmap", "gmail", "microsoft"))
     answer = account.client.get(f"{account.base}/messages", params={"folder": "all"})
     if not there:
         assert lacks(answer)

@@ -12,13 +12,15 @@ what it reports in between came through the server's push. Then:
    copy in its sent folder,
 2. the push wakes the worker, and the change feed of the second names the
    mail as created,
-3. the second reads it and its thread, marks it read and starred with a
+3. the second finds it in the folder ``all``, reads it and its thread,
+   marks it read and starred with a
    keyword, puts it in a new folder as well as the inbox and back,
    renames and deletes that folder, and the change feed names the mail
    as updated,
 4. a reply draft is stored, replaced and deleted,
-5. the mail goes to the trash and then for good, and the change feed
-   names it as deleted. The sent copy is deleted for good as well.
+5. the mail goes to the trash, where ``all`` no longer finds it, and
+   then for good, and the change feed names it as deleted. The sent copy
+   is deleted for good as well.
 
 A mail of an earlier run that is left over is deleted. The accounts come
 from the file ``LIVE_TEST_SERVER_ACCOUNTS`` in ``live/.env`` names. The
@@ -125,6 +127,12 @@ def _described(run: Run, client: httpx.Client, base: str) -> None:
     )
 
 
+def in_all(mailbox: SyncMailboxClient, account_id: str, subject: str) -> list[str]:
+    """The ids of the messages with ``subject`` in the folder ``all``."""
+    page = mailbox.list_messages(account_id, subject=subject, folder="all", limit=10)
+    return [m.id for m in page.items]
+
+
 def checks(
     run: Run,
     client: httpx.Client,
@@ -175,6 +183,9 @@ def checks(
         return
     message_id = arrived[0].id
     url = f"{base}/messages/{message_id}"
+    run.check(
+        "the folder all finds it", in_all(mailbox, receiver_id, title) == [message_id]
+    )
 
     def named(kind: str, after: str) -> bool:
         changes = client.get(f"{base}/changes", params={"since": after}).json()
@@ -231,6 +242,10 @@ def checks(
 
     mark = client.get(f"{base}/changes").json()["state"]
     trashed = client.delete(url)
+    run.check(
+        "the folder all leaves out the trash",
+        message_id not in in_all(mailbox, receiver_id, title),
+    )
     again = client.delete(url)
     gone = client.delete(url, params={"permanent": True})
     run.check(
