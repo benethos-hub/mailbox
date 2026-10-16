@@ -116,9 +116,13 @@ async def test_a_service_that_does_not_answer_leaves_the_tools(
 
 
 async def test_without_an_interval_it_asks_only_at_start() -> None:
+    """A tool refused for a missing right asks nothing either."""
     service = Service(ME)
     async with connected(following(service, READ, every=0)) as client:
         await client.tools()
+        await client.session.call_tool(
+            "get_message", {"account_id": "acc_1", "message_id": "msg_1"}
+        )
         await anyio.sleep(0.05)
     assert service.asked == 0
 
@@ -126,13 +130,15 @@ async def test_without_an_interval_it_asks_only_at_start() -> None:
 # --- a tool's error ---------------------------------------------------------------
 
 MESSAGE = {"account_id": "acc_1", "message_id": "msg_1"}
+# An interval no test waits for: what is asked comes from the tool.
+LONG = 3600
 
 
 async def test_a_tool_refused_for_a_missing_right_asks_at_once() -> None:
     """The right may have been taken away a moment ago: the next tick
     would be up to a minute away."""
     service = Service(me_with(SHARE))
-    async with connected(following(service, [*READ, SHARE], every=0)) as client:
+    async with connected(following(service, [*READ, SHARE], every=LONG)) as client:
         service.me = ME
         refused = await client.session.call_tool("get_message", MESSAGE)
         assert refused.is_error
@@ -164,7 +170,7 @@ async def test_other_refusals_ask_nothing(refusal: tuple[int, str]) -> None:
     is missing."""
     service = Service(ME)
     service.refusal = refusal
-    async with connected(following(service, READ, every=0)) as client:
+    async with connected(following(service, READ, every=LONG)) as client:
         await client.session.call_tool("get_message", MESSAGE)
         assert service.asked == 0
         assert client.received == []
@@ -172,7 +178,7 @@ async def test_other_refusals_ask_nothing(refusal: tuple[int, str]) -> None:
 
 async def test_refusals_in_a_row_ask_once() -> None:
     service = Service(ME)
-    async with connected(following(service, READ, every=0)) as client:
+    async with connected(following(service, READ, every=LONG)) as client:
         for _ in range(3):
             await client.session.call_tool("get_message", MESSAGE)
         assert service.asked == 1

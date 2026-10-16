@@ -101,8 +101,14 @@ as `Address` records.
 A secret the service shows once, a new token, a one-time password or a
 webhook's signing secret, comes as a `Secret`: `repr` and `str` show
 stars, so it reaches no log by accident, and `get_secret_value()` reads
-it. Lists that page answer `Paged`, with `next_cursor` for the next
-page.
+it. A list of messages or drafts answers a `Page` of summaries, with
+`next_cursor` for the next page and, across accounts, `not_answering`
+for those that did not answer. The other lists that page, of accounts,
+users, sends and the audit, answer `Paged`, with `next_cursor` as well.
+
+Beside the operations, `update_messages` and `trash_messages` are
+`batch_messages` for one kind of change, and `message_body` builds the
+body of a send or a draft, as in the example above.
 
 `request(method, path, ...)` sends any request and answers its JSON as
 it comes, e.g. for a field a record leaves out. The routes and their

@@ -32,6 +32,8 @@ everything else is the proposal.
    if it did not exist.
 8. **Every route names its right.** `x-permission` in the OpenAPI
    document, checked by a test. A new route cannot slip out unguarded.
+   `/health` alone has none: it takes no token and tells only that the
+   service runs.
 9. **Someone is always named.** Every call is made by a user, so the
    audit and the log name one.
 
@@ -69,7 +71,7 @@ The groups as `domain/rights/permissions.py` holds them today:
 | `accounts.connect` | `discover_account`, `start_device_oauth`, `poll_device_oauth`, `create_account` | the service |
 | `webhooks.manage` | `list_webhooks`, `get_webhook`, `create_webhook`, `update_webhook`, `renew_webhook_secret`, `delete_webhook` | the service |
 | `users.read` | `list_users`, `get_user`, `list_tokens`, `get_second_factor`, `list_roles`, `get_role` | the service |
-| `users.manage` | `users.read` and changes to users, tokens, passwords, roles: fourteen rights | the service |
+| `users.manage` | `users.read` and changes to users, tokens, passwords, roles: seventeen rights | the service |
 | `admin` | everything, and `show_recovery_key` and `read_service_log`, which nothing else gives | the service |
 
 Two kinds of right, kept in two lists of a user or a role (8.1):
@@ -88,7 +90,7 @@ Two kinds of right, kept in two lists of a user or a role (8.1):
 
 Two operations are open to every user: `get_me` and `list_permissions`.
 A third takes no token at all: `get_linked_attachment`, whose secret is
-the credential. Its `x-permission` is `link`, and it acts with the rights
+the credential. `/health` takes none either and names no right. Its `x-permission` is `link`, and it acts with the rights
 of the token that made the link, `get_attachment` and
 `share_attachment`, as they are when it is used.
 
@@ -178,7 +180,8 @@ from becoming a way up:
   or takes a role of the ticked users, each within the caller's rights,
   all of them or none, and names those it could not change. Pages and buttons appear only
   for those with the right.
-- **MCP server**: at start `/v1/me` decides which tools exist.
+- **MCP server**: at start and while it runs `/v1/me` decides which
+  tools exist.
   `list_accounts` names the limits on sending per account, and warns of
   an account where the token may read mail and send it anywhere, since a
   mail with injected instructions could carry data out through it.
@@ -308,7 +311,7 @@ time, user, credential, activity, the record touched, the client
 address and the outcome. Never a secret, never content. Written by the
 domain services where the log lines are written today. The design in
 full, which activities, which fields, storage, API and page, is
-[AUDIT.md](AUDIT.md); the activities themselves are those of
+[AUDIT.md](AUDIT.md). The activities themselves are those of
 [LOGGING.md](LOGGING.md) section 5.
 
 - `GET /v1/audit`, right `audit` on the service (a service right, so

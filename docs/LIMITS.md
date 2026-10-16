@@ -46,6 +46,16 @@ Towards the mail servers:
 | JMAP server | per account | as many requests at once as the session's `maxConcurrentRequests`, 4 where it names none, and a pause as long as its `Retry-After` | the request waits, or `502 provider_unavailable` during the pause | the server |
 | Webhook posts | per webhook | 8 attempts, 30 seconds after the first failure, doubled up to 1 hour, 10 seconds to answer | the events are dropped | `MAILBOX_SERVICE_WEBHOOK_*` |
 
+The MCP server's own, towards the model:
+
+| Limit | Counts | Default | Past it | Set by |
+|---|---|---|---|---|
+| An attachment | per `get_attachment` | 10 MiB for an image, a PDF or text | refused | fixed |
+| An image | per `get_attachment` | 5 MiB as an image | named only | fixed |
+| PDF pages | per `get_attachment` | 10 pages, 4 megapixels a page and 12 together | refused above 10, smaller images | fixed |
+| Rendering a PDF | per `get_attachment` | 30 seconds, one PDF at a time | refused | fixed |
+| Mails in one change | per `update_messages` | 100 | refused | fixed |
+
 Every `429` carries `Retry-After` in seconds. A limit of `0` switches the
 limit on requests off. The other limits can be set, not switched off.
 
@@ -135,9 +145,11 @@ wrong credentials behind it: a client with a stale token is refused,
 the others pass.
 
 **The MCP server.** It calls the API with one token, so all its tools
-share one limit of 120 a minute. Its start asks `/v1/me` and the folders
-of every account, which fits into the 60 that pass at once. Past the
-limit the model reads "too many requests, try again in N seconds".
+share one limit of 120 a minute. Its start asks `/v1/me`, and while it
+runs it asks again every `MAILBOX_MCP_RIGHTS_SECONDS`, 60 by default,
+and when a tool is refused for a missing right, at most every 5
+seconds. Each counts against the token like any call. Past the limit
+the model reads "too many requests, try again in N seconds".
 
 **Sending.** A send passes the limit on requests, then the grants: their
 recipients and their `max_sends_per_day`. A recipient no grant allows

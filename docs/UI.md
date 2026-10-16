@@ -102,8 +102,9 @@ page, not a sidebar entry.
 
 Every page has a **top bar** with its heading, one line under it that
 says where the person is, and the page's **primary action** at the right.
-Detail pages carry a **breadcrumb** in that line: Accounts › name@example.org
-› Mail. A person always sees a way back without the browser.
+Detail pages carry a **breadcrumb** in that line: Mail search ›
+name@example.org › Inbox. A person always sees a way back without the
+browser.
 
 The click budget, counted from the overview after signing in:
 
@@ -319,12 +320,13 @@ next step appears under the last one:
      code for Gmail: **Sign in with Google** stands alone
    - a provider found with servers: the password field, the servers
      folded under **Servers**, with the source and whether it is trusted
-   - nothing found: **Set up by hand** open at once, with the server
-     fields
-   **Set up by hand** is always there, folded when something was found,
-   unless the deployment offers neither IMAP nor POP3. The same for
-   **Set up a JMAP server by hand**. A kind of account the deployment
-   does not offer is not shown at all.
+   - nothing found: the first card to set up by hand open at once, with
+     the server fields
+   One card per kind set up by hand, **Set up IMAP by hand**, **Set up
+   POP3 by hand** and **Set up JMAP by hand**, with what to know of the
+   kind where there is something, is always there, folded unless
+   nothing was found. A kind of account the deployment does not offer is
+   not shown at all.
    Where no source names a provider the deployment signs in with, its
    **Sign in with** stays offered: a custom domain can be at Microsoft.
 3. **Connect.** The domain tries the servers before storing anything.
@@ -333,7 +335,8 @@ next step appears under the last one:
    password.
 
 After connecting, the account page's **Change** card edits the servers,
-the display name and the password, for IMAP accounts. OAuth accounts have
+the display name and the password, for IMAP, POP3 and JMAP accounts.
+OAuth accounts have
 **Sign in again** and, where the provider offers codes, **Sign in again
 with a code** instead of a password. Nothing of this needs a new domain
 call: `discover`, `create`
@@ -557,7 +560,7 @@ These rules bind every page, the reworked ones and the ones to come.
    the page. Partials are pieces of one page, components are macros used
    by several.
 3. **The route decides nothing.** It reads the form, calls one domain
-   method and renders or redirects. Rights are the domain's; the page
+   method and renders or redirects. Rights are the domain's. The page
    only hides what `caller.allows(...)` denies, with the same names the
    API uses in `x-permission`. The mail pages offer what the account's
    `operations` name, the caller's rights and what the account can do
@@ -584,12 +587,12 @@ These rules bind every page, the reworked ones and the ones to come.
    opens it as a user with the right, one that shows it hidden without
    the right, and one per form. `live/ui.py` walks every workflow of
    section 6 against the test accounts.
-8. **Checklist for a new page**: route module or a route in one; the
-   template of its type; the sidebar entry with its right and its icon;
-   icons only from the sprite, a new one added in `assets/icons.py`;
-   nothing loaded from elsewhere, no CDN; the tests of rule 7; a line
+8. **Checklist for a new page**: route module or a route in one. The
+   template of its type. The sidebar entry with its right and its icon.
+   Icons only from the sprite, a new one added in `assets/icons.py`.
+   Nothing loaded from elsewhere, no CDN. The tests of rule 7. A line
    in this file's section 3 table and, if it changes a workflow, in
-   section 6; the roadmap item; a CHANGELOG entry only when a person
+   section 6. The roadmap item. A CHANGELOG entry only when a person
    using the API notices.
 
 ## 9. Order of work
@@ -642,7 +645,7 @@ All four steps are done, as the roadmap's phase 4b records.
 - 2026-10-09: a batch of users, tokens or devices is all or nothing
   (4.1).
 - 2026-10-09: Mail and Sends on each row of the Accounts list, Verify on
-  the account page alone; the message's actions in its header, its
+  the account page alone. The message's actions in its header, its
   keywords as chips (4.1, 4.4).
 - 2026-10-09: webhooks changeable, a Change card and a new signing
   secret on their page, with the API's `update_webhook` and

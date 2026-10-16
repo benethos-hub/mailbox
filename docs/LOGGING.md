@@ -147,7 +147,7 @@ the audit keeps as well are listed in [AUDIT.md](AUDIT.md) section 2.
 | WARNING | failed sign-in to the UI as X: reason | the user when the name is a user's, else "an unknown name", reason, source | |
 | WARNING | someone typed a wrong code to sign in to the UI as X | user, source | after the right password ([AUTHENTICATION.md](AUTHENTICATION.md) 3) |
 | WARNING | X signed in with a recovery code, N left | user, count, source | its app is gone or out of reach |
-| WARNING | X signed in to the UI, which ended its oldest session: at most N at once | user, count, limit, source | a user holds a few sessions at most ([LIMITS.md](LIMITS.md)). Many in a row may be a stolen password |
+| WARNING | X signed in to the UI, which ended its oldest session / its N oldest sessions: at most M at once | user, count, limit, source | a user holds a few sessions at most ([LIMITS.md](LIMITS.md)). Many in a row may be a stolen password |
 | INFO | signed out | user | |
 | WARNING | someone presented token T of U: reason | token name and id, user id, source, reason: revoked, expired or its user disabled | a token the service does not know counts against the sign-in throttle alone |
 | WARNING | a wrong password or code to confirm a step | user | |
@@ -192,7 +192,8 @@ the sign-in throttle are in 5.9 with the other limits.
 | WARNING | account A could not be reached: reason | account, reason | on a change of status, not per round |
 | INFO | X started a sign-in with P for A | actor, provider, [account] | without an account to connect a new one |
 | INFO | X finished the sign-in with P: A connected / signed in again | actor, provider, account | |
-| WARNING | a sign-in with P failed: reason | provider, reason, no `state` | |
+| WARNING | X could not finish a sign-in with P: reason | actor, provider, reason, no `state` | |
+| INFO | account A can do otherwise now: +gained, -lost | account, the capabilities gained and lost | when the server answers other capabilities than were stored, e.g. after it stopped offering IDLE |
 | DEBUG | the token of A was refreshed | account | |
 
 A status that flips every round (unreachable, reachable) is logged on
@@ -297,9 +298,8 @@ requests without, both as tokens per minute with a burst, in
 - Any other request counts per client address, before the app sees it:
   the sign-in page and its files, a wrong path, the API's documentation.
   `MAILBOX_SERVICE_RATE_LIMIT_ANONYMOUS_PER_MINUTE`, 30 by default.
-- A burst of half as many passes at once. That covers the MCP server's
-  start, which calls `/v1/me` and lists folders for every account. `0`
-  switches a limit off.
+- A burst of half as many passes at once. That covers a client that
+  starts with several calls at once. `0` switches a limit off.
 - `/health` is not limited.
 - The OpenAPI document names the `429` once, in its description, not at
   every operation.
@@ -315,9 +315,12 @@ the limit engages, not per refused request.
 
 Its own process, its own log on stderr, its own rules, the same spirit:
 
-- `INFO` at start: transport, the service's URL, which tools were
-  registered, and before it a `WARNING` per account that reads mail
-  and sends anywhere.
+- `INFO` at start: the settings file it read, if any, the transport,
+  over HTTP its address and whether a bearer token is required, the
+  service's URL and which tools were registered, and before those a
+  `WARNING` per account that reads mail and sends anywhere. A
+  `WARNING` over HTTP without a bearer token, and over stdio where one
+  is set and ignored.
 - `INFO` when the tools changed while it runs: which came and went, and
   how many clients were told, with the same `WARNING`s after it.
   `WARNING` once when the service could not be asked, `INFO` when it
@@ -325,8 +328,9 @@ Its own process, its own log on stderr, its own rules, the same spirit:
   nothing.
 - `WARNING` for a tool that failed, with the tool's name and the code of
   the service's error and its HTTP status, not its message: a message
-  may repeat an address or a search term the model sent. A refusal of
-  the server's own checks says "the arguments were refused".
+  may repeat an address or a search term the model sent. An error the
+  server raises itself, such as refused arguments or a PDF that takes
+  too long, says "the arguments were refused".
 - Never a tool's arguments, never a search term, never mail content,
   never the token. `httpx` and the MCP library at `WARNING`, so no
   request URL is written.
@@ -422,7 +426,8 @@ domain/
       users.py         user created, token issued, role replaced, ...
       accounts.py      account connected, needs a new sign-in, OAuth
       discovery.py     a lookup, the discovery limit
-      mailbox.py       sent, refused, replayed, the send limit
+      mailbox.py       sent, refused, replayed, the send limit, links to
+                         attachments shared, used, handed back, refused
       sync.py          a pass, a failed sync, IDLE
       changes.py       the change log purged
       webhooks.py      created, changed, a new secret, removed, a post

@@ -83,9 +83,9 @@ class Settings(files.FileSettings):
     # which needs a second connection per account, or a JMAP server's
     # event source.
     sync_idle: bool = True
-    # Sync worker: accounts watched over IDLE at once. Each watcher holds a
-    # thread of its own, outside the pool that answers requests. Further
-    # accounts are polled only.
+    # Sync worker: accounts watched at once. An IMAP watcher holds a thread
+    # of its own while it waits in IDLE, outside the pool that answers
+    # requests. Further accounts are polled only.
     sync_watchers: int = Field(default=50, ge=1)
     # Threads: the messages a thread lists at most, the newest.
     thread_messages: int = Field(default=500, ge=1)

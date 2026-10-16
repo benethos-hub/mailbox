@@ -1,4 +1,4 @@
-# Concept — Mailbox
+# Concept of Mailbox
 
 > **Status: draft, 2026-09-24. The software is beta, version 0.4.1.**
 > Describes the target design. What is built today is marked in
@@ -241,8 +241,9 @@ Ids are opaque strings to clients. Nothing may parse them.
 Every adapter implements `Reads` of `data.providers.base`, and of the
 protocols beyond it those it may be able to do: `Writes` (flags and
 folders), `Deletes`, `Drafts`, `Sends`, `Watches` (push), `Deltas`
-(changes since a token) and `FlagChanges` (whose flags changed, IMAP
-with CONDSTORE). One protocol per ability, checked with
+(changes since a token), `FlagChanges` (whose flags changed, IMAP
+with CONDSTORE), `Threads` (threads the server keeps) and `Summaries`
+(messages read by id, for threads the index keeps). One protocol per ability, checked with
 `isinstance`, was **decided 2026-10-07**. What an account can do follows
 from what its server answers (5.11, R4): asked when the account is
 connected or verified, when the sync sees a folder come or go, and when
@@ -822,11 +823,11 @@ contract promises whole words.
 
 **The UI and the MCP server know no providers.** The API answers per
 account the operations its caller can run there, capabilities and
-rights together. The UI and the MCP server only ask that list, and the
-marks with their words come from `mailbox-common`. Setting up an
-account is the one place that knows the kinds of account. Later the
-domain describes each kind's connection, and the UI draws the form
-from it.
+rights together. The UI and the MCP server ask that list, and the
+account's `capabilities` for what it cannot do at all, and the marks
+with their words come from `mailbox-common`. Setting up an account is
+the one place that knows the kinds of account. The domain describes
+each kind's connection, and the UI draws the form from it.
 
 ## 6. REST API
 
@@ -839,7 +840,7 @@ Base path `/v1`, JSON, bearer authentication on everything except
 |---|---|---|
 | GET | `/v1/accounts` | list, paged by address (6.6) |
 | POST | `/v1/accounts` | create with credentials (IMAP/POP3/SMTP, app password), connection is tested first |
-| GET | `/v1/accounts/{account_id}` | get, including `status` and `capabilities` |
+| GET | `/v1/accounts/{account_id}` | get, including `status`, `capabilities`, `marks` and `operations` |
 | PATCH | `/v1/accounts/{account_id}` | display name, settings, new password |
 | DELETE | `/v1/accounts/{account_id}` | remove, credentials deleted |
 | POST | `/v1/accounts/{account_id}/verify` | test the connection now |
@@ -911,7 +912,7 @@ A message already in the trash answers `DELETE` without `permanent` with
 needs `mail.delete`. Deleting for good needs `UIDPLUS` on an IMAP server,
 for the same reason as a move. On Microsoft, Graph's delete of a message
 outside Deleted Items only moves it there, so the adapter moves the
-message into the trash and deletes it from there; a deleted or replaced
+message into the trash and deletes it from there. A deleted or replaced
 draft goes the same way.
 
 `keywords` follow JMAP (RFC 8621): `$answered`, `$forwarded`, `$draft` and
@@ -1743,7 +1744,7 @@ included for a grant on every account. `user`, `outcome`, `recipient`
 - **Decided 2026-10-16:** while it runs it asks `/v1/me` again every
   `MAILBOX_MCP_RIGHTS_SECONDS`, 60 by default, over stdio and HTTP, and
   at once when a tool is refused with `403 forbidden`, a right missing.
-  When the tools change it tells its clients with
+  With `0` it asks only at start. When the tools change it tells its clients with
   `notifications/tools/list_changed`, so a right granted or taken away
   shows without a restart. When the service refuses the token, every
   tool goes away. **Decided 2026-10-16:** a user that may do nothing

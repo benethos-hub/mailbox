@@ -104,20 +104,22 @@ some folders, such as the invoices, and end after a week.
 
 - **Accounts:** IMAP with SMTP for sending, set up from the address alone
   (autodiscovery), JMAP servers such as Fastmail and Stalwart, POP3
-  for mailboxes without IMAP (the inbox only), and Microsoft accounts
-  (Outlook.com, Microsoft 365) over Microsoft Graph with OAuth sign-in.
+  for mailboxes without IMAP (the inbox only), Microsoft accounts
+  (Outlook.com, Microsoft 365) over Microsoft Graph with OAuth sign-in,
+  and Gmail over the Gmail API.
   Credentials are encrypted (AES-256-GCM) under a master key kept
   outside the database.
 - **Reading:** folders, lists and search, one account or all at once,
-  messages as text and HTML, attachments, the raw source. Message ids stay
+  conversations across folders, messages as text and HTML, attachments,
+  the raw source. Message ids stay
   the same when a message moves, kept by a background sync. A link to an
   attachment lets another service fetch the file once, without a token.
 - **Writing:** flags, moving, deleting, folders, drafts, and sending with
   reply, reply to all and forward. A retried send is not sent twice
   (`Idempotency-Key`).
 - **Changes:** a change feed names each message created, changed or
-  deleted since a point you keep, in IMAP, JMAP, POP3 and Microsoft
-  accounts, flags set in other mail clients included where the IMAP
+  deleted since a point you keep, in IMAP, JMAP, POP3, Microsoft and
+  Gmail accounts, flags set in other mail clients included where the IMAP
   server offers CONDSTORE. Webhooks post the same events, signed, to a URL of your
   choice, a host in your local network included.
 - **Users and rights:** users, roles and grants per account and per
@@ -135,7 +137,7 @@ some folders, such as the invoices, and end after a week.
 - **Operation:** encrypted backup and restore, container images, compose
   files for operation with HTTPS through Caddy and MCP server instances.
 
-Planned next: threads across folders. The order is in
+What comes next, and in which order, is in
 [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Providers

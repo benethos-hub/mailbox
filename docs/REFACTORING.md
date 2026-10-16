@@ -535,20 +535,20 @@ code.
 
 | # | What | Where | Proposed |
 |---|---|---|---|
-| B1 | Record an activity and re-raise: five equal `except MailboxServiceError` blocks; record and swallow: `_after_sending` in `outgoing.py`, rebuilt by hand in `sending.py` and `idempotency.py` | `accounts/service.py`, `accounts/oauth.py`, `mailbox/sending.py` (three), `mailbox/idempotency.py` | two context managers on `ActivityLog` in `activity/recorder.py`, about 35 lines to 12 |
-| B2 | Load the user, check the caller covers it: six copies; own user or `get_user`: two | `users/service.py` | `_managed(access, op, user_id)` and `_self_or_get_user` |
-| B3 | Bounded tables: drop the expired, then the oldest; sliding window trimmed and capped | `auth/throttle.py`, `discovery/service.py` (twice) | one helper beside `locks.py`, domain only |
+| B1 | Record an activity and re-raise: five equal `except MailboxServiceError` blocks. Record and swallow: `_after_sending` in `outgoing.py`, rebuilt by hand in `sending.py` and `idempotency.py` | `accounts/service.py`, `accounts/oauth.py`, `mailbox/sending.py` (three), `mailbox/idempotency.py` | two context managers on `ActivityLog` in `activity/recorder.py`, about 35 lines to 12 |
+| B2 | Load the user, check the caller covers it: six copies. Own user or `get_user`: two | `users/service.py` | `_managed(access, op, user_id)` and `_self_or_get_user` |
+| B3 | Bounded tables: drop the expired, then the oldest. Sliding window trimmed and capped | `auth/throttle.py`, `discovery/service.py` (twice) | one helper beside `locks.py`, domain only |
 | B4 | Cursors and pages: decode then "invalid cursor" in `sending.py` and `merge.py`, own decoding in `changes/feed.py` and `system/servicelog.py`, encoding straight with `opaque` in three, `limit + 1` and `more` in four | `domain/paging.py` gets `encode_cursor`, `decode_cursor(prefix, value, parse)`, `split_page(found, limit)` |
 | B5 | Pages: build a model, turn `ValidationError` into `FormError` | `mailform.py`, `routes/folders.py`, `routes/webhooks.py`, `routes/sends.py`, `grants.py` | `model_of(...)` in `web/pages/forms.py` |
 | B6 | The account ids the caller may do X on | `mailbox/service.py` (twice), `mailbox/sending.py`, `webhooks/delivery.py`, `accounts/service.py` | `Access.filter(operation, ids)` in `rights/access.py` |
 | B7 | Pages: call the domain if allowed, else a default: eight copies | `routes/sends.py`, `routes/users.py` (four), `routes/mail.py`, `routes/home.py`, and `system/status.py` | `if_allowed(...)` in `web/pages/deps.py` |
 | B8 | The web decides what the domain decides: `effective.py` rebuilds `ACCOUNT_FREE \| ALL_ACCOUNTS` (`access.py` builds it three times), `navigation.py` recomputes `StatusService.may_see`, `routes/mail.py` derives the batch rule that `mailbox/service.py` enforces | one constant and two predicates in `rights`, the web calls them |
-| B9 | AuthService: load a user, refuse if missing or disabled, three times; the name key twice | `auth/service.py` | `_live_user`, `_name_key` |
-| B10 | The background loop: repeat, record a failed round, sleep, in two places, wrapped once more by `main.py`; `Retries.pause` in `delivery.py` rebuilds `backoff` without jitter | `webhooks/delivery.py`, `sync/worker.py`, `main.py` | one `rounds(...)` helper in the domain, `backoff` from `common` (after 8.2) |
+| B9 | AuthService: load a user, refuse if missing or disabled, three times. The name key twice | `auth/service.py` | `_live_user`, `_name_key` |
+| B10 | The background loop: repeat, record a failed round, sleep, in two places, wrapped once more by `main.py`. `Retries.pause` in `delivery.py` rebuilds `backoff` without jitter | `webhooks/delivery.py`, `sync/worker.py`, `main.py` | one `rounds(...)` helper in the domain, `backoff` from `common` (after 8.2) |
 | B11 | The fingerprint as sorted JSON under two names | `mailbox/merge.py`, `mailbox/idempotency.py` | one helper. Changing the idempotency hash invalidates stored keys, kept 24 h: a commit of its own, noted in the CHANGELOG |
 | B12 | Pages read the same form fields twice, once to show them again, once for the call | `routes/webhooks.py`, `routes/users.py`, `routes/accounts.py` | read once into the typed dict |
 | B13 | SyncWorker: look up the account, record only if it still exists, four times | `sync/worker.py` | `_record(account_id, make)` |
-| B14 | Small: the mail page URL built three times; `quote(safe="")` twice in `web`; `LOG_LEVELS` beside `servicelog.LEVELS`; the admin grant literal in `users/service.py` and `access.py` (`Access.admin` unused); the mail form's field keys listed three times; `str(form.get(x) or "")` 39 times; `why()` six times in the activity catalogue; `TokenInfo.of(...)` three times | | each a one-line helper or a constant |
+| B14 | Small: the mail page URL built three times. `quote(safe="")` twice in `web`. `LOG_LEVELS` beside `servicelog.LEVELS`. The admin grant literal in `users/service.py` and `access.py` (`Access.admin` unused). The mail form's field keys listed three times. `str(form.get(x) or "")` 39 times. `why()` six times in the activity catalogue. `TokenInfo.of(...)` three times | | each a one-line helper or a constant |
 
 ### 9.3 Data
 
