@@ -7,7 +7,8 @@ rights of that token are resolved anew, as if the token asked. The
 secret is shown once and kept as its digest. Every refusal is the same
 ``NotFoundError``, a locked-out address too, and counts as a wrong
 token of the address that tried. A mail server that fails is not the
-fetcher's doing: it counts nothing, and a link it failed holds again.
+fetcher's doing: it counts nothing, the link holds still or again, and
+the answer is ``ProviderUnavailableError``, to try again while it holds.
 Where the secret travels, the URL and its path, is the web layer's.
 """
 
@@ -30,6 +31,7 @@ from ...errors import (
     NotFoundError,
     ProviderAuthError,
     ProviderError,
+    ProviderUnavailableError,
 )
 from ..activity import SERVICE, ActivityLog, Actor, someone
 from ..activity import mailbox as said
@@ -45,6 +47,8 @@ SECRET_LENGTH = 128
 LINK_SECONDS = 120
 # The one answer to every link that does not hand out its attachment.
 LINK_GONE = "no such link"
+# The answer where the mail server failed and the link holds.
+LINK_LATER = "the mail server did not hand out the attachment: try again"
 
 
 @dataclass(frozen=True, slots=True)
@@ -137,8 +141,9 @@ class AttachmentLinks:
 
     async def redeem(self, presented: str, source: str) -> AttachmentContent:
         """The attachment of the link whose secret ``presented`` is, used up.
-        ``source`` is the client address that asks. Anything else is
-        ``NotFoundError``, always the same."""
+        ``source`` is the client address that asks. Where the mail server
+        fails, ``ProviderUnavailableError`` and the link holds. Anything
+        else is ``NotFoundError``, always the same."""
         if self._auth.lockouts.is_locked_out(source):
             raise NotFoundError(LINK_GONE)
         link = (
@@ -174,16 +179,15 @@ class AttachmentLinks:
                 access, link.account_id, link.message_id, link.attachment_id, claim
             )
         except (ProviderError, ProviderAuthError) as exc:
-            if not claimed:
-                raise self._refused(source, link, exc.message, counted=False) from None
-            with self._activity.atomic():
-                self._store.release(link.id)
-                self._activity.record(
-                    said.LinkReturned(
-                        by=Actor.of(access), link_id=link.id, reason=exc.message
+            if claimed:
+                with self._activity.atomic():
+                    self._store.release(link.id)
+                    self._activity.record(
+                        said.LinkReturned(
+                            by=Actor.of(access), link_id=link.id, reason=exc.message
+                        )
                     )
-                )
-            raise NotFoundError(LINK_GONE) from None
+            raise ProviderUnavailableError(LINK_LATER) from None
         except MailboxServiceError as exc:
             raise self._refused(source, link, exc.message) from None
 
@@ -199,18 +203,11 @@ class AttachmentLinks:
         return access, ""
 
     def _refused(
-        self,
-        source: str,
-        link: StoredLink | None = None,
-        why: str = "",
-        *,
-        counted: bool = True,
+        self, source: str, link: StoredLink | None = None, why: str = ""
     ) -> NotFoundError:
         """The answer to a link that does not hold, the failure counted for
-        ``source`` unless the mail server failed. A secret that is no
-        link's writes no line."""
-        if counted:
-            self._auth.lockouts.failed(source)
+        ``source``. A secret that is no link's writes no line."""
+        self._auth.lockouts.failed(source)
         if link is not None:
             self._activity.record(
                 said.LinkRefused(by=someone(source), link_id=link.id, reason=why)

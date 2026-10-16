@@ -10445,7 +10445,7 @@
           "links"
         ],
         "summary": "Get Linked Attachment",
-        "description": "The attachment a link from `share_attachment` hands out, once. No\nAuthorization: whoever holds the URL fetches it. A link unknown,\nused, ended or no longer allowed answers the same `404`, and so does\nan address that failed too often.",
+        "description": "The attachment a link from `share_attachment` hands out, once. No\nAuthorization: whoever holds the URL fetches it. A link unknown,\nused, ended or no longer allowed answers the same `404`, and so does\nan address that failed too often. Where the mail server fails, the\nlink holds and the answer is `502 provider_unavailable`: try again.",
         "operationId": "get_linked_attachment",
         "parameters": [
           {
@@ -10467,6 +10467,16 @@
           },
           "404": {
             "description": "No attachment for this link: unknown, used, ended, or no longer allowed. One answer for every case",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The mail server did not hand out the attachment (`provider_unavailable`). The link holds: try again before it ends",
             "content": {
               "application/json": {
                 "schema": {

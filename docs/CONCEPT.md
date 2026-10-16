@@ -976,7 +976,9 @@ client, the MCP server.
 - Every refusal of `GET /v1/links/{secret}` is the same `404`, for an
   address locked out after failed sign-ins too, so the slowing down
   stays silent. A failure counts as a wrong token in the lockout per
-  address.
+  address. **Decided 2026-10-16:** where the mail server fails, the link
+  holds, nothing counts, and the answer is `502 provider_unavailable`,
+  so the other service tries again.
 - `share_attachment` is the group `mail.share` of its own, in no role
   template ([PERMISSIONS.md](PERMISSIONS.md) 8.7): a grant names it on
   purpose.
