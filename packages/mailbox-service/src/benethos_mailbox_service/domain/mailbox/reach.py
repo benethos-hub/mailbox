@@ -57,10 +57,11 @@ class Reach:
         return record.folder_id in self.ids
 
 
-def of_the_account(record: ChangeRecord) -> bool:
-    """Only a change that is not about a message: what is heard of an
-    account whose folders cannot be read now."""
-    return not record.type.startswith("message.")
+def of_the_account(record: ChangeRecord) -> bool | None:
+    """What is heard of an account whose folders cannot be read now: a
+    change that is not about a message, and of one about a message None,
+    not known yet."""
+    return None if record.type.startswith("message.") else True
 
 
 async def reach_of(

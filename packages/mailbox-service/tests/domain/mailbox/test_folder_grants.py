@@ -292,32 +292,43 @@ def test_the_change_feed_keeps_to_the_folders(
     assert [c["id"] for c in seen] == ["m1", "m3", "m0"]
 
 
-def test_an_account_whose_folders_fail_leaves_the_others_heard(
+def test_an_account_whose_folders_fail_holds_its_changes_until_back(
     app_client: TestClient,
     client: TestClient,
     services: Services,
     mailbox: str,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A list of several accounts goes on without one that is down, and
-    tells of that one only what is not about a message."""
+    """A list of several accounts goes on without one that is down up to
+    that one's first change of a message, which comes once it is back."""
     other = create_account(
         services.accounts, ProviderType.MEMORY, "other@example.com"
     ).id
     grant = Grant(accounts=[mailbox, other], allow=["mail.read"], folders=["inbox"])
     reader = TestClient(app_client.app, headers=bearer_for(services, grant))
     every = client.get("/v1/changes").json()["state"]
+    memory = memory_of(services, other)
+    real = memory.list_folders
 
     async def down() -> list[Folder]:
         raise ProviderUnavailableError("the server does not answer")
 
-    monkeypatch.setattr(memory_of(services, other), "list_folders", down)
+    monkeypatch.setattr(memory, "list_folders", down)
     client.patch(f"/v1/accounts/{mailbox}/messages/m0", json={"unread": True})
     client.patch(f"/v1/accounts/{other}/messages/m0", json={"unread": True})
+    client.patch(f"/v1/accounts/{mailbox}/messages/m0", json={"unread": False})
     across = reader.get("/v1/changes", params={"since": every})
     assert across.status_code == 200
-    heard = [(c["account_id"], c["id"]) for c in across.json()["changes"]]
-    assert heard == [(mailbox, "m0")]
+    page = across.json()
+    assert [(c["account_id"], c["id"]) for c in page["changes"]] == [(mailbox, "m0")]
+    assert page["more"]
+    # Asked again while it is down: nothing moves, and nothing more waits.
+    again = reader.get("/v1/changes", params={"since": page["state"]}).json()
+    assert again == {"changes": [], "state": page["state"], "more": False}
+    monkeypatch.setattr(memory, "list_folders", real)
+    back = reader.get("/v1/changes", params={"since": page["state"]}).json()
+    heard = [(c["account_id"], c["id"]) for c in back["changes"]]
+    assert heard == [(other, "m0"), (mailbox, "m0")]
 
 
 def test_a_reply_needs_the_original_in_reach(

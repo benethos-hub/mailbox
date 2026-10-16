@@ -161,10 +161,10 @@ class MailboxService:
 
     async def hearing_now(
         self, access: Access, account_id: str
-    ) -> Callable[[ChangeRecord], bool] | None:
+    ) -> Callable[[ChangeRecord], bool | None] | None:
         """``hearing`` for a list of several accounts: one whose folders
-        cannot be read now gives only its changes that are not about a
-        message, instead of failing the others."""
+        cannot be read now leaves its changes about a message not known
+        yet, instead of failing the others."""
         try:
             return await self.hearing(access, account_id)
         except MailboxServiceError:
@@ -380,7 +380,7 @@ class MailboxService:
         visible = access.filter(
             "list_all_changes", (a for a in account_ids or existing if a in existing)
         )
-        keep: Callable[[ChangeRecord], bool] | None = None
+        keep: Callable[[ChangeRecord], bool | None] | None = None
         if since:
             hearing = {a: await self.hearing_now(access, a) for a in visible}
             if any(h is not None for h in hearing.values()):
@@ -409,8 +409,9 @@ class MailboxService:
 
 
 def _heard(
-    hearing: dict[str, Callable[[ChangeRecord], bool] | None], record: ChangeRecord
-) -> bool:
+    hearing: dict[str, Callable[[ChangeRecord], bool | None] | None],
+    record: ChangeRecord,
+) -> bool | None:
     hears = hearing.get(record.account_id)
     return hears is None or hears(record)
 

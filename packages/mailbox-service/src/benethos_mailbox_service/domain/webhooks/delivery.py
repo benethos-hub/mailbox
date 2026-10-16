@@ -7,6 +7,10 @@ of the accounts the webhook's creator may read now. It is signed with the
 webhook's secret: ``X-Mailbox-Signature: t=<unix time>,v1=<hex>``, the
 HMAC-SHA256 of ``<unix time>.`` followed by the body.
 
+Where the creator's grants name folders and an account's folders cannot
+be read now, the post ends before that account's first change of a
+message, and it waits there until they can.
+
 A post the receiver does not take with a 2xx is tried again, after
 ``first_retry`` seconds, then twice as long each time up to
 ``longest_retry``. After ``attempts`` tries its events are dropped, the
@@ -42,15 +46,18 @@ from ...data.storage import (
 from ...errors import MailboxServiceError
 from ..activity import DISPATCHER, ActivityLog
 from ..activity import webhooks as said
-from ..changes import ChangeFeed
+from ..changes import ChangeFeed, decided
 from ..rights import Access
 from ..rounds import rounds
 from .service import sealed_label
 
 # How the dispatcher waits: anyio.sleep, or a fake in tests.
 Sleep = Callable[[float], Awaitable[None]]
-# What of an account's changes a creator may hear of, None for all.
-Hearing = Callable[[Access, str], Awaitable[Callable[[ChangeRecord], bool] | None]]
+# What of an account's changes a creator may hear of, None for all. Of a
+# change it cannot tell yet it answers None.
+Hearing = Callable[
+    [Access, str], Awaitable[Callable[[ChangeRecord], bool | None] | None]
+]
 
 BATCH = 100
 # How often the log is looked at for new events, in seconds.
@@ -187,7 +194,11 @@ class WebhookDispatcher:
                     record, replace(pending.delivery, cursor=pending.last), pending.note
                 )
             return False
-        batch = await self._heard(pending.access, pending.window)
+        heard = await self._heard(pending)
+        if heard is None:
+            # The first event is not known yet: it waits.
+            return False
+        pending, batch = heard
         if not batch:
             # Nothing the creator may hear of: past it, without a post.
             self._save(
@@ -308,21 +319,29 @@ class WebhookDispatcher:
         return False
 
     async def _heard(
-        self, access: Access | None, window: list[LoggedChange]
-    ) -> list[LoggedChange]:
+        self, pending: _Pending
+    ) -> tuple[_Pending, list[LoggedChange]] | None:
         """The changes the creator may hear of, where its grants name
-        folders (PERMISSIONS.md 8.5). An account whose folders cannot be
-        read now gives none of its changes of messages: ``hearing``."""
+        folders (PERMISSIONS.md 8.5), and the window they were taken from.
+        It ends before a change of an account whose folders cannot be read
+        now: ``hearing``. None when the first one is such a change."""
+        access, window = pending.access, pending.window
         if self._hearing is None or access is None:
-            return window
-        hearing: dict[str, Callable[[ChangeRecord], bool] | None] = {}
+            return pending, window
+        hearing: dict[str, Callable[[ChangeRecord], bool | None] | None] = {}
         for account_id in dict.fromkeys(e.record.account_id for e in window):
             hearing[account_id] = await self._hearing(access, account_id)
-        return [
-            e
-            for e in window
-            if (hears := hearing[e.record.account_id]) is None or hears(e.record)
-        ]
+
+        def keep(record: ChangeRecord) -> bool | None:
+            hears = hearing[record.account_id]
+            return True if hears is None else hears(record)
+
+        known = decided(window, keep)
+        if not known.changes:
+            return None
+        if known.held:
+            pending = replace(pending, window=known.changes, more=True)
+        return pending, [e for e in known.changes if keep(e.record)]
 
     def _accounts(self, record: WebhookRecord, access: Access | None) -> list[str]:
         """The accounts the webhook hears of: its own list or every one,
