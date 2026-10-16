@@ -92,7 +92,8 @@ async def list_threads(
     newest message in the folder is, with what the caller may see of the
     whole thread. A page is a page of the folder's messages, so it may hold
     fewer threads than `limit`. A later page leaves out what an earlier
-    one listed. POP3 answers `501`."""
+    one listed. A message the service has no thread for yet (IMAP) is a
+    thread of its own under the message's id. POP3 answers `501`."""
     return await mailbox.list_threads(
         caller, account_id, folder_id=folder, limit=limit, cursor=cursor
     )
@@ -103,9 +104,10 @@ async def get_thread(
     account_id: str, thread_id: str, caller: Caller, mailbox: Mailbox
 ) -> Thread:
     """A thread with its messages in every folder, oldest first, those the
-    caller may see. A message names its thread in `thread_id`. A longer
-    thread lists its newest messages and says `truncated`. POP3 answers
-    `501`."""
+    caller may see. A message names its thread in `thread_id`. The id of a
+    message listed as a thread of its own finds it alone, or the thread
+    it is in now. A longer thread lists its newest messages and says
+    `truncated`. POP3 answers `501`."""
     return await mailbox.get_thread(caller, account_id, thread_id)
 
 

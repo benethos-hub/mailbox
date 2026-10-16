@@ -206,7 +206,13 @@ adheres to [Semantic Versioning](https://semver.org/).
   by page. In the folder `all` a thread came again on later pages, as
   in the UI's conversations of All Mail, and so did one whose messages
   came in the same second at the end of a page. A cursor of the list
-  made before is refused once.
+  made before is refused once. Where a folder does not list by date,
+  as IMAP lists a mail moved into it last, no thread is left out, and
+  messages of one second over three pages no longer repeat a thread.
+- `GET /v1/accounts/{account_id}/threads` of an IMAP account shows a
+  message the service has no thread for yet as a thread of its own
+  under the message's id, which `GET .../threads/{thread_id}` takes as
+  well. It was left out until the next sync pass.
 - A list across accounts, `GET /v1/messages`, gives every message once
   when a client asks the next page for fewer messages than the one
   before. It gave some twice, as the MCP server's `search_messages`

@@ -14,7 +14,6 @@ from benethos_mailbox_service.assembly import Services, create_app
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import Address, Grant, MessageSummary
 from benethos_mailbox_service.data.providers import ThreadMessages
-from benethos_mailbox_service.data.providers.imap import mappers
 from benethos_mailbox_service.data.providers.jmap import JmapProvider
 from benethos_mailbox_service.data.storage import InMemoryMessageIndexRepository
 from benethos_mailbox_service.domain.mailbox.threads import thread_of
@@ -29,25 +28,7 @@ from benethos_mailbox_service.errors import (
 from ...conftest import ADMIN, admin_bearer
 from ...imap_fake import FakeFolder, FakeMailBox, make_message
 from ...jmap_fake import FakeJmap
-from ..sync_helpers import header
-
-SENT = mappers.folder_id("Sent")
-INBOX = mappers.folder_id("INBOX")
-ARCHIVE = mappers.folder_id("Archive")
-
-
-def answer(subject: str, day: int, *to: str) -> bytes:
-    """A reply on a day of September to the messages with these subjects."""
-    return make_message(
-        subject,
-        date=datetime(2026, 9, day, tzinfo=UTC),
-        sender="Me <me@example.com>",
-        to="Alice Example <alice@example.com>",
-        extra_headers={
-            "In-Reply-To": header(to[-1]),
-            "References": " ".join(header(s) for s in to),
-        },
-    )
+from ..thread_helpers import INBOX, SENT, answer, every_thread, synced
 
 
 @pytest.fixture
@@ -59,18 +40,6 @@ def conversation(imap_server: FakeMailBox) -> FakeMailBox:
     imap_server.add("INBOX", 5, answer("Re: Re: Mail 1", 11, "Mail 1", "Re: Mail 1"))
     imap_server.add("Archive", 1, make_message("Kept"))
     return imap_server
-
-
-async def synced(services: Services, account_id: str) -> dict[str, str]:
-    """Each subject's thread, after a sync."""
-    await services.sync.sync_account(account_id)
-    found: dict[str, str] = {}
-    for folder in (INBOX, SENT, ARCHIVE):
-        page = await services.mailbox.list_messages(
-            ADMIN, account_id, folder_id=folder, limit=50, cursor=None
-        )
-        found.update((m.subject or "", m.thread_id or "") for m in page.items)
-    return found
 
 
 def reading(account_id: str, *folders: str) -> Access:
@@ -211,22 +180,6 @@ async def test_the_threads_of_a_folder_page_by_page(
         cursor = page.next_cursor
     # Mail 1 on the last page belongs to a thread shown on the first.
     assert shown == [threads[f"Mail {n}"] for n in (1, 4, 3, 2)]
-
-
-async def every_thread(
-    services: Services, account_id: str, folder: str, limit: int
-) -> list[str]:
-    """The ids of the threads of a folder, page by page."""
-    shown: list[str] = []
-    cursor = None
-    while True:
-        page = await services.mailbox.list_threads(
-            ADMIN, account_id, folder_id=folder, limit=limit, cursor=cursor
-        )
-        shown += [t.id for t in page.items]
-        cursor = page.next_cursor
-        if cursor is None:
-            return shown
 
 
 @pytest.mark.parametrize("folder", ["inbox", "all"])

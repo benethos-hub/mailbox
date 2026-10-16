@@ -6606,7 +6606,7 @@
           "mailbox"
         ],
         "summary": "List Threads",
-        "description": "The threads of a folder, newest first. Each is listed where its\nnewest message in the folder is, with what the caller may see of the\nwhole thread. A page is a page of the folder's messages, so it may hold\nfewer threads than `limit`. A later page leaves out what an earlier\none listed. POP3 answers `501`.",
+        "description": "The threads of a folder, newest first. Each is listed where its\nnewest message in the folder is, with what the caller may see of the\nwhole thread. A page is a page of the folder's messages, so it may hold\nfewer threads than `limit`. A later page leaves out what an earlier\none listed. A message the service has no thread for yet (IMAP) is a\nthread of its own under the message's id. POP3 answers `501`.",
         "operationId": "list_threads",
         "security": [
           {
@@ -6804,7 +6804,7 @@
           "mailbox"
         ],
         "summary": "Get Thread",
-        "description": "A thread with its messages in every folder, oldest first, those the\ncaller may see. A message names its thread in `thread_id`. A longer\nthread lists its newest messages and says `truncated`. POP3 answers\n`501`.",
+        "description": "A thread with its messages in every folder, oldest first, those the\ncaller may see. A message names its thread in `thread_id`. The id of a\nmessage listed as a thread of its own finds it alone, or the thread\nit is in now. A longer thread lists its newest messages and says\n`truncated`. POP3 answers `501`.",
         "operationId": "get_thread",
         "security": [
           {

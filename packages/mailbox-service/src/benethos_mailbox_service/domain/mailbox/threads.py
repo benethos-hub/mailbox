@@ -3,7 +3,9 @@ messages of a folder by threads.
 
 Gmail, JMAP and Microsoft keep threads themselves (``Threads``). For IMAP
 the index keeps them (``sync``), and the messages are read by id
-(``Summaries``). POP3 has none: ``501``. A grant that names folders sees
+(``Summaries``). A message the index has no thread for yet is listed as
+a thread of its own under the message's id, and that id finds the thread
+it is in later. POP3 has none: ``501``. A grant that names folders sees
 the messages of a thread in those folders only, and a thread without
 one of them is not found.
 
@@ -97,9 +99,16 @@ class Threads:
             ),
         )
         listed = (await self._calls.published_page(account_id, page)).items
-        ids = list(dict.fromkeys(m.thread_id for m in listed if m.thread_id))
+
+        def thread_of_message(message: MessageSummary) -> str | None:
+            # The index has no thread for it yet: one of its own.
+            return message.thread_id or (message.id if keeps else None)
+
+        loose = {m.id: m for m in listed if keeps and not m.thread_id}
+        ids = list(dict.fromkeys(filter(None, map(thread_of_message, listed))))
         own = self._calls.record(account_id).email
-        read = await self._read(account_id, ids)
+        read = await self._read(account_id, [i for i in ids if i not in loose])
+        read.update({i: ([m], False) for i, m in loose.items()})
         holds = holder(await self._folders.all(account_id), folder)
         found: list[ThreadSummary] = []
         for thread_id in ids:
@@ -107,7 +116,7 @@ class Threads:
             if thread is None or (before and before.listed(thread, holds, listed)):
                 continue
             # Its row shows the newest message in the folder, where it stands.
-            here = next(m for m in listed if m.thread_id == thread_id)
+            here = next(m for m in listed if thread_of_message(m) == thread_id)
             found.append(
                 ThreadSummary.model_validate(
                     {
@@ -119,7 +128,7 @@ class Threads:
                 )
             )
         return Page[ThreadSummary](
-            items=found, next_cursor=_Before.after(page.next_cursor, listed)
+            items=found, next_cursor=_Before.after(page.next_cursor, listed, before)
         )
 
     async def _visible(
@@ -128,8 +137,34 @@ class Threads:
         """The thread with the messages in reach, None without one."""
         if self._calls.keeps_threads(account_id):
             read = await self._from_index(account_id, [thread_id])
+            if not read[thread_id][0]:
+                return await self._of_message(account_id, thread_id, reach)
         else:
             read = {thread_id: await self._from_provider(account_id, thread_id)}
+        own = self._calls.record(account_id).email
+        return _visible(account_id, thread_id, read, reach, own)
+
+    async def _of_message(
+        self, account_id: str, message_id: str, reach: Reach | None
+    ) -> Thread | None:
+        """Where the index keeps threads, the thread a list named by the id
+        of its message, which had none then: the thread it is in now, or
+        the message alone. None for an id of no message."""
+        thread_id = self._calls.thread_of(account_id, message_id)
+        if thread_id is not None:
+            read = await self._from_index(account_id, [thread_id])
+        else:
+            try:
+                found = await self._calls.on_message(
+                    account_id,
+                    message_id,
+                    lambda p, native: summaries(p).summaries([native]),
+                )
+            except NotFoundError:
+                return None
+            thread_id = message_id
+            alone = [public(m, message_id, account_id) for m in found.values()]
+            read = {thread_id: (alone, False)}
         own = self._calls.record(account_id).email
         return _visible(account_id, thread_id, read, reach, own)
 
@@ -268,8 +303,9 @@ def _when(message: MessageSummary) -> datetime | None:
 @dataclass(frozen=True)
 class _Before:
     """What a cursor of a list of threads carries: the cursor of the
-    folder's messages, and the messages of the page before that came in
-    its last second. One of them may share that second with this page."""
+    folder's messages, and the messages of the pages before that came in
+    their last second. One of them may share that second with this page.
+    While whole pages fall into one second, they are carried on."""
 
     cursor: str
     last: frozenset[str]
@@ -283,12 +319,17 @@ class _Before:
         )
 
     @staticmethod
-    def after(cursor: str | None, listed: list[MessageSummary]) -> str | None:
-        """The cursor of the next page, after ``listed``."""
+    def after(
+        cursor: str | None, listed: list[MessageSummary], before: _Before | None
+    ) -> str | None:
+        """The cursor of the next page, after ``listed``, the page after
+        ``before``."""
         if cursor is None:
             return None
         times = [when for m in listed if (when := _when(m)) is not None]
         last = [m.id for m in listed if times and _when(m) == min(times)]
+        if before is not None and times and min(times) == max(times):
+            last = sorted(before.last.union(last))
         return paging.encode_cursor(_CURSOR_PREFIX, [cursor, last])
 
     def listed(
@@ -299,14 +340,18 @@ class _Before:
     ) -> bool:
         """Whether a page before this one listed the thread: it has a
         message in the folder, not on this page, newer than the newest one
-        here or listed in the last second of the page before."""
-        top = _when(listed[0]) if listed else None
-        if top is None:
+        here, or as new and listed in the last second of the pages before.
+        The newest here, not the first: a folder may list by when a message
+        was filed, and an old one filed late opens a page."""
+        times = [when for m in listed if (when := _when(m)) is not None]
+        if not times:
             return False
+        top = max(times)
         here = {m.id for m in listed}
         return any(
             holds(m.folder_ids)
             and m.id not in here
-            and (m.id in self.last or ((when := _when(m)) is not None and when > top))
+            and (when := _when(m)) is not None
+            and (when > top or (when == top and m.id in self.last))
             for m in thread.messages
         )
