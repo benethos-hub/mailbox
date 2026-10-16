@@ -142,7 +142,7 @@ def main(argv: list[str] | None = None) -> None:
         operations = anyio.run(_at_start, connect)
     except (MailboxError, ToolError) as exc:
         sys.exit(f"benethos-mailbox-mcp: {exc}")
-    built = server.build_server(operations, connect)
+    built = server.build_server(operations, connect, settings.rights_seconds)
     server.started(operations, settings.transport, environment.url)
     if settings.transport == "stdio":
         transport.serve_stdio(built, token)

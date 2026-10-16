@@ -527,7 +527,11 @@ packages/mailbox-mcp/
                         #   stdio or HTTP
     server.py           # build_server: the MCP library's server with
                         #   the tools the token's rights allow, each
-                        #   logged when it fails
+                        #   logged when it fails, asked again while
+                        #   it runs
+    listeners.py        # the clients told that the tool list changed:
+                        #   their connections, the announcement, the
+                        #   bus of listen streams
     transport.py        # streamable HTTP: bearer guard, host check (uvicorn)
     tools/              # one module per kind with its part of TOOLS,
                         #   and what the kinds share
@@ -560,7 +564,7 @@ The modules stand in lines, each importing only lines below:
 ```
  cli
  server · transport
- tools
+ tools · listeners
  client · render · pdf
  models · errors · config
 ```

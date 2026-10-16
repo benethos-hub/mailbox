@@ -403,6 +403,9 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
   2026-10-15, done: `share_attachment` in the API, the client and the
   MCP server, the group `mail.share`, and `GET /v1/links/{secret}`,
   which hands the file out once, without a token
+- **The MCP server follows its token's rights while it runs (7.5)**,
+  decided 2026-10-16, done: it asks `/v1/me` every
+  `MAILBOX_MCP_RIGHTS_SECONDS` and sends `notifications/tools/list_changed`
 
 ## Phase 5a – One way to operate every mailbox
 

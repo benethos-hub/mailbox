@@ -75,6 +75,9 @@ done. Update the roadmap in the same commit that finishes an item.
   the conversation of a search hit as well. A user that may share gets
   a link to a PDF attachment, which a GET without a token fetches once,
   the bytes `get_attachment` answers, and a second GET answers `404`.
+  A user loses `mail.share` and gets it back while its server runs,
+  which must tell its client each time and list the tools left, then
+  the user is disabled and no tool is left.
   The write tools create
   a folder and star, move and trash a message of the first test account,
   then put everything back. They also rename the folder and add and

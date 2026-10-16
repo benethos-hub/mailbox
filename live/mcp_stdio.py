@@ -8,8 +8,10 @@ API, and makes a user that may only read them. Then it starts
 ``benethos-mailbox-mcp`` over stdio with that user's token and calls the
 tools, the conversation of a search hit among them. A user that may
 share gets a link to the first PDF attachment, fetched once without a
-token as another service would, and refused the second time. A second
-user may
+token as another service would, and refused the second time. Another
+user loses that right and gets it back while its server runs, which
+must tell its client each time and list the tools that are left, then
+the user is disabled and no tool is left. A second user may
 also write: with it the check creates and renames
 a folder in the first test account, adds and takes off a keyword, stars,
 moves and trashes the newest inbox message there, and puts everything
@@ -35,6 +37,7 @@ import anyio
 from checks.accounts import accounts, read_env, register_all
 from checks.admin import user_token
 from checks.mcp_links import check_links, first_pdf
+from checks.mcp_rights import check_rights
 from checks.mcp_sending import check_constraints, check_sending
 from checks.mcp_session import READ_TOOLS, mcp_session, text_of
 from checks.mcp_writing import check_writing
@@ -301,6 +304,8 @@ def main() -> int:
         sharer = user_token(client, ids, ["mail.read", "mail.share"])
         print("\n== the MCP server over stdio, a link to an attachment")
         anyio.run(check_links, run, url, sharer, client)
+        print("\n== the MCP server over stdio, following its token's rights")
+        anyio.run(check_rights, run, url, client, ids)
         print("\n== the MCP server over stdio, a grant narrowed to the inbox")
         anyio.run(check_folders, run, url, inbox_only, ids[0])
         print("\n== the MCP server over stdio, writing")

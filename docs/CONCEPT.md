@@ -1731,6 +1731,15 @@ included for a grant on every account. `user`, `outcome`, `recipient`
   need them.
 - At start it calls `/v1/me` and registers **only the tools its user can
   use**. The user's rights decide what is offered to the model.
+- **Decided 2026-10-16:** while it runs it asks `/v1/me` again every
+  `MAILBOX_MCP_RIGHTS_SECONDS`, 30 by default, over stdio and HTTP. When
+  the tools change it tells its clients with
+  `notifications/tools/list_changed`, so a right granted or taken away
+  shows without a restart. When the service refuses the token or its
+  user may do nothing, every tool goes away.
+- A refused token is asked for no more, since each refusal counts
+  against the address like a wrong token (LIMITS.md). A new token needs
+  a restart.
 - **Decided 2026-10-12:** `/v1/me` says how each account fares, its
   `status`, whether it needs a person's `attention` and its last
   successful sync, so a model learns of a problem before a tool fails.
@@ -1858,7 +1867,8 @@ another host, e.g. between containers (**decided 2026-09-27**). It runs over std
 admits clients with one shared token (`MAILBOX_MCP_BEARER_TOKEN`), which
 is not passed on: the server acts as the user of its own API token, for
 every client alike. Host and Origin are checked against DNS rebinding. At
-start it asks `/v1/me` what its user may do, and only those tools exist
+start it asks `/v1/me` what its user may do, and only those tools exist.
+It asks again while it runs and tells its clients when they change
 (7.5).
 
 Tools are hand-written, not generated from OpenAPI: generated tools mirror
