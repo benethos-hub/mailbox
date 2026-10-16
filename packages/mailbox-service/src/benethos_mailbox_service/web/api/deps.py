@@ -20,6 +20,7 @@ from ...data.models import (
     SendFilter,
     SendOutcome,
 )
+from ...domain.paging import LARGEST
 from ...domain.rights import Access
 from ..limits import signed_in
 from ..services import (
@@ -60,7 +61,7 @@ __all__ = [
 ]
 
 # How many items a list answers with at most. The default is 50.
-Limit = Annotated[int, Query(ge=1, le=200)]
+Limit = Annotated[int, Query(ge=1, le=LARGEST)]
 
 # A point in the change feed, from the ``state`` of an earlier answer.
 Since = Annotated[

@@ -15,8 +15,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   When its tools change it tells its clients with
   `notifications/tools/list_changed` and announces `tools.listChanged`,
   so a right granted or taken away shows without a restart. When the
-  service refuses the token or its user may do nothing, every tool goes
-  away, also when a tool is refused with `401`. A refused token is asked
+  service refuses the token, every tool goes away, also when a tool is
+  refused with `401`. A user that may do nothing keeps `list_accounts`
+  alone, which lists no account. A refused token is asked
   for no more, since each refusal counts against the address, and a new
   one needs a restart.
 - `POST /v1/accounts/{id}/messages/{id}/attachments/{id}/links`
@@ -27,11 +28,16 @@ adheres to [Semantic Versioning](https://semver.org/).
   for fewer. It needs an API token and the new group `mail.share`, which
   is in no role template. When the link is used, its token must still
   act and hold `get_attachment` and `share_attachment` on the message.
-  Every refusal answers the same `404`. Whoever holds the URL fetches the
+  Every refusal answers the same `404`. When the mail server fails to
+  hand out the file, the link holds again for the rest of its time, the
+  audit says `mailbox.link_returned`, and the address that asked counts
+  no failure. Whoever holds the URL fetches the
   file. The service logs its path masked, but a reverse proxy in front
   writes the whole URL into its access log, where it opens the file
   until the link is used or ends. The Python client has
-  `share_attachment`, the MCP server a tool of the same name.
+  `share_attachment`, the MCP server a tool of the same name. The tool
+  is not marked read-only, and `list_accounts` names `share` as a kind
+  of its own.
 - An account answers `operations`, in `GET /v1/accounts/{id}`, the list
   and `GET /v1/me`: the operations the caller can run there, its rights
   and what the account can do together, by their names in the catalogue
@@ -318,6 +324,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   name before, another `host`, `port`, `smtp_host` or `smtp_port`, no
   longer tries the stored credentials there. Whoever may change an
   account could send its password to a server of their choice.
+- `GET /v1/messages` masks every secret in the message of an account
+  that failed, in `incomplete`, as an error answer does.
+- A cursor of `GET /v1/messages` that asks for pages above 200, the
+  largest `limit`, is refused with `400`. An edited cursor made every
+  account read pages of any size.
 
 ## [0.4.1] - 2026-10-10
 

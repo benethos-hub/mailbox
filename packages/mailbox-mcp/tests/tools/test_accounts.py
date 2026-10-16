@@ -150,3 +150,11 @@ async def test_no_sending_shown_without_the_right_to_send(api: Callable) -> None
     api(routes={"/v1/me": ME})
     [shown] = await accounts.list_accounts()
     assert "sending" not in shown and "warning" not in shown
+
+
+async def test_sharing_is_a_kind_of_its_own(api: Callable) -> None:
+    """A token that may share is told so apart from reading."""
+    sharer = {**ME["accounts"][0], "operations": [*READ, "share_attachment"]}
+    api(routes={"/v1/me": {**ME, "accounts": [sharer]}})
+    [shown] = await accounts.list_accounts()
+    assert shown["can"] == ["read", "share"]

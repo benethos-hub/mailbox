@@ -7,6 +7,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
+from benethos_mailbox_common.log import redact
 from benethos_mailbox_service.data.models import AccountFailure, MessageSummary
 from benethos_mailbox_service.domain.mailbox.merge import (
     Chunk,
@@ -18,7 +19,12 @@ from benethos_mailbox_service.domain.mailbox.merge import (
     newest_of,
     per_account,
 )
-from benethos_mailbox_service.errors import BadRequestError, ProviderUnavailableError
+from benethos_mailbox_service.domain.paging import LARGEST
+from benethos_mailbox_service.errors import (
+    BadRequestError,
+    ProviderError,
+    ProviderUnavailableError,
+)
 
 START = datetime(2026, 9, 1, tzinfo=UTC)
 
@@ -82,10 +88,25 @@ def test_a_cursor_of_another_search_is_refused() -> None:
         decode_cursor(cursor, "q2")
 
 
-def test_a_cursor_without_a_size_is_refused() -> None:
-    cursor = encode_cursor(Positions({}, 0), "q1")
+@pytest.mark.parametrize("size", [0, LARGEST + 1])
+def test_a_cursor_without_a_size_the_api_allows_is_refused(size: int) -> None:
+    """A forged size would make every account read pages of it."""
+    cursor = encode_cursor(Positions({}, size), "q1")
     with pytest.raises(BadRequestError):
         decode_cursor(cursor, "q1")
+    assert decode_cursor(encode_cursor(Positions({}, LARGEST), "q1"), "q1").size == 200
+
+
+async def test_the_error_of_an_account_that_fails_is_redacted() -> None:
+    """As in an error answer: a noted secret a server repeats is masked."""
+    redact.note("s3cret-a-server-repeats")
+
+    async def run(account_id: str) -> str:
+        raise ProviderError("LOGIN failed with s3cret-a-server-repeats")
+
+    failures: list[AccountFailure] = []
+    await per_account(["acc_a"], run, failures)
+    assert [f.message for f in failures] == ["LOGIN failed with ***"]
 
 
 async def test_an_account_that_fails_leaves_the_others() -> None:

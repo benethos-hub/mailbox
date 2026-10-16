@@ -38,7 +38,7 @@
   "tools": [
     {
       "name": "list_accounts",
-      "description": "The mail accounts you may use: id, address and what you may do there (read, write, drafts, send)."
+      "description": "The mail accounts you may use: id, address and what you may do there (read, write, drafts, send, share)."
     },
     {
       "name": "list_folders",

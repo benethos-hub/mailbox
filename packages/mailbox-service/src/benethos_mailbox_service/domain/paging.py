@@ -16,6 +16,8 @@ from ..errors import BadRequestError
 T = TypeVar("T")
 
 INVALID = "invalid cursor"
+# The most items a page of the API lists, and a cursor may ask for.
+LARGEST = 200
 
 # The sort key of an item: what a cursor carries, so plain JSON values.
 Key = tuple[str | int, ...]

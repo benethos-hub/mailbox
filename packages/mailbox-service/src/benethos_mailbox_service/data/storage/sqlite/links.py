@@ -48,6 +48,13 @@ class SqliteLinkRepository:
             )
         )
 
+    def release(self, link_id: str) -> None:
+        self._db.execute(
+            "UPDATE attachment_links SET redeemed_at = NULL, redeemed_by = NULL"
+            " WHERE id = ?",
+            (link_id,),
+        )
+
     def purge(self, now: datetime) -> int:
         removed = self._db.execute(
             "DELETE FROM attachment_links"

@@ -1742,8 +1742,10 @@ included for a grant on every account. `user`, `outcome`, `recipient`
   at once when a tool is refused with `403 forbidden`, a right missing.
   When the tools change it tells its clients with
   `notifications/tools/list_changed`, so a right granted or taken away
-  shows without a restart. When the service refuses the token or its
-  user may do nothing, every tool goes away.
+  shows without a restart. When the service refuses the token, every
+  tool goes away. **Decided 2026-10-16:** a user that may do nothing
+  keeps `list_accounts` alone, which lists no account, so the model can
+  say why nothing else is there.
 - A refused token is asked for no more, since each refusal counts
   against the address like a wrong token (LIMITS.md). A tool refused
   with `401` counts as such a refusal. A new token needs a restart.

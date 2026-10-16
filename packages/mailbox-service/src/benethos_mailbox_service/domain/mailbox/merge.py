@@ -9,6 +9,8 @@ from typing import Any, TypeVar
 
 import anyio
 
+from benethos_mailbox_common.log import redact
+
 from ...data.models import AccountFailure, MessageSummary, received_or_written
 from ...errors import BadRequestError, MailboxServiceError
 from .. import paging
@@ -120,7 +122,7 @@ def decode_cursor(value: str, query: str) -> Positions:
                 "the cursor belongs to another search: start without it"
             )
         size = int(state["size"])
-        if size < 1:
+        if not 1 <= size <= paging.LARGEST:
             raise ValueError(size)
         return Positions(
             {
@@ -139,7 +141,8 @@ async def per_account(
     failures: list[AccountFailure],
 ) -> dict[str, T]:
     """``run`` for every account at once. An account that fails goes to
-    ``failures`` instead of failing the rest."""
+    ``failures`` instead of failing the rest, its message redacted as an
+    error answer's is."""
     results: dict[str, T] = {}
 
     async def one(account_id: str) -> None:
@@ -148,7 +151,9 @@ async def per_account(
         except MailboxServiceError as exc:
             failures.append(
                 AccountFailure(
-                    account_id=account_id, code=exc.code, message=exc.message
+                    account_id=account_id,
+                    code=exc.code,
+                    message=redact.redact(exc.message),
                 )
             )
 

@@ -14,7 +14,7 @@ from benethos_mailbox_common.values import sizes
 from .. import pdf, render
 from ..errors import ToolError
 from ..models import Message
-from .base import MAX_LIMIT, ToolResult, client, reads, result
+from .base import MAX_LIMIT, ToolResult, changes, client, reads, result
 
 
 async def list_folders(account_id: str) -> list[dict[str, Any]]:
@@ -283,7 +283,15 @@ TOOLS = (
     reads(get_thread, "Read a conversation", "get_thread"),
     reads(whats_new, "What is new", "list_changes", "list_all_changes"),
     reads(get_attachment, "Get an attachment", "get_attachment"),
-    reads(share_attachment, "Share an attachment", "share_attachment"),
+    # It makes a link that hands mail out: a change, not a read.
+    changes(
+        share_attachment,
+        "Share an attachment",
+        "share",
+        "share_attachment",
+        destructive=False,
+        idempotent=False,
+    ),
 )
 
 

@@ -15,7 +15,7 @@ from typing import ClassVar
 from benethos_mailbox_common.log import lines
 from benethos_mailbox_common.values import text
 
-from ....data.models import Account
+from ....data.models import Account, ActivityOutcome
 from ..base import Activity, Failure, Purged, account
 
 
@@ -204,6 +204,29 @@ class LinkUsed(Activity):
             f"had attachment {self.attachment_id} of {self.message_id} in "
             f"{self.account_id} fetched through link {self.link_id}"
         )
+
+    def touched(self) -> str | None:
+        return self.link_id
+
+
+@dataclass(frozen=True, kw_only=True)
+class LinkReturned(Activity):
+    """A link used, but the mail server did not hand out the attachment:
+    it holds again for the rest of its time."""
+
+    name: ClassVar[str] = "link_returned"
+    level: ClassVar[int] = logging.WARNING
+    audited: ClassVar[bool] = True
+    outcome: ClassVar[ActivityOutcome] = "failed"
+
+    link_id: str
+    reason: str
+
+    def says(self) -> str:
+        return f"had link {self.link_id} handed back, nothing was fetched"
+
+    def why(self) -> str:
+        return self.reason
 
     def touched(self) -> str | None:
         return self.link_id
