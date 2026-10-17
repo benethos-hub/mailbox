@@ -1,6 +1,6 @@
 # Concept of Mailbox
 
-> **Status: draft, 2026-09-24. The software is beta, version 0.4.1.**
+> **Status: draft, 2026-09-24. The software is beta, version 0.5.0.**
 > Describes the target design. What is built today is marked in
 > [ROADMAP.md](ROADMAP.md). Facts about third-party products were taken
 > from their public documentation on 2026-09-24. Items marked
@@ -61,9 +61,9 @@ REST client can do too.
    secrets/    envelope encryption, key providers, password hashes
    discovery/  autodiscovery sources
    backup.py, files.py, logbook.py
- common/       CROSS-CUTTING ─ helpers every layer reads, beside
-               config.py and errors.py: cursors, the clock,
-               pacing
+ common/       CROSS-CUTTING ─ helpers every layer reads: cursors,
+               the clock, pacing. config.py and errors.py sit
+               next to the layers
 ```
 
 **Decided 2026-09-28:** the domain is in packages by area
@@ -190,10 +190,10 @@ The decisions that shape every endpoint.
 
 | Resource | Notes |
 |---|---|
-| **Account** | one mailbox at one provider. `id` is ours (`acc_…`). Carries `provider`, `email`, `status` (`connected`, `needs_reauth`, `unreachable`), `capabilities`. |
+| **Account** | one mailbox at one provider. `id` is ours (`acc_…`). Carries `provider`, `email`, `status` (`connected`, `needs_reauth`, `unreachable`), `capabilities` and `marks` (5.11), and `operations`, what the caller may run there (7.5). |
 | **Folder** | `id`, `name`, `role` (RFC 6154 special use: inbox, sent, drafts, trash, junk, archive, all), `parent_id`, counts, `subscribed` (IMAP, decided 2026-09-24). Gmail labels are folders. |
 | **Message** | summary (list) and full form (get). `folder_ids` is an array. `unread`, `starred` as booleans, further flags as `keywords`. |
-| **Thread** | where the provider supports it (Gmail, Graph conversations), otherwise built from `References` / `In-Reply-To`. |
+| **Thread** | the provider's own on Gmail, JMAP and Microsoft. On IMAP built by the service across folders from `Message-ID`, `In-Reply-To` and `References` (6.3). None on POP3. |
 | **Attachment** | metadata on the message, content via its own download route. |
 | **Draft** | a message with the draft role, own routes because providers treat it specially. |
 | **Change** | an entry in the change feed: `{type, id, account_id, at}`. |
@@ -210,8 +210,8 @@ between calls. Per adapter:
 | Gmail | Gmail message id, stable by design |
 | Microsoft | Graph with `Prefer: IdType="ImmutableId"` |
 | JMAP | the JMAP email id, immutable by the standard |
-| IMAP | `OBJECTID` (RFC 8474) or Gmail's `X-GM-MSGID` where offered, otherwise our own id mapped to `(folder, UIDVALIDITY, UID)` in the store, updated when *we* move a message and re-resolved by `Message-ID` header when the mapping breaks |
-| POP3 | `UIDL` |
+| IMAP | our own id mapped to `(folder, UIDVALIDITY, UID)` in the store, updated when *we* move a message and re-resolved by `Message-ID` header when the mapping breaks. `OBJECTID` (RFC 8474) is not read |
+| POP3 | our own id mapped to the `UIDL` of the one folder. The ids never move (5.2) |
 
 Ids are opaque strings to clients. Nothing may parse them.
 
@@ -290,13 +290,14 @@ parsing). The adapter boundary keeps the choice reversible: if thread usage
 becomes a bottleneck with many accounts, only `data/providers/imap/`
 changes.
 
-**Three auth modes planned:** password, app password, and SASL XOAUTH2
+**Three auth modes:** password, app password, and SASL XOAUTH2
 with a token refresher. XOAUTH2 matters beyond Google and Microsoft: it
 is the only non-password way into Yahoo and AOL, once a provider grants
 it. Password and app password work. XOAUTH2 waits for the refresher: the
 IMAP and SMTP modules speak it, but an account with `auth: xoauth2`
-answers `501` until the service can renew its token. Server extensions used where offered: `IDLE` (push), `CONDSTORE` /
-`QRESYNC` (cheap delta), `UIDPLUS` and `MOVE`, `OBJECTID` (stable ids, 4.1).
+answers `501` until the service can renew its token. Server extensions
+used where offered: `IDLE` (push), `CONDSTORE` / `QRESYNC` (cheap
+delta), `UIDPLUS` and `MOVE`.
 
 Gmail and Microsoft accounts *could* run over IMAP too, but their native
 APIs give stable ids, threads, labels, delta and push, and need the same
@@ -384,10 +385,10 @@ an app password is the credential to ask for.
   so its bodies, `in_reply_to` and attachments, inline images among
   them, are those the other providers answer. Graph's own body is HTML
   for a plain text mail, and Graph lists no attachments for a mail with
-  inline images only. Graph takes at most 4 MB per request: a larger
-  draft is created without its files, which follow one by one, a file
-  of 3 MB or more through an upload session in ranges, the ways
-  Microsoft documents.
+  inline images only. Graph takes at most 4 MB per request, and the
+  MIME travels in base64: a mail above 2.5 MiB is created without its
+  files, which follow one by one, a file of 3 MB or more through an
+  upload session in ranges, the ways Microsoft documents.
   Bcc recipients travel in a Bcc header **(unverified: that Exchange takes
   it out before delivery)**. Keywords are categories. `$answered` and
   `$forwarded` are the verb Outlook last carried out on a message
@@ -615,8 +616,9 @@ up the result.
 
 For every IMAP or SMTP candidate the service then reads the server's
 `CAPABILITY`: which auth mechanisms it offers (`AUTH=XOAUTH2`,
-`AUTH=PLAIN`) decides whether to ask for OAuth or a password, and `IDLE`,
-`CONDSTORE`, `MOVE` feed the account's capabilities.
+`AUTH=PLAIN`) decides whether to ask for OAuth or a password. The
+account's own capabilities are read from the server when the account
+connects (5.11, rule 4).
 
 The result tells the person what to do, not just where the server is:
 
@@ -680,7 +682,7 @@ registered that domain.
 POST rather than GET, so the address does not end up in access logs. A
 candidate carries: adapter, servers with host, port and encryption, the
 credential kind to ask for, OAuth provider if any, hints with help links,
-`source`, `confirmed` (4 above), and the capabilities read from the server.
+`source`, `confirmed` (4 above), and per server what its `CAPABILITY` answered.
 `POST /v1/accounts` then takes the chosen candidate plus the credential, and
 verifies before it stores (7.4). The configuration UI is the main user:
 address field, result, then either an OAuth button or a password field.
@@ -839,7 +841,7 @@ Base path `/v1`, JSON, bearer authentication on everything except
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/v1/accounts` | list, paged by address (6.6) |
-| POST | `/v1/accounts` | create with credentials (IMAP/POP3/SMTP, app password), connection is tested first |
+| POST | `/v1/accounts` | create with credentials (IMAP, POP3 and SMTP with a password or app password, JMAP with a password or an API token), connection is tested first. OAuth accounts connect through the sign-in routes below |
 | GET | `/v1/accounts/{account_id}` | get, including `status`, `capabilities`, `marks` and `operations` |
 | PATCH | `/v1/accounts/{account_id}` | display name, settings, new password |
 | DELETE | `/v1/accounts/{account_id}` | remove, credentials deleted |
@@ -996,7 +998,7 @@ carries `Cache-Control: no-store`.
 | POST | `{acc}/send` | send. Body: recipients, `reply_to`, subject, text / html, attachments, `attachments_from`, optional `reference: {message_id, action: reply\|reply_all\|forward}`. Header `Idempotency-Key` |
 | GET | `{acc}/drafts` | list |
 | POST | `{acc}/drafts` | create (same body as send) |
-| PUT | `{acc}/drafts/{draft_id}` | replace, `keep_attachments` names stored attachments that stay. The answer names the draft's id from now on: IMAP keeps it, Microsoft and JMAP store a new message under a new id (decided 2026-10-06). Where the old one cannot be deleted, the new one is taken back, and the error names it only where that fails too. IMAP without `UIDPLUS` answers `501` |
+| PUT | `{acc}/drafts/{draft_id}` | replace, `keep_attachments` names stored attachments that stay. The answer names the draft's id from now on: IMAP keeps it, Gmail, Microsoft and JMAP store a new message under a new id (decided 2026-10-06). Where the old one cannot be deleted, the new one is taken back, and the error names it only where that fails too. IMAP without `UIDPLUS` answers `501` |
 | DELETE | `{acc}/drafts/{draft_id}` | delete |
 | POST | `{acc}/drafts/{draft_id}/send` | send a draft, `Idempotency-Key` |
 | GET | `{acc}/sends` | the audit of sends, newest first |
@@ -1051,9 +1053,10 @@ Rules of the implementation for drafts (phase 2):
   answers `400`. It needs only `send_draft`: the draft was written by
   whoever may write drafts.
 
-Sending is **synchronous** in phase 2: `200` means the provider accepted the
-message. After an SMTP send the copy is appended to the sent folder unless
-the provider does that itself (Gmail, Graph). A queued outbox with `send_at`
+Sending is **synchronous**: `200` means the provider accepted the
+message. After an SMTP send the copy is appended to the sent folder.
+Gmail and Graph keep it themselves, JMAP moves the submitted message
+there (5.6). A queued outbox with `send_at`
 is a later option (see IDEAS.md).
 
 `Idempotency-Key`: the result of the first request is stored for 24 hours.
@@ -1083,12 +1086,14 @@ read.
 
 Events: `message.created`, `message.updated`, `message.deleted`,
 `message.sent`, `account.needs_reauth`. Payloads carry ids only, signed with
-HMAC-SHA256 in a header. The source is IMAP IDLE / polling, Gmail
-`history.list` and Graph delta queries, all normalized into the change feed.
+HMAC-SHA256 in a header. The source is IMAP IDLE / polling, POP3
+polling, JMAP `Email/changes`, Gmail `history.list` and Graph delta
+queries, all normalized into the change feed.
 
 **Decided 2026-09-25:**
 
-- Phase 4 covers IMAP and Microsoft accounts. IMAP changes come from the
+- Phase 4 covered IMAP and Microsoft accounts, Gmail, JMAP and POP3
+  followed in phase 5. IMAP changes come from the
   sync pass, Microsoft changes from Graph delta queries per folder in the
   worker.
 - IMAP uses CONDSTORE (RFC 7162) where the server offers it. A pass then
@@ -1149,12 +1154,11 @@ not followed.
 
 | Parameter | Meaning |
 |---|---|
-| `folder` | folder id, or a role such as `inbox`. Left out: the inbox, on every account. The role `all` lists every folder but the trash and junk where the account has such a folder (Gmail's All Mail, a JMAP or IMAP server's, on Microsoft and on an IMAP or JMAP server without one the adapter shows), and answers `501` elsewhere. A grant narrowed to folders lists `all` within them |
+| `folder` | folder id, or a role such as `inbox`. Left out: the inbox, on every account. The role `all` lists every folder but the trash and junk: Gmail's All Mail, a server's own `\All` folder on IMAP or JMAP, and otherwise, on Microsoft and on IMAP or JMAP servers without one, a folder "All Mail" the service shows (5.11). POP3 answers `501`. A grant narrowed to folders lists `all` within them |
 | `q` | free text (subject, addresses, body where the provider can) |
 | `from`, `to`, `subject` | structured filters |
 | `after`, `before` | days, `YYYY-MM-DD`: `after` includes its day, `before` does not. The audits take a time with a zone instead |
 | `unread`, `starred`, `has_attachments` | booleans |
-| `native` | provider's own syntax, passed through (Gmail search, IMAP SEARCH), not built yet |
 | `limit` | 1–200, default 50 |
 | `cursor` | opaque, from `next_cursor` of the previous page |
 
@@ -1176,7 +1180,7 @@ Rules of the implementation (built before phase 3):
   `multipart/mixed` message, elsewhere the provider's index. It comes
   near the field of the same name, which every account counts alike,
   but is not always the same.
-- `native` is not built yet.
+- A parameter for the provider's own search syntax is not built.
 
 #### The service's own lists
 
@@ -1926,7 +1930,8 @@ blob for an image.
 **Decided 2026-09-24:** sending a new mail and sending a draft are two
 tools, `send_message` and `send_draft`. The model may create folders
 (`create_folder`). Text from PDF attachments comes later. The policy file
-stays as designed. The first tools go by the token's rights alone.
+stays as designed (superseded the next day, below). The first tools go
+by the token's rights alone.
 
 **Decided 2026-09-25:** no policy file. The token's rights, its grants and
 their constraints decide which tools exist. The idea waits in IDEAS.md.
@@ -2161,8 +2166,8 @@ Undecided ideas are collected in [IDEAS.md](IDEAS.md).
    `benethos-mailbox-mcp`, on ghcr.io the two images as well.
 3. **Gmail priority:** is Gmail needed early, or are GMX / web.de /
    T-Online over IMAP the main use? Microsoft accounts are supported
-   already (phase 5). **Answered 2026-10-08:** Gmail comes next after
-   the beta, built in phase 5 (5.5).
+   already (phase 5). **Answered 2026-10-08:** Gmail came after the
+   beta, built in phase 5 (5.5).
 4. **Sending from the MCP server:** decided 2026-09-24, both stay open,
    governed by rights (7.7).
 5. **Local cache:** list and search go straight to the provider in the

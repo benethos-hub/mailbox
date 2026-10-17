@@ -15,7 +15,7 @@ One REST API for all your mailboxes, whichever provider they are at, a
 Python client for it and an MCP server on top. Scripts, tools and AI
 agents work with your mail through one door you control.
 
-> **Status: beta, version 0.4.1.** Usable with real accounts. A breaking
+> **Status: beta, version 0.5.0.** Usable with real accounts. A breaking
 > change of the API or the configuration is announced in the changelog.
 > Stored data is carried forward by migrations.
 
@@ -114,8 +114,8 @@ some folders, such as the invoices, and end after a week.
   the raw source. Message ids stay
   the same when a message moves, kept by a background sync. A link to an
   attachment lets another service fetch the file once, without a token.
-- **Writing:** flags, moving, deleting, folders, drafts, and sending with
-  reply, reply to all and forward. A retried send is not sent twice
+- **Writing:** read state, stars and keywords, moving, deleting,
+  folders, drafts, and sending with reply, reply to all and forward. A retried send is not sent twice
   (`Idempotency-Key`).
 - **Changes:** a change feed names each message created, changed or
   deleted since a point you keep, in IMAP, JMAP, POP3, Microsoft and
@@ -128,8 +128,8 @@ some folders, such as the invoices, and end after a week.
   and an audit of administration.
 - **MCP server:** reads, sorts, writes drafts, sends and tells what is
   new, over stdio or streamable HTTP, offering only the tools its token
-  may use. Mail content
-  reaches the model marked as foreign text.
+  may use and following its rights while it runs. Mail content reaches
+  the model marked as foreign text.
 - **Configuration UI** in the browser under `/ui`: accounts, users,
   rights, tokens, reading and writing mail, the send audit, webhooks,
   the status of accounts and sync, the audit of administration, the

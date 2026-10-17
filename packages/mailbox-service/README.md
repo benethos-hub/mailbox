@@ -6,7 +6,7 @@
 [![Python](https://img.shields.io/pypi/pyversions/benethos-mailbox-service)](https://pypi.org/project/benethos-mailbox-service/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](https://github.com/benethos-hub/mailbox/blob/main/LICENSE)
 
-> **Beta, version 0.4.1.** Usable with real accounts. A breaking change
+> **Beta, version 0.5.0.** Usable with real accounts. A breaking change
 > of the API or the configuration is announced in the changelog. Stored
 > data is carried forward by migrations.
 
@@ -87,20 +87,22 @@ benethos-mailbox-service serve
   - `/health`: open, for health checks
 
 Then connect accounts in the UI (Accounts, Connect an account) or with
-`POST /v1/accounts`. An IMAP account needs its address and an app
-password. The service looks up the servers from the address. A JMAP
-account, at Fastmail, Stalwart or any JMAP server, signs in with an API
-token or a password and sends through JMAP. A POP3 account, for a
-mailbox without IMAP, works the same way: the inbox only, without
-folders, read state or search. Microsoft
-accounts sign in with OAuth, in the browser or with a code, through the
-project's app or one of your own. Away from `localhost` the project's
-app signs in with a code only. For the browser there, register an app
-of your own:
-[docs/MICROSOFT.md](https://github.com/benethos-hub/mailbox/blob/main/docs/MICROSOFT.md).
-Gmail accounts sign in with Google in the browser, through a Google
-client of your own, or connect over IMAP with an app password:
-[docs/GOOGLE.md](https://github.com/benethos-hub/mailbox/blob/main/docs/GOOGLE.md).
+`POST /v1/accounts`. Each kind of account connects in its own way:
+
+- **IMAP:** the address and an app password. The service looks up the
+  servers from the address.
+- **JMAP**, at Fastmail, Stalwart or any JMAP server: an API token or a
+  password. It sends through JMAP.
+- **POP3**, for a mailbox without IMAP: as IMAP, the inbox only,
+  without folders, read state or search.
+- **Microsoft:** OAuth, in the browser or with a code, through the
+  project's app or one of your own. Away from `localhost` the project's
+  app signs in with a code only. For the browser there, register an app
+  of your own:
+  [docs/MICROSOFT.md](https://github.com/benethos-hub/mailbox/blob/main/docs/MICROSOFT.md).
+- **Gmail:** Sign in with Google in the browser, through a Google
+  client of your own, or over IMAP with an app password:
+  [docs/GOOGLE.md](https://github.com/benethos-hub/mailbox/blob/main/docs/GOOGLE.md).
 
 ## Where things live
 
@@ -115,7 +117,7 @@ data in the folders of the operating system for the user:
 
 Started in a folder that has `config/benethos-mailbox-service/` or
 `data/benethos-mailbox-service/`, as the repository does, it works from
-there instead, as before. The command names what applies, never a value
+there instead. The command names what applies, never a value
 of the settings:
 
 ```
@@ -170,7 +172,7 @@ names the settings file it read and the database at start.
 | `MAILBOX_SERVICE_SYNC_IDLE` | `true` | wait for the server to report a change: IMAP IDLE, with a second connection per account, or a JMAP server's event source |
 | `MAILBOX_SERVICE_SYNC_WATCHERS` | `50` | accounts watched at once. An IMAP account holds a thread of its own while it waits in IDLE. Further accounts are polled only. |
 | `MAILBOX_SERVICE_THREAD_MESSAGES` | `500` | the messages a thread lists at most, the newest |
-| `MAILBOX_SERVICE_THREAD_REFERENCES` | `20` | threads the service keeps itself (IMAP): of the `References` of a message, the last ones kept to find its thread |
+| `MAILBOX_SERVICE_THREAD_REFERENCES` | `20` | IMAP accounts, which the service threads itself: how many of the last `References` of a message count |
 | `MAILBOX_SERVICE_CHANGES_DAYS` | `7` | days the change feed keeps a change |
 | `MAILBOX_SERVICE_LINK_SECONDS` | `120` | seconds a link to an attachment holds at most, any value from 1 on. 60 to 300 is the range to keep to: whoever holds the URL fetches the file, and the URL stands in access logs, such as a reverse proxy's |
 | `MAILBOX_SERVICE_AUDIT_DAYS` | `90` | days the audits of sends and of administration keep a record. `0` keeps every record. |
@@ -274,10 +276,10 @@ restored one opens with that key alone. Note its recovery key, then pass
 
 ## Users, rights and tokens
 
-Every route under `/v1` needs `Authorization: Bearer <token>`, but
-`GET /v1/links/{secret}`: a link to an attachment that
-`share_attachment` made for another service, whose secret is the
-credential. It hands the file out once, until it ends. `/health` is
+Every route under `/v1` needs `Authorization: Bearer <token>`, except
+`GET /v1/links/{secret}`. That route hands out an attachment another
+service was given a link to by `share_attachment`: the secret in the
+URL is the credential, once, until the link ends. `/health` is
 open. A token belongs to a user. The user's grants decide
 what it may do, per account and per operation: for example read mail,
 write drafts, send, manage accounts. Grants can limit sending to certain
@@ -318,13 +320,13 @@ from the environment only and sets `MAILBOX_SERVICE_HOST=0.0.0.0`,
 `MAILBOX_SERVICE_DATA_DIR=/data`, `MAILBOX_SERVICE_KEY_PROVIDER=file` and
 `MAILBOX_SERVICE_KEY_FILE=/run/secrets/master_key`. The database lives in the
 volume at `/data`. The master key is a file mounted at
-`/run/secrets/master_key`. Tags: the version (`0.4.1`), the minor version
-(`0.4`) and `latest`.
+`/run/secrets/master_key`. Tags: the version (`0.5.0`), the minor version
+(`0.5`) and `latest`.
 
 ### With docker run
 
 ```sh
-IMAGE=ghcr.io/benethos-hub/benethos-mailbox-service:0.4.1
+IMAGE=ghcr.io/benethos-hub/benethos-mailbox-service:0.5.0
 
 # once: a master key file, the keys in the database, the first user
 docker run --rm "$IMAGE" keys generate > master_key
@@ -359,7 +361,7 @@ does the first start in one run:
 sh setup.sh
 ```
 
-The version runs as named in its `.env`, `MAILBOX_VERSION=0.4.1`. Its
+The version runs as named in its `.env`, `MAILBOX_VERSION=0.5.0`. Its
 [README](https://github.com/benethos-hub/mailbox/blob/main/containers/production/README.md)
 has the same steps by hand, the update, backup and restore, HTTPS
 with Caddy or a proxy of your own, and the MCP server instances.

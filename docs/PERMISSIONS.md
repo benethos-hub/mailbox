@@ -90,9 +90,10 @@ Two kinds of right, kept in two lists of a user or a role (8.1):
 
 Two operations are open to every user: `get_me` and `list_permissions`.
 A third takes no token at all: `get_linked_attachment`, whose secret is
-the credential. `/health` takes none either and names no right. Its `x-permission` is `link`, and it acts with the rights
-of the token that made the link, `get_attachment` and
-`share_attachment`, as they are when it is used.
+the credential. Its `x-permission` is `link`, and it acts with the
+rights of the token that made the link, `get_attachment` and
+`share_attachment`, as they are when it is used. `/health` takes no
+token either and names no right.
 
 ## 4. How a right is resolved
 
@@ -197,7 +198,8 @@ Eight changes. The first two change the model, the rest add to it.
 None removes a right anyone holds. **Decided 2026-10-05:** 8.1 to 8.5,
 8.7 and 8.8 as below, with the answers of section 10. 8.6 followed on
 its own, with the answers of AUDIT.md section 7. All of it is built but
-`identities` of 8.5.
+`identities` of 8.5. The sections below are the proposal as written:
+"today" in them means before 2026-10-05.
 
 ### 8.1 Service rights leave the grant
 

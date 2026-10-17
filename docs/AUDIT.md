@@ -95,7 +95,7 @@ record come from the activity's typed fields, not from its text. Nothing else wr
 audit record, and no route does.
 
 The recorder needs `Access.source` and the credential id, which
-LOGGING.md puts onto `Access` in its step 2. The CLI commands that
+LOGGING.md step 2 put onto `Access`. The CLI commands that
 change the database (`users`, `keys`, `restore`) record their activities
 with `host` as the credential.
 

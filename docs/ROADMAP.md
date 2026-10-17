@@ -1,6 +1,6 @@
 # Roadmap
 
-> **Beta, version 0.4.1.** Usable with real accounts. A breaking change
+> **Beta, version 0.5.0.** Usable with real accounts. A breaking change
 > of the API or the configuration is announced in the changelog. Stored
 > data is carried forward by migrations.
 
@@ -19,8 +19,8 @@ in [CONCEPT.md](CONCEPT.md). The section numbers below point there.
 | [4a](#phase-4a--password-sign-in) | Password sign-in | **done** |
 | [4b](#phase-4b--ui-rework) | UI rework | **done** |
 | [4c](#phase-4c--api-users) | API users | **done** |
-| [5](#phase-5--more-providers-and-the-configuration-ui) | More providers and the configuration UI | in progress |
-| [5a](#phase-5a--one-way-to-operate-every-mailbox) | One way to operate every mailbox | done |
+| [5](#phase-5--more-providers-and-the-configuration-ui) | More providers and the configuration UI | **in progress** |
+| [5a](#phase-5a--one-way-to-operate-every-mailbox) | One way to operate every mailbox | **done** |
 
 Undecided ideas wait in [IDEAS.md](IDEAS.md) until they are designed.
 
@@ -32,7 +32,8 @@ API design early.
 
 **Done.**
 
-- uv workspace with two distributions: service and MCP server
+- uv workspace with two distributions: service and MCP server (four
+  since 0.4.0, CONCEPT 9)
 - CI, ruff, mypy, pytest with an 80 % coverage floor
 - FastAPI app in three layers (`web` → `domain` → `data`, 1.1), checked by
   an architecture test
@@ -104,6 +105,8 @@ Everything real mail will depend on, before any real mailbox is connected.
 
 ## Phase 3 – MCP server and container
 
+**Done.**
+
 - **MCP read tools over stdio, registered by the token's rights (8)**, done
 - **MCP write tools `update_messages` and `create_folder` (8)**, done
 - **The MCP server registers only what its user may do (`/v1/me`)**, done
@@ -125,6 +128,8 @@ Everything real mail will depend on, before any real mailbox is connected.
 
 ## Phase 4 – Change feed and webhooks
 
+**Done.**
+
 - **The change log: every sync pass and every change through the API
   records created, updated and deleted messages, kept for
   `MAILBOX_SERVICE_CHANGES_DAYS` days (6.5)**, done
@@ -144,6 +149,8 @@ Everything real mail will depend on, before any real mailbox is connected.
 
 ## Phase 4a – Password sign-in
 
+**Done.**
+
 - **Passwords as a credential kind of a user: scrypt, unique names,
   NIST rules, the same answer for a wrong name (7.5)**, done
 - **The UI signs in with name and password, the session holds the user,
@@ -162,6 +169,8 @@ Everything real mail will depend on, before any real mailbox is connected.
   second factor later (IDEAS)
 
 ## Phase 4b – UI rework
+
+**Done.**
 
 A rework of the configuration UI before the providers of phase 5.
 Scope, page types and the rules for every page in [UI.md](UI.md).
@@ -185,6 +194,8 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
 
 ## Phase 4c – API users
 
+**Done.**
+
 - **The UI sign-in switch `ui_sign_in` on the user: off for new users,
   in the API and the UI, the password deleted when it goes off
   (CONCEPT 7.5, UI 6.3)**, done: schema 12, live-checked in
@@ -194,6 +205,8 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
   new users are API users by default
 
 ## Phase 5 – More providers and the configuration UI
+
+**In progress.** What is done is listed first, what is open at the end.
 
 - **`microsoft` adapter over Graph with OAuth (5.4)**, done, in steps:
   1. **OAuth core for every provider: authorization code with PKCE,
@@ -407,14 +420,27 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
   decided 2026-10-16, done: it asks `/v1/me` every
   `MAILBOX_MCP_RIGHTS_SECONDS` and sends `notifications/tools/list_changed`
 
+Open in this phase, each planned in CONCEPT.md:
+
+- Microsoft changes by push, with change-notification subscriptions
+  (5.4). The worker polls delta queries today
+- the discovery sources 6 to 8: Microsoft's realm, SRV records and
+  guessing (5.8)
+- the token refresher for SASL XOAUTH2 on IMAP and SMTP (5.1)
+- `keys rotate` (7.3) and scheduled backups (7.8)
+- the integration job against the test mail server in the CI (10)
+- threads across accounts (6.3)
+
 ## Phase 5a – One way to operate every mailbox
+
+**Done.**
 
 Decided 2026-10-12 (5.11). Every mailbox is operated the same way,
 and what an account cannot do answers `501`, announced by its
 capabilities. [UNIFORM.md](UNIFORM.md) section 5 holds the work in
 order, each step one pull request or more:
 
-1. **Bugs without a live check**, against today's documentation, done
+1. **Bugs without a live check**, against the documentation of the time, done
 2. **Bugs with a live check**: Gmail threads a reply, Microsoft answers
    the text body, `in_reply_to`, the sent copy and inline attachments,
    done
@@ -432,7 +458,8 @@ order, each step one pull request or more:
    an account from the API, the marks from `mailbox-common`, done
 9. **Setting up an account, described by the domain**, done
 
-Steps 5 to 8 change the contract and ship together as 0.5.0.
+All nine steps shipped in 0.5.0. Steps 5 and 6 changed the contract,
+marked as breaking in the changelog.
 
 ## Keeping this file current
 

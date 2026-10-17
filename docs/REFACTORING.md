@@ -1170,6 +1170,9 @@ Decided by the user on 2026-10-10, built as #132.
 
 ## 17. The review of 2026-10-15
 
+Built 2026-10-15 as #180 (17.1), #181 (17.2), #182 (17.3), #183 (17.4),
+#184 (17.5) and #186 (17.6).
+
 A review of `main` at e044c1d8 found code written more than once and
 tests that lean on each other. The user decided the order of the work
 and that a provider's 403 answers with one error class.

@@ -1,6 +1,6 @@
 # Connecting Microsoft accounts
 
-> **Beta, version 0.4.1.** Usable with real accounts. A breaking change
+> **Beta, version 0.5.0.** Usable with real accounts. A breaking change
 > of the API or the configuration is announced in the changelog. Stored
 > data is carried forward by migrations.
 
@@ -30,7 +30,8 @@ account**:
   Microsoft has seen the sign-in. This works wherever the service runs,
   also on a server.
 
-Where the service is not at `localhost`, the UI offers the code only.
+Where the service is not at `localhost` or `127.0.0.1`, the UI offers
+the code only.
 A browser that
 reaches the service through an SSH tunnel at `localhost` can still sign
 in in the browser, as long as `MAILBOX_SERVICE_PUBLIC_URL` does not name
@@ -231,6 +232,28 @@ Once connected, the service asks the account's folders every
 `MAILBOX_SERVICE_SYNC_INTERVAL` seconds what changed (Graph delta
 queries), for the change feed and webhooks. That needs no permission
 beyond those of step 3.
+
+## How Microsoft looks through the API
+
+- **Folders** are Outlook's. The service shows a folder "All Mail" with
+  the id `all` and the role `all`: every folder but the trash and junk,
+  which Outlook has no folder for. A message cannot be moved into it.
+- **Marks:** a Microsoft account reads and writes `$answered` and
+  `$forwarded`, as the verb Outlook last carried out on a message, one
+  of the two at a time. Outlook shows a reply or a forward of the
+  service that way. Any other mark, such as `$junk`, answers `501`.
+- **Keywords** are Outlook's categories, in Outlook's spelling, such as
+  `Work`. A keyword may hold spaces, on one line, up to 100 characters.
+- **Dates:** `date` is the Date header, `received` when the mailbox
+  received the message. Lists sort by `received`.
+- **Attachments:** inline images are listed and download. Ids look like
+  `att_0`, as on the other providers.
+- **Sending:** a mail above about 3 MB is stored without its files,
+  which follow one by one, a large one in ranges, up to the 25 MiB the
+  service allows. The answer names the sent copy, and the mail arrives
+  under the `Message-ID` the send answered.
+- **Changes** come through Graph delta queries, polled every
+  `MAILBOX_SERVICE_SYNC_INTERVAL`.
 
 ## Without Microsoft accounts
 

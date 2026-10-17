@@ -229,6 +229,7 @@ each account and compares.
 | INFO | X shared attachment T of M in A as link L for N s | actor, the ids of the attachment, the message, the account and the link, seconds | never the secret, never the URL |
 | INFO | X had attachment T of M in A fetched through link L | the user of the token that made the link, its token, the address that fetched it, the ids | |
 | WARNING | someone was refused link L: reason | source, link id, reason: used, ended, its token or the token's user can no longer act, or what the service answered | a secret that is no link's writes no line, as a wrong token does not |
+| WARNING | X had link L handed back, nothing was fetched: reason | the user of the token that made the link, the address that fetched it, link id, reason | the mail server did not hand out the attachment: the link holds for the rest of its time, the answer is `502` |
 | INFO | purged N links to attachments, used or ended by D | count, time | at start and once an hour at most, as links are made |
 
 Drafts are mail content and change nothing others see: not logged.

@@ -5,7 +5,7 @@
 [![Python](https://img.shields.io/pypi/pyversions/benethos-mailbox-client)](https://pypi.org/project/benethos-mailbox-client/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](https://github.com/benethos-hub/mailbox/blob/main/LICENSE)
 
-> **Beta, version 0.4.1.** Usable with real accounts. A breaking change
+> **Beta, version 0.5.0.** Usable with real accounts. A breaking change
 > of the API or the configuration is announced in the changelog. Stored
 > data is carried forward by migrations.
 
@@ -151,9 +151,9 @@ becomes a record of `models/`. That package sends nothing.
 `SyncMailboxClient` with `httpx.Client`, and a method of either is one
 line made from its endpoint, with the endpoint's name, docstring and
 signature, `get_attachment`, which streams, a few more. A test holds
-every operation of the API to a method of both clients, but the route of
-a link to an attachment, whose URL another service fetches without a
-token. What both share stands
+every operation of the API to a method of both clients, except the
+route of a link to an attachment, whose URL another service fetches
+without a token. What both share stands
 beside them: the address and the token (`environment.py`), the shape
 of a request (`calls.py`), how an answer or a failure is read
 (`answers.py`) and an attachment read in chunks (`attachments.py`).

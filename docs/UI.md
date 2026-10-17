@@ -29,7 +29,7 @@ what it must do and how it is secured.
 8. **Rules for growth.** A new page follows a page type, a checklist and a
    test. Section 8.
 
-## 2. Today
+## 2. Before the rework
 
 The UI as it was on 2026-09-27, before the rework. What the rework
 changed is in the roadmap's phase 4b.
@@ -54,7 +54,7 @@ What differs from page to page, and what the rework aligns:
 - **The overview** lists the accounts and their rights, nothing about
   the person signed in.
 
-What is missing, all on existing domain services and API routes:
+What was missing then, all on existing domain services and API routes:
 
 - **Webhooks** (phase 4): create, list with the delivery state, remove.
 - **Status** (phase 5): accounts, sync, worker, webhooks in one view.
@@ -322,11 +322,11 @@ next step appears under the last one:
      folded under **Servers**, with the source and whether it is trusted
    - nothing found: the first card to set up by hand open at once, with
      the server fields
-   One card per kind set up by hand, **Set up IMAP by hand**, **Set up
-   POP3 by hand** and **Set up JMAP by hand**, with what to know of the
-   kind where there is something, is always there, folded unless
-   nothing was found. A kind of account the deployment does not offer is
-   not shown at all.
+   One card per kind set up by hand is always there: **Set up IMAP by
+   hand**, **Set up POP3 by hand** and **Set up JMAP by hand**, each
+   with what to know of its kind. They are folded unless nothing was
+   found. A kind of account the deployment does not offer is not shown
+   at all.
    Where no source names a provider the deployment signs in with, its
    **Sign in with** stays offered: a custom domain can be at Microsoft.
 3. **Connect.** The domain tries the servers before storing anything.
@@ -653,5 +653,5 @@ All four steps are done, as the roadmap's phase 4b records.
 - 2026-10-09: the page's own dialog in place of the browser's
   question, copy buttons beside every secret shown once, relative
   times in lists (7).
-
-The Service card of the overview shows to everyone with `accounts.read`.
+- 2026-10-09: the Service card of the overview to everyone with
+  `accounts.read` (5).
