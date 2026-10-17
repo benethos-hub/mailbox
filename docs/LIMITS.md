@@ -55,6 +55,7 @@ The MCP server's own, towards the model:
 | PDF pages | per `get_attachment` | 10 pages, 4 megapixels a page and 12 together | refused above 10, smaller images | fixed |
 | Rendering a PDF | per `get_attachment` | 30 seconds, one PDF at a time | refused | fixed |
 | Mails in one change | per `update_messages` | 100 | refused | fixed |
+| Mails of a conversation | per `get_thread` | the newest 20, which share `max_chars` | the older ones are left out | fixed |
 
 Every `429` carries `Retry-After` in seconds. A limit of `0` switches the
 limit on requests off. The other limits can be set, not switched off.
@@ -148,7 +149,8 @@ the others pass.
 share one limit of 120 a minute. Its start asks `/v1/me`, and while it
 runs it asks again every `MAILBOX_MCP_RIGHTS_SECONDS`, 60 by default,
 and when a tool is refused for a missing right, at most every 5
-seconds. Each counts against the token like any call. Past the limit
+seconds, unless the setting is 0: then it asks only at start. Each
+counts against the token like any call. Past the limit
 the model reads "too many requests, try again in N seconds".
 
 **Sending.** A send passes the limit on requests, then the grants: their

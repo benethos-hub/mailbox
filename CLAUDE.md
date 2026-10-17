@@ -99,8 +99,9 @@ done. Update the roadmap in the same commit that finishes an item.
   conversations, writes a folder and
   a draft on the first and removes them, and sends one mail from the
   first to the second, deleted for good on both sides. It also makes a
-  user, a role and a token and uses the token on the API, opens the
-  status, adds and removes a webhook, shows the recovery key of its own
+  user, a role and a token and uses the token on the API, reads the
+  state of the service on the overview and the Accounts list, adds and
+  removes a webhook, shows the recovery key of its own
   service, reads its log, makes a user with a one-time password and
   reads the audit of administration. A user of its own adds two devices
   of the second factor's first method, TOTP, from the keys of their QR
