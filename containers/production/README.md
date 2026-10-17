@@ -35,8 +35,9 @@ Needs Docker with compose 2.24 or newer (`docker compose version`).
 
 ## Get the folder
 
-Into an empty folder, from the repository at `main`, or at a release tag
-from the first release that has this folder:
+Into an empty folder, from the repository. The files at a release tag
+fit that version, so put `v0.5.0` in place of `main` in the address
+below for 0.5.0. `main` holds the newest:
 
 ```sh
 mkdir -p mailbox/caddy.d && cd mailbox
@@ -292,7 +293,7 @@ dropped first.
 
 ## From the compose file before
 
-Until this folder, `containers/compose.yaml` ran the service, with the
+Before 0.3.0, `containers/compose.yaml` ran the service, with the
 image named in `MAILBOX_SERVICE_IMAGE`. This compose file has the same
 project name, `benethos-mailbox`, and the same volume, so the data
 stays. Copy the old `secrets/master_key` into `secrets/` here, keep its

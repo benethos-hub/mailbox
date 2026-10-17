@@ -172,8 +172,13 @@ when access is taken back under the Google account's security settings.
   message outside the trash and the spam. It is no label at Gmail.
 - A message can be in **several folders**. A move sets its folders
   exactly: `["Label_1"]` takes the inbox off, `["ALL_MAIL"]` archives.
-  Sent and Drafts are Gmail's own and cannot be a target.
-- **Starred** and **unread** are flags. Important, the categories
+  `add_folder_ids` and `remove_folder_ids` put a message into a label or
+  take it out and leave the rest as it is. `remove_folder_ids` with the
+  inbox archives. Sent and Drafts are Gmail's own and cannot be a
+  target.
+- **Starred** and **unread** are read and written. Gmail writes no mark
+  of RFC 8621: a reply leaves `$answered` off and `original_marked`
+  false, and setting a mark answers `501`. Important, the categories
   (Promotions, Social, ...) and the chats are left out.
 - **Keywords** do not exist at Gmail: its labels are the folders.
   Setting one answers `501 not_supported`.

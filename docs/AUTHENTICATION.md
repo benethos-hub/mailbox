@@ -8,8 +8,8 @@ factors of the UI sign-in: the password, and the second factor with
 its methods. TOTP is the first method, passkeys may follow in the same
 frame.
 
-Proposal of 2026-10-09. **Decided 2026-10-09:** built as proposed,
-with the answers of section 10.
+The second factor of the UI sign-in as built in 0.4.0, from the
+proposal of 2026-10-09 and its decisions, the answers of section 10.
 
 ## 1. The factors
 
@@ -183,13 +183,13 @@ holds 75 bits and works once.
 - The key is derived with HKDF from the data key, for this purpose
   alone, and comes from the vault, never from the database. The
   domain only gets a hash function handed in. Each row keeps the id of
-  the data key, so a later `keys rotate` can still check old codes or
-  void them.
+  the data key, so a rotation of the data key, should one come, can
+  still check old codes or void them.
 - After a restore on another machine the codes count only with the
   same master key, as every other secret of the backup does.
 - A code of digits alone is tried as a code of the app first, then as a
   recovery code.
-- The page shows how many are left. **New recovery codes** asks for the
+- The page shows how many are left. **Make new codes** asks for the
   password and a code, of any device or an old recovery code, as adding
   a device does, and replaces the whole set. Whoever holds the password
   and an open session alone cannot make a set of its own.
@@ -205,7 +205,7 @@ codes let a person back in alone. The command is the last way for the
 last administrator. A user with `users.manage` removing the second
 factor is the third.
 
-## 7. Where it changes the service
+## 7. Where it lives in the service
 
 **Data**, schemas 18 and 19:
 
@@ -251,7 +251,6 @@ Without a second factor the password alone does, as before.
 - `DELETE /v1/users/{user_id}/second-factor/totp/{device_id}`,
   operation `remove_totp_device` in `users.manage`: one TOTP device,
   the second factor off with the last device. `404`, `409` as above.
-- `docs/openapi.json` anew.
 
 **UI**, with the checklist of [UI.md](UI.md) section 8:
 

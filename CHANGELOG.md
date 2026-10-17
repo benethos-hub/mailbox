@@ -11,9 +11,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 
 - The MCP server asks what its token may do every
-  `MAILBOX_MCP_RIGHTS_SECONDS`, 60 by default, and at once when a tool
-  is refused with `403 forbidden`, a right missing. With `0` it asks
-  only at start.
+  `MAILBOX_MCP_RIGHTS_SECONDS`, 60 by default, and when a tool is
+  refused with `403 forbidden`, a right missing, at most every five
+  seconds. With `0` it asks only at start.
   When its tools change it tells its clients with
   `notifications/tools/list_changed` and announces `tools.listChanged`,
   so a right granted or taken away shows without a restart. When the
@@ -22,7 +22,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   alone, which lists no account. A refused token is asked
   for no more, since each refusal counts against the address, and a new
   one needs a restart.
-- `POST /v1/accounts/{id}/messages/{id}/attachments/{id}/links`
+- `POST /v1/accounts/{account_id}/messages/{message_id}/attachments/{attachment_id}/links`
   (`share_attachment`) makes a link to an attachment for another
   service, which fetches the file itself with `GET /v1/links/{secret}`:
   once, without a token, until `expires_at`. A link holds
@@ -30,7 +30,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   for fewer. It needs an API token and the new group `mail.share`, which
   is in no role template. When the link is used, its token must still
   act and hold `get_attachment` and `share_attachment` on the message.
-  Every refusal answers the same `404`. When the mail server fails to
+  Every refusal answers the same `404` and counts against the client
+  address as a wrong token does. The audit keeps `mailbox.link_shared`
+  and `mailbox.link_used`, never the secret or the URL. When the mail
+  server fails to
   hand out the file, the link holds for the rest of its time, the answer
   is `502 provider_unavailable` to try again, the audit says
   `mailbox.link_returned`, and the address that asked counts no
@@ -152,11 +155,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   the list across accounts merges by it.
 - **Breaking:** a list without a folder is the inbox on every account.
   It was every folder on Gmail, Microsoft and JMAP, the trash and junk
-  among them. The role `all` lists every folder but the trash and junk
-  where the account has such a folder: Gmail's All Mail, a JMAP or IMAP
-  server's, and on Microsoft, and on JMAP and IMAP without one, a folder
-  "All Mail" the service shows. A
-  grant narrowed to folders lists `all` within them. The list across
+  among them. The role `all` lists every folder but the trash and junk.
+  Where the account has such a folder, Gmail's All Mail or a JMAP or
+  IMAP server's own, that folder is `all`. On Microsoft, and on JMAP and
+  IMAP without one, the service shows a folder "All Mail" with that
+  role. A grant narrowed to folders lists `all` within them. The list across
   accounts takes the inbox without `folder` as well. A cursor of a list
   without a folder handed out before this version is refused once.
 - **Breaking:** a role the account has no folder for answers `501
@@ -253,7 +256,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   and `get_message` names the mail it answers (`reference`). It was
   always null on Gmail.
 - A Microsoft account answers `501` when a change sets or takes off a
-  keyword with `$`, such as `$answered`, which Outlook keeps no place
+  mark it does not write, such as `$junk`, which Outlook keeps no place
   for. It answered success and stored nothing.
 - The `next_cursor` of a Microsoft account belongs to its folder and
   search, as on the other providers. Sent with another folder or filter,
