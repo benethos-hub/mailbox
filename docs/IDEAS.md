@@ -81,9 +81,9 @@ hundreds, or when the IMAP session is rebuilt anyway.
 
 - Never load remote content. A tracking pixel tells the sender that a mail
   was opened, and when, and from where.
-- For the model: HTML converted to text, hidden content dropped (already
-  required by CONCEPT 7.7).
-- For the configuration UI or other clients: sanitized HTML, remote images
+- For the model this is built: HTML converted to text, hidden content
+  dropped (CONCEPT 7.7).
+- Left for the configuration UI or other clients: sanitized HTML, remote images
   replaced by placeholders, links shown with their real target.
 
 ## Attachments for the model
@@ -98,8 +98,8 @@ hundreds, or when the IMAP session is rebuilt anyway.
   without opening the mail, in the MCP server and in the UI. IMAP reads
   BODYSTRUCTURE while listing anyway, JMAP has the property on
   `Email/get`, Graph needs `$expand`, Gmail the full form of every
-  message, and POP3 cannot, so it would answer an empty list, as
-  UNIFORM.md handles such differences. It changes the summary's
+  message, and POP3 cannot, so a capability would say that the list
+  carries nothing there (UNIFORM.md, rule R5). It changes the summary's
   contract and belongs in a version of its own.
 - **Attachments as MCP resources.** A person picks an attachment in the
   client and attaches it to the message, with no download and no tool
@@ -212,7 +212,8 @@ settings rather than in code.
 
 ## Parts of words in every search
 
-The search runs on the provider's server, so how text matches differs
+CONCEPT.md open question 5 asks the same. The search runs on the
+provider's server, so how text matches differs
 per provider: IMAP finds parts of words, Microsoft beginnings of words,
 Gmail whole words only (docs/UNIFORM.md, decision 6.7). A search for
 `rechnung` finds "Stromrechnung" on IMAP alone, and "Rechnungsnummer"
@@ -236,7 +237,5 @@ the service to search itself.
 - **A marker on mail sent through the API**, for example a header naming
   the user, so it can be traced later which mail a script or an assistant
   sent.
-- **Local search index** across all accounts (SQLite FTS). See open
-  question 5 in CONCEPT.md.
 - **Live Public Suffix List** in addition to the bundled one (CONCEPT 5.8),
   for example a file the operator keeps current.

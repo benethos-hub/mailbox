@@ -1,17 +1,17 @@
 # One way to operate every mailbox
 
-**Decided 2026-10-12.** This file collects where the API behaves
-differently per provider today and sets the rules that end that. The
-decisions are in section 6, and section 7 names what the change
-carries along. Section 8 makes the UI and the MCP server independent
-of the providers. Section 5 is the work list. The rules stand in
-CONCEPT 5.11, the work in ROADMAP phase 5a.
+**Decided 2026-10-12, built in 0.5.0.** This file collects where the
+API behaved differently per provider before 0.5.0 and the rules that
+ended that. The decisions are in section 6, and section 7 names what
+the change carried along. Section 8 makes the UI and the MCP server
+independent of the providers. Section 5 is the work list. The rules
+stand in CONCEPT 5.11, the work in ROADMAP phase 5a.
 
 Contents:
 [1. The principle](#1-the-principle) ·
 [2. Rules](#2-rules) ·
 [3. Capabilities](#3-capabilities) ·
-[4. Where the API breaks the principle today](#4-where-the-api-breaks-the-principle-today) ·
+[4. Where the API broke the principle before 0.5.0](#4-where-the-api-broke-the-principle-before-050) ·
 [5. Work in order](#5-work-in-order) ·
 [6. Decisions](#6-decisions) ·
 [7. What belongs to it](#7-what-belongs-to-it) ·
@@ -27,7 +27,7 @@ silently ignored, and no value silently means something else.
 The service is already built on this idea: neutral models, capabilities
 per account, `501 not_supported` for what an adapter lacks (CONCEPT 5).
 An inventory of all five adapters and the domain on 2026-10-12 found
-where it does not hold. Section 4 lists what it found.
+where it did not hold. Section 4 lists what it found.
 
 ## 2. Rules
 
@@ -90,6 +90,7 @@ each one guards exactly one thing:
 | `search` | the filters of `list_messages` | yes | no | yes | yes | yes |
 | `drafts` | drafts | with a drafts folder | no | yes | yes | with a drafts folder |
 | `send` | sending | with SMTP | with SMTP | yes | yes | with submission and a drafts or sent folder |
+| `refused` | a send names the recipients the server refused at once | with SMTP | with SMTP | no | no | no |
 | `sent_copy` | a sent mail is kept and its id answered | with a sent folder | no | yes | yes | with a sent folder |
 | `threads` | `thread_id`, `list_threads`, `get_thread` | yes, the service's own | no | yes | yes | yes |
 | `push` | changes arrive within seconds | with IDLE | no | no | no | with an event source |
@@ -100,7 +101,7 @@ The marks are the keywords RFC 8621 names besides `$seen` and
 `$forwarded`, `$draft`, `$junk`, `$notjunk` and `$phishing`. The list
 draws the line between a mark and a server note (4.1). Other `$`
 keywords, such as `$important` or Thunderbird's `$label1`, pass as
-keywords, as today.
+keywords, as before.
 
 A yes or no would be too coarse for `marks`, as it was for `flags`.
 Microsoft keeps `$answered` and `$forwarded` but no `$junk`, and Gmail
@@ -120,7 +121,7 @@ named `refused`, like the field it guards. The two lists of marks are
 inside, not what a client can do. They leave the API (decision
 6.8).
 
-## 4. Where the API breaks the principle today
+## 4. Where the API broke the principle before 0.5.0
 
 Each point names what happens, on which provider, and what the rules
 would make of it. **Bug** marks what is wrong under today's documentation
@@ -132,12 +133,12 @@ larger piece that is neither, and runs on its own.
 
 - **Microsoft drops `$` keywords without an error.** Setting `$answered`
   or `$junk` answers `200`, and nothing is stored
-  (`microsoft/mappers.py:149`). A `message.updated` record is written
+  (`microsoft/mappers.py`). A `message.updated` record is written
   anyway. Rule R2: `501`. *Bug.* Done: `$answered` and `$forwarded`
   are kept as the verb Outlook last carried out (6.4), and every other
   `$` keyword answers `501`.
 - **Gmail announces `flags`, and every keyword change answers `501`**
-  (`gmail/messages.py:110`). The UI offers the keyword form on Gmail
+  (`gmail/messages.py`). The UI offers the keyword form on Gmail
   accounts, against CONCEPT 5 ("the UI offers no action an account
   cannot do"). Rule R3: the capability `keywords` is missing. *Concept
   (section 3).* Done: Gmail lacks `keywords`, and the UI offers no
@@ -174,7 +175,7 @@ larger piece that is neither, and runs on its own.
   junk, which Microsoft and IMAP without `\All` emulate.
 - **`list_all_messages` with a role leaves out an account that has no
   such folder**, without naming it in `incomplete`
-  (`domain/mailbox/across.py:111-116`). *Bug.* Done: it is named there
+  (`domain/mailbox/across.py`). *Bug.* Done: it is named there
   with `not_supported`.
 - **An account without the folder a role names answers `404` from the
   domain and `409` from the adapters**, for the same situation. Gmail
@@ -202,7 +203,7 @@ larger piece that is neither, and runs on its own.
   next messages the newest comes first. None is skipped or given twice,
   though a page may hold a message older than one of the next page.
 - **Days count in UTC** on Gmail, Microsoft and JMAP, and in the
-  server's day on IMAP.
+  server's day on IMAP. Stays: a day is the provider's unit.
 
 ### 4.4 Search and attachments
 
@@ -210,13 +211,13 @@ larger piece that is neither, and runs on its own.
   compares. **Gmail and Microsoft match whole words or prefixes**, JMAP
   as its server does. No adapter can make the provider's index match
   parts of words. *Concept (6.7).*
-- **On Microsoft, `sender`, `to` or `subject` switch the list to Graph's
+- **On Microsoft, `from`, `to` or `subject` switch the list to Graph's
   `$search`.** `unread`, `starred` and `has_attachments=false` are then
   checked after each page, so a page can come back short or empty with
-  a `next_cursor`. Documented with 6.7.
+  a `next_cursor`. Documented with 6.7. Stays.
 - **A Microsoft cursor keeps its first query.** Sent with another folder
   or filter, it answers the old query's next page, without
-  `invalid_cursor` (`microsoft/provider.py:147-151`). *Bug.* Done: the
+  `invalid_cursor` (`microsoft/provider.py`). *Bug.* Done: the
   cursor is bound to the folder and the search, and another list's
   answers `invalid_cursor`.
 - **`has_attachments` can come out three ways for one message.** The
@@ -232,16 +233,16 @@ larger piece that is neither, and runs on its own.
 - **A reply or forward marks the original only on IMAP and JMAP.** On
   Gmail and POP3 the mark answers `501`, on Microsoft it is dropped. The
   send answers success either way, and only the log knows
-  (`domain/mailbox/outgoing.py:446-456`). Rule R6: the answer says
+  (`domain/mailbox/outgoing.py`). Rule R6: the answer says
   whether the original was marked. *Concept (6.4).* Done:
   `original_marked`, and Microsoft writes both marks.
 - **A reply through Gmail starts a new Gmail thread.** The send and the
-  draft pass no `threadId` (`gmail/sending.py:28, 45`). Gmail's
+  draft pass no `threadId` (`gmail/sending.py`). Gmail's
   documentation asks for it besides the headers, so a reply lands outside
   the original's thread. To confirm live. *Bug.* Done: the send and the
   draft pass the original's `threadId`, checked live.
 - **Microsoft answers no `sent_copy_id`**, although Exchange keeps the
-  copy (`microsoft/provider.py:259`). The `message.sent` record then
+  copy (`microsoft/provider.py`). The `message.sent` record then
   carries the Message-ID header in place of a message id. *Bug.* Done:
   the mail is sent as a draft, whose immutable id the copy keeps, the
   way Microsoft documents.
@@ -267,11 +268,11 @@ larger piece that is neither, and runs on its own.
 ### 4.6 Drafts
 
 - **A Gmail draft never shows its `reference`.** The domain keeps it only
-  where `$draft` is among the keywords (`domain/mailbox/service.py:196`),
+  where `$draft` is among the keywords (`domain/mailbox/service.py`),
   and Gmail has no keywords. *Bug.* Done: Gmail names `$draft` for a
   message with the label `DRAFT`, so its draft keeps the `reference`.
 - **A replaced draft keeps its id on IMAP and gets a new one elsewhere.**
-  Documented with the draft id.
+  Documented with the draft id. Stays.
 - **Replacing a draft can leave two**, with an error, on Microsoft and on
   IMAP without UIDPLUS: the new one is stored before the old one is
   deleted. Rule R6. *Bug.* Done: where the old one cannot be deleted,
@@ -286,12 +287,16 @@ larger piece that is neither, and runs on its own.
   of its subfolders. Documented. The subfolders also lose their
   subscription.
 - **Folder counts are null on IMAP and POP3**, and on Gmail's All Mail.
-  Microsoft, JMAP and other Gmail labels fill them.
+  Microsoft, JMAP and other Gmail labels fill them. Stays: IMAP would
+  need a `STATUS` per folder, POP3 has one folder.
 - **Gmail's own folders refuse neutral operations with `400`**: no
-  subfolder in the inbox, no move into Sent or Drafts. Rule R2.
+  subfolder in the inbox, no move into Sent or Drafts. Rule R2. Open:
+  the domain refuses a change of a folder with a role with `409` first
+  (CONCEPT 6.2), Gmail's `400` reaches only its own folders without a
+  role.
 - **Microsoft shows Outbox, Conversation History and similar folders
   without a role**, as if a person had made them. Renaming them fails at
-  Graph with a general error.
+  Graph with a general error. Stays.
 - **IMAP drops `\Noselect` folders but keeps them as `parent_id`** of
   their children. *Bug.* Done: the subfolders go below the nearest
   listed folder, or to the top.
@@ -299,7 +304,7 @@ larger piece that is neither, and runs on its own.
 ### 4.8 Message fields
 
 - **`snippet` is always null on IMAP and POP3**, also in `get_message`,
-  where the body is known.
+  where the body is known. Stays: IMAP and POP3 read headers for a list.
 - **Microsoft answers HTML only.** A plain text mail has
   `text_body: null` and Exchange's HTML in `html_body`. Graph answers the
   text with `Prefer: outlook.body-content-type="text"`. *Bug.* Done,
@@ -322,9 +327,12 @@ larger piece that is neither, and runs on its own.
   subject. JMAP depends on the server. *Concept (6.9).*
 - **An IMAP thread id can be null until the backfill reaches the
   message, and a merge turns the younger id into a `404`.** Native
-  thread ids never do either.
+  thread ids never do either. Decided 2026-10-16: the list of threads
+  shows such a message as a thread of its own under the message's id,
+  which finds the thread once the index has it (CONCEPT 6.3). The `404`
+  after a merge stays.
 - **Microsoft cuts long conversations at the pages read first**, which
-  may not be the newest messages. Marked unverified in the code.
+  may not be the newest messages. Marked unverified in the code. Open.
 
 ### 4.10 The change feed
 
@@ -336,7 +344,7 @@ larger piece that is neither, and runs on its own.
   source.** The worker quietly polls instead. IDLE watches the inbox
   only. Rule R4. Done: without them the account lacks `push`.
 - **A JMAP deletion carries no folder.** A message in several folders is
-  reported with one of them.
+  reported with one of them. Stays: JMAP does not say where it was.
 - **`message.updated` also means a thread merge**, documented as "moved
   or flags changed".
 - **After an expired JMAP state, messages that arrived in the gap are
@@ -442,9 +450,8 @@ Steps 1 to 9 are done. Each step is one pull request or more.
    instead, and what its page sums up. The connect page offers one form
    per kind to set up by hand, and no template names a kind.
 
-Steps 5 and 6 change the contract. With 7 and 8 they ship together as
-0.5.0, marked as breaking in the changelog. Steps 1 to 4 can ship
-earlier, in a patch release, since they keep the contract.
+All nine steps shipped in 0.5.0. Steps 5 and 6 changed the contract
+and are marked as breaking in the changelog.
 
 ## 6. Decisions
 
@@ -522,7 +529,7 @@ Decided 2026-10-12, each with the options weighed and why.
    itself. Substrings for every account would need an index of the
    service's own, an idea for later (IDEAS.md).
 
-   What `text=rechnung` finds, by the providers' documentation (the
+   What `q=rechnung` finds, by the providers' documentation (the
    Gmail and Microsoft rows are to be confirmed live):
 
    | In the mail | IMAP | Microsoft | Gmail | JMAP (Stalwart) |
@@ -532,7 +539,7 @@ Decided 2026-10-12, each with the options weighed and why.
    | Rechnungsnummer | yes | yes, a word beginning | no | as it indexes |
    | Stromrechnung | yes | no | no | as it indexes |
 
-   And `sender=mail`: IMAP finds `max@gmail.com` and `mail@example.org`,
+   And `from=mail`: IMAP finds `max@gmail.com` and `mail@example.org`,
    Gmail and Microsoft only the second, where `mail` is a word of the
    address.
 8. **Inner capabilities.** `stable_ids`, `delta` and `server_search` (a)
@@ -554,7 +561,7 @@ Decided 2026-10-12, each with the options weighed and why.
     *Decided: (a).* It has a cost on IMAP: a list then fetches
     `BODYSTRUCTURE` beside the headers, a little more per page. POP3
     reads the headers with `TOP` only, so its list keeps the header
-    guess, or reads more lines of each message.
+    guess (decided 2026-10-15).
 11. **Where the capabilities live.** Under R4 they depend on the server,
     so they are found when the account connects and when it is
     verified. (a) Stored with the account in the database, a new
@@ -563,31 +570,30 @@ Decided 2026-10-12, each with the options weighed and why.
     start.
     *Decided: (a).* The account then answers the same capabilities
     while its server cannot be reached, where (b) would answer none.
-    Today an account whose adapter cannot be built answers an empty
-    list, which reads as "can do nothing" but means "unknown".
+    Before 0.5.0 an account whose adapter could not be built answered
+    an empty list, which read as "can do nothing" but meant "unknown".
 
 ## 7. What belongs to it
 
 - **One test suite for all adapters.** Every adapter, through its fake,
   runs the same expectations: each operation either does what the
   neutral model says, or answers `501` and lacks the capability. Without
-  such a suite the adapters drift apart again. It runs before the
-  capability work (section 5, step 4), so that work is guarded from its
-  start.
-- **The client package.** Its capability enum gains the new values and
-  loses `flags`, `stable_ids`, `delta` and `server_search`. An older
+  such a suite the adapters drift apart again. It has run since step 4
+  of section 5 (`tests/integration/test_conformance.py`), so the
+  capability work was guarded from its start.
+- **The client package.** Its capability enum has the new values and
+  lost `flags`, `stable_ids`, `delta` and `server_search`. An older
   client that checks the values strictly fails on the new ones. The
   client is pinned to the service's version, but a client of another
-  language is not. The changelog names it.
+  language is not. The changelog says so.
 - **The MCP server.** It names what an account lacks from the
-  capabilities (`list_accounts`). It follows the new set, and its tool
-  descriptions lose what they say per provider, such as "on IMAP" or
-  Gmail's way to archive.
-- **The UI.** Each action follows the capability that guards it, such
-  as the keyword form `keywords` and the mark buttons the list of marks
-  written.
+  operations the API answers (`list_accounts`), and its tool
+  descriptions name no provider, no "on IMAP" and no Gmail way to
+  archive.
+- **The UI.** Each action follows the operation that guards it, such
+  as the keyword form and the mark buttons.
 - **The contract and the concept.** The descriptions in
-  `docs/openapi.json` that admit differences per provider today are
+  `docs/openapi.json` that admitted differences per provider were
   rewritten: the list without a folder, `has_attachments`, keywords,
   the sent copy. The provider sections of CONCEPT.md (5.2 to 5.6) keep
   how each adapter works, and say what the account lacks rather than
@@ -595,7 +601,7 @@ Decided 2026-10-12, each with the options weighed and why.
 - **The live checks.** Each provider's check covers its capabilities:
   what it announces works, what it lacks answers `501`. Gmail's check
   sends a reply and reads it in the original's thread. Microsoft's check
-  marks a reply and sends a large mail.
+  marks a reply and, with `--large`, sends a large mail.
 
 ## 8. The UI and the MCP server without provider knowledge
 
@@ -608,7 +614,8 @@ no change in either.
 ### 8.1 Where they knew providers before 0.5.0
 
 - **Three tables of what an operation needs.** The domain checked
-  protocols (`domain/accounts/abilities.py`), the UI mapped capabilities
+  protocols (`domain/accounts/abilities.py`, which now holds the one
+  table of U1), the UI mapped capabilities
   to its actions (`web/pages/rights.py`), and the MCP server mapped them
   to what it names as lacking (`mailbox-mcp/render.py`). The three could
   disagree. The UI's table sent the trash with `folders` and the keyword
@@ -643,8 +650,8 @@ the capabilities and the caller's rights together, as a list of
 operation names such as `update_message` or `create_draft`. It goes on
 the account in `GET /v1/me` and `GET /v1/accounts/{id}`. The UI and the
 MCP server only ask whether an operation is in that list. `rights.py`
-becomes a lookup, and the MCP server names what is lacking from the
-same answer. The field is new, so nothing breaks.
+is a lookup, and the MCP server names what is lacking from the same
+answer.
 
 **U2. Templates never ask a capability or a provider**, only what the
 page was handed (`can.<operation>`). A rule in `test_code_rules.py`
@@ -668,9 +675,8 @@ tested at the API, not in the UI.
 **U6. Setting up an account, described by the domain.** Each
 kind of account describes its connection: the fields, their defaults
 and hints, the ways to sign in. The UI draws the form from it. Then a
-new adapter needs no new template. It is the one place the UI still
-knows providers, and the change is the largest of the six, so it
-comes last.
+new adapter needs no new template. It was the one place the UI still
+knew providers, and the change was the largest of the six, so it came
+last.
 
-U1 to U5 belong to section 5, step 8. U6 follows as the last step,
-once the rest is done.
+U1 to U5 were built in step 8 of section 5, U6 in step 9.
