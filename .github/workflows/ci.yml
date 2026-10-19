@@ -10,70 +10,48 @@ permissions:
   contents: read
 
 jobs:
+  # brand, lint, test, coverage-badge, audit and the lowest-* jobs are the
+  # organisation's reusable workflows in benethos-hub/.github, followed at
+  # main. Each explains itself in its file. What stays here is what only
+  # this project has: fresh-install and docker.
+
   # The organisation's check of assets/brand: the icon as icon.svg, and
   # icon.png and social-preview.png made from it, none older than it.
   brand:
     uses: benethos-hub/.github/.github/workflows/brand.yml@main
 
+  # uv.lock in step with pyproject.toml, ruff, the formatting and mypy. The
+  # tools come from the dependency group dev, which uv sync installs.
   lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
+    uses: benethos-hub/.github/.github/workflows/python-lint.yml@main
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v10.3.0
-        with:
-          enable-cache: true
-
-      - name: Install dependencies (locked)
-        run: uv sync --frozen
-
-      - name: Lockfile is in step with pyproject.toml
-        run: uv lock --check
-
-      - name: Ruff (lint)
-        run: uv run ruff check .
-
-      - name: Ruff (format check)
-        run: uv run ruff format --check .
-
-      - name: Mypy (type check)
-        run: uv run mypy
-
-  # The run on the newest version, 3.15, measures the coverage and its
-  # floor as well. Before 3.14, measuring the branches took about as long
-  # again as the tests themselves. The name stays test (<version>), which
-  # main requires.
+  # pytest on every supported Python against uv.lock, offline: providers are
+  # faked and the MCP tests mock the REST API. The newest version measures
+  # the coverage of the four packages, as [tool.coverage.run] names them,
+  # and its floor. The versions are named here although they equal the
+  # defaults: test_packaging.py holds them to the classifiers,
+  # requires-python, .python-version and the documentation.
   test:
-    name: test (${{ matrix.python-version }})
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.11", "3.12", "3.13", "3.14", "3.15"]
-        include:
-          - python-version: "3.15"
-            coverage: true
-    steps:
-      - uses: actions/checkout@v7
+    uses: benethos-hub/.github/.github/workflows/python-tests.yml@main
+    with:
+      python-versions: '["3.11", "3.12", "3.13", "3.14", "3.15"]'
+      coverage-python: "3.15"
+      badge: true
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v10.3.0
-        with:
-          enable-cache: true
-          python-version: ${{ matrix.python-version }}
+  # The coverage badge of the README, as coverage.json on the branch badges.
+  # A push to main only, so it is no required check.
+  coverage-badge:
+    if: github.event_name == 'push'
+    needs: test
+    uses: benethos-hub/.github/.github/workflows/coverage-badge.yml@main
+    permissions:
+      contents: write # push coverage.json to the branch badges
 
-      - name: Install dependencies (locked)
-        run: uv sync --frozen
-
-      # Offline: providers are faked and the MCP tests mock the REST API.
-      - name: Run tests
-        if: ${{ !matrix.coverage }}
-        run: uv run pytest -q
-
-      - name: Run tests with coverage
-        if: ${{ matrix.coverage }}
-        run: uv run pytest -q --cov --cov-fail-under=80
+  # Every version pinned in uv.lock, for every platform and Python, against
+  # PyPI and OSV. A waiver in ignore-vulns belongs here, in the lowest-*
+  # jobs and in publish.yml alike.
+  audit:
+    uses: benethos-hub/.github/.github/workflows/python-dependency-audit.yml@main
 
   # Every other job installs from uv.lock. A user installs from PyPI, where
   # only the declared ranges in pyproject.toml count, and most of them have
@@ -83,10 +61,10 @@ jobs:
   fresh-install:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v10.3.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
 
       - name: Build the four wheels
         run: uv build --all-packages --wheel
@@ -118,93 +96,86 @@ jobs:
           PY
 
   # The other side of fresh-install: the lowest versions pyproject.toml
-  # allows. An environment that already holds an older fastapi or
-  # defusedxml keeps it, as long as it meets the minimum. Dependabot moves
-  # uv.lock, never the minimums, so they fall behind the code unnoticed.
-  # Each environment is also checked against OSV: a minimum with a known
-  # vulnerability lets someone install it.
-  # A required check: a failure here means raising a minimum.
+  # allows, on the oldest supported Python, without the lockfile. An
+  # environment that already holds an older fastapi or defusedxml keeps it,
+  # as long as it meets the minimum. Dependabot moves uv.lock, never the
+  # minimums, so they fall behind the code unnoticed. With audit, those
+  # versions are checked against OSV as well: a minimum with a known
+  # vulnerability lets someone install it. A failure here means raising a
+  # minimum. One job per environment, each a required check. The tests run
+  # from the root, so the pytest settings of pyproject.toml apply.
   lowest-versions:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
+    uses: benethos-hub/.github/.github/workflows/python-lowest-versions.yml@main
+    with:
+      python-version: "3.11"
+      editable: |
+        packages/mailbox-service
+        packages/mailbox-client
+        packages/mailbox-mcp
+        packages/mailbox-common[all]
+      requirements: |
+        pytest>=9.1.1
+        pytest-asyncio>=1.0
+      audit: true
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v10.3.0
+  # Alone, the MCP server may get older versions than beside the service.
+  # The client and the common package it needs come from the repository:
+  # they are released together.
+  lowest-mcp:
+    uses: benethos-hub/.github/.github/workflows/python-lowest-versions.yml@main
+    with:
+      python-version: "3.11"
+      editable: |
+        packages/mailbox-client
+        packages/mailbox-mcp
+        packages/mailbox-common[all]
+      requirements: |
+        pytest>=9.1.1
+        pytest-asyncio>=1.0
+      pytest-args: packages/mailbox-mcp/tests
+      audit: true
 
-      - name: The packages on their lowest versions
-        run: |
-          set -euo pipefail
-          uv venv -p 3.11 /tmp/lowest
-          uv pip install --python /tmp/lowest/bin/python --resolution lowest-direct \
-            -e packages/mailbox-service -e packages/mailbox-client -e packages/mailbox-mcp \
-            -e "packages/mailbox-common[all]" "pytest>=9.1.1" "pytest-asyncio>=1.0"
-          uv pip list --python /tmp/lowest/bin/python
-          /tmp/lowest/bin/python -m pytest -q -p no:cacheprovider
+  # The client alone needs httpx and nothing else.
+  lowest-client:
+    uses: benethos-hub/.github/.github/workflows/python-lowest-versions.yml@main
+    with:
+      python-version: "3.11"
+      editable: packages/mailbox-client
+      requirements: |
+        pytest>=9.1.1
+        pytest-asyncio>=1.0
+      pytest-args: packages/mailbox-client/tests
+      audit: true
 
-      - name: No known vulnerability in their lowest versions
-        run: |
-          set -euo pipefail
-          uv pip freeze --python /tmp/lowest/bin/python --exclude-editable > /tmp/lowest.txt
-          uvx pip-audit==2.10.1 --strict --disable-pip --no-deps \
-            --vulnerability-service osv -r /tmp/lowest.txt
+  # The common package alone with every extra, on their lowest versions.
+  lowest-common:
+    uses: benethos-hub/.github/.github/workflows/python-lowest-versions.yml@main
+    with:
+      python-version: "3.11"
+      editable: packages/mailbox-common[all]
+      requirements: pytest>=9.1.1
+      pytest-args: packages/mailbox-common/tests
+      audit: true
 
-      # Alone, the MCP server may get older versions than beside the service.
-      # The client and the common package it needs come from the repository:
-      # they are released together.
-      - name: The MCP server alone on its lowest versions
-        run: |
-          set -euo pipefail
-          uv venv -p 3.11 /tmp/lowest-mcp
-          uv pip install --python /tmp/lowest-mcp/bin/python --resolution lowest-direct \
-            -e packages/mailbox-client -e packages/mailbox-mcp \
-            -e "packages/mailbox-common[all]" \
-            "pytest>=9.1.1" "pytest-asyncio>=1.0"
-          uv pip list --python /tmp/lowest-mcp/bin/python
-          /tmp/lowest-mcp/bin/python -m pytest -q -p no:cacheprovider packages/mailbox-mcp/tests
-
-      - name: No known vulnerability in the MCP server's lowest versions
-        run: |
-          set -euo pipefail
-          uv pip freeze --python /tmp/lowest-mcp/bin/python --exclude-editable > /tmp/lowest-mcp.txt
-          uvx pip-audit==2.10.1 --strict --disable-pip --no-deps \
-            --vulnerability-service osv -r /tmp/lowest-mcp.txt
-
-      # The client alone needs httpx and nothing else.
-      - name: The client alone on its lowest versions
-        run: |
-          set -euo pipefail
-          uv venv -p 3.11 /tmp/lowest-client
-          uv pip install --python /tmp/lowest-client/bin/python --resolution lowest-direct \
-            -e packages/mailbox-client "pytest>=9.1.1" "pytest-asyncio>=1.0"
-          uv pip list --python /tmp/lowest-client/bin/python
-          /tmp/lowest-client/bin/python -m pytest -q -p no:cacheprovider packages/mailbox-client/tests
-
-      # The common package alone. Without extras it needs the standard
-      # library only, and every group but those with an extra works. Then
-      # with every extra, on their lowest versions.
-      - name: The common package alone, without extras and with all
-        run: |
-          set -euo pipefail
-          uv venv -p 3.11 /tmp/lowest-common
-          uv pip install --python /tmp/lowest-common/bin/python \
-            -e packages/mailbox-common "pytest>=9.1.1"
-          uv pip list --python /tmp/lowest-common/bin/python
-          /tmp/lowest-common/bin/python -m pytest -q -p no:cacheprovider \
-            --ignore=packages/mailbox-common/tests/paths \
-            --ignore=packages/mailbox-common/tests/settings \
-            packages/mailbox-common/tests
-          uv pip install --python /tmp/lowest-common/bin/python --resolution lowest-direct \
-            -e "packages/mailbox-common[all]"
-          uv pip list --python /tmp/lowest-common/bin/python
-          /tmp/lowest-common/bin/python -m pytest -q -p no:cacheprovider packages/mailbox-common/tests
+  # The common package without extras needs the standard library only,
+  # and every group but those with an extra works.
+  lowest-common-bare:
+    uses: benethos-hub/.github/.github/workflows/python-lowest-versions.yml@main
+    with:
+      python-version: "3.11"
+      editable: packages/mailbox-common
+      requirements: pytest>=9.1.1
+      pytest-args: >-
+        --ignore=packages/mailbox-common/tests/paths
+        --ignore=packages/mailbox-common/tests/settings
+        packages/mailbox-common/tests
 
   # Both images are built on every push, so a broken Dockerfile shows up
   # here and not first in a release.
   docker:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Build both images
         run: |
@@ -259,15 +230,16 @@ jobs:
 
       # The release publishes linux/arm64 as well. Build it here so that an
       # arm64-only break does not first surface in a release. Nothing is
-      # loaded or pushed.
+      # loaded or pushed. Each cache scope is the image's name, which
+      # publish/ghcr reads by default, so the release reuses these layers.
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
 
       - name: Set up Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       - name: Build the service for arm64 as well
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: containers/images/mailbox-service/Dockerfile
@@ -277,7 +249,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=benethos-mailbox-service
 
       - name: Build the MCP server for arm64 as well
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: containers/images/mailbox-mcp/Dockerfile

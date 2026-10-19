@@ -8,15 +8,10 @@ release job of publish.yml sends it.
 
 from __future__ import annotations
 
-import hashlib
-import importlib.util
 import json
 import re
 from pathlib import Path
-from types import ModuleType
 from typing import Any
-
-import pytest
 
 from benethos_mailbox_client import environment
 
@@ -24,7 +19,6 @@ from .publish_helpers import project_of, workflow_job
 
 ROOT = Path(__file__).resolve().parents[3]
 ENTRY = ROOT / ".github" / "publish" / "mcp-registry" / "server.json"
-FILL = ENTRY.parent / "fill_bundle_checksum.py"
 MCP = ROOT / "packages" / "mailbox-mcp"
 OWNER = "benethos-hub"
 RAW = f"https://raw.githubusercontent.com/{OWNER}/mailbox/main/"
@@ -55,58 +49,17 @@ def test_the_entry_lists_pypi_and_the_bundle() -> None:
 
 
 def test_the_bundle_is_the_one_the_release_carries() -> None:
-    """The release job fills in the checksum of the very file it
-    attached. Until then the entry holds the placeholder."""
+    """The action publish/mcp-registry fills in the checksum of the very
+    file the release carries. Until then the entry holds its placeholder
+    of zeros."""
     version = project_of(MCP)["version"]
     (bundle,) = _packages("mcpb")
     assert bundle["identifier"] == (
         f"https://github.com/{OWNER}/mailbox/releases/download/v{version}/"
         f"{project_of(MCP)['name']}-{version}.mcpb"
     )
-    assert bundle["fileSha256"] == _fill().PLACEHOLDER
+    assert bundle["fileSha256"] == "0" * 64
     assert bundle["transport"] == {"type": "stdio"}
-
-
-def _fill() -> ModuleType:
-    spec = importlib.util.spec_from_file_location("fill_bundle_checksum", FILL)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-def test_the_checksum_is_the_bundles_and_written_once(tmp_path: Path) -> None:
-    fill = _fill()
-    entry = tmp_path / "server.json"
-    entry.write_bytes(ENTRY.read_bytes())
-    (bundle,) = _packages("mcpb")
-    attached = tmp_path / bundle["identifier"].rsplit("/", 1)[-1]
-    attached.write_bytes(b"the bundle")
-    assert fill.fill(entry, attached) == hashlib.sha256(b"the bundle").hexdigest()
-    (filled,) = [
-        p
-        for p in json.loads(entry.read_text("utf-8"))["packages"]
-        if p["registryType"] == "mcpb"
-    ]
-    assert filled["fileSha256"] == hashlib.sha256(b"the bundle").hexdigest()
-    with pytest.raises(SystemExit, match="not the placeholder"):
-        fill.fill(entry, attached)
-    other = tmp_path / "other.mcpb"
-    other.write_bytes(b"x")
-    entry.write_bytes(ENTRY.read_bytes())
-    with pytest.raises(SystemExit, match="not the file the entry points at"):
-        fill.fill(entry, other)
-
-
-def test_without_the_bundle_the_rest_is_kept(tmp_path: Path) -> None:
-    fill = _fill()
-    entry = tmp_path / "server.json"
-    entry.write_bytes(ENTRY.read_bytes())
-    fill.drop(entry)
-    kept = json.loads(entry.read_text("utf-8"))
-    assert kept["packages"] == _packages("pypi")
-    with pytest.raises(SystemExit, match="no bundle"):
-        fill.drop(entry)
 
 
 def test_the_description_is_the_packages() -> None:
@@ -170,18 +123,18 @@ def test_each_icon_is_a_file_of_the_repository() -> None:
             assert icon["sizes"] == ["{}x{}".format(*size)]
 
 
-def test_the_job_waits_for_the_packages_and_checks_the_tag() -> None:
+def test_the_job_waits_for_the_packages() -> None:
     """The registry checks the package on PyPI and the bundle on the
     release when it takes the entry, and a pre-release is never listed.
-    The checksum goes in before the entry, and a refused entry goes
-    again without the bundle."""
+    The action publish/mcp-registry checks the tag, fills in the checksum
+    and publishes the entry at its default path, this one."""
     job = workflow_job("mcp-registry")
     assert re.search(r"^    needs: \[pypi-mcp, mcpb-bundle\]$", job, re.M)
-    filled = job.index('fill_bundle_checksum.py "$ENTRY"')
-    assert filled < job.index("mcp-publisher publish")
-    assert "fill_bundle_checksum.py --drop" in job
     assert "!github.event.release.prerelease" in job
     assert "contents: read" in job and "id-token: write" in job
-    assert "does not match the entry's version" in job
-    assert re.search(r"MCP_PUBLISHER_SHA256: [0-9a-f]{64}$", job, re.M)
-    assert ".github/publish/mcp-registry/server.json" in job
+    assert job.rstrip().endswith(
+        "- uses: benethos-hub/.github/actions/publish/mcp-registry@main"
+    )
+    assert ENTRY.relative_to(ROOT).as_posix() == (
+        ".github/publish/mcp-registry/server.json"
+    )

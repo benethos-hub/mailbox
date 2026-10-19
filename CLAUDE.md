@@ -188,18 +188,22 @@ containers/               # images/ (one folder per image), and one folder
                           #   development/ (built from the repository),
                           #   test-mail-server/ (Stalwart for tests).
                           #   Each keeps its secrets/ local
-.github/workflows/        # ci.yml: checks, fresh install, lowest
-                          #   versions, images,
-                          #   publish.yml: on a release the four packages
+.github/workflows/        # ci.yml: the organisation's workflows from
+                          #   benethos-hub/.github (lint, tests, audit,
+                          #   lowest versions per package, coverage
+                          #   badge), fresh install, images,
+                          #   publish.yml: on a release, through the
+                          #   organisation's actions, the four packages
                           #   to PyPI, in the order of their dependencies,
                           #   both images to GHCR, the MCP server's
                           #   Claude Desktop bundle onto the release and
-                          #   its entry to the MCP Registry
+                          #   its entry to the MCP Registry. A manual run
+                          #   on main tries PyPI and pushes the images as
+                          #   edge
 .github/publish/          # one folder per place a release is listed:
                           #   mcp-registry/server.json, the MCP server's
                           #   entry (test_mcp_registry.py), mcpb/, its
                           #   Claude Desktop bundle (test_mcpb.py)
-.github/actions/          # pypi-package/: the steps of one upload to PyPI
 docs/
   CONCEPT.md              # design
   ARCHITECTURE.md         # layers, modules, seams, rules for new code
@@ -240,6 +244,8 @@ packages/
       test_packaging.py     # the LICENSE copies, the Python versions,
                             #   one version and its examples in the
                             #   documentation
+      test_publish.py       # the PyPI jobs of publish.yml, their order
+                            #   and the trial run
       test_mcp_registry.py  # the MCP Registry entry held to the package
       test_mcpb.py          # the Claude Desktop bundle held to the package
       test_cli.py           # the command line
@@ -312,9 +318,11 @@ test accounts for golden rule 1.
 
 - Commit only when the user asks. Clear, descriptive messages.
 - `main` is protected: no direct push, no force push, a linear history,
-  and every CI job must pass, `brand / Brand assets` and
-  `lowest-versions` among them. Every change reaches
-  `main` as a pull request.
+  and every CI job but `coverage-badge` must pass. Most are the
+  organisation's reusable workflows, named `<job> / <name>`, such as
+  `test / Python 3.15`, `lowest-mcp / Python 3.11`, `audit / Dependency
+  audit` and `brand / Brand assets`. Every change reaches `main` as a
+  pull request.
 - The flow: a branch per work stream, created before the first edit.
   Commit, push the branch, open the pull request with `gh pr create`.
   The user merges it on GitHub as a squash merge. Afterwards pull `main`
@@ -331,11 +339,6 @@ common package to it, the service the common package.
 
 1. `uv lock --upgrade --dry-run`. If it moves anything, run
    `uv lock --upgrade` as a commit of its own, then all checks.
-   Compare `MCP_PUBLISHER_VERSION` in `publish.yml` with the newest
-   release of `modelcontextprotocol/registry`, which Dependabot cannot
-   see. A newer one goes in with the checksum of
-   `mcp-publisher_linux_amd64.tar.gz` from its checksums file. Compare
-   `MCPB_VERSION` with the newest `@anthropic-ai/mcpb` on npm as well.
 2. Set `version` in the four packages' `pyproject.toml`, the pins
    `benethos-mailbox-client==X.Y.Z` and
    `benethos-mailbox-common[paths,settings]==X.Y.Z` in the MCP server's

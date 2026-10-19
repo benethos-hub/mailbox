@@ -6,6 +6,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- The images take the tag `latest` from a full release only, not from a
+  pre-release, and `edge` from `main` only.
+- The service runs on FastAPI 0.146 and Starlette 1.9.
+
 ## [0.5.0] - 2026-10-17
 
 ### Added

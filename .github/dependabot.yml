@@ -1,43 +1,43 @@
 version: 2
+# Minor and patch updates arrive as one pull request per ecosystem and week
+# instead of one each. With every action and image pinned exactly, each
+# patch is a pull request, and a single run of the checks covers them
+# together. A major update still comes on its own, since that is where
+# behaviour changes and it wants its own review.
 updates:
   # "uv", not "pip": the versions actually installed are the ones pinned in
-  # uv.lock, and the pip ecosystem does not read that file.
-  # Each pull request rewrites uv.lock, so separate ones conflict after
-  # every merge. Minor and patch updates come as one pull request. A
-  # major update comes alone.
+  # uv.lock, and the pip ecosystem does not read that file. Each pull
+  # request rewrites uv.lock, so separate ones conflict after every merge.
   - package-ecosystem: "uv"
     directory: "/"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
     groups:
-      python-minor:
-        patterns:
-          - "*"
-        update-types:
-          - "minor"
-          - "patch"
+      minor-and-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+        # Always alone, whatever the size of the bump: the suite mocks the
+        # REST API and does not see what the SDK changes, so it needs the
+        # live check live/mcp_stdio.py.
+        exclude-patterns: ["mcp"]
 
-  # "/" reads the workflows. The composite action of publish.yml names
-  # its own versions.
+  # The actions the workflows use, each pinned to a commit with its version
+  # in a comment beside it. Dependabot raises the commit and the comment
+  # together. The organisation's workflows and actions are followed at main
+  # and kept current in benethos-hub/.github.
   - package-ecosystem: "github-actions"
-    directories:
-      - "/"
-      - "/.github/actions/pypi-package"
+    directory: "/"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
     groups:
-      actions-minor:
-        patterns:
-          - "*"
-        update-types:
-          - "minor"
-          - "patch"
+      minor-and-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
 
   # The base images of both Dockerfiles (python, uv). A stale base builds
-  # and runs without complaint, and ships unpatched packages. Both images
-  # use the same bases, so one group brings each update as one pull request.
+  # and runs without complaint, and ships unpatched packages.
   - package-ecosystem: "docker"
     directories:
       - "/containers/images/mailbox-service"
@@ -46,6 +46,6 @@ updates:
       interval: "weekly"
     open-pull-requests-limit: 5
     groups:
-      base-images:
-        patterns:
-          - "*"
+      minor-and-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]

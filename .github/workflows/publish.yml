@@ -1,35 +1,25 @@
 name: Publish
 
-# Publishes a release when a GitHub release is published:
-#   * the four packages to PyPI, via Trusted Publishing (OIDC, no stored token)
-#   * both container images to ghcr.io, via the automatic GITHUB_TOKEN
-#   * the MCP server's Claude Desktop bundle (.mcpb) onto the release,
-#     after its package is on PyPI
-#   * the MCP server's entry to the MCP Registry, via the workflow's OIDC
-#     token, after its package is on PyPI and not for a pre-release
-# Everything carries the same version, and the release tag must name it:
-# vX.Y.Z publishes X.Y.Z of each package and image. The client and the
-# common package have no image.
+# Publishes a release: the four packages to PyPI, both images to ghcr.io,
+# the MCP server's Claude Desktop bundle onto the release, and its entry in
+# the MCP Registry. Each upload is done by an action of the organisation in
+# benethos-hub/.github (actions/publish), followed at main like the CI
+# workflows. Its README describes the gate, the trial run, the release tags
+# and the one-time setup. What follows is what this project adds.
 #
-# One job per package and per image. A package waits for those it needs,
-# the images for nothing. A version can be uploaded to PyPI only once, so
-# the checks run first and each wheel is inspected before its upload.
+# Four packages carry one version, and the release tag names it. They go
+# to PyPI in the order of their dependencies, one job each, since a package
+# on PyPI that pins one not yet there cannot be installed: common first,
+# then client and service, then mcp. test_packaging.py holds that order to
+# the pyproject files. PyPI trusts this file, publish.yml, together with
+# the environment pypi-<package> of each job. Renaming either has PyPI
+# refuse the next upload.
 #
-# `workflow_dispatch` builds the images alone and tags them `edge`. PyPI is
-# skipped there: a manual run carries no release tag to take a version from.
+# Two images, benethos-mailbox-service and benethos-mailbox-mcp, from one
+# matrix. The client and the common package have no image.
 #
-# One-time setup on PyPI: a (pending) publisher per project with this
-# repository's owner and name and the workflow filename publish.yml, with
-# an environment named pypi- and the package: pypi-benethos-mailbox-service,
-# pypi-benethos-mailbox-client, pypi-benethos-mailbox-mcp and
-# pypi-benethos-mailbox-common. PyPI takes a pending publisher (repository,
-# workflow, environment) for one project only, hence one environment each.
-# On GitHub: the four environments under Settings, Environments.
-#
-# One-time setup on ghcr.io, possible only after the first push: a new
-# package is private even when its repository is public. Each image is
-# switched under the organisation's Packages, Package settings, Change
-# visibility, Public.
+# The bundle pins the MCP server's version on PyPI, so it is locked and
+# packed once that version is there, and the registry entry waits for it.
 
 on:
   release:
@@ -40,39 +30,29 @@ permissions:
   contents: read
 
 jobs:
-  checks:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
+  # Waits up to 30 minutes for the CI run of ci.yml on main for this commit,
+  # and stops the release when that run failed, or after five minutes when
+  # there is none. On a branch other than main nothing would be built, so it
+  # does not run there. A waiver in ignore-vulns belongs here and in ci.yml
+  # alike.
+  ci-passed:
+    if: github.event_name == 'release' || github.ref == 'refs/heads/main'
+    uses: benethos-hub/.github/.github/workflows/python-release-ci-passed.yml@main
+    permissions:
+      actions: read # list the CI runs of this commit
+      contents: read
+    with:
+      audit: true
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v10.3.0
-        with:
-          enable-cache: true
-
-      - name: Install dependencies (locked)
-        run: uv sync --frozen
-
-      - name: Lint, types and tests
-        run: |
-          set -euo pipefail
-          uv lock --check
-          uv run ruff check .
-          uv run ruff format --check .
-          uv run mypy
-          uv run pytest -q --cov --cov-fail-under=80
-
-  # One job per package, in the order of their dependencies: a package on
-  # PyPI that pins one not yet there cannot be installed. A job runs only
-  # when those it waits for uploaded, and test_packaging.py holds the order
-  # to the pyproject files. The client waits for the common package too,
-  # so it may come to need it. The steps are .github/actions/pypi-package.
+  # The wheel must carry the PEP 561 marker, which makes type checkers read
+  # the installed package, and the license text. Neither would fail a test
+  # or the build. A version may be uploaded once only, so never by hand.
   pypi-common:
     name: PyPI benethos-mailbox-common
-    # A manual run has no version to publish, and PyPI rejects a re-upload.
     if: github.event_name == 'release'
-    needs: [checks]
+    needs: [ci-passed]
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     environment:
       name: pypi-benethos-mailbox-common
       url: https://pypi.org/p/benethos-mailbox-common
@@ -80,18 +60,21 @@ jobs:
       contents: read
       id-token: write # required for Trusted Publishing (OIDC)
     steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/pypi-package
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: benethos-hub/.github/actions/publish/pypi@main
         with:
           package: benethos-mailbox-common
-          module: benethos_mailbox_common
+          wheel-contains: |
+            benethos_mailbox_common/py.typed
+            benethos_mailbox_common-{version}.dist-info/licenses/LICENSE
 
+  # The client waits for the common package too, so it may come to need it.
   pypi-client:
     name: PyPI benethos-mailbox-client
-    # A manual run has no version to publish, and PyPI rejects a re-upload.
     if: github.event_name == 'release'
-    needs: [checks, pypi-common]
+    needs: [ci-passed, pypi-common]
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     environment:
       name: pypi-benethos-mailbox-client
       url: https://pypi.org/p/benethos-mailbox-client
@@ -99,18 +82,20 @@ jobs:
       contents: read
       id-token: write # required for Trusted Publishing (OIDC)
     steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/pypi-package
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: benethos-hub/.github/actions/publish/pypi@main
         with:
           package: benethos-mailbox-client
-          module: benethos_mailbox_client
+          wheel-contains: |
+            benethos_mailbox_client/py.typed
+            benethos_mailbox_client-{version}.dist-info/licenses/LICENSE
 
   pypi-service:
     name: PyPI benethos-mailbox-service
-    # A manual run has no version to publish, and PyPI rejects a re-upload.
     if: github.event_name == 'release'
-    needs: [checks, pypi-common]
+    needs: [ci-passed, pypi-common]
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     environment:
       name: pypi-benethos-mailbox-service
       url: https://pypi.org/p/benethos-mailbox-service
@@ -118,18 +103,20 @@ jobs:
       contents: read
       id-token: write # required for Trusted Publishing (OIDC)
     steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/pypi-package
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: benethos-hub/.github/actions/publish/pypi@main
         with:
           package: benethos-mailbox-service
-          module: benethos_mailbox_service
+          wheel-contains: |
+            benethos_mailbox_service/py.typed
+            benethos_mailbox_service-{version}.dist-info/licenses/LICENSE
 
   pypi-mcp:
     name: PyPI benethos-mailbox-mcp
-    # A manual run has no version to publish, and PyPI rejects a re-upload.
     if: github.event_name == 'release'
-    needs: [checks, pypi-client, pypi-common]
+    needs: [ci-passed, pypi-client, pypi-common]
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     environment:
       name: pypi-benethos-mailbox-mcp
       url: https://pypi.org/p/benethos-mailbox-mcp
@@ -137,145 +124,82 @@ jobs:
       contents: read
       id-token: write # required for Trusted Publishing (OIDC)
     steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/pypi-package
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: benethos-hub/.github/actions/publish/pypi@main
         with:
           package: benethos-mailbox-mcp
-          module: benethos_mailbox_mcp
+          wheel-contains: |
+            benethos_mailbox_mcp/py.typed
+            benethos_mailbox_mcp-{version}.dist-info/licenses/LICENSE
 
+  # The PyPI half of a manual run, for all four packages, without the
+  # environments and without an OIDC token, since nothing is uploaded.
+  pypi-trial:
+    name: PyPI ${{ matrix.package }} (trial)
+    if: github.event_name == 'workflow_dispatch'
+    needs: [ci-passed]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - package: benethos-mailbox-common
+            module: benethos_mailbox_common
+          - package: benethos-mailbox-client
+            module: benethos_mailbox_client
+          - package: benethos-mailbox-service
+            module: benethos_mailbox_service
+          - package: benethos-mailbox-mcp
+            module: benethos_mailbox_mcp
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: benethos-hub/.github/actions/publish/pypi@main
+        with:
+          dry-run: true
+          package: ${{ matrix.package }}
+          wheel-contains: |
+            ${{ matrix.module }}/py.typed
+            ${{ matrix.module }}-{version}.dist-info/licenses/LICENSE
+
+  # A release, or a manual run on main, which pushes edge. edge is public,
+  # and the form offers every branch. arm64 is emulated on the amd64
+  # runner, and the dependencies ship aarch64 wheels. The docker job of
+  # ci.yml builds arm64 into the cache scope of each image's name, which
+  # the action reads by default.
   ghcr-publish:
     name: Image ${{ matrix.image }}
-    needs: checks
+    if: github.event_name == 'release' || github.ref == 'refs/heads/main'
+    needs: [ci-passed]
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
         include:
           - image: benethos-mailbox-service
             folder: mailbox-service
-            package: packages/mailbox-service
             description: "Mailbox, mailbox-service: one REST API for several mail providers and accounts."
           - image: benethos-mailbox-mcp
             folder: mailbox-mcp
-            package: packages/mailbox-mcp
             description: "Mailbox, mailbox-mcp: the MCP server over streamable HTTP. Reaches mail through the REST API of mailbox-service only."
     permissions:
       contents: read
       packages: write # push to ghcr.io as the GITHUB_TOKEN identity
     steps:
-      - uses: actions/checkout@v7
-
-      # The image carries the package's version. A release must name the
-      # same one, as for PyPI.
-      - name: The release names the package version
-        if: github.event_name == 'release'
-        env:
-          TAG: ${{ github.event.release.tag_name }}
-          PYPROJECT: ${{ matrix.package }}/pyproject.toml
-        run: |
-          set -euo pipefail
-          version=$(python3 -c "import sys, tomllib; print(tomllib.load(open(sys.argv[1], 'rb'))['project']['version'])" "$PYPROJECT")
-          if [ "v${version}" != "${TAG}" ]; then
-            echo "::error::the release ${TAG} does not match the package version ${version}"
-            exit 1
-          fi
-
-      # arm64 is emulated on the amd64 runner. The dependencies ship
-      # aarch64 wheels, so nothing is compiled from source.
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
-
-      - name: Set up Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Log in to ghcr.io
-        uses: docker/login-action@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: benethos-hub/.github/actions/publish/ghcr@main
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      # Tags from the release tag (v0.4.0 -> 0.4.0, 0.4, latest), and the
-      # OCI labels, among them org.opencontainers.image.source, which links
-      # the package to this repository. The description is per image, not
-      # the repository's.
-      - name: Derive image tags, labels and annotations
-        id: meta
-        uses: docker/metadata-action@v6
-        env:
-          # The GitHub package page reads the index of a multi-arch image,
-          # not its manifests, so both are annotated.
-          DOCKER_METADATA_ANNOTATIONS_LEVELS: index,manifest
-        with:
-          images: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}
-          flavor: latest=false
-          tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable=${{ github.event_name == 'release' }}
-            type=raw,value=edge,enable=${{ github.event_name == 'workflow_dispatch' }}
-          labels: |
-            org.opencontainers.image.title=${{ matrix.image }}
-            org.opencontainers.image.description=${{ matrix.description }}
-          annotations: |
-            org.opencontainers.image.title=${{ matrix.image }}
-            org.opencontainers.image.description=${{ matrix.description }}
-
-      - name: Build and push
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: containers/images/${{ matrix.folder }}/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          annotations: ${{ steps.meta.outputs.annotations }}
-          cache-from: type=gha,scope=${{ matrix.image }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
-
-      # Read the published index back instead of trusting that the
-      # annotations arrived: the package page shows only what the index
-      # carries.
-      - name: The published index carries both platforms and the description
-        env:
-          TAGS: ${{ steps.meta.outputs.tags }}
-        run: |
-          set -euo pipefail
-          ref=$(printf '%s\n' "$TAGS" | head -1)
-          echo "inspecting ${ref}"
-          docker buildx imagetools inspect "$ref" --raw > /tmp/index.json
-          python3 - <<'PY'
-          import json
-
-          index = json.load(open("/tmp/index.json"))
-          annotations = index.get("annotations") or {}
-          # unknown/unknown entries are the provenance attestations.
-          platforms = sorted(
-              f"{m['platform']['os']}/{m['platform']['architecture']}"
-              for m in index.get("manifests", [])
-              if m.get("platform", {}).get("architecture") != "unknown"
-          )
-          missing = [
-              key
-              for key in (
-                  "org.opencontainers.image.description",
-                  "org.opencontainers.image.source",
-                  "org.opencontainers.image.version",
-              )
-              if not annotations.get(key)
-          ]
-          assert not missing, f"the index carries no {missing}"
-          assert "linux/amd64" in platforms, f"amd64 is missing: {platforms}"
-          assert "linux/arm64" in platforms, f"arm64 is missing: {platforms}"
-          print("OK:", ", ".join(platforms))
-          print("   ", annotations["org.opencontainers.image.description"])
-          PY
+          image: ${{ matrix.image }}
+          dockerfile: containers/images/${{ matrix.folder }}/Dockerfile
+          description: ${{ matrix.description }}
+          version-file: packages/${{ matrix.folder }}/pyproject.toml
 
   # The Claude Desktop bundle of the MCP server, .github/publish/mcpb/. It
-  # pins the MCP server's version on PyPI, so it is locked and packed once
-  # that is uploaded. It goes onto the release twice: under its version, and
-  # without, for a link that always reaches the newest full release.
+  # pins the MCP server's version on PyPI, so it is staged and locked here
+  # once that version is uploaded, and the action packs and attaches it.
   mcpb-bundle:
     name: Claude Desktop bundle
     if: github.event_name == 'release'
@@ -284,33 +208,17 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: write # attach the bundle to the release
-    env:
-      # Pinned. Dependabot cannot see a package npx fetches, so the bump is
-      # a release step in CLAUDE.md.
-      MCPB_VERSION: 2.1.2
-      MANIFEST: .github/publish/mcpb/manifest.json
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # The write token is for the upload, nothing here pushes.
           persist-credentials: false
 
-      - name: The release names the bundle's version
-        env:
-          TAG: ${{ github.event.release.tag_name }}
-        run: |
-          set -euo pipefail
-          version=$(python3 -c "import json, sys; print(json.load(open(sys.argv[1]))['version'])" "$MANIFEST")
-          if [ "v${version}" != "${TAG}" ]; then
-            echo "::error::the release ${TAG} does not match the bundle's version ${version}"
-            exit 1
-          fi
-
       - name: Install uv
-        uses: astral-sh/setup-uv@v10.3.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
 
       - name: Stage the bundle
-        run: python3 .github/publish/mcpb/build.py "$RUNNER_TEMP/bundle"
+        run: uv run --no-project .github/publish/mcpb/build.py "$RUNNER_TEMP/bundle"
 
       # PyPI's index can name a fresh upload a little later than the upload.
       - name: Lock it to the version on PyPI
@@ -325,27 +233,18 @@ jobs:
           done
           exit 1
 
-      - name: Validate and pack
-        run: |
-          set -euo pipefail
-          npx --yes "@anthropic-ai/mcpb@${MCPB_VERSION}" validate "$RUNNER_TEMP/bundle/manifest.json"
-          npx --yes "@anthropic-ai/mcpb@${MCPB_VERSION}" pack "$RUNNER_TEMP/bundle"             "benethos-mailbox-mcp-${GITHUB_REF_NAME#v}.mcpb"
+      # Attached twice, under its version and without, which gives the
+      # README a link that always reaches the newest full release.
+      - uses: benethos-hub/.github/actions/publish/mcpb@main
+        with:
+          staged: ${{ runner.temp }}/bundle
+          name: benethos-mailbox-mcp
 
-      - name: Attach it to the release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          versioned="benethos-mailbox-mcp-${GITHUB_REF_NAME#v}.mcpb"
-          cp "$versioned" benethos-mailbox-mcp.mcpb
-          gh release upload "$GITHUB_REF_NAME" "$versioned" benethos-mailbox-mcp.mcpb
-
-  # The MCP server's entry in the MCP Registry, .github/publish/mcp-registry/
-  # server.json. The registry takes no upload: it checks each package when
-  # it takes the entry. The README of this version on PyPI must carry the
-  # mcp-name line, and the bundle must be on the release with its checksum.
-  # So it waits for both. A pre-release is not listed, since an entry
-  # cannot be taken back.
+  # The MCP server's entry, .github/publish/mcp-registry/server.json. The
+  # registry checks each package when it takes the entry: the README of
+  # this version on PyPI must carry the mcp-name line, and the bundle must
+  # be on the release with its checksum. The entry lists no image. An entry
+  # cannot be taken back, so a pre-release never gets one.
   mcp-registry:
     name: MCP Registry
     if: github.event_name == 'release' && !github.event.release.prerelease
@@ -355,69 +254,6 @@ jobs:
     permissions:
       contents: read
       id-token: write # the registry grants io.github.benethos-hub/* to this token
-    env:
-      # Pinned with its checksum. Dependabot cannot see a download, so the
-      # bump is a release step in CLAUDE.md: the line for
-      # mcp-publisher_linux_amd64.tar.gz from the release's checksums file.
-      # The registry refuses a publisher that is too old with "invalid
-      # audience".
-      MCP_PUBLISHER_VERSION: v1.8.1
-      MCP_PUBLISHER_SHA256: a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc
-      ENTRY: .github/publish/mcp-registry/server.json
     steps:
-      - uses: actions/checkout@v7
-
-      - name: The release names the entry's version
-        env:
-          TAG: ${{ github.event.release.tag_name }}
-        run: |
-          set -euo pipefail
-          version=$(python3 -c "import json, sys; print(json.load(open(sys.argv[1]))['version'])" "$ENTRY")
-          if [ "v${version}" != "${TAG}" ]; then
-            echo "::error::the release ${TAG} does not match the entry's version ${version}"
-            exit 1
-          fi
-
-      - name: Install mcp-publisher
-        run: |
-          set -euo pipefail
-          curl -fsSL -o mcp-publisher.tar.gz \
-            "https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}/mcp-publisher_linux_amd64.tar.gz"
-          echo "${MCP_PUBLISHER_SHA256}  mcp-publisher.tar.gz" | sha256sum -c -
-          tar xzf mcp-publisher.tar.gz mcp-publisher
-
-      # The bundle's hash exists only now. The entry holds a placeholder,
-      # and the hash is taken from the very file the release carries.
-      - name: Fill in the bundle's checksum
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          bundle="benethos-mailbox-mcp-${GITHUB_REF_NAME#v}.mcpb"
-          gh release download "$GITHUB_REF_NAME" --pattern "$bundle" --dir "$RUNNER_TEMP"
-          python3 .github/publish/mcp-registry/fill_bundle_checksum.py "$ENTRY" "$RUNNER_TEMP/$bundle"
-
-      - name: Log in with the workflow's OIDC token
-        run: ./mcp-publisher login github-oidc
-
-      # The registry reads the version from PyPI's JSON API, which can
-      # report a fresh upload as missing for minutes. It takes an entry
-      # whole or not at all, so a refusal that outlasts the attempts falls
-      # back to the entry without the bundle: the version is listed at
-      # least with PyPI, and the job still fails, so the refusal is looked
-      # at.
-      - name: Publish the entry
-        run: |
-          set -euo pipefail
-          for attempt in 1 2 3 4 5 6; do
-            if ./mcp-publisher publish "$ENTRY"; then
-              exit 0
-            fi
-            echo "attempt ${attempt} refused, trying again in 60 s"
-            sleep 60
-          done
-          echo "::warning::The registry refused the entry with the bundle, publishing it without"
-          python3 .github/publish/mcp-registry/fill_bundle_checksum.py --drop "$ENTRY"
-          ./mcp-publisher publish "$ENTRY"
-          echo "::error::Listed without the bundle. The refusals above say why."
-          exit 1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: benethos-hub/.github/actions/publish/mcp-registry@main

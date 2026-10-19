@@ -139,10 +139,14 @@ def test_the_staged_bundle_pins_the_package_on_pypi(tmp_path: Path) -> None:
 
 
 def test_the_job_packs_after_the_upload_and_attaches_twice() -> None:
+    """Staged and locked against PyPI here, then packed, checked against
+    its version and attached twice by the action publish/mcpb."""
     job = workflow_job("mcpb-bundle")
     assert re.search(r"^    needs: \[pypi-mcp\]$", job, re.M)
-    assert "does not match the bundle's version" in job
     assert "contents: write" in job and "persist-credentials: false" in job
-    assert re.search(r"^      MCPB_VERSION: \d+\.\d+\.\d+$", job, re.M)
+    staged = job.index("uv run --no-project .github/publish/mcpb/build.py")
+    locked = job.index("--refresh-package benethos-mailbox-mcp")
+    packed = job.index("benethos-hub/.github/actions/publish/mcpb@main")
+    assert staged < locked < packed
     assert "--frozen" not in job  # the lock is made here, used on install
-    assert '"$versioned" benethos-mailbox-mcp.mcpb' in job
+    assert f"name: {project_of(MCP)['name']}\n" in job
