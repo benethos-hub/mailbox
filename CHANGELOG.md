@@ -13,6 +13,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 - The images take the tag `latest` from a full release only, not from a
   pre-release, and `edge` from `main` only.
 - The service runs on FastAPI 0.149 and Starlette 1.9.
+- The images build on `python:3.15-slim` and `uv` 0.13.2, each pinned
+  by its digest.
 
 ## [0.5.0] - 2026-10-17
 
