@@ -173,10 +173,10 @@ def _ci() -> str:
 
 
 def _tested() -> list[str]:
-    """The Python versions of the test matrix in ci.yml, lowest first."""
-    matrix = re.search(r"^ +python-version: \[(.*)\]$", _ci(), re.M)
-    assert matrix
-    return sorted((v.strip(' "') for v in matrix.group(1).split(",")), key=_minor)
+    """The Python versions the job test of ci.yml names, lowest first."""
+    versions = re.findall(r"^ +python-versions: '\[(.*)\]'$", _ci(), re.M)
+    assert len(versions) == 1, versions
+    return sorted((v.strip(' "') for v in versions[0].split(",")), key=_minor)
 
 
 # A new Python version goes into the matrix, the classifiers, the coverage
@@ -198,20 +198,24 @@ def test_the_classifiers_name_the_tested_versions() -> None:
 
 
 def test_the_lowest_tested_version_is_the_floor() -> None:
-    """requires-python allows the lowest version of the matrix, and each
-    step of lowest-versions installs on it."""
+    """requires-python allows the lowest tested version, and each
+    lowest-* job installs on it."""
     lowest = _tested()[0]
     assert project_of(SERVICE)["requires-python"] == f">={lowest}"
-    assert set(re.findall(r"uv venv -p (\S+) /tmp/lowest", _ci())) == {lowest}
+    calls = re.findall(
+        r"python-lowest-versions\.yml@main\n +with:\n +python-version: \"(\S+)\"$",
+        _ci(),
+        re.M,
+    )
+    assert len(calls) == _ci().count("python-lowest-versions.yml@main")
+    assert set(calls) == {lowest}
 
 
 def test_the_newest_tested_version_measures_and_runs_locally() -> None:
     """The coverage is measured on the newest version, and
     .python-version names it for the local environment."""
     newest = _tested()[-1]
-    measured = re.findall(
-        r'^ +- python-version: "(\S+)"\n +coverage: true$', _ci(), re.M
-    )
+    measured = re.findall(r'^ +coverage-python: "(\S+)"$', _ci(), re.M)
     assert measured == [newest]
     assert (ROOT / ".python-version").read_text("utf-8").strip() == newest
 
@@ -467,7 +471,8 @@ def _badges(relative: str) -> set[str]:
     package name as its label."""
     text = (ROOT / relative).read_text("utf-8")
     badges = re.findall(
-        r"\[!\[PyPI (\S+)\]\(https://img\.shields\.io/pypi/v/(\S+)\?label=PyPI%20(\S+)\)\]",
+        r"\[!\[PyPI (\S+)\]\(https://img\.shields\.io/pypi/v/(\S+)"
+        r"\?label=PyPI%20(\S+)&logo=pypi&logoColor=white\)\]",
         text,
     )
     assert all(alt == name == label for alt, name, label in badges), badges

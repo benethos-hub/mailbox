@@ -188,8 +188,10 @@ containers/               # images/ (one folder per image), and one folder
                           #   development/ (built from the repository),
                           #   test-mail-server/ (Stalwart for tests).
                           #   Each keeps its secrets/ local
-.github/workflows/        # ci.yml: checks, fresh install, lowest
-                          #   versions, images,
+.github/workflows/        # ci.yml: the organisation's workflows from
+                          #   benethos-hub/.github (lint, tests, audit,
+                          #   lowest versions per package, coverage
+                          #   badge), fresh install, images,
                           #   publish.yml: on a release the four packages
                           #   to PyPI, in the order of their dependencies,
                           #   both images to GHCR, the MCP server's
@@ -312,9 +314,11 @@ test accounts for golden rule 1.
 
 - Commit only when the user asks. Clear, descriptive messages.
 - `main` is protected: no direct push, no force push, a linear history,
-  and every CI job must pass, `brand / Brand assets` and
-  `lowest-versions` among them. Every change reaches
-  `main` as a pull request.
+  and every CI job but `coverage-badge` must pass. Most are the
+  organisation's reusable workflows, named `<job> / <name>`, such as
+  `test / Python 3.15`, `lowest-mcp / Python 3.11`, `audit / Dependency
+  audit` and `brand / Brand assets`. Every change reaches `main` as a
+  pull request.
 - The flow: a branch per work stream, created before the first edit.
   Commit, push the branch, open the pull request with `gh pr create`.
   The user merges it on GitHub as a squash merge. Afterwards pull `main`
