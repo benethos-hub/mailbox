@@ -96,7 +96,8 @@ version as the PyPI packages:
 | Event | Tags |
 |---|---|
 | release `v1.2.3` | `1.2.3`, `1.2`, `latest` |
-| started by hand (Actions, Publish, Run workflow) | `edge` |
+| release marked as a pre-release | its version only |
+| started by hand on `main` (Actions, Publish, Run workflow) | `edge` |
 
 - The service image holds the service package, the MCP image the MCP
   server and the client, both the common package, each installed from

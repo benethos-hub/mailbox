@@ -235,14 +235,15 @@ uv run ruff check . && uv run ruff format --check .
 uv run mypy
 ```
 
-The tests run offline. CI runs these checks too. It also installs the
-packages on the lowest versions their `pyproject.toml` allows, runs the
-tests there and checks those versions against OSV for known
-vulnerabilities, and checks the brand assets in `assets/brand/` with the
-organisation's workflow. Every one of these checks has to pass before a
-change reaches `main`. Manual checks against real test accounts live in
-`live/` and are described in [CLAUDE.md](CLAUDE.md), which also holds the
-working rules for this repository.
+The tests run offline. CI runs these checks too, most of them as the
+organisation's reusable workflows. It also installs the packages on the
+lowest versions their `pyproject.toml` allows and runs the tests there,
+checks those versions and every version in `uv.lock` against OSV for
+known vulnerabilities, and checks the brand assets in `assets/brand/`.
+Every one of these checks has to pass before a change reaches `main`.
+Manual checks against real test accounts live in `live/` and are
+described in [CLAUDE.md](CLAUDE.md), which also holds the working rules
+for this repository.
 
 ## Licence
 

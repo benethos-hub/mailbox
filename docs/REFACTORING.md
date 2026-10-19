@@ -1092,7 +1092,7 @@ its two tokens for masking.
 `publish.yml` uploads the packages in the order of their dependencies,
 as the user decided: common first, then the client and the service,
 then the MCP server. The client waits for common too, so it may come to
-need it. `test_packaging.py` holds the order to the pyproject files.
+need it. `test_publish.py` holds the order to the pyproject files.
 
 ### 15.3 Order of work
 
