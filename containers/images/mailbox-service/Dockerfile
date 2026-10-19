@@ -11,7 +11,7 @@
 
 # Base images are named in FROM directly, so Dependabot can update them.
 
-FROM ghcr.io/astral-sh/uv:0.13.1 AS uv
+FROM ghcr.io/astral-sh/uv:0.13.2 AS uv
 
 # --- build: a virtual environment with the service and its dependencies -------
 FROM python:3.15-slim AS build
