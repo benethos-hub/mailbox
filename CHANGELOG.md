@@ -6,11 +6,13 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-10-20
+
 ### Changed
 
 - The images take the tag `latest` from a full release only, not from a
   pre-release, and `edge` from `main` only.
-- The service runs on FastAPI 0.146 and Starlette 1.9.
+- The service runs on FastAPI 0.149 and Starlette 1.9.
 
 ## [0.5.0] - 2026-10-17
 
@@ -1844,7 +1846,8 @@ the configuration may change without notice.
 - One error envelope `{"error": {"code", "message"}}`, authentication errors
   included.
 
-[Unreleased]: https://github.com/benethos-hub/mailbox/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/benethos-hub/mailbox/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/benethos-hub/mailbox/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/benethos-hub/mailbox/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/benethos-hub/mailbox/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/benethos-hub/mailbox/compare/v0.3.1...v0.4.0
