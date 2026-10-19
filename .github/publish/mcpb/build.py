@@ -7,13 +7,14 @@ the bundle does not carry the workspace. Its pyproject.toml pins the MCP
 server's version on PyPI instead, and uv.lock is made once that version is
 there:
 
-    python .github/publish/mcpb/build.py <staging dir>
+    uv run --no-project .github/publish/mcpb/build.py <staging dir>
     uv lock --directory <staging dir>
-    npx @anthropic-ai/mcpb pack <staging dir> <file>.mcpb
 
-The release job of publish.yml runs these after the upload to PyPI. The
-manifest is committed as it ships. tests/test_mcpb.py of the service holds
-it to the package and runs this script into a temporary folder. Standard
+The release job of publish.yml runs these after the upload to PyPI, and
+the organisation's action publish/mcpb packs the staged folder and
+attaches it to the release. The manifest is committed as it ships.
+tests/test_mcpb.py of the service holds it to the package and runs this
+script into a temporary folder. Standard
 library only, so it runs without the project's environment.
 """
 
