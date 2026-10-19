@@ -2,7 +2,7 @@
   "manifest_version": "0.4",
   "name": "benethos-mailbox-mcp",
   "display_name": "Mailbox",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "MCP server that gives AI agents your mailboxes through mailbox-service, within its token's rights.",
   "long_description": "Gives Claude your mailboxes through mailbox-service, a service you run yourself: search and read mail, see what is new, look at attachments, sort, write drafts and send. The service decides what the token may do. It holds no mail password, and the mail stays between Claude and your service.",
   "author": {

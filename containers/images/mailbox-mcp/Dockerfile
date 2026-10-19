@@ -9,12 +9,14 @@
 # go into the image. It reaches mail through the REST API of the service
 # alone (MAILBOX_SERVICE_URL, MAILBOX_SERVICE_TOKEN).
 
-# Base images are named in FROM directly, so Dependabot can update them.
+# Base images are named in FROM directly, each by its tag and the digest
+# of that tag, so a build is reproducible and Dependabot updates both,
+# also when an image is rebuilt under the same tag.
 
-FROM ghcr.io/astral-sh/uv:0.13.2 AS uv
+FROM ghcr.io/astral-sh/uv:0.13.2@sha256:b9fddcde095a7aeafd499024adb8927df6619c7c5672f5ff7126474715f62ba4 AS uv
 
 # --- build: a virtual environment with the MCP server and its dependencies ----
-FROM python:3.15-slim AS build
+FROM python:3.15-slim@sha256:2da676046630d7bf14c6764ae1143dc7fa0377a53f94bf5a642f0b214aca5bce AS build
 COPY --from=uv /uv /usr/local/bin/uv
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
@@ -27,7 +29,7 @@ COPY packages packages
 RUN uv sync --frozen --no-dev --no-editable --package benethos-mailbox-mcp
 
 # --- runtime -------------------------------------------------------------------
-FROM python:3.15-slim
+FROM python:3.15-slim@sha256:2da676046630d7bf14c6764ae1143dc7fa0377a53f94bf5a642f0b214aca5bce
 
 RUN useradd --system --uid 10001 --user-group --home-dir /app \
         --shell /usr/sbin/nologin mailbox \

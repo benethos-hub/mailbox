@@ -1,6 +1,6 @@
 # Connecting Microsoft accounts
 
-> **Beta, version 0.5.0.** Usable with real accounts. A breaking change
+> **Beta, version 0.5.1.** Usable with real accounts. A breaking change
 > of the API or the configuration is announced in the changelog. Stored
 > data is carried forward by migrations.
 

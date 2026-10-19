@@ -118,6 +118,26 @@ jobs:
         pytest-asyncio>=1.0
       audit: true
 
+  # Alone, the service may get older versions than beside the MCP server
+  # and the client, with the extras of the common package it pins. Three
+  # test modules import the client or the MCP server and stay out.
+  lowest-service:
+    uses: benethos-hub/.github/.github/workflows/python-lowest-versions.yml@main
+    with:
+      python-version: "3.11"
+      editable: |
+        packages/mailbox-service
+        packages/mailbox-common[paths,settings]
+      requirements: |
+        pytest>=9.1.1
+        pytest-asyncio>=1.0
+      pytest-args: >-
+        --ignore=packages/mailbox-service/tests/test_packaging.py
+        --ignore=packages/mailbox-service/tests/test_mcpb.py
+        --ignore=packages/mailbox-service/tests/test_mcp_registry.py
+        packages/mailbox-service/tests
+      audit: true
+
   # Alone, the MCP server may get older versions than beside the service.
   # The client and the common package it needs come from the repository:
   # they are released together.
