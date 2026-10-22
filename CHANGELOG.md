@@ -10,7 +10,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- The images build on Python 3.15.1.
+- The images build on Python 3.15.1 and uv 0.13.5.
 - The service runs on FastAPI 0.161.
 - The icons of the UI come from Bootstrap Icons 1.13.2.
 
