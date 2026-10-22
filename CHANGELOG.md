@@ -9,6 +9,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 
 - The images build on Python 3.15.1.
+- The service runs on FastAPI 0.161.
 
 ## [0.5.1] - 2026-10-20
 
