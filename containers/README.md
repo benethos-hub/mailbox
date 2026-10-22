@@ -102,6 +102,9 @@ version as the PyPI packages:
 - The service image holds the service package, the MCP image the MCP
   server and the client, both the common package, each installed from
   `uv.lock` without the development tools.
+- Both build on `python:3.15-slim` and take `uv` from its image, each
+  named by its tag and the digest of that tag. Dependabot raises both,
+  also for a new build under the same tag.
 - They run as user `mailbox` (uid 10001). The compose files of
   `development/` and `production/` add a read-only root file system, no capabilities
   and `no-new-privileges`, to Caddy as well, which keeps only
