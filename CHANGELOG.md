@@ -6,6 +6,14 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-10-22
+
+### Changed
+
+- The images build on Python 3.15.1 and uv 0.13.5.
+- The service runs on FastAPI 0.161.
+- The icons of the UI come from Bootstrap Icons 1.13.2.
+
 ## [0.5.1] - 2026-10-20
 
 ### Changed
@@ -1848,7 +1856,8 @@ the configuration may change without notice.
 - One error envelope `{"error": {"code", "message"}}`, authentication errors
   included.
 
-[Unreleased]: https://github.com/benethos-hub/mailbox/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/benethos-hub/mailbox/compare/v0.5.2...HEAD
+[0.5.2]: https://github.com/benethos-hub/mailbox/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/benethos-hub/mailbox/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/benethos-hub/mailbox/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/benethos-hub/mailbox/compare/v0.4.0...v0.4.1

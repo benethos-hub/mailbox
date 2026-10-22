@@ -27,9 +27,9 @@ STATIC = (
     / "packages/mailbox-service/src/benethos_mailbox_service/web/pages/static"
 )
 
-VERSION = "1.13.1"
+VERSION = "1.13.2"
 URL = f"https://registry.npmjs.org/bootstrap-icons/-/bootstrap-icons-{VERSION}.tgz"
-SHA256 = "5ec2a52a7de279ac2f26d193dd5748343ec00ba613413bd5ab9202b36d06a8e2"
+SHA256 = "7b5960145e1ab14a49a117f96a9e5a54a94fdf07f21e302d9e4f88d73dd19f9c"
 SPRITE = STATIC / "img/icons.svg"
 LICENSE = STATIC / "img/icons-LICENSE.txt"
 
