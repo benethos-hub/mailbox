@@ -6,6 +6,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- The images build on Python 3.15.1.
+
 ## [0.5.1] - 2026-10-20
 
 ### Changed
