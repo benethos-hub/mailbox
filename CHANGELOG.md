@@ -12,6 +12,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 - The images build on Python 3.15.1.
 - The service runs on FastAPI 0.161.
+- The icons of the UI come from Bootstrap Icons 1.13.2.
 
 ## [0.5.1] - 2026-10-20
 
