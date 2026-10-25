@@ -6,6 +6,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- The service runs on FastAPI 0.162 and Starlette 1.10.
+
 ## [0.5.2] - 2026-10-22
 
 ### Changed
