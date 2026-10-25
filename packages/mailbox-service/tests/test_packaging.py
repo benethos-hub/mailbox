@@ -154,7 +154,7 @@ def _tested() -> list[str]:
 
 
 # A new Python version goes into the matrix, the classifiers, the coverage
-# run, .python-version and the documentation at once. The tests below
+# run, fresh-install and the documentation at once. The tests below
 # fail for each of them that is left behind.
 
 
@@ -185,13 +185,14 @@ def test_the_lowest_tested_version_is_the_floor() -> None:
     assert set(calls) == {lowest}
 
 
-def test_the_newest_tested_version_measures_and_runs_locally() -> None:
-    """The coverage is measured on the newest version, and
-    .python-version names it for the local environment."""
+def test_the_newest_tested_version_measures_and_installs() -> None:
+    """The coverage is measured on the newest version, and fresh-install
+    builds and installs on it."""
     newest = _tested()[-1]
     measured = re.findall(r'^ +coverage-python: "(\S+)"$', _ci(), re.M)
     assert measured == [newest]
-    assert (ROOT / ".python-version").read_text("utf-8").strip() == newest
+    installed = re.findall(r'^ +UV_PYTHON: "(\S+)"$', _ci(), re.M)
+    assert installed == [newest]
 
 
 @pytest.mark.parametrize(
