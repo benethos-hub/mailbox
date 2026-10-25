@@ -30,7 +30,7 @@ jobs:
   # the coverage of the four packages, as [tool.coverage.run] names them,
   # and its floor. The versions are named here although they equal the
   # defaults: test_packaging.py holds them to the classifiers,
-  # requires-python, fresh-install, .python-version and the documentation.
+  # requires-python, fresh-install and the documentation.
   test:
     uses: benethos-hub/.github/.github/workflows/python-tests.yml@main
     with:
