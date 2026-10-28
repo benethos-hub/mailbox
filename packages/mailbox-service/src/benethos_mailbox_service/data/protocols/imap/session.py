@@ -24,7 +24,7 @@ from ..transport import Server, refuse_line_ends, text
 from .folders import Folders
 from .messages import Messages
 from .responses import capabilities, quietly_logout, translated, uidvalidity
-from .values import MAX_MESSAGE_BYTES, Selected
+from .values import MAX_MESSAGE_BYTES, Selected, command_folder
 
 ClientFactory = Callable[..., Any]
 
@@ -161,6 +161,7 @@ class ImapSession:
     def _select_folder(self, folder: str, readonly: bool) -> dict[bytes, Any]:
         """SELECT or EXAMINE. A folder that is gone, e.g. renamed by another
         client, is ``NotFoundError`` rather than a server error."""
+        folder = command_folder(folder)
         client = self.client()
         try:
             answer: dict[bytes, Any] = client.select_folder(folder, readonly=readonly)

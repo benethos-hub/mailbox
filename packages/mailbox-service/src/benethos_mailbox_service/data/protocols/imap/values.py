@@ -9,6 +9,7 @@ from datetime import date, datetime
 from benethos_mailbox_common.values import sizes
 
 from ...mail import parse
+from ..transport import refuse_line_ends
 
 DEFAULT_PORTS = {"tls": 993, "starttls": 143}
 
@@ -16,6 +17,15 @@ DEFAULT_PORTS = {"tls": 993, "starttls": 143}
 MAX_MESSAGE_BYTES = 40 * sizes.MIB
 # Headers beyond this are cut off: a list reads many at once.
 MAX_HEADER_BYTES = 256 * 1024
+
+
+def command_folder(name: str) -> str:
+    """``name`` as it goes into a command. No server's folder holds CR, LF
+    or NUL. A name that does comes from a forged id and would end the
+    command and start another, which imaplib refuses only from Python
+    3.14."""
+    refuse_line_ends(name, what="the folder name")
+    return name
 
 
 @dataclass(frozen=True, slots=True)
