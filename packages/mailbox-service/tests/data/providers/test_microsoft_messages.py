@@ -12,11 +12,13 @@ from typing import Any
 import httpx
 import pytest
 
+from benethos_mailbox_service.data.models import MessageUpdate
 from benethos_mailbox_service.data.providers.microsoft import (
     messages as microsoft_messages,
 )
 from benethos_mailbox_service.errors import (
     BadRequestError,
+    MessageNotFoundError,
     NotFoundError,
     ProviderError,
     ProviderUnavailableError,
@@ -24,6 +26,7 @@ from benethos_mailbox_service.errors import (
 
 from ...graph_fake import FakeGraph
 from ...microsoft_adapter import adapter
+from ...provider_ops import delete, update
 
 # --- reading --------------------------------------------------------------------------
 
@@ -100,6 +103,22 @@ async def test_an_attachment_of_another_id_is_not_found(graph: FakeGraph) -> Non
     message_id = graph.add_message()
     with pytest.raises(NotFoundError):
         await adapter(graph).get_attachment(message_id, "AAMkatt1=")
+
+
+async def test_an_id_graph_cannot_read_is_a_message_not_found(
+    graph: FakeGraph,
+) -> None:
+    """Graph answers 400 for it, the other providers 404."""
+    provider = adapter(graph)
+    with pytest.raises(MessageNotFoundError):
+        await provider.get_message("not an id")
+    with pytest.raises(MessageNotFoundError):
+        await provider.get_raw("not an id")
+    with pytest.raises(MessageNotFoundError):
+        await update(provider, "not an id", MessageUpdate(add_keywords=["work"]))
+    for permanent in (False, True):
+        with pytest.raises(MessageNotFoundError):
+            await delete(provider, "not an id", permanent)
 
 
 # --- sending ------------------------------------------------------------------------

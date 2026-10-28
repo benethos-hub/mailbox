@@ -25,6 +25,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 - A list of messages or threads in a folder the account does not have
   answers `404` on every provider. It reached the provider first, and
   Microsoft answered `400`.
+- A message id that Microsoft cannot read answers `404` when the message
+  is read, fetched raw, deleted or its keywords changed, as on every
+  other provider. Graph answered `400`.
 
 ### Security
 
