@@ -44,6 +44,8 @@ testpaths = [
     "packages/mailbox-common/tests",
 ]
 asyncio_mode = "auto"
+# Each async fixture gets the loop of its test. Unset, pytest-asyncio warns.
+asyncio_default_fixture_loop_scope = "function"
 # The packages have tests with the same file names (test_cli.py, ...).
 addopts = "--import-mode=importlib"
 

@@ -9,6 +9,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 
 - The service runs on FastAPI 0.162 and Starlette 1.10.
+- Both images run on Python 3.15.2. It rejects TLS certificate chains
+  with the compromised eMudhra intermediate CA keys.
+- `benethos-mailbox-service` needs dnspython 2.9.0 or newer, the first
+  version without a known vulnerability. An install from the lockfile,
+  as the images do, had it already.
 
 ## [0.5.2] - 2026-10-22
 
