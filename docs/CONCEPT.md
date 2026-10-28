@@ -242,8 +242,10 @@ Every adapter implements `Reads` of `data.providers.base`, and of the
 protocols beyond it those it may be able to do: `Writes` (flags and
 folders), `Deletes`, `Drafts`, `Sends`, `Watches` (push), `Deltas`
 (changes since a token), `FlagChanges` (whose flags changed, IMAP
-with CONDSTORE), `Threads` (threads the server keeps) and `Summaries`
-(messages read by id, for threads the index keeps). One protocol per ability, checked with
+with CONDSTORE), `Threads` (threads the server keeps), `Summaries`
+(messages read by id, for threads the index keeps) and `Places` (the
+folders of messages read by id without their content, for a change
+under grants that name folders where no index keeps them). One protocol per ability, checked with
 `isinstance`, was **decided 2026-10-07**. What an account can do follows
 from what its server answers (5.11, R4): asked when the account is
 connected or verified, when the sync sees a folder come or go, and when

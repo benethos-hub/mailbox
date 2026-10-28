@@ -21,7 +21,7 @@ from ...data.models import (
     MessageUpdate,
     Page,
 )
-from ...data.providers import Reads
+from ...data.providers import Places, Reads
 from ...data.storage import IndexEntry
 from ...errors import MailboxServiceError, MessageNotFoundError, missing_message
 from ..accounts import Adapters, Needs, deletes, writes
@@ -116,11 +116,11 @@ class Calls:
                 found[message_id] = [folder]
                 continue
             try:
-                message = await self.message(account_id, message_id)
+                found[message_id] = await self.on_message(
+                    account_id, message_id, _folders_of
+                )
             except MessageNotFoundError:
                 found[message_id] = []
-                continue
-            found[message_id] = list(message.folder_ids)
         return found
 
     async def attachment(
@@ -355,6 +355,17 @@ class Gone:
             noted = (passes, set())
             self._after[account_id] = noted
         noted[1].update(natives.items())
+
+
+async def _folders_of(provider: Reads, native: str) -> list[str]:
+    """A message's folders, read without its content where the provider
+    can."""
+    if isinstance(provider, Places):
+        found = await provider.folders_of([native])
+        if native not in found:
+            raise missing_message(native)
+        return found[native]
+    return list((await provider.get_message(native)).folder_ids)
 
 
 def _follow(

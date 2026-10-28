@@ -112,6 +112,14 @@ async def get_message(account: JmapAccount, message_id: str) -> Message:
     return mappers.message(email, await account.source(email, message_id))
 
 
+async def folders_of(
+    account: JmapAccount, message_ids: list[str]
+) -> dict[str, list[str]]:
+    """The mailboxes of the emails that are there, nothing else of them."""
+    found = await account.emails(message_ids, ["mailboxIds"])
+    return {i: sorted(e.mailbox_ids) for i, e in found.items()}
+
+
 async def get_raw(account: JmapAccount, message_id: str) -> bytes:
     email = await account.email(message_id, ["blobId"])
     return await account.source(email, message_id)

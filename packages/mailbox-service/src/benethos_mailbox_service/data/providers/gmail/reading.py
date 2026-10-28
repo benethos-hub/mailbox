@@ -124,6 +124,15 @@ async def summaries(api: GmailApi, message_ids: list[str]) -> dict[str, MessageS
     return {i: mappers.summary(m, known) for i, m in found.items()}
 
 
+async def folders_of(api: GmailApi, message_ids: list[str]) -> dict[str, list[str]]:
+    """The folders of the messages that are there, from their labels
+    alone (``minimal``)."""
+    known = await known_folders(api)
+    params = [("format", "minimal"), ("fields", "id,labelIds")]
+    found = await messages(api, message_ids, params)
+    return {i: mappers.folder_ids(m.label_ids, known) for i, m in found.items()}
+
+
 async def summary(api: GmailApi, message_id: str) -> MessageSummary | None:
     return (await summaries(api, [message_id])).get(message_id)
 
