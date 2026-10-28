@@ -13,10 +13,10 @@
 # of that tag, so a build is reproducible and Dependabot updates both,
 # also when an image is rebuilt under the same tag.
 
-FROM ghcr.io/astral-sh/uv:0.13.5@sha256:32a7bb39b496babbd997b0a39a4d66c126bdaf5661b302bf6f06abda8deca6ff AS uv
+FROM ghcr.io/astral-sh/uv:0.13.6@sha256:af22a52f5eafef3d78e551599d405c02df61919d18028f0cea8eda93bc9986d0 AS uv
 
 # --- build: a virtual environment with the service and its dependencies -------
-FROM python:3.15-slim@sha256:533b0b2f9b5d46fd097091cf826f27902f1d6c3bca714b6dc74551356aa97a51 AS build
+FROM python:3.15-slim@sha256:94d3426f1def7db4a106a232ac121bfd975393e5dfd40a619b955fae45fe7913 AS build
 COPY --from=uv /uv /usr/local/bin/uv
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
@@ -29,7 +29,7 @@ COPY packages packages
 RUN uv sync --frozen --no-dev --no-editable --package benethos-mailbox-service
 
 # --- runtime -------------------------------------------------------------------
-FROM python:3.15-slim@sha256:533b0b2f9b5d46fd097091cf826f27902f1d6c3bca714b6dc74551356aa97a51
+FROM python:3.15-slim@sha256:94d3426f1def7db4a106a232ac121bfd975393e5dfd40a619b955fae45fe7913
 
 RUN useradd --system --uid 10001 --user-group --home-dir /app \
         --shell /usr/sbin/nologin mailbox \

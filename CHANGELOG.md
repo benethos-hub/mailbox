@@ -9,6 +9,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 
 - The service runs on FastAPI 0.162 and Starlette 1.10.
+- Both images run on Python 3.15.2. It rejects TLS certificate chains
+  with the compromised eMudhra intermediate CA keys.
 
 ## [0.5.2] - 2026-10-22
 
