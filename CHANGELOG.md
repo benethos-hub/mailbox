@@ -6,6 +6,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `benethos-mailbox-client`: `Folder.subscribed`, whether the folder is
+  subscribed on the server, as the API says.
+
 ### Changed
 
 - **Breaking:** a replacement list `keywords` in
