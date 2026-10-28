@@ -23,7 +23,12 @@ from .responses import (
     translated,
     with_code,
 )
-from .values import MAX_HEADER_BYTES, FetchedMessage, SearchCriteria
+from .values import (
+    MAX_HEADER_BYTES,
+    FetchedMessage,
+    SearchCriteria,
+    command_folder,
+)
 
 if TYPE_CHECKING:
     from .session import ImapSession
@@ -155,6 +160,7 @@ class Messages:
         command. Returns their UIDs there, as far as the server reports them
         (``COPYUID``, RFC 4315). Needs ``MOVE``, or ``UIDPLUS`` to copy and
         expunge just these."""
+        target = command_folder(target)
         with translated():
             client = self._session.client()
             announced = capabilities(client)
@@ -205,6 +211,7 @@ class Messages:
     def append(self, folder: str, raw: bytes, flags: list[str]) -> int | None:
         """Store a message in ``folder``. Returns its UID where the server
         reports it (``APPENDUID``, RFC 4315)."""
+        folder = command_folder(folder)
         with translated():
             client = self._session.client()
             reported = with_code(

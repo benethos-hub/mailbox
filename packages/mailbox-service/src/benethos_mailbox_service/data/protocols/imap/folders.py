@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from ..transport import text
 from .responses import capabilities, quietly, translated
-from .values import FolderState, Namespace, RawFolder
+from .values import FolderState, Namespace, RawFolder, command_folder
 
 if TYPE_CHECKING:
     from .session import ImapSession
@@ -43,6 +43,7 @@ class Folders:
     def folder_state(self, folder: str, modseq: bool = False) -> FolderState:
         """A folder's state without selecting it, with ``modseq`` also its
         HIGHESTMODSEQ."""
+        folder = command_folder(folder)
         items = ["UIDVALIDITY", "UIDNEXT", "MESSAGES"]
         if modseq:
             items.append("HIGHESTMODSEQ")
@@ -77,6 +78,7 @@ class Folders:
     def create_folder(self, name: str) -> None:
         """Create and subscribe: mail clients such as Outlook list only
         subscribed folders."""
+        name = command_folder(name)
         with translated():
             client = self._session.client()
             client.create_folder(name)
@@ -84,6 +86,7 @@ class Folders:
 
     def rename_folder(self, old: str, new: str) -> None:
         """Rename, and move the subscription along."""
+        old, new = command_folder(old), command_folder(new)
         with translated():
             client = self._session.client()
             client.rename_folder(old, new)
@@ -92,6 +95,7 @@ class Folders:
 
     def delete_folder(self, name: str) -> None:
         """Delete, and drop the subscription, which would otherwise stay."""
+        name = command_folder(name)
         with translated():
             client = self._session.client()
             quietly(lambda: client.unsubscribe_folder(name))

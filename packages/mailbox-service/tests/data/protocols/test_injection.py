@@ -10,6 +10,7 @@ inside quotes. JMAP sends JSON, which carries every character as data.
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from typing import Any
 
 import pytest
@@ -24,6 +25,7 @@ from benethos_mailbox_service.data.providers.jmap import mappers as jmap
 from benethos_mailbox_service.data.providers.microsoft import mappers as graph
 from benethos_mailbox_service.errors import BadRequestError, MailboxServiceError
 
+from ...imap_fake import FakeMailBox
 from ...smtp_fake import FakeSmtpServer
 
 # What ends a line or a command, and what does not.
@@ -71,6 +73,46 @@ def test_an_imap_login_with_a_quote_goes_to_the_server(value: str) -> None:
     with pytest.raises(MailboxServiceError):
         ImapSession(SERVER, client_factory=factory).login("me", f"x{value}y")
     assert factory.calls == 1
+
+
+def _folder_commands(session: ImapSession, name: str) -> list[Callable[[], Any]]:
+    """Every command of a session that takes a folder name, with ``name``."""
+    return [
+        lambda: session.select(name),
+        lambda: session.select_writable(name),
+        lambda: session.folders.folder_state(name),
+        lambda: session.folders.create_folder(name),
+        lambda: session.folders.rename_folder(name, "New"),
+        lambda: session.folders.rename_folder("INBOX", name),
+        lambda: session.folders.delete_folder(name),
+        lambda: session.messages.move([1], name),
+        lambda: session.messages.append(name, b"Subject: x\r\n\r\nx", []),
+    ]
+
+
+@pytest.mark.parametrize("end", ENDS)
+def test_an_imap_folder_name_with_a_line_end_never_reaches_the_server(
+    end: str, server: FakeMailBox
+) -> None:
+    session = ImapSession(SERVER, client_factory=server)
+    session.login("me", "secret")
+    asked = len(server.calls)
+    for command in _folder_commands(session, f'INBOX"{end}Z99 DELETE "Important'):
+        with pytest.raises(BadRequestError, match="the folder name must not hold"):
+            command()
+    assert server.calls[asked:] == []
+
+
+@pytest.mark.parametrize("name", ["Ordner mit Ä", "a/b.c", "100% *wichtig*"])
+def test_an_imap_folder_name_without_one_goes_to_the_server(
+    name: str, server: FakeMailBox
+) -> None:
+    session = ImapSession(SERVER, client_factory=server)
+    session.login("me", "secret")
+    session.folders.create_folder(name)
+    session.select(name)
+    assert ("create", name) in server.calls
+    assert ("select", name, True) in server.calls
 
 
 @pytest.mark.parametrize("end", ENDS)
