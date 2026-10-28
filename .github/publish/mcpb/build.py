@@ -10,7 +10,7 @@ there:
     uv run --no-project .github/publish/mcpb/build.py <staging dir>
     uv lock --directory <staging dir>
 
-The release job of publish.yml runs these after the upload to PyPI, and
+The job mcpb-bundle of publish.yml runs these after the upload to PyPI, and
 the organisation's action publish/mcpb packs the staged folder and
 attaches it to the release. The manifest is committed as it ships.
 tests/test_mcpb.py of the service holds it to the package and runs this

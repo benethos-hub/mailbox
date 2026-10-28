@@ -3,7 +3,7 @@
 An entry cannot be changed once the registry took it, so what it repeats
 from the package is held to the package here: the version, the name in
 all places that name it, the description, the settings and the icons. The
-release job of publish.yml sends it.
+job mcp-registry of publish.yml sends it.
 """
 
 from __future__ import annotations
