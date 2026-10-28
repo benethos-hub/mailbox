@@ -12842,7 +12842,7 @@
               }
             ],
             "title": "Keywords",
-            "description": "Replaces the list of keywords. Needs `keywords`. A mark such as `$answered` needs to be among the account's `marks.written`."
+            "description": "Replaces the keywords. A mark the message has, such as `$answered`, stays until `remove_keywords` names it. Needs `keywords`. A mark in the list needs to be among the account's `marks.written`."
           },
           "add_keywords": {
             "anyOf": [

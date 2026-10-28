@@ -145,7 +145,7 @@ def for_update(changes: MessageUpdate) -> Needs:
     if changes.starred is not None:
         found.add(Capability.STARS)
     if changes.keywords is not None:
-        # A new list takes off what it leaves out.
+        # A new list takes off what it leaves out, but the marks.
         found.add(Capability.KEYWORDS)
     for keyword in _touched(changes):
         if keyword.lower() in _MARKS:

@@ -8,6 +8,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Breaking:** a replacement list `keywords` in
+  `PATCH /v1/accounts/{account_id}/messages/{message_id}` and the
+  batches keeps the marks a message has, such as `$answered`. It took
+  them off on IMAP and JMAP, but not on Microsoft. Name a mark in
+  `remove_keywords` to take it off.
 - The service runs on FastAPI 0.162 and Starlette 1.10.
 - Both images run on Python 3.15.2. It rejects TLS certificate chains
   with the compromised eMudhra intermediate CA keys.
