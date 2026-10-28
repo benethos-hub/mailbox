@@ -2025,7 +2025,7 @@ access from the internet. A certificate by DNS challenge, which needs a
 Caddy image of its own, is left out.
 
 Rules of the implementation (phase 3): the image holds the service package
-only, installed from the lockfile, and runs as a non-root user on a
+and the common package only, installed from the lockfile, and runs as a non-root user on a
 read-only root file system. Configuration comes from the environment, the
 database from the volume `/data`. `keys generate` prints a new master key
 for the secret file, and `keys init` then adds the data key. The compose
