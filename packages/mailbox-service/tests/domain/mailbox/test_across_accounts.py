@@ -19,6 +19,7 @@ from benethos_mailbox_service.data.models import (
 )
 from benethos_mailbox_service.data.providers import CredentialReader, ProviderSettings
 from benethos_mailbox_service.data.providers.memory import MemoryProvider
+from benethos_mailbox_service.domain.mailbox.across import PAGES
 from benethos_mailbox_service.domain.mailbox.merge import newest_first
 from benethos_mailbox_service.errors import ProviderUnavailableError
 
@@ -289,3 +290,41 @@ def test_per_account_listing_also_names_the_account(world: World) -> None:
     assert {i["account_id"] for i in items} == {ids[0]}
     message = client.get(f"/v1/accounts/{ids[0]}/messages/a9").json()
     assert message["account_id"] == ids[0]
+
+
+def test_a_grant_reaching_little_reads_on_page_by_page(
+    world: World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An account read for little reads at most ``PAGES`` pages per page of
+    the list. The list reads on with the cursor, in the same order."""
+    services, client, ids, adapters = world
+    small = Folder(id="small", name="Small")
+    adapters[0].folders.append(small)
+    adapters[0].messages = [
+        *_messages("a", list(range(100, 160))),
+        *_messages("s", [0], folder="small"),
+    ]
+    real = adapters[0].list_messages
+    asked: list[None] = []
+
+    async def counted(*args: Any, **kwargs: Any) -> Page[MessageSummary]:
+        asked.append(None)
+        return await real(*args, **kwargs)
+
+    monkeypatch.setattr(adapters[0], "list_messages", counted)
+    headers = bearer_for(
+        services,
+        Grant(accounts=[ids[0]], allow=["mail.read"], folders=["Small"]),
+        Grant(accounts=[ids[1]], allow=["mail.read"]),
+    )
+    pages, cursor = [], None
+    while True:
+        query = {"folder": "all", "limit": 2, **({"cursor": cursor} if cursor else {})}
+        body = client.get("/v1/messages", params=query, headers=headers).json()
+        pages.append([m["subject"] for m in body["items"]])
+        assert len(asked) <= PAGES * len(pages)
+        cursor = body["next_cursor"]
+        if cursor is None:
+            break
+    assert pages[0] == []
+    assert [s for page in pages for s in page] == ["b10", "b8", "b2", "s0"]

@@ -13,6 +13,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   batches keeps the marks a message has, such as `$answered`. It took
   them off on IMAP and JMAP, but not on Microsoft. Name a mark in
   `remove_keywords` to take it off.
+- `GET /v1/messages` reads at most ten pages of an account for one page
+  of the list. Where the grants reach little of the folder, a page may
+  hold fewer messages than `limit`, or none, with a `next_cursor` to
+  read on. One request read the whole account before.
 - The service runs on FastAPI 0.162 and Starlette 1.10.
 - Both images run on Python 3.15.2. It rejects TLS certificate chains
   with the compromised eMudhra intermediate CA keys.
