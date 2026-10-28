@@ -109,7 +109,9 @@ shows a draft by its label but cannot set `$draft`.
 So `marks` is not one capability but two lists on the account: the
 marks it reads and the marks it writes. Writing a mark outside the
 second list answers `501`. A mark outside the first list never appears,
-and its absence means nothing.
+and its absence means nothing. A list `keywords` that replaces the
+keywords keeps the marks the message has, on every provider. Only
+`remove_keywords` takes a mark off (decided 2026-10-28).
 
 `refused` (decision 6.1) needs a capability as well: whether the
 provider names the recipients it refuses while sending, as SMTP does.

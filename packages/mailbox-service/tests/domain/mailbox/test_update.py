@@ -7,15 +7,24 @@ from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
 from benethos_mailbox_service.assembly import Services
-from benethos_mailbox_service.data.models import Grant, MessageUpdate
+from benethos_mailbox_service.data.models import (
+    Abilities,
+    Capability,
+    Grant,
+    MessageUpdate,
+)
 from benethos_mailbox_service.data.providers.imap import mappers
+from benethos_mailbox_service.data.providers.jmap import mappers as jmap
+from benethos_mailbox_service.data.providers.microsoft import mappers as graph
+from benethos_mailbox_service.domain.accounts import for_update
+from benethos_mailbox_service.domain.accounts.abilities import lacking
 from benethos_mailbox_service.errors import (
     BadRequestError,
     NotFoundError,
     NotSupportedError,
 )
 
-from ...conftest import bearer_for
+from ...conftest import bearer_for, memory_of, relearn
 from ...imap_adapter import provider
 from ...imap_fake import FakeMailBox
 from ...provider_ops import update
@@ -144,6 +153,40 @@ def test_invalid_keywords_are_refused(keyword: str) -> None:
         MessageUpdate(keywords=[keyword])
 
 
+# --- a list that replaces the keywords keeps the marks --------------------
+
+
+REPLACED = MessageUpdate(keywords=["work"])
+
+
+def test_a_new_list_keeps_the_marks_and_replaces_other_dollar_keywords() -> None:
+    after = REPLACED.keywords_after(["$answered", "$important", "old"])
+    assert after == {"$answered": "$answered", "work": "work"}
+    named = MessageUpdate(keywords=["$junk"]).keywords_after(["$answered"])
+    assert named == {"$answered": "$answered", "$junk": "$junk"}
+
+
+def test_a_new_list_keeps_the_marks_on_imap() -> None:
+    current = ("\\Seen", "\\Answered", "$Forwarded", "\\Draft", "Old")
+    add, remove = mappers.flag_changes(current, REPLACED, frozenset())
+    assert (add, remove) == (["work"], ["Old"])
+
+
+def test_a_new_list_keeps_the_marks_on_jmap() -> None:
+    patch = jmap.keyword_patch(
+        {"$seen": True, "$answered": True, "old": True}, REPLACED
+    )
+    assert patch == {"keywords/work": True, "keywords/old": None}
+
+
+def test_a_new_list_without_marks_needs_no_mark_written() -> None:
+    assert not graph.touches_marks(REPLACED)
+    keywords_only = Abilities.of({Capability.KEYWORDS}, written=())
+    assert lacking(keywords_only, for_update(REPLACED)) is None
+    with_mark = MessageUpdate(keywords=["$answered", "work"])
+    assert isinstance(lacking(keywords_only, for_update(with_mark)), NotSupportedError)
+
+
 # --- the IMAP adapter -----------------------------------------------------
 
 
@@ -252,3 +295,26 @@ def test_patch_needs_mail_write(
         f"/v1/accounts/{account_id}/messages/m0", json={"starred": True}, headers=writer
     )
     assert answer.status_code == 200
+
+
+def test_patch_with_a_new_list_keeps_the_marks(
+    client: TestClient, services: Services, account_id: str
+) -> None:
+    url = f"/v1/accounts/{account_id}/messages/m0"
+    client.patch(url, json={"keywords": ["$answered", "old"]})
+    answer = client.patch(url, json={"keywords": ["work"]})
+    assert answer.status_code == 200
+    assert answer.json()["keywords"] == ["$answered", "work"]
+    taken = client.patch(url, json={"remove_keywords": ["$answered"]})
+    assert taken.json()["keywords"] == ["work"]
+
+
+def test_patch_with_a_mark_the_account_does_not_write_is_refused(
+    client: TestClient, services: Services, account_id: str
+) -> None:
+    memory_of(services, account_id).given = Abilities.of({Capability.KEYWORDS})
+    relearn(services, account_id)
+    url = f"/v1/accounts/{account_id}/messages/m0"
+    assert client.patch(url, json={"keywords": ["work"]}).status_code == 200
+    refused = client.patch(url, json={"keywords": ["$answered", "work"]})
+    assert refused.status_code == 501

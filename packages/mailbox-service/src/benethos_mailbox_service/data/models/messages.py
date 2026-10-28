@@ -202,8 +202,10 @@ class MessageUpdate(BaseModel):
     keywords: Keywords = Field(
         default=None,
         description=(
-            "Replaces the list of keywords. Needs `keywords`. A mark such as "
-            "`$answered` needs to be among the account's `marks.written`."
+            "Replaces the keywords. A mark the message has, such as "
+            "`$answered`, stays until `remove_keywords` names it. Needs "
+            "`keywords`. A mark in the list needs to be among the account's "
+            "`marks.written`."
         ),
     )
     add_keywords: Keywords = Field(
@@ -298,12 +300,15 @@ class MessageUpdate(BaseModel):
     def keywords_after(self, current: Iterable[str]) -> dict[str, str] | None:
         """The keywords of a message that has ``current`` once changed, by
         their lower case: one it has as it is spelled there, a new one as
-        the caller spelled it. None where the keywords stay as they are."""
+        the caller spelled it. A list that replaces them keeps the marks
+        it has: only ``remove_keywords`` takes one off. None where the
+        keywords stay as they are."""
         if not self.changes_keywords:
             return None
         have = {k.lower(): k for k in current}
         if self.keywords is not None:
-            return {k.lower(): have.get(k.lower(), k) for k in self.keywords}
+            marks = {lower: k for lower, k in have.items() if lower in MARKS}
+            return marks | {k.lower(): have.get(k.lower(), k) for k in self.keywords}
         for keyword in self.remove_keywords or []:
             have.pop(keyword.lower(), None)
         for keyword in self.add_keywords or []:

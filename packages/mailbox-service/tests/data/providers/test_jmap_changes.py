@@ -167,10 +167,12 @@ async def test_flags_and_keywords(jmap: JmapProvider, server: FakeJmap) -> None:
         MessageUpdate(unread=False, starred=True, keywords=["Work", "$forwarded"]),
     )
     assert changed.unread is False and changed.starred
-    assert changed.keywords == ["$forwarded", "Work"]
+    # The new list keeps the mark the email has.
+    assert changed.keywords == ["$answered", "$forwarded", "Work"]
     assert server.emails[email_id]["keywords"] == {
         "$seen": True,
         "$flagged": True,
+        "$answered": True,
         "Work": True,
         "$forwarded": True,
     }
