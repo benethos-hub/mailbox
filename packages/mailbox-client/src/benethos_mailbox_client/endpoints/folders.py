@@ -59,4 +59,5 @@ def _folder(item: dict[str, Any]) -> Folder:
         unread=item.get("unread"),
         total=item.get("total"),
         parent_id=item.get("parent_id"),
+        subscribed=item.get("subscribed"),
     )

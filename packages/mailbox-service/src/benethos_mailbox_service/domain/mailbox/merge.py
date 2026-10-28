@@ -60,14 +60,21 @@ def newest_of(
     counts what it gave: of the accounts' next items, the newest is taken
     first. A provider whose order is not by date (IMAP's by arrival) is
     then never skipped or given twice, though a page may hold a message
-    older than one of the next page."""
+    older than one of the next page. A window that ran out before its
+    account did ends the merge: its next message may be newer than any
+    left of the others."""
     queues = [
         (account_id, [item for chunk in window for item in chunk.items])
         for account_id, window in windows.items()
     ]
+    more = [window[-1].next_cursor is not None for window in windows.values()]
     heads = [0] * len(queues)
     taken: list[tuple[MessageSummary, str]] = []
     while len(taken) < limit:
+        if any(
+            more[n] and heads[n] == len(items) for n, (_, items) in enumerate(queues)
+        ):
+            break
         waiting = [
             (newest_first(items[heads[n]]), n)
             for n, (_, items) in enumerate(queues)

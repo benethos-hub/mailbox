@@ -274,6 +274,7 @@ class Adapters:
         """Forget the adapter and what is known of the account: the next
         use reads the record and builds a new one."""
         self._status.pop(account_id, None)
+        self._relearned.pop(account_id, None)
         adapter = self._providers.pop(account_id, None)
         if adapter is not None:
             await adapter.close()

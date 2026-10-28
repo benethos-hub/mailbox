@@ -4,9 +4,17 @@ deleting for good. A folder's list and the search are in ``listing``."""
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any
 
-from ....errors import ConflictError, MailboxServiceError, missing
+from ....errors import (
+    BadRequestError,
+    ConflictError,
+    MailboxServiceError,
+    missing,
+    missing_message,
+)
 from ...models import FolderRole, Message, MessageSummary, MessageUpdate
 from ...protocols import path_part
 from .. import rules
@@ -15,6 +23,17 @@ from . import mappers
 from .api import PAGE_SIZE, Graph, own_path
 from .shapes import Item, Listing
 from .shapes import Message as GraphMessage
+
+
+@contextmanager
+def _by_id(message_id: str) -> Iterator[None]:
+    """A refusal of a request whose only input is the id, as the message
+    missing. Graph answers 400 for an id it cannot read, where the other
+    providers answer 404."""
+    try:
+        yield
+    except BadRequestError:
+        raise missing_message(message_id) from None
 
 
 async def summary_of(graph: Graph, path: str) -> GraphMessage:
@@ -27,13 +46,15 @@ async def get_message(graph: Graph, message_id: str) -> Message:
     as for any other provider. Graph's own fields would answer
     Exchange's HTML for a plain text mail, and no attachments for a mail
     with inline images only."""
-    item = await summary_of(graph, f"/me/messages/{path_part(message_id)}")
+    with _by_id(message_id):
+        item = await summary_of(graph, f"/me/messages/{path_part(message_id)}")
     return mappers.message(item, await get_raw(graph, message_id))
 
 
 async def get_raw(graph: Graph, message_id: str) -> bytes:
     path = f"/me/messages/{path_part(message_id)}/$value"
-    return (await graph.call("GET", path)).body
+    with _by_id(message_id):
+        return (await graph.call("GET", path)).body
 
 
 async def thread_messages(graph: Graph, thread_id: str, limit: int) -> ThreadMessages:
@@ -74,14 +95,19 @@ async def update_messages(
         if target == mappers.ALL:
             raise rules.into_all()
         path = f"/me/messages/{path_part(message_id)}"
+
+        async def read() -> GraphMessage:
+            with _by_id(message_id):
+                return await summary_of(graph, path)
+
         item = None
         verb: dict[str, Any] = {}
         if mappers.touches_marks(changes):
             # Refused before anything changes.
-            item = await summary_of(graph, path)
+            item = await read()
             verb = mappers.verb_after(item, changes)
         if changes.add_keywords or changes.remove_keywords:
-            item = item or await summary_of(graph, path)
+            item = item or await read()
             categories = mappers.categories_after(item, changes)
             patch = {**body, **mappers.changes(None, None, categories), **verb}
         else:
@@ -92,7 +118,7 @@ async def update_messages(
             await graph.move(GraphMessage, path, target)
         # Read again: Graph answers a change without the verb that says
         # whether the message is answered. Its id survives the move.
-        return mappers.summary(await summary_of(graph, path))
+        return mappers.summary(await read())
 
     return await rules.per_id(message_ids, one)
 
@@ -110,7 +136,9 @@ async def delete_messages(
             await delete_for_good(graph, message_id, trash)
             return None
         path = f"/me/messages/{path_part(message_id)}"
-        if (await graph.placed(path)).parent_folder_id == trash:
+        with _by_id(message_id):
+            placed = await graph.placed(path)
+        if placed.parent_folder_id == trash:
             raise rules.in_trash_already()
         return mappers.summary(await graph.move(GraphMessage, path, trash))
 
@@ -126,7 +154,9 @@ async def delete_for_good(
         trash = await graph.role_id(FolderRole.TRASH)
     path = f"/me/messages/{path_part(message_id)}"
     moved = None
-    if (await graph.placed(path)).parent_folder_id != trash:
+    with _by_id(message_id):
+        placed = await graph.placed(path)
+    if placed.parent_folder_id != trash:
         moved = await graph.move(Item, path, trash)
         path = f"/me/messages/{path_part(moved.id)}"
     try:

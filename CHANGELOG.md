@@ -6,6 +6,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `benethos-mailbox-client`: `Folder.subscribed`, whether the folder is
+  subscribed on the server, as the API says.
+
 ### Changed
 
 - **Breaking:** a replacement list `keywords` in
@@ -13,6 +18,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   batches keeps the marks a message has, such as `$answered`. It took
   them off on IMAP and JMAP, but not on Microsoft. Name a mark in
   `remove_keywords` to take it off.
+- `GET /v1/messages` reads at most ten pages of an account for one page
+  of the list. Where the grants reach little of the folder, a page may
+  hold fewer messages than `limit`, or none, with a `next_cursor` to
+  read on. One request read the whole account before.
 - The service runs on FastAPI 0.162 and Starlette 1.10.
 - Both images run on Python 3.15.2. It rejects TLS certificate chains
   with the compromised eMudhra intermediate CA keys.
@@ -25,6 +34,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 - A list of messages or threads in a folder the account does not have
   answers `404` on every provider. It reached the provider first, and
   Microsoft answered `400`.
+- A message id that Microsoft cannot read answers `404` when the message
+  is read, fetched raw, deleted or its keywords changed, as on every
+  other provider. Graph answered `400`.
 
 ### Security
 

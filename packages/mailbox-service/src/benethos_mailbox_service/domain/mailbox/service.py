@@ -76,6 +76,10 @@ class MailboxService:
         # Sending, drafts and the audit of sends: mailbox.outgoing.send_message.
         self.outgoing = Outgoing(self._calls, idempotency, sends, clock, activity)
 
+    def forget_account(self, account_id: str) -> None:
+        """An account is deleted: what was noted of its messages goes."""
+        self._calls.forget_account(account_id)
+
     # --- folders ----------------------------------------------------------------------
 
     async def list_folders(self, access: Access, account_id: str) -> list[Folder]:

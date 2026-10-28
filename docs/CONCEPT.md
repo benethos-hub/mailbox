@@ -1218,7 +1218,10 @@ advisor" need, whichever account it went to.
   first. The cursor is opaque and carries the position in every account.
   Each account gives the start of its own list: IMAP lists by arrival,
   so an old mail filed late may come a page early, but no message is
-  skipped or given twice. Each page is newest first.
+  skipped or given twice. Each page is newest first. An account reads
+  at most ten of its own pages for one page of the list. Where the
+  grants reach little of the folder, a page may hold fewer messages
+  than asked, or none, with a cursor to read on.
 - **One slow or failing account does not fail the request.** The answer is
   marked incomplete and says which account failed and why:
 

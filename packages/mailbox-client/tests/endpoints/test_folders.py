@@ -19,6 +19,12 @@ async def test_list_folders(make_client: Callable) -> None:
     ]
 
 
+async def test_a_folder_says_whether_it_is_subscribed(make_client: Callable) -> None:
+    api = FakeApi([{**FOLDER, "subscribed": False}, SUBFOLDER])
+    found = await make_client(api).list_folders("acc_1")
+    assert [f.subscribed for f in found] == [False, None]
+
+
 async def test_create_folder(make_client: Callable) -> None:
     api = FakeApi(FOLDER)
     found = await make_client(api).create_folder("acc_1", "Inbox", None)

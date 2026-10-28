@@ -27,6 +27,11 @@ from .reach import Reach, reach_of
 
 OPERATION = "list_all_messages"
 
+# The pages of one account read for one page of the list. A grant that
+# reaches little of the folder would read the whole account at once:
+# the next page of the list reads on from there.
+PAGES = 10
+
 
 class AcrossAccounts:
     def __init__(self, calls: Calls) -> None:
@@ -145,7 +150,8 @@ class AcrossAccounts:
         reach: Reach | None = None,
     ) -> list[merge.Chunk]:
         """At least ``window.limit`` of the account's next messages, or all
-        it has left, so that merging by date cannot skip a newer one. Read
+        it has left, or what ``PAGES`` pages hold: the merge stops where
+        such a window runs out, so that it cannot skip a newer one. Read
         in pages of ``window.size`` always, so the offsets into them hold,
         whatever the limit of each page of the list. Out of ``reach`` left
         out: the same each time a page is read. An account that cannot
@@ -173,8 +179,10 @@ class AcrossAccounts:
                 first.next_cursor,
             )
         ]
-        while chunks[-1].next_cursor and (
-            sum(len(c.items) for c in chunks) < window.limit
+        while (
+            chunks[-1].next_cursor
+            and len(chunks) < PAGES
+            and sum(len(c.items) for c in chunks) < window.limit
         ):
             cursor = chunks[-1].next_cursor
             more = await page(cursor)

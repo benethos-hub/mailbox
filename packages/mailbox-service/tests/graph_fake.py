@@ -7,6 +7,7 @@ from __future__ import annotations
 import base64
 import itertools
 import json
+import re
 from email import message_from_bytes
 from email.policy import default
 from email.utils import getaddresses
@@ -21,6 +22,8 @@ from .graph_fake_files import json_answer as _json
 TOKEN = "good-token"
 # How the fake marks an id that is not immutable.
 REST = "rest-"
+# The characters of an id of Graph, the prefix of this fake among them.
+_ID = re.compile(r"[A-Za-z0-9_=+/-]+")
 PROPS = "singleValueExtendedProperties"
 WELL_KNOWN = ("inbox", "sentitems", "drafts", "deleteditems", "junkemail")
 
@@ -346,9 +349,7 @@ class FakeGraph(FileCalls):
             return self._page(list(self.messages.values()), query, "/v1.0/me/messages")
         message = self.messages.get(path[0].removeprefix(REST))
         if message is None:
-            return _error(
-                404, "ErrorItemNotFound", "The specified object was not found"
-            )
+            return _unknown(path[0])
         rest = path[1:]
         if not rest:
             return self._one_message(method, message, request)
@@ -440,6 +441,14 @@ def _expanded(message: dict[str, Any], request: httpx.Request | None) -> Any:
 
 def _list(items: Any) -> httpx.Response:
     return _json(200, {"value": list(items)})
+
+
+def _unknown(message_id: str) -> httpx.Response:
+    """Graph's answer for an id it has no message for. It reads an id as
+    base64url before it looks for it."""
+    if not _ID.fullmatch(message_id):
+        return _error(400, "ErrorInvalidIdMalformed", "Id is malformed.")
+    return _error(404, "ErrorItemNotFound", "The specified object was not found")
 
 
 def _error(status: int, code: str, message: str) -> httpx.Response:
