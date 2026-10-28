@@ -27,6 +27,19 @@ def test_create_list_get_delete(client: TestClient) -> None:
     assert client.get(f"/v1/accounts/{account['id']}").status_code == 404
 
 
+def test_a_deleted_account_leaves_nothing_noted(
+    client: TestClient, services: Services, account_id: str
+) -> None:
+    """What the adapters and the calls noted of it goes with it."""
+    relearned = services.adapters._relearned
+    gone = services.mailbox._calls._gone._after
+    relearned[account_id] = 0.0
+    gone[account_id] = (0, {("m0", "native")})
+    assert client.delete(f"/v1/accounts/{account_id}").status_code == 204
+    assert account_id not in relearned
+    assert account_id not in gone
+
+
 def test_the_list_filters(client: TestClient) -> None:
     for email in ("anna@example.com", "bob@example.org"):
         client.post("/v1/accounts", json={"provider": "memory", "email": email})

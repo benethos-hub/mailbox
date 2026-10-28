@@ -42,6 +42,10 @@ class Calls:
 
     # --- the accounts -----------------------------------------------------------------
 
+    def forget_account(self, account_id: str) -> None:
+        """An account is deleted: what the calls noted of it goes."""
+        self._gone.forget(account_id)
+
     def record(self, account_id: str) -> Account:
         return self._adapters.record(account_id)
 
@@ -308,6 +312,10 @@ class Gone:
     def __init__(self, sync: SyncService) -> None:
         self._sync = sync
         self._after: dict[str, tuple[int, set[tuple[str, str]]]] = {}
+
+    def forget(self, account_id: str) -> None:
+        """An account is deleted: what was looked up in it goes."""
+        self._after.pop(account_id, None)
 
     async def after_a_pass(
         self, account_id: str, natives: dict[str, str]

@@ -259,6 +259,8 @@ class _Domain:
 
         def deleted(account_id: str) -> None:
             sync.forget_account(account_id)
+            # Built after the accounts, so looked up when one is deleted.
+            self.mailbox.forget_account(account_id)
             if worker is not None:
                 worker.forget(account_id)
 
