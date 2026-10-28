@@ -398,6 +398,24 @@ def test_ids_round_trip_and_are_opaque() -> None:
         mappers.parse_cursor(mappers.folder_id("x"))
 
 
+@pytest.mark.parametrize("end", ["\r\n", "\n", "\x00", "\t", "\x7f"])
+def test_an_id_naming_a_folder_no_server_has_is_not_one(end: str) -> None:
+    name = f'INBOX"{end}Z99 DELETE "Important'
+    with pytest.raises(NotFoundError):
+        mappers.folder_name(mappers.folder_id(name))
+    with pytest.raises(NotFoundError):
+        mappers.parse_message_id(mappers.message_id(name, 1, 1))
+    with pytest.raises(BadRequestError, match="invalid cursor"):
+        mappers.parse_cursor(mappers.cursor(name, 1, 1))
+
+
+def test_an_id_naming_a_folder_with_spaces_and_wildcards_is_one() -> None:
+    name = "Rechnungen für 2026 *%"
+    assert mappers.folder_name(mappers.folder_id(name)) == name
+    assert mappers.parse_message_id(mappers.message_id(name, 1, 1)).folder == name
+    assert mappers.parse_cursor(mappers.cursor(name, 1, 1)).folder == name
+
+
 def test_flat_folder_without_delimiter() -> None:
     folder = mappers.folder(RawFolder("Notes", None, ()))
     assert folder is not None

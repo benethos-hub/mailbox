@@ -30,6 +30,6 @@ def test_a_forged_folder_id_never_reaches_the_server(
     answer = client.get(
         f"/v1/accounts/{imap_account_id}/{path}", params={"folder": FORGED}
     )
-    assert answer.status_code == 400
+    assert answer.status_code == 404
     sent = [a for c in imap_server.calls for a in c[1:] if isinstance(a, str)]
     assert not [a for a in sent if "\r" in a or "\n" in a]

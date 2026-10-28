@@ -18,11 +18,14 @@ adheres to [Semantic Versioning](https://semver.org/).
 ### Security
 
 - A folder name with a line break or NUL never reaches a command of an
-  IMAP server, and the request answers `400`. A folder id is not signed:
+  IMAP server. A folder id is not signed:
   a caller with `mail.read` could build one whose name ended `SELECT`
   and started a command of their choosing, run with the account's
   credentials. Python 3.14 and newer refused it already, 3.11 to 3.13
   sent it. The images run on 3.15 and were not affected.
+- An IMAP folder id, message id or cursor whose folder name holds a
+  control character answers like one of the wrong form: `404` for an
+  id, `400` for a cursor. No server has such a folder.
 
 ## [0.5.2] - 2026-10-22
 

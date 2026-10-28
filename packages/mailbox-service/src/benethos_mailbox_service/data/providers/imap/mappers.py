@@ -7,6 +7,7 @@ attribute (``uid``, ``flags``, ``date``, ...), without any library of its own.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -30,6 +31,10 @@ from ...protocols import FetchedMessage, RawFolder
 from .. import rules
 
 INBOX = "INBOX"
+
+# What no folder name on a server holds, the control characters of
+# ``FOLDER_NAME_PATTERN``. Only a forged id carries one.
+_CONTROL = re.compile(r"[\x00-\x1f\x7f]")
 
 # RFC 6154 special-use flags.
 SPECIAL_USE: dict[str, FolderRole] = {
@@ -105,8 +110,16 @@ def folder_id(name: str) -> str:
     return opaque.encode("f_", [name])
 
 
+def _named(parts: list[Any] | None) -> list[Any] | None:
+    """``parts`` of an id whose first part is a folder name, None where it
+    holds a character no server's folder does."""
+    if parts is None or _CONTROL.search(parts[0]):
+        return None
+    return parts
+
+
 def folder_name(value: str) -> str:
-    parts = opaque.fields("f_", value, str)
+    parts = _named(opaque.fields("f_", value, str))
     if parts is None:
         raise missing("folder", value)
     return str(parts[0])
@@ -117,7 +130,7 @@ def message_id(folder: str, uidvalidity: int, uid: int) -> str:
 
 
 def parse_message_id(value: str) -> Place:
-    parts = opaque.fields("m_", value, str, int, int)
+    parts = _named(opaque.fields("m_", value, str, int, int))
     if parts is None:
         raise missing_message(value)
     return Place(*parts)
@@ -128,7 +141,7 @@ def cursor(folder: str, uidvalidity: int, before_uid: int) -> str:
 
 
 def parse_cursor(value: str) -> Cursor:
-    parts = opaque.fields("c_", value, str, int, int)
+    parts = _named(opaque.fields("c_", value, str, int, int))
     if parts is None:
         raise rules.invalid_cursor()
     return Cursor(*parts)
