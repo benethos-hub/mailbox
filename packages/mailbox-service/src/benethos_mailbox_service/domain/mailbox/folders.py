@@ -133,13 +133,13 @@ class Folders:
         self, access: Access, account_id: str, folder: str
     ) -> tuple[str, Reach | None]:
         """The folder whose messages are listed, a role resolved, and what
-        the grants reach. One out of reach is missing, but the folder
-        ``all``, which lists what they reach of every folder. The account's
-        folders are asked for once, and only where a role or the grants
-        need them."""
-        narrowed = access.folder_scopes("list_messages", account_id) is not None
-        folders = await self.all(account_id) if narrowed or is_role(folder) else []
+        the grants reach. One the account lacks or out of reach is
+        missing, but the folder ``all``, which lists what they reach of
+        every folder. The account's folders are asked for once."""
+        folders = await self.all(account_id)
         folder = _resolved(folders, folder)
+        if not any(f.id == folder for f in folders):
+            raise missing("folder", folder)
         reach = await reach_of(
             self._calls, access, "list_messages", account_id, folders
         )

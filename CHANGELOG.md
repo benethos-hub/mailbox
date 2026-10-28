@@ -15,6 +15,12 @@ adheres to [Semantic Versioning](https://semver.org/).
   version without a known vulnerability. An install from the lockfile,
   as the images do, had it already.
 
+### Fixed
+
+- A list of messages or threads in a folder the account does not have
+  answers `404` on every provider. It reached the provider first, and
+  Microsoft answered `400`.
+
 ### Security
 
 - A folder name with a line break or NUL never reaches a command of an
