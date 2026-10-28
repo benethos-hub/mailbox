@@ -237,7 +237,7 @@ requires-dist = [
     { name = "benethos-mailbox-common", extras = ["paths", "settings"], editable = "packages/mailbox-common" },
     { name = "cryptography", specifier = ">=50" },
     { name = "defusedxml", specifier = ">=0.7.1" },
-    { name = "dnspython", specifier = ">=2.6.1" },
+    { name = "dnspython", specifier = ">=2.9.0" },
     { name = "fastapi", specifier = ">=0.133.0" },
     { name = "httpx", specifier = ">=0.28" },
     { name = "imap-tools", specifier = ">=1.10" },
