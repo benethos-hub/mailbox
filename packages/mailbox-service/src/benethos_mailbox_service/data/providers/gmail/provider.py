@@ -42,7 +42,7 @@ from ...models import (
 )
 from ...protocols import ApiClient
 from ..base import FolderChanges, ThreadMessages, TokenSource
-from . import folders, messages, sending
+from . import folders, messages, reading, sending
 from .api import GmailApi
 from .changes import Changes
 from .shapes import Profile
@@ -98,6 +98,9 @@ class GmailProvider:
 
     async def get_message(self, message_id: str) -> Message:
         return await messages.get_message(self._api, message_id)
+
+    async def folders_of(self, message_ids: list[str]) -> dict[str, list[str]]:
+        return await reading.folders_of(self._api, message_ids)
 
     async def get_attachment(
         self, message_id: str, attachment_id: str

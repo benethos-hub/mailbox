@@ -12,6 +12,7 @@ from ....errors import (
     BadRequestError,
     ConflictError,
     MailboxServiceError,
+    NotFoundError,
     missing,
     missing_message,
 )
@@ -49,6 +50,20 @@ async def get_message(graph: Graph, message_id: str) -> Message:
     with _by_id(message_id):
         item = await summary_of(graph, f"/me/messages/{path_part(message_id)}")
     return mappers.message(item, await get_raw(graph, message_id))
+
+
+async def folders_of(graph: Graph, message_ids: list[str]) -> dict[str, list[str]]:
+    """The folder of each message that is there, nothing else of it."""
+    found: dict[str, list[str]] = {}
+    for message_id in message_ids:
+        try:
+            with _by_id(message_id):
+                placed = await graph.placed(f"/me/messages/{path_part(message_id)}")
+        except NotFoundError:
+            continue
+        parent = placed.parent_folder_id
+        found[message_id] = [parent] if parent else []
+    return found
 
 
 async def get_raw(graph: Graph, message_id: str) -> bytes:

@@ -108,6 +108,9 @@ class MicrosoftProvider:
     async def get_message(self, message_id: str) -> Message:
         return await messages.get_message(self._graph, message_id)
 
+    async def folders_of(self, message_ids: list[str]) -> dict[str, list[str]]:
+        return await messages.folders_of(self._graph, message_ids)
+
     async def get_attachment(
         self, message_id: str, attachment_id: str
     ) -> AttachmentContent:

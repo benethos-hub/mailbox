@@ -301,6 +301,17 @@ class Summaries(Protocol):
         ...
 
 
+@runtime_checkable
+class Places(Protocol):
+    """Reads the folders of messages named by id without their content.
+    The domain needs it to judge a change under grants that name folders,
+    where the account keeps no index."""
+
+    async def folders_of(self, message_ids: list[str]) -> dict[str, list[str]]:
+        """The folder ids of each message that is there, by id."""
+        ...
+
+
 # The protocols an adapter implements where its account may have a
 # capability, any one of them. The domain threads an account of its own
 # where the adapter reads summaries.
