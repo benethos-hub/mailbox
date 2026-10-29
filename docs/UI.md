@@ -86,8 +86,9 @@ initial in a circle, the name and the roles. It opens a menu upwards:
 "Signed in as" the name, then Your page (with `users.read`), Password,
 Second factor with its state (on or off), and Sign out in red, still a
 form that posts. A click elsewhere or Escape closes it. It is the one
-place for what is the person's own: neither the overview nor the own
-user page repeats its links.
+place for what is the person's own: the overview does not repeat its
+links, and the own page's Access tab links them beside the facts they
+belong to.
 
 A button beside the brand **folds the sidebar** to a narrow bar of
 icons, each word its tooltip, the account menu its avatar alone. The
