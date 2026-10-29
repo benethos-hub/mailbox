@@ -143,15 +143,6 @@
 </form>
 {% endmacro %}
 
-{# A labelled input. #}
-{% macro field(name, label, value="", type="text", hint=None, required=False, cls="", attrs="") %}
-<div class="field {{ cls }}">
-  <label for="f-{{ name }}">{{ label }}</label>
-  <input id="f-{{ name }}" name="{{ name }}" type="{{ type }}" value="{{ value }}"{% if required %} required{% endif %} {{ attrs }} />
-  {% if hint %}<span class="hint">{{ hint }}</span>{% endif %}
-</div>
-{% endmacro %}
-
 {# The filter bar above a list (filters.py): the search first, more
    filters folded, the active ones as chips under it. A GET form, so a
    filtered list has its URL. ``focus``: the cursor starts in the search,
