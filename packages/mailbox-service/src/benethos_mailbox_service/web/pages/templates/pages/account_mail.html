@@ -83,10 +83,10 @@
     {% endif %}
     {% if can.search and view == "messages" %}<div class="body">{{ filter_bar(bar, problem) }}</div>{% endif %}
     {% if selectable and messages %}
-    <form id="batch" class="body toolbar" method="post" action="/ui/accounts/{{ account.id }}/mail/batch">
+    <form id="batch" class="batch-bar" method="post" action="/ui/accounts/{{ account.id }}/mail/batch">
       {{ csrf_field() }}
       <input type="hidden" name="back" value="{{ here }}" />
-      <label for="f-batch-action">Ticked messages</label>
+      <label class="label" for="f-batch-action">Ticked messages</label>
       <select id="f-batch-action" name="action">
         {% if can.read_state %}
         <option value="read">mark read</option>
