@@ -339,3 +339,36 @@ def test_no_package_entry_defines_a_class() -> None:
         if isinstance(node, ast.ClassDef)
     ]
     assert not violations, "a class in a package's entry:\n  " + "\n  ".join(violations)
+
+
+# What the rule below found when it came, left for a change of its own
+# (2026-10-29): the OAuth clients as assembly builds them, and a host's
+# first admin through the command line.
+WHOLE_SERVICE = {
+    "data/providers/test_gmail_changes.py",
+    "data/storage/test_sqlite_database.py",
+}
+
+
+def test_tests_of_the_data_layer_go_through_no_api() -> None:
+    """A test sits in the folder of the code it tests (ARCHITECTURE 13).
+    One that goes through the API or builds the whole service tests the
+    domain or several layers, not the data layer."""
+    tests = Path(__file__).resolve().parent
+    violations = []
+    for path in sorted((tests / "data").rglob("test_*.py")):
+        name = path.relative_to(tests).as_posix()
+        for node in ast.walk(ast.parse(path.read_text("utf-8"))):
+            if isinstance(node, ast.ImportFrom) and not node.level:
+                named = [node.module or ""]
+            elif isinstance(node, ast.Import):
+                named = [alias.name for alias in node.names]
+            else:
+                continue
+            for module in named:
+                outside = module.split(".")[0] == "fastapi" or module.startswith(
+                    "benethos_mailbox_service.assembly"
+                )
+                if outside and name not in WHOLE_SERVICE:
+                    violations.append(f"{name}:{node.lineno} {module}")
+    assert not violations, "a data test beyond its layer:\n  " + "\n  ".join(violations)
