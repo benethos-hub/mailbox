@@ -181,6 +181,10 @@ release carries it as a Claude Desktop extension,
 explains how to install, start and configure it, for the service and
 the MCP server with the container image and the compose file.
 
+> **The MCP server and the service must have the same version** to work
+> together. Update both at once. The MCP server's tool `server_status`
+> shows the service's version and whether it matches its own.
+
 ## Getting started
 
 1. Start the service and create the first user:

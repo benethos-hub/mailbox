@@ -103,6 +103,10 @@
     {
       "name": "send_draft",
       "description": "Send a draft as it is stored."
+    },
+    {
+      "name": "server_status",
+      "description": "What this server is and how long it has run: its name and version, the transport, Python, the MCP library and the uptime."
     }
   ],
   "user_config": {

@@ -197,7 +197,12 @@ async def test_registered_by_the_right_and_marked() -> None:
             ["batch_messages", "create_folder"]
         ).list_tools()
     }
-    assert set(tools) == {"list_accounts", "update_messages", "create_folder"}
+    assert set(tools) == {
+        "list_accounts",
+        "server_status",
+        "update_messages",
+        "create_folder",
+    }
     update, create = tools["update_messages"], tools["create_folder"]
     assert update.annotations is not None and create.annotations is not None
     assert update.annotations.read_only_hint is False

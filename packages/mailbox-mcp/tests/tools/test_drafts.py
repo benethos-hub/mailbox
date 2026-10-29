@@ -96,7 +96,7 @@ async def test_delete_draft(api: Callable) -> None:
 async def test_registered_by_the_right_and_marked() -> None:
     rights = ["list_drafts", "create_draft", "update_draft", "delete_draft"]
     tools = {t.name: t for t in await server.build_server(rights).list_tools()}
-    assert set(tools) == {"list_accounts", *rights}
+    assert set(tools) == {"list_accounts", "server_status", *rights}
     hints = {
         name: (t.annotations.read_only_hint, t.annotations.destructive_hint)  # type: ignore[union-attr]
         for name, t in tools.items()
@@ -109,7 +109,7 @@ async def test_registered_by_the_right_and_marked() -> None:
 
 async def test_only_create_draft_with_that_right() -> None:
     names = {t.name for t in await server.build_server(["create_draft"]).list_tools()}
-    assert names == {"list_accounts", "create_draft"}
+    assert names == {"list_accounts", "server_status", "create_draft"}
 
 
 async def test_a_draft_in_html(api: Callable) -> None:

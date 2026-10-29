@@ -7,8 +7,9 @@ does, adds the first two test accounts and makes a user that may only read
 them. Then it starts ``benethos-mailbox-mcp --transport streamable-http`` on
 a free port with that user's API token and a bearer token of its own. It
 checks that a request without the bearer token is refused, and that the
-tools answer with it. Nothing in the mailboxes is written. Credentials and
-mail content are never printed.
+tools answer with it, ``server_status`` both ways among them. Nothing in
+the mailboxes is written. Credentials and mail content are never
+printed.
 """
 
 from __future__ import annotations
@@ -23,6 +24,7 @@ import httpx
 from checks.accounts import accounts, read_env, register_all
 from checks.admin import user_token
 from checks.mcp_session import READ_TOOLS
+from checks.mcp_status import check_status
 from checks.processes import free_port, program, started, stop
 from checks.run import Run
 from checks.service import throwaway_service
@@ -50,7 +52,9 @@ def start_mcp(
     return process
 
 
-async def check_http(run: Run, url: str, bearer: str, emails: set[str]) -> None:
+async def check_http(
+    run: Run, url: str, bearer: str, api_token: str, emails: set[str]
+) -> None:
     body = {
         "jsonrpc": "2.0",
         "id": 1,
@@ -85,6 +89,7 @@ async def check_http(run: Run, url: str, bearer: str, emails: set[str]) -> None:
             tools == READ_TOOLS,
             ", ".join(sorted(tools)),
         )
+        await check_status(run, session, api_token, "streamable-http")
         listed = await session.call_tool("list_accounts", {})
         found = (listed.structured_content or {}).get("result", [])
         run.check(
@@ -122,6 +127,7 @@ def main() -> int:
                 run,
                 f"http://127.0.0.1:{mcp_port}/mcp",
                 bearer,
+                token,
                 {a["email"].lower() for a in test_accounts},
             )
         finally:

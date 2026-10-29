@@ -1758,9 +1758,16 @@ included for a grant on every account. `user`, `outcome`, `recipient`
   With `0` it asks only at start. When the tools change it tells its clients with
   `notifications/tools/list_changed`, so a right granted or taken away
   shows without a restart. When the service refuses the token, every
-  tool goes away. **Decided 2026-10-16:** a user that may do nothing
-  keeps `list_accounts` alone, which lists no account, so the model can
-  say why nothing else is there.
+  tool goes away but `server_status`. **Decided 2026-10-16:** a user
+  that may do nothing keeps `list_accounts` alone beside
+  `server_status`, and it lists no account, so the model can say why
+  nothing else is there.
+- **Decided 2026-10-29:** the tool `server_status` is always offered,
+  whatever the token may do, also when the service refuses the token.
+  It asks the service nothing for its answer. It names the server's own
+  version, its transport, Python, the MCP library and its uptime, and
+  with `details` the service as the server's own requests last found
+  it.
 - A refused token is asked for no more, since each refusal counts
   against the address like a wrong token (LIMITS.md). A tool refused
   with `401` counts as such a refusal. A new token needs a restart.
@@ -1922,6 +1929,7 @@ one or two `operationId`s.
 | `delete_draft` | drafts | `delete_draft` |
 | `send_message` | send | `send_message`, with an idempotency key derived from the call |
 | `send_draft` | send | `send_draft`, with an idempotency key derived from the call |
+| `server_status` | always | none: what the server knows, from its own calls of `health` and `get_me` |
 
 **Decided 2026-09-24, attachments:** `get_attachment` hands images over
 as images, the pages of a PDF as PNG images (a page range, a few pages at

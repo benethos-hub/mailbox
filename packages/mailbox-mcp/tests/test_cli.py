@@ -46,7 +46,7 @@ def test_main_runs_stdio_with_the_allowed_tools(
     monkeypatch.setattr(
         server,
         "build_server",
-        lambda ops, connect=None, every=0: Recorded(set(ops), every),
+        lambda ops, connect=None, every=0, **_: Recorded(set(ops), every),
     )
     cli.main([])
     assert runs == [(ALLOWED, 60, "stdio")]
@@ -109,7 +109,10 @@ def test_the_start_leaves_no_client_behind(monkeypatch: pytest.MonkeyPatch) -> N
         return ALLOWED
 
     def build(
-        ops: set[str], connect: Callable[[], MailboxClient], every: float
+        ops: set[str],
+        connect: Callable[[], MailboxClient],
+        every: float,
+        **_: object,
     ) -> object:
         built.append(connect)
         return type("S", (), {"run": lambda self, transport: None})()
@@ -136,15 +139,15 @@ def test_the_start_names_the_service_and_the_tools(
     monkeypatch.setattr(
         server,
         "build_server",
-        lambda ops, connect=None, every=0: type(
+        lambda ops, connect=None, every=0, **_: type(
             "S", (), {"run": lambda self, transport: None}
         )(),
     )
     with caplog.at_level(logging.INFO):
         cli.main([])
     assert (
-        "serving 1 tools over stdio for mailbox-service at "
-        "http://127.0.0.1:8080: list_accounts" in caplog.text
+        "serving 2 tools over stdio for mailbox-service at "
+        "http://127.0.0.1:8080: list_accounts, server_status" in caplog.text
     )
 
 

@@ -25,7 +25,7 @@ LINES = (
 # The same inside tools/.
 TOOL_LINES = (
     {"accounts"},
-    {"reading", "writing", "drafts", "sending"},
+    {"reading", "writing", "drafts", "sending", "status"},
     {"compose"},
     {"base"},
 )

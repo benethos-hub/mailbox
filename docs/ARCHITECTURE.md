@@ -568,6 +568,8 @@ packages/mailbox-mcp/
       writing.py        # change messages, create a folder
       drafts.py         # list, write, replace, delete drafts
       sending.py        # send a mail, send a draft
+      status.py         # server_status: what runs, from memory, and
+                        #   the service as the server last saw it
     render.py           # what the model sees of mail, marked as foreign
     pdf.py              # PDF pages as PNG (pypdfium2)
     client.py           # the client package's MailboxClient, the

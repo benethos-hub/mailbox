@@ -207,7 +207,7 @@ def started(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     monkeypatch.setattr(
         server,
         "build_server",
-        lambda ops, connect=None, every=0: (
+        lambda ops, connect=None, every=0, **_: (
             Stdio() if seen.get("want_stdio") else real_build(ops)
         ),
     )

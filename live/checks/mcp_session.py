@@ -23,6 +23,7 @@ READ_TOOLS = {
     "get_thread",
     "get_attachment",
     "whats_new",
+    "server_status",
 }
 
 

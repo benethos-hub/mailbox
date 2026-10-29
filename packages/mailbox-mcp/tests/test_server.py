@@ -48,9 +48,10 @@ async def names(operations: list[str]) -> set[str]:
 
 
 async def test_only_what_the_token_may_do() -> None:
-    assert await names([]) == {"list_accounts"}
+    assert await names([]) == {"list_accounts", "server_status"}
     assert await names(READ) == {
         "list_accounts",
+        "server_status",
         "list_folders",
         "search_messages",
         "get_message",
@@ -175,7 +176,9 @@ async def test_each_server_has_a_client_of_its_own() -> None:
 
     def connect_to(host: str) -> Callable[[], MailboxClient]:
         def answer(request: httpx.Request) -> httpx.Response:
-            asked.append(request.url.host)
+            # Each server asks the service's version as it starts.
+            if request.url.path != "/health":
+                asked.append(request.url.host)
             return httpx.Response(200, json=ME)
 
         def connect() -> MailboxClient:
@@ -233,6 +236,7 @@ HINTS = {
     "delete_draft": ("Delete a draft", False, True, True, True),
     "send_message": ("Send a mail", False, True, False, True),
     "send_draft": ("Send a draft", False, True, False, True),
+    "server_status": ("Server status", True, None, None, False),
 }
 
 

@@ -44,15 +44,24 @@ def me_with(*operations: str) -> dict[str, Any]:
 
 class Service:
     """``/v1/me`` of the REST API: ``me`` with ``status``, or no answer at
-    all while ``down``. Counts how often it was asked. Every other path
-    answers the error ``refusal``, a status and a code."""
+    all while ``down``. Counts how often it was asked, and keeps the path
+    of every request. ``/health`` names ``version`` where one is set.
+    Every other path answers the error ``refusal``, a status and a
+    code."""
 
     def __init__(self, me: dict[str, Any]) -> None:
         self.me, self.status, self.down = me, 200, False
         self.refusal = (403, "forbidden")
         self.asked = 0
+        self.version: str | None = None
+        self.paths: list[str] = []
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
+        self.paths.append(request.url.path)
+        if request.url.path == "/health" and self.version is not None:
+            if self.down:
+                raise httpx.ConnectError("refused", request=request)
+            return httpx.Response(200, json={"status": "ok", "version": self.version})
         if request.url.path != "/v1/me":
             status, code = self.refusal
             error = {"code": code, "message": "refused"}
