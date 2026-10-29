@@ -290,8 +290,8 @@ The first page after signing in. Its cards, in order:
    card says at a glance whether this user may read mail and send it
    anywhere, the warning the API and the MCP server also give.
 2. **Your accounts**: one row per account with its address, status,
-   unread count where cheap, and what you may do there. A row opens the
-   account's mail, the address opens the account.
+   unread count where cheap, and what you may do there. Its Mail button
+   opens the account's mail, the address opens the account.
 3. **Service**: only for those with `accounts.read`: accounts that need
    attention (needs_reauth, unreachable, sync failing), webhooks failing.
    Each line links to the page that fixes it. When all is well, it says
