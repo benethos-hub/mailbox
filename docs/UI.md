@@ -155,7 +155,7 @@ with the reason. A batch of messages acts on the mail server, which
 cannot take back a part: it names the messages it could not change.
 
 Lists: Accounts, Users, Roles, Sends, Webhooks, Mail, Drafts, Audit,
-Log, and Changes if it is built (6.6).
+Log, and Changes if it is built (6.7).
 
 ### 4.2 Detail
 
@@ -468,7 +468,21 @@ time, level, source and message, a traceback with it, and every secret
 the service holds masked (CONCEPT 7.4). The filter bar searches the
 message and the source and sets the least level.
 
-### 6.6 Changes, optional
+### 6.6 Writing mail
+
+A message's page offers **Reply**, **Reply to all** and **Forward**,
+each opening Compose with the original named. A forward goes quoted in
+the text or as an attachment. Compose takes the text, an HTML version if
+wanted, and files. **Send** asks first and sends at once. **Save as
+draft** stores it, and a stored draft opens in the same form to save,
+send or delete. A draft is replaced as a whole and may get a new id from
+the provider: the form goes on with the id the answer brings (U4). Each
+time the form is shown it carries a new idempotency key, so a second
+click on Send answers the first result. A refused form comes back with
+what was typed, its files to be chosen again: a browser cannot be handed
+files.
+
+### 6.7 Changes, optional
 
 A list of the change feed per account, newest first: event, message,
 when. It shows what webhooks would have received, which helps when a
@@ -635,7 +649,7 @@ All four steps are done, as the roadmap's phase 4b records.
 - 2026-09-27: the sync state in the worker's memory, the last sign-in
   stored (5, 6.5).
 - 2026-09-27: a delivery log for webhooks (6.4).
-- 2026-09-27: the Changes page not in phase 4b (6.6).
+- 2026-09-27: the Changes page not in phase 4b (6.7).
 - 2026-09-27: a lighter background. The other colours follow from the
   contrast rule of section 7.
 - 2026-10-06: the filters of Sends, Users, Accounts and Webhooks at the
