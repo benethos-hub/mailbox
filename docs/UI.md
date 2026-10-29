@@ -14,7 +14,8 @@ what it must do and how it is secured.
 
 1. **Simple to use.** Every task a person comes for is reached in three
    to five clicks from the overview, counting a page open, a button and a
-   form submit as one click each. Section 3 has the budget.
+   form submit as one click each, and the question of a dialog as one
+   more. Section 3 has the budget.
 2. **A lighter look, blue instead of grey.** One palette in section 7,
    the dark mode kept.
 3. **Reworked workflows.** Connecting an account starts with the address
@@ -112,19 +113,19 @@ The click budget, counted from the overview after signing in:
 |---|---|---|
 | Read a mail of one account | 2 | Mail on its row of the overview or of Accounts, the message |
 | Read the newest mail of every account | 2 | Mail search, the message |
-| Reply to a mail | 4 | Mail search, the message, Reply, Send |
+| Reply to a mail | 5 | Mail search, the message, Reply, Send, Send in the dialog |
 | Connect an account | 4 | Accounts, Connect, Look up, Connect (or Sign in with the provider) |
 | Change an account's password | 3 | Accounts, the account, Save |
 | Create a user with rights | 3 | Users, New user, Create |
-| Give a user a token | 3, 4 once it has one | Users, the user, (New token), Create token |
-| Revoke a token | 3 | Users, the user, Revoke |
+| Give a user a token | 4, 5 once it has one | Users, the user, Access, (New token), Create token |
+| Revoke a token | 5 | Users, the user, Access, Revoke, Revoke in the dialog |
 | Add a webhook | 3 | Webhooks, New webhook, Create |
 | Change a webhook | 3 | Webhooks, the webhook, Save |
 | See why a webhook fails | 1 | Webhooks |
 | See which account is not syncing | 1 | Overview, or Accounts (its dot shows on every page) |
 | Show the recovery key | 2 | Recovery key, Show |
 | Read the service log | 1 | Log |
-| See who changed a user | 1 | Audit, or 2: Users, the user |
+| See who changed a user | 1 | Audit, or 4: Users, the user, Activity, What was done to it |
 
 A task that needs more than five clicks is a bug of the navigation, not
 of the person.
