@@ -157,7 +157,8 @@ async def get_thread(
     if thread_id is None:
         raise ToolError(
             f"mail {message_id} names no thread: the account keeps none, "
-            "or the service has not threaded it yet"
+            "or the service has not threaded it yet",
+            kind="no thread",
         )
     found = await client().get_thread(account_id, thread_id)
     for item in found.messages[-MAX_THREAD_MAILS:]:
@@ -228,7 +229,8 @@ async def get_attachment(
     if not found.complete:
         raise ToolError(
             f"the attachment has more than the {MAX_ATTACHMENT_BYTES} bytes "
-            "this tool hands over"
+            "this tool hands over",
+            kind="the attachment is too large",
         )
     if kind in IMAGE_TYPES and len(found.data) > MAX_IMAGE_BYTES:
         return result(
@@ -317,7 +319,8 @@ async def _pdf(data: bytes, first_page: int, pages: int) -> pdf.Pages:
             )
     except TimeoutError:
         raise ToolError(
-            f"the PDF took longer than {PDF_SECONDS} seconds to render"
+            f"the PDF took longer than {PDF_SECONDS} seconds to render",
+            kind="the PDF took too long",
         ) from None
 
 

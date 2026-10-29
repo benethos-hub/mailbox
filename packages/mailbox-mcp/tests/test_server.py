@@ -305,3 +305,15 @@ async def test_a_failed_tool_is_a_warning_without_its_arguments(
     assert record.levelno == logging.WARNING
     assert record.getMessage() == f"tool send_message failed: {said}"
     assert "a@x.org" not in caplog.text
+
+
+async def test_a_tool_error_logs_its_kind(caplog: pytest.LogCaptureFixture) -> None:
+    """A PDF that takes too long is no refused argument."""
+
+    async def get_attachment() -> str:
+        raise ToolError("took longer than 30 seconds", kind="the PDF took too long")
+
+    with pytest.raises(ToolError):
+        await server._logged(get_attachment, server._Held())()
+    [record] = caplog.records
+    assert record.getMessage() == "tool get_attachment failed: the PDF took too long"

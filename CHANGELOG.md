@@ -64,6 +64,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   `subject` of `search_messages` take one line of 1 to 200 characters,
   as the API does, and refuse other values in their own names. The
   name of `create_folder` and `update_folder` takes at most 200.
+- `benethos-mailbox-mcp`: the log names why a tool failed when it was
+  no refused argument: a PDF that took too long, an attachment too large
+  to hand over, a mail without a thread.
 - `benethos-mailbox-client`: the `content_type` of an `AttachmentLink`
   is a media type, else `application/octet-stream`, as for the bytes of
   an attachment. The sender of the mail chose it.

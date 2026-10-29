@@ -41,7 +41,12 @@ _MISSING_RIGHT = "forbidden"
 
 
 class ToolError(_McpToolError):
-    """An anticipated failure, its message shown to the model as is."""
+    """An anticipated failure, its message shown to the model as is.
+    ``kind`` says for the log what went wrong, without the message."""
+
+    def __init__(self, message: str, kind: str = "the arguments were refused") -> None:
+        super().__init__(message)
+        self.kind = kind
 
 
 def for_the_model(exc: MailboxError) -> ToolError:
@@ -81,4 +86,6 @@ def reason(exc: Exception) -> str:
         return "mailbox-service did not answer in time"
     if isinstance(exc, ConfigurationError):
         return "the REST client is not configured"
+    if isinstance(exc, ToolError):
+        return exc.kind
     return "the arguments were refused"
