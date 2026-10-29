@@ -22,7 +22,8 @@ from pathlib import Path
 
 import pytest
 
-ROOT = Path(__file__).resolve().parents[3]
+from .publish_helpers import ROOT
+
 PACKAGES = ROOT / "packages"
 # Folders with READMEs that are not the project's own.
 SKIPPED = {".git", ".venv", "node_modules", "vendor", "__pycache__", "data"}
