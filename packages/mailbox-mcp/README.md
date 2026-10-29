@@ -73,7 +73,10 @@ Then:
 
 1. Download
    [`benethos-mailbox-mcp.mcpb`](https://github.com/benethos-hub/mailbox/releases/latest/download/benethos-mailbox-mcp.mcpb)
-   from the latest release.
+   from the latest release, if the service runs that version. For a
+   service of an older version, take `benethos-mailbox-mcp-<version>.mcpb`
+   from the [release](https://github.com/benethos-hub/mailbox/releases)
+   of that version.
 2. Open the file with Claude Desktop, with a double click or in Claude
    Desktop under Settings, Extensions. It shows the extension as
    **Mailbox**. Install it.
@@ -92,18 +95,22 @@ Then:
 Each release carries the extension twice: as
 `benethos-mailbox-mcp.mcpb`, the link above, which always leads to the
 latest, and as `benethos-mailbox-mcp-<version>.mcpb`. An extension runs
-the version of the server it was made with. To update, download the
-newer file and open it the same way.
+the version of the server it was made with. Update it with the
+service: download the file of the service's new version and open it the
+same way.
 
 ## Install
 
 For Claude Desktop see [Claude Desktop extension](#claude-desktop-extension).
 For other clients there is nothing to install either. An MCP client
 starts it over stdio with [uv](https://docs.astral.sh/uv/)'s
-`uvx benethos-mailbox-mcp` (see below). To have the command at hand:
+`uvx benethos-mailbox-mcp==<version>` (see below). `<version>` is
+always the version of your service, which its `/health` names, such as
+`curl http://127.0.0.1:8080/health`. Without it, uvx takes the newest
+release, which may not match the service. To have the command at hand:
 
 ```sh
-uv tool install benethos-mailbox-mcp      # or: pipx install benethos-mailbox-mcp
+uv tool install benethos-mailbox-mcp==<version>   # or: pipx install benethos-mailbox-mcp==<version>
 benethos-mailbox-mcp --version
 ```
 
@@ -170,7 +177,7 @@ In `claude_desktop_config.json` (Settings, Developer, Edit Config):
   "mcpServers": {
     "mailbox": {
       "command": "uvx",
-      "args": ["benethos-mailbox-mcp"],
+      "args": ["benethos-mailbox-mcp==<version>"],
       "env": {
         "MAILBOX_SERVICE_URL": "http://127.0.0.1:8080",
         "MAILBOX_SERVICE_TOKEN": "<token>"
@@ -180,6 +187,7 @@ In `claude_desktop_config.json` (Settings, Developer, Edit Config):
 }
 ```
 
+`<version>` is the version of your service, see [Install](#install).
 From a clone instead: `"command": "uv"` and
 `"args": ["run", "--directory", "<path to the clone>", "benethos-mailbox-mcp"]`.
 On Windows write the path with `\\` or `/`. Restart Claude Desktop after a
@@ -187,14 +195,42 @@ change.
 
 ## Claude Code
 
+Claude Code starts the server itself, over stdio, with the service's
+address and token:
+
 ```sh
 claude mcp add mailbox \
   -e MAILBOX_SERVICE_URL=http://127.0.0.1:8080 \
   -e MAILBOX_SERVICE_TOKEN=<token> \
-  -- uvx benethos-mailbox-mcp
+  -- uvx benethos-mailbox-mcp==<version>
 ```
 
-Add `-s user` to have it in every project. `claude mcp list` shows whether
+`<version>` is the version of your service, see [Install](#install).
+
+Or it connects to a server that already runs over HTTP, started as in
+[Over HTTP](#over-http) or as an instance beside the service
+([Container](#container)), with that server's bearer token. The
+service's token stays with the server. On the same machine, over http:
+
+```sh
+claude mcp add --transport http mailbox http://127.0.0.1:8000/mcp \
+  --header "Authorization: Bearer <bearer token>"
+```
+
+From another machine, over https, behind a TLS reverse proxy. The
+address is the proxy's with the server's path, `MAILBOX_MCP_PATH`,
+`/mcp` by default:
+
+```sh
+claude mcp add --transport http mailbox https://mcp.example.org/mcp \
+  --header "Authorization: Bearer <bearer token>"
+```
+
+An instance beside the service in operation answers at the path of its
+route in Caddy, which is its `MAILBOX_MCP_PATH`.
+
+`--transport http` names the protocol, streamable HTTP, for both. Add
+`-s user` to have it in every project. `claude mcp list` shows whether
 it connects.
 
 ## Without a client
