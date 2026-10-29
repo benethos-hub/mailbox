@@ -49,7 +49,8 @@ def read(call: Call[T], response: httpx.Response) -> T:
 def api_error(response: httpx.Response) -> ApiError:
     """The error envelope as an ApiError. A validation failure (422) has no
     envelope but a list of what was wrong where, which is what a caller
-    needs to correct the call."""
+    needs to correct the call. A limit says in ``Retry-After`` how long to
+    wait."""
     try:
         body = response.json()
     except ValueError:
@@ -58,7 +59,9 @@ def api_error(response: httpx.Response) -> ApiError:
         error = body["error"]
         if "code" in error and "message" in error:
             code, message = str(error["code"]), str(error["message"])
-            return ApiError(response.status_code, code, message)
+            wait = response.headers.get("Retry-After", "")
+            retry_after = int(wait) if wait.isdigit() else None
+            return ApiError(response.status_code, code, message, retry_after)
     if isinstance(body, dict) and isinstance(body.get("detail"), list):
         reasons = [
             f"{'.'.join(str(p) for p in item.get('loc', ()) if p != 'body')}: "

@@ -75,6 +75,15 @@ class Message(MessageSummary):
 
 
 @dataclass(frozen=True, slots=True)
+class NotAnswering:
+    """An account that did not answer, in a list across accounts."""
+
+    account_id: str
+    code: str
+    message: str
+
+
+@dataclass(frozen=True, slots=True)
 class Page:
     """A page of message summaries, of messages or of drafts."""
 
@@ -82,14 +91,17 @@ class Page:
     next_cursor: str | None
     # Accounts that did not answer, as "account: why".
     not_answering: list[str] = field(default_factory=list)
+    # The same accounts, each with the code of the error.
+    incomplete: list[NotAnswering] = field(default_factory=list)
 
 
 @dataclass(frozen=True, slots=True)
 class Failed:
-    """An id a batch did not do, and why."""
+    """An id a batch did not do, why, and the code of the error."""
 
     id: str
     error: str
+    code: str = "failed"
 
 
 @dataclass(frozen=True, slots=True)

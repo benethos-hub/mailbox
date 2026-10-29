@@ -57,3 +57,10 @@ async def test_get_thread(make_client: Callable) -> None:
     assert found.truncated
     assert [m.id for m in found.messages] == ["msg_1"]
     assert found.messages[0].thread_id == "thr_1"
+
+
+async def test_list_threads_without_a_limit(make_client: Callable) -> None:
+    api = FakeApi({"items": [], "next_cursor": None})
+    await make_client(api).list_threads("acc_1", folder="inbox")
+    path = "/v1/accounts/acc_1/threads"
+    assert api.call() == ("GET", path, {"folder": "inbox"}, None)

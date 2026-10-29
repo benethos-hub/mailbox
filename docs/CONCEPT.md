@@ -2107,7 +2107,9 @@ the same code.
 **Decided 2026-10-09:** it covers the whole REST API, not only what the
 MCP server needs. Every operation is a method of both clients, named
 like its `operationId`, and a test holds every operation of
-`docs/openapi.json` to one, without exceptions. A new route is
+`docs/openapi.json` to one, but the route a link opens: its URL is the
+credential, which another service holds, never a client with a token.
+A new route is
 incomplete until the client has its method. A secret the service
 shows once comes as a `Secret`, kept out of `repr` and `str`.
 

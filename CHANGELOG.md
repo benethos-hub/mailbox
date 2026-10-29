@@ -17,6 +17,18 @@ adheres to [Semantic Versioning](https://semver.org/).
   time it asks what its token may do.
 - `benethos-mailbox-client`: `Folder.subscribed`, whether the folder is
   subscribed on the server, as the API says.
+- `benethos-mailbox-client`: `ApiError.retry_after`, the seconds the
+  `Retry-After` header of a limit asks to wait, else `None`.
+- `benethos-mailbox-client`: `Sent.sent_copy_id`, the copy in the sent
+  folder where the service put one. `Sent.message_id_header` is a
+  string, as the API always answers one.
+- `benethos-mailbox-client`: `Failed.code`, the code of the error a
+  batch answered for an id, and `Page.incomplete`, the accounts that did
+  not answer as records `NotAnswering` with their code. `not_answering`
+  stays as it was.
+- `benethos-mailbox-client`: `list_changes` takes `since` and `limit`
+  as optional, as the API does, and `list_messages`, `list_drafts` and
+  `list_threads` their `limit`.
 
 ### Changed
 
@@ -38,6 +50,15 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `benethos-mailbox-service` needs dnspython 2.9.0 or newer, the first
   version without a known vulnerability. An install from the lockfile,
   as the images do, had it already.
+- `benethos-mailbox-client`: the repr of `Environment` leaves the token
+  out.
+- `benethos-mailbox-client`: the `content_type` of an `AttachmentLink`
+  is a media type, else `application/octet-stream`, as for the bytes of
+  an attachment. The sender of the mail chose it.
+- `benethos-mailbox-client` and `benethos-mailbox-mcp` refuse a
+  `MAILBOX_SERVICE_URL` with a user or password in it. The address is
+  named in the error when the service cannot be reached, which reaches
+  the model.
 
 ### Fixed
 

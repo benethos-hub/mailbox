@@ -50,7 +50,8 @@ uv add benethos-mailbox-client      # or: pip install benethos-mailbox-client
 Make a token on your user's page in the service's UI. The client reads
 it from `MAILBOX_SERVICE_TOKEN`, and the address of the service from
 `MAILBOX_SERVICE_URL` (default `http://127.0.0.1:8080`). Both can be
-passed as arguments instead.
+passed as arguments instead. The address carries no user or password:
+it is named in the errors of the client.
 
 For async code:
 
@@ -109,7 +110,8 @@ stars, so it reaches no log by accident, and `get_secret_value()` reads
 it. A list of messages or drafts answers a `Page` of summaries, with
 `next_cursor` for the next page and, across accounts, `not_answering`
 for those that did not answer. The other lists that page, of accounts,
-users, sends and the audit, answer `Paged`, with `next_cursor` as well.
+threads, users, sends and the audit, answer `Paged`, with `next_cursor`
+as well.
 
 Beside the operations, `update_messages` and `trash_messages` are
 `batch_messages` for one kind of change, and `message_body` builds the
@@ -145,7 +147,7 @@ Everything the client raises is a `MailboxError`:
 | `ConfigurationError` | no token, or an address it refuses |
 | `ServiceUnavailableError` | the service cannot be reached |
 | `ServiceTimeoutError` | the service took the request but did not answer in time |
-| `ApiError` | the API answered with an error: `status`, `code`, `message` |
+| `ApiError` | the API answered with an error: `status`, `code`, `message`, and `retry_after`, the seconds a limit asks to wait, else `None` |
 
 ## Inside
 

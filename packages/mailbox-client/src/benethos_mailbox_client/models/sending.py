@@ -10,10 +10,12 @@ Recipient = tuple[str, str | None]
 
 @dataclass(frozen=True, slots=True)
 class Sent:
-    message_id_header: str | None
+    message_id_header: str
     refused: list[str]
     # Of a reply or a forward: whether the original carries the mark now.
     original_marked: bool | None = None
+    # The copy in the sent folder, where the service put one.
+    sent_copy_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

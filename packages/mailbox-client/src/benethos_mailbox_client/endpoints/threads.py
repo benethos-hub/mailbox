@@ -12,7 +12,11 @@ from .readings import maybe_time, paged
 
 
 def list_threads(
-    account_id: str, *, folder: str, limit: int, cursor: str | None = None
+    account_id: str,
+    *,
+    folder: str,
+    limit: int | None = None,
+    cursor: str | None = None,
 ) -> Call[Paged[ThreadSummary]]:
     """The threads of a folder, newest first. ``folder`` is an id or a
     role. A page may hold fewer threads than ``limit``."""

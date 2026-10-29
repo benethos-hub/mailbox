@@ -116,3 +116,26 @@ async def test_every_error_is_a_mailbox_error(make_client: Callable) -> None:
     client = make_client(lambda _: httpx.Response(500, text="boom"))
     with pytest.raises(MailboxError):
         await client.get_me()
+
+
+@pytest.mark.parametrize(
+    ("status", "headers", "wait"),
+    [
+        (429, {"Retry-After": "7"}, 7),
+        (429, {}, None),
+        (409, {}, None),
+    ],
+)
+async def test_a_limit_says_how_long_to_wait(
+    make_client: Callable, status: int, headers: dict[str, str], wait: int | None
+) -> None:
+    client = make_client(
+        lambda _: httpx.Response(
+            status,
+            headers=headers,
+            json={"error": {"code": "rate_limited", "message": "slow down"}},
+        )
+    )
+    with pytest.raises(ApiError) as caught:
+        await client.request("GET", "/v1/accounts")
+    assert caught.value.retry_after == wait

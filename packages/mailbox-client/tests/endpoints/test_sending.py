@@ -19,9 +19,9 @@ async def test_send_message(make_client: Callable) -> None:
 
 
 async def test_send_draft(make_client: Callable) -> None:
-    api = FakeApi({})
+    api = FakeApi({**SENT, "sent_copy_id": "msg_9", "original_marked": None})
     found = await make_client(api).send_draft("acc_1", "drf_1", "key-2")
     path = "/v1/accounts/acc_1/drafts/drf_1/send"
     assert api.call() == ("POST", path, {}, None)
     assert api.seen[0].headers["idempotency-key"] == "key-2"
-    assert found == Sent(None, [])
+    assert found == Sent("<m@x>", ["b@x.org"], sent_copy_id="msg_9")

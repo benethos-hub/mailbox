@@ -16,6 +16,12 @@ async def test_list_drafts(make_client: Callable) -> None:
     assert api.call() == ("GET", "/v1/accounts/acc_1/drafts", {"limit": "10"}, None)
 
 
+async def test_list_drafts_without_a_limit(make_client: Callable) -> None:
+    api = FakeApi({"items": [], "next_cursor": None})
+    await make_client(api).list_drafts("acc_1")
+    assert api.call() == ("GET", "/v1/accounts/acc_1/drafts", {}, None)
+
+
 async def test_create_draft(make_client: Callable) -> None:
     api = FakeApi({"id": "drf_1"})
     found = await make_client(api).create_draft("acc_1", BODY)

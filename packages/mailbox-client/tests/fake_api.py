@@ -106,7 +106,9 @@ MESSAGE = {
 PAGE = {
     "items": [SUMMARY],
     "next_cursor": "c2",
-    "incomplete": [{"account_id": "acc_2", "message": "timed out"}],
+    "incomplete": [
+        {"account_id": "acc_2", "code": "provider_timeout", "message": "timed out"}
+    ],
 }
 
 SENT = {"message_id_header": "<m@x>", "refused": ["b@x.org"], "original_marked": True}

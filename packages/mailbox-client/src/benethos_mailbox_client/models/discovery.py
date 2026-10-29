@@ -21,7 +21,8 @@ class Hint:
 @dataclass(frozen=True, slots=True)
 class MailServer:
     """A server a candidate names: ``protocol`` imap, pop3, smtp or jmap,
-    ``security`` tls, starttls or none. ``reachable`` None: not tried."""
+    ``security`` tls or starttls, never plain text. ``reachable`` None:
+    not tried."""
 
     protocol: str
     host: str

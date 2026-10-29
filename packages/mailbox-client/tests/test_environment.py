@@ -15,7 +15,7 @@ from benethos_mailbox_client import (
     SyncMailboxClient,
     from_environment,
 )
-from benethos_mailbox_client.environment import DEFAULT_URL
+from benethos_mailbox_client.environment import DEFAULT_URL, connection
 
 ACCOUNT = {"id": "acc_1", "provider": "imap", "email": "me@example.com"}
 KINDS = [MailboxClient, SyncMailboxClient]
@@ -125,3 +125,24 @@ def test_the_environment_is_read_at_one_moment(
     monkeypatch.delenv("MAILBOX_SERVICE_ALLOW_HTTP")
     client = MailboxClient(found.url, found.token, allow_http=found.allow_http)
     assert client.base_url == "http://mailbox-service:8080"
+
+
+def test_the_token_stays_out_of_the_repr(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MAILBOX_SERVICE_TOKEN", "tok_SECRET")
+    found = from_environment()
+    assert found.token == "tok_SECRET"
+    assert "tok_SECRET" not in repr(found)
+
+
+def test_the_headers_of_a_connection_stay_out_of_its_repr() -> None:
+    found = connection("https://mail.test", "tok_SECRET", None)
+    assert found.headers == {"Authorization": "Bearer tok_SECRET"}
+    assert "tok_SECRET" not in repr(found)
+
+
+@pytest.mark.parametrize("kind", KINDS)
+@pytest.mark.parametrize("url", ["https://u:pw_SECRET@host", "http://u@127.0.0.1"])
+def test_a_url_with_a_user_or_password_is_refused(kind: type, url: str) -> None:
+    with pytest.raises(ConfigurationError, match="user or password") as caught:
+        kind(base_url=url, token="tok")
+    assert "pw_SECRET" not in str(caught.value)

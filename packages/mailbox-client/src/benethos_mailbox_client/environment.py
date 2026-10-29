@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import ipaddress
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import httpx
 
@@ -28,10 +28,11 @@ def service_url() -> str:
 class Environment:
     """What the environment says about the service, read at one moment:
     its address, the token, and whether http may go to another machine.
-    Unchecked: a client checks it when it is made."""
+    Unchecked: a client checks it when it is made. Its repr leaves the
+    token out."""
 
     url: str
-    token: str
+    token: str = field(repr=False)
     allow_http: bool
 
 
@@ -50,10 +51,11 @@ def from_environment() -> Environment:
 
 @dataclass(frozen=True, slots=True)
 class Connection:
-    """Where the service is and the token that opens it, checked."""
+    """Where the service is and the token that opens it, checked. Its
+    repr leaves the headers out, which carry the token."""
 
     base_url: str
-    headers: dict[str, str]
+    headers: dict[str, str] = field(repr=False)
 
 
 def connection(
@@ -77,11 +79,15 @@ def connection(
 
 
 def _check_url(url: str, allow_http: bool) -> None:
-    """https anywhere, http to this machine, or anywhere when allowed."""
+    """https anywhere, http to this machine, or anywhere when allowed.
+    Never a user or password in it: the address is named in errors, which
+    reach a model and its logs."""
     try:
         parts = httpx.URL(url)
     except httpx.InvalidURL:
         raise ConfigurationError(f"{URL_ENV} is not a URL: {url}") from None
+    if parts.userinfo:
+        raise ConfigurationError(f"{URL_ENV} must not carry a user or password")
     if parts.scheme == "https" and parts.host:
         return
     if parts.scheme != "http" or not parts.host:
