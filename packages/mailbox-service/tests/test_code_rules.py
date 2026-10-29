@@ -303,3 +303,26 @@ def test_two_test_modules_of_a_folder_share_no_fixture_name() -> None:
         if len(names) > 1
     ]
     assert not violations, "a fixture name twice:\n  " + "\n  ".join(violations)
+
+
+def test_no_live_script_imports_another() -> None:
+    """What the live checks share is in live/checks/ (ARCHITECTURE 13): a
+    script is no library, and importing one loads all it needs."""
+    live = REPOSITORY / "live"
+    scripts = {path.stem for path in live.glob("*.py")}
+    violations = []
+    for path in sorted(live.glob("*.py")):
+        for node in ast.walk(ast.parse(path.read_text("utf-8"))):
+            if isinstance(node, ast.ImportFrom) and not node.level:
+                named = [node.module or ""]
+            elif isinstance(node, ast.Import):
+                named = [alias.name for alias in node.names]
+            else:
+                continue
+            for module in named:
+                if module.split(".")[0] in scripts:
+                    violations.append(f"{path.name}:{node.lineno} {module}")
+    assert len(scripts) > 5
+    assert not violations, "a live script imports another:\n  " + "\n  ".join(
+        violations
+    )
