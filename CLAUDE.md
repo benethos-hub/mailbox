@@ -67,7 +67,8 @@ done. Update the roadmap in the same commit that finishes an item.
   webhook on a receiver at 127.0.0.1), test accounts in `live/.env` (not
   versioned, template `live/.env.example`).
   `MAILBOX_SERVICE_TOKEN=... uv run python live/register.py` adds the test
-  accounts to a running service over its API and checks them.
+  accounts to a running service over its API and checks them, with
+  `--own-service` to a service and database of its own.
 - Run the MCP server: `MAILBOX_SERVICE_TOKEN=... uv run benethos-mailbox-mcp`
   (stdio, `--transport streamable-http` for HTTP).
   For Claude Code and Claude Desktop see `packages/mailbox-mcp/README.md`.
