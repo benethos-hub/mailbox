@@ -6,12 +6,29 @@ from __future__ import annotations
 from collections.abc import Callable
 
 import pytest
+from mcp.server.mcpserver.exceptions import ToolError as SdkToolError
 
-from benethos_mailbox_mcp import render
+from benethos_mailbox_mcp import render, server
 from benethos_mailbox_mcp.errors import ApiError
 from benethos_mailbox_mcp.tools import reading
 
 # --- search_messages ------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [("text", "x" * 201), ("text", ""), ("sender", "a\tb"), ("subject", "a\nb")],
+)
+async def test_a_filter_the_api_would_refuse_is_refused_first(
+    api: Callable, field: str, value: str
+) -> None:
+    """The API takes one line of at most 200 characters and answers its
+    own names, q and from. The tool refuses in its own names first."""
+    fake = api([])
+    built = server.build_server(["list_messages"])
+    with pytest.raises(SdkToolError, match=rf"(?s)validation error.*\n{field}\n"):
+        await built.call_tool("search_messages", {"account_id": "acc_1", field: value})
+    assert fake.calls == []
 
 
 async def test_search_passes_filters_and_answers_summaries(api: Callable) -> None:

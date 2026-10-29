@@ -23,6 +23,17 @@ async def list_folders(account_id: str) -> list[dict[str, Any]]:
     return [render.folder(f) for f in await client().list_folders(account_id)]
 
 
+def _filter(description: str) -> Any:
+    """A filter of the search, held to what the API takes: one line of
+    at most 200 characters."""
+    return Field(
+        min_length=1,
+        max_length=200,
+        pattern=r"^[^\x00-\x1f\x7f]*$",
+        description=f"{description}. One line, at most 200 characters",
+    )
+
+
 async def search_messages(
     account_id: Annotated[
         str | None, Field(description="One account. Left out: every account")
@@ -35,10 +46,10 @@ async def search_messages(
             "where the account has it"
         ),
     ] = None,
-    text: Annotated[str | None, Field(description="Anywhere in the mail")] = None,
-    sender: Annotated[str | None, Field(description="Part of From")] = None,
-    to: Annotated[str | None, Field(description="Part of To")] = None,
-    subject: Annotated[str | None, Field(description="Part of the subject")] = None,
+    text: Annotated[str | None, _filter("Anywhere in the mail")] = None,
+    sender: Annotated[str | None, _filter("Part of From")] = None,
+    to: Annotated[str | None, _filter("Part of To")] = None,
+    subject: Annotated[str | None, _filter("Part of the subject")] = None,
     after: Annotated[
         str | None, Field(description="Received from this day, YYYY-MM-DD")
     ] = None,
