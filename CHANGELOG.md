@@ -27,7 +27,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   not answer as records `NotAnswering` with their code. `not_answering`
   stays as it was.
 - `benethos-mailbox-client`: `list_changes` takes `since` and `limit`
-  as optional, as the API does, and `list_messages` its `limit`.
+  as optional, as the API does, and `list_messages` and `list_drafts`
+  their `limit`.
 
 ### Changed
 
