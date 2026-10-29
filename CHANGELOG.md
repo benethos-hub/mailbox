@@ -30,7 +30,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `benethos-mailbox-mcp`: `share_attachment` takes `expires_in`, a
   link that lives fewer seconds than the service's default.
 - `benethos-mailbox-mcp`: each hit of `search_messages` carries the
-  first 120 characters of its text as `snippet`.
+  first 120 characters of its text as `snippet`. `get_message` marks an
+  inline attachment, such as a logo in a signature, as `(inline)`.
 - `benethos-mailbox-client`: `ApiError.retry_after`, the seconds the
   `Retry-After` header of a limit asks to wait, else `None`.
 - `benethos-mailbox-client`: `Sent.sent_copy_id`, the copy in the sent

@@ -125,3 +125,11 @@ def test_a_snippet_is_one_short_line() -> None:
     shown = render.summary(mail(snippet="Dear Ann,\n\n" + "x" * 300))
     assert shown["snippet"] == ("Dear Ann, " + "x" * 300)[: render.SNIPPET_CHARS]
     assert "snippet" not in render.summary(mail())
+
+
+def test_an_inline_attachment_says_so() -> None:
+    files = [AttachedFile("a1", "logo.png", "image/png", 9, inline=True)]
+    files.append(AttachedFile("a2", "bill.pdf", "application/pdf", 9))
+    lines = render.message("acc_1", mail(attachments=files), 4000).splitlines()
+    assert "attachment: a1 logo.png (image/png, 9 bytes) (inline)" in lines
+    assert "attachment: a2 bill.pdf (application/pdf, 9 bytes)" in lines

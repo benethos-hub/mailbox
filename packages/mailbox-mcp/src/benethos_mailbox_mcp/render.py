@@ -146,9 +146,11 @@ def message(account_id: str, item: Message, max_chars: int) -> str:
     theirs.append(f"subject: {text_values.joined(item.subject or '')}")
     for attachment in item.attachments:
         filename = text_values.joined(attachment.filename or "-")
+        # Inline: shown in the text, such as a logo, not a file of its own.
+        inline = " (inline)" if attachment.inline else ""
         theirs.append(
             f"attachment: {attachment.id} {filename} "
-            f"({attachment.content_type}, {attachment.size} bytes)"
+            f"({attachment.content_type}, {attachment.size} bytes){inline}"
         )
     content = "\n".join(theirs) + "\n\n" + body
     return "\n".join(ours) + "\n\n" + foreign(f"{account_id}/{item.id}", content)
