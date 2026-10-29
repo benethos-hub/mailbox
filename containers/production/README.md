@@ -117,6 +117,10 @@ token, at the same version as the service, the `MAILBOX_VERSION` of
 }
 ```
 
+The MCP server and the service must have the same version to work
+together. The tool `server_status` with `details` shows whether they
+match.
+
 The address is `https://<MAILBOX_DOMAIN>` with the profile `https`, or
 that of your own proxy. Without either, the service answers on this host
 alone, at `http://127.0.0.1:8080`. More, for Claude Desktop, Claude Code

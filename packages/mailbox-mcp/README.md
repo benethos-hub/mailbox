@@ -29,6 +29,12 @@ It reaches mail only through the REST API of
 which has to be running, with the Python client
 [`mailbox-client`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-client).
 It holds no mail password and no mail library.
+
+> **The MCP server and the service must have the same version** to work
+> together. Update both at once. The tool `server_status` with
+> `details` names the service's version and whether it matches this
+> server's (`versions_match`).
+
 The rights of the user whose token it carries decide what it may do. It
 runs in one of two ways. Over stdio, the MCP client starts it, and it ends
 with the client. Over streamable HTTP, it runs as a server of its own.
