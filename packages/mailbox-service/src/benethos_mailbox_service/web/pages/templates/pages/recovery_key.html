@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import card, csrf_field, secret_card with context %}
+{% from "components/ui.html" import card, csrf_field, icon, secret_card with context %}
 {% block title %}Recovery key · {{ APP_NAME }}{% endblock %}
 {% block heading %}Recovery key{% endblock %}
 {% block subheading %}<div class="sub">The master key written out: it opens every stored secret</div>{% endblock %}
@@ -24,7 +24,7 @@
       </div>
       {% endif %}
     </div>
-    <div class="form-actions"><button class="primary" type="submit">Show</button></div>
+    <div class="form-actions"><button class="primary" type="submit">{{ icon("check-lg") }} Show</button></div>
   </form>
 {% endcall %}
 {% endif %}

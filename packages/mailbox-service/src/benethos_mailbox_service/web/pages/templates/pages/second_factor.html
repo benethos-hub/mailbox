@@ -29,7 +29,7 @@
         <input id="f-confirm" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,7}" maxlength="7" required autofocus />
       </div>
     </div>
-    <div class="form-actions"><button class="primary" type="submit">{% if devices %}Add device{% else %}Turn on{% endif %}</button></div>
+    <div class="form-actions"><button class="primary" type="submit">{{ icon("check-lg") }} {% if devices %}Add device{% else %}Turn on{% endif %}</button></div>
   </form>
   <form method="post" action="/ui/second-factor/totp/cancel">
     {{ csrf_field() }}

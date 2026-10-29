@@ -193,6 +193,18 @@ def test_every_editor_has_a_way_back(
     )
 
 
+def test_every_primary_action_has_an_icon() -> None:
+    """docs/UI.md 7: the primary action of a page keeps its word, with an
+    icon beside it."""
+    bare = []
+    for template in sorted((TEMPLATE_DIR / "pages").glob("*.html")):
+        text = template.read_text(encoding="utf-8")
+        for button in re.findall(r"<button[^>]*primary[^>]*>.*?</button>", text):
+            if "icon(" not in button:
+                bare.append(f"{template.name}: {button}")
+    assert not bare, bare
+
+
 def test_every_class_a_template_names_is_styled() -> None:
     """A class without a rule in app.css is a leftover or a typo, as the
     hidden "Select" heading of the mail list once was."""

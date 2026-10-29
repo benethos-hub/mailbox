@@ -1,4 +1,5 @@
 {% extends "bare.html" %}
+{% from "components/ui.html" import icon %}
 {% block title %}Sign in · {{ APP_NAME }}{% endblock %}
 {% block heading %}Sign in{% endblock %}
 {% block content %}
@@ -15,7 +16,7 @@
     <input id="f-password" name="password" type="password" autocomplete="current-password" required />
   </div>
   <div class="form-actions">
-    <button class="primary" type="submit">Sign in</button>
+    <button class="primary" type="submit">{{ icon("check-lg") }} Sign in</button>
   </div>
 </form>
 {% endblock %}
