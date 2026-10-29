@@ -322,6 +322,8 @@ def sent(result: Sent) -> dict[str, Any]:
         "sent": True,
         "message_id_header": result.message_id_header,
     }
+    if result.sent_copy_id is not None:
+        found["sent_copy_id"] = result.sent_copy_id
     if result.refused:
         found["refused"] = result.refused
     if result.original_marked is not None:

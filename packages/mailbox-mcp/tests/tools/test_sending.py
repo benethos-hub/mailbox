@@ -22,7 +22,11 @@ async def test_send_message(api: Callable) -> None:
     result = await sending.send_message(
         "acc_1", to=["bob@example.com"], subject="Hi", text="Hello"
     )
-    assert result == {"sent": True, "message_id_header": "<m1@example.com>"}
+    assert result == {
+        "sent": True,
+        "message_id_header": "<m1@example.com>",
+        "sent_copy_id": "msg_s",
+    }
     [call], [key] = handler.calls, handler.keys
     assert call.path == "/v1/accounts/acc_1/send"
     assert key is not None and key.startswith("mcp-") and len(key) == 4 + 64

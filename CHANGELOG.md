@@ -20,6 +20,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `benethos-mailbox-mcp`: `list_accounts` names three more things an
   account may lack in `unsupported`: a mail in several folders,
   conversations and a copy in the sent folder.
+- `benethos-mailbox-mcp`: `send_message` and `send_draft` answer
+  `sent_copy_id`, the copy in the sent folder where the account keeps
+  one.
 - `benethos-mailbox-client`: `ApiError.retry_after`, the seconds the
   `Retry-After` header of a limit asks to wait, else `None`.
 - `benethos-mailbox-client`: `Sent.sent_copy_id`, the copy in the sent
