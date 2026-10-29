@@ -70,3 +70,20 @@ def test_marks_read_only_show_and_change_nothing(
     page = page_with(ui, services, account_id, read_only)
     assert '<span class="tag">answered</span>' in page
     assert "$answered" not in page
+
+
+def test_the_account_page_says_what_the_account_can(
+    ui: TestClient, services: Services, account_id: str
+) -> None:
+    """Why a button is missing on its mail pages, in words."""
+    memory = memory_of(services, account_id)
+    memory.given = Abilities.of(EVERY, written={Mark.ANSWERED})
+    relearn(services, account_id)
+    page = ui.get(f"/ui/accounts/{account_id}").text
+    assert '<span class="tag">conversations</span>' in page
+    assert '<span class="tag">answered</span>' in page
+    memory.given = Abilities.of(EVERY - {Capability.THREADS})
+    relearn(services, account_id)
+    page = ui.get(f"/ui/accounts/{account_id}").text
+    assert '<span class="tag">conversations</span>' not in page
+    assert "Sets marks" not in page

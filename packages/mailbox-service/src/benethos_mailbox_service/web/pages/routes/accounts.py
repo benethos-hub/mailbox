@@ -12,8 +12,9 @@ from pydantic import SecretStr
 from starlette.datastructures import FormData
 
 from benethos_mailbox_common.log import redact
+from benethos_mailbox_common.mail import marks
 
-from ....data.models import AccountStatus, ProviderType
+from ....data.models import Account, AccountStatus, Capability, ProviderType
 from ....domain.accounts import AccountService, Rename, connection_of, connections
 from ....domain.discovery import connectable, sign_ins
 from ....domain.rights import Access
@@ -34,6 +35,34 @@ router = APIRouter()
 _FIELDS = {f.name: f for c in connections() for f in c.fields}
 SETTING_FIELDS = tuple(_FIELDS)
 NUMBERS = {name for name, field in _FIELDS.items() if field.number}
+
+
+# What an account can do, in a person's words, in the order shown: why a
+# button is missing on its mail pages. The rest is not for a person.
+CAN = {
+    Capability.SEARCH: "search",
+    Capability.THREADS: "conversations",
+    Capability.READ_STATE: "read state",
+    Capability.STARS: "stars",
+    Capability.KEYWORDS: "keywords",
+    Capability.FOLDERS: "folders",
+    Capability.MOVE: "move",
+    Capability.LABELS: "several folders",
+    Capability.TRASH: "trash",
+    Capability.DRAFTS: "drafts",
+    Capability.SEND: "send",
+    Capability.PUSH: "push",
+}
+
+
+def _can(account: Account) -> list[str]:
+    """What the account can do, in words."""
+    return [word for able, word in CAN.items() if able in account.capabilities]
+
+
+def _marks(account: Account) -> list[str]:
+    """The marks the account sets, in words (UNIFORM U3)."""
+    return [mark.word for mark in marks.marks_of(account.marks.written)]
 
 
 def _settings(form: FormData) -> dict[str, str | int | bool]:
@@ -277,6 +306,8 @@ def _account_page(
         in_browser=_in_browser(request, found.provider),
         with_code=_with_code(request, found.provider),
         connection=connection_of(found.provider),
+        can=_can(found),
+        sets_marks=_marks(found),
         sync=status.sync_of(caller, account_id),
     )
 
