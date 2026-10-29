@@ -184,7 +184,7 @@ A person finds the delete button of a record in the same place on every
 detail page, and never anywhere else. The entries of its lists have
 their bin on their row.
 
-Detail pages: Account, User, Role, Webhook, Message, Draft, Conversation.
+Detail pages: Account, User, Role, Webhook, Message, Conversation.
 
 ### 4.3 Editor
 
@@ -193,7 +193,8 @@ Connect an account, New user, New role, New webhook, Compose. It has
 **Create** (or
 **Send**) as the primary button and **Cancel** back to the list. A record
 that needs one or two fields (a token, a folder) is created
-from the card it belongs to, not from an editor page.
+from the card it belongs to, not from an editor page. A stored draft
+opens in Compose, its **Delete draft** among the form's buttons.
 
 ### 4.4 Reader
 
