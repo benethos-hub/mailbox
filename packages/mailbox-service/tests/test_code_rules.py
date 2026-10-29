@@ -326,3 +326,16 @@ def test_no_live_script_imports_another() -> None:
     assert not violations, "a live script imports another:\n  " + "\n  ".join(
         violations
     )
+
+
+def test_no_package_entry_defines_a_class() -> None:
+    """The entry of a package offers, it does not implement
+    (ARCHITECTURE 5.2): no __init__.py of the four packages defines a
+    class."""
+    violations = [
+        f"{path.relative_to(REPOSITORY).as_posix()}: {node.name}"
+        for path in sorted((REPOSITORY / "packages").glob("*/src/**/__init__.py"))
+        for node in ast.parse(path.read_text("utf-8")).body
+        if isinstance(node, ast.ClassDef)
+    ]
+    assert not violations, "a class in a package's entry:\n  " + "\n  ".join(violations)

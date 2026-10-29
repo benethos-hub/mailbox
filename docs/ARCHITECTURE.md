@@ -235,6 +235,10 @@ packages/mailbox-service/
         rights.py       # what the mail pages offer, by the rights on an account
         effective.py    # a user's effective rights, grouped for reading
         errors.py       # errors as a page
+        security.py     # the security headers of every answer under
+                        #   /ui, the content security policy
+        handlers.py     # what the UI answers to the sign-in required,
+                        #   a password to change, a failed form, CSRF
         routes/         # one module per area
         templates/      # base and bare, partials, components (macros), pages
         static/         # app.css, app.js, early.js (read before the page
