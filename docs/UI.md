@@ -197,9 +197,9 @@ from the card it belongs to, not from an editor page.
 
 ### 4.4 Reader
 
-The mail page of an account: folders on the left, the list in the
-middle, the message where the list was when one is opened, the
-breadcrumb the way back to its folder. Not a three-pane client. The
+The mail page of an account: folders on the left, the list beside
+them; a message opens on a page of its own, the breadcrumb the way back
+to its folder. Not a three-pane client. The
 rework keeps this layout and gives it the filter bar and the pager of
 every other list. The batch bar above the list asks for a folder only
 while "move to" is chosen, and the head of the list ticks every row.
