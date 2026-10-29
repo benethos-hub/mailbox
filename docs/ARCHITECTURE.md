@@ -349,6 +349,9 @@ packages/mailbox-service/
         base.py         # the contract: Reads, and one protocol for each
                         #   thing an adapter may do beyond it
         rules.py        # what every adapter answers the same way
+        tokenapi.py     # TokenApi, signed: what Gmail's and Graph's
+                        #   clients share, the access token renewed
+                        #   once, the pause the server asked for
         registry.py     # build_provider, sign_in, probe_server: the
                         #   adapter of a kind, its settings by default
         connections.py  # how each kind of account is connected, as the
