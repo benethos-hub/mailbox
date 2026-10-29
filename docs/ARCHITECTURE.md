@@ -565,7 +565,8 @@ packages/mailbox-mcp/
       reading.py        # folders, search, a message, what is new,
                         #   attachments, a link to one for another
                         #   service
-      writing.py        # change messages, create a folder
+      writing.py        # change messages, create, rename or move a
+                        #   folder
       drafts.py         # list, write, replace, delete drafts
       sending.py        # send a mail, send a draft
       status.py         # server_status: what runs, from memory, and
