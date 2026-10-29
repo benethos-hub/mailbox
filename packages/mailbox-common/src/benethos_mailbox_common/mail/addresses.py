@@ -1,8 +1,31 @@
 """An address as people read it: ``Name <email>``, or the email alone.
 Not the header of a message, which ``email.utils.formataddr`` writes,
-encoding a name beyond ASCII."""
+encoding a name beyond ASCII. And the addresses a person or a model
+typed, split up before they are judged."""
 
 from __future__ import annotations
+
+from dataclasses import dataclass
+from email.utils import getaddresses
+
+
+@dataclass(frozen=True, slots=True)
+class Parsed:
+    """An address as it was typed, not yet judged: ``email`` may be no
+    address at all."""
+
+    name: str | None
+    email: str
+
+
+def parsed(text: str) -> list[Parsed]:
+    """The addresses in ``text``: ``Name <a@example.org>, b@example.org``,
+    a semicolon between them as well as a comma. A name with a comma
+    needs quotes: ``"Smith, Ann" <ann@example.org>``."""
+    text = text.replace(";", ",").strip()
+    if not text:
+        return []
+    return [Parsed(name or None, email) for name, email in getaddresses([text])]
 
 
 def readable(name: str | None, email: str, *, quoted: bool = False) -> str:

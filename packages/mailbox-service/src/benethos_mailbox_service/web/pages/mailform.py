@@ -9,7 +9,6 @@ second click on Send returns the first result instead of sending twice.
 from __future__ import annotations
 
 import base64
-from email.utils import getaddresses
 from typing import Any
 
 from fastapi import Request
@@ -57,15 +56,12 @@ def addresses_text(values: list[Address]) -> str:
 
 def recipients(field: str, value: str) -> list[Recipient]:
     """``Name <a@example.org>, b@example.org``. A semicolon separates too."""
-    value = value.replace(";", ",").strip()
-    if not value:
-        return []
     found = []
-    for name, email in getaddresses([value]):
+    for address in addresses.parsed(value):
         try:
-            found.append(Recipient(email=email, name=name or None))
+            found.append(Recipient(email=address.email, name=address.name))
         except ValidationError:
-            shown = email or value
+            shown = address.email or value.strip()
             raise ComposeError(f"{field}: {shown} is not an address") from None
     return found
 

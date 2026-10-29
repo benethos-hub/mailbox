@@ -5,10 +5,11 @@ from __future__ import annotations
 
 import base64
 import binascii
-from email.utils import parseaddr
 from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field
+
+from benethos_mailbox_common.mail import addresses as typed_addresses
 
 from ..client import message_body
 from ..errors import ToolError
@@ -112,13 +113,14 @@ AttachFrom = Annotated[
 
 
 def recipients(addresses: list[str] | None) -> list[Recipient]:
-    """``Name <address>`` or plain addresses, as the model wrote them."""
+    """``Name <address>`` or plain addresses, as the model wrote them,
+    one in each."""
     found = []
     for value in addresses or []:
-        name, email = parseaddr(value)
-        if "@" not in email:
+        typed = typed_addresses.parsed(value)
+        if len(typed) != 1 or "@" not in typed[0].email:
             raise ToolError(f"not an address: {value}")
-        found.append((email, name or None))
+        found.append((typed[0].email, typed[0].name))
     return found
 
 
