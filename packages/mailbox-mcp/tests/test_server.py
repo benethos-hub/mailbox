@@ -319,3 +319,52 @@ async def test_a_tool_error_logs_its_kind(caplog: pytest.LogCaptureFixture) -> N
         await server._logged(get_attachment, server._Held())()
     [record] = caplog.records
     assert record.getMessage() == "tool get_attachment failed: the PDF took too long"
+
+
+@pytest.mark.parametrize(
+    ("status", "body", "said", "valid"),
+    [
+        (
+            409,
+            {"error": {"code": "conflict", "message": "the folder exists"}},
+            "the folder exists (conflict, HTTP 409)",
+            "yes",
+        ),
+        (
+            422,
+            {"detail": [{"loc": ["query", "q"], "msg": "String too long"}]},
+            "query.q: String too long (validation_error, HTTP 422)",
+            "yes",
+        ),
+        (
+            429,
+            {"error": {"code": "rate_limited", "message": "too many requests"}},
+            "too many requests (rate_limited, HTTP 429)",
+            "unknown",
+        ),
+        (
+            501,
+            {"error": {"code": "not_supported", "message": "no threads here"}},
+            "no threads here (not_supported, HTTP 501)",
+            "yes",
+        ),
+        (
+            503,
+            {"error": {"code": "unavailable", "message": "starting"}},
+            "starting (unavailable, HTTP 503)",
+            "unknown",
+        ),
+    ],
+)
+async def test_what_the_model_reads_of_an_error(
+    api: Callable, status: int, body: dict[str, object], said: str, valid: str
+) -> None:
+    """A limit and a service not ready answer before the token is looked
+    at: they say nothing of it."""
+    api(body, status)
+    held = server._Held()
+    logged = server._logged(reading.list_folders, held)
+    with pytest.raises(ToolError) as caught:
+        await logged("acc_1")
+    assert str(caught.value) == said
+    assert held.running.seen.token_valid == valid
