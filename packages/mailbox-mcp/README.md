@@ -195,6 +195,9 @@ change.
 
 ## Claude Code
 
+Claude Code starts the server itself, over stdio, with the service's
+address and token:
+
 ```sh
 claude mcp add mailbox \
   -e MAILBOX_SERVICE_URL=http://127.0.0.1:8080 \
@@ -203,7 +206,31 @@ claude mcp add mailbox \
 ```
 
 `<version>` is the version of your service, see [Install](#install).
-Add `-s user` to have it in every project. `claude mcp list` shows whether
+
+Or it connects to a server that already runs over HTTP, started as in
+[Over HTTP](#over-http) or as an instance beside the service
+([Container](#container)), with that server's bearer token. The
+service's token stays with the server. On the same machine, over http:
+
+```sh
+claude mcp add --transport http mailbox http://127.0.0.1:8000/mcp \
+  --header "Authorization: Bearer <bearer token>"
+```
+
+From another machine, over https, behind a TLS reverse proxy. The
+address is the proxy's with the server's path, `MAILBOX_MCP_PATH`,
+`/mcp` by default:
+
+```sh
+claude mcp add --transport http mailbox https://mcp.example.org/mcp \
+  --header "Authorization: Bearer <bearer token>"
+```
+
+An instance beside the service in operation answers at the path of its
+route in Caddy, which is its `MAILBOX_MCP_PATH`.
+
+`--transport http` names the protocol, streamable HTTP, for both. Add
+`-s user` to have it in every project. `claude mcp list` shows whether
 it connects.
 
 ## Without a client
