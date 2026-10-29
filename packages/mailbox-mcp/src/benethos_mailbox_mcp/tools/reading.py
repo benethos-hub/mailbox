@@ -280,12 +280,12 @@ async def share_attachment(
     link = await client().share_attachment(account_id, message_id, attachment_id)
     source = f"{account_id}/{message_id}/{attachment_id}"
     head = (
-        f"Link to attachment {source}: {link.content_type}, {link.size} bytes. "
+        f"Link to attachment {source}: {link.size} bytes. "
         f"It can be fetched once, until {link.expires_at.isoformat()}.\n"
         f"URL: {link.url.get_secret_value()}"
     )
-    # The sender chose the name, so it stays inside the marker.
-    name = f"filename: {link.filename or '-'}"
+    # The sender chose the name and the type, so they stay inside the marker.
+    name = f"filename: {link.filename or '-'}\ntype: {link.content_type}"
     return result(f"{head}\n\n" + render.foreign(source, name))
 
 
