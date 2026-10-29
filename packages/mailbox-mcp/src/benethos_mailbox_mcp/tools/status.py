@@ -25,14 +25,14 @@ _INDENT = "  "
 @dataclass(frozen=True, slots=True)
 class Seen:
     """The service as this server's own requests last found it.
-    ``reachable`` and ``token_accepted`` read yes, no or unknown.
+    ``reachable`` and ``token_valid`` read yes, no or unknown.
     ``checked`` is the ``time.monotonic()`` of the last request, None for
     none."""
 
     token_set: bool = False
     reachable: str = UNKNOWN
     checked: float | None = None
-    token_accepted: str = UNKNOWN
+    token_valid: str = UNKNOWN
     version: str | None = None
 
 
@@ -107,7 +107,7 @@ def _upstream(running: Running, now: float) -> list[tuple[str, object]]:
         ("token_set", _yes(seen.token_set)),
         ("service_version", seen.version or UNKNOWN),
         ("versions_match", matches),
-        ("token_accepted", seen.token_accepted),
+        ("token_valid", seen.token_valid),
         ("tools_offered", ", ".join(running.offered) or "none"),
     ]
 

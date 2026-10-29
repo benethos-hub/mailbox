@@ -46,7 +46,7 @@ async def check_status(
         "with details: the service answered, took the token, its version matches",
         not detailed.is_error
         and found.get("reachable") == "yes"
-        and found.get("token_accepted") == "yes"
+        and found.get("token_valid") == "yes"
         and found.get("service_version") == core["version"]
         and found.get("versions_match") == "yes",
         f"service {found.get('service_version')}, server {core['version']}",

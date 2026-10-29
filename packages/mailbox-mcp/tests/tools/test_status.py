@@ -32,7 +32,7 @@ UPSTREAM = [
     "token_set",
     "service_version",
     "versions_match",
-    "token_accepted",
+    "token_valid",
     "tools_offered",
 ]
 
@@ -119,7 +119,7 @@ def test_the_answer_of_a_server_that_saw_nothing() -> None:
         "token_set": "no",
         "service_version": "unknown",
         "versions_match": "unknown",
-        "token_accepted": "unknown",
+        "token_valid": "unknown",
         "tools_offered": "none",
     }
 
@@ -169,7 +169,7 @@ async def test_a_service_of_the_same_version_that_took_the_token() -> None:
     service.version = __version__
     async with connected(following(service, READ)) as client:
         await until(lambda: service.asked >= 1)
-        found = await settled(client, "token_accepted", "yes")
+        found = await settled(client, "token_valid", "yes")
     assert found["reachable"] == "yes"
     assert found["service_version"] == __version__
     assert found["versions_match"] == "yes"
@@ -202,7 +202,7 @@ async def test_a_refused_token() -> None:
     async with connected(following(service, READ)) as client:
         service.status = 401
         await client.told()
-        found = await settled(client, "token_accepted", "no")
+        found = await settled(client, "token_valid", "no")
         assert await client.tools() == ["server_status"]
     assert found["reachable"] == "yes"
     assert found["tools_offered"] == "none"
@@ -213,7 +213,7 @@ async def test_a_tool_call_tells_what_it_found() -> None:
     service.refusal = (401, "unauthorized")
     async with connected(following(service, READ, every=0)) as client:
         await client.session.call_tool("get_message", MESSAGE)
-        found = await settled(client, "token_accepted", "no")
+        found = await settled(client, "token_valid", "no")
     assert found["reachable"] == "yes"
 
 
@@ -224,12 +224,12 @@ async def test_a_tool_call_to_a_service_that_is_gone() -> None:
         service.down = True
         await client.session.call_tool("list_accounts", {})
         found = await settled(client, "reachable", "no")
-    assert found["token_accepted"] == "unknown"
+    assert found["token_valid"] == "unknown"
 
 
 def test_the_start_saw_the_service_take_the_token() -> None:
     seen = server.seen_at_start(token_set=True)
-    assert (seen.token_set, seen.reachable, seen.token_accepted) == (
+    assert (seen.token_set, seen.reachable, seen.token_valid) == (
         True,
         "yes",
         "yes",

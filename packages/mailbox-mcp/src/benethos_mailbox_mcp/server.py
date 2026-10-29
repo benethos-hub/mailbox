@@ -305,22 +305,22 @@ def _saw(
     if isinstance(exc, ConfigurationError):
         return running
     seen = running.seen
-    accepted = seen.token_accepted
+    valid = seen.token_valid
     if exc is None or isinstance(exc, ApiError):
         reachable = "yes"
         if token and exc is None:
-            accepted = "yes"
+            valid = "yes"
         elif token and isinstance(exc, ApiError):
             if refused_token(exc):
-                accepted = "no"
+                valid = "no"
             elif exc.status not in _BEFORE_THE_TOKEN:
-                accepted = "yes"
+                valid = "yes"
     else:
         reachable = "no"
     seen = replace(
         seen,
         reachable=reachable,
-        token_accepted=accepted,
+        token_valid=valid,
         checked=time.monotonic(),
         version=version or seen.version,
     )
