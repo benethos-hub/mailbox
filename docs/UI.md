@@ -612,7 +612,8 @@ These rules bind every page, the reworked ones and the ones to come.
 5. **Every form that goes through is Post/Redirect/Get** with one
    message. A refused editor is shown again as 4.7 says. Every
    destructive form asks first. Every list with a filter is a `GET`.
-6. **Words**: the button names of 6.2, tags in lower case, headings in
+6. **Words**: the button names of 6.2, tags in lower case but for an
+   acronym (`API only`), headings in
    sentence case, the record's name in the heading of its detail page.
 7. **Tests**: a page has at least one test in `tests/web/pages/test_ui_*.py` that
    opens it as a user with the right, one that shows it hidden without
