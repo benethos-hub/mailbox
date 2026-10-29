@@ -493,11 +493,19 @@ receiver reports nothing. Built last, if at all.
   | `--surface` | `#ffffff` | `#171d2b` |
   | `--surface-2` | `#eef3fa` | `#1f2736` |
   | `--border` | `#dde5f0` | `#2c3648` |
+  | `--border-strong` | `#c9d3e1` | `#3a4659` |
   | `--text` | `#14213d` | `#e6ebf5` |
   | `--text-muted` | `#56657e` | `#9aa8bf` |
   | `--text-faint` | `#5f6e86` | `#8391a8` |
   | `--accent` | `#2560c8` | `#6ea0ff` |
   | `--accent-soft` | `#e8f0fc` | `#1d2c4a` |
+  | `--on-accent` | `#ffffff` | `#0f1420` |
+  | `--ok` | `#13703f` | `#4ac98a` |
+  | `--ok-soft` | `#e5f5ec` | `#173326` |
+  | `--bad` | `#b5301c` | `#f0776a` |
+  | `--err-soft` | `#fdefed` | `#3a1f1f` |
+  | `--warn` | `#955204` | `#e0a458` |
+  | `--warn-soft` | `#fdf5e8` | `#33291a` |
 
 - **Density**: a little more air than today. Row height 40 px, card
   padding 20 px, one type size for text and one for the small line under
