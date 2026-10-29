@@ -35,7 +35,7 @@ def list_messages(
     unread: bool | None = None,
     starred: bool | None = None,
     has_attachments: bool | None = None,
-    limit: int,
+    limit: int | None = None,
     cursor: str | None = None,
 ) -> Call[Page]:
     """One account's messages, newest first. ``folder`` is an id or a

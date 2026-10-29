@@ -218,3 +218,9 @@ async def test_batch_messages(make_client: Callable) -> None:
         {"ids": ["m1"], "action": "delete", "permanent": True},
     )
     assert found == Outcome(done=["m1"], failed=[])
+
+
+async def test_list_messages_without_a_limit(make_client: Callable) -> None:
+    api = FakeApi(PAGE)
+    await make_client(api).list_messages("acc_1")
+    assert api.call() == ("GET", "/v1/accounts/acc_1/messages", {}, None)
