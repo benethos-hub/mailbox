@@ -357,13 +357,39 @@ def test_sign_in_with_a_code() -> None:
     assert "Sign in again with a code" in landed
 
 
+def test_the_code_has_a_page_of_its_own() -> None:
+    """The post answers with a redirect: a reload of the page shows the
+    same code and starts no second sign-in at the provider."""
+    endpoint = TokenEndpoint(code())
+    client, _, _ = _with_code(endpoint)
+    answer = post(client, "/ui/oauth/microsoft/device", follow_redirects=False)
+    assert answer.status_code == 303
+    page = answer.headers["location"]
+    assert page.startswith("/ui/oauth/microsoft/device/")
+    assert page.endswith("?back=%2Fui%2Faccounts%2Fnew")
+    for _ in range(2):
+        shown = client.get(page)
+        assert shown.status_code == 200 and "ABCD-EFGH" in shown.text
+        assert 'href="/ui/accounts/new">Cancel' in shown.text
+    assert len(endpoint.forms) == 1
+
+
+def test_the_page_of_an_unknown_sign_in() -> None:
+    client, _, _ = _with_code(TokenEndpoint())
+    answer = client.get("/ui/oauth/microsoft/device/made-up", follow_redirects=False)
+    assert answer.status_code == 303
+    assert answer.headers["location"] == "/ui/accounts/new"
+
+
 def test_check_now_without_script() -> None:
     client, _, clock = _with_code(TokenEndpoint(code(), signed_in()))
     _, url = _code_page(client)
     answer = _check(client, url, htmx=False)
-    assert answer.status_code == 200
-    assert "microsoft has not seen the sign-in yet." in answer.text
-    assert "ABCD-EFGH" in answer.text
+    assert answer.status_code == 303
+    assert answer.headers["location"].startswith(url + "?back=")
+    shown = client.get(answer.headers["location"]).text
+    assert "microsoft has not seen the sign-in yet." in shown
+    assert "ABCD-EFGH" in shown
     clock.now += timedelta(seconds=5)
     answer = _check(client, url, htmx=False)
     assert answer.status_code == 303

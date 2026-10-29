@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import action, breadcrumb, card, credentials, csrf_field, danger_card, fact, facts, link_button with context %}
+{% from "components/ui.html" import action, breadcrumb, card, credentials, csrf_field, danger_card, fact, facts, icon, link_button with context %}
 {% from "components/connection.html" import connection_fields %}
 {% block title %}{{ account.email }} · {{ APP_NAME }}{% endblock %}
 {% block heading %}{{ account.email }}{% endblock %}
@@ -25,6 +25,8 @@
   {% endfor %}
   {% endif %}
   {% call fact("Credentials") %}{{ credentials(account.credentials) }}{% endcall %}
+  {% if can %}{% call fact("Can") %}{% for word in can %}<span class="tag">{{ word }}</span> {% endfor %}{% endcall %}{% endif %}
+  {% if sets_marks %}{% call fact("Sets marks") %}{% for word in sets_marks %}<span class="tag">{{ word }}</span> {% endfor %}{% endcall %}{% endif %}
   {% if sync is not none %}
   {% call fact("Last sync") %}{{ sync.last_sync_at | when }}{% if sync.last_error %} <span class="tag bad">failed {{ sync.last_error_at | when }}</span> <span class="muted">{{ sync.last_error }}</span>{% endif %}{% endcall %}
   {% endif %}
@@ -54,7 +56,7 @@
     {{ connection_fields(connection, typed.settings if typed else account.settings, editing=True) }}
   </details>
   {% endif %}
-  <div class="form-actions"><button class="primary" type="submit">Save</button></div>
+  <div class="form-actions"><button class="primary" type="submit">{{ icon("check-lg") }} Save</button></div>
 </form>
 {% if signs_in_with_oauth %}
 <div class="fold toolbar">
@@ -64,14 +66,14 @@
   <form class="inline" method="post" action="/ui/oauth/{{ account.provider.value }}/start">
     {{ csrf_field() }}
     <input type="hidden" name="account_id" value="{{ account.id }}" />
-    <button class="{{ 'primary' if account.status.value == 'needs_reauth' else '' }}" type="submit">Sign in again</button>
+    <button class="{{ 'primary' if account.status.value == 'needs_reauth' else '' }}" type="submit">{{ icon("check-lg") }} Sign in again</button>
   </form>
   {% endif %}
   {% if account.provider.value in with_code %}
   <form class="inline" method="post" action="/ui/oauth/{{ account.provider.value }}/device">
     {{ csrf_field() }}
     <input type="hidden" name="account_id" value="{{ account.id }}" />
-    <button class="{{ 'primary' if account.status.value == 'needs_reauth' and not browser else '' }}" type="submit">Sign in again with a code</button>
+    <button class="{{ 'primary' if account.status.value == 'needs_reauth' and not browser else '' }}" type="submit">{{ icon("check-lg") }} Sign in again with a code</button>
   </form>
   {% endif %}
 </div>

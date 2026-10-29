@@ -154,6 +154,7 @@ def test_the_page_says_whether_a_user_can_sign_in(
     saved = ui.get(access).text
     assert "not possible: no password yet" in saved
     assert "Set password" in saved and "Make a one-time password" in saved
+    assert "data-confirm=\"Replace this user's password?" in saved
     secret = "a password for the bot user"
     post(
         ui,
@@ -201,6 +202,17 @@ def test_change_disable_and_delete_a_user(ui: TestClient, services: Services) ->
     deleted = post(ui, f"{url}/delete")
     assert "User deleted" in deleted.text
     assert ui.get(url).status_code == 404
+
+
+def test_the_users_are_hidden_without_the_right(
+    app_client: TestClient, services: Services, account_id: str
+) -> None:
+    """docs/UI.md 8.7: a page shown with its right, hidden without it."""
+    sign_in(
+        app_client,
+        *browser_user(services, Grant(accounts=[account_id], allow=["mail.read"])),
+    )
+    assert app_client.get("/ui/users").status_code == 403
 
 
 def test_no_escalation_through_the_form(
@@ -310,7 +322,7 @@ def test_token_days_must_be_a_number(ui: TestClient, services: Services) -> None
         f"/ui/users/{user.id}/tokens",
         {"name": "t", "days": "99999999999"},
     )
-    assert "from 1 to 3650" in answer.text
+    assert "at most 3650 days" in answer.text
     assert services.tokens.list_tokens(ADMIN, user.id) == []
 
 

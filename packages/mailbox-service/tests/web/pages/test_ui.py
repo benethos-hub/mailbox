@@ -177,8 +177,12 @@ def test_the_overview_starts_with_the_user(
     page = app_client.get("/ui").text
     assert "<h2>You</h2>" in page and "readers" in page
     assert "this is the first" in page
-    # The account opens its mail. Its page needs get_account.
-    assert f'href="/ui/accounts/{account_id}/mail"' in page
+    # The account opens its mail, by an icon as on Accounts. Its page
+    # needs get_account.
+    assert (
+        f'<a class="btn small icon-btn" href="/ui/accounts/{account_id}/mail" '
+        'title="Mail" aria-label="Mail of ' in page
+    )
     assert f'href="/ui/accounts/{account_id}"' not in page
     # Without accounts.read, no service card.
     assert "<h2>Service</h2>" not in page
@@ -186,6 +190,12 @@ def test_the_overview_starts_with_the_user(
     again = TestClient(app_client.app)
     sign_in(again, name, password)
     assert "before this one" in again.get("/ui").text
+
+
+def test_no_account_yet_sits_in_its_card(ui: TestClient) -> None:
+    page = ui.get("/ui").text
+    accounts = page.split("<h2>Your accounts</h2>", 1)[1].split("</section>", 1)[0]
+    assert "No account yet, or none you may use." in accounts
 
 
 def test_the_overview_shows_the_service_to_who_may_list_accounts(

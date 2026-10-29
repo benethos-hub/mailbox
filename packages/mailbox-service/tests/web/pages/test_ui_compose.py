@@ -193,6 +193,16 @@ def test_saving_a_draft_keeps_its_attachments(
     assert "plan.txt" not in dropped.text
 
 
+def test_the_drafts_are_hidden_without_the_right(
+    app_client: TestClient, services: Services, account_id: str
+) -> None:
+    sign_in(
+        app_client,
+        *browser_user(services, Grant(accounts=[account_id], allow=["mail.read"])),
+    )
+    assert app_client.get(f"/ui/accounts/{account_id}/drafts").status_code == 403
+
+
 def test_sending_needs_its_right(
     app_client: TestClient, services: Services, account_id: str
 ) -> None:

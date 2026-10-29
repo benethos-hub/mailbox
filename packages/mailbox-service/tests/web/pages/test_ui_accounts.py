@@ -115,6 +115,9 @@ def test_an_unknown_provider_is_refused(ui: TestClient) -> None:
         ui, "/ui/accounts", {"email": "x@example.org", "provider": "carrier-pigeon"}
     )
     assert "Unknown provider." in answer.text
+    # The forms always send one: none is no IMAP account by default.
+    answer = post(ui, "/ui/accounts", {"email": "x@example.org"})
+    assert "Unknown provider." in answer.text
 
 
 def test_change_verify_and_remove(ui: TestClient, account_id: str) -> None:

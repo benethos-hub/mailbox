@@ -24,6 +24,7 @@ from benethos_mailbox_service.domain.accounts.service import AccountService
 from benethos_mailbox_service.domain.auth.passwords import Passwords
 from benethos_mailbox_service.domain.auth.service import AuthService
 from benethos_mailbox_service.domain.auth.tokens import (
+    MAX_TOKEN_DAYS,
     TOKEN_PREFIX,
     hash_token,
     new_token,
@@ -130,6 +131,14 @@ def test_a_revocation_during_an_authentication_stays(
 def test_an_expiry_without_a_time_zone_is_refused(service: AuthService) -> None:
     with pytest.raises(BadRequestError, match="time zone"):
         service.issue_token("usr_reader", "t", expires_at=datetime(2027, 1, 1))
+
+
+def test_a_token_ends_within_ten_years(service: AuthService) -> None:
+    """The API and the UI alike: every token with an end ends by then."""
+    last = NOW + timedelta(days=MAX_TOKEN_DAYS)
+    assert service.issue_token("usr_reader", "t", expires_at=last).token.expires_at
+    with pytest.raises(BadRequestError, match="at most 3650 days"):
+        service.issue_token("usr_reader", "t", expires_at=last + timedelta(seconds=1))
 
 
 def test_expired_token(service: AuthService, clock: Clock) -> None:

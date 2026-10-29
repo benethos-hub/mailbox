@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import breadcrumb, csrf_field with context %}
+{% from "components/ui.html" import breadcrumb, csrf_field, icon with context %}
 {% from "components/connection.html" import connection_fields %}
 {% block title %}Connect an account · {{ APP_NAME }}{% endblock %}
 {% block heading %}Connect an account{% endblock %}
@@ -34,7 +34,7 @@
   {% else %}
   <div class="fold">{{ connection_fields(connection, settings, suffix=suffix) }}</div>
   {% endif %}
-  <div class="form-actions"><button{% if primary %} class="primary"{% endif %} type="submit">Connect</button></div>
+  <div class="form-actions"><button{% if primary %} class="primary"{% endif %} type="submit">{{ icon("check-lg") }} Connect</button></div>
 </form>
 {% endmacro %}
 {# Two ways: in this browser, sent back to this service, or with a code
@@ -46,13 +46,13 @@
 <form class="inline" method="post" action="/ui/oauth/{{ provider }}/start">
   {{ csrf_field() }}
   <input type="hidden" name="login_hint" value="{{ hint }}" />
-  <button class="primary" type="submit">Sign in with {{ provider | signs_in_at }}</button>
+  <button class="primary" type="submit">{{ icon("check-lg") }} Sign in with {{ provider | signs_in_at }}</button>
 </form>
 {% endif %}
 {% if provider in with_code %}
 <form class="inline" method="post" action="/ui/oauth/{{ provider }}/device">
   {{ csrf_field() }}
-  <button{% if provider not in in_browser %} class="primary"{% endif %} type="submit">Sign in {% if provider in in_browser %}with a code{% else %}with {{ provider | signs_in_at }} and a code{% endif %}</button>
+  <button{% if provider not in in_browser %} class="primary"{% endif %} type="submit">{{ icon("check-lg") }} Sign in {% if provider in in_browser %}with a code{% else %}with {{ provider | signs_in_at }} and a code{% endif %}</button>
 </form>
 {% endif %}
 {% endmacro %}
@@ -64,7 +64,7 @@
     <form class="toolbar" method="post" action="/ui/accounts/discover">
       {{ csrf_field() }}
       <input class="grow" name="email" type="email" value="{{ email }}" placeholder="name@example.org" aria-label="Address" required{% if not discovery and not retry %} autofocus{% endif %} />
-      <button class="{{ 'primary' if not discovery and not retry }}" type="submit">Look up</button>
+      <button class="{{ 'primary' if not discovery and not retry }}" type="submit">{{ icon("search") }} Look up</button>
     </form>
     <p class="hint faint">Asks public sources how the address's provider is reached. No password leaves this service.</p>
   </div>

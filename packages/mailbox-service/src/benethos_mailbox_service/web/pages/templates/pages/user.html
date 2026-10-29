@@ -14,7 +14,7 @@
 {% endif %}
 
 {% set state %}{% if is_me %}<span class="tag accent">you</span> {% endif %}{% if not user.ui_sign_in %}<span class="tag">API only</span> {% endif %}{% if user.disabled %}<span class="tag bad">disabled</span>{% else %}<span class="tag ok">active</span>{% endif %}{% endset %}
-{{ tabs(tabs_shown, tab, "/ui/users/" ~ user.id) }}
+{{ tabs(tabs_shown, tab) }}
 
 {% if tab == "rights" %}
 
@@ -101,7 +101,7 @@
     <span class="muted">The service makes one and shows it once.</span>
   </form>
   <div class="fold">
-  <form method="post" action="/ui/users/{{ user.id }}/password">
+  <form method="post" action="/ui/users/{{ user.id }}/password" data-confirm="Replace this user's password? The old one stops working at once." data-confirm-label="Set password">
     {{ csrf_field() }}
     <input type="hidden" name="name" value="{{ user.name }}" autocomplete="off" />
     <div class="form-grid">
@@ -115,7 +115,7 @@
       </div>
     </div>
     <span class="hint">{{ user.name }} must change it at the next sign-in.</span>
-    <div class="form-actions"><button class="primary" type="submit">Set password</button></div>
+    <div class="form-actions"><button class="primary" type="submit">{{ icon("check-lg") }} Set password</button></div>
   </form>
   </div>
 {% endcall %}

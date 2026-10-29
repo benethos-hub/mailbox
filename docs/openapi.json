@@ -13870,7 +13870,7 @@
               }
             ],
             "title": "Expires At",
-            "description": "With a time zone, e.g. 2026-12-31T23:59:59Z"
+            "description": "With a time zone, e.g. 2026-12-31T23:59:59Z. At most 3650 days, ten years, ahead. Null: the token has no end."
           }
         },
         "type": "object",

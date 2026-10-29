@@ -65,6 +65,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `benethos-mailbox-service` needs dnspython 2.9.0 or newer, the first
   version without a known vulnerability. An install from the lockfile,
   as the images do, had it already.
+- `POST /v1/users/{user_id}/tokens` refuses an `expires_at` more than
+  3650 days, ten years, ahead with `400`, as the UI did. A token without
+  an end stays possible.
 - `benethos-mailbox-client`: the repr of `Environment` leaves the token
   out.
 - `benethos-mailbox-mcp`: the filters `text`, `sender`, `to` and

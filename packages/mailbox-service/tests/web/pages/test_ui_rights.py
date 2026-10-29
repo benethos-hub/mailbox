@@ -186,14 +186,21 @@ def test_a_refused_change_keeps_what_was_typed(
     assert services.users.get_user(ADMIN, user.id).name == "someone"
 
 
-@pytest.mark.parametrize("days", ["soon", "0", "3651"])
+@pytest.mark.parametrize(
+    ("days", "why"),
+    [
+        ("soon", "Days valid must be a whole number."),
+        ("0", "the token would be expired already"),
+        ("3651", "a token lasts at most 3650 days"),
+    ],
+)
 def test_a_refused_token_keeps_its_name(
-    ui: TestClient, services: Services, days: str
+    ui: TestClient, services: Services, days: str, why: str
 ) -> None:
     user = services.users.create_user(ADMIN, "bot", [], [])
     refused = post(ui, f"/ui/users/{user.id}/tokens", {"name": "laptop", "days": days})
     assert refused.status_code == 400
-    assert "Days valid must be a whole number from 1 to 3650" in refused.text
+    assert why in refused.text
     assert 'name="name" value="laptop"' in refused.text
     assert f'name="days" value="{days}"' in refused.text
     assert services.tokens.list_tokens(ADMIN, user.id) == []

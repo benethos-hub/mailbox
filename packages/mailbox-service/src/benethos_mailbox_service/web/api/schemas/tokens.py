@@ -13,7 +13,11 @@ from ....data.models import ApiToken
 class TokenCreate(BaseModel):
     name: str
     expires_at: AwareDatetime | None = Field(
-        default=None, description="With a time zone, e.g. 2026-12-31T23:59:59Z"
+        default=None,
+        description=(
+            "With a time zone, e.g. 2026-12-31T23:59:59Z. At most 3650 days, "
+            "ten years, ahead. Null: the token has no end."
+        ),
     )
 
 

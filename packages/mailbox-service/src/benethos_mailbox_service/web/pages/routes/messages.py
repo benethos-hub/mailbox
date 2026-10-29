@@ -12,7 +12,7 @@ from pydantic import ValidationError
 from ....data.models import MessageBatch, MessageUpdate
 from ...services import Mailbox
 from ..deps import Actor
-from ..forms import FormError, failing, model_of, text_of
+from ..forms import FormError, failing, first_problem, model_of, text_of
 from ..navigation import mail_url, message_url
 from ..templates import back, local_path
 
@@ -144,8 +144,8 @@ async def batch(
             )
         else:
             return back(request, listing, error="Choose an action.")
-    except ValidationError:
-        return back(request, listing, error="At most 100 messages at a time.")
+    except ValidationError as exc:
+        return back(request, listing, error=first_problem(exc))
     with failing(listing):
         result = await mailbox.batch_messages(caller, account_id, request_batch)
     failed = [r for r in result.results if not r.ok]

@@ -12,7 +12,7 @@
 <div class="body list-bar">{{ filter_bar(bar) }}</div>
 {% if users %}
 {% if can_batch %}
-<form class="batch-bar" id="users-batch" method="post" action="/ui/users/batch">
+<form class="batch-bar" id="users-batch" method="post" action="/ui/users/batch" data-confirm="Apply to the ticked users?" data-confirm-label="Apply">
   {{ csrf_field() }}
   <input type="hidden" name="back" value="{{ here }}" />
   <label class="label" for="f-users-action">Ticked users</label>

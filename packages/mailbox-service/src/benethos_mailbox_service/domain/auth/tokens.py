@@ -11,7 +11,7 @@ import secrets
 import string
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Literal
 
 from benethos_mailbox_common.values import secret
@@ -26,6 +26,8 @@ TOKEN_PREFIX = "mbx_"
 _ALPHABET = string.ascii_letters + string.digits
 # 64 characters of base62 carry a little over 380 bits.
 _TOKEN_LENGTH = 64
+# Ten years: every token that ends ends by then. One without an end has none.
+MAX_TOKEN_DAYS = 3650
 
 TokenState = Literal["active", "expired", "revoked"]
 
@@ -81,6 +83,10 @@ class ApiTokens:
             raise BadRequestError("expires_at needs a time zone")
         if expires_at is not None and expires_at <= self._clock():
             raise BadRequestError("the token would be expired already")
+        if expires_at is not None and expires_at > self._clock() + timedelta(
+            days=MAX_TOKEN_DAYS
+        ):
+            raise BadRequestError(f"a token lasts at most {MAX_TOKEN_DAYS} days")
         plain = new_token()
         token = ApiToken(
             id=secret.new_id("tok"),

@@ -279,7 +279,7 @@ def user_page(
         ),
         outcomes=audit_routes.OUTCOMES,
         **editor(request, caller, found.service, found.grants, form),
-        **_tabs(request, caller, form, token_form),
+        **_tabs(request, caller, user_id, form, token_form),
     )
 
 
@@ -290,17 +290,19 @@ TABS = (("rights", "Rights"), ("access", "Access"), ("activity", "Activity"))
 def _tabs(
     request: Request,
     caller: Access,
+    user_id: str,
     form: FormData | None,
     token_form: FormData | None,
 ) -> dict[str, Any]:
-    """The tabs the caller sees and the one shown: the one of a refused
-    form, else the one the address names, else Rights."""
+    """The tabs the caller sees, each with its address, and the one shown:
+    the one of a refused form, else the one the address names, else
+    Rights."""
     shown = [
-        (k, label)
+        (k, label, f"/ui/users/{user_id}?tab={k}")
         for k, label in TABS
         if k != "activity" or caller.allows("list_activity")
     ]
-    keys = [key for key, _ in shown]
+    keys = [key for key, _, _ in shown]
     wanted = request.query_params.get("tab", "")
     tab = wanted if wanted in keys else "rights"
     if form is not None:

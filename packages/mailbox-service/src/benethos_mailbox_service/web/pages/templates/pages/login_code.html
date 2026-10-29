@@ -1,4 +1,5 @@
 {% extends "bare.html" %}
+{% from "components/ui.html" import icon %}
 {% block title %}Code · {{ APP_NAME }}{% endblock %}
 {% block heading %}Code{% endblock %}
 {% block content %}
@@ -11,7 +12,7 @@
     <span class="hint">Or one of your recovery codes, which then works no more.</span>
   </div>
   <div class="form-actions">
-    <button class="primary" type="submit">Sign in</button>
+    <button class="primary" type="submit">{{ icon("check-lg") }} Sign in</button>
     <a href="/ui/login">Cancel</a>
   </div>
 </form>
