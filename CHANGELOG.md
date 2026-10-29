@@ -22,6 +22,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `benethos-mailbox-client`: `Sent.sent_copy_id`, the copy in the sent
   folder where the service put one. `Sent.message_id_header` is a
   string, as the API always answers one.
+- `benethos-mailbox-client`: `Failed.code`, the code of the error a
+  batch answered for an id, and `Page.incomplete`, the accounts that did
+  not answer as records `NotAnswering` with their code. `not_answering`
+  stays as it was.
 
 ### Changed
 

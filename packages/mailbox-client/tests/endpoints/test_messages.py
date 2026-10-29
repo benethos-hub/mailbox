@@ -16,6 +16,7 @@ from benethos_mailbox_client import (
     Failed,
     Message,
     MessageSummary,
+    NotAnswering,
     Outcome,
     Page,
     Reference,
@@ -72,7 +73,8 @@ async def test_list_messages(make_client: Callable) -> None:
         },
         None,
     )
-    assert found == Page([READ_SUMMARY], "c2", ["acc_2: timed out"])
+    down = NotAnswering("acc_2", "provider_timeout", "timed out")
+    assert found == Page([READ_SUMMARY], "c2", ["acc_2: timed out"], [down])
 
 
 async def test_get_message(make_client: Callable) -> None:
@@ -100,7 +102,7 @@ def test_a_message_is_its_summary_and_more() -> None:
 
 async def test_update_messages(make_client: Callable) -> None:
     results = [{"id": "m1", "ok": True}, {"id": "m2", "ok": False}]
-    results.append({"id": "m3", "error": {"message": "gone"}})
+    results.append({"id": "m3", "error": {"code": "not_found", "message": "gone"}})
     api = FakeApi({"results": results})
     found = await make_client(api).update_messages(
         "acc_1", ["m1", "m2", "m3"], unread=False, folder_id="archive"
@@ -115,7 +117,10 @@ async def test_update_messages(make_client: Callable) -> None:
             "changes": {"unread": False, "folder_ids": ["archive"]},
         },
     )
-    assert found == Outcome(["m1"], [Failed("m2", "failed"), Failed("m3", "gone")])
+    assert found == Outcome(
+        ["m1"], [Failed("m2", "failed"), Failed("m3", "gone", "not_found")]
+    )
+    assert found.failed[1].code == "not_found"
 
 
 async def test_update_messages_adds_and_takes_off(make_client: Callable) -> None:
@@ -186,6 +191,7 @@ async def test_list_all_messages_names_the_accounts(make_client: Callable) -> No
     others = {k: v for k, v in request.url.params.items() if k != "accounts"}
     assert others == {"folder": "inbox", "unread": "true", "limit": "5"}
     assert found.not_answering == ["acc_2: timed out"]
+    assert found.incomplete == [NotAnswering("acc_2", "provider_timeout", "timed out")]
 
 
 async def test_update_message_sends_only_what_changes(make_client: Callable) -> None:

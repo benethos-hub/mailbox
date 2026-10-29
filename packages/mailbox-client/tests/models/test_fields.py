@@ -18,6 +18,8 @@ SCHEMAS = json.loads(CONTRACT.read_text("utf-8"))["components"]["schemas"]
 RENAMED = {"from": "sender"}
 # Fields a record names otherwise than its schema.
 RENAMED_IN = {"Sending": {"max_sends_per_day": "max_per_day", "sends_left": "left"}}
+# Fields a record holds beyond its schema.
+KEPT = {"Page": {"not_answering": "incomplete as text, from before the records"}}
 # Records that share a name with a schema but hold something else.
 OTHER = {
     "Attachment": "the bytes of an attachment, the API's are its metadata",
@@ -26,6 +28,8 @@ OTHER = {
 # Records named otherwise than the schema they read.
 SCHEMA_OF = {
     "Sent": "SendResult",
+    "Page": "MessagePage",
+    "NotAnswering": "AccountFailure",
     "Changes": "ChangePage",
     "Sending": "MeSending",
     "User": "UserInfo",
@@ -61,4 +65,4 @@ def test_a_record_holds_every_field_of_its_schema(name: str) -> None:
     renamed = {**RENAMED, **RENAMED_IN.get(name, {})}
     schema = SCHEMAS[SCHEMA_OF.get(name, name)]
     wanted = {renamed.get(p, p) for p in schema.get("properties", {})}
-    assert fields == wanted
+    assert fields - set(KEPT.get(name, {})) == wanted

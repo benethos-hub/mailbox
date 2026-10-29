@@ -14,6 +14,7 @@ from ..models import (
     Failed,
     Message,
     MessageSummary,
+    NotAnswering,
     Outcome,
     Page,
     Reference,
@@ -235,12 +236,15 @@ def _batch(account_id: str, body: dict[str, Any]) -> Call[Outcome]:
 
 def page(found: dict[str, Any]) -> Page:
     """A page of summaries, of messages or of drafts."""
+    incomplete = [
+        NotAnswering(str(f["account_id"]), str(f["code"]), str(f["message"]))
+        for f in found.get("incomplete") or []
+    ]
     return Page(
         items=[summary(item) for item in found.get("items", [])],
         next_cursor=found.get("next_cursor"),
-        not_answering=[
-            f"{f['account_id']}: {f['message']}" for f in found.get("incomplete") or []
-        ],
+        not_answering=[f"{f.account_id}: {f.message}" for f in incomplete],
+        incomplete=incomplete,
     )
 
 
@@ -252,7 +256,11 @@ def _outcome(found: dict[str, Any]) -> Outcome:
         else:
             error = item.get("error") or {}
             failed.append(
-                Failed(id=str(item["id"]), error=str(error.get("message", "failed")))
+                Failed(
+                    id=str(item["id"]),
+                    error=str(error.get("message", "failed")),
+                    code=str(error.get("code", "failed")),
+                )
             )
     return Outcome(done, failed)
 
