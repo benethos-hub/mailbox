@@ -192,6 +192,12 @@ def test_the_overview_starts_with_the_user(
     assert "before this one" in again.get("/ui").text
 
 
+def test_no_account_yet_sits_in_its_card(ui: TestClient) -> None:
+    page = ui.get("/ui").text
+    accounts = page.split("<h2>Your accounts</h2>", 1)[1].split("</section>", 1)[0]
+    assert "No account yet, or none you may use." in accounts
+
+
 def test_the_overview_shows_the_service_to_who_may_list_accounts(
     ui: TestClient, account_id: str
 ) -> None:

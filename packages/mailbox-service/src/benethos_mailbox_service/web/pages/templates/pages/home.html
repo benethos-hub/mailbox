@@ -18,8 +18,8 @@
 <div class="notice warn">You may read mail and send it to any address on at least one account. A mail with injected instructions could use that to carry data out. A grant with recipients narrows sending.</div>
 {% endif %}
 
+{% call card("Your accounts", meta=rows | length if rows else none, tight=True) %}
 {% if rows %}
-{% call card("Your accounts", meta=rows | length, tight=True) %}
 <div class="table-scroll">
   <table>
     <thead><tr><th>Account</th><th>Status</th><th>You may</th><th>Sending</th><th></th></tr></thead>
@@ -43,10 +43,10 @@
     </tbody>
   </table>
 </div>
-{% endcall %}
 {% else %}
 {{ empty("No account yet, or none you may use.") }}
 {% endif %}
+{% endcall %}
 
 {% if service is not none %}
 {% call card("Service") %}
