@@ -14,7 +14,7 @@
 {% endif %}
 
 {% set state %}{% if is_me %}<span class="tag accent">you</span> {% endif %}{% if not user.ui_sign_in %}<span class="tag">API only</span> {% endif %}{% if user.disabled %}<span class="tag bad">disabled</span>{% else %}<span class="tag ok">active</span>{% endif %}{% endset %}
-{{ tabs(tabs_shown, tab, "/ui/users/" ~ user.id) }}
+{{ tabs(tabs_shown, tab) }}
 
 {% if tab == "rights" %}
 

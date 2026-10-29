@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import action, breadcrumb, csrf_field, filter_bar, folder_options, icon, link_button, toggle with context %}
+{% from "components/ui.html" import action, breadcrumb, csrf_field, filter_bar, folder_options, icon, link_button, tabs, toggle with context %}
 {% block title %}{{ current.name }} · {{ account.email }} · {{ APP_NAME }}{% endblock %}
 {% block heading %}{{ current.name }}{% endblock %}
 {% block subheading %}{{ breadcrumb(trail) }}{% endblock %}
@@ -79,7 +79,7 @@
 
   <section class="card">
     {% if views %}
-    <nav class="tabs" aria-label="List the folder by">{% for key, label, url in views %}<a href="{{ url }}"{% if key == view %} class="active" aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}</nav>
+    {{ tabs(views, view, "List the folder by") }}
     {% endif %}
     {% if can.search and view == "messages" %}<div class="body">{{ filter_bar(bar, problem) }}</div>{% endif %}
     {% if selectable and messages %}

@@ -4,6 +4,8 @@ account, which keeps its threads."""
 
 from __future__ import annotations
 
+import re
+
 import pytest
 
 from benethos_mailbox_service.assembly import Services
@@ -33,6 +35,9 @@ def test_a_folder_listed_by_conversations(
     assert (
         ">Conversations</a>" in messages and 'aria-current="page">Messages' in messages
     )
+    tabs = messages.split('<nav class="tabs" aria-label="List the folder by">')[1]
+    links = re.findall(r'<a href="([^"]+)"', tabs.split("</nav>")[0])
+    assert [link.endswith("view=threads") for link in links] == [False, True]
     assert "<th>Folder</th>" not in messages
     listed = client.get(f"{url}&view=threads")
     assert listed.status_code == 200, listed.text
