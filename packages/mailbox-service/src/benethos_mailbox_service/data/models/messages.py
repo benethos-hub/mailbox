@@ -205,7 +205,8 @@ class MessageUpdate(BaseModel):
             "Replaces the keywords. A mark the message has, such as "
             "`$answered`, stays until `remove_keywords` names it. Needs "
             "`keywords`. A mark in the list needs to be among the account's "
-            "`marks.written`."
+            "`marks.written`. For clients of your own: the MCP server and the "
+            "UI add and remove."
         ),
     )
     add_keywords: Keywords = Field(
