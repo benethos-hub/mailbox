@@ -143,7 +143,11 @@ def main(argv: list[str] | None = None) -> None:
     except (MailboxError, ToolError) as exc:
         sys.exit(f"benethos-mailbox-mcp: {exc}")
     built = server.build_server(
-        operations, connect, settings.rights_seconds, transport=settings.transport
+        operations,
+        connect,
+        settings.rights_seconds,
+        transport=settings.transport,
+        seen=server.seen_at_start(bool(environment.token)),
     )
     server.started(operations, settings.transport, environment.url)
     if settings.transport == "stdio":

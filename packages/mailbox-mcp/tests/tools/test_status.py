@@ -7,6 +7,7 @@ import re
 import sys
 from importlib.metadata import version
 
+import anyio
 import httpx
 import pytest
 
@@ -14,7 +15,15 @@ from benethos_mailbox_client import MailboxClient
 from benethos_mailbox_mcp import __version__, server
 from benethos_mailbox_mcp.tools import Running, status
 
-from ..rights_helpers import ME, READ, Connected, Service, connected, following
+from ..rights_helpers import (
+    ME,
+    READ,
+    Connected,
+    Service,
+    connected,
+    following,
+    until,
+)
 
 CORE = ["name", "version", "transport", "python", "mcp", "uptime_seconds"]
 UPSTREAM = [
@@ -69,10 +78,11 @@ async def test_details_add_the_upstream_block_and_ask_no_one() -> None:
     the answer."""
     service = Service(ME)
     async with connected(following(service, READ, every=0)) as client:
-        asked = service.asked
+        await until(lambda: "/health" in service.paths)
+        asked = len(service.paths)
         text = await answer_of(client, details=True)
         assert await answer_of(client, details=False) == await answer_of(client)
-    assert service.asked == asked
+        assert len(service.paths) == asked
     lines = text.splitlines()
     assert [line.split(":")[0] for line in lines[: len(CORE)]] == CORE
     assert lines[len(CORE) : len(CORE) + 2] == ["details:", "  upstream:"]
@@ -134,3 +144,94 @@ async def test_no_part_of_the_token_shows(details: bool) -> None:
         text = await answer_of(client, details)
     windows = {secret[n : n + 6] for n in range(len(secret) - 5)}
     assert not any(window in text for window in windows)
+
+
+# --- the service as the server saw it ----------------------------------------------
+
+MESSAGE = {"account_id": "acc_1", "message_id": "m1"}
+
+
+def upstream(text: str) -> dict[str, str]:
+    return {key.strip(): value for key, value in fields(text).items()}
+
+
+async def settled(client: Connected, key: str, value: str) -> dict[str, str]:
+    """The upstream block once ``key`` reads ``value``: the server learns
+    beside the call, never for it."""
+    with anyio.fail_after(3):
+        while (found := upstream(await answer_of(client, True)))[key] != value:
+            await anyio.sleep(0.005)
+    return found
+
+
+async def test_a_service_of_the_same_version_that_took_the_token() -> None:
+    service = Service(ME)
+    service.version = __version__
+    async with connected(following(service, READ)) as client:
+        await until(lambda: service.asked >= 1)
+        found = await settled(client, "token_accepted", "yes")
+    assert found["reachable"] == "yes"
+    assert found["service_version"] == __version__
+    assert found["versions_match"] == "yes"
+    assert re.fullmatch(r"\d+", found["checked_seconds_ago"])
+
+
+async def test_a_service_of_another_version() -> None:
+    service = Service(ME)
+    service.version = "0.0.1"
+    async with connected(following(service, READ, every=0)) as client:
+        found = await settled(client, "service_version", "0.0.1")
+    assert found["versions_match"] == "no"
+
+
+async def test_a_service_that_does_not_answer() -> None:
+    """The tool does not fail when the service does not answer."""
+    service = Service(ME)
+    service.version, service.down = __version__, True
+    async with connected(following(service, READ, every=0)) as client:
+        found = await settled(client, "reachable", "no")
+    assert found["checked_seconds_ago"] != "never"
+    assert found["service_version"] == "unknown"
+
+
+async def test_a_refused_token() -> None:
+    """A refused token takes every other tool away and leaves this one,
+    which says why."""
+    service = Service(ME)
+    service.version = __version__
+    async with connected(following(service, READ)) as client:
+        service.status = 401
+        await client.told()
+        found = await settled(client, "token_accepted", "no")
+        assert await client.tools() == ["server_status"]
+    assert found["reachable"] == "yes"
+    assert found["tools_offered"] == "none"
+
+
+async def test_a_tool_call_tells_what_it_found() -> None:
+    service = Service(ME)
+    service.refusal = (401, "unauthorized")
+    async with connected(following(service, READ, every=0)) as client:
+        await client.session.call_tool("get_message", MESSAGE)
+        found = await settled(client, "token_accepted", "no")
+    assert found["reachable"] == "yes"
+
+
+async def test_a_tool_call_to_a_service_that_is_gone() -> None:
+    service = Service(ME)
+    async with connected(following(service, READ, every=0)) as client:
+        await settled(client, "reachable", "yes")
+        service.down = True
+        await client.session.call_tool("list_accounts", {})
+        found = await settled(client, "reachable", "no")
+    assert found["token_accepted"] == "unknown"
+
+
+def test_the_start_saw_the_service_take_the_token() -> None:
+    seen = server.seen_at_start(token_set=True)
+    assert (seen.token_set, seen.reachable, seen.token_accepted) == (
+        True,
+        "yes",
+        "yes",
+    )
+    assert seen.checked is not None

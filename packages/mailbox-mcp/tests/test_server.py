@@ -176,7 +176,9 @@ async def test_each_server_has_a_client_of_its_own() -> None:
 
     def connect_to(host: str) -> Callable[[], MailboxClient]:
         def answer(request: httpx.Request) -> httpx.Response:
-            asked.append(request.url.host)
+            # Each server asks the service's version as it starts.
+            if request.url.path != "/health":
+                asked.append(request.url.host)
             return httpx.Response(200, json=ME)
 
         def connect() -> MailboxClient:

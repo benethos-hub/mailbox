@@ -341,8 +341,9 @@ the tools that fit. While it runs it asks again every
 `MAILBOX_MCP_RIGHTS_SECONDS`, and when a tool is refused for a
 missing right, and tells its client when the tools change
 (`notifications/tools/list_changed`), so a right granted or taken away
-in the service shows without a restart. Claude Desktop lists the tools
-anew when told. When the service refuses the token, every tool but
+in the service shows without a restart. Each time it also asks
+`/health` for the service's version, which no limit counts. Claude
+Desktop lists the tools anew when told. When the service refuses the token, every tool but
 `server_status` goes away and the server asks no more, since each
 refusal counts against the address like a wrong token. A new token then
 needs a restart. A user that may do nothing keeps `list_accounts` alone

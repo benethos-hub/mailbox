@@ -11,7 +11,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `benethos-mailbox-mcp`: the tool `server_status`, always offered. It
   names the server's version, the transport, Python, the MCP library
   and the uptime. With `details` it adds the service as the server last
-  saw it.
+  saw it: whether it answered and how long ago, its version and whether
+  it matches, whether it took the token, and the tools offered. The
+  server asks `/health` for the service's version as it starts and each
+  time it asks what its token may do.
 - `benethos-mailbox-client`: `Folder.subscribed`, whether the folder is
   subscribed on the server, as the API says.
 
