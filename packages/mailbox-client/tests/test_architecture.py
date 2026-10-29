@@ -154,3 +154,14 @@ def test_modules_and_classes_stay_small() -> None:
                 if methods > MAX_METHODS:
                     violations.append(f"{name}: {node.name} has {methods} methods")
     assert not violations, "beyond the limits:\n  " + "\n  ".join(violations)
+
+
+def test_no_module_is_named_like_its_package() -> None:
+    """The service of a package is service.py, and a module is never
+    named like the package that holds it (ARCHITECTURE 5.6)."""
+    named = [
+        path.relative_to(ROOT).as_posix()
+        for path in sorted(ROOT.rglob("*.py"))
+        if path.stem == path.parent.name
+    ]
+    assert not named, "named like its package:\n  " + "\n  ".join(named)

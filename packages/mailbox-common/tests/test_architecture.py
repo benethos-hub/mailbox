@@ -150,3 +150,14 @@ def test_a_function_of_the_package_exists_once() -> None:
             for function in sorted(_functions(path) & shared):
                 violations.append(f"{name}: {function}")
     assert not violations, "a copy of a helper:\n  " + "\n  ".join(violations)
+
+
+def test_no_module_is_named_like_its_package() -> None:
+    """The service of a package is service.py, and a module is never
+    named like the package that holds it (ARCHITECTURE 5.6)."""
+    named = [
+        path.relative_to(ROOT).as_posix()
+        for path in sorted(ROOT.rglob("*.py"))
+        if path.stem == path.parent.name
+    ]
+    assert not named, "named like its package:\n  " + "\n  ".join(named)
