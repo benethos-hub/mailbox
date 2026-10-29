@@ -214,7 +214,7 @@ async def create_account(
     settings = _settings(form)
     display_name = text_of(form, "display_name")
     try:
-        provider = ProviderType(str(form.get("provider") or ProviderType.IMAP))
+        provider = ProviderType(str(form.get("provider") or ""))
     except ValueError:
         return back(request, "/ui/accounts/new", error="Unknown provider.")
     try:
