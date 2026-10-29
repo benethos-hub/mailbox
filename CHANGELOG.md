@@ -62,7 +62,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   out.
 - `benethos-mailbox-mcp`: the filters `text`, `sender`, `to` and
   `subject` of `search_messages` take one line of 1 to 200 characters,
-  as the API does, and refuse other values in their own names.
+  as the API does, and refuse other values in their own names. The
+  name of `create_folder` and `update_folder` takes at most 200.
 - `benethos-mailbox-client`: the `content_type` of an `AttachmentLink`
   is a media type, else `application/octet-stream`, as for the bytes of
   an attachment. The sender of the mail chose it.

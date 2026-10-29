@@ -135,6 +135,12 @@ EVERY_OPERATION = {need for tool in catalogue.TOOLS for need in tool.needs}
             },
             "message_ids",
         ),
+        ("create_folder", {"account_id": "acc_1", "name": "x" * 201}, "name"),
+        (
+            "update_folder",
+            {"account_id": "acc_1", "folder_id": "f", "name": "x" * 201},
+            "name",
+        ),
         (
             "send_message",
             {
