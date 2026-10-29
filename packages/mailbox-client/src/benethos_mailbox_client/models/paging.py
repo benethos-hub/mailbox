@@ -10,7 +10,7 @@ R = TypeVar("R")
 
 @dataclass(frozen=True, slots=True)
 class Paged(Generic[R]):
-    """A page of records: accounts, users, sends, the audit. With
+    """A page of records: accounts, threads, users, sends, the audit. With
     ``next_cursor`` the list goes on, asked with that cursor."""
 
     items: list[R]

@@ -110,7 +110,8 @@ stars, so it reaches no log by accident, and `get_secret_value()` reads
 it. A list of messages or drafts answers a `Page` of summaries, with
 `next_cursor` for the next page and, across accounts, `not_answering`
 for those that did not answer. The other lists that page, of accounts,
-users, sends and the audit, answer `Paged`, with `next_cursor` as well.
+threads, users, sends and the audit, answer `Paged`, with `next_cursor`
+as well.
 
 Beside the operations, `update_messages` and `trash_messages` are
 `batch_messages` for one kind of change, and `message_body` builds the
