@@ -118,7 +118,7 @@ jobs:
         packages/mailbox-common[all]
       requirements: |
         pytest>=9.1.1
-        pytest-asyncio>=1.0
+        pytest-asyncio>=1.4
       audit: true
 
   # Alone, the service may get older versions than beside the MCP server
@@ -132,7 +132,7 @@ jobs:
         packages/mailbox-common[paths,settings]
       requirements: |
         pytest>=9.1.1
-        pytest-asyncio>=1.0
+        pytest-asyncio>=1.4
       pytest-args: packages/mailbox-service/tests
       audit: true
 
@@ -149,7 +149,7 @@ jobs:
         packages/mailbox-common[all]
       requirements: |
         pytest>=9.1.1
-        pytest-asyncio>=1.0
+        pytest-asyncio>=1.4
       pytest-args: packages/mailbox-mcp/tests
       audit: true
 
@@ -161,7 +161,7 @@ jobs:
       editable: packages/mailbox-client
       requirements: |
         pytest>=9.1.1
-        pytest-asyncio>=1.0
+        pytest-asyncio>=1.4
       pytest-args: packages/mailbox-client/tests
       audit: true
 

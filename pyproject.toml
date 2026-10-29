@@ -26,7 +26,7 @@ dev = [
     "benethos-mailbox-client",
     "benethos-mailbox-common[all]",
     "pytest>=9.1.1",
-    "pytest-asyncio>=1.0",
+    "pytest-asyncio>=1.4",
     "pytest-cov>=7.1.0",
     "ruff>=0.15.19",
     "mypy>=2.1.0",
@@ -45,6 +45,13 @@ testpaths = [
     "packages/mailbox-common/tests",
 ]
 asyncio_mode = "auto"
+# A file, socket or database left open fails the run. One found by the
+# garbage collector comes as an unraisable exception. pytest-asyncio before
+# 1.4 leaves an event loop open on Python 3.11, hence its minimum.
+filterwarnings = [
+    "error::ResourceWarning",
+    "error::pytest.PytestUnraisableExceptionWarning",
+]
 # Each async fixture gets the loop of its test. Unset, pytest-asyncio warns.
 asyncio_default_fixture_loop_scope = "function"
 # The packages have tests with the same file names (test_cli.py, ...).
