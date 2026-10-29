@@ -17,7 +17,9 @@ from .accounts import (
     update_account,
     verify_account,
 )
+from .attachments import get_attachment, share_attachment
 from .audit import list_activity
+from .changes import list_all_changes, list_changes
 from .compose import message_body
 from .discovery import discover_account, poll_device_oauth, start_device_oauth
 from .drafts import create_draft, delete_draft, list_drafts, update_draft
@@ -29,14 +31,10 @@ from .me import get_me, list_permissions
 from .messages import (
     batch_messages,
     delete_message,
-    get_attachment,
     get_message,
     get_message_raw,
-    list_all_changes,
     list_all_messages,
-    list_changes,
     list_messages,
-    share_attachment,
     trash_messages,
     update_message,
     update_messages,

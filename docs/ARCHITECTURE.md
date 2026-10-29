@@ -452,10 +452,11 @@ packages/mailbox-client/
       discovery.py      # discovery, the sign-in with a code
       folders.py        # the folders of an account
       messages.py       # lists and search in one account or across,
-                        #   changes, a message and its source, an
-                        #   attachment and a link to it, flags, keywords
+                        #   a message and its source, flags, keywords
                         #   and moves for one or many, deleting, and
                         #   the page the drafts read too
+      changes.py        # the change feed of one account or of all
+      attachments.py    # an attachment's bytes, a link to it
       threads.py        # the threads of a folder, one thread
       drafts.py         # list, write, replace, delete drafts
       sending.py        # send a message, send a draft
@@ -489,9 +490,10 @@ packages/mailbox-client/
       accounts.py       # an account, its stored credentials
       discovery.py      # what discovery found, a sign-in with a code
       folders.py        # a folder
-      messages.py       # a message and its summary, a page, the
-                        #   changes, a batch's outcome, an
-                        #   attachment's bytes, a link to an attachment
+      messages.py       # a message and its summary, a page, a
+                        #   batch's outcome
+      changes.py        # the changes since a state
+      attachments.py    # an attachment's bytes, a link to an attachment
       threads.py        # a thread and its summary
       sending.py        # a recipient, what a send answered
       sends.py          # a record of the audit of sends

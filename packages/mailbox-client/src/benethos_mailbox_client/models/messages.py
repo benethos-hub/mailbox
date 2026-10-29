@@ -7,8 +7,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from .secrets import Secret
-
 
 @dataclass(frozen=True, slots=True)
 class Address:
@@ -77,31 +75,6 @@ class Message(MessageSummary):
 
 
 @dataclass(frozen=True, slots=True)
-class Attachment:
-    """An attachment's bytes, as far as the caller's limit allowed: with
-    ``complete`` False, ``data`` stops at that limit."""
-
-    data: bytes
-    content_type: str
-    charset: str | None  # one Python knows, else None
-    filename: str | None
-    complete: bool = True
-
-
-@dataclass(frozen=True, slots=True)
-class AttachmentLink:
-    """A link to an attachment for another service: whoever holds ``url``
-    fetches the attachment once, with GET and no token, until
-    ``expires_at``. Shown once, kept out of every line as a ``Secret``."""
-
-    url: Secret
-    expires_at: datetime
-    content_type: str
-    size: int
-    filename: str | None
-
-
-@dataclass(frozen=True, slots=True)
 class Page:
     """A page of message summaries, of messages or of drafts."""
 
@@ -109,25 +82,6 @@ class Page:
     next_cursor: str | None
     # Accounts that did not answer, as "account: why".
     not_answering: list[str] = field(default_factory=list)
-
-
-@dataclass(frozen=True, slots=True)
-class Change:
-    """One change of the change feed: ids only."""
-
-    type: str  # e.g. "message.created"
-    id: str
-    account_id: str
-    at: datetime
-
-
-@dataclass(frozen=True, slots=True)
-class Changes:
-    """Changes after a point in the change feed, oldest first."""
-
-    changes: list[Change]
-    state: str
-    more: bool
 
 
 @dataclass(frozen=True, slots=True)
