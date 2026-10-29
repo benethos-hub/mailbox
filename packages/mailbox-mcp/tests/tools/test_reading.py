@@ -5,13 +5,31 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+import httpx
 import pytest
+from mcp.server.mcpserver.exceptions import ToolError as SdkToolError
 
-from benethos_mailbox_mcp import render
-from benethos_mailbox_mcp.errors import ApiError
+from benethos_mailbox_mcp import render, server
+from benethos_mailbox_mcp.errors import ApiError, ToolError
 from benethos_mailbox_mcp.tools import reading
 
 # --- search_messages ------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [("text", "x" * 201), ("text", ""), ("sender", "a\tb"), ("subject", "a\nb")],
+)
+async def test_a_filter_the_api_would_refuse_is_refused_first(
+    api: Callable, field: str, value: str
+) -> None:
+    """The API takes one line of at most 200 characters and answers its
+    own names, q and from. The tool refuses in its own names first."""
+    fake = api([])
+    built = server.build_server(["list_messages"])
+    with pytest.raises(SdkToolError, match=rf"(?s)validation error.*\n{field}\n"):
+        await built.call_tool("search_messages", {"account_id": "acc_1", field: value})
+    assert fake.calls == []
 
 
 async def test_search_passes_filters_and_answers_summaries(api: Callable) -> None:
@@ -26,7 +44,7 @@ async def test_search_passes_filters_and_answers_summaries(api: Callable) -> Non
                 "unread": True,
                 "starred": False,
                 "has_attachments": False,
-                "snippet": "not needed",
+                "snippet": "Hello",
                 "keywords": ["$answered"],
                 "folder_ids": ["INBOX", "Label_1"],
             }
@@ -55,6 +73,7 @@ async def test_search_passes_filters_and_answers_summaries(api: Callable) -> Non
                 "has_attachments": False,
                 "folders": ["INBOX", "Label_1"],
                 "marks": ["answered"],
+                "snippet": "Hello",
             }
         ],
         "next_cursor": "c1",
@@ -172,3 +191,32 @@ async def test_get_message_names_folders_keywords_and_the_original(
     assert "folders: drafts" in ours
     assert "marks: draft" in ours
     assert "answers: msg_1 (reply)" in ours
+
+
+# --- several accounts -----------------------------------------------------------------
+
+
+async def test_several_accounts_are_one_call(make_client: Callable) -> None:
+    seen: list[httpx.Request] = []
+
+    def answer(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        if request.url.path == "/v1/changes":
+            return httpx.Response(
+                200, json={"changes": [], "state": "s", "more": False}
+            )
+        return httpx.Response(200, json={"items": [], "next_cursor": None})
+
+    make_client(answer)
+    await reading.search_messages(account_ids=["a", "b"])
+    await reading.whats_new(account_ids=["a", "b"])
+    assert [r.url.path for r in seen] == ["/v1/messages", "/v1/changes"]
+    assert all(r.url.params.get_list("accounts") == ["a", "b"] for r in seen)
+
+
+@pytest.mark.parametrize("tool", [reading.search_messages, reading.whats_new])
+async def test_one_account_or_several_not_both(api: Callable, tool: Callable) -> None:
+    fake = api([])
+    with pytest.raises(ToolError, match="not both"):
+        await tool(account_id="a", account_ids=["b"])
+    assert fake.calls == []

@@ -17,6 +17,21 @@ adheres to [Semantic Versioning](https://semver.org/).
   time it asks what its token may do.
 - `benethos-mailbox-client`: `Folder.subscribed`, whether the folder is
   subscribed on the server, as the API says.
+- `benethos-mailbox-mcp`: `list_accounts` names three more things an
+  account may lack in `unsupported`: a mail in several folders,
+  conversations and a copy in the sent folder.
+- `benethos-mailbox-mcp`: `send_message` and `send_draft` answer
+  `sent_copy_id`, the copy in the sent folder where the account keeps
+  one.
+- `benethos-mailbox-mcp`: `list_accounts` names per account the marks
+  it writes in `marks_written`. A mark outside them is refused.
+- `benethos-mailbox-mcp`: `search_messages` and `whats_new` take
+  `account_ids`, several accounts in one call, beside `account_id`.
+- `benethos-mailbox-mcp`: `share_attachment` takes `expires_in`, a
+  link that lives fewer seconds than the service's default.
+- `benethos-mailbox-mcp`: each hit of `search_messages` carries the
+  first 120 characters of its text as `snippet`. `get_message` marks an
+  inline attachment, such as a logo in a signature, as `(inline)`.
 - `benethos-mailbox-client`: `ApiError.retry_after`, the seconds the
   `Retry-After` header of a limit asks to wait, else `None`.
 - `benethos-mailbox-client`: `Sent.sent_copy_id`, the copy in the sent
@@ -52,6 +67,13 @@ adheres to [Semantic Versioning](https://semver.org/).
   as the images do, had it already.
 - `benethos-mailbox-client`: the repr of `Environment` leaves the token
   out.
+- `benethos-mailbox-mcp`: the filters `text`, `sender`, `to` and
+  `subject` of `search_messages` take one line of 1 to 200 characters,
+  as the API does, and refuse other values in their own names. The
+  name of `create_folder` and `update_folder` takes at most 200.
+- `benethos-mailbox-mcp`: the log names why a tool failed when it was
+  no refused argument: a PDF that took too long, an attachment too large
+  to hand over, a mail without a thread.
 - `benethos-mailbox-client`: the `content_type` of an `AttachmentLink`
   is a media type, else `application/octet-stream`, as for the bytes of
   an attachment. The sender of the mail chose it.
@@ -62,6 +84,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `benethos-mailbox-mcp`: `get_message` shows `bcc` and `reply_to`
+  where a mail has them. A draft replaced with `update_draft` after
+  reading it lost both.
 - A list of messages or threads in a folder the account does not have
   answers `404` on every provider. It reached the provider first, and
   Microsoft answered `400`.

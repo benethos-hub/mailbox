@@ -63,6 +63,9 @@ async def test_list_accounts_names_what_an_account_cannot_do(api: Callable) -> N
                 "the trash",
                 "search and filters",
                 "drafts",
+                "a mail in several folders (add_folders, remove_folders)",
+                "conversations (get_thread, thread ids)",
+                "a copy in the sent folder",
             ],
         }
     ]
@@ -83,11 +86,24 @@ async def test_an_account_that_can_do_everything_names_no_limits(
             "search",
             "drafts",
             "send",
+            "labels",
+            "threads",
+            "sent_copy",
         ],
     }
     api(routes={"/v1/me": {**ME, "accounts": [full]}})
     [shown] = await accounts.list_accounts()
     assert shown["can"] == ["read", "drafts"] and "unsupported" not in shown
+
+
+async def test_an_account_names_the_marks_it_writes(api: Callable) -> None:
+    graph = {
+        **ME["accounts"][0],
+        "marks": {"read": ["$answered"], "written": ["$answered"]},
+    }
+    api(routes={"/v1/me": {**ME, "accounts": [graph]}})
+    [shown] = await accounts.list_accounts()
+    assert shown["marks_written"] == ["$answered"]
 
 
 @pytest.mark.parametrize(

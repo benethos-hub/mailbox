@@ -135,6 +135,12 @@ EVERY_OPERATION = {need for tool in catalogue.TOOLS for need in tool.needs}
             },
             "message_ids",
         ),
+        ("create_folder", {"account_id": "acc_1", "name": "x" * 201}, "name"),
+        (
+            "update_folder",
+            {"account_id": "acc_1", "folder_id": "f", "name": "x" * 201},
+            "name",
+        ),
         (
             "send_message",
             {
@@ -244,11 +250,13 @@ README = Path(__file__).resolve().parents[1] / "README.md"
 
 
 async def test_the_readme_lists_every_tool() -> None:
-    """The tool table of the README, which the service's UI repeats."""
+    """The tool table of the README, which the service's UI repeats, in
+    the order of TOOLS, which the bundle's manifest follows too."""
     every = {need for tool in catalogue.TOOLS for need in tool.needs}
     tools = {tool.name for tool in await server.build_server(every).list_tools()}
     listed = re.findall(r"^\| `(\w+)` \|", README.read_text(encoding="utf-8"), re.M)
-    assert set(listed) == tools and len(listed) == len(tools)
+    assert set(listed) == tools
+    assert listed == [tool.fn.__name__ for tool in catalogue.TOOLS]
 
 
 async def test_every_tool_carries_its_title_and_hints() -> None:
@@ -299,3 +307,64 @@ async def test_a_failed_tool_is_a_warning_without_its_arguments(
     assert record.levelno == logging.WARNING
     assert record.getMessage() == f"tool send_message failed: {said}"
     assert "a@x.org" not in caplog.text
+
+
+async def test_a_tool_error_logs_its_kind(caplog: pytest.LogCaptureFixture) -> None:
+    """A PDF that takes too long is no refused argument."""
+
+    async def get_attachment() -> str:
+        raise ToolError("took longer than 30 seconds", kind="the PDF took too long")
+
+    with pytest.raises(ToolError):
+        await server._logged(get_attachment, server._Held())()
+    [record] = caplog.records
+    assert record.getMessage() == "tool get_attachment failed: the PDF took too long"
+
+
+@pytest.mark.parametrize(
+    ("status", "body", "said", "valid"),
+    [
+        (
+            409,
+            {"error": {"code": "conflict", "message": "the folder exists"}},
+            "the folder exists (conflict, HTTP 409)",
+            "yes",
+        ),
+        (
+            422,
+            {"detail": [{"loc": ["query", "q"], "msg": "String too long"}]},
+            "query.q: String too long (validation_error, HTTP 422)",
+            "yes",
+        ),
+        (
+            429,
+            {"error": {"code": "rate_limited", "message": "too many requests"}},
+            "too many requests (rate_limited, HTTP 429)",
+            "unknown",
+        ),
+        (
+            501,
+            {"error": {"code": "not_supported", "message": "no threads here"}},
+            "no threads here (not_supported, HTTP 501)",
+            "yes",
+        ),
+        (
+            503,
+            {"error": {"code": "unavailable", "message": "starting"}},
+            "starting (unavailable, HTTP 503)",
+            "unknown",
+        ),
+    ],
+)
+async def test_what_the_model_reads_of_an_error(
+    api: Callable, status: int, body: dict[str, object], said: str, valid: str
+) -> None:
+    """A limit and a service not ready answer before the token is looked
+    at: they say nothing of it."""
+    api(body, status)
+    held = server._Held()
+    logged = server._logged(reading.list_folders, held)
+    with pytest.raises(ToolError) as caught:
+        await logged("acc_1")
+    assert str(caught.value) == said
+    assert held.running.seen.token_valid == valid

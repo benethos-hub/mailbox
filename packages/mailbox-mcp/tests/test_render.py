@@ -77,6 +77,25 @@ def test_a_header_of_the_sender_stays_on_one_line() -> None:
     assert any(line.startswith("attachment: att_0 a b.pdf ") for line in lines)
 
 
+def test_bcc_and_reply_to_are_inside_the_marker() -> None:
+    """A draft keeps them only when the model sees them before it
+    replaces the draft."""
+    text = render.message(
+        "acc_1",
+        mail(
+            bcc=[Address("x@example.org")],
+            reply_to=[Address("team@example.org", "Team")],
+            text_body="body",
+        ),
+        4000,
+    )
+    marker = text.index("<mail-content")
+    assert text.index("bcc: x@example.org") > marker
+    assert text.index("reply_to: Team <team@example.org>") > marker
+    plain = render.message("acc_1", mail(text_body="body"), 4000)
+    assert "bcc:" not in plain and "reply_to:" not in plain
+
+
 def test_body_prefers_text() -> None:
     assert render.body_text(mail(text_body=" plain ", html_body="<p>x</p>")) == "plain"
     assert render.body_text(mail(html_body="<p>x</p>")) == "x"
@@ -100,3 +119,17 @@ def test_addresses() -> None:
     assert render.address(Address("a@example.com", "A")) == "A <a@example.com>"
     assert render.address(Address("a@example.com")) == "a@example.com"
     assert render.address(None) == "-"
+
+
+def test_a_snippet_is_one_short_line() -> None:
+    shown = render.summary(mail(snippet="Dear Ann,\n\n" + "x" * 300))
+    assert shown["snippet"] == ("Dear Ann, " + "x" * 300)[: render.SNIPPET_CHARS]
+    assert "snippet" not in render.summary(mail())
+
+
+def test_an_inline_attachment_says_so() -> None:
+    files = [AttachedFile("a1", "logo.png", "image/png", 9, inline=True)]
+    files.append(AttachedFile("a2", "bill.pdf", "application/pdf", 9))
+    lines = render.message("acc_1", mail(attachments=files), 4000).splitlines()
+    assert "attachment: a1 logo.png (image/png, 9 bytes) (inline)" in lines
+    assert "attachment: a2 bill.pdf (application/pdf, 9 bytes)" in lines

@@ -28,8 +28,8 @@ Keywords = Annotated[
     list[str] | None,
     Field(
         max_length=50,
-        description="Keywords: a word of your own, or a mark such as "
-        + marks.JUNK.keyword,
+        description="Keywords: a word of your own, or a mark among the "
+        "account's marks_written, such as " + marks.JUNK.keyword,
     ),
 ]
 
@@ -91,7 +91,7 @@ async def update_messages(
 
 async def create_folder(
     account_id: str,
-    name: str,
+    name: Annotated[str, Field(max_length=200)],
     parent: Annotated[
         str | None,
         Field(description="Folder id or role to create it in. Left out: the top"),
@@ -106,7 +106,9 @@ async def create_folder(
 async def update_folder(
     account_id: str,
     folder_id: str,
-    name: Annotated[str | None, Field(description="The new name")] = None,
+    name: Annotated[
+        str | None, Field(max_length=200, description="The new name")
+    ] = None,
     parent: Annotated[
         str | None, Field(description="Folder id or role to move it into")
     ] = None,

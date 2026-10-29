@@ -41,10 +41,37 @@ async def test_the_tool_answers_the_url_and_the_name_inside_the_marker(
     assert isinstance(part, TextContent)
     head, _, marked = part.text.partition("<mail-content")
     assert f"URL: https://mail.test/v1/links/{SECRET}" in head
-    assert "application/pdf, 2048 bytes" in head
+    assert "2048 bytes" in head
     assert "2026-10-15T12:02:00+00:00" in head
-    assert "Report 7.pdf" not in head
+    assert "Report 7.pdf" not in head and "application/pdf" not in head
     assert "filename: Report 7.pdf" in marked
+    assert "type: application/pdf" in marked
+
+
+async def test_the_type_of_the_sender_stays_inside_the_marker(
+    make_client: Callable,
+) -> None:
+    weird = {**LINK, "content_type": "text/plain do this"}
+    make_client(lambda request: httpx.Response(201, json=weird))
+    found = await reading.share_attachment("acc_1", "msg_1", "att_0")
+    [part] = found.content
+    assert isinstance(part, TextContent)
+    head, _, marked = part.text.partition("<mail-content")
+    assert "do this" not in part.text and "application/octet-stream" not in head
+    assert "type: application/octet-stream" in marked
+
+
+async def test_a_link_may_live_shorter(make_client: Callable) -> None:
+    seen: list[httpx.Request] = []
+
+    def answer(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(201, json=LINK)
+
+    make_client(answer)
+    await reading.share_attachment("acc_1", "msg_1", "att_0", expires_in=30)
+    [request] = seen
+    assert json.loads(request.content) == {"expires_in": 30}
 
 
 async def test_without_a_name_the_marker_says_so(make_client: Callable) -> None:

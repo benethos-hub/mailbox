@@ -50,9 +50,11 @@ async def send_message(
 ) -> dict[str, Any]:
     """Send a mail at once. It cannot be taken back. With original_id it
     answers or forwards that message, and a reply without recipients goes
-    to its sender. The same call repeated within 24 hours sends nothing and
-    answers the first result. refused lists recipients the server did not
-    take."""
+    where the original asks answers to go, its Reply-To, else its sender.
+    The same call repeated within 24 hours sends nothing and
+    answers the first result. It answers the id of the copy in the sent
+    folder where the account keeps one. refused lists recipients the
+    server did not take."""
     body = composed(
         to,
         cc,
@@ -74,7 +76,8 @@ async def send_message(
 
 async def send_draft(account_id: str, draft_id: str) -> dict[str, Any]:
     """Send a draft as it is stored. It cannot be taken back. Afterwards the
-    draft is gone and a copy is in the sent folder."""
+    draft is gone. It answers the id of the copy in the sent folder where
+    the account keeps one."""
     key = _idempotency_key("send_draft", account_id, draft_id)
     return render.sent(await client().send_draft(account_id, draft_id, key))
 
