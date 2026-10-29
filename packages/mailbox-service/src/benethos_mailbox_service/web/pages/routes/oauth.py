@@ -8,14 +8,15 @@ that carries the cookie again. ``finish`` needs the session. The sign-in's
 ``state`` belongs to the user who started it, so a code slipped to someone
 else is refused.
 
-A sign-in with a code shows the code and asks the domain every few
-seconds, by htmx, whether the person signed in. **Check now** does the
-same without script.
+A sign-in with a code shows the code on a page of its own, a GET, so a
+reload starts no second sign-in. It asks the domain every few seconds,
+by htmx, whether the person signed in. **Check now** does the same
+without script.
 """
 
 from __future__ import annotations
 
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -102,7 +103,7 @@ async def finish(
 async def device(
     request: Request, caller: Actor, provider: str, oauth: OAuth
 ) -> Response:
-    """A code to sign in with at the provider, and the page that shows it."""
+    """A code to sign in with at the provider, on to the page that shows it."""
     form = await request.form()
     account_id = text_of(form, "account_id", strip=False) or None
     here = f"/ui/accounts/{account_id}" if account_id else "/ui/accounts/new"
@@ -111,7 +112,28 @@ async def device(
         return back(request, here, error=f"Unknown provider: {provider}")
     with failing(here):
         started = await oauth.start_device(caller, kind, account_id=account_id)
-    return _device_page(request, started, here)
+    return back(request, _device_url(started, here))
+
+
+@router.get("/oauth/{provider}/device/{sign_in_id}")
+async def device_page(
+    request: Request, caller: Viewer, provider: str, sign_in_id: str, oauth: OAuth
+) -> Response:
+    """The code of a sign-in this user started. It starts nothing."""
+    here = local_path(request.query_params.get("back"), "/ui/accounts/new")
+    kind = _provider(provider)
+    if kind is None:
+        return back(request, "/ui/accounts", error=f"Unknown provider: {provider}")
+    with failing(here):
+        started = oauth.device(caller, kind, sign_in_id)
+    return render(
+        request,
+        "pages/oauth_device.html",
+        page="accounts",
+        sign_in=started,
+        provider=started.provider.value,
+        here=here,
+    )
 
 
 @router.post("/oauth/{provider}/device/{sign_in_id}")
@@ -130,7 +152,7 @@ async def device_check(
         if account is None and not is_htmx(request):
             started = oauth.device(caller, kind, sign_in_id)
             error = f"{kind.value} has not seen the sign-in yet."
-            return _device_page(request, started, here, err=error)
+            return back(request, _device_url(started, here), error=error)
     except MailboxServiceError as exc:
         return _leave(request, back(request, here, error=redact.redact(exc.message)))
     if account is None:
@@ -139,17 +161,11 @@ async def device_check(
     return _leave(request, back(request, page, f"{account.email} signed in."))
 
 
-def _device_page(
-    request: Request, started: DeviceSignIn, here: str, err: str | None = None
-) -> HTMLResponse:
-    return render(
-        request,
-        "pages/oauth_device.html",
-        page="accounts",
-        sign_in=started,
-        provider=started.provider.value,
-        here=here,
-        err=err,
+def _device_url(started: DeviceSignIn, here: str) -> str:
+    """The page of a sign-in with a code, and where its Cancel leads."""
+    return (
+        f"/ui/oauth/{started.provider.value}/device/{quote(started.id, safe='')}"
+        f"?back={quote(here, safe='')}"
     )
 
 
