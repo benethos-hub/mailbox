@@ -14,7 +14,8 @@ what it must do and how it is secured.
 
 1. **Simple to use.** Every task a person comes for is reached in three
    to five clicks from the overview, counting a page open, a button and a
-   form submit as one click each. Section 3 has the budget.
+   form submit as one click each, and the question of a dialog as one
+   more. Section 3 has the budget.
 2. **A lighter look, blue instead of grey.** One palette in section 7,
    the dark mode kept.
 3. **Reworked workflows.** Connecting an account starts with the address
@@ -85,8 +86,9 @@ initial in a circle, the name and the roles. It opens a menu upwards:
 "Signed in as" the name, then Your page (with `users.read`), Password,
 Second factor with its state (on or off), and Sign out in red, still a
 form that posts. A click elsewhere or Escape closes it. It is the one
-place for what is the person's own: neither the overview nor the own
-user page repeats its links.
+place for what is the person's own: the overview does not repeat its
+links, and the own page's Access tab links them beside the facts they
+belong to.
 
 A button beside the brand **folds the sidebar** to a narrow bar of
 icons, each word its tooltip, the account menu its avatar alone. The
@@ -112,19 +114,19 @@ The click budget, counted from the overview after signing in:
 |---|---|---|
 | Read a mail of one account | 2 | Mail on its row of the overview or of Accounts, the message |
 | Read the newest mail of every account | 2 | Mail search, the message |
-| Reply to a mail | 4 | Mail search, the message, Reply, Send |
+| Reply to a mail | 5 | Mail search, the message, Reply, Send, Send in the dialog |
 | Connect an account | 4 | Accounts, Connect, Look up, Connect (or Sign in with the provider) |
 | Change an account's password | 3 | Accounts, the account, Save |
 | Create a user with rights | 3 | Users, New user, Create |
-| Give a user a token | 3, 4 once it has one | Users, the user, (New token), Create token |
-| Revoke a token | 3 | Users, the user, Revoke |
+| Give a user a token | 4, 5 once it has one | Users, the user, Access, (New token), Create token |
+| Revoke a token | 5 | Users, the user, Access, Revoke, Revoke in the dialog |
 | Add a webhook | 3 | Webhooks, New webhook, Create |
 | Change a webhook | 3 | Webhooks, the webhook, Save |
 | See why a webhook fails | 1 | Webhooks |
 | See which account is not syncing | 1 | Overview, or Accounts (its dot shows on every page) |
 | Show the recovery key | 2 | Recovery key, Show |
 | Read the service log | 1 | Log |
-| See who changed a user | 1 | Audit, or 2: Users, the user |
+| See who changed a user | 1 | Audit, or 4: Users, the user, Activity, What was done to it |
 
 A task that needs more than five clicks is a bug of the navigation, not
 of the person.
@@ -153,7 +155,7 @@ with the reason. A batch of messages acts on the mail server, which
 cannot take back a part: it names the messages it could not change.
 
 Lists: Accounts, Users, Roles, Sends, Webhooks, Mail, Drafts, Audit,
-Log, and Changes if it is built (6.6).
+Log, and Changes if it is built (6.7).
 
 ### 4.2 Detail
 
@@ -182,7 +184,7 @@ A person finds the delete button of a record in the same place on every
 detail page, and never anywhere else. The entries of its lists have
 their bin on their row.
 
-Detail pages: Account, User, Role, Webhook, Message, Draft, Conversation.
+Detail pages: Account, User, Role, Webhook, Message, Conversation.
 
 ### 4.3 Editor
 
@@ -191,13 +193,14 @@ Connect an account, New user, New role, New webhook, Compose. It has
 **Create** (or
 **Send**) as the primary button and **Cancel** back to the list. A record
 that needs one or two fields (a token, a folder) is created
-from the card it belongs to, not from an editor page.
+from the card it belongs to, not from an editor page. A stored draft
+opens in Compose, its **Delete draft** among the form's buttons.
 
 ### 4.4 Reader
 
-The mail page of an account: folders on the left, the list in the
-middle, the message where the list was when one is opened, the
-breadcrumb the way back to its folder. Not a three-pane client. The
+The mail page of an account: folders on the left, the list beside
+them; a message opens on a page of its own, the breadcrumb the way back
+to its folder. Not a three-pane client. The
 rework keeps this layout and gives it the filter bar and the pager of
 every other list. The batch bar above the list asks for a folder only
 while "move to" is chosen, and the head of the list ticks every row.
@@ -275,7 +278,9 @@ A form that goes through answers with a redirect and one message, shown
 once at the top of the next page (Post/Redirect/Get, CONCEPT 1.1).
 Success in green, a refusal in the page's own words in red, never a
 status code. An editor that is refused is shown again at once, with
-what was typed and the reason at the top, and answers `400`. A password
+what was typed and the reason at the top, and answers `400`, or the
+status of the domain's refusal where a provider or a right refused (the
+connect page and the mail form). A password
 is never shown again. An action without fields, such as a delete, goes
 back to its page with the reason. A page that cannot be shown at all is
 the error page with a way back.
@@ -288,9 +293,9 @@ The first page after signing in. Its cards, in order:
    (stored with the password). The account menu has the links. The
    card says at a glance whether this user may read mail and send it
    anywhere, the warning the API and the MCP server also give.
-2. **Your accounts**: one row per account with its address, status,
-   unread count where cheap, and what you may do there. A row opens the
-   account's mail, the address opens the account.
+2. **Your accounts**: one row per account with its address, status
+   and what you may do there. Its Mail button opens the account's mail,
+   the address opens the account.
 3. **Service**: only for those with `accounts.read`: accounts that need
    attention (needs_reauth, unreachable, sync failing), webhooks failing.
    Each line links to the page that fixes it. When all is well, it says
@@ -307,7 +312,8 @@ next step appears under the last one:
 
 1. **Address.** One field, **Look up**. The lookup asks the discovery
    sources (CONCEPT 5.8) and, from the domain, which OAuth providers this
-   deployment offers.
+   deployment offers. It answers the page itself, no redirect: it
+   changes nothing, and the address stays out of the access log.
 2. **How to connect.** One card per way, the recommended one first:
    - a provider the deployment signs in with (Microsoft, Google):
      **Sign in with Microsoft**, the address as the login hint, no
@@ -462,7 +468,21 @@ time, level, source and message, a traceback with it, and every secret
 the service holds masked (CONCEPT 7.4). The filter bar searches the
 message and the source and sets the least level.
 
-### 6.6 Changes, optional
+### 6.6 Writing mail
+
+A message's page offers **Reply**, **Reply to all** and **Forward**,
+each opening Compose with the original named. A forward goes quoted in
+the text or as an attachment. Compose takes the text, an HTML version if
+wanted, and files. **Send** asks first and sends at once. **Save as
+draft** stores it, and a stored draft opens in the same form to save,
+send or delete. A draft is replaced as a whole and may get a new id from
+the provider: the form goes on with the id the answer brings (U4). Each
+time the form is shown it carries a new idempotency key, so a second
+click on Send answers the first result. A refused form comes back with
+what was typed, its files to be chosen again: a browser cannot be handed
+files.
+
+### 6.7 Changes, optional
 
 A list of the change feed per account, newest first: event, message,
 when. It shows what webhooks would have received, which helps when a
@@ -487,11 +507,19 @@ receiver reports nothing. Built last, if at all.
   | `--surface` | `#ffffff` | `#171d2b` |
   | `--surface-2` | `#eef3fa` | `#1f2736` |
   | `--border` | `#dde5f0` | `#2c3648` |
+  | `--border-strong` | `#c9d3e1` | `#3a4659` |
   | `--text` | `#14213d` | `#e6ebf5` |
   | `--text-muted` | `#56657e` | `#9aa8bf` |
   | `--text-faint` | `#5f6e86` | `#8391a8` |
   | `--accent` | `#2560c8` | `#6ea0ff` |
   | `--accent-soft` | `#e8f0fc` | `#1d2c4a` |
+  | `--on-accent` | `#ffffff` | `#0f1420` |
+  | `--ok` | `#13703f` | `#4ac98a` |
+  | `--ok-soft` | `#e5f5ec` | `#173326` |
+  | `--bad` | `#b5301c` | `#f0776a` |
+  | `--err-soft` | `#fdefed` | `#3a1f1f` |
+  | `--warn` | `#955204` | `#e0a458` |
+  | `--warn-soft` | `#fdf5e8` | `#33291a` |
 
 - **Density**: a little more air than today. Row height 40 px, card
   padding 20 px, one type size for text and one for the small line under
@@ -504,13 +532,14 @@ receiver reports nothing. Built last, if at all.
   `static/img/`.
 - **Sidebar**: light, not dark, with the accent on the active entry.
   Collapses to a top bar under 860 px as today.
-- **Components**: everything a page uses is a macro in
+- **Components**: the parts pages share are macros in
   `components/ui.html`, the grant editor in `components/grants.html`, the
   connection fields in `components/connection.html`, the rows of the
   audit in `components/audit.html`, the fields of a webhook in
-  `components/webhook.html`. A page has no
-  markup of its own for a button, a tag, a field, a card header, a pager
-  or a filter bar. The rework adds `filter_bar` with its chips,
+  `components/webhook.html`. The filter bar, the pager, the related
+  list, the Danger card, the secret card and every icon are macros. A
+  tag, a field and a plain button may be written in the page with the
+  classes of `app.css`. The rework adds `filter_bar` with its chips,
   `facts`, `related` and `breadcrumb` and makes the pages use them.
 - **Icons**: a hand-picked set of [Bootstrap Icons](https://icons.getbootstrap.com/)
   (MIT), one sprite `static/img/icons.svg` with the licence beside it.
@@ -560,7 +589,9 @@ These rules bind every page, the reworked ones and the ones to come.
    the page. Partials are pieces of one page, components are macros used
    by several.
 3. **The route decides nothing.** It reads the form, calls one domain
-   method and renders or redirects. Rights are the domain's. The page
+   method and renders or redirects. The mail form is the one route that
+   saves and sends in two steps, and follows the id a replaced draft
+   gets. Rights are the domain's. The page
    only hides what `caller.allows(...)` denies, with the same names the
    API uses in `x-permission`. The mail pages offer what the account's
    `operations` name, the caller's rights and what the account can do
@@ -581,7 +612,8 @@ These rules bind every page, the reworked ones and the ones to come.
 5. **Every form that goes through is Post/Redirect/Get** with one
    message. A refused editor is shown again as 4.7 says. Every
    destructive form asks first. Every list with a filter is a `GET`.
-6. **Words**: the button names of 6.2, tags in lower case, headings in
+6. **Words**: the button names of 6.2, tags in lower case but for an
+   acronym (`API only`), headings in
    sentence case, the record's name in the heading of its detail page.
 7. **Tests**: a page has at least one test in `tests/web/pages/test_ui_*.py` that
    opens it as a user with the right, one that shows it hidden without
@@ -620,7 +652,7 @@ All four steps are done, as the roadmap's phase 4b records.
 - 2026-09-27: the sync state in the worker's memory, the last sign-in
   stored (5, 6.5).
 - 2026-09-27: a delivery log for webhooks (6.4).
-- 2026-09-27: the Changes page not in phase 4b (6.6).
+- 2026-09-27: the Changes page not in phase 4b (6.7).
 - 2026-09-27: a lighter background. The other colours follow from the
   contrast rule of section 7.
 - 2026-10-06: the filters of Sends, Users, Accounts and Webhooks at the
