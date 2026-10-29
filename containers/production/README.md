@@ -1,6 +1,6 @@
 # <img src="../../assets/brand/icon.svg" alt="" height="36" align="absmiddle"> Mailbox in operation
 
-> **Beta, version 0.5.2.** Usable with real accounts. A breaking change
+> **Beta, version 0.6.0.** Usable with real accounts. A breaking change
 > of the API or the configuration is announced in the changelog. Stored
 > data is carried forward by migrations.
 
@@ -36,8 +36,8 @@ Needs Docker with compose 2.24 or newer (`docker compose version`).
 ## Get the folder
 
 Into an empty folder, from the repository. The files at a release tag
-fit that version, so put `v0.5.2` in place of `main` in the address
-below for 0.5.2. `main` holds the newest:
+fit that version, so put `v0.6.0` in place of `main` in the address
+below for 0.6.0. `main` holds the newest:
 
 ```sh
 mkdir -p mailbox/caddy.d && cd mailbox
@@ -63,7 +63,7 @@ The same by hand, from this folder:
 
 ```sh
 cp .env.example .env && chmod 600 .env          # then edit it
-IMAGE=ghcr.io/benethos-hub/benethos-mailbox-service:0.5.2
+IMAGE=ghcr.io/benethos-hub/benethos-mailbox-service:0.6.0
 
 mkdir -p caddy.d secrets/mcp secrets/tls && chmod 700 secrets secrets/mcp
 docker run --rm "$IMAGE" keys generate > secrets/master_key
