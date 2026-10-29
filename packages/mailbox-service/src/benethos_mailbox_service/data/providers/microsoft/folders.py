@@ -5,13 +5,14 @@ from __future__ import annotations
 
 from ...models import Folder
 from ...protocols import path_part
+from .. import rules
 from . import mappers
 from .api import PAGE_SIZE, Graph
 from .shapes import Listing, MailFolder
 
 
 async def list_folders(graph: Graph) -> list[Folder]:
-    return [*await kept(graph), mappers.all_mail()]
+    return [*await kept(graph), rules.all_mail()]
 
 
 async def kept(graph: Graph) -> list[Folder]:

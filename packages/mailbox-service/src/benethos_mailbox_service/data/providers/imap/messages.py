@@ -296,7 +296,7 @@ def _move_target(box: Mailbox, changes: MessageUpdate, current: str) -> str | No
     wanted = rules.move_target(changes, labels=False)
     if wanted is None:
         return None
-    if wanted == mappers.ALL:
+    if wanted == rules.ALL:
         raise rules.into_all()
     target = mappers.folder_name(wanted)
     if target == current:

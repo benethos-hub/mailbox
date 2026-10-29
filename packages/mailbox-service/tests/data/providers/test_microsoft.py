@@ -129,10 +129,10 @@ async def test_all_mail_is_every_folder_but_the_trash_and_junk(
     [everything] = [
         f for f in await provider.list_folders() if f.role is FolderRole.ALL
     ]
-    assert everything.id == mappers.ALL and everything.total is None
-    page = await provider.list_messages(mappers.ALL, limit=10, cursor=None)
+    assert everything.id == rules.ALL and everything.total is None
+    page = await provider.list_messages(rules.ALL, limit=10, cursor=None)
     assert {m.id for m in page.items} == {kept, filed}
-    assert mappers.ALL not in await provider.folder_states()
+    assert rules.ALL not in await provider.folder_states()
     into = await provider.update_messages([kept], MessageUpdate(folder_ids=["all"]))
     assert isinstance(into[kept], BadRequestError)
 
@@ -149,7 +149,7 @@ async def test_messages_newest_first_and_paged(graph: FakeGraph) -> None:
     assert more.next_cursor is None
     # Graph's next page carries its own query: another folder or search
     # with it would answer the first list's page.
-    for folder, search in ((mappers.ALL, None), (inbox, MessageFilter(unread=True))):
+    for folder, search in ((rules.ALL, None), (inbox, MessageFilter(unread=True))):
         with pytest.raises(BadRequestError, match="invalid cursor"):
             await provider.list_messages(
                 folder, limit=2, cursor=page.next_cursor, search=search
@@ -168,10 +168,10 @@ async def test_messages_newest_first_and_paged(graph: FakeGraph) -> None:
 )
 async def test_a_forged_cursor_is_refused(graph: FakeGraph, cursor: str) -> None:
     # As it stands, and wrapped as a cursor of this list would be.
-    bound = rules.bound_cursor("m_", rules.cursor_scope(mappers.ALL, None), cursor)
+    bound = rules.bound_cursor("m_", rules.cursor_scope(rules.ALL, None), cursor)
     for value in (cursor, bound):
         with pytest.raises(BadRequestError, match="invalid cursor"):
-            await adapter(graph).list_messages(mappers.ALL, limit=5, cursor=value)
+            await adapter(graph).list_messages(rules.ALL, limit=5, cursor=value)
     assert graph.requests == []
 
 
@@ -376,7 +376,7 @@ async def test_search_results_come_under_immutable_ids(graph: FakeGraph) -> None
 async def test_many_search_results_go_in_batches_of_twenty(graph: FakeGraph) -> None:
     wanted = {graph.add_message(subject=f"Invoice {n}") for n in range(25)}
     page = await adapter(graph).list_messages(
-        mappers.ALL, limit=30, cursor=None, search=MessageFilter(subject="invoice")
+        rules.ALL, limit=30, cursor=None, search=MessageFilter(subject="invoice")
     )
     assert {m.id for m in page.items} == wanted
     assert len([r for r in graph.requests if r.url.path.endswith("/$batch")]) == 2
@@ -390,7 +390,7 @@ async def test_a_search_result_in_two_folders_keeps_its_own(graph: FakeGraph) ->
     sent = graph.add_message("sentitems", subject="To me", internetMessageId=header)
     provider = adapter(graph)
     found = await provider.list_messages(
-        mappers.ALL, limit=10, cursor=None, search=MessageFilter(subject="to me")
+        rules.ALL, limit=10, cursor=None, search=MessageFilter(subject="to me")
     )
     assert {m.id for m in found.items} == {inbox, sent}
 
