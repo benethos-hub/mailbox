@@ -50,7 +50,8 @@ uv add benethos-mailbox-client      # or: pip install benethos-mailbox-client
 Make a token on your user's page in the service's UI. The client reads
 it from `MAILBOX_SERVICE_TOKEN`, and the address of the service from
 `MAILBOX_SERVICE_URL` (default `http://127.0.0.1:8080`). Both can be
-passed as arguments instead.
+passed as arguments instead. The address carries no user or password:
+it is named in the errors of the client.
 
 For async code:
 

@@ -79,11 +79,15 @@ def connection(
 
 
 def _check_url(url: str, allow_http: bool) -> None:
-    """https anywhere, http to this machine, or anywhere when allowed."""
+    """https anywhere, http to this machine, or anywhere when allowed.
+    Never a user or password in it: the address is named in errors, which
+    reach a model and its logs."""
     try:
         parts = httpx.URL(url)
     except httpx.InvalidURL:
         raise ConfigurationError(f"{URL_ENV} is not a URL: {url}") from None
+    if parts.userinfo:
+        raise ConfigurationError(f"{URL_ENV} must not carry a user or password")
     if parts.scheme == "https" and parts.host:
         return
     if parts.scheme != "http" or not parts.host:

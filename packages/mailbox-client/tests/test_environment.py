@@ -138,3 +138,11 @@ def test_the_headers_of_a_connection_stay_out_of_its_repr() -> None:
     found = connection("https://mail.test", "tok_SECRET", None)
     assert found.headers == {"Authorization": "Bearer tok_SECRET"}
     assert "tok_SECRET" not in repr(found)
+
+
+@pytest.mark.parametrize("kind", KINDS)
+@pytest.mark.parametrize("url", ["https://u:pw_SECRET@host", "http://u@127.0.0.1"])
+def test_a_url_with_a_user_or_password_is_refused(kind: type, url: str) -> None:
+    with pytest.raises(ConfigurationError, match="user or password") as caught:
+        kind(base_url=url, token="tok")
+    assert "pw_SECRET" not in str(caught.value)
