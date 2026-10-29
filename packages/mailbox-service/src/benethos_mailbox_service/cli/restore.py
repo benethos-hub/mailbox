@@ -23,7 +23,8 @@ def add(commands: Commands, option: argparse.ArgumentParser) -> None:
     restore.add_argument(
         "--recovery-key",
         action="store_true",
-        help="read the recovery key from stdin and store it in the key provider",
+        help="ask for the recovery key at a hidden prompt, or read it from "
+        "stdin when piped, and store it in the key provider",
     )
     restore.add_argument(
         "--replace-master-key",
