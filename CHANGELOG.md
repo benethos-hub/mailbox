@@ -62,6 +62,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `benethos-mailbox-mcp`: `get_message` shows `bcc` and `reply_to`
+  where a mail has them. A draft replaced with `update_draft` after
+  reading it lost both.
 - A list of messages or threads in a folder the account does not have
   answers `404` on every provider. It reached the provider first, and
   Microsoft answered `400`.

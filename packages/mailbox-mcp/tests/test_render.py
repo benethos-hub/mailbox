@@ -77,6 +77,25 @@ def test_a_header_of_the_sender_stays_on_one_line() -> None:
     assert any(line.startswith("attachment: att_0 a b.pdf ") for line in lines)
 
 
+def test_bcc_and_reply_to_are_inside_the_marker() -> None:
+    """A draft keeps them only when the model sees them before it
+    replaces the draft."""
+    text = render.message(
+        "acc_1",
+        mail(
+            bcc=[Address("x@example.org")],
+            reply_to=[Address("team@example.org", "Team")],
+            text_body="body",
+        ),
+        4000,
+    )
+    marker = text.index("<mail-content")
+    assert text.index("bcc: x@example.org") > marker
+    assert text.index("reply_to: Team <team@example.org>") > marker
+    plain = render.message("acc_1", mail(text_body="body"), 4000)
+    assert "bcc:" not in plain and "reply_to:" not in plain
+
+
 def test_body_prefers_text() -> None:
     assert render.body_text(mail(text_body=" plain ", html_body="<p>x</p>")) == "plain"
     assert render.body_text(mail(html_body="<p>x</p>")) == "x"

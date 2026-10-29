@@ -124,8 +124,13 @@ def message(account_id: str, item: Message, max_chars: int) -> str:
         f"from: {address(item.sender)}",
         f"to: {', '.join(address(a) for a in item.to) or '-'}",
     ]
-    if item.cc:
-        theirs.append(f"cc: {', '.join(address(a) for a in item.cc)}")
+    for header, found in (
+        ("cc", item.cc),
+        ("bcc", item.bcc),
+        ("reply_to", item.reply_to),
+    ):
+        if found:
+            theirs.append(f"{header}: {', '.join(address(a) for a in found)}")
     # The subject and a file name are the sender's: one line each, so
     # neither can start a header line of its own inside the marker.
     theirs.append(f"subject: {text_values.joined(item.subject or '')}")
