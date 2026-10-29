@@ -23,6 +23,25 @@ async def list_folders(account_id: str) -> list[dict[str, Any]]:
     return [render.folder(f) for f in await client().list_folders(account_id)]
 
 
+AccountId = Annotated[
+    str | None,
+    Field(description="One account. Left out: every account, or those of account_ids"),
+]
+AccountIds = Annotated[
+    list[str] | None,
+    Field(
+        min_length=1,
+        max_length=20,
+        description="Several accounts, not beside account_id. Left out: every account",
+    ),
+]
+
+
+def _one_or_several(account_id: str | None, account_ids: list[str] | None) -> None:
+    if account_id is not None and account_ids is not None:
+        raise ToolError("account_id or account_ids, not both")
+
+
 def _filter(description: str) -> Any:
     """A filter of the search, held to what the API takes: one line of
     at most 200 characters."""
@@ -35,9 +54,8 @@ def _filter(description: str) -> Any:
 
 
 async def search_messages(
-    account_id: Annotated[
-        str | None, Field(description="One account. Left out: every account")
-    ] = None,
+    account_id: AccountId = None,
+    account_ids: AccountIds = None,
     folder: Annotated[
         str | None,
         Field(
@@ -66,8 +84,9 @@ async def search_messages(
 ) -> dict[str, Any]:
     """Find mail, newest first. All filters narrow together. To search every
     folder, give folder all. Without an account it searches every account
-    you may read, and folder must be a role. Answers summaries. get_message
-    reads one message."""
+    you may read, or those of account_ids, and folder must be a role.
+    Answers summaries. get_message reads one message."""
+    _one_or_several(account_id, account_ids)
     filters: dict[str, Any] = dict(
         folder=folder,
         text=text,
@@ -83,7 +102,7 @@ async def search_messages(
         cursor=cursor,
     )
     if account_id is None:
-        page = await client().list_all_messages(**filters)
+        page = await client().list_all_messages(accounts=account_ids, **filters)
     else:
         page = await client().list_messages(account_id, **filters)
     return render.page(page)
@@ -102,17 +121,19 @@ async def whats_new(
             )
         ),
     ] = None,
-    account_id: Annotated[
-        str | None, Field(description="One account. Left out: every account")
-    ] = None,
+    account_id: AccountId = None,
+    account_ids: AccountIds = None,
     limit: Annotated[int, Field(ge=1, le=MAX_CHANGES)] = 50,
 ) -> dict[str, Any]:
     """What changed since an earlier call: mail created, updated (moved,
-    flags) or deleted, oldest first, ids only. Call once without since to
-    get a state, later pass that state as since. With more, call again at
-    once. get_message reads a new mail."""
+    flags) or deleted, oldest first, ids only. Of one account, several or
+    all. Call once without since to get a state, later pass that state as
+    since. With more, call again at once. get_message reads a new mail."""
+    _one_or_several(account_id, account_ids)
     if account_id is None:
-        found = await client().list_all_changes(since=since, limit=limit)
+        found = await client().list_all_changes(
+            accounts=account_ids, since=since, limit=limit
+        )
     else:
         found = await client().list_changes(account_id, since=since, limit=limit)
     return render.changes(found)
