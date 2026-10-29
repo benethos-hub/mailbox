@@ -224,9 +224,9 @@ list shows them as tags. Whoever may change the message removes one
 with the x on its chip and adds one with the field beside them.
 Keywords starting with `$`, such as `$answered`, belong to the mail
 protocol: they show beside the flags, in words where they have one
-(answered, forwarded, draft, junk), and are not changed in the UI. Those
-a server notes for itself, such as `$hasnoattachment` or `$notjunk`, do
-not show.
+(answered, forwarded, draft, junk, phishing), and are not changed in
+the UI. Those a server notes for itself, such as `$hasnoattachment` or
+`$notjunk`, do not show.
 
 ### 4.5 The filter bar
 
@@ -268,9 +268,11 @@ one of its filters, paged with one cursor across the accounts.
 Every list that can grow beyond one page pages with the cursor of the
 domain and shows one pager under the table: **Newest** back to the first
 page, **Older** for the next. Accounts and Users, sorted by address and
-by name, name them **First** and **Next**. Page sizes are constants of
-the page module. A paged card shows no count in its header, since there
-is no total. Roles, tokens and webhooks list everything.
+by name, name them **First** and **Next**. The page size is one
+constant, `PAGE_SIZE` of `web/pages/templates.py`. The conversations of
+a folder and the Activity tab have one of their own in their route
+module. A paged card shows no count in its header, since there is no
+total. Roles, tokens and webhooks list everything.
 
 ### 4.7 Messages and errors
 

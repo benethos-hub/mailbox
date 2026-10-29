@@ -276,6 +276,9 @@ API token, so keep it readable by its owner alone. Template:
 only (`localhost` or a loopback address such as `127.0.0.1` or `::1`),
 since the token goes with every request. For `http` to another host, e.g. a container beside it, set
 `MAILBOX_SERVICE_ALLOW_HTTP=1`. Without it the server does not start.
+The address carries no user or password: the server refuses such an
+address, since it names the address in the error the model reads when
+the service cannot be reached.
 
 ## Over HTTP
 
@@ -318,8 +321,9 @@ written as the service writes its own: in colour on a terminal unless
 it read, the transport, the service's address and the tools it serves,
 and warns where its token may read mail and send it to any address. Over
 HTTP without `MAILBOX_MCP_BEARER_TOKEN` it warns as well. A tool that
-fails writes a warning with the tool's name and the error's code, never
-its arguments. `httpx`, `httpcore` and the MCP library write from
+fails writes a warning with the tool's name and the error's code, or
+why it failed where there is none, such as a PDF that took too long,
+never its arguments. `httpx`, `httpcore` and the MCP library write from
 `warning` on, since a request's URL carries search terms and message ids.
 
 Towards the service it waits 5 seconds for a connection, 30 seconds for
@@ -393,23 +397,23 @@ beside `server_status`, and it lists no account. The tools:
 
 | Tool | Needs | What it does |
 |---|---|---|
-| `list_accounts` | – | the accounts, their addresses, what may be done on each, the limits on sending, a warning where the token may read and send anywhere, what an account cannot do, such as a POP3 mailbox without folders, and an account that needs a person, such as a new sign-in |
+| `list_accounts` | – | the accounts, their addresses, what may be done on each, the limits on sending, a warning where the token may read and send anywhere, what an account cannot do, such as a POP3 mailbox without folders, the marks it writes (`marks_written`), and an account that needs a person, such as a new sign-in |
 | `list_folders` | `mail.read` | folders with id, name, role, parent and counts |
-| `search_messages` | `mail.read` | find mail by text, sender, recipient, subject, days, flags, attachments, in one account, several or all, in the inbox or a folder, or with `all` in every folder but the trash and junk, each hit with the first 120 characters of its text |
-| `get_message` | `mail.read` | one mail as plain text, cut to `max_chars`, 4,000 by default, with its folders, its marks in words, its keywords, and for a draft the mail it answers |
+| `search_messages` | `mail.read` | find mail by text, sender, recipient, subject (each one line of up to 200 characters), days, flags, attachments, in one account, several or all, in the inbox or a folder, or with `all` in every folder but the trash and junk, each hit with the first 120 characters of its text |
+| `get_message` | `mail.read` | one mail as plain text, cut to `max_chars`, 4,000 by default, with its headers, `bcc` and `reply_to` among them, its folders, its marks in words, its keywords, its attachments with id, type and size, an inline one such as a logo marked `(inline)`, and for a draft the mail it answers |
 | `get_thread` | `mail.read` | a conversation in every folder, oldest first, from a mail of it such as a search hit or from its thread id: the newest 20 mails as plain text, sharing `max_chars`, 12,000 by default |
 | `whats_new` | `mail.read` | mail created, updated or deleted since the `state` of an earlier call, ids only, in one account, several or all |
 | `get_attachment` | `mail.read` | an attachment: images up to 5 MiB as images, PDF pages as PNG images (`first_page`, `pages`, up to 10, 4 megapixels a page and 12 together), text as text, HTML as the text a reader sees, both cut to `max_chars`, 20,000 by default. Other types and larger images by name only. An image, PDF or text above 10 MiB is refused, and a PDF whose pages take longer than 30 seconds to render. |
 | `share_attachment` | `mail.share` | a link to an attachment for another service, which fetches the file itself without it passing through the model: a URL that service fetches once, without a token, until it ends, after the service's `MAILBOX_SERVICE_LINK_SECONDS`, 120 by default, or sooner with `expires_in`, with when it ends, the type, the size and the file name |
-| `update_messages` | `mail.write` | up to 100 mails of one account: read or unread, star, move (folder id or role such as `archive`), add and take off keywords, add and take off labels where a mail can be in several folders at once, or into the trash |
-| `create_folder` | `mail.write` | a new folder, at the top or in a parent (id or role) |
-| `update_folder` | `mail.write` | renames a folder, or moves it into another one or to the top. Deleting a folder is not a tool |
+| `update_messages` | `mail.write` | up to 100 mails of one account: read or unread, star, move (folder id or role such as `archive`), add and take off keywords, a word of your own or a mark the account writes, such as `$junk`, add and take off labels where a mail can be in several folders at once, or into the trash |
+| `create_folder` | `mail.write` | a new folder, named in up to 200 characters, at the top or in a parent (id or role) |
+| `update_folder` | `mail.write` | renames a folder, in up to 200 characters, or moves it into another one or to the top. Deleting a folder is not a tool |
 | `list_drafts` | `drafts` | the drafts of an account |
 | `create_draft` | `drafts` | a draft in plain text or HTML, recipients optional. With `original_id` a reply, reply to all or forward, with `quote` false without the original, `forward_as` attachment for the original as a file. `reply_to`, `attachments` as base64, `attach_from` for attachments of other mail. |
 | `update_draft` | `drafts` | replaces a draft as a whole, `keep_attachments` keeps stored files. It answers with the draft's id from now on, a new one at Microsoft, JMAP and Gmail |
 | `delete_draft` | `drafts` | deletes a draft for good, reaches drafts only |
-| `send_message` | `send` | sends a mail at once, plain text or HTML. It takes what `create_draft` takes. |
-| `send_draft` | `send` | sends a stored draft |
+| `send_message` | `send` | sends a mail at once, plain text or HTML. It takes what `create_draft` takes. It answers the mail's `Message-ID`, the recipients the server refused and `sent_copy_id`, the copy in the sent folder where the account keeps one |
+| `send_draft` | `send` | sends a stored draft, and answers the same as `send_message` |
 | `server_status` | – | what runs: the name and version of this server, the transport, Python, the MCP library and the uptime. With `details` the service as this server last saw it: whether it answered and how long ago, its version and whether it matches, whether it took the token, and the tools offered. Offered always, also when the service refuses the token, and asks the service nothing |
 
 Each tool has a title for display and the standard MCP hints. Clients
@@ -446,7 +450,7 @@ the mail first. With `drafts` alone it writes drafts for a person to send.
 Mail content comes back inside `<mail-content>` markers, the headers and
 attachment names as much as the body. Strangers wrote it, so it is data,
 not instructions. A list of messages, which is JSON, carries a `note`
-saying the same of `from` and `subject`, a list of drafts of `to` and
+saying the same of `from`, `subject` and `snippet`, a list of drafts of `to` and
 `subject`, which a reply takes from the mail it answers. HTML is turned
 into text without its hidden parts: text not shown, too small or faint
 to read, pushed off the page or in the colour of its own background.

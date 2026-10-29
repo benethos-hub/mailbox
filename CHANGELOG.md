@@ -88,6 +88,13 @@ adheres to [Semantic Versioning](https://semver.org/).
   `MAILBOX_SERVICE_URL` with a user or password in it. The address is
   named in the error when the service cannot be reached, which reaches
   the model.
+- `benethos-mailbox-mcp`: `share_attachment` names the content type
+  inside the marker, beside the file name, since the sender chose it.
+- The account page of the UI says what the account can do and which
+  marks it writes.
+- A sign-in with a code in the UI answers a page of its own, so a reload
+  starts no second sign-in at the provider. The batch of the Users list
+  and Set password for another user ask first.
 
 ### Fixed
 

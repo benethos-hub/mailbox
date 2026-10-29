@@ -922,6 +922,9 @@ draft goes the same way.
 `keywords` follow JMAP (RFC 8621): `$answered`, `$forwarded`, `$draft` and
 the provider's own keywords as they are. `\Seen` and `\Flagged` are
 `unread` and `starred`. A `PATCH` with `keywords` replaces the list.
+A mark the message has, such as `$answered`, stays until
+`remove_keywords` names it (decided 2026-10-28, UNIFORM.md 3). A mark in
+the list needs to be among the account's `marks.written`.
 
 **Decided 2026-10-12:** keywords and folders are also added and taken off,
 in the API rather than in the MCP server, so that a batch of messages
@@ -1625,8 +1628,8 @@ with the role
   - Format `mbx_` + 64 random base62 characters, a little over 380 bits.
     Shown **once** on creation, stored as a SHA-256 hash (a random token of
     that length needs no slow hash).
-  - Per token: `name`, `created_at`, `expires_at` (optional),
-    `last_used_at`, `revoked_at`.
+  - Per token: `name`, `created_at`, `expires_at` (optional, at most
+    3650 days ahead, else `400`), `last_used_at`, `revoked_at`.
   - A token carries the rights of its user, no more. Narrowing a single
     token below its user is left open, since a second user with fewer
     rights does the same job.
@@ -1898,7 +1901,9 @@ imports the service.
 It calls the REST API through the client, which reads
 `MAILBOX_SERVICE_URL` and `MAILBOX_SERVICE_TOKEN`. The URL is `https`, or `http` to this machine only, since the token
 goes with every request. `MAILBOX_SERVICE_ALLOW_HTTP=1` allows `http` to
-another host, e.g. between containers (**decided 2026-09-27**). It runs over stdio or streamable HTTP. Over HTTP a bearer guard
+another host, e.g. between containers (**decided 2026-09-27**). A URL
+with a user or password is refused: the address is named in the error
+when the service cannot be reached, which reaches the model. It runs over stdio or streamable HTTP. Over HTTP a bearer guard
 admits clients with one shared token (`MAILBOX_MCP_BEARER_TOKEN`), which
 is not passed on: the server acts as the user of its own API token, for
 every client alike. Host and Origin are checked against DNS rebinding. At

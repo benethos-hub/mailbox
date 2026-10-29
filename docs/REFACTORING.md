@@ -1161,8 +1161,8 @@ Decided by the user on 2026-10-10, built as #132.
   server's `Settings` extend it. The MCP server has typed settings
   and no python-dotenv. A settings file no longer changes the
   environment of the process.
-- **The boundaries.** `tests/test_boundaries.py` of the service
-  checks all four packages: what a package hands on is a named
+- **The boundaries.** `tests/test_boundaries.py`, at the root of the
+  repository since #215, checks all four packages: what a package hands on is a named
   record, frozen and with slots, not a tuple or a dict. Each
   exception stands in `ALLOWED` with its reason, and an entry that
   no longer matches fails. The tuples of the domain became

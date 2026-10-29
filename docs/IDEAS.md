@@ -151,7 +151,7 @@ TOTP came on 2026-10-09 as a choice per user
 
 Collected 2026-10-09. Today the REST API takes a static bearer token
 (CONCEPT 7.5): random, stored as a hash, revocable, with an optional
-expiry. Whoever copies it from a settings file, a log or a proxy can use
+expiry of at most ten years. Whoever copies it from a settings file, a log or a proxy can use
 it until it is revoked or expires. Three steps, each building on the one
 before:
 

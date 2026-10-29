@@ -134,8 +134,9 @@ some folders, such as the invoices, and end after a week.
   sending (allowed recipients, sends per day), an audit of every send
   and an audit of administration.
 - **MCP server:** reads, sorts, writes drafts, sends and tells what is
-  new, over stdio or streamable HTTP, offering only the tools its token
-  may use and following its rights while it runs. Mail content reaches
+  new, over stdio or streamable HTTP, offering only the mail tools its
+  token may use, `server_status` always, and following its rights while
+  it runs. Mail content reaches
   the model marked as foreign text.
 - **Configuration UI** in the browser under `/ui`: accounts, users,
   rights, tokens, reading and writing mail, the send audit, webhooks,

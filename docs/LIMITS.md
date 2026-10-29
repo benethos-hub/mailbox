@@ -32,6 +32,7 @@ Towards the callers of the service:
 | Discoveries | per user | 10 in any minute, each domain's findings kept a day | `429 rate_limited` | `MAILBOX_SERVICE_DISCOVERY_PER_MINUTE`, the day is fixed |
 | Sends | per user and account, under a grant | `max_sends_per_day` in any 24 hours | `429 send_limit_reached` | the grant |
 | Recipients | per send, under a grant | the grant's `recipients` | `403 recipient_not_allowed` | the grant |
+| Pages of an account read for one page of `GET /v1/messages` | per account, per request | 10 | the page is shorter, or empty, with a `next_cursor` to read on | fixed |
 
 Towards the mail servers:
 
@@ -56,6 +57,8 @@ The MCP server's own, towards the model:
 | Rendering a PDF | per `get_attachment` | 30 seconds, one PDF at a time | refused | fixed |
 | Mails in one change | per `update_messages` | 100 | refused | fixed |
 | Mails of a conversation | per `get_thread` | the newest 20, which share `max_chars` | the older ones are left out | fixed |
+| Hits of a search or a list | per call, `limit` | 50 at most | refused | fixed |
+| Changes of `whats_new` | per call, `limit` | 200 at most | refused | fixed |
 
 Every `429` carries `Retry-After` in seconds. A limit of `0` switches the
 limit on requests off. The other limits can be set, not switched off.
