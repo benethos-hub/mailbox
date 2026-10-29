@@ -395,7 +395,7 @@ beside `server_status`, and it lists no account. The tools:
 |---|---|---|
 | `list_accounts` | – | the accounts, their addresses, what may be done on each, the limits on sending, a warning where the token may read and send anywhere, what an account cannot do, such as a POP3 mailbox without folders, and an account that needs a person, such as a new sign-in |
 | `list_folders` | `mail.read` | folders with id, name, role, parent and counts |
-| `search_messages` | `mail.read` | find mail by text, sender, recipient, subject, days, flags, attachments, in one account, several or all, in the inbox or a folder, or with `all` in every folder but the trash and junk |
+| `search_messages` | `mail.read` | find mail by text, sender, recipient, subject, days, flags, attachments, in one account, several or all, in the inbox or a folder, or with `all` in every folder but the trash and junk, each hit with the first 120 characters of its text |
 | `get_message` | `mail.read` | one mail as plain text, cut to `max_chars`, 4,000 by default, with its folders, its marks in words, its keywords, and for a draft the mail it answers |
 | `get_thread` | `mail.read` | a conversation in every folder, oldest first, from a mail of it such as a search hit or from its thread id: the newest 20 mails as plain text, sharing `max_chars`, 12,000 by default |
 | `get_attachment` | `mail.read` | an attachment: images up to 5 MiB as images, PDF pages as PNG images (`first_page`, `pages`, up to 10, 4 megapixels a page and 12 together), text as text, HTML as the text a reader sees, both cut to `max_chars`, 20,000 by default. Other types and larger images by name only. An image, PDF or text above 10 MiB is refused, and a PDF whose pages take longer than 30 seconds to render. |

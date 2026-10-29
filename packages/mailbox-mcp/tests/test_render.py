@@ -119,3 +119,9 @@ def test_addresses() -> None:
     assert render.address(Address("a@example.com", "A")) == "A <a@example.com>"
     assert render.address(Address("a@example.com")) == "a@example.com"
     assert render.address(None) == "-"
+
+
+def test_a_snippet_is_one_short_line() -> None:
+    shown = render.summary(mail(snippet="Dear Ann,\n\n" + "x" * 300))
+    assert shown["snippet"] == ("Dear Ann, " + "x" * 300)[: render.SNIPPET_CHARS]
+    assert "snippet" not in render.summary(mail())
