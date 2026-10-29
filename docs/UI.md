@@ -309,7 +309,8 @@ next step appears under the last one:
 
 1. **Address.** One field, **Look up**. The lookup asks the discovery
    sources (CONCEPT 5.8) and, from the domain, which OAuth providers this
-   deployment offers.
+   deployment offers. It answers the page itself, no redirect: it
+   changes nothing, and the address stays out of the access log.
 2. **How to connect.** One card per way, the recommended one first:
    - a provider the deployment signs in with (Microsoft, Google):
      **Sign in with Microsoft**, the address as the login hint, no
