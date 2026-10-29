@@ -11,6 +11,7 @@ import pkgutil
 import re
 import sqlite3
 import sys
+from contextlib import closing
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -245,13 +246,13 @@ def test_a_migration_runs_before_then_its_statements() -> None:
             db.execute("INSERT INTO log VALUES ('before')")
             return ["said so"]
 
-    db = sqlite3.connect(":memory:")
-    db.execute("CREATE TABLE log (step TEXT)")
-    assert Step().apply(db) == ["said so"]
-    assert [row[0] for row in db.execute("SELECT step FROM log")] == [
-        "before",
-        "statement",
-    ]
+    with closing(sqlite3.connect(":memory:")) as db:
+        db.execute("CREATE TABLE log (step TEXT)")
+        assert Step().apply(db) == ["said so"]
+        assert [row[0] for row in db.execute("SELECT step FROM log")] == [
+            "before",
+            "statement",
+        ]
     # The fingerprint is the module's source, here this test module.
     source = inspect.getsource(sys.modules[__name__])
     assert Step.fingerprint() == hashlib.sha256(source.encode()).hexdigest()
@@ -291,14 +292,14 @@ def test_the_registry_refuses_a_gap_or_a_wrong_place() -> None:
 
 def test_the_registry_runs_a_step_and_records_its_version() -> None:
     registry = MigrationRegistry(_One(), _Two())
-    db = sqlite3.connect(":memory:")
-    registry.prepare(db)
-    assert registry.version_of(db) == 0
-    assert registry.apply(db, registry.step(1)) == []
-    assert registry.version_of(db) == 1
-    assert registry.apply(db, registry.step(2)) == ["schema 2: two is coming"]
-    assert registry.version_of(db) == 2
-    assert db.execute("SELECT count(*) FROM two").fetchone()[0] == 0
+    with closing(sqlite3.connect(":memory:")) as db:
+        registry.prepare(db)
+        assert registry.version_of(db) == 0
+        assert registry.apply(db, registry.step(1)) == []
+        assert registry.version_of(db) == 1
+        assert registry.apply(db, registry.step(2)) == ["schema 2: two is coming"]
+        assert registry.version_of(db) == 2
+        assert db.execute("SELECT count(*) FROM two").fetchone()[0] == 0
 
 
 def test_each_migration_step_is_one_statement() -> None:
