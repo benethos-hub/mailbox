@@ -589,7 +589,9 @@ These rules bind every page, the reworked ones and the ones to come.
    the page. Partials are pieces of one page, components are macros used
    by several.
 3. **The route decides nothing.** It reads the form, calls one domain
-   method and renders or redirects. Rights are the domain's. The page
+   method and renders or redirects. The mail form is the one route that
+   saves and sends in two steps, and follows the id a replaced draft
+   gets. Rights are the domain's. The page
    only hides what `caller.allows(...)` denies, with the same names the
    API uses in `x-permission`. The mail pages offer what the account's
    `operations` name, the caller's rights and what the account can do
