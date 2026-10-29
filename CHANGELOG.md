@@ -62,6 +62,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 - The service runs on FastAPI 0.162 and Starlette 1.10.
 - Both images run on Python 3.15.2. It rejects TLS certificate chains
   with the compromised eMudhra intermediate CA keys.
+- The images install pydantic 2.14.2, platformdirs 4.14.0 and dnspython
+  2.9.1 from the lockfile.
 - `benethos-mailbox-service` needs dnspython 2.9.0 or newer, the first
   version without a known vulnerability. An install from the lockfile,
   as the images do, had it already.
