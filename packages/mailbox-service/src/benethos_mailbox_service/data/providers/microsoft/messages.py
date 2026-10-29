@@ -107,7 +107,7 @@ async def update_messages(
     async def one(message_id: str) -> MessageSummary:
         # Judged per id, as the other adapters answer it.
         target = rules.move_target(changes, labels=False)
-        if target == mappers.ALL:
+        if target == rules.ALL:
             raise rules.into_all()
         path = f"/me/messages/{path_part(message_id)}"
 

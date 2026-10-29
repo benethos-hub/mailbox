@@ -22,12 +22,12 @@ import anyio
 import httpx
 from checks.accounts import accounts, read_env, register_all
 from checks.admin import user_token
+from checks.mcp_session import READ_TOOLS
 from checks.processes import free_port, program, started, stop
 from checks.run import Run
 from checks.service import throwaway_service
 from mcp import ClientSession
 from mcp.client.streamable_http import create_mcp_http_client, streamable_http_client
-from mcp_stdio import READ_TOOLS
 
 
 def start_mcp(

@@ -18,10 +18,8 @@ from typing import Any
 
 import httpx
 
-from benethos_mailbox_service.data.secrets import cipher, encode_recovery
-
 from .admin import Admin, bootstrap
-from .processes import service_env
+from .processes import new_master_key, service_env
 
 PORT = 8080
 URL = f"http://localhost:{PORT}"
@@ -65,9 +63,7 @@ class OwnService:
         """The service on its own database, reachable under ``URL``, with
         the settings of ``oauth`` for the provider's app in place of any
         that start with ``oauth_prefix``."""
-        master_key = self.secret_file(
-            "master_key", lambda: encode_recovery(cipher.new_key())
-        )
+        master_key = self.secret_file("master_key", new_master_key)
         service = {
             **service_env(str(self.data), PORT, master_key),
             "MAILBOX_SERVICE_PUBLIC_URL": URL,

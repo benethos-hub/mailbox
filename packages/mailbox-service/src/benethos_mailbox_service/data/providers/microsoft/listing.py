@@ -32,7 +32,7 @@ async def list_messages(
     else:
         path = (
             "/me/messages"
-            if folder_id == mappers.ALL
+            if folder_id == rules.ALL
             else f"/me/mailFolders/{path_part(folder_id)}/messages"
         )
         params = {**mappers.SUMMARY_PARAMS, "$top": str(limit), **query}
@@ -41,7 +41,7 @@ async def list_messages(
     if "$search" in query:
         found = await _immutable(graph, found)
     items = [mappers.summary(item) for item in found]
-    if folder_id == mappers.ALL:
+    if folder_id == rules.ALL:
         # Graph lists every folder: the trash and junk leave after
         # each page, so a page can come back short.
         outside = await _outside_all(graph)

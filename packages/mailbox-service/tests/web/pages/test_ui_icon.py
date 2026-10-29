@@ -5,25 +5,20 @@ script renders."""
 
 from __future__ import annotations
 
-import importlib.util
 from pathlib import Path
 from types import ModuleType
 
 import pytest
 from fastapi.testclient import TestClient
 
+from ...scripts_helpers import script_module
+
 REPOSITORY = Path(__file__).resolve().parents[5]
 ICON = "/ui/static/img/icon.svg"
 
 
 def _build() -> ModuleType:
-    spec = importlib.util.spec_from_file_location(
-        "assets_build", REPOSITORY / "assets" / "build.py"
-    )
-    assert spec and spec.loader
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return script_module("assets_build", REPOSITORY / "assets" / "build.py")
 
 
 def test_every_shipped_image_is_made_from_its_source() -> None:

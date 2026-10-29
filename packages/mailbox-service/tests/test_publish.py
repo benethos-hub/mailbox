@@ -12,13 +12,14 @@ import re
 from .publish_helpers import (
     PACKAGES,
     ROOT,
+    WORKFLOW,
     module_of,
     project_of,
     workflow_job,
     workspace_needs,
 )
 
-SERVICE, CLIENT, MCP, COMMON = PACKAGES
+_, CLIENT, _, COMMON = PACKAGES
 
 
 def _wheel_contains(module: str) -> str:
@@ -34,11 +35,11 @@ def _wheel_contains(module: str) -> str:
 def _publish_jobs() -> dict[str, dict[str, object]]:
     """The PyPI upload jobs of publish.yml by package: the job's name,
     the jobs it waits for, its environment and what its wheel must carry."""
-    text = (ROOT / ".github" / "workflows" / "publish.yml").read_text("utf-8")
     jobs: dict[str, dict[str, object]] = {}
-    for job, body in re.findall(r"^  (pypi-\S+):\n((?:    .*\n|\n)+)", text, re.M):
+    for job in re.findall(r"^  (pypi-\S+):$", WORKFLOW.read_text("utf-8"), re.M):
         if job == "pypi-trial":
             continue
+        body = workflow_job(job)
         package = re.search(r"^\s+package: (\S+)$", body, re.M)
         environment = re.search(r"^      name: (\S+)$", body, re.M)
         needs = re.search(r"^    needs: \[(.*)\]$", body, re.M)

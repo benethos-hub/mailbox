@@ -24,7 +24,6 @@ from benethos_mailbox_service.data.providers import (
     Timing,
 )
 from benethos_mailbox_service.data.providers.imap import ImapProvider
-from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 from benethos_mailbox_service.errors import (
     BadRequestError,
     ProviderAuthError,
@@ -32,7 +31,7 @@ from benethos_mailbox_service.errors import (
     ProviderUnavailableError,
 )
 
-from ...conftest import admin_bearer
+from ...conftest import admin_bearer, set_master_key
 from ...imap_fake import FakeMailBox
 from ...smtp_fake import FakeSmtpServer
 
@@ -193,7 +192,7 @@ async def test_starttls_on_587_and_an_own_login() -> None:
 def world(
     monkeypatch: pytest.MonkeyPatch,
 ) -> Iterator[tuple[TestClient, FakeSmtpServer]]:
-    monkeypatch.setenv("MAILBOX_SERVICE_MASTER_KEY", encode_recovery(cipher.new_key()))
+    set_master_key(monkeypatch)
     box, smtp = FakeMailBox(), FakeSmtpServer()
 
     def factory(

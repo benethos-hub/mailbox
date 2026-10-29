@@ -40,7 +40,7 @@ from ..base import CredentialReader, ProviderSettings
 from ..guard import REAL_TIME, Pace, Timing
 from ..mailserver import MailServerAdapter
 from ..sender import SmtpFactory
-from . import drafts, everywhere, folders, mappers, messages
+from . import drafts, everywhere, folders, messages
 from .abilities import abilities as imap_abilities
 from .changes import Idle, ImapChanges
 from .connect import SessionFactory, default_session
@@ -108,7 +108,7 @@ class ImapProvider(MailServerAdapter):
         found = await self._run(lambda box: box.list_folders(subscriptions=True))
         if any(f.role is FolderRole.ALL for f in found):
             return found
-        return [*found, mappers.all_mail()]
+        return [*found, rules.all_mail()]
 
     async def list_messages(
         self,
@@ -118,7 +118,7 @@ class ImapProvider(MailServerAdapter):
         cursor: str | None,
         search: MessageFilter | None = None,
     ) -> Page[MessageSummary]:
-        if folder_id == mappers.ALL:
+        if folder_id == rules.ALL:
             return await self._run(
                 lambda box: everywhere.list_all(box, limit, cursor, search)
             )

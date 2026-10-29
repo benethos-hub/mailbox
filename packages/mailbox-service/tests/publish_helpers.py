@@ -37,14 +37,16 @@ def needs_of(package: Path) -> list[str]:
     return [str(need) for need in needs]
 
 
+def name_of(need: str) -> str:
+    """The name of the package a dependency names, without its version,
+    extras or markers."""
+    return re.split(r"[=<>!~\[; ]", need, maxsplit=1)[0]
+
+
 def workspace_needs(package: Path) -> set[str]:
     """The packages of the workspace that ``package`` depends on."""
     names = {str(project_of(p)["name"]) for p in PACKAGES}
-    return {
-        name
-        for need in needs_of(package)
-        if (name := re.split(r"[=<>!~\[; ]", need, maxsplit=1)[0]) in names
-    }
+    return {name for need in needs_of(package) if (name := name_of(need)) in names}
 
 
 def workflow_job(name: str) -> str:

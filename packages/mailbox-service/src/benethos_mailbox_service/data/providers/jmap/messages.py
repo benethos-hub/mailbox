@@ -36,7 +36,7 @@ async def list_messages(
     if not mappers.is_id(folder_id):
         raise missing("folder", folder_id)
     outside = None
-    if folder_id == mappers.ALL:
+    if folder_id == rules.ALL:
         folders = await account.folders()
         if mappers.emulates_all(folders):
             outside = [f.id for f in folders if f.role in mappers.OUTSIDE_ALL]
@@ -143,7 +143,7 @@ async def update_messages(
     if changes.changes_folders:
         rules.move_target(changes, labels=True)
         folders = await account.folders()
-        if mappers.ALL in changes.named_folders() and mappers.emulates_all(folders):
+        if rules.ALL in changes.named_folders() and mappers.emulates_all(folders):
             return dict.fromkeys(message_ids, rules.into_all())
         known = {f.id for f in folders}
         unknown = next((t for t in changes.named_folders() if t not in known), None)

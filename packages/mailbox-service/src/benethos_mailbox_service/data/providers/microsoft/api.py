@@ -32,6 +32,7 @@ from ...protocols import (
 )
 from .. import rules
 from ..base import TokenSource
+from ..tokenapi import TokenApi, signed
 from . import mappers
 from .shapes import Batch, ErrorDetail, Failure, Item, Listing, Placed
 
@@ -62,7 +63,7 @@ T = TypeVar("T")
 L = TypeVar("L", bound=Listing[Any])
 
 
-class Graph:
+class Graph(TokenApi):
     def __init__(
         self,
         tokens: TokenSource,
@@ -70,14 +71,9 @@ class Graph:
         clock: Callable[[], float] = time.monotonic,
         sleep: Callable[[float], Awaitable[None]] = anyio.sleep,
     ) -> None:
-        self.tokens = tokens
-        self._http = http or ApiClient()
-        self._clock = clock
-        self._sleep = sleep
+        super().__init__(tokens, http, clock, sleep)
         self._roles: dict[str, FolderRole] | None = None
         self._root: str | None = None
-        # Until when Graph asked to be left alone (Retry-After).
-        self._rest_until = 0.0
 
     async def call(
         self,
@@ -92,9 +88,7 @@ class Graph:
         """One Graph request. ``path`` below ``/v1.0``, e.g. ``/me/messages``.
         While Graph asked to be left alone, nothing is sent. A change
         Exchange refuses as a conflict goes again after a pause."""
-        wait = self._rest_until - self._clock()
-        if wait > 0:
-            raise rules.resting("microsoft asked to wait", wait)
+        self._rested("microsoft")
         tries = CONFLICT_TRIES if method == "PATCH" else 1
         for attempt in range(tries):
             if attempt:
@@ -122,18 +116,14 @@ class Graph:
         content: bytes | None,
         content_type: str | None,
     ) -> Answer:
-        """One request with the access token, and where Graph refuses the
-        token, revoked or changed since it was issued, once more with a
-        new one."""
-        for attempt in (1, 2):
-            token = await self.tokens.access_token()
-            headers = {
-                "Authorization": f"Bearer {token.get_secret_value()}",
-                "Prefer": IMMUTABLE_IDS,
-            }
+        """One request with the access token and the preference for
+        immutable ids, the token renewed once where Graph refuses it."""
+
+        def send(token: str) -> Awaitable[Answer]:
+            headers = {"Authorization": f"Bearer {token}", "Prefer": IMMUTABLE_IDS}
             if content_type:
                 headers["Content-Type"] = content_type
-            answer = await self._http.request(
+            return self._http.request(
                 method,
                 f"{GRAPH}{VERSION}{path}",
                 headers=headers,
@@ -141,11 +131,8 @@ class Graph:
                 json_body=json_body,
                 content=content,
             )
-            if answer.status == 401 and attempt == 1:
-                self.tokens.reject()
-                continue
-            return answer
-        raise AssertionError("unreachable")  # pragma: no cover
+
+        return await signed(self.tokens, send)
 
     async def read(self, shape: type[S], method: str, path: str, **kwargs: Any) -> S:
         """One Graph request, its answer read as ``shape``."""

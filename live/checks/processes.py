@@ -24,6 +24,11 @@ def program(name: str) -> str:
     return command
 
 
+def new_master_key() -> str:
+    """A new master key, as a recovery key, for a service of a check."""
+    return encode_recovery(cipher.new_key())
+
+
 def free_port() -> int:
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", 0))
@@ -59,7 +64,7 @@ def service_env(
         "MAILBOX_SERVICE_DATA_DIR": str(Path(data_dir).resolve()),
         "MAILBOX_SERVICE_STORAGE": "sqlite",
         "MAILBOX_SERVICE_KEY_PROVIDER": "env",
-        "MAILBOX_SERVICE_MASTER_KEY": master_key or encode_recovery(cipher.new_key()),
+        "MAILBOX_SERVICE_MASTER_KEY": master_key or new_master_key(),
         "MAILBOX_SERVICE_HOST": "127.0.0.1",
         "MAILBOX_SERVICE_PORT": str(port),
         "MAILBOX_SERVICE_SYNC_INTERVAL": "0",

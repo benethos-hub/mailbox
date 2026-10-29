@@ -71,6 +71,15 @@ def in_trash_already() -> ConflictError:
     )
 
 
+# The id of the folder ``all`` where an adapter emulates it.
+ALL = "all"
+
+
+def all_mail() -> Folder:
+    """The folder ``all``, which only this service shows."""
+    return Folder(id=ALL, name="All Mail", role=FolderRole.ALL)
+
+
 def into_all() -> BadRequestError:
     """A move into the folder ``all`` the adapter emulates."""
     return BadRequestError(

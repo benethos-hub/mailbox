@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.storage import (
     Database,
     InMemoryWebhookRepository,
@@ -29,3 +30,10 @@ def store(
     )
     yield SqliteWebhookRepository(db)
     db.close()
+
+
+@pytest.fixture
+def ready(services: Services) -> Services:
+    """Services whose vault can seal a secret."""
+    services.vault.initialize()
+    return services

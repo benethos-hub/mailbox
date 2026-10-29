@@ -30,13 +30,12 @@ from benethos_mailbox_service.data.providers import (
 )
 from benethos_mailbox_service.data.providers.imap import ImapProvider, mappers
 from benethos_mailbox_service.data.providers.memory import MemoryProvider
-from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 from benethos_mailbox_service.errors import (
     NotFoundError,
     NotSupportedError,
 )
 
-from ...conftest import ADMIN, bearer_for, create_account
+from ...conftest import ADMIN, bearer_for, create_account, set_master_key
 from ...imap_adapter import provider
 from ...imap_fake import FakeFolder, FakeMailBox, make_message
 from .drafts_helpers import drafts_url
@@ -330,7 +329,7 @@ def test_drafts_is_a_right_of_its_own(
 
 @pytest.fixture
 def on_imap(box: FakeMailBox, monkeypatch: pytest.MonkeyPatch) -> tuple[Services, str]:
-    monkeypatch.setenv("MAILBOX_SERVICE_MASTER_KEY", encode_recovery(cipher.new_key()))
+    set_master_key(monkeypatch)
 
     def factory(
         kind: ProviderType, settings: ProviderSettings, credentials: CredentialReader

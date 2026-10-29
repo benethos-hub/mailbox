@@ -8,6 +8,21 @@ from typing import Any
 import httpx
 from fastapi.testclient import TestClient
 
+from benethos_mailbox_service.assembly import Services, create_app
+from benethos_mailbox_service.config import Settings
+from benethos_mailbox_service.data.models import Grant
+
+from .conftest import browser_admin, browser_user
+
+
+def signed_in(services: Services, *grants: Grant) -> TestClient:
+    """A browser signed in to the UI of ``services``: as a user with
+    ``grants``, without them as the admin."""
+    client = TestClient(create_app(Settings(storage="memory"), services))
+    who = browser_user(services, *grants) if grants else browser_admin(services)
+    sign_in(client, *who)
+    return client
+
 
 def sign_in(client: TestClient, name: str, password: str, next: str = "/ui") -> None:
     answer = try_sign_in(client, name, password, next)

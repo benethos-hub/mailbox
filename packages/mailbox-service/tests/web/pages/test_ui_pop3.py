@@ -9,23 +9,19 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from benethos_mailbox_service.assembly import Services, create_app
-from benethos_mailbox_service.config import Settings
+from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import Candidate, Discovery, ProviderType
 
-from ...conftest import browser_admin
-from ...ui_helpers import post, sign_in
+from ...ui_helpers import post, signed_in
 
 
 @pytest.fixture
-def browser(pop3_services: Services) -> TestClient:
-    client = TestClient(create_app(Settings(storage="memory"), pop3_services))
-    sign_in(client, *browser_admin(pop3_services))
-    return client
+def pop3_browser(pop3_services: Services) -> TestClient:
+    return signed_in(pop3_services)
 
 
-def test_the_mail_page(browser: TestClient, pop3_account_id: str) -> None:
-    page = browser.get(f"/ui/accounts/{pop3_account_id}/mail").text
+def test_the_mail_page(pop3_browser: TestClient, pop3_account_id: str) -> None:
+    page = pop3_browser.get(f"/ui/accounts/{pop3_account_id}/mail").text
     assert "Mail 3" in page
     assert "Delete for good" in page
     for absent in ("mark read", "move to …", "move to the trash", "New folder"):
@@ -34,11 +30,11 @@ def test_the_mail_page(browser: TestClient, pop3_account_id: str) -> None:
     assert 'name="text"' not in page  # the filter bar
 
 
-def test_the_message_page(browser: TestClient, pop3_account_id: str) -> None:
-    mail = browser.get(f"/ui/accounts/{pop3_account_id}/mail").text
+def test_the_message_page(pop3_browser: TestClient, pop3_account_id: str) -> None:
+    mail = pop3_browser.get(f"/ui/accounts/{pop3_account_id}/mail").text
     start = mail.index(f"/ui/accounts/{pop3_account_id}/mail/m")
     link = mail[start : mail.index('"', start)]
-    page = browser.get(link).text
+    page = pop3_browser.get(link).text
     assert "Delete for good" in page
     for absent in (
         "Mark read",
@@ -50,8 +46,10 @@ def test_the_message_page(browser: TestClient, pop3_account_id: str) -> None:
         assert absent not in page
 
 
-def test_the_account_page_names_pop3(browser: TestClient, pop3_account_id: str) -> None:
-    page = browser.get(f"/ui/accounts/{pop3_account_id}").text
+def test_the_account_page_names_pop3(
+    pop3_browser: TestClient, pop3_account_id: str
+) -> None:
+    page = pop3_browser.get(f"/ui/accounts/{pop3_account_id}").text
     assert "POP3" in page and "POP3 server" in page
     assert "995 for tls, 110 for starttls" in page
 
@@ -76,12 +74,12 @@ class OnlyPop3:
         )
 
 
-def test_a_provider_with_pop3_alone(browser: TestClient) -> None:
-    browser.app.state.services = replace(  # type: ignore[attr-defined]
-        browser.app.state.services,  # type: ignore[attr-defined]
+def test_a_provider_with_pop3_alone(pop3_browser: TestClient) -> None:
+    pop3_browser.app.state.services = replace(  # type: ignore[attr-defined]
+        pop3_browser.app.state.services,  # type: ignore[attr-defined]
         discovery=OnlyPop3(),
     )
-    page = post(browser, "/ui/accounts/discover", {"email": "me@example.org"}).text
+    page = post(pop3_browser, "/ui/accounts/discover", {"email": "me@example.org"}).text
     assert 'name="provider" value="pop3"' in page
     assert "POP3 server" in page and 'value="pop.example.org"' in page
     # Setting up by hand offers each kind, with what to know of it.

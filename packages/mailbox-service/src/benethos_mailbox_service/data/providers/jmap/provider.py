@@ -89,7 +89,7 @@ class JmapProvider:
         trash and junk."""
         found = await self._account.folders()
         if mappers.emulates_all(found):
-            return [*found, mappers.all_mail()]
+            return [*found, rules.all_mail()]
         return found
 
     async def list_messages(

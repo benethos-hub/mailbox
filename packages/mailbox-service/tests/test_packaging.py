@@ -17,9 +17,8 @@ from pathlib import Path
 
 import pytest
 
-from .publish_helpers import PACKAGES, module_of, needs_of, project_of
+from .publish_helpers import PACKAGES, ROOT, module_of, name_of, needs_of, project_of
 
-ROOT = Path(__file__).resolve().parents[3]
 SERVICE, CLIENT, MCP, COMMON = PACKAGES
 
 
@@ -71,8 +70,7 @@ def test_a_pin_inside_the_workspace_is_exact() -> None:
         f"{package.name}: {need}"
         for package in PACKAGES
         for need in needs_of(package)
-        if re.split(r"[=<>!~\[; ]", need, maxsplit=1)[0] in names
-        and f"=={_version()}" not in need
+        if name_of(need) in names and f"=={_version()}" not in need
     ]
     assert not loose
 

@@ -6,7 +6,7 @@ from email.utils import getaddresses
 
 import pytest
 
-from benethos_mailbox_common.mail.addresses import readable
+from benethos_mailbox_common.mail.addresses import Parsed, parsed, readable
 
 
 def test_a_name_and_an_email() -> None:
@@ -34,3 +34,23 @@ def test_a_quoted_name_comes_back_as_it_was(name: str) -> None:
         [readable(name, "ann@example.org", quoted=True), "bob@example.org"]
     )
     assert getaddresses([text]) == [(name, "ann@example.org"), ("", "bob@example.org")]
+
+
+def test_typed_addresses_are_split_by_comma_or_semicolon() -> None:
+    typed = parsed(
+        ' Ann <ann@example.org>; b@example.org, "Smith, Ann" <s@example.org> '
+    )
+    assert typed == [
+        Parsed("Ann", "ann@example.org"),
+        Parsed(None, "b@example.org"),
+        Parsed("Smith, Ann", "s@example.org"),
+    ]
+
+
+@pytest.mark.parametrize("text", ["", "  "])
+def test_nothing_typed_is_no_address(text: str) -> None:
+    assert parsed(text) == []
+
+
+def test_what_is_typed_is_not_judged() -> None:
+    assert parsed("nonsense") == [Parsed(None, "nonsense")]

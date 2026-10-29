@@ -34,7 +34,7 @@ from benethos_mailbox_service.errors import (
     SetupRequiredError,
 )
 
-from ..conftest import create_account
+from ..conftest import PipedStdin, create_account
 
 
 class MemoryKeyProvider:
@@ -392,7 +392,7 @@ def test_keys_init_and_import_commands(
     assert decode_recovery(recovery) == FileKeyProvider(key_file).load()
 
     key_file.unlink()
-    monkeypatch.setattr("sys.stdin", _Stdin(recovery + "\n"))
+    monkeypatch.setattr("sys.stdin", PipedStdin(recovery + "\n"))
     assert main(["keys", "import"]) == 0
     assert FileKeyProvider(key_file).load() == decode_recovery(recovery)
 
@@ -419,14 +419,3 @@ def test_a_generated_key_as_a_container_secret(
     assert capsys.readouterr().out.strip() == generated
     assert main(["keys", "generate"]) == 0
     assert capsys.readouterr().out.strip() != generated
-
-
-class _Stdin:
-    def __init__(self, text: str) -> None:
-        self._text = text
-
-    def isatty(self) -> bool:
-        return False
-
-    def readline(self) -> str:
-        return self._text

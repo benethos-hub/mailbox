@@ -28,13 +28,6 @@ HOOK = {"url": "https://hooks.example.com/mail"}
 pytestmark = pytest.mark.usefixtures("master_key")
 
 
-@pytest.fixture
-def ready(services: Services) -> Services:
-    """Services whose vault can seal a secret."""
-    services.vault.initialize()
-    return services
-
-
 def test_create_answers_the_secret_once(
     client: TestClient, ready: Services, account_id: str
 ) -> None:

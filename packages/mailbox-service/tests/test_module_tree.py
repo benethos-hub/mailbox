@@ -15,7 +15,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[3]
+from .publish_helpers import ROOT
+
 ARCHITECTURE = ROOT / "docs" / "ARCHITECTURE.md"
 PACKAGES = ("mailbox-service", "mailbox-client", "mailbox-mcp", "mailbox-common")
 

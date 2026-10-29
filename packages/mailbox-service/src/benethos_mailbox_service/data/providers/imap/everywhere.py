@@ -51,7 +51,7 @@ def list_all(
     box: Mailbox, limit: int, cursor: str | None, search: MessageFilter | None
 ) -> Page[MessageSummary]:
     search = search or MessageFilter()
-    scope = rules.cursor_scope(mappers.ALL, search)
+    scope = rules.cursor_scope(rules.ALL, search)
     places = _places(cursor, scope) if cursor else None
     streams: dict[str, list[_Hit]] = {}
     found: dict[str, tuple[int, list[int]]] = {}

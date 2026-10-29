@@ -27,8 +27,8 @@ from ...protocols import (
     standard_refusals,
     wire,
 )
-from .. import rules
 from ..base import TokenSource
+from ..tokenapi import TokenApi, signed
 from .shapes import Failure, Label, Labels
 
 # DEBUG alone: the data layer decides nothing (docs/LOGGING.md rule 6.2).
@@ -53,7 +53,7 @@ _SETS = ("/modify", "/batchModify", "/batchDelete", "/trash", "/untrash")
 S = TypeVar("S", bound=BaseModel)
 
 
-class GmailApi:
+class GmailApi(TokenApi):
     def __init__(
         self,
         tokens: TokenSource,
@@ -61,14 +61,9 @@ class GmailApi:
         clock: Callable[[], float] = time.monotonic,
         sleep: Callable[[float], Awaitable[None]] = anyio.sleep,
     ) -> None:
-        self.tokens = tokens
-        self._http = http or ApiClient()
-        self._clock = clock
-        self._sleep = sleep
+        super().__init__(tokens, http, clock, sleep)
         self._labels: list[Label] | None = None
         self._labels_at = 0.0
-        # Until when Gmail asked to be left alone (Retry-After).
-        self._rest_until = 0.0
 
     async def call(
         self,
@@ -82,9 +77,7 @@ class GmailApi:
         While Gmail asked to be left alone, nothing is sent. A request that
         changes nothing twice is tried again after an error of Gmail's own
         side, with a growing pause, as Gmail asks."""
-        wait = self._rest_until - self._clock()
-        if wait > 0:
-            raise rules.resting("gmail asked to wait", wait)
+        self._rested("gmail")
         tries = ATTEMPTS if _repeatable(method, path) else 1
         for attempt in range(tries):
             if attempt:
@@ -105,23 +98,19 @@ class GmailApi:
     async def _signed(
         self, method: str, path: str, params: Params | None, json_body: Any
     ) -> Answer:
-        """One request with the access token, and where Gmail refuses the
-        token, revoked or changed since it was issued, once more with a
-        new one."""
-        for attempt in (1, 2):
-            token = await self.tokens.access_token()
-            answer = await self._http.request(
+        """One request with the access token, renewed once where Gmail
+        refuses it."""
+
+        def send(token: str) -> Awaitable[Answer]:
+            return self._http.request(
                 method,
                 f"{GMAIL}{MAILBOX}{path}",
-                headers={"Authorization": f"Bearer {token.get_secret_value()}"},
+                headers={"Authorization": f"Bearer {token}"},
                 params=params,
                 json_body=json_body,
             )
-            if answer.status == 401 and attempt == 1:
-                self.tokens.reject()
-                continue
-            return answer
-        raise AssertionError("unreachable")  # pragma: no cover
+
+        return await signed(self.tokens, send)
 
     async def read(self, shape: type[S], method: str, path: str, **kwargs: Any) -> S:
         """One request, its answer read as ``shape``."""

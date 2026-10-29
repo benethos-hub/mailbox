@@ -65,7 +65,7 @@ async def test_folders_with_roles_and_parents(server: FakeMailBox) -> None:
     folders = {f.name: f for f in await provider(server).list_folders()}
     # \Noselect is left out. Without \All the adapter shows its own.
     assert set(folders) == {"INBOX", "Sent", "2026", "All Mail"}
-    assert folders["All Mail"].id == mappers.ALL
+    assert folders["All Mail"].id == rules.ALL
     assert folders["INBOX"].role is FolderRole.INBOX
     assert folders["Sent"].role is FolderRole.SENT
     # Below a folder that is not listed: at the top, as nothing above it
@@ -86,7 +86,7 @@ async def test_all_mail_is_every_folder_but_the_trash_newest_first(
     server.add("Sent", 1, make_message("Sent one", date=september[1]))
     server.add("Archive/2026", 1, make_message("Filed", date=september[2]))
     imap = provider(server)
-    whole = await imap.list_messages(mappers.ALL, limit=10, cursor=None)
+    whole = await imap.list_messages(rules.ALL, limit=10, cursor=None)
     assert whole.next_cursor is None
     assert [m.subject for m in whole.items] == [
         "Filed",
@@ -103,7 +103,7 @@ async def test_all_mail_is_every_folder_but_the_trash_newest_first(
     subjects: list[str | None] = []
     cursor = None
     for _ in range(10):
-        page = await imap.list_messages(mappers.ALL, limit=2, cursor=cursor)
+        page = await imap.list_messages(rules.ALL, limit=2, cursor=cursor)
         subjects += [m.subject for m in page.items]
         when = [m.received for m in page.items]
         assert when == sorted(
@@ -116,15 +116,15 @@ async def test_all_mail_is_every_folder_but_the_trash_newest_first(
         (m.subject for m in whole.items), key=str
     )
     found = await imap.list_messages(
-        mappers.ALL, limit=10, cursor=None, search=MessageFilter(subject="Invoice")
+        rules.ALL, limit=10, cursor=None, search=MessageFilter(subject="Invoice")
     )
     assert [m.subject for m in found.items] == ["Invoice 5", "Invoice 3", "Invoice 1"]
-    first = await imap.list_messages(mappers.ALL, limit=2, cursor=None)
+    first = await imap.list_messages(rules.ALL, limit=2, cursor=None)
     with pytest.raises(BadRequestError, match="invalid cursor"):
         await imap.list_messages(INBOX, limit=2, cursor=first.next_cursor)
     [moved] = (
         await imap.update_messages(
-            [found.items[0].id], MessageUpdate(folder_ids=[mappers.ALL])
+            [found.items[0].id], MessageUpdate(folder_ids=[rules.ALL])
         )
     ).values()
     assert isinstance(moved, BadRequestError)
@@ -142,9 +142,9 @@ async def test_a_cursor_of_all_as_it_was_written_reads(
 ) -> None:
     """Per folder with hits left its UIDVALIDITY and the UID below which
     its next page looks: a cursor handed out before still reads."""
-    scope = rules.cursor_scope(mappers.ALL, MessageFilter())
+    scope = rules.cursor_scope(rules.ALL, MessageFilter())
     cursor = opaque.encode("a_", [scope, places])
-    page = await provider(server).list_messages(mappers.ALL, limit=10, cursor=cursor)
+    page = await provider(server).list_messages(rules.ALL, limit=10, cursor=cursor)
     assert [m.subject for m in page.items] == subjects
 
 
@@ -162,12 +162,12 @@ async def test_a_cursor_of_all_as_it_was_written_reads(
 async def test_a_cursor_of_all_made_up_is_refused(
     server: FakeMailBox, value: object
 ) -> None:
-    scope = rules.cursor_scope(mappers.ALL, MessageFilter())
+    scope = rules.cursor_scope(rules.ALL, MessageFilter())
     if isinstance(value, list) and value[0] == "SCOPE":
         value = [scope, value[1]]
     with pytest.raises(BadRequestError, match="invalid cursor"):
         await provider(server).list_messages(
-            mappers.ALL, limit=10, cursor=opaque.encode("a_", value)
+            rules.ALL, limit=10, cursor=opaque.encode("a_", value)
         )
 
 
@@ -175,7 +175,7 @@ async def test_a_server_with_all_shows_its_own(server: FakeMailBox) -> None:
     server.folders["All"] = FakeFolder(flags=("\\All",))
     folders = await provider(server).list_folders()
     [everything] = [f for f in folders if f.role is FolderRole.ALL]
-    assert everything.id != mappers.ALL
+    assert everything.id != rules.ALL
 
 
 async def test_a_folder_below_an_unlisted_one_is_renamed_in_place(

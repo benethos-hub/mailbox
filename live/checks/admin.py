@@ -13,8 +13,7 @@ import httpx
 
 from benethos_mailbox_client import Grant, SyncMailboxClient
 from benethos_mailbox_service.assembly import Services
-from benethos_mailbox_service.domain.rights import ADMIN_SERVICE, permissions
-from benethos_mailbox_service.domain.rights.access import Access
+from benethos_mailbox_service.domain.rights import ADMIN_SERVICE, Access, permissions
 
 from .processes import program, run_dir
 
