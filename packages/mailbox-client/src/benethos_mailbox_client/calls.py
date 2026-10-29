@@ -26,14 +26,16 @@ P = ParamSpec("P")
 @dataclass(frozen=True, slots=True)
 class Call(Generic[T]):
     """One request to the API, and how its answer becomes what the caller
-    gets. ``read`` takes the JSON of the answer, None for no content."""
+    gets. ``read`` takes the JSON of the answer, None for no content. Its
+    repr leaves the body and the headers out: a body may hold the
+    credentials of an account or a password."""
 
     method: str
     path: str
     read: Callable[[Any], T]
     params: dict[str, Any] = field(default_factory=dict)
-    json: dict[str, Any] | None = None
-    headers: dict[str, str] = field(default_factory=dict)
+    json: dict[str, Any] | None = field(default=None, repr=False)
+    headers: dict[str, str] = field(default_factory=dict, repr=False)
     timeout: float = TIMEOUT
     # The answer's bytes as they come, not JSON: ``read`` takes them.
     raw: bool = False
