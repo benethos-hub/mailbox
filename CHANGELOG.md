@@ -23,6 +23,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `benethos-mailbox-mcp`: `send_message` and `send_draft` answer
   `sent_copy_id`, the copy in the sent folder where the account keeps
   one.
+- `benethos-mailbox-mcp`: `list_accounts` names per account the marks
+  it writes in `marks_written`. A mark outside them is refused.
 - `benethos-mailbox-client`: `ApiError.retry_after`, the seconds the
   `Retry-After` header of a limit asks to wait, else `None`.
 - `benethos-mailbox-client`: `Sent.sent_copy_id`, the copy in the sent

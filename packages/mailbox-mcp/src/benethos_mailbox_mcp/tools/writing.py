@@ -28,8 +28,8 @@ Keywords = Annotated[
     list[str] | None,
     Field(
         max_length=50,
-        description="Keywords: a word of your own, or a mark such as "
-        + marks.JUNK.keyword,
+        description="Keywords: a word of your own, or a mark among the "
+        "account's marks_written, such as " + marks.JUNK.keyword,
     ),
 ]
 

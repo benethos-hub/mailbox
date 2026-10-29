@@ -96,6 +96,16 @@ async def test_an_account_that_can_do_everything_names_no_limits(
     assert shown["can"] == ["read", "drafts"] and "unsupported" not in shown
 
 
+async def test_an_account_names_the_marks_it_writes(api: Callable) -> None:
+    graph = {
+        **ME["accounts"][0],
+        "marks": {"read": ["$answered"], "written": ["$answered"]},
+    }
+    api(routes={"/v1/me": {**ME, "accounts": [graph]}})
+    [shown] = await accounts.list_accounts()
+    assert shown["marks_written"] == ["$answered"]
+
+
 @pytest.mark.parametrize(
     ("status", "says"),
     [("needs_reauth", "sign in to the provider again"), ("connected", "last sync")],

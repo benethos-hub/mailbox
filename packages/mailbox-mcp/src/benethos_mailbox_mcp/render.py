@@ -282,6 +282,8 @@ def account(found: MeAccount, can: list[str]) -> dict[str, Any]:
         lacking := [text for name, text in ACCOUNT_LIMITS.items() if name not in able]
     ):
         shown["unsupported"] = lacking
+    if found.marks is not None:
+        shown["marks_written"] = sorted(found.marks.written)
     if "send" in can and found.sending:
         shown["sending"] = [sending(limit) for limit in found.sending]
     if "read_and_send_anywhere" in found.warnings:
