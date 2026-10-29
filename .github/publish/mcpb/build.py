@@ -13,7 +13,7 @@ there:
 The job mcpb-bundle of publish.yml runs these after the upload to PyPI, and
 the organisation's action publish/mcpb packs the staged folder and
 attaches it to the release. The manifest is committed as it ships.
-tests/test_mcpb.py of the service holds it to the package and runs this
+tests/test_mcpb.py at the root holds it to the package and runs this
 script into a temporary folder. Standard
 library only, so it runs without the project's environment.
 """

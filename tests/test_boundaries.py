@@ -20,7 +20,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 
-PACKAGES = Path(__file__).resolve().parents[2]
+PACKAGES = Path(__file__).resolve().parents[1] / "packages"
 SRC = {
     "common": PACKAGES / "mailbox-common/src/benethos_mailbox_common",
     "client": PACKAGES / "mailbox-client/src/benethos_mailbox_client",

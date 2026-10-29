@@ -135,8 +135,8 @@ An import or a line that breaks a rule fails the suite.
 ## 3. The code, module by module
 
 What each package and module of the service holds. A new module gets
-its line here in the same commit. `tests/test_module_tree.py` of the
-service checks that every path named here is there, that every package
+its line here in the same commit. `tests/test_module_tree.py` at the
+root of the repository checks that every path named here is there, that every package
 is named, and that a folder which lists some of its modules as lines
 lists all of them.
 
@@ -852,8 +852,8 @@ imapclient boundary), never by patching deep inside a library.
   and say why in the docstring.
   Example: `benethos_mailbox_common.paths.folders`: `system_folders(app)`
   returns `SystemFolders(config, data)`, not a tuple.
-  `tests/test_boundaries.py` of the service checks it for the four
-  packages: what each offers, and the methods of the domain services
+  `tests/test_boundaries.py` at the root of the repository checks it for
+  the four packages: what each offers, and the methods of the domain services
   the web layer reaches. Its `ALLOWED` names what stays, with the
   reason, such as a lookup by key or the free JSON of an account's
   settings.
@@ -913,6 +913,9 @@ imapclient boundary), never by patching deep inside a library.
   `<subject>_helpers.py`. The clocks a test moves itself are in
   `clocks.py`. No test module imports another, which
   `test_code_rules.py` checks in all four packages.
+- What checks the repository across the four packages, the publishing,
+  the READMEs, the trees of section 3 and the boundaries, is in `tests/`
+  at its root. Each package's tests stay its own and run alone.
 - Fakes plug in at a seam: the memory provider, `httpx.MockTransport`,
   a fake `IMAPClient` at the imapclient boundary. Nothing is patched
   deep inside a library.

@@ -129,7 +129,12 @@ MAX_LINES = 500
 MAX_METHODS = 30
 # Where the limits hold: the package, its tests and the live checks.
 REPOSITORY = Path(__file__).resolve().parents[3]
-SIZED = (ROOT, Path(__file__).resolve().parent, REPOSITORY / "live")
+SIZED = (
+    ROOT,
+    Path(__file__).resolve().parent,
+    REPOSITORY / "tests",
+    REPOSITORY / "live",
+)
 
 
 def test_modules_and_classes_stay_small() -> None:
