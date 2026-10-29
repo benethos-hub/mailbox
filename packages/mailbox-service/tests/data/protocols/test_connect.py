@@ -53,10 +53,12 @@ def test_the_context_verifies_the_host_name_on_any_address() -> None:
     context = tls_context("imap.example.org")
     assert context.check_hostname is True
     assert context.verify_mode is ssl.CERT_REQUIRED
-    with socket.socket() as raw:
-        wrapped = context.wrap_socket(
+    with (
+        socket.socket() as raw,
+        context.wrap_socket(
             raw, server_hostname=ADDRESS, do_handshake_on_connect=False
-        )
+        ) as wrapped,
+    ):
         assert wrapped.server_hostname == "imap.example.org"
 
 
