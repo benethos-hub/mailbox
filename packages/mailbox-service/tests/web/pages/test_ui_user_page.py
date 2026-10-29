@@ -105,6 +105,9 @@ def test_ticked_users_are_disabled_and_enabled(
     two = services.users.create_user(ADMIN, "two", [], [])
     page = ui.get("/ui/users").text
     assert 'id="users-batch"' in page and f'value="{one.id}" form="users-batch"' in page
+    assert (
+        'data-confirm="Apply to the ticked users?" data-confirm-label="Apply"' in page
+    )
     done = post(ui, "/ui/users/batch", {"user": [one.id, two.id], "action": "disable"})
     assert "2 users changed." in done.text
     assert all(services.users.get_user(ADMIN, u.id).disabled for u in (one, two))
