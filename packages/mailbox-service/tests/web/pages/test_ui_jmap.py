@@ -9,28 +9,24 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from benethos_mailbox_service.assembly import Services, create_app
-from benethos_mailbox_service.config import Settings
+from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import Candidate, Discovery, ProviderType
 
-from ...conftest import browser_admin
 from ...jmap_fake import HOST, TOKEN, FakeJmap
-from ...ui_helpers import post, sign_in
+from ...ui_helpers import post, signed_in
 
 
 @pytest.fixture
-def browser(jmap_services: Services) -> TestClient:
-    client = TestClient(create_app(Settings(storage="memory"), jmap_services))
-    sign_in(client, *browser_admin(jmap_services))
-    return client
+def jmap_browser(jmap_services: Services) -> TestClient:
+    return signed_in(jmap_services)
 
 
-def test_the_account_page(browser: TestClient, jmap_account_id: str) -> None:
-    page = browser.get(f"/ui/accounts/{jmap_account_id}").text
+def test_the_account_page(jmap_browser: TestClient, jmap_account_id: str) -> None:
+    page = jmap_browser.get(f"/ui/accounts/{jmap_account_id}").text
     assert "JMAP server" in page and "Session path" in page
     assert "SMTP server" not in page and "New password" in page
     # Everything a mail client does is offered.
-    mail = browser.get(f"/ui/accounts/{jmap_account_id}/mail").text
+    mail = jmap_browser.get(f"/ui/accounts/{jmap_account_id}/mail").text
     assert "move to the trash" in mail and "New folder" in mail
 
 
@@ -42,18 +38,18 @@ class NothingFound:
 
 
 def test_connect_by_hand_with_a_token(
-    browser: TestClient, jmap_server: FakeJmap
+    jmap_browser: TestClient, jmap_server: FakeJmap
 ) -> None:
-    browser.app.state.services = replace(  # type: ignore[attr-defined]
-        browser.app.state.services,  # type: ignore[attr-defined]
+    jmap_browser.app.state.services = replace(  # type: ignore[attr-defined]
+        jmap_browser.app.state.services,  # type: ignore[attr-defined]
         discovery=NothingFound(),
     )
-    page = post(browser, "/ui/accounts/discover", {"email": "me@example.org"}).text
+    page = post(jmap_browser, "/ui/accounts/discover", {"email": "me@example.org"}).text
     assert "No way to connect me@example.org was found" in page
     assert "Set up JMAP by hand" in page
     assert 'name="provider" value="jmap"' in page
     done = post(
-        browser,
+        jmap_browser,
         "/ui/accounts",
         {
             "email": "me@example.org",
@@ -70,9 +66,9 @@ def test_connect_by_hand_with_a_token(
     assert "token" in done.text and "New API token" in done.text
 
 
-def test_a_refused_token_shows_the_form_again(browser: TestClient) -> None:
+def test_a_refused_token_shows_the_form_again(jmap_browser: TestClient) -> None:
     done = post(
-        browser,
+        jmap_browser,
         "/ui/accounts",
         {
             "email": "me@example.org",
@@ -112,12 +108,12 @@ class FoundJmap:
         )
 
 
-def test_a_discovered_jmap_server(browser: TestClient) -> None:
-    browser.app.state.services = replace(  # type: ignore[attr-defined]
-        browser.app.state.services,  # type: ignore[attr-defined]
+def test_a_discovered_jmap_server(jmap_browser: TestClient) -> None:
+    jmap_browser.app.state.services = replace(  # type: ignore[attr-defined]
+        jmap_browser.app.state.services,  # type: ignore[attr-defined]
         discovery=FoundJmap(),
     )
-    page = post(browser, "/ui/accounts/discover", {"email": "me@example.org"}).text
+    page = post(jmap_browser, "/ui/accounts/discover", {"email": "me@example.org"}).text
     assert 'name="provider" value="jmap"' in page
     assert ">API token<" in page and 'value="/jmap/session"' in page
     assert '<option value="token" selected>' in page
@@ -126,9 +122,9 @@ def test_a_discovered_jmap_server(browser: TestClient) -> None:
 # --- a draft that gets a new id when it is replaced -----------------------------------
 
 
-def saved_draft(browser: TestClient, account_id: str) -> str:
+def saved_draft(jmap_browser: TestClient, account_id: str) -> str:
     saved = post(
-        browser,
+        jmap_browser,
         f"/ui/accounts/{account_id}/compose",
         {"to": "bob@example.org", "subject": "Plan", "text": "first", "do": "save"},
     )
@@ -137,19 +133,19 @@ def saved_draft(browser: TestClient, account_id: str) -> str:
 
 
 def test_a_draft_edited_and_sent(
-    browser: TestClient, jmap_account_id: str, jmap_server: FakeJmap
+    jmap_browser: TestClient, jmap_account_id: str, jmap_server: FakeJmap
 ) -> None:
-    first = saved_draft(browser, jmap_account_id)
+    first = saved_draft(jmap_browser, jmap_account_id)
     edited = post(
-        browser,
+        jmap_browser,
         first,
         {"to": "bob@example.org", "subject": "Plan", "text": "second", "do": "save"},
     )
     assert "Draft saved." in edited.text and "second" in edited.text
     second = edited.url.path
-    assert second != first and browser.get(first).status_code == 404
+    assert second != first and jmap_browser.get(first).status_code == 404
     sent = post(
-        browser,
+        jmap_browser,
         second,
         {"to": "bob@example.org", "subject": "Plan", "text": "third", "do": "send"},
     )
@@ -160,12 +156,12 @@ def test_a_draft_edited_and_sent(
 
 
 def test_a_draft_saved_but_not_sent(
-    browser: TestClient, jmap_account_id: str, jmap_server: FakeJmap
+    jmap_browser: TestClient, jmap_account_id: str, jmap_server: FakeJmap
 ) -> None:
-    first = saved_draft(browser, jmap_account_id)
+    first = saved_draft(jmap_browser, jmap_account_id)
     jmap_server.refuse_submission = {"type": "forbiddenToSend", "description": "quota"}
     refused = post(
-        browser,
+        jmap_browser,
         first,
         {"to": "bob@example.org", "subject": "Plan", "text": "second", "do": "send"},
     )

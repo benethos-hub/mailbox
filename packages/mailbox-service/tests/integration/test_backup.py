@@ -3,7 +3,6 @@ the commands."""
 
 from __future__ import annotations
 
-import io
 import re
 import sqlite3
 from pathlib import Path
@@ -34,12 +33,7 @@ from benethos_mailbox_service.data.storage import (
     Repositories,
 )
 
-from ..conftest import create_account
-
-
-class _Stdin(io.StringIO):
-    def isatty(self) -> bool:
-        return False
+from ..conftest import PipedStdin, create_account
 
 
 @pytest.fixture
@@ -251,7 +245,7 @@ def test_backup_verify_restore_commands(
     assert main(["restore", str(target)]) == 1
     assert "pass --recovery-key" in capsys.readouterr().err
 
-    monkeypatch.setattr("sys.stdin", _Stdin(recovery + "\n"))
+    monkeypatch.setattr("sys.stdin", PipedStdin(recovery + "\n"))
     assert main(["restore", str(target), "--recovery-key"]) == 0
     # The time of the backup as every line writes a time (LOGGING.md 6.9).
     assert re.search(
@@ -263,7 +257,7 @@ def test_backup_verify_restore_commands(
     assert services.vault.read(account_id, "password").get_secret_value() == "hunter2"
     services.close()
 
-    monkeypatch.setattr("sys.stdin", _Stdin(recovery + "\n"))
+    monkeypatch.setattr("sys.stdin", PipedStdin(recovery + "\n"))
     assert main(["backup", "verify", str(target), "--recovery-key"]) == 0
 
     # Writing a backup takes the master key the service holds: the option
@@ -293,7 +287,7 @@ def test_a_restore_keeps_another_master_key_unless_told(
     before = Settings().database_path.read_bytes()
     capsys.readouterr()
 
-    monkeypatch.setattr("sys.stdin", _Stdin(recovery + "\n"))
+    monkeypatch.setattr("sys.stdin", PipedStdin(recovery + "\n"))
     assert main(["restore", str(target), "--recovery-key"]) == 1
     assert "holds another master key" in capsys.readouterr().err
     assert FileKeyProvider(other_key_file).load() == own
@@ -302,7 +296,7 @@ def test_a_restore_keeps_another_master_key_unless_told(
     assert main(["restore", str(target), "--replace-master-key"]) == 1
     assert "goes with --recovery-key" in capsys.readouterr().err
 
-    monkeypatch.setattr("sys.stdin", _Stdin(recovery + "\n"))
+    monkeypatch.setattr("sys.stdin", PipedStdin(recovery + "\n"))
     assert main(["restore", str(target), "--recovery-key", "--replace-master-key"]) == 0
     assert FileKeyProvider(other_key_file).load() == decode_recovery(recovery)
     services = _services()

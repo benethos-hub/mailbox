@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import io
 import itertools
 import logging
 import os
@@ -276,6 +277,14 @@ def admin_bearer(services: Services) -> dict[str, str]:
 def browser_admin(services: Services) -> tuple[str, str]:
     """A user with every right, to sign in to the UI with."""
     return browser_user(services, service=[permissions.ADMIN], name="admin")
+
+
+class PipedStdin(io.StringIO):
+    """Standard input that is no terminal, as when a command is piped
+    into."""
+
+    def isatty(self) -> bool:
+        return False
 
 
 def bearer_for(

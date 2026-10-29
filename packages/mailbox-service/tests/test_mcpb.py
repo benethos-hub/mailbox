@@ -9,7 +9,6 @@ folder below.
 
 from __future__ import annotations
 
-import importlib.util
 import inspect
 import json
 import re
@@ -22,6 +21,7 @@ from benethos_mailbox_client import environment
 from benethos_mailbox_mcp.tools import TOOLS
 
 from .publish_helpers import PACKAGES, ROOT, project_of, workflow_job
+from .scripts_helpers import script_module
 
 BUNDLE = ROOT / ".github" / "publish" / "mcpb"
 MCP = PACKAGES[2]
@@ -32,11 +32,7 @@ def _manifest() -> dict[str, Any]:
 
 
 def _build() -> ModuleType:
-    spec = importlib.util.spec_from_file_location("mcpb_build", BUNDLE / "build.py")
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return script_module("mcpb_build", BUNDLE / "build.py")
 
 
 def _first_sentence(text: str) -> str:

@@ -226,3 +226,80 @@ def test_no_test_module_imports_another() -> None:
                 name = path.relative_to(REPOSITORY).as_posix()
                 violations.append(f"{name}:{node.lineno} from {node.module or '.'}")
     assert not violations, "imports a test module:\n  " + "\n  ".join(violations)
+
+
+# A fixture each module of a server of its own brings, by design: the
+# one of tests/conftest.py is the IMAP server.
+OWN_SERVER = "server"
+# What the two rules below found when they came, left for a change of its
+# own (2026-10-29): a module beside the fixture of a conftest, and two
+# modules of a folder with a fixture of one name.
+SHADOWING = {
+    ("domain/changes/test_changes_delta.py", "clock"),
+    ("domain/sync/test_jmap_sync.py", "client"),
+    ("domain/sync/test_take_up.py", "services"),
+}
+REPEATED = {
+    ("domain/accounts", "world"),
+    ("domain/mailbox", "box"),
+    ("web/pages", "endpoint"),
+}
+
+
+def _fixtures(path: Path) -> set[str]:
+    """The names of the fixtures a module defines at its top."""
+    found = set()
+    for node in ast.parse(path.read_text("utf-8")).body:
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        for decorator in node.decorator_list:
+            target = decorator.func if isinstance(decorator, ast.Call) else decorator
+            if isinstance(target, ast.Attribute) and target.attr == "fixture":
+                found.add(node.name)
+    return found
+
+
+def _test_modules() -> list[tuple[Path, Path]]:
+    """Every test module of the four packages, with its package's tests."""
+    return [
+        (tests, path)
+        for tests in sorted((REPOSITORY / "packages").glob("*/tests"))
+        for path in sorted(tests.rglob("test_*.py"))
+    ]
+
+
+def test_no_test_module_hides_a_fixture_of_a_conftest() -> None:
+    """A module that defines a fixture of a conftest.py above it under the
+    same name leaves a reader to guess which one holds (ARCHITECTURE 13)."""
+    violations = []
+    for tests, path in _test_modules():
+        name = path.relative_to(tests).as_posix()
+        mine = _fixtures(path) - {OWN_SERVER}
+        for folder in [path.parent, *path.parent.parents]:
+            conftest = folder / "conftest.py"
+            if conftest.exists():
+                for fixture in sorted(mine & _fixtures(conftest)):
+                    if (name, fixture) not in SHADOWING:
+                        violations.append(f"{name}: {fixture}")
+            if folder == tests:
+                break
+    assert not violations, "hides a fixture of a conftest:\n  " + "\n  ".join(
+        violations
+    )
+
+
+def test_two_test_modules_of_a_folder_share_no_fixture_name() -> None:
+    """A fixture two modules of a folder need goes to its conftest.py, or
+    each names its own (ARCHITECTURE 13)."""
+    seen: dict[tuple[Path, str], list[str]] = {}
+    for tests, path in _test_modules():
+        folder = path.parent.relative_to(tests).as_posix()
+        for fixture in _fixtures(path) - {OWN_SERVER}:
+            if (folder, fixture) not in REPEATED:
+                seen.setdefault((path.parent, fixture), []).append(path.name)
+    violations = [
+        f"{folder.relative_to(REPOSITORY).as_posix()}: {fixture} in {', '.join(names)}"
+        for (folder, fixture), names in sorted(seen.items())
+        if len(names) > 1
+    ]
+    assert not violations, "a fixture name twice:\n  " + "\n  ".join(violations)

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
+from functools import partial
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
@@ -38,22 +39,15 @@ from benethos_mailbox_service.errors import (
     ProviderUnavailableError,
 )
 
+from ... import gmail_adapter
 from ...gmail_fake import TOKEN, FakeGmail
 from ...oauth_fake import Tokens
 
 NOW = datetime(2026, 10, 9, 12, 0, tzinfo=UTC)
 
 
-def adapter(
-    gmail: FakeGmail, tokens: Tokens | None = None, clock: list[float] | None = None
-) -> GmailProvider:
-    ticks = clock if clock is not None else [0.0]
-    return GmailProvider(
-        tokens or Tokens(TOKEN),
-        ApiClient(transport=httpx.MockTransport(gmail)),
-        clock=lambda: ticks[0],
-        now=lambda: NOW,
-    )
+# The adapter at a fixed time, its clock standing still.
+adapter = partial(gmail_adapter.adapter, clock=lambda: 0.0, now=lambda: NOW)
 
 
 # --- changes --------------------------------------------------------------------------
@@ -209,7 +203,7 @@ async def test_a_send_is_not_tried_again(gmail: FakeGmail) -> None:
 
 async def test_a_pause_gmail_asks_for_is_kept(gmail: FakeGmail) -> None:
     clock = [100.0]
-    provider = adapter(gmail, clock=clock)
+    provider = adapter(gmail, clock=lambda: clock[0])
     gmail.next_answer = httpx.Response(429, headers={"Retry-After": "30"})
     with pytest.raises(ProviderUnavailableError):
         await provider.list_folders()

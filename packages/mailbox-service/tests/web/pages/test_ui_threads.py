@@ -5,16 +5,13 @@ account, which keeps its threads."""
 from __future__ import annotations
 
 import pytest
-from fastapi.testclient import TestClient
 
-from benethos_mailbox_service.assembly import Services, create_app
-from benethos_mailbox_service.config import Settings
+from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import Grant
 
-from ...conftest import browser_admin, browser_user
 from ...imap_fake import make_message
 from ...jmap_fake import FakeJmap
-from ...ui_helpers import sign_in
+from ...ui_helpers import signed_in
 
 
 @pytest.fixture
@@ -27,17 +24,10 @@ def conversation(jmap_server: FakeJmap) -> tuple[str, str]:
     return first, second
 
 
-def browser(services: Services, *grants: Grant) -> TestClient:
-    client = TestClient(create_app(Settings(storage="memory"), services))
-    who = browser_user(services, *grants) if grants else browser_admin(services)
-    sign_in(client, *who)
-    return client
-
-
 def test_a_folder_listed_by_conversations(
     jmap_services: Services, jmap_account_id: str, conversation: tuple[str, str]
 ) -> None:
-    client = browser(jmap_services)
+    client = signed_in(jmap_services)
     url = f"/ui/accounts/{jmap_account_id}/mail?folder=inbox"
     messages = client.get(url).text
     assert (
@@ -60,7 +50,7 @@ def test_a_folder_listed_by_conversations(
 def test_the_page_of_a_conversation(
     jmap_services: Services, jmap_account_id: str, conversation: tuple[str, str]
 ) -> None:
-    client = browser(jmap_services)
+    client = signed_in(jmap_services)
     found = client.get(f"/ui/accounts/{jmap_account_id}/threads/T1?folder=inbox")
     assert found.status_code == 200, found.text
     page = found.text
@@ -78,7 +68,7 @@ def test_a_message_names_the_others_of_its_conversation(
     jmap_server: FakeJmap,
     conversation: tuple[str, str],
 ) -> None:
-    client = browser(jmap_services)
+    client = signed_in(jmap_services)
     first, second = conversation
     page = client.get(f"/ui/accounts/{jmap_account_id}/mail/{first}").text
     card = page[page.index("In this conversation") :]
@@ -97,7 +87,7 @@ def test_without_the_rights_no_conversations_show(
         accounts=[jmap_account_id],
         allow=["list_folders", "list_messages", "get_message"],
     )
-    client = browser(jmap_services, reading)
+    client = signed_in(jmap_services, reading)
     first, _ = conversation
     folder = client.get(f"/ui/accounts/{jmap_account_id}/mail?folder=inbox").text
     assert "Conversations" not in folder
