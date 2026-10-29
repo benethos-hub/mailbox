@@ -18,13 +18,8 @@ from benethos_mailbox_common.values import text
 
 from ...common.hosts import is_server
 from ...data.models import Abilities, Account, ProviderType
-from ...data.protocols import HostCheck
-from ...data.providers import (
-    CredentialReader,
-    ProviderSettings,
-    Tokens,
-    hosts_in,
-)
+from ...data.protocols import HostCheck, Tokens
+from ...data.providers import CredentialReader, ProviderSettings, hosts_in
 from ...errors import BadRequestError, MailboxServiceError
 from .adapters import REFRESH_TOKEN, Adapters
 

@@ -12,8 +12,8 @@ from ..common.clock import utc_now
 from ..config import Settings
 from ..data.logbook import LogBook
 from ..data.models import ProviderType
-from ..data.protocols import Lookup, Resolve, SafeFetcher
-from ..data.providers import OAuthClient, ProviderFactory
+from ..data.protocols import Lookup, OAuthClient, Resolve, SafeFetcher
+from ..data.providers import ProviderFactory
 from ..data.secrets import CredentialVault, KeyProvider, PasswordHasher
 from ..data.storage import Repositories, open_repositories
 from ..domain.accounts import AccountHooks, AccountService, Adapters, OAuthService

@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 from benethos_mailbox_common.values import secret
 
 from ...data.models import Account, ProviderType
-from ...data.providers import DeviceCode, OAuthClient, Waiting
+from ...data.protocols import DeviceCode, OAuthClient, Waiting
 from ...errors import BadRequestError, ProviderUnavailableError
 from ..rights import Access
 from .signin import UNKNOWN, SignIns, forget_beyond

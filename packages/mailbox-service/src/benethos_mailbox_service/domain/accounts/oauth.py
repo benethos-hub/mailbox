@@ -39,7 +39,7 @@ from benethos_mailbox_common.values import secret
 from ...common.clock import utc_now
 from ...common.urls import is_loopback
 from ...data.models import Account, ProviderType
-from ...data.providers import OAuthClient, authorize_url, new_pkce
+from ...data.protocols import OAuthClient, authorize_url, new_pkce
 from ...errors import BadRequestError
 from ..activity import ActivityLog, Actor
 from ..activity import accounts as said
