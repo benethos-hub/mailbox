@@ -154,6 +154,8 @@ def test_the_batch_needs_ticks_and_an_action(ui: TestClient, account_id: str) ->
     assert "Choose an action" in unknown.text
     nowhere = post(ui, url, {"ids": "m1", "action": "move"})
     assert "Choose a folder" in nowhere.text
+    many = post(ui, url, {"ids": [f"m{n}" for n in range(101)], "action": "read"})
+    assert "ids: List should have at most 100 items" in many.text
 
 
 # --- folders --------------------------------------------------------------------------
