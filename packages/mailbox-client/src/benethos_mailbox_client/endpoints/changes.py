@@ -27,9 +27,12 @@ def list_all_changes(
     )
 
 
-def list_changes(account_id: str, *, since: str | None, limit: int) -> Call[Changes]:
-    """The changes of one account after the point ``since``.
-    ``list_all_changes`` follows every account."""
+def list_changes(
+    account_id: str, *, since: str | None = None, limit: int | None = None
+) -> Call[Changes]:
+    """The changes of one account after the point ``since``. Without it,
+    only the state to start from. ``list_all_changes`` follows every
+    account."""
     return Call(
         "GET",
         path("accounts", account_id, "changes"),

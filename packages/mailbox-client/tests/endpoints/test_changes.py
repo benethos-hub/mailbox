@@ -34,3 +34,9 @@ async def test_list_all_changes(make_client: Callable) -> None:
     found = await make_client(api).list_all_changes(since="s0")
     assert api.call() == ("GET", "/v1/changes", {"since": "s0"}, None)
     assert found == Changes(changes=[], state="s1", more=False)
+
+
+async def test_list_changes_without_a_point_or_a_limit(make_client: Callable) -> None:
+    api = FakeApi({"changes": [], "state": "s0", "more": False})
+    await make_client(api).list_changes("acc_1")
+    assert api.call() == ("GET", "/v1/accounts/acc_1/changes", {}, None)
