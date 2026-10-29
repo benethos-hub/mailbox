@@ -88,11 +88,19 @@ async def read_fields(form: FormData) -> dict[str, Any]:
         OutgoingAttachment(
             filename=upload.filename or "attachment",
             content_type=upload.content_type or "application/octet-stream",
-            data=base64.b64encode(await upload.read()),
+            data=base64.b64encode(await _read(upload)),
         )
         for upload in uploads(form)
     ]
     return fields
+
+
+async def _read(upload: UploadFile) -> bytes:
+    """The bytes of a chosen file, its temporary file closed after."""
+    try:
+        return await upload.read()
+    finally:
+        await upload.close()
 
 
 def reference_of(form: FormData) -> MessageReference | None:
