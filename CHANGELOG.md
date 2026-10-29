@@ -6,6 +6,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-29
+
 ### Added
 
 - `benethos-mailbox-mcp`: the tool `server_status`, always offered. It
@@ -62,6 +64,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 - The service runs on FastAPI 0.162 and Starlette 1.10.
 - Both images run on Python 3.15.2. It rejects TLS certificate chains
   with the compromised eMudhra intermediate CA keys.
+- The images install pydantic 2.14.2, platformdirs 4.14.0 and dnspython
+  2.9.1 from the lockfile.
 - `benethos-mailbox-service` needs dnspython 2.9.0 or newer, the first
   version without a known vulnerability. An install from the lockfile,
   as the images do, had it already.
@@ -84,6 +88,13 @@ adheres to [Semantic Versioning](https://semver.org/).
   `MAILBOX_SERVICE_URL` with a user or password in it. The address is
   named in the error when the service cannot be reached, which reaches
   the model.
+- `benethos-mailbox-mcp`: `share_attachment` names the content type
+  inside the marker, beside the file name, since the sender chose it.
+- The account page of the UI says what the account can do and which
+  marks it writes.
+- A sign-in with a code in the UI answers a page of its own, so a reload
+  starts no second sign-in at the provider. The batch of the Users list
+  and Set password for another user ask first.
 
 ### Fixed
 
@@ -1959,7 +1970,8 @@ the configuration may change without notice.
 - One error envelope `{"error": {"code", "message"}}`, authentication errors
   included.
 
-[Unreleased]: https://github.com/benethos-hub/mailbox/compare/v0.5.2...HEAD
+[Unreleased]: https://github.com/benethos-hub/mailbox/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/benethos-hub/mailbox/compare/v0.5.2...v0.6.0
 [0.5.2]: https://github.com/benethos-hub/mailbox/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/benethos-hub/mailbox/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/benethos-hub/mailbox/compare/v0.4.1...v0.5.0

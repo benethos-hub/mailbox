@@ -285,6 +285,8 @@ packages/mailbox-service/
                         #   roles (folders), the folders a grant
                         #   reaches (reach),
                         #   lists across accounts (across, merge),
+                        #   the threads of one account and a folder
+                        #   by threads (threads),
                         #   the fingerprint of a request
                         #   (fingerprint), links to attachments for
                         #   another service (links)
@@ -576,9 +578,11 @@ packages/mailbox-mcp/
     client.py           # the client package's MailboxClient, the
                         #   one way to the REST API
     models.py           # the client package's records
-    errors.py           # ToolError, and the client's errors turned
-                        #   into one for the model, what one tells of
-                        #   the token's rights
+    errors.py           # ToolError with the kind of its failure, the
+                        #   client's errors turned into one for the
+                        #   model, why one failed for the log
+                        #   (reason), what one tells of the token's
+                        #   rights
     config.py           # Settings (MAILBOX_MCP_* and the service's
                         #   address and token), the optional .env and
                         #   the folder of the system, from mailbox-common
@@ -793,7 +797,7 @@ noticing. Every change is measured against that.
 
 | Seam | Defined in | Implementations | Exchangeable for |
 |---|---|---|---|
-| Mail provider | `data/providers/base.py` (`Reads`, which every adapter implements, and `Writes`, `Deletes`, `Drafts`, `Sends`, `Watches`, `Deltas`, `FlagChanges` for what it may do beyond, `PROTOCOLS` for the protocol behind each capability. `Capability` and `Abilities` of `data/models/accounts.py`, answered by each adapter's `abilities()` from its server), registry in `data/providers/registry.py`. The domain checks what each operation needs and answers 501 for a lack (`domain/accounts/abilities.py`, `NEEDS`) | memory, imap, microsoft, pop3, jmap, gmail | another protocol or library, e.g. `aioimaplib` for IMAPClient |
+| Mail provider | `data/providers/base.py` (`Reads`, which every adapter implements, and `Writes`, `Deletes`, `Drafts`, `Sends`, `Watches`, `Deltas`, `FlagChanges`, `Threads`, `Summaries`, `Places` for what it may do beyond, `PROTOCOLS` for the protocol behind each capability. `Capability` and `Abilities` of `data/models/accounts.py`, answered by each adapter's `abilities()` from its server), registry in `data/providers/registry.py`. The domain checks what each operation needs and answers 501 for a lack (`domain/accounts/abilities.py`, `NEEDS`) | memory, imap, microsoft, pop3, jmap, gmail | another protocol or library, e.g. `aioimaplib` for IMAPClient |
 | Sending | `data/protocols/smtp.py` (`SmtpSession`), and `data/providers/sender.py` (`SmtpSender`), which adapters without sending of their own (IMAP, POP3) hold | stdlib smtplib | e.g. aiosmtplib |
 | Web layer | `web/` | FastAPI, Jinja2 for the UI | another framework, as long as the OpenAPI document stays the same |
 | Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `PasswordRepository`, `KeyRepository`, `CredentialRepository`, `MessageIndexRepository`, `IdempotencyRepository`, `SendLogRepository`, `ChangeLogRepository`, `WebhookRepository`, `AuditRepository`, `LinkRepository`, `TotpRepository`, `RecoveryCodeRepository`) | in-memory, SQLite | another database |

@@ -182,7 +182,8 @@ from becoming a way up:
   all of them or none, and names those it could not change. Pages and buttons appear only
   for those with the right.
 - **MCP server**: at start and while it runs `/v1/me` decides which
-  tools exist.
+  tools exist, but `server_status`, which the server offers whatever
+  the token may do.
   `list_accounts` names the limits on sending per account, and warns of
   an account where the token may read mail and send it anywhere, since a
   mail with injected instructions could carry data out through it.

@@ -1,6 +1,6 @@
 # Roadmap
 
-> **Beta, version 0.5.2.** Usable with real accounts. A breaking change
+> **Beta, version 0.6.0.** Usable with real accounts. A breaking change
 > of the API or the configuration is announced in the changelog. Stored
 > data is carried forward by migrations.
 
@@ -419,6 +419,11 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
 - **The MCP server follows its token's rights while it runs (7.5)**,
   decided 2026-10-16, done: it asks `/v1/me` every
   `MAILBOX_MCP_RIGHTS_SECONDS` and sends `notifications/tools/list_changed`
+- **The MCP tool `server_status`, always offered (7.5, 8)**, decided
+  2026-10-29, done: the server's version, transport, Python, MCP library
+  and uptime, with `details` the service as the server last saw it, its
+  version from `/health`. Live-checked in `live/mcp_stdio.py` and
+  `live/mcp_http.py`
 
 Open in this phase, each planned in CONCEPT.md:
 
@@ -459,7 +464,9 @@ order, each step one pull request or more:
 9. **Setting up an account, described by the domain**, done
 
 All nine steps shipped in 0.5.0. Steps 5 and 6 changed the contract,
-marked as breaking in the changelog.
+marked as breaking in the changelog. One rule of step 6 changed once
+more: a replacement list `keywords` keeps the marks a message has
+(UNIFORM 3, decided 2026-10-28), shipped in 0.6.0 as a breaking change.
 
 ## Keeping this file current
 

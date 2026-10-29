@@ -10,7 +10,7 @@
 [![Sponsor](https://raw.githubusercontent.com/benethos-hub/.github/main/profile/badges/sponsor.svg)](https://github.com/sponsors/BeneODev)
 [![PayPal](https://raw.githubusercontent.com/benethos-hub/.github/main/profile/badges/paypal.svg)](https://paypal.me/BeneODev)
 
-> **Beta, version 0.5.2.** Usable with real accounts. A breaking change
+> **Beta, version 0.6.0.** Usable with real accounts. A breaking change
 > of the API or the configuration is announced in the changelog. Stored
 > data is carried forward by migrations.
 
@@ -109,7 +109,9 @@ webhook's signing secret, comes as a `Secret`: `repr` and `str` show
 stars, so it reaches no log by accident, and `get_secret_value()` reads
 it. A list of messages or drafts answers a `Page` of summaries, with
 `next_cursor` for the next page and, across accounts, `not_answering`
-for those that did not answer. The other lists that page, of accounts,
+for those that did not answer, as text, and `incomplete`, the same
+accounts as `NotAnswering` records with the error's `code` and
+`message`. The other lists that page, of accounts,
 threads, users, sends and the audit, answer `Paged`, with `next_cursor`
 as well.
 

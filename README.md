@@ -22,7 +22,7 @@ One REST API for all your mailboxes, whichever provider they are at, a
 Python client for it and an MCP server on top. Scripts, tools and AI
 agents work with your mail through one door you control.
 
-> **Status: beta, version 0.5.2.** Usable with real accounts. A breaking
+> **Status: beta, version 0.6.0.** Usable with real accounts. A breaking
 > change of the API or the configuration is announced in the changelog.
 > Stored data is carried forward by migrations.
 
@@ -134,8 +134,9 @@ some folders, such as the invoices, and end after a week.
   sending (allowed recipients, sends per day), an audit of every send
   and an audit of administration.
 - **MCP server:** reads, sorts, writes drafts, sends and tells what is
-  new, over stdio or streamable HTTP, offering only the tools its token
-  may use and following its rights while it runs. Mail content reaches
+  new, over stdio or streamable HTTP, offering only the mail tools its
+  token may use, `server_status` always, and following its rights while
+  it runs. Mail content reaches
   the model marked as foreign text.
 - **Configuration UI** in the browser under `/ui`: accounts, users,
   rights, tokens, reading and writing mail, the send audit, webhooks,

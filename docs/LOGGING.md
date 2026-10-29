@@ -330,8 +330,12 @@ Its own process, its own log on stderr, its own rules, the same spirit:
 - `WARNING` for a tool that failed, with the tool's name and the code of
   the service's error and its HTTP status, not its message: a message
   may repeat an address or a search term the model sent. An error the
-  server raises itself, such as refused arguments or a PDF that takes
-  too long, says "the arguments were refused".
+  server raises itself says what kind it was, never the message: "the
+  arguments were refused", "the PDF took too long", "the attachment is
+  too large" or "no thread".
+- `DEBUG` when the service's version could not be asked at `/health`,
+  which the server does at start and before each time it asks what its
+  token may do. `server_status` itself logs nothing.
 - Never a tool's arguments, never a search term, never mail content,
   never the token. `httpx` and the MCP library at `WARNING`, so no
   request URL is written.
