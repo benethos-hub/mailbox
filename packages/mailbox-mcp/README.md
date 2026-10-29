@@ -342,11 +342,11 @@ the tools that fit. While it runs it asks again every
 missing right, and tells its client when the tools change
 (`notifications/tools/list_changed`), so a right granted or taken away
 in the service shows without a restart. Claude Desktop lists the tools
-anew when told. When the service refuses the token, every tool goes away
-and the server asks no more, since each refusal counts against the
-address like a wrong token. A new token then needs a restart. A user
-that may do nothing keeps `list_accounts` alone, which lists no
-account. The tools:
+anew when told. When the service refuses the token, every tool but
+`server_status` goes away and the server asks no more, since each
+refusal counts against the address like a wrong token. A new token then
+needs a restart. A user that may do nothing keeps `list_accounts` alone
+beside `server_status`, and it lists no account. The tools:
 
 | Tool | Needs | What it does |
 |---|---|---|
@@ -367,6 +367,7 @@ account. The tools:
 | `delete_draft` | `drafts` | deletes a draft for good, reaches drafts only |
 | `send_message` | `send` | sends a mail at once, plain text or HTML. It takes what `create_draft` takes. |
 | `send_draft` | `send` | sends a stored draft |
+| `server_status` | – | what runs: the name and version of this server, the transport, Python, the MCP library and the uptime. With `details` the service as this server last saw it: whether it answered and how long ago, its version and whether it matches, whether it took the token, and the tools offered. Offered always, also when the service refuses the token, and asks the service nothing |
 
 Each tool has a title for display and the standard MCP hints. Clients
 can use them to decide when to ask the person before a call.
@@ -379,8 +380,8 @@ can use them to decide when to ask the person before a call.
 - **Idempotent:** `update_messages`, `update_folder`, `update_draft` and
   `delete_draft`. The same call again changes nothing more. The send tools are not marked
   idempotent, although a repeat within 24 hours sends nothing.
-- **Open world:** every tool except `list_accounts`, since they reach mail
-  from and to anyone.
+- **Open world:** every tool except `list_accounts` and `server_status`,
+  since they reach mail from and to anyone.
 
 `share_attachment` is for a file another service takes over, such as
 another MCP server the client runs beside this one. The model carries

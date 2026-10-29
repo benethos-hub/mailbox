@@ -123,12 +123,17 @@ async def test_send_draft(api: Callable) -> None:
 async def test_registered_only_with_the_send_rights() -> None:
     assert {
         t.name for t in await server.build_server(["create_draft"]).list_tools()
-    } == {"list_accounts", "create_draft"}
+    } == {"list_accounts", "server_status", "create_draft"}
     tools = {
         t.name: t
         for t in await server.build_server(["send_message", "send_draft"]).list_tools()
     }
-    assert set(tools) == {"list_accounts", "send_message", "send_draft"}
+    assert set(tools) == {
+        "list_accounts",
+        "server_status",
+        "send_message",
+        "send_draft",
+    }
     for name in ("send_message", "send_draft"):
         annotations = tools[name].annotations
         assert annotations is not None and annotations.destructive_hint is True

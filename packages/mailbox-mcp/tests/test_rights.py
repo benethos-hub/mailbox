@@ -79,7 +79,7 @@ async def test_a_refused_token_removes_every_tool_and_asks_no_more(
         async with connected(following(service, READ)) as client:
             service.status = 401
             await client.told()
-            assert await client.tools() == []
+            assert await client.tools() == ["server_status"]
             asked = service.asked
             await anyio.sleep(0.1)
             assert service.asked == asked
@@ -91,7 +91,7 @@ async def test_a_user_that_may_do_nothing_gets_its_tools_back() -> None:
     async with connected(following(service, READ)) as client:
         service.status = 403
         await client.told()
-        assert await client.tools() == []
+        assert await client.tools() == ["server_status"]
         service.status = 200
         await client.told(2)
         assert "list_accounts" in await client.tools()
@@ -155,7 +155,7 @@ async def test_a_refused_token_on_a_tool_takes_every_tool() -> None:
     async with connected(following(service, READ)) as client:
         await client.session.call_tool("get_message", MESSAGE)
         await client.told()
-        assert await client.tools() == []
+        assert await client.tools() == ["server_status"]
         asked = service.asked
         await anyio.sleep(0.1)
         assert service.asked == asked

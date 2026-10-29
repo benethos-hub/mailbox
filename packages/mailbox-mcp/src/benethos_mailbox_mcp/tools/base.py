@@ -68,6 +68,9 @@ class Tool:
     # Open world: it reaches mail, which comes from and goes to anyone.
     # Only list_accounts stays inside this service.
     open_world: bool = True
+    # Offered whatever the token may do, also when the service refuses
+    # it, and asks the service nothing: server_status.
+    always: bool = False
 
 
 def reads(fn: Callable[..., Any], title: str, *needs: str, kind: str = "read") -> Tool:

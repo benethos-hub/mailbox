@@ -48,9 +48,10 @@ async def names(operations: list[str]) -> set[str]:
 
 
 async def test_only_what_the_token_may_do() -> None:
-    assert await names([]) == {"list_accounts"}
+    assert await names([]) == {"list_accounts", "server_status"}
     assert await names(READ) == {
         "list_accounts",
+        "server_status",
         "list_folders",
         "search_messages",
         "get_message",
@@ -233,6 +234,7 @@ HINTS = {
     "delete_draft": ("Delete a draft", False, True, True, True),
     "send_message": ("Send a mail", False, True, False, True),
     "send_draft": ("Send a draft", False, True, False, True),
+    "server_status": ("Server status", True, None, None, False),
 }
 
 

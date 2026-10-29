@@ -8,6 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `benethos-mailbox-mcp`: the tool `server_status`, always offered. It
+  names the server's version, the transport, Python, the MCP library
+  and the uptime. With `details` it adds the service as the server last
+  saw it.
 - `benethos-mailbox-client`: `Folder.subscribed`, whether the folder is
   subscribed on the server, as the API says.
 
