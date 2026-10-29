@@ -52,6 +52,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   as the images do, had it already.
 - `benethos-mailbox-client`: the repr of `Environment` leaves the token
   out.
+- `benethos-mailbox-client`: the `content_type` of an `AttachmentLink`
+  is a media type, else `application/octet-stream`, as for the bytes of
+  an attachment. The sender of the mail chose it.
 - `benethos-mailbox-client` and `benethos-mailbox-mcp` refuse a
   `MAILBOX_SERVICE_URL` with a user or password in it. The address is
   named in the error when the service cannot be reached, which reaches

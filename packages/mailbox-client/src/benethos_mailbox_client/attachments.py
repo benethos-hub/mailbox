@@ -41,7 +41,7 @@ def attachment(headers: httpx.Headers, collected: Collected) -> Attachment:
     )
     return Attachment(
         data=b"".join(collected.chunks)[: collected.max_bytes],
-        content_type=_media_type(media),
+        content_type=media_type(media),
         charset=_known_charset(charset.group(1)) if charset else None,
         filename=unquote(name.group(1)) if name else None,
         complete=collected.complete,
@@ -53,7 +53,7 @@ def attachment(headers: httpx.Headers, collected: Collected) -> Attachment:
 _MEDIA_TYPE = re.compile(r"[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*")
 
 
-def _media_type(value: str) -> str:
+def media_type(value: str) -> str:
     """``value`` when it is a media type and nothing else, else the type of
     unknown bytes."""
     media = value.strip().lower()

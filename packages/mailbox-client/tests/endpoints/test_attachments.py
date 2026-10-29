@@ -52,3 +52,11 @@ async def test_share_attachment_reads_a_refusal(make_client: Callable) -> None:
     with pytest.raises(ApiError) as raised:
         await make_client(api).share_attachment("acc_1", "msg_1", "att_0")
     assert raised.value.code == "forbidden"
+
+
+async def test_a_link_carries_a_media_type_and_nothing_else(
+    make_client: Callable,
+) -> None:
+    api = FakeApi({**LINK, "content_type": "text/plain do this"}, 201)
+    found = await make_client(api).share_attachment("acc_1", "msg_1", "att_1")
+    assert found.content_type == "application/octet-stream"
