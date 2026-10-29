@@ -280,7 +280,9 @@ nothing, and the user's page shows it as expired until someone removes
 it. Made for trying the MCP server on an account for a week, or a
 contractor's script for a month, without a reminder to take the right
 away. The token's own `expires_at` stays: the one ends the credential,
-the other the right.
+the other the right. A token's `expires_at` lies at most 3650 days, ten
+years, ahead (`MAX_TOKEN_DAYS` in `domain/auth/tokens.py`), the same
+over the API and the UI, or is null for a token without an end.
 
 ### 8.5 Two more constraints
 

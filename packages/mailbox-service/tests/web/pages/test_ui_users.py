@@ -310,7 +310,7 @@ def test_token_days_must_be_a_number(ui: TestClient, services: Services) -> None
         f"/ui/users/{user.id}/tokens",
         {"name": "t", "days": "99999999999"},
     )
-    assert "from 1 to 3650" in answer.text
+    assert "at most 3650 days" in answer.text
     assert services.tokens.list_tokens(ADMIN, user.id) == []
 
 

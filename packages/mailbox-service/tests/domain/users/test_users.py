@@ -241,10 +241,14 @@ def test_a_manager_of_one_account_manages_itself(
 def test_a_token_expiry_needs_a_time_zone(client: TestClient) -> None:
     user = client.post("/v1/users", json={"name": "naive"}).json()
     url = f"/v1/users/{user['id']}/tokens"
-    naive = client.post(url, json={"name": "t", "expires_at": "2099-01-01T00:00:00"})
+    soon = f"{datetime.now(UTC).year + 1}-01-01T00:00:00"
+    naive = client.post(url, json={"name": "t", "expires_at": soon})
     assert naive.status_code == 422
-    aware = client.post(url, json={"name": "t", "expires_at": "2099-01-01T00:00:00Z"})
+    aware = client.post(url, json={"name": "t", "expires_at": soon + "Z"})
     assert aware.status_code == 201
+    later = client.post(url, json={"name": "t", "expires_at": "2099-01-01T00:00:00Z"})
+    assert later.status_code == 400
+    assert later.json()["error"]["message"] == "a token lasts at most 3650 days"
 
 
 async def test_a_password_through_the_api(

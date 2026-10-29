@@ -3,7 +3,7 @@ They are listed on the Access tab of the user's page."""
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Form, Request
@@ -21,9 +21,6 @@ from .users import TokenForm, access_tab, user_page
 
 router = APIRouter()
 
-# Longer than that is a token without an end: leave the field empty for one.
-MAX_TOKEN_DAYS = 3650
-
 
 @router.post("/users/{user_id}/tokens")
 async def create_token(
@@ -39,15 +36,22 @@ async def create_token(
             request, caller, user_id, users, token_form=form, err=err
         ),
     ):
-        if days and not (days.isdigit() and 1 <= int(days) <= MAX_TOKEN_DAYS):
-            raise FormError(
-                f"Days valid must be a whole number from 1 to {MAX_TOKEN_DAYS}."
-            )
-        expires_at = utc_now() + timedelta(days=int(days)) if days else None
+        if days and not days.isdigit():
+            raise FormError("Days valid must be a whole number.")
+        expires_at = _after(int(days)) if days else None
         plain = tokens.create_token(caller, user_id, name, expires_at).plain
     # Shown on the next page, once, and never in the URL.
     show_once(request, f"token:{user_id}", plain)
     return back(request, here)
+
+
+def _after(days: int) -> datetime:
+    """``days`` from now. More than a date holds is the last date, which
+    the domain refuses as it does any too far ahead."""
+    try:
+        return utc_now() + timedelta(days=days)
+    except OverflowError:
+        return datetime.max.replace(tzinfo=UTC)
 
 
 @router.post("/users/{user_id}/tokens/{token_id}/revoke")
