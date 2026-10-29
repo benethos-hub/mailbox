@@ -51,10 +51,11 @@ def from_environment() -> Environment:
 
 @dataclass(frozen=True, slots=True)
 class Connection:
-    """Where the service is and the token that opens it, checked."""
+    """Where the service is and the token that opens it, checked. Its
+    repr leaves the headers out, which carry the token."""
 
     base_url: str
-    headers: dict[str, str]
+    headers: dict[str, str] = field(repr=False)
 
 
 def connection(

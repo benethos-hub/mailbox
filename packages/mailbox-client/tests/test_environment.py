@@ -15,7 +15,7 @@ from benethos_mailbox_client import (
     SyncMailboxClient,
     from_environment,
 )
-from benethos_mailbox_client.environment import DEFAULT_URL
+from benethos_mailbox_client.environment import DEFAULT_URL, connection
 
 ACCOUNT = {"id": "acc_1", "provider": "imap", "email": "me@example.com"}
 KINDS = [MailboxClient, SyncMailboxClient]
@@ -131,4 +131,10 @@ def test_the_token_stays_out_of_the_repr(monkeypatch: pytest.MonkeyPatch) -> Non
     monkeypatch.setenv("MAILBOX_SERVICE_TOKEN", "tok_SECRET")
     found = from_environment()
     assert found.token == "tok_SECRET"
+    assert "tok_SECRET" not in repr(found)
+
+
+def test_the_headers_of_a_connection_stay_out_of_its_repr() -> None:
+    found = connection("https://mail.test", "tok_SECRET", None)
+    assert found.headers == {"Authorization": "Bearer tok_SECRET"}
     assert "tok_SECRET" not in repr(found)
