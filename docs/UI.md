@@ -278,7 +278,9 @@ A form that goes through answers with a redirect and one message, shown
 once at the top of the next page (Post/Redirect/Get, CONCEPT 1.1).
 Success in green, a refusal in the page's own words in red, never a
 status code. An editor that is refused is shown again at once, with
-what was typed and the reason at the top, and answers `400`. A password
+what was typed and the reason at the top, and answers `400`, or the
+status of the domain's refusal where a provider or a right refused (the
+connect page and the mail form). A password
 is never shown again. An action without fields, such as a delete, goes
 back to its page with the reason. A page that cannot be shown at all is
 the error page with a way back.
