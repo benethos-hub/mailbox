@@ -32,7 +32,8 @@ def send_draft(account_id: str, draft_id: str, idempotency_key: str) -> Call[Sen
 
 def _sent(found: dict[str, Any]) -> Sent:
     return Sent(
-        message_id_header=found.get("message_id_header"),
+        message_id_header=str(found["message_id_header"]),
         refused=list(found.get("refused") or []),
         original_marked=found.get("original_marked"),
+        sent_copy_id=found.get("sent_copy_id"),
     )

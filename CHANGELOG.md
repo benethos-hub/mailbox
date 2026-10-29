@@ -19,6 +19,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   subscribed on the server, as the API says.
 - `benethos-mailbox-client`: `ApiError.retry_after`, the seconds the
   `Retry-After` header of a limit asks to wait, else `None`.
+- `benethos-mailbox-client`: `Sent.sent_copy_id`, the copy in the sent
+  folder where the service put one. `Sent.message_id_header` is a
+  string, as the API always answers one.
 
 ### Changed
 
