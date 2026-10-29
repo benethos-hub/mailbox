@@ -99,6 +99,7 @@ def test_a_new_role_has_its_editor(
         *browser_user(services, Grant(accounts=[account_id], allow=["mail.read"])),
     )
     assert reader.get("/ui/roles/new").status_code == 403
+    assert reader.get("/ui/roles").status_code == 403
 
 
 # --- roles to start from (PERMISSIONS.md 8.7) ------------------------------------

@@ -204,6 +204,17 @@ def test_change_disable_and_delete_a_user(ui: TestClient, services: Services) ->
     assert ui.get(url).status_code == 404
 
 
+def test_the_users_are_hidden_without_the_right(
+    app_client: TestClient, services: Services, account_id: str
+) -> None:
+    """docs/UI.md 8.7: a page shown with its right, hidden without it."""
+    sign_in(
+        app_client,
+        *browser_user(services, Grant(accounts=[account_id], allow=["mail.read"])),
+    )
+    assert app_client.get("/ui/users").status_code == 403
+
+
 def test_no_escalation_through_the_form(
     app_client: TestClient, services: Services, account_id: str
 ) -> None:
