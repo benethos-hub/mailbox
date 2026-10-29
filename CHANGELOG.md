@@ -22,6 +22,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   of the list. Where the grants reach little of the folder, a page may
   hold fewer messages than `limit`, or none, with a `next_cursor` to
   read on. One request read the whole account before.
+- The help of `keys import`, `backup verify --recovery-key` and
+  `restore --recovery-key` says the recovery key is asked for at a
+  hidden prompt, and read from stdin only when piped.
 - The service runs on FastAPI 0.162 and Starlette 1.10.
 - Both images run on Python 3.15.2. It rejects TLS certificate chains
   with the compromised eMudhra intermediate CA keys.

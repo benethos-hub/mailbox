@@ -10,7 +10,7 @@ name: Publish
 # Four packages carry one version, and the release tag names it. They go
 # to PyPI in the order of their dependencies, one job each, since a package
 # on PyPI that pins one not yet there cannot be installed: common first,
-# then client and service, then mcp. test_packaging.py holds that order to
+# then client and service, then mcp. test_publish.py holds that order to
 # the pyproject files. PyPI trusts this file, publish.yml, together with
 # the environment pypi-<package> of each job. Renaming either has PyPI
 # refuse the next upload.

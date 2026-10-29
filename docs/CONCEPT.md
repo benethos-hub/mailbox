@@ -1677,7 +1677,7 @@ with the role
   (**decided 2026-10-09**): a choice per user, set up in the UI,
   asked after the password. The factors of the UI sign-in and how each
   is set up and removed: [AUTHENTICATION.md](AUTHENTICATION.md).
-- **Later:** a passkey (AUTHENTICATION.md 8), OAuth 2.0 client
+- **Later:** a passkey (AUTHENTICATION.md 9), OAuth 2.0 client
   credentials for machines. Rights come from grants alone. The
   switch above says where a user may sign in, not what it may do.
 - A disabled user fails authentication with every credential at once.
@@ -2025,7 +2025,7 @@ access from the internet. A certificate by DNS challenge, which needs a
 Caddy image of its own, is left out.
 
 Rules of the implementation (phase 3): the image holds the service package
-only, installed from the lockfile, and runs as a non-root user on a
+and the common package only, installed from the lockfile, and runs as a non-root user on a
 read-only root file system. Configuration comes from the environment, the
 database from the volume `/data`. `keys generate` prints a new master key
 for the secret file, and `keys init` then adds the data key. The compose

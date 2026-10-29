@@ -21,7 +21,8 @@ def add(commands: Commands, option: argparse.ArgumentParser) -> None:
     )
     keys_commands.add_parser(
         "import",
-        help="store the master key from a recovery key, read from stdin",
+        help="store the master key from a recovery key, typed at a hidden "
+        "prompt, or read from stdin when piped",
         parents=[option],
     )
     keys_commands.add_parser(

@@ -32,7 +32,8 @@ def add(commands: Commands, option: argparse.ArgumentParser) -> None:
     backup.add_argument(
         "--recovery-key",
         action="store_true",
-        help="with verify: read the recovery key from stdin",
+        help="with verify: ask for the recovery key at a hidden prompt, or "
+        "read it from stdin when piped",
     )
 
 
