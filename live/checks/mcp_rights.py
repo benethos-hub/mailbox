@@ -1,8 +1,8 @@
 """The MCP server follows its token's rights while it runs: an admin takes
 ``mail.share`` from its user and gives it back, then disables the user.
 The server must tell its client each time and list the tools that are
-left. It asks every second here. Nothing is read from a mailbox and
-nothing is sent."""
+left, at last server_status alone. It asks every second here. Nothing
+is read from a mailbox and nothing is sent."""
 
 from __future__ import annotations
 
@@ -83,7 +83,7 @@ async def check_rights(
         told = await _told(notified, 3)
         tools = await _tools(session)
         run.check(
-            "the user disabled: the client is told, no tool is left",
-            told and not tools,
+            "the user disabled: the client is told, server_status alone is left",
+            told and tools == {"server_status"},
             f"{len(tools)} tools",
         )

@@ -6,12 +6,14 @@ Starts a service of its own on a free port, with a throwaway database and
 master key, adds the first two test accounts of ``live/.env`` through the
 API, and makes a user that may only read them. Then it starts
 ``benethos-mailbox-mcp`` over stdio with that user's token and calls the
-tools, the conversation of a search hit among them. A user that may
-share gets a link to the first PDF attachment, fetched once without a
-token as another service would, and refused the second time. Another
+tools, the conversation of a search hit among them, and
+``server_status`` both ways, which must name the service of its own
+version. A user that may share gets a link to the first PDF attachment,
+fetched once without a token as another service would, and refused the
+second time. Another
 user loses that right and gets it back while its server runs, which
 must tell its client each time and list the tools that are left, then
-the user is disabled and no tool is left. A second user may
+the user is disabled and server_status alone is left. A second user may
 also write: with it the check creates and renames
 a folder in the first test account, adds and takes off a keyword, stars,
 moves and trashes the newest inbox message there, and puts everything
@@ -40,6 +42,7 @@ from checks.mcp_links import check_links, first_pdf
 from checks.mcp_rights import check_rights
 from checks.mcp_sending import check_constraints, check_sending
 from checks.mcp_session import READ_TOOLS, mcp_session, text_of
+from checks.mcp_status import check_status
 from checks.mcp_writing import check_writing
 from checks.run import Run
 from checks.service import throwaway_service
@@ -86,6 +89,7 @@ async def check_tools(run: Run, url: str, token: str, emails: set[str]) -> None:
             tools == READ_TOOLS,
             ", ".join(sorted(tools)),
         )
+        await check_status(run, session, token, "stdio")
 
         listed = await session.call_tool("list_accounts", {})
         found = listed.structured_content or {}
