@@ -125,3 +125,10 @@ def test_the_environment_is_read_at_one_moment(
     monkeypatch.delenv("MAILBOX_SERVICE_ALLOW_HTTP")
     client = MailboxClient(found.url, found.token, allow_http=found.allow_http)
     assert client.base_url == "http://mailbox-service:8080"
+
+
+def test_the_token_stays_out_of_the_repr(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MAILBOX_SERVICE_TOKEN", "tok_SECRET")
+    found = from_environment()
+    assert found.token == "tok_SECRET"
+    assert "tok_SECRET" not in repr(found)

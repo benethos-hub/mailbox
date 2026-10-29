@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import ipaddress
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import httpx
 
@@ -28,10 +28,11 @@ def service_url() -> str:
 class Environment:
     """What the environment says about the service, read at one moment:
     its address, the token, and whether http may go to another machine.
-    Unchecked: a client checks it when it is made."""
+    Unchecked: a client checks it when it is made. Its repr leaves the
+    token out."""
 
     url: str
-    token: str
+    token: str = field(repr=False)
     allow_http: bool
 
 

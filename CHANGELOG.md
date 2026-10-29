@@ -47,6 +47,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `benethos-mailbox-service` needs dnspython 2.9.0 or newer, the first
   version without a known vulnerability. An install from the lockfile,
   as the images do, had it already.
+- `benethos-mailbox-client`: the repr of `Environment` leaves the token
+  out.
 
 ### Fixed
 
