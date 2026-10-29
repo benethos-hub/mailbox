@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import ago, anywhere_tag, card, empty, fact, facts, rights_tags %}
+{% from "components/ui.html" import ago, anywhere_tag, card, empty, fact, facts, link_button, rights_tags %}
 {% from "components/grants.html" import role_tags, sending_of %}
 {% block title %}Overview · {{ APP_NAME }}{% endblock %}
 {% block heading %}Overview{% endblock %}
@@ -37,7 +37,7 @@
           {% if "read_and_send_anywhere" in account.warnings %}{{ anywhere_tag() }}{% endif %}
         </td>
         <td>{{ sending_of(account.sending) }}</td>
-        <td class="actions">{% if row.mail %}<a class="btn small" href="{{ row.mail }}">Mail</a>{% endif %}</td>
+        <td class="actions">{% if row.mail %}{{ link_button(row.mail, "Mail", "envelope", alone=True, name="Mail of " ~ account.email) }}{% endif %}</td>
       </tr>
       {% endfor %}
     </tbody>
