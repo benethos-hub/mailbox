@@ -61,6 +61,19 @@ async def test_the_type_of_the_sender_stays_inside_the_marker(
     assert "type: application/octet-stream" in marked
 
 
+async def test_a_link_may_live_shorter(make_client: Callable) -> None:
+    seen: list[httpx.Request] = []
+
+    def answer(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(201, json=LINK)
+
+    make_client(answer)
+    await reading.share_attachment("acc_1", "msg_1", "att_0", expires_in=30)
+    [request] = seen
+    assert json.loads(request.content) == {"expires_in": 30}
+
+
 async def test_without_a_name_the_marker_says_so(make_client: Callable) -> None:
     make_client(lambda request: httpx.Response(201, json={**LINK, "filename": None}))
     found = await reading.share_attachment("acc_1", "msg_1", "att_0")

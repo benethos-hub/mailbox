@@ -27,6 +27,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   it writes in `marks_written`. A mark outside them is refused.
 - `benethos-mailbox-mcp`: `search_messages` and `whats_new` take
   `account_ids`, several accounts in one call, beside `account_id`.
+- `benethos-mailbox-mcp`: `share_attachment` takes `expires_in`, a
+  link that lives fewer seconds than the service's default.
 - `benethos-mailbox-client`: `ApiError.retry_after`, the seconds the
   `Retry-After` header of a limit asks to wait, else `None`.
 - `benethos-mailbox-client`: `Sent.sent_copy_id`, the copy in the sent
