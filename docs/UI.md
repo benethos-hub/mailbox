@@ -510,13 +510,14 @@ receiver reports nothing. Built last, if at all.
   `static/img/`.
 - **Sidebar**: light, not dark, with the accent on the active entry.
   Collapses to a top bar under 860 px as today.
-- **Components**: everything a page uses is a macro in
+- **Components**: the parts pages share are macros in
   `components/ui.html`, the grant editor in `components/grants.html`, the
   connection fields in `components/connection.html`, the rows of the
   audit in `components/audit.html`, the fields of a webhook in
-  `components/webhook.html`. A page has no
-  markup of its own for a button, a tag, a field, a card header, a pager
-  or a filter bar. The rework adds `filter_bar` with its chips,
+  `components/webhook.html`. The filter bar, the pager, the related
+  list, the Danger card, the secret card and every icon are macros. A
+  tag, a field and a plain button may be written in the page with the
+  classes of `app.css`. The rework adds `filter_bar` with its chips,
   `facts`, `related` and `breadcrumb` and makes the pages use them.
 - **Icons**: a hand-picked set of [Bootstrap Icons](https://icons.getbootstrap.com/)
   (MIT), one sprite `static/img/icons.svg` with the licence beside it.
