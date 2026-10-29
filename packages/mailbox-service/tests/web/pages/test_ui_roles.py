@@ -160,3 +160,9 @@ def test_the_sender_template_wants_recipients(
     assert "Role sender created." in made.text
     [grant] = services.roles.get_role(ADMIN, "sender").grants
     assert grant.recipients == ["*@example.org"] and grant.max_sends_per_day == 10
+
+
+def test_no_role_yet_sits_in_the_card(ui: TestClient) -> None:
+    """docs/UI.md 8: the empty state inside its card, as on Accounts."""
+    page = ui.get("/ui/roles").text
+    assert "No role yet." in page.split('<section class="card', 1)[1]

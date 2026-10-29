@@ -8,8 +8,8 @@
 {% if can_create %}{{ link_button("/ui/roles/new", "New role", "plus-lg", cls="primary") }}{% endif %}
 {% endblock %}
 {% block content %}
+{% call card("Roles", meta=roles | length if roles else none, tight=True) %}
 {% if roles %}
-{% call card("Roles", meta=roles | length, tight=True) %}
 <div class="table-scroll">
   <table>
     <thead><tr><th>Role</th><th>Rights</th><th class="num">Users</th></tr></thead>
@@ -24,8 +24,8 @@
     </tbody>
   </table>
 </div>
-{% endcall %}
 {% else %}
 {{ empty("No role yet.") }}
 {% endif %}
+{% endcall %}
 {% endblock %}
