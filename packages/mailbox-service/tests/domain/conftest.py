@@ -21,10 +21,9 @@ from benethos_mailbox_service.data.providers import (
 )
 from benethos_mailbox_service.data.providers.imap import ImapProvider
 from benethos_mailbox_service.data.providers.memory import MemoryProvider
-from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 
 from ..clocks import Clock
-from ..conftest import create_account
+from ..conftest import create_account, set_master_key
 from ..imap_fake import FakeFolder, FakeMailBox, make_message
 
 # --- an IMAP account through the real services -----------------------------------
@@ -47,7 +46,7 @@ def imap_server() -> FakeMailBox:
 def imap_services(
     imap_server: FakeMailBox, monkeypatch: pytest.MonkeyPatch
 ) -> Services:
-    monkeypatch.setenv("MAILBOX_SERVICE_MASTER_KEY", encode_recovery(cipher.new_key()))
+    set_master_key(monkeypatch)
 
     def factory(
         kind: ProviderType, settings: ProviderSettings, credentials: CredentialReader

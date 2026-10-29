@@ -25,6 +25,7 @@ from typing import Any
 import anyio
 from checks.accounts import read_env, test_server_accounts
 from checks.admin import admin_token
+from checks.processes import new_master_key
 from checks.run import Run, polled
 from checks.service import mailbox_of
 from fastapi.testclient import TestClient
@@ -35,7 +36,6 @@ from benethos_mailbox_service.assembly import build_services, create_app
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import ProviderType
 from benethos_mailbox_service.data.providers import build_provider
-from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 
 HOST = "127.0.0.1"
 POP3_TLS, POP3_STARTTLS, SMTP_TLS = 30995, 30110, 30465
@@ -59,7 +59,7 @@ def start_service() -> tuple[Any, TestClient]:
     service_settings = Settings(
         storage="memory",
         key_provider="env",
-        master_key=SecretStr(encode_recovery(cipher.new_key())),
+        master_key=SecretStr(new_master_key()),
         sync_interval=0,
         discovery_internal_hosts=[HOST],
     )

@@ -48,9 +48,8 @@ from benethos_mailbox_service.data.providers.jmap import JmapProvider
 from benethos_mailbox_service.data.providers.memory import MemoryProvider
 from benethos_mailbox_service.data.providers.microsoft import MicrosoftProvider
 from benethos_mailbox_service.data.providers.pop3 import Pop3Provider
-from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 
-from .conftest import create_account
+from .conftest import create_account, set_master_key
 from .gmail_fake import TOKEN as GMAIL_TOKEN
 from .gmail_fake import FakeGmail
 from .graph_fake import TOKEN as GRAPH_TOKEN
@@ -298,7 +297,7 @@ _BOXES: dict[str, Callable[[], Box]] = {
 def services_of(found: Box, monkeypatch: pytest.MonkeyPatch) -> tuple[Services, str]:
     """The real services with one account of ``found``, and its id. The
     adapter of every account is one on the fake."""
-    monkeypatch.setenv("MAILBOX_SERVICE_MASTER_KEY", encode_recovery(cipher.new_key()))
+    set_master_key(monkeypatch)
 
     def factory(
         kind: ProviderType,

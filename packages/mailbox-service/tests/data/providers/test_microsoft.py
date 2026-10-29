@@ -37,7 +37,6 @@ from benethos_mailbox_service.data.providers.microsoft import (
 from benethos_mailbox_service.data.providers.microsoft import (
     messages as microsoft_messages,
 )
-from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 from benethos_mailbox_service.errors import (
     BadRequestError,
     NotFoundError,
@@ -47,7 +46,7 @@ from benethos_mailbox_service.errors import (
     ProviderUnavailableError,
 )
 
-from ...conftest import admin_bearer
+from ...conftest import admin_bearer, set_master_key
 from ...graph_fake import TOKEN, FakeGraph
 from ...microsoft_adapter import adapter
 from ...oauth_fake import TokenEndpoint, Tokens, granted, id_token, state_of
@@ -290,7 +289,7 @@ def test_without_an_oauth_app_there_is_no_adapter() -> None:
 def test_connect_read_and_send_through_the_api(
     graph: FakeGraph, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("MAILBOX_SERVICE_MASTER_KEY", encode_recovery(cipher.new_key()))
+    set_master_key(monkeypatch)
     graph.add_message(subject="Welcome")
     endpoint = TokenEndpoint(
         granted(TOKEN, "rt-1", id_token=id_token(email="me@example.org")),

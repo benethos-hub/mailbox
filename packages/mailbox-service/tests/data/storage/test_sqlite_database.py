@@ -18,7 +18,7 @@ from benethos_mailbox_service.cli import main
 from benethos_mailbox_service.common.clock import iso
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import ApiToken, ProviderType, User
-from benethos_mailbox_service.data.secrets import cipher, encode_recovery, totp
+from benethos_mailbox_service.data.secrets import totp
 from benethos_mailbox_service.data.storage import (
     Database,
     SqliteTokenRepository,
@@ -32,7 +32,7 @@ from benethos_mailbox_service.errors import (
     UnauthorizedError,
 )
 
-from ...conftest import CHEAP, create_account
+from ...conftest import CHEAP, create_account, set_master_key
 
 NOW = datetime(2026, 9, 24, 12, 0, tzinfo=UTC)
 
@@ -232,7 +232,7 @@ def test_reset_totp_command(
 ) -> None:
     monkeypatch.setenv("MAILBOX_SERVICE_DATA_DIR", str(tmp_path))
     monkeypatch.setenv("MAILBOX_SERVICE_STORAGE", "sqlite")
-    monkeypatch.setenv("MAILBOX_SERVICE_MASTER_KEY", encode_recovery(cipher.new_key()))
+    set_master_key(monkeypatch)
     assert main(["users", "create-admin"]) == 0
     first = capsys.readouterr().out.strip()
     services = build_services(Settings())

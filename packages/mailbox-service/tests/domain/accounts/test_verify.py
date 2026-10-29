@@ -17,9 +17,8 @@ from benethos_mailbox_service.data.providers import (
     Timing,
 )
 from benethos_mailbox_service.data.providers.imap import ImapProvider
-from benethos_mailbox_service.data.secrets import cipher, encode_recovery
 
-from ...conftest import admin_bearer
+from ...conftest import admin_bearer, set_master_key
 from ...imap_fake import FakeMailBox, make_message
 
 NEW_ACCOUNT = {
@@ -43,7 +42,7 @@ World = tuple[Services, TestClient]
 
 @pytest.fixture
 def world(server: FakeMailBox, monkeypatch: pytest.MonkeyPatch) -> Iterator[World]:
-    monkeypatch.setenv("MAILBOX_SERVICE_MASTER_KEY", encode_recovery(cipher.new_key()))
+    set_master_key(monkeypatch)
 
     def factory(
         kind: ProviderType, settings: ProviderSettings, credentials: CredentialReader

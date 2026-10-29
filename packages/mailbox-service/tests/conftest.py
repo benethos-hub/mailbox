@@ -206,10 +206,16 @@ def account_id(accounts: AccountService) -> str:
     return create_account(accounts, ProviderType.MEMORY, "me@example.com").id
 
 
+def set_master_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A new vault key in the environment, for services that store
+    credentials."""
+    monkeypatch.setenv("MAILBOX_SERVICE_MASTER_KEY", encode_recovery(cipher.new_key()))
+
+
 @pytest.fixture
 def master_key(monkeypatch: pytest.MonkeyPatch) -> None:
     """A vault key in the environment, for tests that store credentials."""
-    monkeypatch.setenv("MAILBOX_SERVICE_MASTER_KEY", encode_recovery(cipher.new_key()))
+    set_master_key(monkeypatch)
 
 
 def memory_of(services: Services, account_id: str) -> MemoryProvider:
@@ -345,7 +351,7 @@ def jmap_services_for(
 ) -> Services:
     """The services, with JMAP accounts against ``server``. ``settings``
     change those of the tests."""
-    monkeypatch.setenv("MAILBOX_SERVICE_MASTER_KEY", encode_recovery(cipher.new_key()))
+    set_master_key(monkeypatch)
 
     def factory(
         kind: ProviderType, settings: ProviderSettings, credentials: CredentialReader
@@ -388,7 +394,7 @@ def pop3_server() -> FakePop3Server:
 def pop3_services(
     pop3_server: FakePop3Server, monkeypatch: pytest.MonkeyPatch
 ) -> Services:
-    monkeypatch.setenv("MAILBOX_SERVICE_MASTER_KEY", encode_recovery(cipher.new_key()))
+    set_master_key(monkeypatch)
 
     def factory(
         kind: ProviderType, settings: ProviderSettings, credentials: CredentialReader
