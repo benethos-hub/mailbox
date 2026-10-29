@@ -248,9 +248,9 @@ beyond those of step 3.
   received the message. Lists sort by `received`.
 - **Attachments:** inline images are listed and download. Ids look like
   `att_0`, as on the other providers.
-- **Sending:** a mail above about 3 MB is stored without its files,
-  which follow one by one, a large one in ranges, up to the 25 MiB the
-  service allows. The answer names the sent copy, and the mail arrives
+- **Sending:** a mail above 2.5 MiB is stored without its files, which
+  follow one by one. A file of 3,000,000 bytes or more goes in ranges
+  through an upload session, up to the 25 MiB the service allows. The answer names the sent copy, and the mail arrives
   under the `Message-ID` the send answered.
 - **Changes** come through Graph delta queries, polled every
   `MAILBOX_SERVICE_SYNC_INTERVAL`.
