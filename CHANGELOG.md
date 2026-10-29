@@ -17,6 +17,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   time it asks what its token may do.
 - `benethos-mailbox-client`: `Folder.subscribed`, whether the folder is
   subscribed on the server, as the API says.
+- `benethos-mailbox-mcp`: `list_accounts` names three more things an
+  account may lack in `unsupported`: a mail in several folders,
+  conversations and a copy in the sent folder.
 - `benethos-mailbox-client`: `ApiError.retry_after`, the seconds the
   `Retry-After` header of a limit asks to wait, else `None`.
 - `benethos-mailbox-client`: `Sent.sent_copy_id`, the copy in the sent

@@ -250,6 +250,9 @@ ACCOUNT_LIMITS = {
     "search": "search and filters",
     "drafts": "drafts",
     "send": "sending",
+    "labels": "a mail in several folders (add_folders, remove_folders)",
+    "threads": "conversations (get_thread, thread ids)",
+    "sent_copy": "a copy in the sent folder",
 }
 
 
