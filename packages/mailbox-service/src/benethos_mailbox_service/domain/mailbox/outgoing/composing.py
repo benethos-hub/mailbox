@@ -12,19 +12,19 @@ from typing import Generic, TypeVar
 
 from benethos_mailbox_common.values import text
 
-from ...data.mail import compose
-from ...data.models import (
+from ....data.mail import compose
+from ....data.models import (
     DraftMessage,
     Message,
     MessageReference,
     OutgoingAttachment,
     Recipient,
 )
-from ...errors import missing_message
-from ..rights import Access
+from ....errors import missing_message
+from ...rights import Access
+from ..calls import Calls
+from ..reach import reach_of
 from . import checks, replies
-from .calls import Calls
-from .reach import reach_of
 
 M = TypeVar("M", bound=DraftMessage)
 

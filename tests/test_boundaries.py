@@ -20,7 +20,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 
-PACKAGES = Path(__file__).resolve().parents[2]
+PACKAGES = Path(__file__).resolve().parents[1] / "packages"
 SRC = {
     "common": PACKAGES / "mailbox-common/src/benethos_mailbox_common",
     "client": PACKAGES / "mailbox-client/src/benethos_mailbox_client",
@@ -216,3 +216,36 @@ def test_the_check_reaches_every_package() -> None:
     assert "client models/messages.py Message" in names
     assert "service domain/users/totp.py TotpService.begin" in names
     assert "common values/text.py joined" in names
+
+
+# What the rule below found when it came, left for a change of its own
+# (2026-10-29).
+PASSED_ON = {("service", "data/protocols/imap/__init__.py", "Server")}
+
+
+def test_a_package_offers_no_name_of_another() -> None:
+    """A name comes from where it is defined, or from its own package's
+    ``__init__.py``, never through a third (ARCHITECTURE 6). An
+    ``__init__.py`` that names in ``__all__`` what it imports from a
+    package above it passes that package's name on."""
+    violations = []
+    for package, root in SRC.items():
+        for init in sorted(root.rglob("__init__.py")):
+            tree = _tree(init)
+            names: set[str] = set()
+            for node in tree.body:
+                if isinstance(node, ast.Assign) and any(
+                    getattr(target, "id", "") == "__all__" for target in node.targets
+                ):
+                    names = set(ast.literal_eval(node.value))
+            where = init.relative_to(root).as_posix()
+            for node in tree.body:
+                if not (isinstance(node, ast.ImportFrom) and node.level > 1):
+                    continue
+                for alias in node.names:
+                    name = alias.asname or alias.name
+                    if name in names and (package, where, name) not in PASSED_ON:
+                        violations.append(f"{package}: {where} {name}")
+    assert not violations, "passes on a name of another package:\n  " + "\n  ".join(
+        violations
+    )

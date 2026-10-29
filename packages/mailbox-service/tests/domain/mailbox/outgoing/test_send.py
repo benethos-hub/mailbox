@@ -20,17 +20,17 @@ from benethos_mailbox_service.data.models import (
     Recipient,
 )
 from benethos_mailbox_service.data.providers.imap import mappers
-from benethos_mailbox_service.domain.mailbox import checks
+from benethos_mailbox_service.domain.mailbox.outgoing import checks
 from benethos_mailbox_service.errors import (
     BadRequestError,
     NotSupportedError,
     ProviderAuthError,
 )
 
-from ...conftest import bearer_for, memory_of
-from ...imap_adapter import sending
-from ...imap_fake import FakeFolder, FakeMailBox
-from ...smtp_fake import FakeSmtpServer
+from ....conftest import bearer_for, memory_of
+from ....imap_adapter import sending
+from ....imap_fake import FakeFolder, FakeMailBox
+from ....smtp_fake import FakeSmtpServer
 
 MESSAGE = OutgoingMessage(
     to=[Recipient(email="you@example.com", name="Jürgen Müller")],

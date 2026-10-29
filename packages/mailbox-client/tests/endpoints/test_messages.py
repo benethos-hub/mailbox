@@ -1,5 +1,5 @@
-"""Messages: the lists, one message, changes, flags and moves, deleting,
-the same for both clients."""
+"""Messages: the lists, one message, flags and moves, deleting, the same
+for both clients."""
 
 from __future__ import annotations
 
@@ -13,16 +13,12 @@ from benethos_mailbox_client import (
     Address,
     ApiError,
     AttachedFile,
-    AttachmentLink,
-    Change,
-    Changes,
     Failed,
     Message,
     MessageSummary,
     Outcome,
     Page,
     Reference,
-    Secret,
 )
 
 from ..fake_api import MESSAGE, PAGE, SUMMARY, FakeApi
@@ -77,22 +73,6 @@ async def test_list_messages(make_client: Callable) -> None:
         None,
     )
     assert found == Page([READ_SUMMARY], "c2", ["acc_2: timed out"])
-
-
-async def test_list_changes(make_client: Callable) -> None:
-    change = {"type": "message.created", "id": "msg_1", "account_id": "acc_1"}
-    at = "2026-10-01T08:00:00+00:00"
-    api = FakeApi({"changes": [{**change, "at": at}], "state": "s2", "more": True})
-    found = await make_client(api).list_changes("acc_1", since="s1", limit=10)
-    assert api.call() == (
-        "GET",
-        "/v1/accounts/acc_1/changes",
-        {"since": "s1", "limit": "10"},
-        None,
-    )
-    assert found == Changes(
-        [Change("message.created", "msg_1", "acc_1", AT)], "s2", True
-    )
 
 
 async def test_get_message(make_client: Callable) -> None:
@@ -195,48 +175,6 @@ async def test_get_message_raw_reads_an_error_as_one(make_client: Callable) -> N
     assert raised.value.code == "not_found"
 
 
-LINK = {
-    "url": "https://mail.test/v1/links/" + "s" * 128,
-    "expires_at": "2026-10-01T08:02:00Z",
-    "content_type": "application/pdf",
-    "size": 12,
-    "filename": "a.pdf",
-}
-LINKS = "/v1/accounts/acc_1/messages/msg_1/attachments/att_0/links"
-
-
-async def test_share_attachment_answers_the_link(make_client: Callable) -> None:
-    api = FakeApi(LINK, 201)
-    found = await make_client(api).share_attachment("acc_1", "msg_1", "att_0")
-    assert api.call() == ("POST", LINKS, {}, {})
-    assert found == AttachmentLink(
-        url=Secret(LINK["url"]),
-        expires_at=datetime(2026, 10, 1, 8, 2, tzinfo=UTC),
-        content_type="application/pdf",
-        size=12,
-        filename="a.pdf",
-    )
-    assert "s" * 128 not in repr(found)
-
-
-async def test_share_attachment_asks_for_fewer_seconds(make_client: Callable) -> None:
-    api = FakeApi({**LINK, "filename": None}, 201)
-    found = await make_client(api).share_attachment(
-        "acc_1", "msg_1", "att_0", expires_in=30
-    )
-    assert api.call() == ("POST", LINKS, {}, {"expires_in": 30})
-    assert found.filename is None
-
-
-async def test_share_attachment_reads_a_refusal(make_client: Callable) -> None:
-    api = FakeApi(
-        {"error": {"code": "forbidden", "message": "needs share_attachment"}}, 403
-    )
-    with pytest.raises(ApiError) as raised:
-        await make_client(api).share_attachment("acc_1", "msg_1", "att_0")
-    assert raised.value.code == "forbidden"
-
-
 async def test_list_all_messages_names_the_accounts(make_client: Callable) -> None:
     api = FakeApi(PAGE)
     found = await make_client(api).list_all_messages(
@@ -248,13 +186,6 @@ async def test_list_all_messages_names_the_accounts(make_client: Callable) -> No
     others = {k: v for k, v in request.url.params.items() if k != "accounts"}
     assert others == {"folder": "inbox", "unread": "true", "limit": "5"}
     assert found.not_answering == ["acc_2: timed out"]
-
-
-async def test_list_all_changes(make_client: Callable) -> None:
-    api = FakeApi({"changes": [], "state": "s1", "more": False})
-    found = await make_client(api).list_all_changes(since="s0")
-    assert api.call() == ("GET", "/v1/changes", {"since": "s0"}, None)
-    assert found == Changes(changes=[], state="s1", more=False)
 
 
 async def test_update_message_sends_only_what_changes(make_client: Callable) -> None:

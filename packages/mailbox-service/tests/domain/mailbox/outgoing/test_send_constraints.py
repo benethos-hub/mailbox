@@ -17,7 +17,7 @@ from benethos_mailbox_service.domain.rights.access import (
     recipient_matches,
 )
 
-from ...conftest import ADMIN, bearer_for
+from ....conftest import ADMIN, bearer_for
 
 
 def mail(*to: str, subject: str = "Hi") -> dict[str, object]:

@@ -10,9 +10,9 @@ from .factors import SecondFactorService
 from .passwords import OneTimePassword, PasswordService
 from .roles import RoleService
 from .rules import UserRules
+from .service import BATCH_ACTIONS, BatchOutcome, UserService
 from .tokens import TokenService
 from .totp import TotpConfirmed, TotpService, TotpSetup
-from .users import BATCH_ACTIONS, BatchOutcome, UserService
 
 __all__ = [
     "BATCH_ACTIONS",

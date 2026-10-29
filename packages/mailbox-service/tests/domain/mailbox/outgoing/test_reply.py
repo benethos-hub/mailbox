@@ -35,9 +35,9 @@ from benethos_mailbox_service.data.providers import (
 )
 from benethos_mailbox_service.data.providers.imap import ImapProvider
 
-from ...conftest import ADMIN, bearer_for, create_account, set_master_key
-from ...imap_fake import FakeFolder, FakeMailBox, make_message
-from ...smtp_fake import FakeSmtpServer
+from ....conftest import ADMIN, bearer_for, create_account, set_master_key
+from ....imap_fake import FakeFolder, FakeMailBox, make_message
+from ....smtp_fake import FakeSmtpServer
 
 ORIGINAL = Message(
     id="m1",

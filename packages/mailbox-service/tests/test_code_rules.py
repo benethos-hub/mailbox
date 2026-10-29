@@ -129,7 +129,12 @@ MAX_LINES = 500
 MAX_METHODS = 30
 # Where the limits hold: the package, its tests and the live checks.
 REPOSITORY = Path(__file__).resolve().parents[3]
-SIZED = (ROOT, Path(__file__).resolve().parent, REPOSITORY / "live")
+SIZED = (
+    ROOT,
+    Path(__file__).resolve().parent,
+    REPOSITORY / "tests",
+    REPOSITORY / "live",
+)
 
 
 def test_modules_and_classes_stay_small() -> None:
@@ -241,7 +246,7 @@ SHADOWING = {
 }
 REPEATED = {
     ("domain/accounts", "world"),
-    ("domain/mailbox", "box"),
+    ("domain/mailbox/outgoing", "box"),
     ("web/pages", "endpoint"),
 }
 
@@ -326,3 +331,49 @@ def test_no_live_script_imports_another() -> None:
     assert not violations, "a live script imports another:\n  " + "\n  ".join(
         violations
     )
+
+
+def test_no_package_entry_defines_a_class() -> None:
+    """The entry of a package offers, it does not implement
+    (ARCHITECTURE 5.2): no __init__.py of the four packages defines a
+    class."""
+    violations = [
+        f"{path.relative_to(REPOSITORY).as_posix()}: {node.name}"
+        for path in sorted((REPOSITORY / "packages").glob("*/src/**/__init__.py"))
+        for node in ast.parse(path.read_text("utf-8")).body
+        if isinstance(node, ast.ClassDef)
+    ]
+    assert not violations, "a class in a package's entry:\n  " + "\n  ".join(violations)
+
+
+# What the rule below found when it came, left for a change of its own
+# (2026-10-29): the OAuth clients as assembly builds them, and a host's
+# first admin through the command line.
+WHOLE_SERVICE = {
+    "data/providers/test_gmail_changes.py",
+    "data/storage/test_sqlite_database.py",
+}
+
+
+def test_tests_of_the_data_layer_go_through_no_api() -> None:
+    """A test sits in the folder of the code it tests (ARCHITECTURE 13).
+    One that goes through the API or builds the whole service tests the
+    domain or several layers, not the data layer."""
+    tests = Path(__file__).resolve().parent
+    violations = []
+    for path in sorted((tests / "data").rglob("test_*.py")):
+        name = path.relative_to(tests).as_posix()
+        for node in ast.walk(ast.parse(path.read_text("utf-8"))):
+            if isinstance(node, ast.ImportFrom) and not node.level:
+                named = [node.module or ""]
+            elif isinstance(node, ast.Import):
+                named = [alias.name for alias in node.names]
+            else:
+                continue
+            for module in named:
+                outside = module.split(".")[0] == "fastapi" or module.startswith(
+                    "benethos_mailbox_service.assembly"
+                )
+                if outside and name not in WHOLE_SERVICE:
+                    violations.append(f"{name}:{node.lineno} {module}")
+    assert not violations, "a data test beyond its layer:\n  " + "\n  ".join(violations)

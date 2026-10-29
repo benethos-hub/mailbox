@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import MessageReference
 
-from ...conftest import memory_of
+from ....conftest import memory_of
 
 
 def test_edit_a_reply_draft_as_a_whole(

@@ -15,8 +15,8 @@ from benethos_mailbox_common.values import secret as secret_values
 
 from ...common.hosts import address_problem
 from ...data.models import Abilities, Account, AccountStatus, Page, ProviderType
-from ...data.protocols import HostCheck
-from ...data.providers import ProviderSettings, Tokens, settings_defaults
+from ...data.protocols import HostCheck, Tokens
+from ...data.providers import ProviderSettings, settings_defaults
 from ...data.secrets import CredentialVault
 from ...data.storage import AccountRepository, IdempotencyRepository
 from ...errors import BadRequestError, NotSupportedError

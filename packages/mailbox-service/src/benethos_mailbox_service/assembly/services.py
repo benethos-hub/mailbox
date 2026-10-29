@@ -7,7 +7,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 
 from ..data.models import ProviderType
-from ..data.providers import OAuthClient
+from ..data.protocols import OAuthClient
 from ..data.secrets import CredentialVault
 from ..data.storage import MessageIndexRepository, Repositories, Store
 from ..domain.accounts import AccountService, Adapters, OAuthService

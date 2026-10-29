@@ -21,7 +21,7 @@ from benethos_mailbox_service.data.storage import (
     InMemorySendLogRepository,
     SqliteSendLogRepository,
 )
-from benethos_mailbox_service.domain.mailbox.sending import SendControl
+from benethos_mailbox_service.domain.mailbox import SendControl
 from benethos_mailbox_service.domain.rights.access import (
     Access,
 )
@@ -32,7 +32,7 @@ from benethos_mailbox_service.errors import (
     StorageError,
 )
 
-from ...clocks import Clock
+from ....clocks import Clock
 
 # --- no escalation --------------------------------------------------------------------
 

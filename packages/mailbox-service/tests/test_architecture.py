@@ -429,3 +429,14 @@ def test_the_modules_of_the_assembly_keep_their_lines(part: str) -> None:
             if line_of[other[2]] <= line_of[parts[2]]:
                 violations.append(f"{name}:{line} imports {imported}")
     assert not violations, "against the lines:\n  " + "\n  ".join(violations)
+
+
+def test_no_module_is_named_like_its_package() -> None:
+    """The service of a package is service.py, and a module is never
+    named like the package that holds it (ARCHITECTURE 5.6)."""
+    named = [
+        path.relative_to(ROOT).as_posix()
+        for path in sorted(ROOT.rglob("*.py"))
+        if path.stem == path.parent.name
+    ]
+    assert not named, "named like its package:\n  " + "\n  ".join(named)

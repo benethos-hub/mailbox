@@ -15,18 +15,6 @@ never by importing a provider module.
 
 from __future__ import annotations
 
-from ..protocols import (
-    App,
-    DeviceCode,
-    Endpoints,
-    OAuthClient,
-    Pick,
-    RefreshingTokens,
-    Tokens,
-    Waiting,
-    authorize_url,
-    new_pkce,
-)
 from .base import (
     PROTOCOLS,
     Capability,
@@ -63,12 +51,9 @@ from .registry import (
 from .settings import hosts_in
 
 __all__ = [
-    "App",
     "Capability",
     "CredentialReader",
-    "DeviceCode",
     "FolderChanges",
-    "Endpoints",
     "Reads",
     "Deletes",
     "Deltas",
@@ -78,26 +63,19 @@ __all__ = [
     "Watches",
     "Writes",
     "PROTOCOLS",
-    "OAuthClient",
     "Pace",
     "Timing",
-    "Pick",
     "Places",
     "ProviderFactory",
     "ProviderSettings",
-    "RefreshingTokens",
     "ServerProbe",
     "Summaries",
     "ThreadHeaders",
     "ThreadMessages",
     "Threads",
     "TokenSource",
-    "Tokens",
-    "Waiting",
-    "authorize_url",
     "build_provider",
     "hosts_in",
-    "new_pkce",
     "probe_server",
     "project_client_id",
     "settings_defaults",

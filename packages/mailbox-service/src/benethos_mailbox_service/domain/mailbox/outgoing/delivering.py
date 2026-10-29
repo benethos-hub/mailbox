@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from contextlib import AbstractContextManager
 
-from ...data.mail import compose
-from ...data.models import (
+from ....data.mail import compose
+from ....data.models import (
     Account,
     Message,
     MessageReference,
@@ -17,15 +17,15 @@ from ...data.models import (
     SendResult,
     SentMessage,
 )
-from ...errors import MailboxServiceError
-from .. import changes
-from ..accounts import sends
-from ..activity import ActivityLog, Actor
-from ..activity import mailbox as said
-from ..rights import Access
+from ....errors import MailboxServiceError
+from ... import changes
+from ...accounts import sends
+from ...activity import ActivityLog, Actor
+from ...activity import mailbox as said
+from ...rights import Access
+from ..calls import Calls
+from ..reach import reach_of
 from . import replies
-from .calls import Calls
-from .reach import reach_of
 from .sending import Operation, SendControl
 
 

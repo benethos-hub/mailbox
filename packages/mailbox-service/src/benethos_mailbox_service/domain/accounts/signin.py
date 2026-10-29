@@ -14,7 +14,7 @@ from datetime import datetime
 from typing import Protocol, TypeVar
 
 from ...data.models import Account, ProviderType
-from ...data.providers import OAuthClient, Tokens
+from ...data.protocols import OAuthClient, Tokens
 from ...errors import BadRequestError, NotSupportedError
 from ..activity import ActivityLog, Actor
 from ..activity import accounts as said

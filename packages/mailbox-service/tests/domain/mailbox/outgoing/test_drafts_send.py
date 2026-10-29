@@ -12,7 +12,7 @@ from benethos_mailbox_service.data.models import (
     Grant,
 )
 
-from ...conftest import bearer_for, memory_of
+from ....conftest import bearer_for, memory_of
 from .drafts_helpers import drafts_url
 
 # --- sending a draft ----------------------------------------------------------------

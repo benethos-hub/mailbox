@@ -15,19 +15,14 @@ lives in its URL.
 
 from __future__ import annotations
 
-import inspect
 from datetime import timedelta
-from urllib.parse import quote
 
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
-from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from ...errors import MailboxServiceError
 from ..state import app_services, app_settings
+from . import handlers
 from .deps import CsrfRefusedError
-from .errors import error_page
 from .forms import FormFailedError
 from .routes import (
     accounts,
@@ -49,14 +44,14 @@ from .routes import (
     users,
     webhooks,
 )
+from .security import Security, security_headers
 from .session import (
-    PASSWORD_PAGE,
     PATH,
     PasswordChangeRequiredError,
     SessionStore,
     SignInRequiredError,
 )
-from .templates import STATIC_DIR, back, is_htmx
+from .templates import STATIC_DIR
 
 AREAS = (
     login,
@@ -80,24 +75,6 @@ AREAS = (
 )
 
 
-def security_headers(sign_in_hosts: list[str]) -> list[tuple[bytes, bytes]]:
-    """No inline script or style, no framing, nothing loaded from elsewhere.
-    Forms post here only. The one exception is the redirect of an OAuth
-    sign-in to its provider's ``sign_in_hosts``."""
-    form_action = " ".join(["'self'", *(f"https://{h}" for h in sign_in_hosts)])
-    policy = (
-        "default-src 'self'; script-src 'self'; style-src 'self'; "
-        "img-src 'self' data:; frame-ancestors 'none'; "
-        f"form-action {form_action}; base-uri 'none'"
-    )
-    return [
-        (b"content-security-policy", policy.encode("ascii")),
-        (b"x-content-type-options", b"nosniff"),
-        (b"referrer-policy", b"same-origin"),
-        (b"cache-control", b"no-store"),
-    ]
-
-
 STATIC = f"{PATH}/static"
 
 
@@ -118,81 +95,11 @@ def install(app: FastAPI) -> None:
     for area in AREAS:
         app.include_router(area.router, prefix=PATH, include_in_schema=False)
 
-    app.exception_handler(SignInRequiredError)(_sign_in)
-    app.exception_handler(PasswordChangeRequiredError)(_change_password)
-    app.exception_handler(FormFailedError)(_failed)
-    app.exception_handler(CsrfRefusedError)(_csrf)
-    hosts = app_services(app).oauth.sign_in_hosts()
-    app.add_middleware(_Security, headers=security_headers(hosts))
-
-
-async def _sign_in(request: Request, _: SignInRequiredError) -> Response:
-    """To the sign-in page, and after it back to the page asked for, with
-    its query. A form that was posted cannot be repeated by a redirect,
-    so after a POST the sign-in lands on the start page."""
-    target = f"{PATH}/login"
-    if request.method == "GET":
-        page = request.url.path
-        if request.url.query:
-            page += f"?{request.url.query}"
-        target += f"?next={quote(page, safe='/')}"
-    if is_htmx(request):
-        return Response(status_code=204, headers={"HX-Redirect": target})
-    return RedirectResponse(target, status_code=303)
-
-
-async def _change_password(
-    request: Request, _: PasswordChangeRequiredError
-) -> Response:
-    """A password someone else set is changed before anything else."""
-    if is_htmx(request):
-        return Response(status_code=204, headers={"HX-Redirect": PASSWORD_PAGE})
-    return RedirectResponse(PASSWORD_PAGE, status_code=303)
-
-
-async def _failed(request: Request, exc: FormFailedError) -> Response:
-    if exc.again is not None:
-        try:
-            page = exc.again(exc.error)
-            return await page if inspect.isawaitable(page) else page
-        except MailboxServiceError:
-            pass  # the page itself is gone: back with the message
-    return back(request, exc.path, error=exc.error)
-
-
-async def _csrf(request: Request, _: CsrfRefusedError) -> HTMLResponse:
-    return error_page(
-        request,
-        403,
-        "This form is no longer valid. Reload the page and try again.",
-        title="Form expired",
+    app.exception_handler(SignInRequiredError)(handlers.sign_in_required)
+    app.exception_handler(PasswordChangeRequiredError)(
+        handlers.password_change_required
     )
-
-
-class _Security:
-    """Security headers on every answer under ``/ui``."""
-
-    def __init__(self, app: ASGIApp, headers: list[tuple[bytes, bytes]]) -> None:
-        self.app = app
-        self.headers = headers
-
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http" or not scope["path"].startswith(PATH):
-            await self.app(scope, receive, send)
-            return
-
-        headers = self.headers
-        if scope["path"].startswith(STATIC):
-            # The same for every user: kept, and asked again before use,
-            # which the file's ETag answers with 304.
-            headers = [
-                (name, b"no-cache" if name == b"cache-control" else value)
-                for name, value in headers
-            ]
-
-        async def send_with_headers(message: Message) -> None:
-            if message["type"] == "http.response.start":
-                message["headers"] = [*message.get("headers", []), *headers]
-            await send(message)
-
-        await self.app(scope, receive, send_with_headers)
+    app.exception_handler(FormFailedError)(handlers.form_failed)
+    app.exception_handler(CsrfRefusedError)(handlers.csrf_refused)
+    hosts = app_services(app).oauth.sign_in_hosts()
+    app.add_middleware(Security, headers=security_headers(hosts), static=STATIC)

@@ -9,7 +9,7 @@ import tomllib
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / ".github" / "workflows" / "publish.yml"
 PACKAGES = [
     ROOT / "packages" / "mailbox-service",

@@ -26,15 +26,15 @@ from benethos_mailbox_service.data.storage import (
     SqliteIdempotencyRepository,
     StoredResult,
 )
-from benethos_mailbox_service.domain.mailbox.idempotency import Idempotency
+from benethos_mailbox_service.domain.mailbox import Idempotency
 from benethos_mailbox_service.errors import (
     IdempotencyConflictError,
     ProviderError,
     StorageError,
 )
 
-from ...clocks import Clock
-from ...conftest import bearer_for
+from ....clocks import Clock
+from ....conftest import bearer_for
 
 BODY = {"to": [{"email": "you@example.com"}], "subject": "Once", "text": "Hallo"}
 

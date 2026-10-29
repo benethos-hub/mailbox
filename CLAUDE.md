@@ -205,6 +205,23 @@ containers/               # images/ (one folder per image), and one folder
                           #   mcp-registry/server.json, the MCP server's
                           #   entry (test_mcp_registry.py), mcpb/, its
                           #   Claude Desktop bundle (test_mcpb.py)
+tests/                    # what the repository holds, across the four
+                          #   packages
+  test_boundaries.py      # records, not tuples, where a package hands
+                          #   values on, in all four
+  test_readmes.py         # the links of every README, of docs/ and of
+                          #   this file lead somewhere, and a README of
+                          #   two sections or more lists them in its
+                          #   contents at the top
+  test_module_tree.py     # the trees of docs/ARCHITECTURE.md section 3
+                          #   against the disk
+  test_packaging.py       # the LICENSE copies, the Python versions, one
+                          #   version and its examples in the
+                          #   documentation
+  test_publish.py         # the PyPI jobs of publish.yml, their order and
+                          #   the trial run
+  test_mcp_registry.py    # the MCP Registry entry held to the package
+  test_mcpb.py            # the Claude Desktop bundle held to the package
 docs/
   CONCEPT.md              # design
   ARCHITECTURE.md         # layers, modules, seams, rules for new code
@@ -233,22 +250,7 @@ packages/
                           #   service
       test_architecture.py  # checks the layering on every run
       test_code_rules.py    # logging, handlers, sizes, helpers once
-      test_boundaries.py    # records, not tuples, where a package
-                            #   hands values on, in all four
-      test_readmes.py       # the links of every README, of docs/ and
-                            #   of this file lead somewhere, and a
-                            #   README of two sections or more lists
-                            #   them in its contents at the top
-      test_module_tree.py   # the trees of docs/ARCHITECTURE.md
-                            #   section 3 against the disk
       test_openapi.py       # docs/openapi.json equals the code's
-      test_packaging.py     # the LICENSE copies, the Python versions,
-                            #   one version and its examples in the
-                            #   documentation
-      test_publish.py       # the PyPI jobs of publish.yml, their order
-                            #   and the trial run
-      test_mcp_registry.py  # the MCP Registry entry held to the package
-      test_mcpb.py          # the Claude Desktop bundle held to the package
       test_cli.py           # the command line
       test_errors.py        # the errors every layer raises
       test_logs.py          # the log of serve: what reaches it, in

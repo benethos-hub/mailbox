@@ -15,7 +15,9 @@ from ..data.discovery import default_sources, preset_hosts
 from ..data.models import ProviderType
 from ..data.protocols import (
     ApiClient,
+    App,
     Lookup,
+    OAuthClient,
     Resolve,
     SafeFetcher,
     WebhookPoster,
@@ -23,8 +25,6 @@ from ..data.protocols import (
     host_addresses_now,
 )
 from ..data.providers import (
-    App,
-    OAuthClient,
     Pace,
     ProviderFactory,
     build_provider,

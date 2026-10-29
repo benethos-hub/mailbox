@@ -135,8 +135,8 @@ An import or a line that breaks a rule fails the suite.
 ## 3. The code, module by module
 
 What each package and module of the service holds. A new module gets
-its line here in the same commit. `tests/test_module_tree.py` of the
-service checks that every path named here is there, that every package
+its line here in the same commit. `tests/test_module_tree.py` at the
+root of the repository checks that every path named here is there, that every package
 is named, and that a folder which lists some of its modules as lines
 lists all of them.
 
@@ -235,6 +235,10 @@ packages/mailbox-service/
         rights.py       # what the mail pages offer, by the rights on an account
         effective.py    # a user's effective rights, grouped for reading
         errors.py       # errors as a page
+        security.py     # the security headers of every answer under
+                        #   /ui, the content security policy
+        handlers.py     # what the UI answers to the sign-in required,
+                        #   a password to change, a failed form, CSRF
         routes/         # one module per area
         templates/      # base and bare, partials, components (macros), pages
         static/         # app.css, app.js, early.js (read before the page
@@ -281,13 +285,15 @@ packages/mailbox-service/
                         #   roles (folders), the folders a grant
                         #   reaches (reach),
                         #   lists across accounts (across, merge),
-                        #   replies, sending and drafts (outgoing, with
-                        #   composing, delivering and checks), grant
-                        #   limits and the send audit (sending),
-                        #   Idempotency-Key and the
-                        #   fingerprint of a request (idempotency,
-                        #   fingerprint), links to attachments for
+                        #   the fingerprint of a request
+                        #   (fingerprint), links to attachments for
                         #   another service (links)
+        outgoing/       # Outgoing: replies, sending and drafts
+                        #   (service, with composing, delivering and
+                        #   checks, replies), grant limits and the send
+                        #   audit (sending), the Idempotency-Key
+                        #   (idempotency). Reads through ..calls and
+                        #   ..reach
       sync/             # SyncService (stable message ids, the sync pass),
                         #   what a pass finds (passes), the threads the
                         #   index keeps (threads), SyncWorker (polling
@@ -448,10 +454,11 @@ packages/mailbox-client/
       discovery.py      # discovery, the sign-in with a code
       folders.py        # the folders of an account
       messages.py       # lists and search in one account or across,
-                        #   changes, a message and its source, an
-                        #   attachment and a link to it, flags, keywords
+                        #   a message and its source, flags, keywords
                         #   and moves for one or many, deleting, and
                         #   the page the drafts read too
+      changes.py        # the change feed of one account or of all
+      attachments.py    # an attachment's bytes, a link to it
       threads.py        # the threads of a folder, one thread
       drafts.py         # list, write, replace, delete drafts
       sending.py        # send a message, send a draft
@@ -485,9 +492,10 @@ packages/mailbox-client/
       accounts.py       # an account, its stored credentials
       discovery.py      # what discovery found, a sign-in with a code
       folders.py        # a folder
-      messages.py       # a message and its summary, a page, the
-                        #   changes, a batch's outcome, an
-                        #   attachment's bytes, a link to an attachment
+      messages.py       # a message and its summary, a page, a
+                        #   batch's outcome
+      changes.py        # the changes since a state
+      attachments.py    # an attachment's bytes, a link to an attachment
       threads.py        # a thread and its summary
       sending.py        # a recipient, what a send answered
       sends.py          # a record of the audit of sends
@@ -846,8 +854,8 @@ imapclient boundary), never by patching deep inside a library.
   and say why in the docstring.
   Example: `benethos_mailbox_common.paths.folders`: `system_folders(app)`
   returns `SystemFolders(config, data)`, not a tuple.
-  `tests/test_boundaries.py` of the service checks it for the four
-  packages: what each offers, and the methods of the domain services
+  `tests/test_boundaries.py` at the root of the repository checks it for
+  the four packages: what each offers, and the methods of the domain services
   the web layer reaches. Its `ALLOWED` names what stays, with the
   reason, such as a lookup by key or the free JSON of an account's
   settings.
@@ -907,6 +915,9 @@ imapclient boundary), never by patching deep inside a library.
   `<subject>_helpers.py`. The clocks a test moves itself are in
   `clocks.py`. No test module imports another, which
   `test_code_rules.py` checks in all four packages.
+- What checks the repository across the four packages, the publishing,
+  the READMEs, the trees of section 3 and the boundaries, is in `tests/`
+  at its root. Each package's tests stay its own and run alone.
 - Fakes plug in at a seam: the memory provider, `httpx.MockTransport`,
   a fake `IMAPClient` at the imapclient boundary. Nothing is patched
   deep inside a library.

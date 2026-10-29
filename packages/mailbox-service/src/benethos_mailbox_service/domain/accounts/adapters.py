@@ -16,14 +16,12 @@ from typing import TypeVar
 from pydantic import SecretStr
 
 from ...data.models import Abilities, Account, AccountStatus, Capability, ProviderType
+from ...data.protocols import OAuthClient, RefreshingTokens, Tokens
 from ...data.providers import (
     CredentialReader,
-    OAuthClient,
     ProviderFactory,
     ProviderSettings,
     Reads,
-    RefreshingTokens,
-    Tokens,
     TokenSource,
     build_provider,
 )

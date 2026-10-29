@@ -16,26 +16,26 @@ from typing import Literal
 
 from benethos_mailbox_common.values import secret
 
-from ...common.clock import utc_now
-from ...common.locks import KeyedLocks
-from ...common.retention import Retention
-from ...data.models import (
+from ....common.clock import utc_now
+from ....common.locks import KeyedLocks
+from ....common.retention import Retention
+from ....data.models import (
     Page,
     SendFilter,
     SendOutcome,
     SendRecord,
     SentMessage,
 )
-from ...data.storage import SendLogRepository
-from ...errors import (
+from ....data.storage import SendLogRepository
+from ....errors import (
     MailboxServiceError,
     RecipientNotAllowedError,
     SendLimitError,
 )
-from .. import paging
-from ..activity import SERVICE, ActivityLog, Actor
-from ..activity import mailbox as said
-from ..rights import Access
+from ... import paging
+from ...activity import SERVICE, ActivityLog, Actor
+from ...activity import mailbox as said
+from ...rights import Access
 
 WINDOW = timedelta(hours=24)
 # Days the audit keeps a record, unless the settings say otherwise. 0

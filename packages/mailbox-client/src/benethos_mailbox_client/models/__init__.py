@@ -4,7 +4,9 @@ a caller rather than the fields of the API."""
 from __future__ import annotations
 
 from .accounts import Account, Marks, StoredCredential
+from .attachments import Attachment, AttachmentLink
 from .audit import Activity
+from .changes import Change, Changes
 from .discovery import (
     Candidate,
     DeviceSignIn,
@@ -21,10 +23,6 @@ from .me import Me, MeAccount, Sending
 from .messages import (
     Address,
     AttachedFile,
-    Attachment,
-    AttachmentLink,
-    Change,
-    Changes,
     Failed,
     Message,
     MessageSummary,
