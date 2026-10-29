@@ -101,7 +101,7 @@
     <span class="muted">The service makes one and shows it once.</span>
   </form>
   <div class="fold">
-  <form method="post" action="/ui/users/{{ user.id }}/password">
+  <form method="post" action="/ui/users/{{ user.id }}/password" data-confirm="Replace this user's password? The old one stops working at once." data-confirm-label="Set password">
     {{ csrf_field() }}
     <input type="hidden" name="name" value="{{ user.name }}" autocomplete="off" />
     <div class="form-grid">

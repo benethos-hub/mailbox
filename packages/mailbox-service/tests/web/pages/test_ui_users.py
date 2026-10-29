@@ -154,6 +154,7 @@ def test_the_page_says_whether_a_user_can_sign_in(
     saved = ui.get(access).text
     assert "not possible: no password yet" in saved
     assert "Set password" in saved and "Make a one-time password" in saved
+    assert "data-confirm=\"Replace this user's password?" in saved
     secret = "a password for the bot user"
     post(
         ui,
