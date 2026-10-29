@@ -35,9 +35,9 @@ from benethos_mailbox_service.errors import (
     NotSupportedError,
 )
 
-from ...conftest import ADMIN, bearer_for, create_account, set_master_key
-from ...imap_adapter import provider
-from ...imap_fake import FakeFolder, FakeMailBox, make_message
+from ....conftest import ADMIN, bearer_for, create_account, set_master_key
+from ....imap_adapter import provider
+from ....imap_fake import FakeFolder, FakeMailBox, make_message
 from .drafts_helpers import drafts_url
 
 SENDER = Recipient(email="me@example.com", name="Me")

@@ -285,13 +285,15 @@ packages/mailbox-service/
                         #   roles (folders), the folders a grant
                         #   reaches (reach),
                         #   lists across accounts (across, merge),
-                        #   replies, sending and drafts (outgoing, with
-                        #   composing, delivering and checks), grant
-                        #   limits and the send audit (sending),
-                        #   Idempotency-Key and the
-                        #   fingerprint of a request (idempotency,
-                        #   fingerprint), links to attachments for
+                        #   the fingerprint of a request
+                        #   (fingerprint), links to attachments for
                         #   another service (links)
+        outgoing/       # Outgoing: replies, sending and drafts
+                        #   (service, with composing, delivering and
+                        #   checks, replies), grant limits and the send
+                        #   audit (sending), the Idempotency-Key
+                        #   (idempotency). Reads through ..calls and
+                        #   ..reach
       sync/             # SyncService (stable message ids, the sync pass),
                         #   what a pass finds (passes), the threads the
                         #   index keeps (threads), SyncWorker (polling

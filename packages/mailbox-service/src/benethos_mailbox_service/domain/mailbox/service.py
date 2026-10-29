@@ -43,10 +43,8 @@ from ..sync import SyncService
 from .across import AcrossAccounts, in_reach
 from .calls import Calls, public
 from .folders import Folders
-from .idempotency import Idempotency
-from .outgoing import Outgoing
+from .outgoing import Idempotency, Outgoing, SendControl
 from .reach import of_the_account, outside, reach_of
-from .sending import SendControl
 from .threads import THREAD_MESSAGES, Threads
 
 # The keyword of a draft, \Draft on IMAP.

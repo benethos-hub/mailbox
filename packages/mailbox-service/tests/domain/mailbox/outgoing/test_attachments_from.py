@@ -13,9 +13,9 @@ from fastapi.testclient import TestClient
 
 from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import Attachment, Grant
-from benethos_mailbox_service.domain.mailbox import checks
+from benethos_mailbox_service.domain.mailbox.outgoing import checks
 
-from ...conftest import bearer_for, memory_of
+from ....conftest import bearer_for, memory_of
 
 INVOICE = {"message_id": "m0", "attachment_id": "att_0"}
 

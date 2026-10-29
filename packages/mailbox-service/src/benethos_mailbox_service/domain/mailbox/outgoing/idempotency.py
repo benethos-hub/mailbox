@@ -17,13 +17,13 @@ from typing import TypeVar
 
 from pydantic import BaseModel
 
-from ...common.clock import utc_now
-from ...common.locks import KeyedLocks
-from ...data.storage import IdempotencyRepository, StoredResult
-from ...errors import IdempotencyConflictError
-from ..activity import SERVICE, ActivityLog
-from ..activity import mailbox as said
-from .fingerprint import fingerprint
+from ....common.clock import utc_now
+from ....common.locks import KeyedLocks
+from ....data.storage import IdempotencyRepository, StoredResult
+from ....errors import IdempotencyConflictError
+from ...activity import SERVICE, ActivityLog
+from ...activity import mailbox as said
+from ..fingerprint import fingerprint
 
 R = TypeVar("R", bound=BaseModel)
 

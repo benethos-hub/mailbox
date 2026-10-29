@@ -6,16 +6,16 @@ from __future__ import annotations
 
 from benethos_mailbox_common.values import sizes
 
-from ...data.mail import convert
-from ...data.models import (
+from ....data.mail import convert
+from ....data.models import (
     Address,
     DraftMessage,
     MessageReference,
     OutgoingAttachment,
     Recipient,
 )
-from ...errors import BadRequestError
-from ..rights import Access
+from ....errors import BadRequestError
+from ...rights import Access
 
 # What one message may carry.
 MAX_RECIPIENTS = 100

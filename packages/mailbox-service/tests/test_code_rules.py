@@ -246,7 +246,7 @@ SHADOWING = {
 }
 REPEATED = {
     ("domain/accounts", "world"),
-    ("domain/mailbox", "box"),
+    ("domain/mailbox/outgoing", "box"),
     ("web/pages", "endpoint"),
 }
 

@@ -9,7 +9,6 @@ links to attachments ``AttachmentLinks``.
 from __future__ import annotations
 
 from .folders import find_folder
-from .idempotency import Idempotency
 from .links import (
     LINK_GONE,
     LINK_SECONDS,
@@ -17,7 +16,7 @@ from .links import (
     AttachmentLinks,
     SharedLink,
 )
-from .sending import SendControl
+from .outgoing import Idempotency, SendControl
 from .service import MailboxService
 
 __all__ = [
