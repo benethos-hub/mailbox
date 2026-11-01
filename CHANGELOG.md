@@ -6,6 +6,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- The images install python-multipart 0.0.33, platformdirs 4.14.2 and
+  publicsuffixlist 1.1.2.20261101 from the lockfile.
+
 ## [0.6.0] - 2026-10-29
 
 ### Added
