@@ -8,8 +8,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- The images install python-multipart 0.0.33, platformdirs 4.14.2 and
-  publicsuffixlist 1.1.2.20261101 from the lockfile.
+- The images install anyio 4.16.0, python-multipart 0.0.33, platformdirs
+  4.14.3 and publicsuffixlist 1.1.2.20261101 from the lockfile.
 
 ## [0.6.0] - 2026-10-29
 
