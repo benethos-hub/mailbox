@@ -10,6 +10,9 @@ updates:
   # request rewrites uv.lock, so separate ones conflict after every merge.
   - package-ecosystem: "uv"
     directory: "/"
+    # A version range stays as it is while it allows the new release, and
+    # only uv.lock moves. A release outside the range changes the range.
+    versioning-strategy: "increase-if-necessary"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
