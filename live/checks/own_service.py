@@ -96,8 +96,8 @@ def wait_connected(
 ) -> int:
     """Tell the person how to connect the test account in the UI, then
     wait until it is."""
-    password = own.data / "admin_password"
-    print(f"Open {URL}/ui and sign in as admin, password in {password}.")
+    password_file = own.data / "admin_password"
+    print(f"Open {URL}/ui and sign in as admin, password in {password_file}.")
     print(steps)
     print("Waiting up to ten minutes...")
     deadline = time.monotonic() + WAIT
