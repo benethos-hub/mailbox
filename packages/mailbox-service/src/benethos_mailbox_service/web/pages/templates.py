@@ -11,7 +11,7 @@ from collections.abc import Iterable
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-from urllib.parse import quote, urlencode, urlsplit
+from urllib.parse import quote, unquote, urlencode, urlsplit
 
 import jinja2
 from fastapi import Request
@@ -228,12 +228,16 @@ def back(
 
 
 def local_path(value: str | None, fallback: str) -> str:
-    """Where to go after a form: a page of this UI, never another site."""
+    """Where to go after a form: a page of this UI, never another site.
+    A browser resolves a dot segment, also as ``%2e%2e``, before it asks
+    the server, so a path with one could leave the UI. The result starts
+    with ``PATH`` by construction, so ``value`` cannot name a host."""
     parts = urlsplit(value or "")
     inside = parts.path == PATH or parts.path.startswith(PATH + "/")
-    if parts.scheme or parts.netloc or not inside:
+    segments = unquote(parts.path).replace("\\", "/").split("/")
+    if parts.scheme or parts.netloc or not inside or {".", ".."} & set(segments):
         return fallback
-    return path_and_query(value or "")
+    return PATH + path_and_query(value or "")[len(PATH) :]
 
 
 def page_links(request: Request, cursor: str | None) -> tuple[str | None, str | None]:
