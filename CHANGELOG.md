@@ -9,7 +9,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 
 - The images install anyio 4.16.0, python-multipart 0.0.33, platformdirs
-  4.14.3 and publicsuffixlist 1.1.2.20261101 from the lockfile.
+  4.14.5, typing-inspection 0.4.5 and publicsuffixlist 1.1.2.20261101 from
+  the lockfile.
 - The images build with uv 0.13.7.
 - `benethos-mailbox-service` needs dnspython 2.9.2 or newer, the first
   version without a known vulnerability. The images install it from the
