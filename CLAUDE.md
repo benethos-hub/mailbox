@@ -202,7 +202,12 @@ containers/               # images/ (one folder per image), and one folder
                           #   Claude Desktop bundle onto the release and
                           #   its entry to the MCP Registry. A manual run
                           #   on main tries PyPI and pushes the images as
-                          #   edge
+                          #   edge,
+                          #   freshness.yml: daily, what is pinned and what
+                          #   is newer, and whether the newest versions
+                          #   allowed and the published packages still
+                          #   work, two issues through the organisation's
+                          #   reusable workflow
 .github/publish/          # one folder per place a release is listed:
                           #   mcp-registry/server.json, the MCP server's
                           #   entry (test_mcp_registry.py), mcpb/, its
@@ -224,6 +229,10 @@ tests/                    # what the repository holds, across the four
                           #   the trial run
   test_mcp_registry.py    # the MCP Registry entry held to the package
   test_mcpb.py            # the Claude Desktop bundle held to the package
+  test_freshness.py       # the call of freshness.yml
+  installed_check.py      # not a test: the packages as installed, as real
+                          #   processes, without an account or a mail
+                          #   server, run by hand and by freshness.yml
 docs/
   CONCEPT.md              # design
   ARCHITECTURE.md         # layers, modules, seams, rules for new code
@@ -346,7 +355,9 @@ common package to it, the service the common package.
    `uv lock --upgrade` as a commit of its own, then all checks. Check
    the other pins as well: the base images of both Dockerfiles, a newer
    tag or a new digest under the same tag, and the actions of the
-   workflows. Each update is a commit of its own.
+   workflows. Each update is a commit of its own. The issue "Pinned
+   versions have newer releases", which `freshness.yml` keeps daily, lists
+   the same, but only as of its last run.
 2. Set `version` in the four packages' `pyproject.toml`, the pins
    `benethos-mailbox-client==X.Y.Z` and
    `benethos-mailbox-common[paths,settings]==X.Y.Z` in the MCP server's

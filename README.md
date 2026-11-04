@@ -246,6 +246,17 @@ lowest versions their `pyproject.toml` allows and runs the tests there,
 checks those versions and every version in `uv.lock` against OSV for
 known vulnerabilities, and checks the brand assets in `assets/brand/`.
 Every one of these checks has to pass before a change reaches `main`.
+
+A separate workflow runs once a day and passes or stops nothing. It keeps
+one issue with what the project pins and what is newer: packages,
+vulnerabilities, images and actions. A second issue opens when the newest
+versions the ranges in `pyproject.toml` allow break the tests or
+`tests/installed_check.py`, or when a published package no longer installs
+or starts from PyPI. An install without the lockfile, such as `uvx` or
+`pip install`, gets those versions, so this can change on any day without a
+release here. That check sees neither a real mailbox nor the MCP server in
+front of the real service.
+
 Manual checks against real test accounts live in `live/` and are
 described in [CLAUDE.md](CLAUDE.md), which also holds the working rules
 for this repository.
