@@ -49,7 +49,7 @@ jobs:
 
   # Every version pinned in uv.lock, for every platform and Python, against
   # PyPI and OSV. A waiver in ignore-vulns belongs here, in the lowest-*
-  # jobs and in publish.yml alike.
+  # jobs, in publish.yml and in freshness.yml alike.
   audit:
     uses: benethos-hub/.github/.github/workflows/python-dependency-audit.yml@main
 

@@ -1,0 +1,94 @@
+name: Freshness
+
+# Two questions about the versions, answered once a day in one run and two
+# issues, through the organisation's reusable freshness workflow
+# (docs/freshness.md in benethos-hub/.github). Nothing here commits, the
+# upgraded lockfile stays in the runner.
+#
+#   "Pinned versions have newer releases", the organisation's report: every
+#   package uv.lock pins that has a newer release, within the ranges the
+#   four pyproject.toml allow and beyond them, the build backends, known
+#   vulnerabilities, the images of both Dockerfiles and the compose files by
+#   digest and by tag, every action pinned to a commit, and under Checks one
+#   sentence per job below on what passed. Dependabot proposes the direct
+#   dependencies, the actions and the base images. The issue adds the
+#   packages beneath them, the versions beyond a range and the one place to
+#   see all of it.
+#
+#   "Newest dependency versions break the server", this repository's
+#   question. uvx without a pin and pip install resolve the newest versions
+#   the ranges allow, not the ones in uv.lock, so what a user runs can change
+#   on any day without a release here. Two jobs feed it: newest, the
+#   organisation's ready-made job of the repository, upgrades the lockfile
+#   inside the runner, runs the suite on those versions and then
+#   tests/installed_check.py, the programs as real processes, without an
+#   account and without a mail server. index, a job of the organisation's
+#   workflow, installs each of the four published packages from PyPI into a
+#   fresh environment, the path uvx takes, and runs the same check with its
+#   interpreter for that package alone. A run that proves nothing, the check
+#   failing on the locked versions too or a step failing while nothing moved,
+#   leaves the alarm issue as it was.
+#
+# Both issues are public: names, versions and the result of a job go in, no
+# log. The cron, the concurrency group and the permission to write issues
+# belong here, the measuring belongs to the organisation. The workflow and
+# the action are followed at main, unpinned, as in ci.yml. Nothing here is a
+# required check, nothing runs for a pull request. A waiver in ignore-vulns
+# belongs here, in ci.yml and in publish.yml alike.
+
+on:
+  schedule:
+    - cron: "30 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: freshness
+
+jobs:
+  # uv sync installs the dependency group dev, which holds the test tools and
+  # the four packages, so the action needs no extras. The check is what the
+  # suite cannot see: the service under its real server, the MCP SDK's
+  # conversion of a result and an error on the way to a client.
+  newest:
+    name: Newest versions allowed
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Test the newest versions allowed
+        uses: benethos-hub/.github/actions/python/freshness-newest@main
+        with:
+          findings: ${{ runner.temp }}/freshness/newest
+          check: uv run --frozen python tests/installed_check.py
+
+      - name: Leave the result for the report
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: freshness-newest
+          path: ${{ runner.temp }}/freshness/newest
+          retention-days: 7
+
+  # Runs whatever happened before: a job that died before its upload is a
+  # line in the pins report, not a silent gap, since extra-jobs names it.
+  freshness:
+    name: Freshness report
+    needs: newest
+    if: ${{ !cancelled() }}
+    uses: benethos-hub/.github/.github/workflows/freshness.yml@main
+    permissions:
+      contents: read
+      issues: write
+    with:
+      issue-title: Pinned versions have newer releases
+      extra-jobs: newest
+      alarm-title: Newest dependency versions break the server
+      alarm-resolved: The newest dependency versions work.
+      index: true
+      index-packages: '["benethos-mailbox-service", "benethos-mailbox-client", "benethos-mailbox-mcp", "benethos-mailbox-common"]'
+      index-check: $FRESHNESS_PYTHON tests/installed_check.py

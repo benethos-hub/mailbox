@@ -1,0 +1,84 @@
+"""The daily freshness check: the wiring of freshness.yml.
+
+The check runs through the organisation's workflow and actions, which prove
+themselves there. What can go wrong here is the call: a trigger that is not
+a schedule, a permission beyond issues, an artifact the report does not
+expect, or a published package the index job does not install.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+
+from . import installed_check
+from .publish_helpers import PACKAGES, ROOT, project_of
+
+WORKFLOW = (ROOT / ".github" / "workflows" / "freshness.yml").read_text("utf-8")
+ORG = "benethos-hub/.github/"
+
+
+def _step(name: str) -> str:
+    return WORKFLOW.split(f"- name: {name}\n", 1)[1].split("\n      - ", 1)[0]
+
+
+def _job(name: str) -> str:
+    return WORKFLOW.split(f"\n  {name}:\n", 1)[1].split("\n\n  ", 1)[0]
+
+
+def test_it_runs_on_a_schedule_and_by_hand_only() -> None:
+    on = WORKFLOW.split("\non:\n", 1)[1].split("\npermissions:", 1)[0]
+    assert "schedule:" in on
+    assert "workflow_dispatch:" in on
+    assert "push" not in on
+    assert "pull_request" not in on
+
+
+def test_the_newest_job_is_the_organisations_with_the_check() -> None:
+    step = _step("Test the newest versions allowed")
+    assert f"uses: {ORG}actions/python/freshness-newest@main" in step
+    assert "check: uv run --frozen python tests/installed_check.py" in step
+
+
+def test_the_artifact_is_named_as_the_report_expects() -> None:
+    """freshness-<job>, named in extra-jobs, from the folder the action fills."""
+    assert "findings: ${{ runner.temp }}/freshness/newest" in _step(
+        "Test the newest versions allowed"
+    )
+    upload = _step("Leave the result for the report")
+    assert "name: freshness-newest" in upload
+    assert "path: ${{ runner.temp }}/freshness/newest" in upload
+
+
+def test_the_report_is_the_organisations_and_knows_the_job() -> None:
+    job = _job("freshness")
+    assert f"uses: {ORG}.github/workflows/freshness.yml@main" in job
+    assert "needs: newest" in job
+    assert "extra-jobs: newest" in job
+    assert "if: ${{ !cancelled() }}" in job, "a dead job is a line in the report"
+
+
+def test_the_index_job_checks_every_published_package() -> None:
+    job = _job("freshness")
+    assert "index: true" in job
+    assert "index-check: $FRESHNESS_PYTHON tests/installed_check.py" in job
+    found = re.search(r"index-packages: '(.+)'", job)
+    assert found is not None
+    names = {str(project_of(package)["name"]) for package in PACKAGES}
+    assert set(json.loads(found.group(1))) == names
+
+
+def test_the_check_knows_every_published_package() -> None:
+    names = {str(project_of(package)["name"]) for package in PACKAGES}
+    assert set(installed_check.CHECKS) == names
+
+
+def test_the_two_issues_have_titles_of_their_own() -> None:
+    titles = re.findall(r"^\s+(?:issue-|alarm-)title: (.+)$", WORKFLOW, re.M)
+    assert len(titles) == 2
+    assert len(set(titles)) == 2
+
+
+def test_it_can_write_issues_and_nothing_else() -> None:
+    assert "contents: write" not in WORKFLOW
+    assert WORKFLOW.count("issues: write") == 1

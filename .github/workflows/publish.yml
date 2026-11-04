@@ -33,8 +33,8 @@ jobs:
   # Waits up to 30 minutes for the CI run of ci.yml on main for this commit,
   # and stops the release when that run failed, or after five minutes when
   # there is none. On a branch other than main nothing would be built, so it
-  # does not run there. A waiver in ignore-vulns belongs here and in ci.yml
-  # alike.
+  # does not run there. A waiver in ignore-vulns belongs here, in ci.yml and
+  # in freshness.yml alike.
   ci-passed:
     if: github.event_name == 'release' || github.ref == 'refs/heads/main'
     uses: benethos-hub/.github/.github/workflows/python-release-ci-passed.yml@main
