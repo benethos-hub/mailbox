@@ -184,18 +184,18 @@ def test_an_access_line_masks_the_secret_of_a_link(
     capsys: pytest.CaptureFixture[str], colours: bool
 ) -> None:
     """Whoever holds the path of a link fetches the attachment."""
-    secret = "s3cr3t" * 21
+    link_key = "s3cr3t" * 21
     book = LogBook()
     logging.config.dictConfig(logs.log_config("info", book, colours=colours))
     logging.getLogger("uvicorn.access").info(
         '%s - "%s %s HTTP/%s" %d',
         "127.0.0.1:5000",
         "GET",
-        f"/v1/links/{secret}?x=1",
+        f"/v1/links/{link_key}?x=1",
         "1.1",
         200,
     )
     err = capsys.readouterr().err
-    assert "/v1/links/…" in err and secret not in err
+    assert "/v1/links/…" in err and link_key not in err
     [entry] = book.newest_first()
-    assert secret not in entry.message
+    assert link_key not in entry.message
