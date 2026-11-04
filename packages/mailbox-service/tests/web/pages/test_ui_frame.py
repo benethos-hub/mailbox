@@ -105,12 +105,42 @@ def test_the_ui_is_not_in_the_contract(client: TestClient) -> None:
         ("/v1/me", "/ui/fallback"),
         ("", "/ui/fallback"),
         (None, "/ui/fallback"),
+        # A browser resolves these before it asks the server.
+        ("/ui/../v1/me", "/ui/fallback"),
+        ("/ui/..", "/ui/fallback"),
+        ("/ui/..//evil.example/", "/ui/fallback"),
+        ("/ui/./accounts", "/ui/fallback"),
+        ("/ui/%2e%2e/v1/me", "/ui/fallback"),
+        ("/ui/.%2E/v1/me", "/ui/fallback"),
+        ("/ui/..%2fv1", "/ui/fallback"),
+        ("/ui/..\\v1", "/ui/fallback"),
+        ("/ui/\t../\t/evil.example/", "/ui/fallback"),
+        # Dots that name no step up stay.
+        ("/ui/accounts/a..b/mail?folder=..", "/ui/accounts/a..b/mail?folder=.."),
     ],
 )
 def test_only_local_paths_after_a_form(value: str | None, expected: str) -> None:
     from benethos_mailbox_service.web.pages.templates import local_path
 
     assert local_path(value, "/ui/fallback") == expected
+
+
+@pytest.mark.parametrize(
+    ("path", "location"),
+    [
+        ("/ui/accounts/acc_1?x=1", "/ui/accounts/acc_1?x=1"),
+        # An account id in the URL may be "..", as %2e%2e.
+        ("/ui/accounts/..", "/ui"),
+        ("//evil.example/", "/ui"),
+    ],
+)
+def test_back_stays_in_the_ui(path: str, location: str) -> None:
+    from starlette.requests import Request
+
+    from benethos_mailbox_service.web.pages.templates import back
+
+    scope = {"type": "http", "path": "/ui/x", "query_string": b"", "headers": []}
+    assert back(Request(scope), path).headers["location"] == location
 
 
 def test_page_links_carry_the_query_and_quote_the_cursor() -> None:

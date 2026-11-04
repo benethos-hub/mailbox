@@ -11,7 +11,7 @@ from collections.abc import Iterable
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-from urllib.parse import quote, urlencode, urlsplit
+from urllib.parse import quote, unquote, urlencode, urlsplit
 
 import jinja2
 from fastapi import Request
@@ -217,23 +217,28 @@ def back(
 ) -> Response:
     """Post/Redirect/Get: the browser lands on a GET, a reload repeats
     nothing. The message waits in the session for the next page, never in
-    the URL, so a link cannot put words into the UI."""
+    the URL, so a link cannot put words into the UI. Many paths carry an
+    id from the URL, so this is where every one of them stays in the UI."""
     try:
         for key, value in (("msg", message), ("err", error)):
             if value:
                 show_once(request, key, value)
     except SignInRequiredError:
         pass  # signed out meanwhile: the sign-in page says so
-    return RedirectResponse(path, status_code=303)
+    return RedirectResponse(local_path(path, PATH), status_code=303)
 
 
 def local_path(value: str | None, fallback: str) -> str:
-    """Where to go after a form: a page of this UI, never another site."""
+    """Where to go after a form: a page of this UI, never another site.
+    A browser resolves a dot segment, also as ``%2e%2e``, before it asks
+    the server, so a path with one could leave the UI. The result starts
+    with ``PATH`` by construction, so ``value`` cannot name a host."""
     parts = urlsplit(value or "")
     inside = parts.path == PATH or parts.path.startswith(PATH + "/")
-    if parts.scheme or parts.netloc or not inside:
+    segments = unquote(parts.path).replace("\\", "/").split("/")
+    if parts.scheme or parts.netloc or not inside or {".", ".."} & set(segments):
         return fallback
-    return path_and_query(value or "")
+    return PATH + path_and_query(value or "")[len(PATH) :]
 
 
 def page_links(request: Request, cursor: str | None) -> tuple[str | None, str | None]:

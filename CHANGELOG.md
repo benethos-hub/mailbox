@@ -13,6 +13,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 - The images build on uv 0.13.7 and on `python:3.15-slim` as rebuilt on
   2026-11-02, still Python 3.15.2.
 
+### Fixed
+
+- The UI's `next` and `back` values no longer lead out of `/ui` with a
+  `..` in the path, also written as `%2e%2e`. Such a value lands on the
+  fallback page. It could not reach another host before either.
+
 ## [0.6.0] - 2026-10-29
 
 ### Added

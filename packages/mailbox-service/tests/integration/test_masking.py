@@ -24,22 +24,22 @@ from benethos_mailbox_service.web.pages.forms import FormFailedError, failing
 
 from ..conftest import forget_secrets
 
-PASSWORD = "hunter2-but-longer"
+MASKED = "hunter2-but-longer"
 
 
 def test_the_log_masks_message_arguments_and_traceback(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     logging.config.dictConfig(logs.log_config("info", colours=False))
-    redact.note(PASSWORD)
+    redact.note(MASKED)
     log = logging.getLogger(f"{logs.PACKAGE}.data.providers")
-    log.warning("login with %s refused", PASSWORD)
+    log.warning("login with %s refused", MASKED)
     try:
-        raise RuntimeError(f"the server echoed {PASSWORD}")
+        raise RuntimeError(f"the server echoed {MASKED}")
     except RuntimeError:
         log.exception("a library failed")
     err = capsys.readouterr().err
-    assert PASSWORD not in err
+    assert MASKED not in err
     assert "login with *** refused" in err
     assert "RuntimeError: the server echoed ***" in err
 
@@ -48,10 +48,10 @@ async def test_the_vault_notes_what_it_decrypts(
     master_key: None, services: Services
 ) -> None:
     services.vault.initialize()
-    services.vault.store("acc_1", "password", SecretStr(PASSWORD))
+    services.vault.store("acc_1", "password", SecretStr(MASKED))
     forget_secrets()
-    assert services.vault.read("acc_1", "password").get_secret_value() == PASSWORD
-    assert redact.redact(PASSWORD) == "***"
+    assert services.vault.read("acc_1", "password").get_secret_value() == MASKED
+    assert redact.redact(MASKED) == "***"
 
 
 async def test_tokens_from_a_provider_are_noted() -> None:
@@ -77,8 +77,8 @@ async def test_tokens_from_a_provider_are_noted() -> None:
 
 
 def test_an_error_text_is_masked_in_the_api_and_the_ui() -> None:
-    redact.note(PASSWORD)
-    error = ProviderError(f"the server said: bad password {PASSWORD}")
+    redact.note(MASKED)
+    error = ProviderError(f"the server said: bad password {MASKED}")
     body = json.loads(api_error(error).body)
     assert body["error"]["message"] == "the server said: bad password ***"
     with pytest.raises(FormFailedError) as refused, failing("/ui/accounts"):
