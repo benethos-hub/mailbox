@@ -92,8 +92,7 @@ def test_bundled_presets_are_consistent() -> None:
                     assert server.username is None and server.path, preset.id
                 else:
                     assert server.username == "%EMAILADDRESS%"
-    assert "imap.gmail.com" in bundled().server_hosts()
-    assert "api.fastmail.com" in bundled().server_hosts()
+    assert {"imap.gmail.com", "api.fastmail.com"} <= bundled().server_hosts()
 
 
 async def test_preset_source_by_domain() -> None:

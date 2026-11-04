@@ -130,13 +130,15 @@ def test_hidden_without_the_right(
 def test_webhooks_filter_by_url_account_and_state(
     ready: TestClient, account_id: str
 ) -> None:
-    create(ready, url="https://a.example.com/hook")
-    create(ready, url="https://b.example.com/hook", every="", accounts=account_id)
+    every_account = "https://a.example.com/hook"
+    one_account = "https://b.example.com/hook"
+    create(ready, url=every_account)
+    create(ready, url=one_account, every="", accounts=account_id)
     by_url = ready.get("/ui/webhooks", params={"url": "A.EXAMPLE"}).text
-    assert "a.example.com" in by_url and "b.example.com" not in by_url
+    assert every_account in by_url and one_account not in by_url
     by_account = ready.get("/ui/webhooks", params={"account": account_id}).text
     # Every account includes this one.
-    assert "a.example.com" in by_account and "b.example.com" in by_account
+    assert every_account in by_account and one_account in by_account
     failing = ready.get("/ui/webhooks", params={"failing": "1"}).text
     assert "No webhook matches." in failing
 
