@@ -10,8 +10,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 - The images install anyio 4.16.0, python-multipart 0.0.33, platformdirs
   4.14.3 and publicsuffixlist 1.1.2.20261101 from the lockfile.
-- The images build on uv 0.13.7 and on `python:3.15-slim` as rebuilt on
-  2026-11-02, still Python 3.15.2.
+- The images build with uv 0.13.7.
 
 ### Fixed
 
