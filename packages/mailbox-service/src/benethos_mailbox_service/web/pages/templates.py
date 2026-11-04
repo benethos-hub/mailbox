@@ -217,14 +217,15 @@ def back(
 ) -> Response:
     """Post/Redirect/Get: the browser lands on a GET, a reload repeats
     nothing. The message waits in the session for the next page, never in
-    the URL, so a link cannot put words into the UI."""
+    the URL, so a link cannot put words into the UI. Many paths carry an
+    id from the URL, so this is where every one of them stays in the UI."""
     try:
         for key, value in (("msg", message), ("err", error)):
             if value:
                 show_once(request, key, value)
     except SignInRequiredError:
         pass  # signed out meanwhile: the sign-in page says so
-    return RedirectResponse(path, status_code=303)
+    return RedirectResponse(local_path(path, PATH), status_code=303)
 
 
 def local_path(value: str | None, fallback: str) -> str:

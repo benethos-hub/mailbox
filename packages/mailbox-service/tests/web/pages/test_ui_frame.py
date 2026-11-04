@@ -125,6 +125,24 @@ def test_only_local_paths_after_a_form(value: str | None, expected: str) -> None
     assert local_path(value, "/ui/fallback") == expected
 
 
+@pytest.mark.parametrize(
+    ("path", "location"),
+    [
+        ("/ui/accounts/acc_1?x=1", "/ui/accounts/acc_1?x=1"),
+        # An account id in the URL may be "..", as %2e%2e.
+        ("/ui/accounts/..", "/ui"),
+        ("//evil.example/", "/ui"),
+    ],
+)
+def test_back_stays_in_the_ui(path: str, location: str) -> None:
+    from starlette.requests import Request
+
+    from benethos_mailbox_service.web.pages.templates import back
+
+    scope = {"type": "http", "path": "/ui/x", "query_string": b"", "headers": []}
+    assert back(Request(scope), path).headers["location"] == location
+
+
 def test_page_links_carry_the_query_and_quote_the_cursor() -> None:
     from starlette.requests import Request
 
