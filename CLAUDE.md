@@ -212,6 +212,8 @@ containers/               # images/ (one folder per image), and one folder
                           #   reusable workflow,
                           #   codeql.yml: weekly, the codeql job of ci.yml
                           #   once more, for the queries GitHub adds
+.github/codeql/           # codeql-config.yml: the rules of CodeQL left out,
+                          #   each with its reason
 .github/publish/          # one folder per place a release is listed:
                           #   mcp-registry/server.json, the MCP server's
                           #   entry (test_mcp_registry.py), mcpb/, its

@@ -38,6 +38,13 @@ def test_the_weekly_workflow_makes_the_same_call() -> None:
     assert _job(WEEKLY, "codeql") == _job(CI, "codeql")
 
 
+def test_the_calls_name_the_configuration_of_this_repository() -> None:
+    """A path that does not exist would stop the analysis on every run."""
+    named = re.search(r"config-file: (\S+)", _job(CI, "codeql"))
+    assert named is not None
+    assert (ROOT / named.group(1)).is_file()
+
+
 def test_the_weekly_run_is_weekly_and_by_hand_only() -> None:
     on = WEEKLY.split("\non:\n", 1)[1].split("\npermissions:", 1)[0]
     assert re.search(r'cron: "\d+ \d+ \* \* [0-6]"', on), "one weekday, once"
