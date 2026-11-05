@@ -300,7 +300,7 @@ SKIPPED_DIRS = {
     "dist",
     "node_modules",
 }
-SKIPPED_FILES = {"CHANGELOG.md", "uv.lock"}
+SKIPPED_FILES = {"CHANGELOG.md", "uv.lock", "package-lock.json"}
 
 
 def _text_files() -> list[Path]:
