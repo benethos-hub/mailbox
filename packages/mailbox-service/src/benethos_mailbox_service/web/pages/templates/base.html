@@ -3,15 +3,16 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    {# htmx must not inject its indicator style: the policy allows no inline style. #}
-    <meta name="htmx-config" content='{"includeIndicatorStyles": false}' />
+    {# htmx brings no indicator style of its own: every style is in app.css. #}
+    <meta name="htmx-config" content='{"includeIndicatorCSS": false}' />
     <title>{% block title %}{{ APP_NAME }}{% endblock %}</title>
     <link rel="icon" href="/ui/static/img/icon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/ui/static/css/app.css" />
     <script src="/ui/static/js/early.js"></script>
   </head>
-  {# Every htmx request carries the session's CSRF token as a header. #}
-  <body hx-headers='{"X-CSRF-Token": "{{ csrf }}"}'>
+  {# Every htmx request carries the session's CSRF token as a header.
+     htmx hands an attribute down only when it is marked :inherited. #}
+  <body hx-headers:inherited='{"X-CSRF-Token": "{{ csrf }}"}'>
     <div class="layout">
       {% include "partials/sidebar.html" %}
       <div class="content">

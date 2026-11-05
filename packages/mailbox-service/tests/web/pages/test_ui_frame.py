@@ -77,6 +77,24 @@ def test_static_files(app_client: TestClient) -> None:
         assert app_client.get(path).status_code == 200, path
 
 
+def test_htmx_is_told_what_it_no_longer_assumes(ui: TestClient) -> None:
+    """htmx 4 hands an attribute down only when asked to, and brings its own
+    style for the indicator unless told not to. Nothing here runs the script,
+    so the names are held to what the version expects."""
+    page = ui.get("/ui").text
+    assert "<body hx-headers:inherited=" in page
+    assert """content='{"includeIndicatorCSS": false}'""" in page
+
+
+def test_the_note_on_htmx_names_the_version_beside_it() -> None:
+    folder = STATIC_DIR / "vendor/htmx"
+    note = (folder / "README.md").read_text(encoding="utf-8")
+    named = re.match(r"htmx (\d+\.\d+\.\d+),", note)
+    assert named is not None
+    script = (folder / "htmx.min.js").read_text(encoding="utf-8")
+    assert f'"{named.group(1)}"' in script
+
+
 def test_errors_in_the_ui_are_pages(ui: TestClient, client: TestClient) -> None:
     missing = ui.get("/ui/nothing-here")
     assert missing.status_code == 404
