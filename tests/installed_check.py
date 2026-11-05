@@ -18,7 +18,9 @@ script looks at both, with the interpreter it runs under:
   trouble, an unknown tool and an argument of the wrong type each with an
   error result. The real service behind it stays the live check
   ``live/mcp_stdio.py``
-- the client and the common package: they import, under the installed version
+- the client: it imports, under the installed version
+- the common package: the same, and its groups import. A group with an extra
+  that is not installed names that extra
 
 Exits with 0 when every answer is as expected and with 1 otherwise. No
 account and no mail server, and nothing but ``127.0.0.1``. The settings of
@@ -34,6 +36,7 @@ import importlib
 import importlib.metadata
 import json
 import os
+import pkgutil
 import re
 import shutil
 import socket
@@ -358,7 +361,22 @@ def check_client() -> None:
 
 
 def check_common() -> None:
+    """Without its extras the package needs the standard library only. Each
+    group imports its modules, so importing the groups reaches all of them. A
+    group named like an extra may be missing its library, and then says so."""
     check_import(COMMON)
+    package = importlib.import_module(COMMON.replace("-", "_"))
+    extras = importlib.metadata.metadata(COMMON).get_all("Provides-Extra") or []
+    groups = [found.name for found in pkgutil.iter_modules(package.__path__)]
+    check(bool(groups), f"{COMMON} holds no group")
+    for group in groups:
+        try:
+            importlib.import_module(f"{package.__name__}.{group}")
+        except ModuleNotFoundError as exc:
+            check(
+                group in extras and f"needs the extra {group}" in str(exc),
+                f"the group {group} did not import: {exc}",
+            )
 
 
 CHECKS: dict[str, Callable[[], None]] = {
