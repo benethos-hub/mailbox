@@ -32,12 +32,12 @@ ADAPTERS = [
 ]
 
 
-@pytest.mark.parametrize(("adapter", "able"), ADAPTERS, ids=lambda a: str(a))
+@pytest.mark.parametrize(("adapter", "able"), ADAPTERS, ids=str)
 def test_each_adapter_implements_what_it_can(adapter: type, able: set[type]) -> None:
     assert {p for p in PROTOCOLS if issubclass(adapter, p)} == able
 
 
-@pytest.mark.parametrize(("adapter", "able"), ADAPTERS, ids=lambda a: str(a))
+@pytest.mark.parametrize(("adapter", "able"), ADAPTERS, ids=str)
 def test_each_adapter_says_whether_its_ids_stay(adapter: type, able: set[type]) -> None:
     # IMAP and POP3 ids name a place, and the domain maps them.
     assert adapter.stable_ids is (adapter not in (ImapProvider, Pop3Provider))
