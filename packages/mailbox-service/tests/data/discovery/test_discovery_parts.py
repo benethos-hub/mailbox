@@ -215,10 +215,14 @@ def test_parse_keeps_what_can_be_used() -> None:
         b"<other/>",
         b"<clientConfig/>",
         # Entity expansion is refused, not performed.
-        b'<?xml version="1.0"?><!DOCTYPE x [<!ENTITY a "aaaa">]>'
-        b"<clientConfig><emailProvider>&a;</emailProvider></clientConfig>",
-        b'<?xml version="1.0"?><!DOCTYPE x [<!ENTITY e SYSTEM "file:///etc/passwd">]>'
-        b"<clientConfig><emailProvider>&e;</emailProvider></clientConfig>",
+        (
+            b'<?xml version="1.0"?><!DOCTYPE x [<!ENTITY a "aaaa">]>'
+            b"<clientConfig><emailProvider>&a;</emailProvider></clientConfig>"
+        ),
+        (
+            b'<?xml version="1.0"?><!DOCTYPE x [<!ENTITY e SYSTEM "file:///etc/passwd">]>'
+            b"<clientConfig><emailProvider>&e;</emailProvider></clientConfig>"
+        ),
     ],
 )
 def test_parse_refuses_broken_or_hostile_files(xml: bytes) -> None:
