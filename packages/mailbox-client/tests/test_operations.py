@@ -14,15 +14,8 @@ from pathlib import Path
 
 import pytest
 
-from benethos_mailbox_client import (
-    MailboxClient,
-    SyncMailboxClient,
-    endpoints,
-    models,
-)
-from benethos_mailbox_client import (
-    __all__ as exported,
-)
+from benethos_mailbox_client import MailboxClient, SyncMailboxClient, endpoints, models
+from benethos_mailbox_client import __all__ as exported
 
 CONTRACT = Path(__file__).resolve().parents[3] / "docs" / "openapi.json"
 METHODS = {"get", "put", "post", "patch", "delete"}
