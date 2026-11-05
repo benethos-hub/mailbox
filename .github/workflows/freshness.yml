@@ -1,9 +1,9 @@
 name: Freshness
 
-# Two questions about the versions, answered once a day in one run and two
-# issues, through the organisation's reusable freshness workflow
-# (docs/freshness.md in benethos-hub/.github). Nothing here commits, the
-# upgraded lockfile stays in the runner.
+# Two questions about the versions, answered once a day and after every run
+# of Publish, in one run and two issues, through the organisation's reusable
+# freshness workflow (docs/freshness.md in benethos-hub/.github). Nothing here
+# commits, the upgraded lockfile stays in the runner.
 #
 #   "Pinned versions have newer releases", the organisation's report: every
 #   package uv.lock pins that has a newer release, within the ranges the

@@ -247,8 +247,8 @@ checks those versions and every version in `uv.lock` against OSV for
 known vulnerabilities, and checks the brand assets in `assets/brand/`.
 Every one of these checks has to pass before a change reaches `main`.
 
-A separate workflow runs once a day and passes or stops nothing. It keeps
-one issue with what the project pins and what is newer: packages,
+A separate workflow runs once a day and after each run of the publishing
+workflow, and passes or stops nothing. It keeps one issue with what the project pins and what is newer: packages,
 vulnerabilities, images and actions. A second issue opens when the newest
 versions the ranges in `pyproject.toml` allow break the tests or
 `tests/installed_check.py`, or when a published package no longer installs
