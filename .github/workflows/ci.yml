@@ -64,6 +64,7 @@ jobs:
       security-events: write
     with:
       languages: python,javascript-typescript,actions
+      config-file: .github/codeql/codeql-config.yml
 
   # Every other job installs from uv.lock. A user installs from PyPI, where
   # only the declared ranges in pyproject.toml count, and most of them have

@@ -16,6 +16,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `benethos-mailbox-service` needs dnspython 2.9.2 or newer, the first
   version without a known vulnerability. The images install it from the
   lockfile. The advisory concerns zone files, and the service reads none.
+- The images name their user by its id, `USER 10001` instead of
+  `USER mailbox`, so that a host or an orchestrator can see it is not root.
+  It is the same user.
 
 ### Fixed
 

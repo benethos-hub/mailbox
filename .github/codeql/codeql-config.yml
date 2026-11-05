@@ -1,0 +1,17 @@
+# The rules of CodeQL that do not apply to this repository, each with its
+# reason. A finding that is wrong at one place is dismissed there instead. Both
+# calls of the analysis name this file (ci.yml, codeql.yml).
+query-filters:
+  # The body of a Protocol method or an overload is `...`, and `await call` in
+  # a test has its effect. Ruff's B018 reports a useless expression.
+  - exclude:
+      id: py/ineffectual-statement
+  # A test says what it expects with assert, also of a request it makes in the
+  # same line. Tests do not run under python -O, and Ruff's S101 keeps assert
+  # out of the packages.
+  - exclude:
+      id: py/side-effect-in-assert
+  # The rule follows imports under TYPE_CHECKING, which do not run. A real cycle
+  # fails on import in the tests.
+  - exclude:
+      id: py/unsafe-cyclic-import

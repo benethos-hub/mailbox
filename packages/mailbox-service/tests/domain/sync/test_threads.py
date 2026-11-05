@@ -122,7 +122,8 @@ async def test_a_message_and_a_change_name_their_thread(
     )
     [reply] = page.items
     message = await imap_services.mailbox.get_message(ADMIN, imap_account_id, reply.id)
-    assert message.thread_id == reply.thread_id is not None
+    assert reply.thread_id is not None
+    assert message.thread_id == reply.thread_id
     changed = await imap_services.mailbox.update_message(
         ADMIN, imap_account_id, reply.id, MessageUpdate(starred=True)
     )
