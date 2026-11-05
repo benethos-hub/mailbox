@@ -10,8 +10,8 @@ permissions:
   contents: read
 
 jobs:
-  # brand, lint, test, coverage-badge, audit and the lowest-* jobs are the
-  # organisation's reusable workflows in benethos-hub/.github, followed at
+  # brand, lint, test, coverage-badge, audit, codeql and the lowest-* jobs are
+  # the organisation's reusable workflows in benethos-hub/.github, followed at
   # main. Each explains itself in its file. What stays here is what only
   # this project has: fresh-install and docker.
 
@@ -52,6 +52,18 @@ jobs:
   # jobs, in publish.yml and in freshness.yml alike.
   audit:
     uses: benethos-hub/.github/.github/workflows/python-dependency-audit.yml@main
+
+  # CodeQL on the Python code, the JavaScript of the UI and the workflows, with
+  # the security and the quality queries. The findings go to Security, Code
+  # scanning, and never fail this job, so it is no required check. codeql.yml
+  # makes the same call once a week, for the queries GitHub adds in between.
+  codeql:
+    uses: benethos-hub/.github/.github/workflows/codeql.yml@main
+    permissions:
+      contents: read
+      security-events: write
+    with:
+      languages: python,javascript-typescript,actions
 
   # Every other job installs from uv.lock. A user installs from PyPI, where
   # only the declared ranges in pyproject.toml count, and most of them have

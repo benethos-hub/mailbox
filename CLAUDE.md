@@ -194,7 +194,7 @@ containers/               # images/ (one folder per image), and one folder
 .github/workflows/        # ci.yml: the organisation's workflows from
                           #   benethos-hub/.github (lint, tests, audit,
                           #   lowest versions per package, coverage
-                          #   badge), fresh install, images,
+                          #   badge, CodeQL), fresh install, images,
                           #   publish.yml: on a release, through the
                           #   organisation's actions, the four packages
                           #   to PyPI, in the order of their dependencies,
@@ -208,7 +208,9 @@ containers/               # images/ (one folder per image), and one folder
                           #   newer, and whether the newest versions
                           #   allowed and the published packages still
                           #   work, two issues through the organisation's
-                          #   reusable workflow
+                          #   reusable workflow,
+                          #   codeql.yml: weekly, the codeql job of ci.yml
+                          #   once more, for the queries GitHub adds
 .github/publish/          # one folder per place a release is listed:
                           #   mcp-registry/server.json, the MCP server's
                           #   entry (test_mcp_registry.py), mcpb/, its
@@ -231,6 +233,7 @@ tests/                    # what the repository holds, across the four
   test_mcp_registry.py    # the MCP Registry entry held to the package
   test_mcpb.py            # the Claude Desktop bundle held to the package
   test_freshness.py       # the call of freshness.yml
+  test_codeql.py          # the calls of CodeQL, every other action by commit
   installed_check.py      # not a test: the packages as installed, as real
                           #   processes, without an account or a mail
                           #   server, run by hand and by freshness.yml
@@ -333,11 +336,12 @@ test accounts for golden rule 1.
 
 - Commit only when the user asks. Clear, descriptive messages.
 - `main` is protected: no direct push, no force push, a linear history,
-  and every CI job but `coverage-badge` must pass. Most are the
+  and every CI job but `coverage-badge` and `codeql` must pass. Most are the
   organisation's reusable workflows, named `<job> / <name>`, such as
   `test / Python 3.15`, `lowest-mcp / Python 3.11`, `audit / Dependency
-  audit` and `brand / Brand assets`. Every change reaches `main` as a
-  pull request.
+  audit` and `brand / Brand assets`. `codeql` files what it finds under
+  Security, Code scanning, and a merge does not wait for it. Every change
+  reaches `main` as a pull request.
 - The flow: a branch per work stream, created before the first edit.
   Commit, push the branch, open the pull request with `gh pr create`.
   The user merges it on GitHub as a squash merge. Afterwards pull `main`

@@ -37,3 +37,10 @@ and anything that reaches other hosts through autodiscovery.
 The design of these protections is in
 [docs/CONCEPT.md](docs/CONCEPT.md), section 7. Every rate limit, and how
 the limits work together, is in [docs/LIMITS.md](docs/LIMITS.md).
+
+CodeQL reads the code and the workflows on every change and once a week,
+with GitHub's security and quality queries, through a workflow of the
+benethos-hub organisation. Its findings are under **Security → Code
+scanning**. Every version in the lockfile and every lowest version the
+project allows is checked for known vulnerabilities in CI, and the daily
+freshness check reports what is newer.

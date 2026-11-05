@@ -1,0 +1,27 @@
+name: CodeQL
+
+# The weekly half of the CodeQL analysis. The codeql job of ci.yml reads every
+# change on the day it is made, with the queries of that day. GitHub adds and
+# sharpens queries over time, and only a run on a schedule reads code nobody
+# changed with them. Both file under the same category, so each run refreshes
+# the analysis the last one left and nothing is counted twice. The
+# organisation's workflow (docs/codeql.md in benethos-hub/.github) holds the
+# pins, the query suite and the inputs. Findings go to Security, Code scanning,
+# and never fail the job. It starts half an hour after the freshness run.
+
+on:
+  schedule:
+    - cron: "0 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  codeql:
+    uses: benethos-hub/.github/.github/workflows/codeql.yml@main
+    permissions:
+      contents: read
+      security-events: write
+    with:
+      languages: python,javascript-typescript,actions
