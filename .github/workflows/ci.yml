@@ -60,6 +60,7 @@ jobs:
   # start, the client imports, and the service still describes the same API.
   fresh-install:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     # The newest tested version builds and installs the wheels.
     env:
       UV_PYTHON: "3.15"
@@ -192,6 +193,7 @@ jobs:
   # here and not first in a release.
   docker:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
