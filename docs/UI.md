@@ -579,6 +579,11 @@ receiver reports nothing. Built last, if at all.
 - **Nothing from elsewhere**: no CDN. Every script, style, font and
   image the UI loads is kept under `static/`, as htmx and the icons
   are. A test checks the templates and the stylesheet for it.
+  `assets/vendor/package-lock.json` records the version of each, for
+  the freshness report, and a test holds it to what the UI ships. A
+  new version of htmx moves the file, its note and the lockfile
+  together, and is compared before and after in a real browser, since
+  neither the tests nor the live checks run JavaScript.
 
 ## 8. Rules for building and extending
 

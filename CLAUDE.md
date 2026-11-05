@@ -181,7 +181,11 @@ assets/                   # brand/: the organisation's brand assets,
                           #   icons.py makes the UI's icon sprite
                           #   from a pinned Bootstrap Icons package.
                           #   --icon renders brand/icon.png for the MCP
-                          #   Registry and the Claude Desktop bundle
+                          #   Registry and the Claude Desktop bundle.
+                          #   vendor/: the versions of the JavaScript
+                          #   packages the UI ships, a package-lock.json
+                          #   for the freshness report, nothing installs
+                          #   from it (test_vendored.py)
 live/                     # manual checks against the test accounts,
                           #   what they share in live/checks/, one module
                           #   per subject
@@ -236,6 +240,8 @@ tests/                    # what the repository holds, across the four
   test_mcp_registry.py    # the MCP Registry entry held to the package
   test_mcpb.py            # the Claude Desktop bundle held to the package
   test_freshness.py       # the call of freshness.yml
+  test_vendored.py        # the lockfile of assets/vendor held to the
+                          #   JavaScript the UI ships
   test_codeql.py          # the calls of CodeQL, every other action by commit
   test_dockerfile_lint.py # the call of hadolint, against every Dockerfile
   installed_check.py      # not a test: the packages as installed, as real
