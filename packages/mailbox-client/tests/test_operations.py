@@ -14,8 +14,15 @@ from pathlib import Path
 
 import pytest
 
-import benethos_mailbox_client
-from benethos_mailbox_client import MailboxClient, SyncMailboxClient, endpoints, models
+from benethos_mailbox_client import (
+    MailboxClient,
+    SyncMailboxClient,
+    endpoints,
+    models,
+)
+from benethos_mailbox_client import (
+    __all__ as exported,
+)
 
 CONTRACT = Path(__file__).resolve().parents[3] / "docs" / "openapi.json"
 METHODS = {"get", "put", "post", "patch", "delete"}
@@ -84,4 +91,4 @@ def test_both_clients_send_the_same_endpoint(name: str) -> None:
 
 
 def test_every_record_is_exported_by_the_package() -> None:
-    assert set(models.__all__) <= set(benethos_mailbox_client.__all__)
+    assert set(models.__all__) <= set(exported)
