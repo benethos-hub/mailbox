@@ -19,6 +19,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 - The images name their user by its id, `USER 10001` instead of
   `USER mailbox`, so that a host or an orchestrator can see it is not root.
   It is the same user.
+- The UI ships htmx 4.0.1 instead of 2.0.4. Only the page of a sign-in with a
+  code uses it, and that page works as before.
 
 ### Fixed
 
