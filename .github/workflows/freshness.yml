@@ -35,10 +35,18 @@ name: Freshness
 # the action are followed at main, unpinned, as in ci.yml. Nothing here is a
 # required check, nothing runs for a pull request. A waiver in ignore-vulns
 # belongs here, in ci.yml and in publish.yml alike.
+#
+# The run after Publish is for the index job, which installs the freshly
+# published package from PyPI: a release that does not install stands in the
+# alarm issue within minutes instead of at the next cron. The reason is in
+# docs/freshness.md of benethos-hub/.github, under "Calling it".
 
 on:
   schedule:
     - cron: "30 4 * * *"
+  workflow_run:
+    workflows: [Publish]
+    types: [completed]
   workflow_dispatch:
 
 permissions:

@@ -26,12 +26,20 @@ def _job(name: str) -> str:
     return WORKFLOW.split(f"\n  {name}:\n", 1)[1].split("\n\n  ", 1)[0]
 
 
-def test_it_runs_on_a_schedule_and_by_hand_only() -> None:
+def test_it_runs_on_a_schedule_after_publish_and_by_hand_only() -> None:
     on = WORKFLOW.split("\non:\n", 1)[1].split("\npermissions:", 1)[0]
     assert "schedule:" in on
+    assert "workflow_run:" in on
     assert "workflow_dispatch:" in on
     assert "push" not in on
     assert "pull_request" not in on
+
+
+def test_the_run_after_publish_names_the_workflow_as_it_reads() -> None:
+    """A trigger with another name never fires, and nothing says so."""
+    publish = (ROOT / ".github" / "workflows" / "publish.yml").read_text("utf-8")
+    name = publish.split("\n", 1)[0].removeprefix("name: ")
+    assert f"workflows: [{name}]\n    types: [completed]\n" in WORKFLOW
 
 
 def test_the_newest_job_is_the_organisations_with_the_check() -> None:
