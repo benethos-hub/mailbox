@@ -10,10 +10,10 @@ permissions:
   contents: read
 
 jobs:
-  # brand, lint, test, coverage-badge, audit, codeql and the lowest-* jobs are
-  # the organisation's reusable workflows in benethos-hub/.github, followed at
-  # main. Each explains itself in its file. What stays here is what only
-  # this project has: fresh-install and docker.
+  # brand, lint, test, coverage-badge, audit, codeql, dockerfile-lint and the
+  # lowest-* jobs are the organisation's reusable workflows in
+  # benethos-hub/.github, followed at main. Each explains itself in its file.
+  # What stays here is what only this project has: fresh-install and docker.
 
   # The organisation's check of assets/brand: the icon as icon.svg, and
   # icon.png and social-preview.png made from it, none older than it.
@@ -200,6 +200,21 @@ jobs:
         --ignore=packages/mailbox-common/tests/paths
         --ignore=packages/mailbox-common/tests/settings
         packages/mailbox-common/tests
+
+  # hadolint over both Dockerfiles: an image without a tag, ADD where COPY would
+  # do, no USER, the shell form of CMD, and ShellCheck over every RUN line. A
+  # FROM from a registry other than the two named is a finding as well. The
+  # findings go to Security, Code scanning, and this job stays green on them,
+  # so it is no required check. The docker job below builds and runs the
+  # images, this one reads the files.
+  dockerfile-lint:
+    uses: benethos-hub/.github/.github/workflows/dockerfile-lint.yml@main
+    permissions:
+      contents: read
+      security-events: write
+    with:
+      files: containers/**/Dockerfile
+      trusted-registries: docker.io ghcr.io
 
   # Both images are built on every push, so a broken Dockerfile shows up
   # here and not first in a release.

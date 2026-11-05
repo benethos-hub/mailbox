@@ -18,8 +18,9 @@ CI = (WORKFLOWS / "ci.yml").read_text("utf-8")
 WEEKLY = (WORKFLOWS / "codeql.yml").read_text("utf-8")
 CALL = "uses: benethos-hub/.github/.github/workflows/codeql.yml@main"
 ORG = "benethos-hub/.github/"
-# The scanners of ci.yml that upload to code scanning.
-SCANNERS = 1
+# The scanners of ci.yml that upload to code scanning: codeql here and
+# dockerfile-lint, whose test is test_dockerfile_lint.py.
+SCANNERS = 2
 
 
 def _job(workflow: str, name: str) -> str:

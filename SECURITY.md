@@ -39,8 +39,9 @@ The design of these protections is in
 the limits work together, is in [docs/LIMITS.md](docs/LIMITS.md).
 
 CodeQL reads the code and the workflows on every change and once a week,
-with GitHub's security and quality queries, through a workflow of the
-benethos-hub organisation. Its findings are under **Security → Code
-scanning**. Every version in the lockfile and every lowest version the
+with GitHub's security and quality queries, and hadolint reads the
+Dockerfiles on every change, both through workflows of the benethos-hub
+organisation. Their findings are under **Security → Code scanning**. Every
+version in the lockfile and every lowest version the
 project allows is checked for known vulnerabilities in CI, and the daily
 freshness check reports what is newer.
