@@ -1,9 +1,9 @@
 name: Freshness
 
-# Two questions about the versions, answered once a day in one run and two
-# issues, through the organisation's reusable freshness workflow
-# (docs/freshness.md in benethos-hub/.github). Nothing here commits, the
-# upgraded lockfile stays in the runner.
+# Two questions about the versions, answered once a day and after every run
+# of Publish, in one run and two issues, through the organisation's reusable
+# freshness workflow (docs/freshness.md in benethos-hub/.github). Nothing here
+# commits, the upgraded lockfile stays in the runner.
 #
 #   "Pinned versions have newer releases", the organisation's report: every
 #   package uv.lock pins that has a newer release, within the ranges the
@@ -35,10 +35,18 @@ name: Freshness
 # the action are followed at main, unpinned, as in ci.yml. Nothing here is a
 # required check, nothing runs for a pull request. A waiver in ignore-vulns
 # belongs here, in ci.yml and in publish.yml alike.
+#
+# The run after Publish is for the index job, which installs the freshly
+# published package from PyPI: a release that does not install stands in the
+# alarm issue within minutes instead of at the next cron. The reason is in
+# docs/freshness.md of benethos-hub/.github, under "Calling it".
 
 on:
   schedule:
     - cron: "30 4 * * *"
+  workflow_run:
+    workflows: [Publish]
+    types: [completed]
   workflow_dispatch:
 
 permissions:

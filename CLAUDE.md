@@ -203,8 +203,9 @@ containers/               # images/ (one folder per image), and one folder
                           #   its entry to the MCP Registry. A manual run
                           #   on main tries PyPI and pushes the images as
                           #   edge,
-                          #   freshness.yml: daily, what is pinned and what
-                          #   is newer, and whether the newest versions
+                          #   freshness.yml: daily and after every run of
+                          #   publish.yml, what is pinned and what is
+                          #   newer, and whether the newest versions
                           #   allowed and the published packages still
                           #   work, two issues through the organisation's
                           #   reusable workflow
