@@ -247,6 +247,10 @@ checks those versions and every version in `uv.lock` against OSV for
 known vulnerabilities, and checks the brand assets in `assets/brand/`.
 Every one of these checks has to pass before a change reaches `main`.
 
+CodeQL reads the code and the workflows on every change and once a week, and
+files what it finds under Security, Code scanning. A merge does not wait for
+it.
+
 A separate workflow runs once a day and after each run of the publishing
 workflow, and passes or stops nothing. It keeps one issue with what the project pins and what is newer: packages,
 vulnerabilities, images and actions. A second issue opens when the newest

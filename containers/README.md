@@ -142,4 +142,6 @@ compose files in `development/` and `production/` keep every port on the loopbac
 address, all but Caddy's 80 and 443, production with the instances of
 its example override file. It also starts the
 service until its health check reports healthy, and the MCP server's
-image once, for its version.
+image once, for its version. Its job `dockerfile-lint` reads both
+Dockerfiles with hadolint, and what that finds goes to Security, Code
+scanning.
