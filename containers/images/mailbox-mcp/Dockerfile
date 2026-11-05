@@ -50,7 +50,7 @@ ENV PATH=/opt/venv/bin:$PATH \
     MAILBOX_MCP_LOG_LEVEL=INFO
 
 WORKDIR /app
-USER mailbox
+USER 10001
 EXPOSE 8000
 
 # The port accepts connections. Every HTTP request needs the bearer token,

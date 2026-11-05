@@ -55,7 +55,7 @@ ENV PATH=/opt/venv/bin:$PATH \
     MAILBOX_SERVICE_KEY_FILE=/run/secrets/master_key
 
 WORKDIR /app
-USER mailbox
+USER 10001
 VOLUME /data
 EXPOSE 8080
 
