@@ -15,7 +15,9 @@ secrets="$here/secrets"
 tls="$secrets/tls"
 admin_env="$secrets/admin.env"
 accounts_env="$secrets/accounts.env"
-cli_image="ghcr.io/stalwartlabs/cli:1.0"
+# An exact version: Docker keeps a tag it has as it is, and CLI 1.0.13 cannot
+# read the schema of Stalwart 1.0.
+cli_image="ghcr.io/stalwartlabs/cli:1.0.14"
 network="mailbox-test-mail-server_default"
 domain="mailbox.test"
 hostname="mail.$domain"
@@ -95,7 +97,7 @@ say "Bootstrap: the domain $domain"
 compose up -d >/dev/null 2>&1
 ready
 cli update Bootstrap --json \
-    "{\"serverHostname\":\"$hostname\",\"defaultDomain\":\"$domain\",\"requestTlsCertificate\":false,\"generateDkimKeys\":false}" \
+    "{\"defaultHostname\":\"$hostname\",\"defaultDomain\":\"$domain\",\"requestTlsCertificate\":false,\"generateDkimKeys\":false}" \
     >/dev/null
 
 say "Recovery mode: certificate, listeners, accounts"
@@ -116,7 +118,7 @@ while read -r name protocol port implicit; do
     tls_on=true
     [ "$protocol" = http ] && [ "$implicit" = false ] && tls_on=false
     cli create NetworkListener --json \
-        "{\"name\":\"$name\",\"protocol\":\"$protocol\",\"bind\":{\"[::]:$port\":true},\"useTls\":$tls_on,\"tlsImplicit\":$implicit}" \
+        "{\"name\":\"$name\",\"protocol\":\"$protocol\",\"bind\":{\"[::]:$port\":true},\"useTls\":$tls_on,\"implicitTls\":$implicit}" \
         >/dev/null
 done <<'LISTENERS'
 submission smtp 587 false
