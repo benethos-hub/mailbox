@@ -210,7 +210,8 @@ containers/               # images/ (one folder per image), and one folder
                           #   edge,
                           #   freshness.yml: daily and after every run of
                           #   publish.yml, what is pinned and what is
-                          #   newer, and whether the newest versions
+                          #   newer, assets/vendor among it, and whether
+                          #   the newest versions
                           #   allowed and the published packages still
                           #   work, two issues through the organisation's
                           #   reusable workflow,
@@ -369,8 +370,10 @@ common package to it, the service the common package.
 1. `uv lock --upgrade --dry-run`. If it moves anything, run
    `uv lock --upgrade` as a commit of its own, then all checks. Check
    the other pins as well: the base images of both Dockerfiles, a newer
-   tag or a new digest under the same tag, and the actions of the
-   workflows. Each update is a commit of its own. The issue "Pinned
+   tag or a new digest under the same tag, the actions of the
+   workflows, and htmx and Bootstrap Icons in `assets/vendor`, with
+   their highest stable version on npm and not the tag `latest`. Each
+   update is a commit of its own. The issue "Pinned
    versions have newer releases", which `freshness.yml` keeps daily, lists
    the same, but only as of its last run.
 2. Set `version` in the four packages' `pyproject.toml`, the pins

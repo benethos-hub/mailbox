@@ -11,6 +11,8 @@ from __future__ import annotations
 import json
 import re
 
+import pytest
+
 from . import installed_check
 from .publish_helpers import PACKAGES, ROOT, project_of
 
@@ -23,7 +25,8 @@ def _step(name: str) -> str:
 
 
 def _job(name: str) -> str:
-    return WORKFLOW.split(f"\n  {name}:\n", 1)[1].split("\n\n  ", 1)[0]
+    after = WORKFLOW.split(f"\n  {name}:\n", 1)[1]
+    return re.split(r"\n\n  (?! )", after, maxsplit=1)[0]
 
 
 def test_it_runs_on_a_schedule_after_publish_and_by_hand_only() -> None:
@@ -61,9 +64,29 @@ def test_the_artifact_is_named_as_the_report_expects() -> None:
 def test_the_report_is_the_organisations_and_knows_the_job() -> None:
     job = _job("freshness")
     assert f"uses: {ORG}.github/workflows/freshness.yml@main" in job
-    assert "needs: newest" in job
-    assert "extra-jobs: newest" in job
+    assert "needs: [newest, npm-outdated, npm-audit]" in job
+    assert "extra-jobs: newest npm-outdated npm-audit" in job
     assert "if: ${{ !cancelled() }}" in job, "a dead job is a line in the report"
+
+
+@pytest.mark.parametrize(
+    ("job", "action"),
+    [("npm-outdated", "freshness-outdated"), ("npm-audit", "freshness-audit")],
+)
+def test_the_npm_jobs_read_the_lockfile_of_the_vendored_packages(
+    job: str, action: str
+) -> None:
+    """The folder a job names must hold the lockfile, or the job fails daily."""
+    steps = _job(job)
+    assert f"uses: {ORG}actions/node/{action}@main" in steps
+    found = re.search(r"directory: (\S+)", steps)
+    assert found is not None
+    assert (ROOT / found.group(1) / "package-lock.json").is_file()
+    assert "persist-credentials: false" in steps
+    assert "timeout-minutes:" in steps
+    assert f"findings: ${{{{ runner.temp }}}}/freshness/{job}" in steps
+    assert f"name: freshness-{job}" in steps
+    assert f"path: ${{{{ runner.temp }}}}/freshness/{job}" in steps
 
 
 def test_the_index_job_checks_every_published_package() -> None:

@@ -13,7 +13,11 @@ name: Freshness
 #   sentence per job below on what passed. Dependabot proposes the direct
 #   dependencies, the actions and the base images. The issue adds the
 #   packages beneath them, the versions beyond a range and the one place to
-#   see all of it.
+#   see all of it. Two jobs add the JavaScript the UI ships, which is copied
+#   into the tree and which no other tool here sees: npm-outdated and
+#   npm-audit read the lockfile in assets/vendor, tests/test_vendored.py holds
+#   it to the files. They only report. A new version of htmx is checked in a
+#   real browser (docs/UI.md 7).
 #
 #   "Newest dependency versions break the server", this repository's
 #   question. uvx without a pin and pip install resolve the newest versions
@@ -82,11 +86,55 @@ jobs:
           path: ${{ runner.temp }}/freshness/newest
           retention-days: 7
 
+  npm-outdated:
+    name: Outdated npm packages
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Compare the lockfile with the npm registry
+        uses: benethos-hub/.github/actions/node/freshness-outdated@main
+        with:
+          findings: ${{ runner.temp }}/freshness/npm-outdated
+          directory: assets/vendor
+
+      - name: Leave the result for the report
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: freshness-npm-outdated
+          path: ${{ runner.temp }}/freshness/npm-outdated
+          retention-days: 7
+
+  npm-audit:
+    name: Known npm vulnerabilities
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Audit the lockfile
+        uses: benethos-hub/.github/actions/node/freshness-audit@main
+        with:
+          findings: ${{ runner.temp }}/freshness/npm-audit
+          directory: assets/vendor
+
+      - name: Leave the result for the report
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: freshness-npm-audit
+          path: ${{ runner.temp }}/freshness/npm-audit
+          retention-days: 7
+
   # Runs whatever happened before: a job that died before its upload is a
   # line in the pins report, not a silent gap, since extra-jobs names it.
   freshness:
     name: Freshness report
-    needs: newest
+    needs: [newest, npm-outdated, npm-audit]
     if: ${{ !cancelled() }}
     uses: benethos-hub/.github/.github/workflows/freshness.yml@main
     permissions:
@@ -94,7 +142,7 @@ jobs:
       issues: write
     with:
       issue-title: Pinned versions have newer releases
-      extra-jobs: newest
+      extra-jobs: newest npm-outdated npm-audit
       alarm-title: Newest dependency versions break the server
       alarm-resolved: The newest dependency versions work.
       index: true
