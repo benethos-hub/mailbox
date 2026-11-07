@@ -9,8 +9,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 
 - The images install anyio 4.16.0, python-multipart 0.0.33, platformdirs
-  4.14.5, typing-inspection 0.4.5, pydantic 2.14.3 and publicsuffixlist
-  1.1.2.20261105 from the lockfile.
+  4.14.5, typing-inspection 0.4.5, pydantic 2.14.3, publicsuffixlist
+  1.1.2.20261107, fastapi 0.162.1, click 8.5.1, sse-starlette 3.7.0 and
+  pypdfium2 5.15.0 from the lockfile. The PDFium of pypdfium2 5.15.0 has
+  fixes for known vulnerabilities.
 - The images build with uv 0.13.7, on the build of `python:3.15-slim` from
   2026-11-05, still Python 3.15.2.
 - `benethos-mailbox-service` needs dnspython 2.9.2 or newer, the first
