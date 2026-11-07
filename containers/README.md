@@ -1,6 +1,6 @@
 # <img src="../assets/brand/icon.svg" alt="" height="36" align="absmiddle"> Containers
 
-> **Beta, version 0.6.0.** Usable with real accounts. A breaking change
+> **Beta, version 0.6.1.** Usable with real accounts. A breaking change
 > of the API or the configuration is announced in the changelog. Stored
 > data is carried forward by migrations.
 
@@ -105,11 +105,12 @@ version as the PyPI packages:
 - Both build on `python:3.15-slim` and take `uv` from its image, each
   named by its tag and the digest of that tag. Dependabot raises both,
   also for a new build under the same tag.
-- They run as user `mailbox` (uid 10001). The compose files of
-  `development/` and `production/` add a read-only root file system, no capabilities
-  and `no-new-privileges`, to Caddy as well, which keeps only
-  `NET_BIND_SERVICE` for its ports 80 and 443. The test mail server runs
-  Stalwart without these.
+- They run as user `mailbox` (uid 10001), which the Dockerfiles name by
+  its id, so that a host or an orchestrator can see it is not root. The
+  compose files of `development/` and `production/` add a read-only root
+  file system, no capabilities and `no-new-privileges`, to Caddy as
+  well, which keeps only `NET_BIND_SERVICE` for its ports 80 and 443.
+  The test mail server runs Stalwart without these.
 - Settings come from the environment only.
 - Both have a health check: the service on `GET /health`, the MCP server
   on its port.

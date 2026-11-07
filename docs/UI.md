@@ -287,6 +287,12 @@ is never shown again. An action without fields, such as a delete, goes
 back to its page with the reason. A page that cannot be shown at all is
 the error page with a way back.
 
+Where the browser goes afterwards, the `back` a form carries or the
+`next` of the sign-in, is a path of this UI, never another site. A value
+with a scheme, a host or a dot segment, also written as `%2e%2e`, lands
+on the route's own fallback instead, the list the form belongs to or the
+start of the UI.
+
 ## 5. The overview
 
 The first page after signing in. Its cards, in order:

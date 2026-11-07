@@ -22,7 +22,7 @@ One REST API for all your mailboxes, whichever provider they are at, a
 Python client for it and an MCP server on top. Scripts, tools and AI
 agents work with your mail through one door you control.
 
-> **Status: beta, version 0.6.0.** Usable with real accounts. A breaking
+> **Status: beta, version 0.6.1.** Usable with real accounts. A breaking
 > change of the API or the configuration is announced in the changelog.
 > Stored data is carried forward by migrations.
 
@@ -247,13 +247,14 @@ checks those versions and every version in `uv.lock` against OSV for
 known vulnerabilities, and checks the brand assets in `assets/brand/`.
 Every one of these checks has to pass before a change reaches `main`.
 
-CodeQL reads the code and the workflows on every change and once a week, and
-files what it finds under Security, Code scanning. A merge does not wait for
-it.
+CodeQL reads the code and the workflows on every change and once a week,
+hadolint the Dockerfiles on every change. Both file what they find under
+Security, Code scanning. A merge does not wait for them.
 
 A separate workflow runs once a day and after each run of the publishing
-workflow, and passes or stops nothing. It keeps one issue with what the project pins and what is newer: packages,
-vulnerabilities, images and actions. A second issue opens when the newest
+workflow, and passes or stops nothing. It keeps one issue with what the
+project pins and what is newer: packages, vulnerabilities, images, actions
+and the JavaScript the UI ships. A second issue opens when the newest
 versions the ranges in `pyproject.toml` allow break the tests or
 `tests/installed_check.py`, or when a published package no longer installs
 or starts from PyPI. An install without the lockfile, such as `uvx` or
