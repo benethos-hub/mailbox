@@ -6,6 +6,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-11-07
+
 ### Changed
 
 - The images install anyio 4.16.0, python-multipart 0.0.33, platformdirs
@@ -1994,7 +1996,8 @@ the configuration may change without notice.
 - One error envelope `{"error": {"code", "message"}}`, authentication errors
   included.
 
-[Unreleased]: https://github.com/benethos-hub/mailbox/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/benethos-hub/mailbox/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/benethos-hub/mailbox/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/benethos-hub/mailbox/compare/v0.5.2...v0.6.0
 [0.5.2]: https://github.com/benethos-hub/mailbox/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/benethos-hub/mailbox/compare/v0.5.0...v0.5.1
