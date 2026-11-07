@@ -2131,7 +2131,7 @@ Its interface has no stability promise yet.
 | Crypto | `cryptography` (AES-256-GCM), `keyring` |
 | Mail | IMAPClient, imap-tools (parser), smtplib, poplib, httpx (JMAP, Graph) |
 | MCP | `mcp` 2.x |
-| Quality | pytest, pytest-asyncio, pytest-cov (≥ 80 %), ruff, mypy, GitHub Actions |
+| Quality | pytest, pytest-asyncio, pytest-cov (≥ 80 %), ruff, mypy, GitHub Actions, CodeQL and hadolint under Code scanning |
 | Container | non-root image, compose file bound to the loopback address |
 
 ## 10. Testing

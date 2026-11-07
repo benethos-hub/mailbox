@@ -923,8 +923,11 @@ imapclient boundary), never by patching deep inside a library.
   `clocks.py`. No test module imports another, which
   `test_code_rules.py` checks in all four packages.
 - What checks the repository across the four packages, the publishing,
-  the READMEs, the trees of section 3 and the boundaries, is in `tests/`
-  at its root. Each package's tests stay its own and run alone.
+  the workflows, the READMEs, the trees of section 3, the boundaries and
+  the JavaScript the UI ships, is in `tests/` at its root. Beside them
+  `installed_check.py` is not a test: the packages as installed, as real
+  processes, run by hand and by `freshness.yml`. Each package's tests
+  stay its own and run alone.
 - Fakes plug in at a seam: the memory provider, `httpx.MockTransport`,
   a fake `IMAPClient` at the imapclient boundary. Nothing is patched
   deep inside a library.
