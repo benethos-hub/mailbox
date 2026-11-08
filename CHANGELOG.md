@@ -6,6 +6,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- The images install fastapi 0.162.2 and pypdfium2 5.15.1 from the
+  lockfile. pypdfium2 5.15.1 brings PDFium 8149 and fixes a rare error
+  when its objects are closed while the garbage collector runs.
+
 ## [0.6.1] - 2026-11-07
 
 ### Changed
