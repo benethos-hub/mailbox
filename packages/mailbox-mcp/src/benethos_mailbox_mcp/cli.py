@@ -43,6 +43,12 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="benethos-mailbox-mcp")
     parser.add_argument("--version", action="version", version=__version__)
     parser.add_argument(
+        "--list-tools",
+        action="store_true",
+        help="print every tool as a client lists it, as JSON, and exit. "
+        "Needs no service and no token.",
+    )
+    parser.add_argument(
         "--env-file",
         type=Path,
         metavar="PATH",
@@ -164,6 +170,9 @@ def _built(settings: config.Settings, environment: Environment) -> server.MCPSer
 def main(argv: list[str] | None = None) -> None:
     parser = _build_parser()
     args = parser.parse_args(argv)
+    if args.list_tools:
+        sys.stdout.write(anyio.run(server.tools_json))
+        return
     try:
         found = config.settings_file(args.env_file)
     except FileNotFoundError as exc:

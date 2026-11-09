@@ -7,7 +7,7 @@ from typing import Annotated, Any
 from pydantic import Field
 
 from .. import render
-from .base import MAX_LIMIT, changes, client, reads
+from .base import AccountId, Cursor, DraftId, Limit, changes, client, reads
 from .compose import (
     Action,
     Addresses,
@@ -18,20 +18,20 @@ from .compose import (
     OriginalId,
     Quote,
     ReplyTo,
+    Subject,
     Text,
     composed,
 )
 
 
 async def list_drafts(
-    account_id: str,
-    limit: Annotated[int, Field(ge=1, le=MAX_LIMIT)] = 20,
-    cursor: Annotated[
-        str | None, Field(description="next_cursor of the previous call")
-    ] = None,
+    account_id: AccountId,
+    limit: Limit = 20,
+    cursor: Cursor = None,
 ) -> dict[str, Any]:
     """The drafts of an account, newest first. get_message reads one by
-    its id."""
+    its id. It reads only. Use it to find a draft for send_draft,
+    update_draft or delete_draft."""
     page = await client().list_drafts(account_id, limit, cursor)
     return {
         "drafts": [render.draft(item) for item in page.items],
@@ -41,11 +41,11 @@ async def list_drafts(
 
 
 async def create_draft(
-    account_id: str,
+    account_id: AccountId,
     to: Addresses = None,
     cc: Addresses = None,
     bcc: Addresses = None,
-    subject: str = "",
+    subject: Subject = "",
     text: Text = "",
     html: Html = None,
     original_id: OriginalId = None,
@@ -59,7 +59,9 @@ async def create_draft(
     """Write a draft into the drafts folder. Nothing is sent. With
     original_id it answers or forwards that message: the service adds
     recipients of a reply, the subject prefix and the quote. Recipients may
-    stay empty."""
+    stay empty. Use it instead of send_message when a person should look
+    at the mail before it goes: send_draft sends it later. Answers the
+    draft's id."""
     body = composed(
         to,
         cc,
@@ -79,12 +81,12 @@ async def create_draft(
 
 
 async def update_draft(
-    account_id: str,
-    draft_id: str,
+    account_id: AccountId,
+    draft_id: DraftId,
     to: Addresses = None,
     cc: Addresses = None,
     bcc: Addresses = None,
-    subject: str = "",
+    subject: Subject = "",
     text: Text = "",
     html: Html = None,
     original_id: OriginalId = None,
@@ -104,7 +106,7 @@ async def update_draft(
     get_message first to keep parts of it. A draft that answers a message
     keeps that link with original_id, action and quote=false, as its text
     holds the quote already. Use the id it answers with from now on: some
-    providers store the draft under a new one."""
+    providers store the draft under a new one. Nothing is sent."""
     body = composed(
         to,
         cc,
@@ -125,8 +127,10 @@ async def update_draft(
     )
 
 
-async def delete_draft(account_id: str, draft_id: str) -> str:
-    """Delete a draft for good. Reaches drafts only, never other mail."""
+async def delete_draft(account_id: AccountId, draft_id: DraftId) -> str:
+    """Delete a draft for good. Reaches drafts only, never other mail.
+    It cannot be undone. Not needed after send_draft, which removes the
+    draft itself. To change a draft, use update_draft."""
     await client().delete_draft(account_id, draft_id)
     return f"draft {draft_id} deleted"
 

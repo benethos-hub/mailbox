@@ -19,6 +19,10 @@ done. Update the roadmap in the same commit that finishes an item.
    regenerate it with `uv run benethos-mailbox-service openapi > docs/openapi.json`
    and review the diff like code. `operationId` is the route function name and
    must stay stable, since generated clients and the MCP server depend on it.
+   Likewise `docs/mcp-tools.json` holds the MCP server's tools as a client
+   lists them. After any change to a tool, regenerate it with
+   `uv run benethos-mailbox-mcp --list-tools > docs/mcp-tools.json` and
+   review the diff of its descriptions like code.
 5. **Secrets never travel.** Provider passwords, OAuth tokens and API tokens
    are never logged, never returned in a response and redacted from error
    text. No real address, credential or message content in any versioned file.
@@ -273,6 +277,8 @@ docs/
   ROADMAP.md              # phases and their state
   IDEAS.md                # collected, not yet decided
   openapi.json            # generated, checked in, guarded by a test
+  mcp-tools.json          # the MCP server's tools as a client lists them,
+                          #   generated, checked in, guarded by a test
 packages/
   mailbox-service/            # the service, runs permanently
     src/benethos_mailbox_service/   # layers and modules: docs/ARCHITECTURE.md

@@ -9,9 +9,10 @@ from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
-from typing import Any
+from typing import Annotated, Any
 
 from mcp.types import CallToolResult, ImageContent, TextContent
+from pydantic import Field
 
 from ..client import MailboxClient
 
@@ -19,6 +20,34 @@ from ..client import MailboxClient
 ToolResult = CallToolResult
 
 MAX_LIMIT = 50
+
+# The parameters most tools share, each with where its value comes from.
+AccountId = Annotated[
+    str, Field(description="The account, by the id list_accounts names")
+]
+MessageId = Annotated[
+    str,
+    Field(
+        description="A mail of that account, by the id search_messages, "
+        "whats_new or get_thread answers"
+    ),
+]
+DraftId = Annotated[
+    str,
+    Field(
+        description="A draft of that account, by the id list_drafts or "
+        "create_draft answers"
+    ),
+]
+FolderId = Annotated[
+    str, Field(description="A folder of that account, by the id list_folders answers")
+]
+Limit = Annotated[
+    int, Field(ge=1, le=MAX_LIMIT, description="At most this many in one answer")
+]
+Cursor = Annotated[
+    str | None, Field(description="next_cursor of the previous call, for more")
+]
 
 
 # The client of the server whose tool runs now. Each server makes its own

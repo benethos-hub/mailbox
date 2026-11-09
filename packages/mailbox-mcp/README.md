@@ -11,6 +11,8 @@
 [![Sponsor](https://raw.githubusercontent.com/benethos-hub/.github/main/profile/badges/sponsor.svg)](https://github.com/sponsors/BeneODev)
 [![PayPal](https://raw.githubusercontent.com/benethos-hub/.github/main/profile/badges/paypal.svg)](https://paypal.me/BeneODev)
 
+[![benethos-mailbox-mcp on Glama](https://glama.ai/mcp/servers/benethos-hub/mailbox/badges/card.svg)](https://glama.ai/mcp/servers/benethos-hub/mailbox)
+
 > **Beta, version 0.6.1.** Usable with real accounts. A breaking change
 > of the API or the configuration is announced in the changelog. Stored
 > data is carried forward by migrations.
@@ -238,6 +240,10 @@ it connects.
 ```sh
 MAILBOX_SERVICE_URL=http://127.0.0.1:8080 MAILBOX_SERVICE_TOKEN=<token> benethos-mailbox-mcp
 ```
+
+`benethos-mailbox-mcp --list-tools` prints every tool as a client lists
+it, with its description, its parameters and its hints, as JSON, and
+exits. It needs no service and no token.
 
 ## Options
 

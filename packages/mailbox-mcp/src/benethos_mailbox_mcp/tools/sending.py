@@ -7,7 +7,7 @@ from typing import Any
 from benethos_mailbox_common.values import canonical, secret
 
 from .. import render
-from .base import changes, client
+from .base import AccountId, DraftId, changes, client
 from .compose import (
     Action,
     Addresses,
@@ -18,6 +18,7 @@ from .compose import (
     OriginalId,
     Quote,
     ReplyTo,
+    Subject,
     Text,
     composed,
 )
@@ -33,11 +34,11 @@ def _idempotency_key(tool: str, account_id: str, arguments: Any) -> str:
 
 
 async def send_message(
-    account_id: str,
+    account_id: AccountId,
     to: Addresses = None,
     cc: Addresses = None,
     bcc: Addresses = None,
-    subject: str = "",
+    subject: Subject = "",
     text: Text = "",
     html: Html = None,
     original_id: OriginalId = None,
@@ -54,7 +55,8 @@ async def send_message(
     The same call repeated within 24 hours sends nothing and
     answers the first result. It answers the id of the copy in the sent
     folder where the account keeps one. refused lists recipients the
-    server did not take."""
+    server did not take. When a person should look at the mail first, use
+    create_draft instead."""
     body = composed(
         to,
         cc,
@@ -74,10 +76,12 @@ async def send_message(
     return render.sent(await client().send_message(account_id, body, key))
 
 
-async def send_draft(account_id: str, draft_id: str) -> dict[str, Any]:
+async def send_draft(account_id: AccountId, draft_id: DraftId) -> dict[str, Any]:
     """Send a draft as it is stored. It cannot be taken back. Afterwards the
     draft is gone. It answers the id of the copy in the sent folder where
-    the account keeps one."""
+    the account keeps one. Use it once a draft from create_draft or
+    update_draft is right. The same call repeated within 24 hours sends
+    nothing and answers the first result."""
     key = _idempotency_key("send_draft", account_id, draft_id)
     return render.sent(await client().send_draft(account_id, draft_id, key))
 

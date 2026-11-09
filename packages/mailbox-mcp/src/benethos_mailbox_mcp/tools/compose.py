@@ -36,7 +36,22 @@ OriginalId = Annotated[
 ]
 
 
-Action = Literal["reply", "reply_all", "forward"]
+Action = Annotated[
+    Literal["reply", "reply_all", "forward"],
+    Field(
+        description="With original_id: reply to its sender, reply_all to "
+        "everyone it went to, or forward it"
+    ),
+]
+
+
+Subject = Annotated[
+    str,
+    Field(
+        description="The subject. Left empty with original_id: the original's, "
+        "after Re: or Fwd:"
+    ),
+]
 
 
 Quote = Annotated[
@@ -79,7 +94,9 @@ Html = Annotated[
 class NewFile(BaseModel):
     """A file to attach that the caller made, such as an invitation."""
 
-    filename: str = Field(min_length=1, max_length=200)
+    filename: str = Field(
+        min_length=1, max_length=200, description="The name the recipient sees"
+    )
     content_type: str = Field(
         default="application/octet-stream",
         description="Its type, e.g. text/calendar, text/csv, application/pdf",
@@ -90,7 +107,7 @@ class NewFile(BaseModel):
 class FromMessage(BaseModel):
     """An attachment of another mail of the same account."""
 
-    message_id: str
+    message_id: str = Field(description="The mail that carries it")
     attachment_id: str = Field(description="As get_message lists it")
 
 

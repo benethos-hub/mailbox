@@ -13,12 +13,24 @@ adheres to [Semantic Versioning](https://semver.org/).
   `server_status`. It is meant for directories that read the tool list
   in a sandbox. Beside `MAILBOX_SERVICE_TOKEN` the server does not
   start. Without the setting nothing changes.
+- `benethos-mailbox-mcp --list-tools` prints every tool of the MCP server
+  as a client lists it, as JSON, without a service or a token.
 
 ### Changed
 
+- The MCP tools describe every parameter, the ids by the tool that
+  answers them. Each tool says when to use it rather than a related
+  one, whether it changes anything, and what it answers. What the tools
+  do is unchanged.
 - The images install fastapi 0.162.2 and pypdfium2 5.15.1 from the
   lockfile. pypdfium2 5.15.1 brings PDFium 8149 and fixes a rare error
   when its objects are closed while the garbage collector runs.
+
+### Fixed
+
+- On Python 3.11 and 3.12 the descriptions of the MCP tools carried the
+  indentation of their source code, spaces a client sent to the model
+  with every description. They are now the same on every Python version.
 
 ## [0.6.1] - 2026-11-07
 

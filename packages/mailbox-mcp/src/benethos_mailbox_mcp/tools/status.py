@@ -12,6 +12,9 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, field
 from importlib.metadata import PackageNotFoundError, version
+from typing import Annotated
+
+from pydantic import Field
 
 from .. import __version__
 from .base import Tool, ToolResult, result
@@ -63,7 +66,12 @@ def reporting(running: Running) -> Iterator[None]:
         _running.reset(token)
 
 
-async def server_status(details: bool = False) -> ToolResult:
+async def server_status(
+    details: Annotated[
+        bool,
+        Field(description="Also the service as this server last saw it"),
+    ] = False,
+) -> ToolResult:
     """What this server is and how long it has run: its name and version,
     the transport, Python, the MCP library and the uptime. With `details`
     also the service as this server last saw it: whether it answered and

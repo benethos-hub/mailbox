@@ -10,7 +10,7 @@ from benethos_mailbox_common.mail import marks
 
 from .. import render
 from ..errors import ToolError
-from .base import changes, client
+from .base import AccountId, FolderId, changes, client
 
 MAX_BATCH = 100
 
@@ -35,10 +35,21 @@ Keywords = Annotated[
 
 
 async def update_messages(
-    account_id: str,
-    message_ids: Annotated[list[str], Field(min_length=1, max_length=MAX_BATCH)],
-    unread: bool | None = None,
-    starred: bool | None = None,
+    account_id: AccountId,
+    message_ids: Annotated[
+        list[str],
+        Field(
+            min_length=1,
+            max_length=MAX_BATCH,
+            description="Mails of that account, by the ids search_messages answers",
+        ),
+    ],
+    unread: Annotated[
+        bool | None, Field(description="true: mark unread. false: mark read")
+    ] = None,
+    starred: Annotated[
+        bool | None, Field(description="true: star. false: take the star off")
+    ] = None,
     move_to: Annotated[
         str | None,
         Field(description="Folder id, or a role such as archive, inbox, junk"),
@@ -56,7 +67,8 @@ async def update_messages(
     a mail can be in several folders at once, add_folders puts it in one
     more and leaves it where it is, remove_folders takes it out of one,
     and remove_folders inbox archives it. Ids stay the same after a move.
-    Answers which ids were done and which failed, with the reason."""
+    trash moves mail to the trash and deletes nothing for good. Answers
+    which ids were done and which failed, with the reason."""
     labels = (add_folders, remove_folders, add_keywords, remove_keywords)
     if trash:
         if (
@@ -90,22 +102,24 @@ async def update_messages(
 
 
 async def create_folder(
-    account_id: str,
-    name: Annotated[str, Field(max_length=200)],
+    account_id: AccountId,
+    name: Annotated[str, Field(max_length=200, description="The new folder's name")],
     parent: Annotated[
         str | None,
         Field(description="Folder id or role to create it in. Left out: the top"),
     ] = None,
 ) -> dict[str, Any]:
     """Create a folder in an account. Answers its id, which update_messages
-    takes as move_to."""
+    takes as move_to. Fails on an account without folders, which
+    list_accounts names under unsupported. To rename or move a folder that
+    exists, use update_folder. Folders are not deleted by any tool."""
     folder = await client().create_folder(account_id, name, parent)
     return {"id": folder.id, "name": folder.name}
 
 
 async def update_folder(
-    account_id: str,
-    folder_id: str,
+    account_id: AccountId,
+    folder_id: FolderId,
     name: Annotated[
         str | None, Field(max_length=200, description="The new name")
     ] = None,
@@ -115,7 +129,9 @@ async def update_folder(
     to_top: Annotated[bool, Field(description="Move it to the top")] = False,
 ) -> dict[str, Any]:
     """Rename a folder or move it, with the mail and folders inside. Answers
-    its id from now on, which can change with the name and the place."""
+    its id from now on, which can change with the name and the place.
+    Other mail programs then find the folder under its new name. To make a
+    new folder, use create_folder. Folders are not deleted by any tool."""
     if parent is not None and to_top:
         raise ToolError("parent or to_top, not both")
     if name is None and parent is None and not to_top:
