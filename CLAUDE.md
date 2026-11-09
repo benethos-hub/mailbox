@@ -42,7 +42,7 @@ done. Update the roadmap in the same commit that finishes an item.
 - Windows, PowerShell or Bash. Python 3.11-3.15. CI measures the
   coverage on the newest and builds the fresh install with it. A new
   version goes into the CI matrix, `coverage-python`, `UV_PYTHON` of
-  fresh-install, the classifiers and this line at once, as
+  fresh-install and browser, the classifiers and this line at once, as
   `test_packaging.py` checks.
 - Set up: `uv sync` (the workspace dev group holds pytest, ruff, mypy).
 - Configuration: one folder per package under `config/`, e.g.

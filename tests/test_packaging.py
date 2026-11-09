@@ -184,13 +184,13 @@ def test_the_lowest_tested_version_is_the_floor() -> None:
 
 
 def test_the_newest_tested_version_measures_and_installs() -> None:
-    """The coverage is measured on the newest version, and fresh-install
-    builds and installs on it."""
+    """The coverage is measured on the newest version, and the jobs that
+    pick a Python of their own, fresh-install and browser, run on it."""
     newest = _tested()[-1]
     measured = re.findall(r'^ +coverage-python: "(\S+)"$', _ci(), re.M)
     assert measured == [newest]
     installed = re.findall(r'^ +UV_PYTHON: "(\S+)"$', _ci(), re.M)
-    assert installed == [newest]
+    assert len(installed) == 2 and set(installed) == {newest}
 
 
 @pytest.mark.parametrize(
