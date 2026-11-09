@@ -60,6 +60,10 @@ from .pop3_fake import FakePop3Server
 PUBLIC = "93.184.215.14"  # what every host resolves to, without DNS
 METHODS = {"get", "post", "put", "patch", "delete"}  # of the OpenAPI document
 
+# The UI in real browsers needs the browser dependency group and the
+# browsers themselves: a suite of its own, which CI's browser job runs.
+collect_ignore = [] if os.environ.get("MAILBOX_BROWSER_TESTS") else ["browser"]
+
 
 async def resolve_to_public(host: str, port: int) -> list[str]:
     return [PUBLIC]
