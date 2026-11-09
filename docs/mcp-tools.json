@@ -597,7 +597,7 @@
   {
     "name": "update_messages",
     "title": "Change messages",
-    "description": "Change mail of one account: mark read or unread, star, move,\narchive, label, add and remove keywords, or put into the trash. Where\na mail can be in several folders at once, add_folders puts it in one\nmore and leaves it where it is, remove_folders takes it out of one,\nand remove_folders inbox archives it. Ids stay the same after a move.\nAnswers which ids were done and which failed, with the reason.",
+    "description": "Change mail of one account: mark read or unread, star, move,\narchive, label, add and remove keywords, or put into the trash. Where\na mail can be in several folders at once, add_folders puts it in one\nmore and leaves it where it is, remove_folders takes it out of one,\nand remove_folders inbox archives it. Ids stay the same after a move.\ntrash moves mail to the trash and deletes nothing for good. Answers\nwhich ids were done and which failed, with the reason.",
     "inputSchema": {
       "properties": {
         "account_id": {
@@ -752,7 +752,7 @@
   {
     "name": "create_folder",
     "title": "Create a folder",
-    "description": "Create a folder in an account. Answers its id, which update_messages\ntakes as move_to.",
+    "description": "Create a folder in an account. Answers its id, which update_messages\ntakes as move_to. Fails on an account without folders, which\nlist_accounts names under unsupported. To rename or move a folder that\nexists, use update_folder. Folders are not deleted by any tool.",
     "inputSchema": {
       "properties": {
         "account_id": {
@@ -803,7 +803,7 @@
   {
     "name": "update_folder",
     "title": "Rename or move a folder",
-    "description": "Rename a folder or move it, with the mail and folders inside. Answers\nits id from now on, which can change with the name and the place.",
+    "description": "Rename a folder or move it, with the mail and folders inside. Answers\nits id from now on, which can change with the name and the place.\nOther mail programs then find the folder under its new name. To make a\nnew folder, use create_folder. Folders are not deleted by any tool.",
     "inputSchema": {
       "properties": {
         "account_id": {
@@ -873,7 +873,7 @@
   {
     "name": "list_drafts",
     "title": "List drafts",
-    "description": "The drafts of an account, newest first. get_message reads one by\nits id.",
+    "description": "The drafts of an account, newest first. get_message reads one by\nits id. It reads only. Use it to find a draft for send_draft,\nupdate_draft or delete_draft.",
     "inputSchema": {
       "properties": {
         "account_id": {
@@ -923,7 +923,7 @@
   {
     "name": "create_draft",
     "title": "Write a draft",
-    "description": "Write a draft into the drafts folder. Nothing is sent. With\noriginal_id it answers or forwards that message: the service adds\nrecipients of a reply, the subject prefix and the quote. Recipients may\nstay empty.",
+    "description": "Write a draft into the drafts folder. Nothing is sent. With\noriginal_id it answers or forwards that message: the service adds\nrecipients of a reply, the subject prefix and the quote. Recipients may\nstay empty. Use it instead of send_message when a person should look\nat the mail before it goes: send_draft sends it later. Answers the\ndraft's id.",
     "inputSchema": {
       "$defs": {
         "FromMessage": {
@@ -1173,7 +1173,7 @@
   {
     "name": "update_draft",
     "title": "Replace a draft",
-    "description": "Replace a draft as a whole: what is left out is gone afterwards,\nattachments too unless keep_attachments names them. Read it with\nget_message first to keep parts of it. A draft that answers a message\nkeeps that link with original_id, action and quote=false, as its text\nholds the quote already. Use the id it answers with from now on: some\nproviders store the draft under a new one.",
+    "description": "Replace a draft as a whole: what is left out is gone afterwards,\nattachments too unless keep_attachments names them. Read it with\nget_message first to keep parts of it. A draft that answers a message\nkeeps that link with original_id, action and quote=false, as its text\nholds the quote already. Use the id it answers with from now on: some\nproviders store the draft under a new one. Nothing is sent.",
     "inputSchema": {
       "$defs": {
         "FromMessage": {
@@ -1445,7 +1445,7 @@
   {
     "name": "delete_draft",
     "title": "Delete a draft",
-    "description": "Delete a draft for good. Reaches drafts only, never other mail.",
+    "description": "Delete a draft for good. Reaches drafts only, never other mail.\nIt cannot be undone. Not needed after send_draft, which removes the\ndraft itself. To change a draft, use update_draft.",
     "inputSchema": {
       "properties": {
         "account_id": {
@@ -1490,7 +1490,7 @@
   {
     "name": "send_message",
     "title": "Send a mail",
-    "description": "Send a mail at once. It cannot be taken back. With original_id it\nanswers or forwards that message, and a reply without recipients goes\nwhere the original asks answers to go, its Reply-To, else its sender.\nThe same call repeated within 24 hours sends nothing and\nanswers the first result. It answers the id of the copy in the sent\nfolder where the account keeps one. refused lists recipients the\nserver did not take.",
+    "description": "Send a mail at once. It cannot be taken back. With original_id it\nanswers or forwards that message, and a reply without recipients goes\nwhere the original asks answers to go, its Reply-To, else its sender.\nThe same call repeated within 24 hours sends nothing and\nanswers the first result. It answers the id of the copy in the sent\nfolder where the account keeps one. refused lists recipients the\nserver did not take. When a person should look at the mail first, use\ncreate_draft instead.",
     "inputSchema": {
       "$defs": {
         "FromMessage": {
@@ -1740,7 +1740,7 @@
   {
     "name": "send_draft",
     "title": "Send a draft",
-    "description": "Send a draft as it is stored. It cannot be taken back. Afterwards the\ndraft is gone. It answers the id of the copy in the sent folder where\nthe account keeps one.",
+    "description": "Send a draft as it is stored. It cannot be taken back. Afterwards the\ndraft is gone. It answers the id of the copy in the sent folder where\nthe account keeps one. Use it once a draft from create_draft or\nupdate_draft is right. The same call repeated within 24 hours sends\nnothing and answers the first result.",
     "inputSchema": {
       "properties": {
         "account_id": {

@@ -67,7 +67,8 @@ async def update_messages(
     a mail can be in several folders at once, add_folders puts it in one
     more and leaves it where it is, remove_folders takes it out of one,
     and remove_folders inbox archives it. Ids stay the same after a move.
-    Answers which ids were done and which failed, with the reason."""
+    trash moves mail to the trash and deletes nothing for good. Answers
+    which ids were done and which failed, with the reason."""
     labels = (add_folders, remove_folders, add_keywords, remove_keywords)
     if trash:
         if (
@@ -109,7 +110,9 @@ async def create_folder(
     ] = None,
 ) -> dict[str, Any]:
     """Create a folder in an account. Answers its id, which update_messages
-    takes as move_to."""
+    takes as move_to. Fails on an account without folders, which
+    list_accounts names under unsupported. To rename or move a folder that
+    exists, use update_folder. Folders are not deleted by any tool."""
     folder = await client().create_folder(account_id, name, parent)
     return {"id": folder.id, "name": folder.name}
 
@@ -126,7 +129,9 @@ async def update_folder(
     to_top: Annotated[bool, Field(description="Move it to the top")] = False,
 ) -> dict[str, Any]:
     """Rename a folder or move it, with the mail and folders inside. Answers
-    its id from now on, which can change with the name and the place."""
+    its id from now on, which can change with the name and the place.
+    Other mail programs then find the folder under its new name. To make a
+    new folder, use create_folder. Folders are not deleted by any tool."""
     if parent is not None and to_top:
         raise ToolError("parent or to_top, not both")
     if name is None and parent is None and not to_top:

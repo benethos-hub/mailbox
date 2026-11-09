@@ -55,7 +55,8 @@ async def send_message(
     The same call repeated within 24 hours sends nothing and
     answers the first result. It answers the id of the copy in the sent
     folder where the account keeps one. refused lists recipients the
-    server did not take."""
+    server did not take. When a person should look at the mail first, use
+    create_draft instead."""
     body = composed(
         to,
         cc,
@@ -78,7 +79,9 @@ async def send_message(
 async def send_draft(account_id: AccountId, draft_id: DraftId) -> dict[str, Any]:
     """Send a draft as it is stored. It cannot be taken back. Afterwards the
     draft is gone. It answers the id of the copy in the sent folder where
-    the account keeps one."""
+    the account keeps one. Use it once a draft from create_draft or
+    update_draft is right. The same call repeated within 24 hours sends
+    nothing and answers the first result."""
     key = _idempotency_key("send_draft", account_id, draft_id)
     return render.sent(await client().send_draft(account_id, draft_id, key))
 

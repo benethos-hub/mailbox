@@ -30,7 +30,8 @@ async def list_drafts(
     cursor: Cursor = None,
 ) -> dict[str, Any]:
     """The drafts of an account, newest first. get_message reads one by
-    its id."""
+    its id. It reads only. Use it to find a draft for send_draft,
+    update_draft or delete_draft."""
     page = await client().list_drafts(account_id, limit, cursor)
     return {
         "drafts": [render.draft(item) for item in page.items],
@@ -58,7 +59,9 @@ async def create_draft(
     """Write a draft into the drafts folder. Nothing is sent. With
     original_id it answers or forwards that message: the service adds
     recipients of a reply, the subject prefix and the quote. Recipients may
-    stay empty."""
+    stay empty. Use it instead of send_message when a person should look
+    at the mail before it goes: send_draft sends it later. Answers the
+    draft's id."""
     body = composed(
         to,
         cc,
@@ -103,7 +106,7 @@ async def update_draft(
     get_message first to keep parts of it. A draft that answers a message
     keeps that link with original_id, action and quote=false, as its text
     holds the quote already. Use the id it answers with from now on: some
-    providers store the draft under a new one."""
+    providers store the draft under a new one. Nothing is sent."""
     body = composed(
         to,
         cc,
@@ -125,7 +128,9 @@ async def update_draft(
 
 
 async def delete_draft(account_id: AccountId, draft_id: DraftId) -> str:
-    """Delete a draft for good. Reaches drafts only, never other mail."""
+    """Delete a draft for good. Reaches drafts only, never other mail.
+    It cannot be undone. Not needed after send_draft, which removes the
+    draft itself. To change a draft, use update_draft."""
     await client().delete_draft(account_id, draft_id)
     return f"draft {draft_id} deleted"
 
