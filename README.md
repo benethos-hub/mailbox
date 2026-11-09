@@ -18,6 +18,8 @@
 [![Sponsor](https://raw.githubusercontent.com/benethos-hub/.github/main/profile/badges/sponsor.svg)](https://github.com/sponsors/BeneODev)
 [![PayPal](https://raw.githubusercontent.com/benethos-hub/.github/main/profile/badges/paypal.svg)](https://paypal.me/BeneODev)
 
+[![benethos-mailbox-mcp on Glama](https://glama.ai/mcp/servers/benethos-hub/mailbox/badges/card.svg)](https://glama.ai/mcp/servers/benethos-hub/mailbox)
+
 One REST API for all your mailboxes, whichever provider they are at, a
 Python client for it and an MCP server on top. Scripts, tools and AI
 agents work with your mail through one door you control.
