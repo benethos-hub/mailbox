@@ -26,6 +26,12 @@ adheres to [Semantic Versioning](https://semver.org/).
   lockfile. pypdfium2 5.15.1 brings PDFium 8149 and fixes a rare error
   when its objects are closed while the garbage collector runs.
 
+### Fixed
+
+- On Python 3.11 and 3.12 the descriptions of the MCP tools carried the
+  indentation of their source code, spaces a client sent to the model
+  with every description. They are now the same on every Python version.
+
 ## [0.6.1] - 2026-11-07
 
 ### Changed

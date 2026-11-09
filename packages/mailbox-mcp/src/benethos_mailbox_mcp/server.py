@@ -10,6 +10,7 @@ right, changes its tools to match and tells its clients (``listeners``).
 from __future__ import annotations
 
 import functools
+import inspect
 import json
 import logging
 import time
@@ -175,6 +176,9 @@ def _serve(
         server.add_tool(
             fn,
             title=tool.title,
+            # Python before 3.13 keeps a docstring's indentation: the
+            # description is cleaned, the same on every version.
+            description=inspect.getdoc(tool.fn),
             annotations=ToolAnnotations(
                 title=tool.title,
                 readOnlyHint=tool.read_only,

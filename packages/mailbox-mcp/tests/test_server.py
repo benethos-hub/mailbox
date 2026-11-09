@@ -280,6 +280,9 @@ async def test_every_tool_carries_its_title_and_hints() -> None:
         )
         assert found == HINTS[tool.name], tool.name
         assert len(tool.description or "") < 700, tool.name
+        # No indentation of the docstring, on any Python version.
+        lines = (tool.description or "").splitlines()
+        assert lines and all(line == line.lstrip() for line in lines), tool.name
 
 
 @pytest.mark.parametrize(
