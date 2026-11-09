@@ -631,7 +631,11 @@ These rules bind every page, the reworked ones and the ones to come.
 7. **Tests**: a page has at least one test in `tests/web/pages/test_ui_*.py` that
    opens it as a user with the right, one that shows it hidden without
    the right, and one per form. `live/ui.py` walks every workflow of
-   section 6 against the test accounts.
+   section 6 against the test accounts. The browser suite,
+   `tests/browser/`, opens every page reached by links from the
+   overview in Chrome, Firefox and WebKit and fails on a violation of
+   the content security policy or a missing file. A page linked from
+   nowhere needs a link or a test of its own there.
 8. **Checklist for a new page**: route module or a route in one. The
    template of its type. The sidebar entry with its right and its icon.
    Icons only from the sprite, a new one added in `assets/icons.py`.

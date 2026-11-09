@@ -276,6 +276,9 @@ lowest versions their `pyproject.toml` allows and runs the tests there,
 checks those versions and every version in `uv.lock` against OSV for
 known vulnerabilities, and checks the brand assets in `assets/brand/`.
 Every one of these checks has to pass before a change reaches `main`.
+A further job opens the configuration UI in Chrome, Firefox and WebKit
+and checks what only a browser shows: the page of a sign-in with a code
+goes on by itself, and no page breaks the content security policy.
 
 CodeQL reads the code and the workflows on every change and once a week,
 hadolint the Dockerfiles on every change. Both file what they find under
