@@ -34,6 +34,7 @@ agents work with your mail through one door you control.
 - [What it can do today](#what-it-can-do-today)
 - [Providers](#providers)
 - [The four packages](#the-four-packages)
+- [Tools](#tools)
 - [Getting started](#getting-started)
 - [Documentation](#documentation)
 - [Development](#development)
@@ -185,6 +186,33 @@ the MCP server with the container image and the compose file.
 > **The MCP server and the service must have the same version** to work
 > together. Update both at once. The MCP server's tool `server_status`
 > shows the service's version and whether it matches its own.
+
+## Tools
+
+The tools of the MCP server. Each is offered only to a token with the
+right it needs. What each takes and answers, and the hints it carries
+for clients: [packages/mailbox-mcp](packages/mailbox-mcp/README.md#tools).
+
+| Tool | Needs | What it does |
+|---|---|---|
+| `list_accounts` | – | the accounts and what may be done on each |
+| `list_folders` | `mail.read` | the folders of an account, with their roles and counts |
+| `search_messages` | `mail.read` | finds mail in one account, several or all |
+| `get_message` | `mail.read` | one mail as plain text, with its attachments listed |
+| `get_thread` | `mail.read` | a conversation across folders |
+| `whats_new` | `mail.read` | mail created, changed or deleted since an earlier call |
+| `get_attachment` | `mail.read` | an attachment: images, PDF pages as images, text |
+| `share_attachment` | `mail.share` | a link another service fetches an attachment with, once |
+| `update_messages` | `mail.write` | read state, star, move, keywords, labels, trash |
+| `create_folder` | `mail.write` | a new folder |
+| `update_folder` | `mail.write` | renames or moves a folder |
+| `list_drafts` | `drafts` | the drafts of an account |
+| `create_draft` | `drafts` | a draft, also as a reply or a forward |
+| `update_draft` | `drafts` | replaces a draft |
+| `delete_draft` | `drafts` | deletes a draft |
+| `send_message` | `send` | sends a mail at once |
+| `send_draft` | `send` | sends a stored draft |
+| `server_status` | – | what runs, and whether the service answers |
 
 ## Getting started
 

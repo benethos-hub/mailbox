@@ -247,14 +247,18 @@ HINTS = {
 
 
 README = Path(__file__).resolve().parents[1] / "README.md"
+# The repository's README repeats the table short, for directories that
+# read the tools from it.
+ROOT_README = Path(__file__).resolve().parents[3] / "README.md"
 
 
-async def test_the_readme_lists_every_tool() -> None:
+@pytest.mark.parametrize("readme", [README, ROOT_README], ids=["package", "root"])
+async def test_the_readme_lists_every_tool(readme: Path) -> None:
     """The tool table of the README, which the service's UI repeats, in
     the order of TOOLS, which the bundle's manifest follows too."""
     every = {need for tool in catalogue.TOOLS for need in tool.needs}
     tools = {tool.name for tool in await server.build_server(every).list_tools()}
-    listed = re.findall(r"^\| `(\w+)` \|", README.read_text(encoding="utf-8"), re.M)
+    listed = re.findall(r"^\| `(\w+)` \|", readme.read_text(encoding="utf-8"), re.M)
     assert set(listed) == tools
     assert listed == [tool.fn.__name__ for tool in catalogue.TOOLS]
 
