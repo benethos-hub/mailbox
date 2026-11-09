@@ -10,7 +10,7 @@ from benethos_mailbox_common.mail import marks
 
 from .. import render
 from ..errors import ToolError
-from .base import changes, client
+from .base import AccountId, FolderId, changes, client
 
 MAX_BATCH = 100
 
@@ -35,10 +35,21 @@ Keywords = Annotated[
 
 
 async def update_messages(
-    account_id: str,
-    message_ids: Annotated[list[str], Field(min_length=1, max_length=MAX_BATCH)],
-    unread: bool | None = None,
-    starred: bool | None = None,
+    account_id: AccountId,
+    message_ids: Annotated[
+        list[str],
+        Field(
+            min_length=1,
+            max_length=MAX_BATCH,
+            description="Mails of that account, by the ids search_messages answers",
+        ),
+    ],
+    unread: Annotated[
+        bool | None, Field(description="true: mark unread. false: mark read")
+    ] = None,
+    starred: Annotated[
+        bool | None, Field(description="true: star. false: take the star off")
+    ] = None,
     move_to: Annotated[
         str | None,
         Field(description="Folder id, or a role such as archive, inbox, junk"),
@@ -90,8 +101,8 @@ async def update_messages(
 
 
 async def create_folder(
-    account_id: str,
-    name: Annotated[str, Field(max_length=200)],
+    account_id: AccountId,
+    name: Annotated[str, Field(max_length=200, description="The new folder's name")],
     parent: Annotated[
         str | None,
         Field(description="Folder id or role to create it in. Left out: the top"),
@@ -104,8 +115,8 @@ async def create_folder(
 
 
 async def update_folder(
-    account_id: str,
-    folder_id: str,
+    account_id: AccountId,
+    folder_id: FolderId,
     name: Annotated[
         str | None, Field(max_length=200, description="The new name")
     ] = None,

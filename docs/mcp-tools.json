@@ -38,6 +38,7 @@
     "inputSchema": {
       "properties": {
         "account_id": {
+          "description": "The account, by the id list_accounts names",
           "title": "Account Id",
           "type": "string"
         }
@@ -221,6 +222,7 @@
             }
           ],
           "default": null,
+          "description": "true: unread mail only. false: read mail only",
           "title": "Unread"
         },
         "starred": {
@@ -233,6 +235,7 @@
             }
           ],
           "default": null,
+          "description": "true: starred mail only. false: the rest only",
           "title": "Starred"
         },
         "has_attachments": {
@@ -245,10 +248,12 @@
             }
           ],
           "default": null,
+          "description": "true: mail with attachments only. false: without",
           "title": "Has Attachments"
         },
         "limit": {
           "default": 20,
+          "description": "At most this many in one answer",
           "maximum": 50,
           "minimum": 1,
           "title": "Limit",
@@ -264,7 +269,7 @@
             }
           ],
           "default": null,
-          "description": "next_cursor of the previous call",
+          "description": "next_cursor of the previous call, for more",
           "title": "Cursor"
         }
       },
@@ -289,15 +294,18 @@
     "inputSchema": {
       "properties": {
         "account_id": {
+          "description": "The account, by the id list_accounts names",
           "title": "Account Id",
           "type": "string"
         },
         "message_id": {
+          "description": "A mail of that account, by the id search_messages, whats_new or get_thread answers",
           "title": "Message Id",
           "type": "string"
         },
         "max_chars": {
           "default": 4000,
+          "description": "The body is cut after this many characters",
           "maximum": 50000,
           "minimum": 200,
           "title": "Max Chars",
@@ -337,6 +345,7 @@
     "inputSchema": {
       "properties": {
         "account_id": {
+          "description": "The account, by the id list_accounts names",
           "title": "Account Id",
           "type": "string"
         },
@@ -368,6 +377,7 @@
         },
         "max_chars": {
           "default": 12000,
+          "description": "The bodies together are cut after this many characters",
           "maximum": 100000,
           "minimum": 1000,
           "title": "Max Chars",
@@ -451,6 +461,7 @@
         },
         "limit": {
           "default": 50,
+          "description": "At most this many changes in one answer",
           "maximum": 200,
           "minimum": 1,
           "title": "Limit",
@@ -478,10 +489,12 @@
     "inputSchema": {
       "properties": {
         "account_id": {
+          "description": "The account, by the id list_accounts names",
           "title": "Account Id",
           "type": "string"
         },
         "message_id": {
+          "description": "A mail of that account, by the id search_messages, whats_new or get_thread answers",
           "title": "Message Id",
           "type": "string"
         },
@@ -507,6 +520,7 @@
         },
         "max_chars": {
           "default": 20000,
+          "description": "Text and HTML attachments are cut after this many characters",
           "maximum": 100000,
           "minimum": 200,
           "title": "Max Chars",
@@ -534,10 +548,12 @@
     "inputSchema": {
       "properties": {
         "account_id": {
+          "description": "The account, by the id list_accounts names",
           "title": "Account Id",
           "type": "string"
         },
         "message_id": {
+          "description": "A mail of that account, by the id search_messages, whats_new or get_thread answers",
           "title": "Message Id",
           "type": "string"
         },
@@ -585,10 +601,12 @@
     "inputSchema": {
       "properties": {
         "account_id": {
+          "description": "The account, by the id list_accounts names",
           "title": "Account Id",
           "type": "string"
         },
         "message_ids": {
+          "description": "Mails of that account, by the ids search_messages answers",
           "items": {
             "type": "string"
           },
@@ -607,6 +625,7 @@
             }
           ],
           "default": null,
+          "description": "true: mark unread. false: mark read",
           "title": "Unread"
         },
         "starred": {
@@ -619,6 +638,7 @@
             }
           ],
           "default": null,
+          "description": "true: star. false: take the star off",
           "title": "Starred"
         },
         "move_to": {
@@ -736,10 +756,12 @@
     "inputSchema": {
       "properties": {
         "account_id": {
+          "description": "The account, by the id list_accounts names",
           "title": "Account Id",
           "type": "string"
         },
         "name": {
+          "description": "The new folder's name",
           "maxLength": 200,
           "title": "Name",
           "type": "string"
@@ -785,10 +807,12 @@
     "inputSchema": {
       "properties": {
         "account_id": {
+          "description": "The account, by the id list_accounts names",
           "title": "Account Id",
           "type": "string"
         },
         "folder_id": {
+          "description": "A folder of that account, by the id list_folders answers",
           "title": "Folder Id",
           "type": "string"
         },
@@ -853,11 +877,13 @@
     "inputSchema": {
       "properties": {
         "account_id": {
+          "description": "The account, by the id list_accounts names",
           "title": "Account Id",
           "type": "string"
         },
         "limit": {
           "default": 20,
+          "description": "At most this many in one answer",
           "maximum": 50,
           "minimum": 1,
           "title": "Limit",
@@ -873,7 +899,7 @@
             }
           ],
           "default": null,
-          "description": "next_cursor of the previous call",
+          "description": "next_cursor of the previous call, for more",
           "title": "Cursor"
         }
       },
@@ -904,6 +930,7 @@
           "description": "An attachment of another mail of the same account.",
           "properties": {
             "message_id": {
+              "description": "The mail that carries it",
               "title": "Message Id",
               "type": "string"
             },
@@ -924,6 +951,7 @@
           "description": "A file to attach that the caller made, such as an invitation.",
           "properties": {
             "filename": {
+              "description": "The name the recipient sees",
               "maxLength": 200,
               "minLength": 1,
               "title": "Filename",
@@ -951,6 +979,7 @@
       },
       "properties": {
         "account_id": {
+          "description": "The account, by the id list_accounts names",
           "title": "Account Id",
           "type": "string"
         },
@@ -1007,6 +1036,7 @@
         },
         "subject": {
           "default": "",
+          "description": "The subject. Left empty with original_id: the original's, after Re: or Fwd:",
           "title": "Subject",
           "type": "string"
         },
@@ -1044,6 +1074,7 @@
         },
         "action": {
           "default": "reply",
+          "description": "With original_id: reply to its sender, reply_all to everyone it went to, or forward it",
           "enum": [
             "reply",
             "reply_all",
@@ -1149,6 +1180,7 @@
           "description": "An attachment of another mail of the same account.",
           "properties": {
             "message_id": {
+              "description": "The mail that carries it",
               "title": "Message Id",
               "type": "string"
             },
@@ -1169,6 +1201,7 @@
           "description": "A file to attach that the caller made, such as an invitation.",
           "properties": {
             "filename": {
+              "description": "The name the recipient sees",
               "maxLength": 200,
               "minLength": 1,
               "title": "Filename",
@@ -1196,10 +1229,12 @@
       },
       "properties": {
         "account_id": {
+          "description": "The account, by the id list_accounts names",
           "title": "Account Id",
           "type": "string"
         },
         "draft_id": {
+          "description": "A draft of that account, by the id list_drafts or create_draft answers",
           "title": "Draft Id",
           "type": "string"
         },
@@ -1256,6 +1291,7 @@
         },
         "subject": {
           "default": "",
+          "description": "The subject. Left empty with original_id: the original's, after Re: or Fwd:",
           "title": "Subject",
           "type": "string"
         },
@@ -1293,6 +1329,7 @@
         },
         "action": {
           "default": "reply",
+          "description": "With original_id: reply to its sender, reply_all to everyone it went to, or forward it",
           "enum": [
             "reply",
             "reply_all",
@@ -1412,10 +1449,12 @@
     "inputSchema": {
       "properties": {
         "account_id": {
+          "description": "The account, by the id list_accounts names",
           "title": "Account Id",
           "type": "string"
         },
         "draft_id": {
+          "description": "A draft of that account, by the id list_drafts or create_draft answers",
           "title": "Draft Id",
           "type": "string"
         }
@@ -1458,6 +1497,7 @@
           "description": "An attachment of another mail of the same account.",
           "properties": {
             "message_id": {
+              "description": "The mail that carries it",
               "title": "Message Id",
               "type": "string"
             },
@@ -1478,6 +1518,7 @@
           "description": "A file to attach that the caller made, such as an invitation.",
           "properties": {
             "filename": {
+              "description": "The name the recipient sees",
               "maxLength": 200,
               "minLength": 1,
               "title": "Filename",
@@ -1505,6 +1546,7 @@
       },
       "properties": {
         "account_id": {
+          "description": "The account, by the id list_accounts names",
           "title": "Account Id",
           "type": "string"
         },
@@ -1561,6 +1603,7 @@
         },
         "subject": {
           "default": "",
+          "description": "The subject. Left empty with original_id: the original's, after Re: or Fwd:",
           "title": "Subject",
           "type": "string"
         },
@@ -1598,6 +1641,7 @@
         },
         "action": {
           "default": "reply",
+          "description": "With original_id: reply to its sender, reply_all to everyone it went to, or forward it",
           "enum": [
             "reply",
             "reply_all",
@@ -1700,10 +1744,12 @@
     "inputSchema": {
       "properties": {
         "account_id": {
+          "description": "The account, by the id list_accounts names",
           "title": "Account Id",
           "type": "string"
         },
         "draft_id": {
+          "description": "A draft of that account, by the id list_drafts or create_draft answers",
           "title": "Draft Id",
           "type": "string"
         }
@@ -1736,6 +1782,7 @@
       "properties": {
         "details": {
           "default": false,
+          "description": "Also the service as this server last saw it",
           "title": "Details",
           "type": "boolean"
         }
