@@ -99,6 +99,29 @@ def build_server(
     return server
 
 
+CATALOGUE = (
+    "This server only lists its tools (MAILBOX_MCP_CATALOGUE) and calls "
+    "none. Start it with MAILBOX_SERVICE_TOKEN and without "
+    "MAILBOX_MCP_CATALOGUE to use them."
+)
+
+
+def build_catalogue(*, transport: str = "stdio") -> MCPServer:
+    """A server that lists every tool and runs none but ``server_status``,
+    for a directory that reads the tool list in a sandbox without a
+    service or a token. It reaches no service: it has no client and asks
+    for no rights."""
+    held = _Held(running=Running(transport))
+    server = MCPServer(
+        name="benethos-mailbox-mcp",
+        title="mailbox-mcp",
+        version=__version__,
+        instructions=_INSTRUCTIONS,
+    )
+    _serve(server, held, list(TOOLS), catalogue=True)
+    return server
+
+
 def _chosen(allowed: set[str]) -> list[Tool]:
     """The tools that need none of the rights or one ``allowed``."""
     return [tool for tool in TOOLS if not tool.needs or tool.needs & allowed]
@@ -121,14 +144,23 @@ class _Held:
     running: Running = field(default_factory=Running)
 
 
-def _serve(server: MCPServer, held: _Held, chosen: list[Tool]) -> None:
+def _serve(
+    server: MCPServer, held: _Held, chosen: list[Tool], *, catalogue: bool = False
+) -> None:
     """The tools ``chosen`` in place of those ``server`` served. Nothing
-    awaits in between, so no list request sees half of it."""
+    awaits in between, so no list request sees half of it. In a
+    ``catalogue`` each tool but those offered always refuses its call."""
     for name in held.shown:
         server.remove_tool(name)
     for tool in chosen:
+        if tool.always:
+            fn = _reported(tool.fn, held)
+        elif catalogue:
+            fn = _listed_only(tool.fn)
+        else:
+            fn = _logged(tool.fn, held)
         server.add_tool(
-            _reported(tool.fn, held) if tool.always else _logged(tool.fn, held),
+            fn,
             title=tool.title,
             annotations=ToolAnnotations(
                 title=tool.title,
@@ -287,6 +319,17 @@ def _logged(fn: Callable[..., Any], held: _Held) -> Callable[..., Any]:
             raise
         held.running = _saw(held.running)
         return found
+
+    return run
+
+
+def _listed_only(fn: Callable[..., Any]) -> Callable[..., Any]:
+    """The tool as a catalogue lists it, with its own signature, refusing
+    every call."""
+
+    @functools.wraps(fn)
+    async def run(*args: Any, **kwargs: Any) -> Any:
+        raise ToolError(CATALOGUE)
 
     return run
 

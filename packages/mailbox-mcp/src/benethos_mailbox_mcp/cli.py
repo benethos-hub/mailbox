@@ -119,6 +119,48 @@ def configure_logging(level: str) -> None:
         logging.getLogger(name).setLevel(logging.WARNING)
 
 
+def _catalogue(
+    settings: config.Settings, environment: Environment
+) -> server.MCPServer | None:
+    """The server that only lists its tools, if the settings ask for it.
+    A token beside it is refused: a server meant to act would serve no
+    working tool."""
+    if not settings.catalogue:
+        return None
+    if environment.token:
+        sys.exit(
+            "benethos-mailbox-mcp: MAILBOX_MCP_CATALOGUE lists the tools "
+            "without a service. Unset MAILBOX_SERVICE_TOKEN, or unset "
+            "MAILBOX_MCP_CATALOGUE to use the tools."
+        )
+    built = server.build_catalogue(transport=settings.transport)
+    logger.warning(
+        "catalogue: listing every tool over %s and running none but "
+        "server_status, without a service",
+        settings.transport,
+    )
+    return built
+
+
+def _built(settings: config.Settings, environment: Environment) -> server.MCPServer:
+    """The server with the tools the token may use, asked at the
+    service."""
+    connect = connector(environment)
+    try:
+        operations = anyio.run(_at_start, connect)
+    except (MailboxError, ToolError) as exc:
+        sys.exit(f"benethos-mailbox-mcp: {exc}")
+    built = server.build_server(
+        operations,
+        connect,
+        settings.rights_seconds,
+        transport=settings.transport,
+        seen=server.seen_at_start(bool(environment.token)),
+    )
+    server.started(operations, settings.transport, environment.url)
+    return built
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = _build_parser()
     args = parser.parse_args(argv)
@@ -137,19 +179,7 @@ def main(argv: list[str] | None = None) -> None:
     for secret in (environment.token, token):
         if secret:
             redact.note(secret)
-    connect = connector(environment)
-    try:
-        operations = anyio.run(_at_start, connect)
-    except (MailboxError, ToolError) as exc:
-        sys.exit(f"benethos-mailbox-mcp: {exc}")
-    built = server.build_server(
-        operations,
-        connect,
-        settings.rights_seconds,
-        transport=settings.transport,
-        seen=server.seen_at_start(bool(environment.token)),
-    )
-    server.started(operations, settings.transport, environment.url)
+    built = _catalogue(settings, environment) or _built(settings, environment)
     if settings.transport == "stdio":
         transport.serve_stdio(built, token)
         return

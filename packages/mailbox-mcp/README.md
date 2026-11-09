@@ -255,6 +255,7 @@ MAILBOX_SERVICE_URL=http://127.0.0.1:8080 MAILBOX_SERVICE_TOKEN=<token> benethos
 | `--log-level` | `MAILBOX_MCP_LOG_LEVEL` | `INFO` |
 | – | `MAILBOX_MCP_RIGHTS_SECONDS` | `60`, how often it asks what its token may do. `0` asks only at start |
 | – | `MAILBOX_MCP_BEARER_TOKEN` | none, what HTTP clients must send |
+| – | `MAILBOX_MCP_CATALOGUE` | off. `true` lists every tool and runs none, see below |
 | `--env-file` | `MAILBOX_MCP_ENV_FILE` | a settings file, see below |
 
 The command line wins over the environment, the environment over a
@@ -279,6 +280,13 @@ since the token goes with every request. For `http` to another host, e.g. a cont
 The address carries no user or password: the server refuses such an
 address, since it names the address in the error the model reads when
 the service cannot be reached.
+
+`MAILBOX_MCP_CATALOGUE=true` is for a directory of MCP servers that
+starts the server in a sandbox and reads its tool list, without a
+service or a token. The server then lists every tool, asks the service
+nothing and refuses every call but `server_status`, naming the setting.
+With `MAILBOX_SERVICE_TOKEN` set beside it, it does not start. In use,
+leave it off: a server with a token offers the tools its token allows.
 
 ## Over HTTP
 

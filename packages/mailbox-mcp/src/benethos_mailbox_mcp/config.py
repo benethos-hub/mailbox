@@ -44,6 +44,9 @@ class Settings(files.FileSettings):
     log_level: LogLevel = "INFO"
     # How often the server asks what its token may do. 0: only at start.
     rights_seconds: int = Field(default=60, ge=0)
+    # Lists every tool and runs none, without a service or a token: for a
+    # directory that reads the tool list in a sandbox. Never with a token.
+    catalogue: bool = False
     # The one token callers over HTTP bring. None: no guard.
     bearer_token: SecretStr | None = None
     # None: the client's default address.
