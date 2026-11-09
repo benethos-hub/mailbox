@@ -17,12 +17,13 @@ _KINDS = (*reading.TOOLS, *writing.TOOLS, *drafts.TOOLS, *sending.TOOLS)
 
 async def list_accounts() -> list[dict[str, Any]]:
     """The mail accounts you may use: id, address and what you may do there
-    (read, write, drafts, send, share). Other tools take the account id. Where you
-    may send, `sending` names the limits, one entry per grant: to whom, how
-    many a day and how many are left. A send passes when one of them
-    allows it. `warning` marks an account where you may read mail and send
-    it anywhere. `unsupported` names what an account cannot do, such as
-    folders on a mailbox without them: tools for that fail there."""
+    (read, write, drafts, send, share). Call it first: other tools take the
+    account id. It reads only. Where you may send, `sending` names the
+    limits, one entry per grant: to whom, how many a day and how many are
+    left. A send passes when one of them allows it. `warning` marks an
+    account where you may read mail and send it anywhere. `unsupported`
+    names what an account cannot do, such as folders on a mailbox without
+    them: tools for that fail there."""
     me = await client().get_me()
     return [
         render.account(account, _capabilities(account.operations))
