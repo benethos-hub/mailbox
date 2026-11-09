@@ -163,6 +163,9 @@ A uv workspace with four distributions and one lockfile.
 
 ```
 pyproject.toml            # workspace root: members, dev group, tool config
+glama.json                # the GitHub accounts that maintain the MCP
+                          #   server's listing on Glama, at the root
+                          #   where Glama looks for it
 config/                   # one folder per package: .env.example versioned,
                           #   .env and key files local
 data/                     # one folder per package, created when missing,
