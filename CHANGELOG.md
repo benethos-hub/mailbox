@@ -6,6 +6,14 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `MAILBOX_MCP_CATALOGUE=true` starts the MCP server without a service
+  or a token: it lists every tool and refuses every call but
+  `server_status`. It is meant for directories that read the tool list
+  in a sandbox. Beside `MAILBOX_SERVICE_TOKEN` the server does not
+  start. Without the setting nothing changes.
+
 ### Changed
 
 - The images install fastapi 0.162.2 and pypdfium2 5.15.1 from the

@@ -1954,6 +1954,14 @@ by the token's rights alone.
 **Decided 2026-09-25:** no policy file. The token's rights, its grants and
 their constraints decide which tools exist. The idea waits in IDEAS.md.
 
+**Decided 2026-11-09, the catalogue:** a directory such as Glama starts
+the server in a sandbox without a service or a token and reads its tool
+list there. For that, `MAILBOX_MCP_CATALOGUE=true` lists every tool and
+runs none but `server_status`, which answers as usual. It is set only
+where a directory builds the server, never by default: a server with a
+token keeps to the token's rights unchanged, and a token beside the
+catalogue stops the start.
+
 Principles:
 
 - The **rights of the token** decide which tools exist (`/v1/me`).
