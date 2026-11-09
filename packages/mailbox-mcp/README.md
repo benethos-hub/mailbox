@@ -239,6 +239,10 @@ it connects.
 MAILBOX_SERVICE_URL=http://127.0.0.1:8080 MAILBOX_SERVICE_TOKEN=<token> benethos-mailbox-mcp
 ```
 
+`benethos-mailbox-mcp --list-tools` prints every tool as a client lists
+it, with its description, its parameters and its hints, as JSON, and
+exits. It needs no service and no token.
+
 ## Options
 
 | Option | Environment | Default |

@@ -10,6 +10,7 @@ right, changes its tools to match and tells its clients (``listeners``).
 from __future__ import annotations
 
 import functools
+import json
 import logging
 import time
 from collections.abc import AsyncIterator, Callable, Iterable
@@ -120,6 +121,18 @@ def build_catalogue(*, transport: str = "stdio") -> MCPServer:
     )
     _serve(server, held, list(TOOLS), catalogue=True)
     return server
+
+
+async def tools_json() -> str:
+    """Every tool as a client lists it, as JSON: names, descriptions,
+    schemas and hints. ``docs/mcp-tools.json`` holds it, so a change to a
+    tool shows in the diff of a pull request."""
+    listed = await build_catalogue().list_tools()
+    dumped = [
+        tool.model_dump(mode="json", by_alias=True, exclude_none=True)
+        for tool in listed
+    ]
+    return json.dumps(dumped, indent=2) + "\n"
 
 
 def _chosen(allowed: set[str]) -> list[Tool]:

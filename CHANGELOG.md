@@ -13,6 +13,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   `server_status`. It is meant for directories that read the tool list
   in a sandbox. Beside `MAILBOX_SERVICE_TOKEN` the server does not
   start. Without the setting nothing changes.
+- `benethos-mailbox-mcp --list-tools` prints every tool of the MCP server
+  as a client lists it, as JSON, without a service or a token.
 
 ### Changed
 
