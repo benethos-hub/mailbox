@@ -35,6 +35,12 @@ dev = [
     "mcp[cli]>=2.3.0,<3",
     "types-defusedxml>=0.7",
 ]
+# The configuration UI in real browsers, packages/mailbox-service/tests/
+# browser: `uv run --group browser playwright install` once, then
+# MAILBOX_BROWSER_TESTS=1 uv run --group browser pytest on that folder.
+browser = [
+    "playwright>=1.64.1",
+]
 
 [tool.pytest.ini_options]
 testpaths = [

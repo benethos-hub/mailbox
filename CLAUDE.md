@@ -42,7 +42,7 @@ done. Update the roadmap in the same commit that finishes an item.
 - Windows, PowerShell or Bash. Python 3.11-3.15. CI measures the
   coverage on the newest and builds the fresh install with it. A new
   version goes into the CI matrix, `coverage-python`, `UV_PYTHON` of
-  fresh-install, the classifiers and this line at once, as
+  fresh-install and browser, the classifiers and this line at once, as
   `test_packaging.py` checks.
 - Set up: `uv sync` (the workspace dev group holds pytest, ruff, mypy).
 - Configuration: one folder per package under `config/`, e.g.
@@ -294,6 +294,8 @@ packages/
       test_errors.py        # the errors every layer raises
       test_logs.py          # the log of serve: what reaches it, in
                             #   which form
+      browser/              # the UI in Chrome, Firefox and WebKit,
+                            #   a suite of its own (Verifying)
   mailbox-client/         # the Python client of the REST API, async and
                           #   sync, no image
     src/benethos_mailbox_client/    # modules: docs/ARCHITECTURE.md
@@ -329,6 +331,14 @@ that adds a module, a package, a library or a seam.
 - Lint and format: `uv run ruff check .` and `uv run ruff format .`.
 - Types: `uv run mypy`.
 - Lockfile: `uv lock --check`.
+- The UI in real browsers, the one check that runs its JavaScript:
+  `uv run --group browser playwright install chromium firefox webkit`
+  once, then `MAILBOX_BROWSER_TESTS=1 uv run --group browser pytest
+  packages/mailbox-service/tests/browser`. The sign-in with a code must
+  go on by itself through htmx, and no page reached from the overview
+  may break the content security policy or miss a file of its own. The
+  default run leaves the folder out, CI's browser job runs it. Run it
+  after a change to a template, to `static/` or to htmx.
 
 Never write a test that reaches a real mail server, and never one that skips
 itself without credentials. Live checks are manual scripts in `live/`, outside
