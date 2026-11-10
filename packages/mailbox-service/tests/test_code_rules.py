@@ -215,6 +215,20 @@ def test_templates_ask_operations_not_providers() -> None:
     assert not violations, "a template names a provider:\n  " + "\n  ".join(violations)
 
 
+def test_htmx_is_spoken_in_one_module() -> None:
+    """The headers htmx sends and follows are read and written in
+    ``web/pages/templates.py`` alone, so another version of htmx touches
+    one module of Python."""
+    home = ROOT / "web" / "pages" / "templates.py"
+    spoken = re.compile(r"HX-(?:Request|Redirect)")
+    violations = [
+        path.relative_to(ROOT).as_posix()
+        for path in sorted(ROOT.rglob("*.py"))
+        if path != home and spoken.search(path.read_text("utf-8"))
+    ]
+    assert not violations, "htmx outside templates.py:\n  " + "\n  ".join(violations)
+
+
 def test_no_test_module_imports_another() -> None:
     """What tests of several modules share is a fixture in the conftest.py
     of their nearest common folder, or a helper in a module of its own

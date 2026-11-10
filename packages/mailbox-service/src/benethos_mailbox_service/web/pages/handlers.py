@@ -8,7 +8,7 @@ import inspect
 from urllib.parse import quote
 
 from fastapi import Request
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.responses import HTMLResponse, Response
 
 from ...errors import MailboxServiceError
 from .deps import CsrfRefusedError
@@ -20,7 +20,7 @@ from .session import (
     PasswordChangeRequiredError,
     SignInRequiredError,
 )
-from .templates import back, is_htmx
+from .templates import back, redirect_to
 
 
 async def sign_in_required(request: Request, _: SignInRequiredError) -> Response:
@@ -33,18 +33,14 @@ async def sign_in_required(request: Request, _: SignInRequiredError) -> Response
         if request.url.query:
             page += f"?{request.url.query}"
         target += f"?next={quote(page, safe='/')}"
-    if is_htmx(request):
-        return Response(status_code=204, headers={"HX-Redirect": target})
-    return RedirectResponse(target, status_code=303)
+    return redirect_to(request, target)
 
 
 async def password_change_required(
     request: Request, _: PasswordChangeRequiredError
 ) -> Response:
     """A password someone else set is changed before anything else."""
-    if is_htmx(request):
-        return Response(status_code=204, headers={"HX-Redirect": PASSWORD_PAGE})
-    return RedirectResponse(PASSWORD_PAGE, status_code=303)
+    return redirect_to(request, PASSWORD_PAGE)
 
 
 async def form_failed(request: Request, exc: FormFailedError) -> Response:
