@@ -9,8 +9,9 @@ import tomllib
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
-WORKFLOW = ROOT / ".github" / "workflows" / "publish.yml"
+from .repository_helpers import ROOT, WORKFLOWS, job_of
+
+WORKFLOW = WORKFLOWS / "publish.yml"
 PACKAGES = [
     ROOT / "packages" / "mailbox-service",
     ROOT / "packages" / "mailbox-client",
@@ -51,7 +52,4 @@ def workspace_needs(package: Path) -> set[str]:
 
 def workflow_job(name: str) -> str:
     """The lines of one job of the publish workflow."""
-    text = WORKFLOW.read_text("utf-8")
-    found = re.search(rf"^  {name}:\n((?:    .*\n|\n)+)", text, re.M)
-    assert found, name
-    return found.group(1)
+    return job_of(WORKFLOW.read_text("utf-8"), name)

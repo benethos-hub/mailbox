@@ -11,13 +11,13 @@ import re
 
 from .publish_helpers import (
     PACKAGES,
-    ROOT,
     WORKFLOW,
     module_of,
     project_of,
     workflow_job,
     workspace_needs,
 )
+from .repository_helpers import WORKFLOWS
 
 _, CLIENT, _, COMMON = PACKAGES
 
@@ -82,7 +82,7 @@ def test_a_job_with_rights_of_its_own_still_reads_the_repository() -> None:
     """The permissions of a job replace the workflow's. Each job that
     names its own keeps ``contents: read``, which its checkout needs once
     the repository is private, or ``contents: write``, which reads too."""
-    for workflow in (ROOT / ".github" / "workflows").glob("*.yml"):
+    for workflow in WORKFLOWS.glob("*.yml"):
         text = workflow.read_text("utf-8")
         blocks = re.findall(r"^    permissions:\n((?:      .*\n)+)", text, re.M)
         for block in blocks:

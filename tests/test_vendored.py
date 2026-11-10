@@ -13,7 +13,7 @@ import json
 import re
 from typing import Any
 
-from .publish_helpers import ROOT
+from .repository_helpers import ROOT
 
 FOLDER = ROOT / "assets" / "vendor"
 HTMX = (

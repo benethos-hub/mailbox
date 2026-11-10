@@ -12,10 +12,9 @@ import re
 from fnmatch import fnmatch
 from pathlib import Path
 
-from .publish_helpers import ROOT
+from .repository_helpers import ROOT, job_of, read
 
-CI = (ROOT / ".github" / "workflows" / "ci.yml").read_text("utf-8")
-JOB = CI.split("\n  dockerfile-lint:\n", 1)[1].split("\n\n  ", 1)[0]
+JOB = job_of(read("ci.yml"), "dockerfile-lint")
 
 
 def _input(name: str) -> str:

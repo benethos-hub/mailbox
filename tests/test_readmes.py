@@ -22,7 +22,7 @@ from pathlib import Path
 
 import pytest
 
-from .publish_helpers import ROOT
+from .repository_helpers import ROOT
 
 PACKAGES = ROOT / "packages"
 # Folders with READMEs that are not the project's own.

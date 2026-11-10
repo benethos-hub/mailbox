@@ -18,6 +18,7 @@ from pathlib import Path
 import pytest
 
 from .publish_helpers import PACKAGES, ROOT, module_of, name_of, needs_of, project_of
+from .repository_helpers import read
 
 SERVICE, CLIENT, MCP, COMMON = PACKAGES
 
@@ -141,7 +142,7 @@ def _minor(name: str) -> tuple[int, int]:
 
 
 def _ci() -> str:
-    return (ROOT / ".github" / "workflows" / "ci.yml").read_text("utf-8")
+    return read("ci.yml")
 
 
 def _tested() -> list[str]:
