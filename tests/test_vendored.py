@@ -8,6 +8,7 @@ UI does not ship.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from typing import Any
@@ -15,11 +16,12 @@ from typing import Any
 from .publish_helpers import ROOT
 
 FOLDER = ROOT / "assets" / "vendor"
-HTMX_NOTE = (
+HTMX = (
     ROOT
     / "packages/mailbox-service/src/benethos_mailbox_service/web/pages/static"
-    / "vendor/htmx/README.md"
+    / "vendor/htmx"
 )
+HTMX_NOTE = HTMX / "README.md"
 ICONS = ROOT / "assets" / "icons.py"
 
 
@@ -58,3 +60,11 @@ def test_each_entry_is_locked_at_its_version_from_the_npm_registry() -> None:
         entry = lock[f"node_modules/{name}"]
         assert entry["version"] == version
         assert entry["resolved"].startswith(f"https://registry.npmjs.org/{name}/-/")
+
+
+def test_htmx_is_the_file_of_its_npm_package() -> None:
+    """A minified file cannot be read as a diff. Its digest, taken from the
+    package on npm, says it is the released one."""
+    recorded = _named(r"^([0-9a-f]{64})$", HTMX_NOTE.read_text("utf-8"))
+    shipped = hashlib.sha256((HTMX / "htmx.min.js").read_bytes()).hexdigest()
+    assert shipped == recorded

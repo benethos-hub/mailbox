@@ -241,6 +241,7 @@ def test_http_from_the_environment(
     monkeypatch.setenv("MAILBOX_MCP_HOST", "0.0.0.0")
     monkeypatch.setenv("MAILBOX_MCP_PATH", "/mail")
     monkeypatch.setenv("MAILBOX_MCP_ALLOWED_HOSTS", "a.example:443, b.example:443")
+    monkeypatch.setenv("MAILBOX_MCP_BEARER_TOKEN", "bearer")
     cli.main([])
     assert started["run"]["host"] == "0.0.0.0"
     assert started["app"]["path"] == "/mail"

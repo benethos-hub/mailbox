@@ -1906,7 +1906,10 @@ with a user or password is refused: the address is named in the error
 when the service cannot be reached, which reaches the model. It runs over stdio or streamable HTTP. Over HTTP a bearer guard
 admits clients with one shared token (`MAILBOX_MCP_BEARER_TOKEN`), which
 is not passed on: the server acts as the user of its own API token, for
-every client alike. Host and Origin are checked against DNS rebinding. At
+every client alike. Host and Origin are checked against DNS rebinding.
+On an address other hosts reach, such as `0.0.0.0`, it does not start
+without the bearer token and a list of allowed hosts or origins
+(**decided 2026-11-10**). At
 start it asks `/v1/me` what its user may do, and only those tools exist.
 It asks again while it runs and tells its clients when they change
 (7.5).

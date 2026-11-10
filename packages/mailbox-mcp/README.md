@@ -312,17 +312,18 @@ claude mcp add --transport http mailbox http://127.0.0.1:8000/mcp \
 - **Bearer token.** With `MAILBOX_MCP_BEARER_TOKEN` set, every HTTP request
   must carry `Authorization: Bearer <token>`. Anything else gets `401`. It
   has no command-line option, since arguments show in the process list.
-  Without it the server logs a warning and admits anyone who can reach
-  the port. Over stdio the token is ignored.
+  On a loopback bind without it the server logs a warning and admits
+  anyone who can reach the port. On any other bind, such as `0.0.0.0`,
+  it does not start without it. Over stdio the token is ignored.
 - **Two tokens.** The bearer token only admits MCP clients. The server
   calls the REST API with its own `MAILBOX_SERVICE_TOKEN`, and that user's
   rights decide which tools exist, for every client alike.
 - **Host check.** Against DNS rebinding the server checks the `Host` and
   `Origin` headers. On a loopback bind it admits `127.0.0.1`, `localhost`
   and `[::1]`. With `--allowed-hosts` it admits exactly those, and
-  `--allowed-origins` alone admits the hosts of those origins. A bind such
-  as `0.0.0.0` without a list checks nothing, so set the list there. A
-  refused host gets `421`, a refused origin `403`.
+  `--allowed-origins` alone admits the hosts of those origins. On a bind
+  such as `0.0.0.0` the server does not start without one of the two
+  lists. A refused host gets `421`, a refused origin `403`.
 - Beyond your own machine, put a TLS reverse proxy in front.
 
 ## Log and timeouts
@@ -334,7 +335,8 @@ written as the service writes its own: in colour on a terminal unless
 `NO_COLOR` is set, plain elsewhere, its tokens masked as `***`. At start it names the settings file
 it read, the transport, the service's address and the tools it serves,
 and warns where its token may read mail and send it to any address. Over
-HTTP without `MAILBOX_MCP_BEARER_TOKEN` it warns as well. A tool that
+HTTP on a loopback bind without `MAILBOX_MCP_BEARER_TOKEN` it warns as
+well. A tool that
 fails writes a warning with the tool's name and the error's code, or
 why it failed where there is none, such as a PDF that took too long,
 never its arguments. `httpx`, `httpcore` and the MCP library write from
@@ -374,7 +376,8 @@ docker run -d --name mailbox-mcp --restart unless-stopped --network mailbox \
 
 Inside the container the server binds to `0.0.0.0`. So
 `MAILBOX_MCP_ALLOWED_HOSTS` names the Host values clients use: the port as
-published on the host, or the host name behind a proxy.
+published on the host, or the host name behind a proxy. Without it, or
+without `MAILBOX_MCP_BEARER_TOKEN`, the server does not start.
 
 ### Beside a service in operation
 

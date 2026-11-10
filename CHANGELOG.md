@@ -18,6 +18,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The MCP server over HTTP on an address other hosts reach, such as
+  `0.0.0.0` in its image, no longer starts without
+  `MAILBOX_MCP_BEARER_TOKEN` and `MAILBOX_MCP_ALLOWED_HOSTS` or
+  `MAILBOX_MCP_ALLOWED_ORIGINS`. Before, it started with a warning and
+  admitted anyone who reached the port. On `127.0.0.1` and over stdio
+  nothing changes.
 - The MCP tools describe every parameter, the ids by the tool that
   answers them. Each tool says when to use it rather than a related
   one, whether it changes anything, and what it answers. What the tools
@@ -32,6 +38,13 @@ adheres to [Semantic Versioning](https://semver.org/).
 - On Python 3.11 and 3.12 the descriptions of the MCP tools carried the
   indentation of their source code, spaces a client sent to the model
   with every description. They are now the same on every Python version.
+- A page of the UI given a return address whose host cannot be read,
+  such as `next=//[`, answered with a plain error 500. It now goes to
+  the page's own default, as for any address outside the UI.
+- A cursor of a Microsoft account's message list that names a host
+  which cannot be read answered with an error 500 outside the error
+  envelope. It is now `400` with the code `bad_request`, as any other
+  forged cursor.
 
 ## [0.6.1] - 2026-11-07
 

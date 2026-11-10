@@ -179,3 +179,73 @@ def test_every_line_is_written_as_the_service_writes_it(
         r"benethos_mailbox_mcp\.server: started with \*\*\*",
         handler.format(record),
     )
+
+
+def _serving_http(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, object]]:
+    """The calls of ``serve_http``, with a start that asks no service."""
+
+    async def operations() -> set[str]:
+        return ALLOWED
+
+    served: list[dict[str, object]] = []
+    monkeypatch.setenv("MAILBOX_SERVICE_TOKEN", "tok")
+    monkeypatch.setattr(server, "allowed_operations", operations)
+    monkeypatch.setattr(
+        server,
+        "build_server",
+        lambda ops, connect=None, every=0, **_: object(),
+    )
+    monkeypatch.setattr(
+        cli.transport, "serve_http", lambda built, **kwargs: served.append(kwargs)
+    )
+    return served
+
+
+@pytest.mark.parametrize(
+    "variables",
+    [
+        {},
+        {"MAILBOX_MCP_BEARER_TOKEN": "bearer"},
+        {"MAILBOX_MCP_ALLOWED_HOSTS": "mcp.example.org"},
+    ],
+)
+def test_http_on_an_open_address_needs_the_token_and_the_hosts(
+    monkeypatch: pytest.MonkeyPatch, variables: dict[str, str]
+) -> None:
+    served = _serving_http(monkeypatch)
+    for name, value in variables.items():
+        monkeypatch.setenv(name, value)
+    with pytest.raises(SystemExit, match="MAILBOX_MCP_BEARER_TOKEN and"):
+        cli.main(["--transport", "streamable-http", "--host", "0.0.0.0"])
+    assert served == []
+
+
+@pytest.mark.parametrize(
+    "allowed", ["MAILBOX_MCP_ALLOWED_HOSTS", "MAILBOX_MCP_ALLOWED_ORIGINS"]
+)
+def test_http_on_an_open_address_serves_with_the_token_and_the_hosts(
+    monkeypatch: pytest.MonkeyPatch, allowed: str
+) -> None:
+    served = _serving_http(monkeypatch)
+    monkeypatch.setenv("MAILBOX_MCP_BEARER_TOKEN", "bearer")
+    monkeypatch.setenv(allowed, "https://mcp.example.org")
+    cli.main(["--transport", "streamable-http", "--host", "0.0.0.0"])
+    assert [call["host"] for call in served] == ["0.0.0.0"]
+
+
+def test_http_on_loopback_serves_without_them(monkeypatch: pytest.MonkeyPatch) -> None:
+    served = _serving_http(monkeypatch)
+    cli.main(["--transport", "streamable-http", "--host", "127.0.0.1"])
+    assert [call["token"] for call in served] == [None]
+
+
+def test_the_catalogue_over_http_serves_without_them(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    served: list[dict[str, object]] = []
+    monkeypatch.setenv("MAILBOX_MCP_CATALOGUE", "true")
+    monkeypatch.setattr(
+        cli.transport, "serve_http", lambda built, **kwargs: served.append(kwargs)
+    )
+    cli.main(["--transport", "streamable-http", "--host", "0.0.0.0"])
+    assert [call["host"] for call in served] == ["0.0.0.0"]

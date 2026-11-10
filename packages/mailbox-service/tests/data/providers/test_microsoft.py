@@ -150,6 +150,9 @@ async def test_messages_newest_first_and_paged(graph: FakeGraph) -> None:
         "/users/someone/messages",
         "/me/../users/someone/messages",
         "http://graph.microsoft.com/v1.0/me/messages",
+        # Hosts urlsplit cannot read.
+        "//[",
+        "//evil＃.com/me/messages",
     ],
 )
 async def test_a_forged_cursor_is_refused(graph: FakeGraph, cursor: str) -> None:

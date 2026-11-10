@@ -257,8 +257,12 @@ class Graph(TokenApi):
 def own_path(link: str) -> str:
     """The path of a Graph link, e.g. a next page, below ``/v1.0``. Refuses
     any other host: a cursor comes back from the caller, and a forged one
-    must not carry the token elsewhere."""
-    parts = urlsplit(link)
+    must not carry the token elsewhere. A host ``urlsplit`` cannot read
+    is no cursor of ours."""
+    try:
+        parts = urlsplit(link)
+    except ValueError:
+        raise rules.invalid_cursor() from None
     if (parts.scheme or parts.netloc) and f"{parts.scheme}://{parts.netloc}" != GRAPH:
         raise rules.invalid_cursor()
     # A full link names the version, but a cursor handed out before does not.

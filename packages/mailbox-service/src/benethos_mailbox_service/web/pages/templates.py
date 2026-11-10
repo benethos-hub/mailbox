@@ -232,8 +232,12 @@ def local_path(value: str | None, fallback: str) -> str:
     """Where to go after a form: a page of this UI, never another site.
     A browser resolves a dot segment, also as ``%2e%2e``, before it asks
     the server, so a path with one could leave the UI. The result starts
-    with ``PATH`` by construction, so ``value`` cannot name a host."""
-    parts = urlsplit(value or "")
+    with ``PATH`` by construction, so ``value`` cannot name a host. A
+    host ``urlsplit`` cannot read, such as ``//[``, is no page of it."""
+    try:
+        parts = urlsplit(value or "")
+    except ValueError:
+        return fallback
     inside = parts.path == PATH or parts.path.startswith(PATH + "/")
     segments = unquote(parts.path).replace("\\", "/").split("/")
     if parts.scheme or parts.netloc or not inside or {".", ".."} & set(segments):
