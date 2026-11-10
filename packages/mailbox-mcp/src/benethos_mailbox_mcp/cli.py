@@ -162,7 +162,7 @@ def _built(settings: config.Settings, environment: Environment) -> server.Server
     """The server with the tools the token may use, asked at the
     service."""
     try:
-        return server.start(
+        built = server.start(
             connector(environment),
             settings.rights_seconds,
             transport=settings.transport,
@@ -171,6 +171,7 @@ def _built(settings: config.Settings, environment: Environment) -> server.Server
         )
     except (MailboxError, ToolError) as exc:
         sys.exit(f"{config.APP}: {exc}")
+    return built
 
 
 def main(argv: list[str] | None = None) -> None:
