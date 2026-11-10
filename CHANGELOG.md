@@ -6,6 +6,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- The images install fastapi 0.162.3 from the lockfile.
+
 ## [0.7.0] - 2026-11-10
 
 ### Added
