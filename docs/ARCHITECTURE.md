@@ -549,11 +549,14 @@ packages/mailbox-mcp/
                         #   tokens noted for masking, --list-tools, the
                         #   catalogue or the start over stdio or HTTP,
                         #   HTTP on an open address only with its guards
-    server.py           # build_server: the MCP library's server with
-                        #   the tools the token's rights allow, each
-                        #   logged when it fails, asked again while
-                        #   it runs. build_catalogue: every tool, none
-                        #   run but server_status (CATALOGUE).
+    server.py           # start: what the token may do, asked at the
+                        #   service, then build_server: the MCP
+                        #   library's server with the tools the token's
+                        #   rights allow, each logged when it fails,
+                        #   asked again while it runs. Server: that
+                        #   library's class. build_catalogue: every
+                        #   tool, none run but server_status
+                        #   (CATALOGUE).
                         #   tools_json: the tools as a client lists
                         #   them, docs/mcp-tools.json
     listeners.py        # the clients told that the tool list changed:

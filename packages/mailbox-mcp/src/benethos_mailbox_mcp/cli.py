@@ -16,20 +16,11 @@ from pydantic import ValidationError
 
 from benethos_mailbox_common.log import lines, redact
 
-from . import __version__, config, server, tools, transport
-from .client import Connect, Environment, connector, from_environment
+from . import __version__, config, server, transport
+from .client import Environment, connector, from_environment
 from .errors import MailboxError, ToolError
 
 logger = logging.getLogger(__name__)
-
-
-async def _at_start(connect: Connect) -> set[str]:
-    """What the token may do, asked before the server runs. Its client
-    belongs to this event loop, which ends here: the server makes its own
-    in its lifespan."""
-    async with connect() as made:
-        with tools.calling(made):
-            return await server.allowed_operations()
 
 
 TRANSPORTS = get_args(config.Transport)
@@ -148,14 +139,9 @@ def configure_logging(level: str) -> None:
         logging.getLogger(name).setLevel(logging.WARNING)
 
 
-def _catalogue(
-    settings: config.Settings, environment: Environment
-) -> server.MCPServer | None:
-    """The server that only lists its tools, if the settings ask for it.
-    A token beside it is refused: a server meant to act would serve no
-    working tool."""
-    if not settings.catalogue:
-        return None
+def _catalogue(settings: config.Settings, environment: Environment) -> server.Server:
+    """The server that only lists its tools. A token beside it is refused:
+    a server meant to act would serve no working tool."""
     if environment.token:
         catalogue = config.variable("catalogue")
         sys.exit(
@@ -172,23 +158,19 @@ def _catalogue(
     return built
 
 
-def _built(settings: config.Settings, environment: Environment) -> server.MCPServer:
+def _built(settings: config.Settings, environment: Environment) -> server.Server:
     """The server with the tools the token may use, asked at the
     service."""
-    connect = connector(environment)
     try:
-        operations = anyio.run(_at_start, connect)
+        return server.start(
+            connector(environment),
+            settings.rights_seconds,
+            transport=settings.transport,
+            url=environment.url,
+            token_set=bool(environment.token),
+        )
     except (MailboxError, ToolError) as exc:
         sys.exit(f"{config.APP}: {exc}")
-    built = server.build_server(
-        operations,
-        connect,
-        settings.rights_seconds,
-        transport=settings.transport,
-        seen=server.seen_at_start(bool(environment.token)),
-    )
-    server.started(operations, settings.transport, environment.url)
-    return built
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -215,7 +197,10 @@ def main(argv: list[str] | None = None) -> None:
     for secret in (environment.token, token):
         if secret:
             redact.note(secret)
-    built = _catalogue(settings, environment) or _built(settings, environment)
+    if settings.catalogue:
+        built = _catalogue(settings, environment)
+    else:
+        built = _built(settings, environment)
     if settings.transport == "stdio":
         transport.serve_stdio(built, token)
         return

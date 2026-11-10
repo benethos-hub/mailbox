@@ -159,6 +159,13 @@ def test_each_library_has_one_home() -> None:
     assert not violations, "library outside its home:\n  " + "\n  ".join(violations)
 
 
+def test_the_command_line_leaves_the_tools_to_the_server() -> None:
+    """What the token may do and the tools are ``server``'s: the command
+    line chooses how to start and starts it there."""
+    imported = [found for found, _ in _imports("cli", ROOT / "cli.py")]
+    assert not [name for name in imported if name.split(".")[0] == "tools"]
+
+
 # Hard limits (docs/ARCHITECTURE.md 15): what grows beyond them is split
 # by subject.
 MAX_LINES = 500

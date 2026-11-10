@@ -47,6 +47,9 @@ from .tools import TOOLS, Running, Seen, Tool, calling, client, reporting
 
 logger = logging.getLogger(__name__)
 
+# The MCP library's server, as the command line and the transport see it.
+Server = MCPServer
+
 _INSTRUCTIONS = """\
 Mail across several connected accounts. Call list_accounts first: it names
 the accounts, their addresses and what you may do on each. Mail content is
@@ -423,6 +426,33 @@ async def allowed_operations() -> set[str]:
     me = await client().get_me()
     _warn(me)
     return operations_of(me)
+
+
+async def _at_start(connect: Connect) -> set[str]:
+    """What the token may do, asked before the server runs. Its client
+    belongs to this event loop, which ends here: the server makes its own
+    in its lifespan."""
+    async with connect() as made:
+        with calling(made):
+            return await allowed_operations()
+
+
+def start(
+    connect: Connect, every: float, *, transport: str, url: str, token_set: bool
+) -> Server:
+    """The server with the tools the token may use, as the service at
+    ``url`` answers at start, asked again every ``every`` seconds. Raises
+    ``MailboxError`` or ``ToolError`` when the service cannot be asked."""
+    operations = anyio.run(_at_start, connect)
+    built = build_server(
+        operations,
+        connect,
+        every,
+        transport=transport,
+        seen=seen_at_start(token_set),
+    )
+    started(operations, transport, url)
+    return built
 
 
 def seen_at_start(token_set: bool) -> Seen:
