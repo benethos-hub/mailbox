@@ -43,14 +43,15 @@ def me_with(*operations: str) -> dict[str, Any]:
 
 
 class Service:
-    """``/v1/me`` of the REST API: ``me`` with ``status``, or no answer at
-    all while ``down``. Counts how often it was asked, and keeps the path
-    of every request. ``/health`` names ``version`` where one is set.
-    Every other path answers the error ``refusal``, a status and a
-    code."""
+    """``/v1/me`` of the REST API: ``me`` with ``status``, no answer at all
+    while ``down``, or one that cannot be decoded while ``garbled``.
+    Counts how often it was asked, and keeps the path of every request.
+    ``/health`` names ``version`` where one is set. Every other path
+    answers the error ``refusal``, a status and a code."""
 
     def __init__(self, me: dict[str, Any]) -> None:
         self.me, self.status, self.down = me, 200, False
+        self.garbled = False
         self.refusal = (403, "forbidden")
         self.asked = 0
         self.version: str | None = None
@@ -69,6 +70,10 @@ class Service:
         self.asked += 1
         if self.down:
             raise httpx.ConnectError("refused", request=request)
+        if self.garbled:
+            # gzip named, but the body is not: as a proxy in between may send.
+            gzip = {"Content-Encoding": "gzip"}
+            return httpx.Response(200, headers=gzip, content=b"{}")
         if self.status != 200:
             error = {"code": "unauthorized", "message": "invalid token"}
             return httpx.Response(self.status, json={"error": error})

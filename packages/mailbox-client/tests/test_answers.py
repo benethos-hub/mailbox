@@ -112,6 +112,19 @@ async def test_a_connection_that_times_out_is_unreachable(
         await client.request("GET", "/v1/accounts")
 
 
+async def test_an_answer_that_cannot_be_decoded(make_client: Callable) -> None:
+    """A body that is not what its Content-Encoding says, as a proxy in
+    between may send, is an ApiError like any unexpected answer, not
+    httpx's own error."""
+    gzip = {"Content-Encoding": "gzip"}
+    client = make_client(lambda _: httpx.Response(200, headers=gzip, content=b"{}"))
+    with pytest.raises(ApiError) as raised:
+        await client.get_me()
+    assert raised.value.code == "unexpected_response"
+    with pytest.raises(ApiError, match="unexpected_response"):
+        await client.get_attachment("acc_1", "msg_1", "att_0", max_bytes=10)
+
+
 async def test_every_error_is_a_mailbox_error(make_client: Callable) -> None:
     client = make_client(lambda _: httpx.Response(500, text="boom"))
     with pytest.raises(MailboxError):

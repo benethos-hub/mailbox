@@ -11,7 +11,7 @@ from typing import Any, TypeVar
 import httpx
 
 from . import endpoints
-from .answers import api_error, failure, read
+from .answers import api_error, failure, read, unreadable
 from .attachments import Collected, attachment
 from .calls import Call, blocking, timeouts
 from .environment import connection
@@ -73,6 +73,8 @@ class SyncMailboxClient:
             )
         except httpx.TransportError as exc:
             raise failure(exc, self.base_url, call.timeout) from None
+        except httpx.HTTPError:
+            raise unreadable() from None
         return read(call, response)
 
     def request(
@@ -217,4 +219,6 @@ class SyncMailboxClient:
                         break
         except httpx.TransportError as exc:
             raise failure(exc, self.base_url, call.timeout) from None
+        except httpx.HTTPError:
+            raise unreadable() from None
         return attachment(response.headers, collected)
