@@ -369,7 +369,7 @@ def test_the_packages_import_only_lines_below(layer: str) -> None:
     assert not violations, "against the lines:\n  " + "\n  ".join(violations)
 
 
-# --- the assembly and the command line (docs/ARCHITECTURE.md 3) -----------------
+# --- the assembly and the command line (docs/ARCHITECTURE.md 2) -----------------
 
 # The modules of assembly/ and cli/ in lines, the top first. A command of
 # cli/ reaches the assembly, and through it the layers, never another
