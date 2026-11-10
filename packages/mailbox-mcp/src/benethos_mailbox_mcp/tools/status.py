@@ -10,7 +10,7 @@ import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from importlib.metadata import PackageNotFoundError, version
 from typing import Annotated
 
@@ -18,6 +18,7 @@ from pydantic import Field
 
 from .. import __version__
 from ..config import APP
+from ..errors import ApiError, ConfigurationError, MailboxError, refused_token
 from .base import Tool, ToolResult, result
 
 NAME = APP
@@ -50,6 +51,53 @@ class Running:
     started: float = field(default_factory=time.monotonic)
     seen: Seen = field(default_factory=Seen)
     offered: tuple[str, ...] = ()
+
+
+# What the service may answer before it looked at the token: a limit on
+# the address, or no user yet.
+_BEFORE_THE_TOKEN = frozenset({429, 503})
+
+
+def saw(
+    running: Running,
+    exc: MailboxError | None = None,
+    *,
+    token: bool = True,
+    version: str | None = None,
+) -> Running:
+    """``running`` after a request to the service: it answered, or failed
+    with ``exc``. ``token``: the request needed the token, so the answer
+    tells whether the service took it. A client that is not configured
+    reached no one."""
+    if isinstance(exc, ConfigurationError):
+        return running
+    seen = running.seen
+    valid = seen.token_valid
+    if exc is None or isinstance(exc, ApiError):
+        reachable = "yes"
+        if token and exc is None:
+            valid = "yes"
+        elif token and isinstance(exc, ApiError):
+            if refused_token(exc):
+                valid = "no"
+            elif exc.status not in _BEFORE_THE_TOKEN:
+                valid = "yes"
+    else:
+        reachable = "no"
+    seen = replace(
+        seen,
+        reachable=reachable,
+        token_valid=valid,
+        checked=time.monotonic(),
+        version=version or seen.version,
+    )
+    return replace(running, seen=seen)
+
+
+def seen_at_start(token_set: bool) -> Seen:
+    """The service as the server found it at start, asking what its
+    token may do: it answered and took the token."""
+    return saw(Running(seen=Seen(token_set=token_set))).seen
 
 
 # The server whose status tool runs now, set around each call as

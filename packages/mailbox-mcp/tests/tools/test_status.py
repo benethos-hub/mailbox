@@ -228,7 +228,7 @@ async def test_a_tool_call_to_a_service_that_is_gone() -> None:
 
 
 def test_the_start_saw_the_service_take_the_token() -> None:
-    seen = server.seen_at_start(token_set=True)
+    seen = status.seen_at_start(token_set=True)
     assert (seen.token_set, seen.reachable, seen.token_valid) == (
         True,
         "yes",
