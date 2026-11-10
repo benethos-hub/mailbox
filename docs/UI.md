@@ -291,7 +291,8 @@ Where the browser goes afterwards, the `back` a form carries or the
 `next` of the sign-in, is a path of this UI, never another site. A value
 with a scheme, a host or a dot segment, also written as `%2e%2e`, lands
 on the route's own fallback instead, the list the form belongs to or the
-start of the UI.
+start of the UI. So does a path outside `/ui`, and a value whose host
+cannot be read, such as `//[`.
 
 ## 5. The overview
 
@@ -581,7 +582,11 @@ receiver reports nothing. Built last, if at all.
 - **No inline style or script**: the content security policy stays.
   htmx only where a page asks the service again by itself, the
   sign-in with a code. Every other form is a plain post, and a
-  destructive one asks first through `data-confirm`.
+  destructive one asks first through `data-confirm`. A redirect
+  answered to htmx is `204` with `HX-Redirect`, which htmx follows as
+  a whole page. `web/pages/templates.py` alone reads and writes the
+  headers of htmx, so another version of htmx touches one module of
+  Python (`test_code_rules.py`).
 - **Nothing from elsewhere**: no CDN. Every script, style, font and
   image the UI loads is kept under `static/`, as htmx and the icons
   are. A test checks the templates and the stylesheet for it.

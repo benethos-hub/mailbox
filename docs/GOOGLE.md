@@ -1,6 +1,6 @@
 # Connecting Gmail accounts
 
-> **Beta, version 0.6.1.** Usable with real accounts. A breaking change
+> **Beta, version 0.7.0.** Usable with real accounts. A breaking change
 > of the API or the configuration is announced in the changelog. Stored
 > data is carried forward by migrations.
 
@@ -166,7 +166,8 @@ when access is taken back under the Google account's security settings.
 ## How Gmail looks through the API
 
 - **Folders** are labels. Inbox, Sent, Drafts, Trash and Spam have their
-  roles, and so do the labels a person made. A label named `Work/2026`
+  roles. The labels a person made are folders without a role. A label
+  named `Work/2026`
   sits in `Work`. Renaming `Work` renames the labels inside it too.
 - **All Mail** is the folder `ALL_MAIL` with the role `all`: every
   message outside the trash and the spam. It is no label at Gmail.

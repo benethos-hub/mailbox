@@ -10,7 +10,7 @@
 [![Sponsor](https://raw.githubusercontent.com/benethos-hub/.github/main/profile/badges/sponsor.svg)](https://github.com/sponsors/BeneODev)
 [![PayPal](https://raw.githubusercontent.com/benethos-hub/.github/main/profile/badges/paypal.svg)](https://paypal.me/BeneODev)
 
-> **Beta, version 0.6.1.** Usable with real accounts. A breaking change
+> **Beta, version 0.7.0.** Usable with real accounts. A breaking change
 > of the API or the configuration is announced in the changelog. Stored
 > data is carried forward by migrations.
 
@@ -149,7 +149,7 @@ Everything the client raises is a `MailboxError`:
 | `ConfigurationError` | no token, or an address it refuses |
 | `ServiceUnavailableError` | the service cannot be reached |
 | `ServiceTimeoutError` | the service took the request but did not answer in time |
-| `ApiError` | the API answered with an error: `status`, `code`, `message`, and `retry_after`, the seconds a limit asks to wait, else `None`. An answer of another shape, or one that cannot be read, has the code `unexpected_response` |
+| `ApiError` | the API answered with an error: `status`, `code`, `message`, and `retry_after`, the seconds a limit asks to wait, else `None`. An answer of another shape has the code `unexpected_response`. So has one that cannot be read, with the status `502` |
 
 ## Inside
 

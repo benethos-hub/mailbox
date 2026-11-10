@@ -1,6 +1,6 @@
 """Time-based one-time passwords, RFC 6238, as every authenticator app
 reads them: HMAC-SHA1, six digits, a step of 30 seconds
-(docs/AUTHENTICATION.md 2).
+(docs/AUTHENTICATION.md 3).
 
 The standard library does all of it. A code is the HOTP of RFC 4226 for
 the number of steps since 1970. One step either way is taken as well, for

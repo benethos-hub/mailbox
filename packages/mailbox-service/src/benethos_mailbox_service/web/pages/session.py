@@ -11,7 +11,7 @@ whatever it did. A user holds a few at most: a new one ends the oldest.
 A user with a second factor gets no session for the password alone, but a
 pending sign-in with a cookie of its own. It reaches the code page and
 nothing else, and ends after a few minutes or a few wrong codes
-(docs/AUTHENTICATION.md 3).
+(docs/AUTHENTICATION.md 4).
 
 Forms carry a CSRF token of the session, checked on every request that
 changes something. The cookie is ``HttpOnly`` and ``SameSite=Strict`` too.
