@@ -65,6 +65,12 @@ class _NamedContext(ssl.SSLContext):
         return super().wrap_socket(sock, *args, **kwargs)
 
 
+def system_context() -> ssl.SSLContext:
+    """A client context as ``ssl.create_default_context`` makes it: the CAs
+    of the system, ``SSL_CERT_FILE`` included, and the default checks."""
+    return ssl.create_default_context()
+
+
 def tls_context(host: str) -> ssl.SSLContext:
     """A client context as ``ssl.create_default_context`` makes it, that
     checks the certificate of ``host`` even on a connection to an address."""
