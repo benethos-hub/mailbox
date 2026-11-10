@@ -129,7 +129,7 @@ def build_catalogue(*, transport: str = "stdio") -> MCPServer:
     for no rights."""
     held = _Held(running=Running(transport))
     server = _new_server()
-    _serve(server, held, list(TOOLS), catalogue=True)
+    _serve(server, held, list(TOOLS), wrap=_listed_only)
     return server
 
 
@@ -167,21 +167,21 @@ class _Held:
     running: Running = field(default_factory=Running)
 
 
+# What a tool runs as, from its function and the server it runs in.
+Wrap = Callable[[Callable[..., Any], "_Held"], Callable[..., Any]]
+
+
 def _serve(
-    server: MCPServer, held: _Held, chosen: list[Tool], *, catalogue: bool = False
+    server: MCPServer, held: _Held, chosen: list[Tool], *, wrap: Wrap | None = None
 ) -> None:
     """The tools ``chosen`` in place of those ``server`` served. Nothing
-    awaits in between, so no list request sees half of it. In a
-    ``catalogue`` each tool but those offered always refuses its call."""
+    awaits in between, so no list request sees half of it. Each tool but
+    those offered always runs as ``wrap`` makes it, by default logged
+    when it fails."""
     for name in held.shown:
         server.remove_tool(name)
     for tool in chosen:
-        if tool.always:
-            fn = _reported(tool.fn, held)
-        elif catalogue:
-            fn = _listed_only(tool.fn)
-        else:
-            fn = _logged(tool.fn, held)
+        fn = (_reported if tool.always else wrap or _logged)(tool.fn, held)
         server.add_tool(
             fn,
             title=tool.title,
@@ -349,9 +349,9 @@ def _logged(fn: Callable[..., Any], held: _Held) -> Callable[..., Any]:
     return run
 
 
-def _listed_only(fn: Callable[..., Any]) -> Callable[..., Any]:
+def _listed_only(fn: Callable[..., Any], held: _Held) -> Callable[..., Any]:
     """The tool as a catalogue lists it, with its own signature, refusing
-    every call."""
+    every call. It needs nothing of its server ``held``."""
 
     @functools.wraps(fn)
     async def run(*args: Any, **kwargs: Any) -> Any:
