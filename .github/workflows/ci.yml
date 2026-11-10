@@ -392,13 +392,31 @@ jobs:
       - name: Smoke test (the MCP server image lists every tool as a catalogue)
         run: |
           expected=$(jq length docs/mcp-tools.json)
-          listed=$(printf '%s\n' \
+          # stdin stays open until the answer is read. At the end of its
+          # input the server ends the session, as MCP's stdio shutdown
+          # has it, and drops a request still running.
+          coproc MCP {
+            timeout 60 docker run -i --rm -e MAILBOX_MCP_CATALOGUE=true \
+              benethos-mailbox-mcp:ci --transport stdio
+          }
+          pid=$MCP_PID
+          exec {from_server}<&"${MCP[0]}" {to_server}>&"${MCP[1]}"
+          eval "exec ${MCP[0]}<&- ${MCP[1]}>&-"
+          printf '%s\n' \
             '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"ci","version":"0"}}}' \
             '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
             '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' \
-            | timeout 60 docker run -i --rm -e MAILBOX_MCP_CATALOGUE=true \
-                benethos-mailbox-mcp:ci --transport stdio \
-            | jq -s '[.[] | select(.id == 2)][0].result.tools | length')
+            >&"$to_server"
+          listed=0
+          while IFS= read -r line <&"$from_server"; do
+            answer=$(jq -c 'select(.id == 2)' <<<"$line")
+            if [ -n "$answer" ]; then
+              listed=$(jq '.result.tools | length' <<<"$answer")
+              break
+            fi
+          done
+          exec {to_server}>&- {from_server}<&-
+          wait "$pid" || true
           echo "listed $listed tools, docs/mcp-tools.json names $expected"
           if [ "$listed" != "$expected" ]; then
             echo "::error::the catalogue lists $listed tools, docs/mcp-tools.json names $expected"
