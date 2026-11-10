@@ -14,7 +14,6 @@ from mcp.server.mcpserver.exceptions import ToolError as SdkToolError
 
 from benethos_mailbox_client import MailboxClient
 from benethos_mailbox_mcp import server
-from benethos_mailbox_mcp import tools as catalogue
 from benethos_mailbox_mcp.errors import (
     ApiError,
     ConfigurationError,
@@ -22,7 +21,14 @@ from benethos_mailbox_mcp.errors import (
     ServiceUnavailableError,
     ToolError,
 )
-from benethos_mailbox_mcp.tools import reading, writing
+from benethos_mailbox_mcp.tools import (
+    MAX_LIMIT,
+    TOOLS,
+    calling,
+    client,
+    reading,
+    writing,
+)
 
 from .rights_helpers import EVERY_OPERATION
 
@@ -103,7 +109,7 @@ async def test_a_tool_call_through_the_server(api: Callable) -> None:
     ("tool", "arguments", "field"),
     [
         ("search_messages", {"limit": 0}, "limit"),
-        ("search_messages", {"limit": catalogue.MAX_LIMIT + 1}, "limit"),
+        ("search_messages", {"limit": MAX_LIMIT + 1}, "limit"),
         ("whats_new", {"limit": reading.MAX_CHANGES + 1}, "limit"),
         (
             "get_message",
@@ -168,7 +174,7 @@ async def test_the_server_refuses_arguments_out_of_bounds(
 
 def test_a_tool_outside_a_server_has_no_client() -> None:
     with pytest.raises(RuntimeError, match="no REST client"):
-        catalogue.client()
+        client()
 
 
 async def test_each_server_has_a_client_of_its_own() -> None:
@@ -213,12 +219,12 @@ async def test_a_server_without_a_client_leaves_the_one_around(
     make_client: Callable,
 ) -> None:
     test = make_client(lambda _: httpx.Response(200, json=[]))
-    with catalogue.calling(None):
-        assert catalogue.client() is test
+    with calling(None):
+        assert client() is test
     own = MailboxClient(base_url="https://own.test", token="secret")
-    with catalogue.calling(own):
-        assert catalogue.client() is own
-    assert catalogue.client() is test
+    with calling(own):
+        assert client() is own
+    assert client() is test
     await own.aclose()
 
 
@@ -259,7 +265,7 @@ async def test_the_readme_lists_every_tool(readme: Path) -> None:
     tools = {tool.name for tool in every}
     listed = re.findall(r"^\| `(\w+)` \|", readme.read_text(encoding="utf-8"), re.M)
     assert set(listed) == tools
-    assert listed == [tool.fn.__name__ for tool in catalogue.TOOLS]
+    assert listed == [tool.fn.__name__ for tool in TOOLS]
 
 
 async def test_every_tool_carries_its_title_and_hints() -> None:

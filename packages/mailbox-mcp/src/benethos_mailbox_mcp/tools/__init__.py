@@ -2,7 +2,7 @@
 ``writing``, ``drafts`` and ``sending``, the kinds ``list_accounts``
 reports, ``accounts`` for ``list_accounts`` itself, and ``status`` for
 ``server_status``. Each module holds its tools and their part of
-``TOOLS``, the catalogue.
+``TOOLS``, every tool.
 """
 
 from __future__ import annotations

@@ -11,8 +11,8 @@ import pytest
 from benethos_mailbox_client import MailboxClient
 from benethos_mailbox_common.log import redact
 from benethos_mailbox_mcp import __version__, cli, server
-from benethos_mailbox_mcp import tools as catalogue
 from benethos_mailbox_mcp.errors import ToolError
+from benethos_mailbox_mcp.tools import client
 
 # What the token may do, as the start reads it.
 ALLOWED = {"get_message", "list_folders"}
@@ -105,7 +105,7 @@ def test_the_start_leaves_no_client_behind(monkeypatch: pytest.MonkeyPatch) -> N
     built: list[Callable[[], MailboxClient]] = []
 
     async def operations() -> set[str]:
-        made.append(catalogue.client())
+        made.append(client())
         return ALLOWED
 
     def build(
@@ -122,7 +122,7 @@ def test_the_start_leaves_no_client_behind(monkeypatch: pytest.MonkeyPatch) -> N
     cli.main([])
     assert made[0]._http.is_closed
     with pytest.raises(RuntimeError):
-        catalogue.client()
+        client()
     monkeypatch.delenv("MAILBOX_SERVICE_TOKEN")
     assert built[0]().base_url == "http://127.0.0.1:8080"
 
