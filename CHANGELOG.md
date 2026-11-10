@@ -38,6 +38,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 - On Python 3.11 and 3.12 the descriptions of the MCP tools carried the
   indentation of their source code, spaces a client sent to the model
   with every description. They are now the same on every Python version.
+- A page of the UI given a return address whose host cannot be read,
+  such as `next=//[`, answered with a plain error 500. It now goes to
+  the page's own default, as for any address outside the UI.
 
 ## [0.6.1] - 2026-11-07
 

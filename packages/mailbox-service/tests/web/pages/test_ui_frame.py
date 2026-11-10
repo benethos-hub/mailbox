@@ -108,6 +108,14 @@ def test_an_incomplete_form_is_a_page(app_client: TestClient) -> None:
     assert "Incomplete form" in answer.text
 
 
+def test_the_sign_in_page_takes_a_next_urlsplit_cannot_read(
+    app_client: TestClient,
+) -> None:
+    answer = app_client.get("/ui/login", params={"next": "//["})
+    assert answer.status_code == 200
+    assert 'name="password"' in answer.text
+
+
 def test_the_ui_is_not_in_the_contract(client: TestClient) -> None:
     assert not [p for p in client.get("/openapi.json").json()["paths"] if "/ui" in p]
 
@@ -135,6 +143,9 @@ def test_the_ui_is_not_in_the_contract(client: TestClient) -> None:
         ("/ui/\t../\t/evil.example/", "/ui/fallback"),
         # Dots that name no step up stay.
         ("/ui/accounts/a..b/mail?folder=..", "/ui/accounts/a..b/mail?folder=.."),
+        # Hosts urlsplit cannot read.
+        ("//[", "/ui/fallback"),
+        ("//evil＃.com/ui", "/ui/fallback"),
     ],
 )
 def test_only_local_paths_after_a_form(value: str | None, expected: str) -> None:
