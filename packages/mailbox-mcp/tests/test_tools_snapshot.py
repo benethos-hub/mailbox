@@ -10,7 +10,7 @@ import anyio
 import pytest
 
 from benethos_mailbox_mcp import cli, server
-from benethos_mailbox_mcp import tools as catalogue
+from benethos_mailbox_mcp.tools import TOOLS
 
 COMMITTED = Path(__file__).resolve().parents[3] / "docs" / "mcp-tools.json"
 
@@ -24,9 +24,7 @@ async def test_the_committed_tools_are_the_codes() -> None:
 
 async def test_it_holds_every_tool_with_its_hints() -> None:
     listed = json.loads(await server.tools_json())
-    assert [tool["name"] for tool in listed] == [
-        tool.fn.__name__ for tool in catalogue.TOOLS
-    ]
+    assert [tool["name"] for tool in listed] == [tool.fn.__name__ for tool in TOOLS]
     assert all("readOnlyHint" in tool["annotations"] for tool in listed)
 
 

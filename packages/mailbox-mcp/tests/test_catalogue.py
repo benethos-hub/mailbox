@@ -11,9 +11,9 @@ import pytest
 from mcp.server.mcpserver.exceptions import ToolError
 
 from benethos_mailbox_mcp import cli, server
-from benethos_mailbox_mcp import tools as catalogue
+from benethos_mailbox_mcp.tools import TOOLS
 
-EVERY_OPERATION = {need for tool in catalogue.TOOLS for need in tool.needs}
+from .rights_helpers import EVERY_OPERATION
 
 
 async def test_it_lists_every_tool_as_a_server_with_every_right() -> None:
@@ -21,9 +21,7 @@ async def test_it_lists_every_tool_as_a_server_with_every_right() -> None:
     token may do everything."""
     listed = await server.build_catalogue().list_tools()
     full = await server.build_server(EVERY_OPERATION).list_tools()
-    assert {tool.name for tool in listed} == {
-        tool.fn.__name__ for tool in catalogue.TOOLS
-    }
+    assert {tool.name for tool in listed} == {tool.fn.__name__ for tool in TOOLS}
     assert [tool.model_dump() for tool in listed] == [
         tool.model_dump() for tool in full
     ]

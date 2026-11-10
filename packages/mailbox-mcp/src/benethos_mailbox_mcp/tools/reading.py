@@ -16,6 +16,7 @@ from ..errors import ToolError
 from ..models import Message
 from .base import (
     AccountId,
+    AttachmentId,
     Cursor,
     Limit,
     MessageId,
@@ -54,14 +55,18 @@ def _one_or_several(account_id: str | None, account_ids: list[str] | None) -> No
         raise ToolError("account_id or account_ids, not both")
 
 
+# The longest filter of the search the API takes.
+MAX_FILTER = 200
+
+
 def _filter(description: str) -> Any:
     """A filter of the search, held to what the API takes: one line of
-    at most 200 characters."""
+    at most ``MAX_FILTER`` characters."""
     return Field(
         min_length=1,
-        max_length=200,
+        max_length=MAX_FILTER,
         pattern=r"^[^\x00-\x1f\x7f]*$",
-        description=f"{description}. One line, at most 200 characters",
+        description=f"{description}. One line, at most {MAX_FILTER} characters",
     )
 
 
@@ -267,7 +272,7 @@ TEXT_TYPES = frozenset(
 async def get_attachment(
     account_id: AccountId,
     message_id: MessageId,
-    attachment_id: Annotated[str, Field(description="The id get_message lists")],
+    attachment_id: AttachmentId,
     first_page: Annotated[int, Field(ge=1, description="PDF: first page")] = 1,
     pages: Annotated[int, Field(ge=1, le=MAX_PAGES, description="PDF: pages")] = 3,
     max_chars: Annotated[
@@ -347,7 +352,7 @@ def _is_text(kind: str) -> bool:
 async def share_attachment(
     account_id: AccountId,
     message_id: MessageId,
-    attachment_id: Annotated[str, Field(description="The id get_message lists")],
+    attachment_id: AttachmentId,
     expires_in: Annotated[
         int | None,
         Field(

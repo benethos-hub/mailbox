@@ -11,20 +11,18 @@ from __future__ import annotations
 
 import re
 
-from .publish_helpers import ROOT
+from .repository_helpers import ORG, ROOT, WORKFLOWS, job_of, read
 
-WORKFLOWS = ROOT / ".github" / "workflows"
-CI = (WORKFLOWS / "ci.yml").read_text("utf-8")
-WEEKLY = (WORKFLOWS / "codeql.yml").read_text("utf-8")
+CI = read("ci.yml")
+WEEKLY = read("codeql.yml")
 CALL = "uses: benethos-hub/.github/.github/workflows/codeql.yml@main"
-ORG = "benethos-hub/.github/"
 # The scanners of ci.yml that upload to code scanning: codeql here and
 # dockerfile-lint, whose test is test_dockerfile_lint.py.
 SCANNERS = 2
 
 
 def _job(workflow: str, name: str) -> str:
-    return workflow.split(f"\n  {name}:\n", 1)[1].split("\n\n  ", 1)[0].rstrip()
+    return job_of(workflow, name).rstrip()
 
 
 def test_the_ci_job_calls_the_organisations_workflow_for_all_our_code() -> None:

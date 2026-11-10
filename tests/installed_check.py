@@ -100,12 +100,19 @@ def scratch_folder() -> Iterator[Path]:
                 time.sleep(0.5)
 
 
-def service_env(scratch: Path, port: int) -> dict[str, str]:
-    """A service of this script: its data in ``scratch``, the master key in
-    the environment once ``keys generate`` made it, no background sync.
-    No ``MAILBOX_SERVICE_*`` of this machine reaches it."""
+def empty_settings(scratch: Path) -> Path:
+    """An empty settings file in ``scratch``. Named, it replaces the search
+    for one, so no settings file of this machine is read."""
     settings = scratch / "empty.env"
     settings.write_text("", encoding="utf-8")
+    return settings
+
+
+def service_env(scratch: Path, settings: Path, port: int) -> dict[str, str]:
+    """A service of this script: its data in ``scratch``, its settings file
+    ``settings``, the master key in the environment once ``keys generate``
+    made it, no background sync. No ``MAILBOX_SERVICE_*`` of this machine
+    reaches it."""
     machine = {k: v for k, v in os.environ.items() if not k.startswith(PREFIX)}
     return {
         **machine,
@@ -169,7 +176,7 @@ def check_service() -> None:
     version = importlib.metadata.version(SERVICE)
     with scratch_folder() as scratch:
         port = free_port()
-        env = service_env(scratch, port)
+        env = service_env(scratch, empty_settings(scratch), port)
         env["MAILBOX_SERVICE_MASTER_KEY"] = command_output(
             env, scratch, "keys", "generate"
         )
@@ -263,8 +270,7 @@ async def converse(scratch: Path, url: str) -> None:
     from mcp.client.stdio import get_default_environment, stdio_client
 
     version = importlib.metadata.version(MCP)
-    settings = scratch / "empty.env"
-    settings.write_text("", encoding="utf-8")
+    settings = empty_settings(scratch)
     parameters = StdioServerParameters(
         command=program(MCP),
         cwd=str(scratch),

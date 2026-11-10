@@ -32,6 +32,7 @@ MessageId = Annotated[
         "whats_new or get_thread answers"
     ),
 ]
+AttachmentId = Annotated[str, Field(description="The id get_message lists")]
 DraftId = Annotated[
     str,
     Field(

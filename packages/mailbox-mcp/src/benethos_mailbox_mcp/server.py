@@ -29,6 +29,7 @@ from benethos_mailbox_common.values import text
 
 from . import __version__, render
 from .client import Connect, MailboxClient
+from .config import APP, variable
 from .errors import (
     ApiError,
     ConfigurationError,
@@ -82,18 +83,14 @@ def build_server(
             held.client = made
             tasks.start_soon(rights.look)
             if every > 0:
-                tasks.start_soon(rights.follow, every)
+                tasks.start_soon(rights.follow)
             try:
                 yield
             finally:
                 tasks.cancel_scope.cancel()
                 held.client = None
 
-    server = MCPServer(
-        name="benethos-mailbox-mcp",
-        title="mailbox-mcp",
-        version=__version__,
-        instructions=_INSTRUCTIONS,
+    server = _new_server(
         lifespan=lifespan,
         middleware=[listeners.middleware],
         subscriptions=listeners.bus,
@@ -103,10 +100,22 @@ def build_server(
     return server
 
 
+def _new_server(**extra: Any) -> MCPServer:
+    """The MCP library's server under this server's name, version and
+    instructions, with ``extra`` for it."""
+    return MCPServer(
+        name=APP,
+        title="mailbox-mcp",
+        version=__version__,
+        instructions=_INSTRUCTIONS,
+        **extra,
+    )
+
+
 CATALOGUE = (
-    "This server only lists its tools (MAILBOX_MCP_CATALOGUE) and calls "
-    "none. Start it with MAILBOX_SERVICE_TOKEN and without "
-    "MAILBOX_MCP_CATALOGUE to use them."
+    f"This server only lists its tools ({variable('catalogue')}) and calls "
+    f"none. Start it with {variable('service_token')} and without "
+    f"{variable('catalogue')} to use them."
 )
 
 
@@ -116,12 +125,7 @@ def build_catalogue(*, transport: str = "stdio") -> MCPServer:
     service or a token. It reaches no service: it has no client and asks
     for no rights."""
     held = _Held(running=Running(transport))
-    server = MCPServer(
-        name="benethos-mailbox-mcp",
-        title="mailbox-mcp",
-        version=__version__,
-        instructions=_INSTRUCTIONS,
-    )
+    server = _new_server()
     _serve(server, held, list(TOOLS), catalogue=True)
     return server
 
@@ -216,10 +220,10 @@ class _Rights:
         self._trouble: str | None = None
         self._asked_at: float | None = None
 
-    async def follow(self, every: float) -> None:
+    async def follow(self) -> None:
         """Asks every ``every`` seconds, until the token is refused."""
         while not self.refused:
-            await anyio.sleep(every)
+            await anyio.sleep(self.every)
             await self.ask()
 
     async def after(self, exc: MailboxError) -> None:

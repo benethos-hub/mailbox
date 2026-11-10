@@ -20,9 +20,11 @@ from mcp.server.mcpserver import MCPServer
 from mcp.server.transport_security import TransportSecuritySettings
 from starlette.types import ASGIApp, Receive, Scope, Send
 
+from .config import variable
+
 logger = logging.getLogger(__name__)
 
-ENV_VAR = "MAILBOX_MCP_BEARER_TOKEN"
+ENV_VAR = variable("bearer_token")
 
 # The error envelope of the REST API.
 _REFUSED = b'{"error":{"code":"unauthorized","message":"bearer token required"}}'

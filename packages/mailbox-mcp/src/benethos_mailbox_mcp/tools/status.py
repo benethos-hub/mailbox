@@ -17,9 +17,10 @@ from typing import Annotated
 from pydantic import Field
 
 from .. import __version__
+from ..config import APP
 from .base import Tool, ToolResult, result
 
-NAME = "benethos-mailbox-mcp"
+NAME = APP
 UNKNOWN = "unknown"
 # Two spaces per level below ``details:``.
 _INDENT = "  "

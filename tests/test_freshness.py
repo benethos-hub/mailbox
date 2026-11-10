@@ -14,10 +14,10 @@ import re
 import pytest
 
 from . import installed_check
-from .publish_helpers import PACKAGES, ROOT, project_of
+from .publish_helpers import PACKAGES, project_of
+from .repository_helpers import ORG, ROOT, job_of, read
 
-WORKFLOW = (ROOT / ".github" / "workflows" / "freshness.yml").read_text("utf-8")
-ORG = "benethos-hub/.github/"
+WORKFLOW = read("freshness.yml")
 
 
 def _step(name: str) -> str:
@@ -25,8 +25,7 @@ def _step(name: str) -> str:
 
 
 def _job(name: str) -> str:
-    after = WORKFLOW.split(f"\n  {name}:\n", 1)[1]
-    return re.split(r"\n\n  (?! )", after, maxsplit=1)[0]
+    return job_of(WORKFLOW, name)
 
 
 def test_it_runs_on_a_schedule_after_publish_and_by_hand_only() -> None:
@@ -57,7 +56,7 @@ def test_each_job_runs_after_a_publish_of_this_repository_only(job: str) -> None
 
 def test_the_run_after_publish_names_the_workflow_as_it_reads() -> None:
     """A trigger with another name never fires, and nothing says so."""
-    publish = (ROOT / ".github" / "workflows" / "publish.yml").read_text("utf-8")
+    publish = read("publish.yml")
     name = publish.split("\n", 1)[0].removeprefix("name: ")
     assert f"workflows: [{name}]\n    types: [completed]\n" in WORKFLOW
 
