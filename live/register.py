@@ -19,14 +19,11 @@ from __future__ import annotations
 
 import argparse
 import os
-import shutil
 import sys
-import tempfile
 
 from checks.accounts import accounts, read_env, register
-from checks.admin import bootstrap
-from checks.processes import free_port, service_env, start_service, stop
 from checks.run import Run
+from checks.service import throwaway_service
 
 from benethos_mailbox_client import ApiError, SyncMailboxClient
 
@@ -54,16 +51,8 @@ def main() -> int:
 
 def with_own_service(count: int) -> int:
     """The checks against a service of its own, removed afterwards."""
-    data_dir = tempfile.mkdtemp(prefix="mailbox-register-")
-    port = free_port()
-    url = f"http://127.0.0.1:{port}"
-    service = service_env(data_dir, port)
-    process = start_service(service, url)
-    try:
-        return check_all(url, bootstrap(service, url).token, count)
-    finally:
-        stop(process)
-        shutil.rmtree(data_dir, ignore_errors=True)
+    with throwaway_service("mailbox-register-") as own:
+        return check_all(own.url, own.admin_user.token, count)
 
 
 def check_all(url: str, token: str, count: int) -> int:
