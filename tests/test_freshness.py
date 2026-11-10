@@ -38,6 +38,23 @@ def test_it_runs_on_a_schedule_after_publish_and_by_hand_only() -> None:
     assert "pull_request" not in on
 
 
+# A run of Publish here, by a release or by hand. A workflow of that name
+# in a fork's pull request completes as well and would start a run.
+OURS = (
+    "github.event_name != 'workflow_run' || "
+    "(github.event.workflow_run.head_repository.full_name == github.repository "
+    "&& (github.event.workflow_run.event == 'release' "
+    "|| github.event.workflow_run.event == 'workflow_dispatch'))"
+)
+
+
+@pytest.mark.parametrize("job", ["newest", "npm-outdated", "npm-audit", "freshness"])
+def test_each_job_runs_after_a_publish_of_this_repository_only(job: str) -> None:
+    found = re.search(r"^    if: >-\n((?:      .*\n)+)", _job(job) + "\n", re.M)
+    assert found is not None, f"{job} has no condition"
+    assert OURS in " ".join(found.group(1).split())
+
+
 def test_the_run_after_publish_names_the_workflow_as_it_reads() -> None:
     """A trigger with another name never fires, and nothing says so."""
     publish = (ROOT / ".github" / "workflows" / "publish.yml").read_text("utf-8")
@@ -66,7 +83,8 @@ def test_the_report_is_the_organisations_and_knows_the_job() -> None:
     assert f"uses: {ORG}.github/workflows/freshness.yml@main" in job
     assert "needs: [newest, npm-outdated, npm-audit]" in job
     assert "extra-jobs: newest npm-outdated npm-audit" in job
-    assert "if: ${{ !cancelled() }}" in job, "a dead job is a line in the report"
+    dead = "if: >-\n      !cancelled() && ("
+    assert dead in job, "a dead job is a line in the report"
 
 
 @pytest.mark.parametrize(
