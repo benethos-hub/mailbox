@@ -326,7 +326,8 @@ packages/mailbox-service/
       mail/             # messages in RFC 5322, whatever protocol carries
                         #   them. __init__.py offers the modules
         compose.py      # outgoing messages as bytes (email)
-        parse.py        # incoming bytes parsed (imap-tools' mail parser)
+        parse.py        # incoming bytes parsed (imap-tools' mail parser),
+                        #   a block of header lines alone (email)
         convert.py      # a parsed message to Message / MessageSummary
         fields.py       # one header field: a Message-ID as one token,
                         #   an address in Unicode

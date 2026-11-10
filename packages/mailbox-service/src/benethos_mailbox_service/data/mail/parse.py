@@ -14,6 +14,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from email.header import Header
+from email.parser import BytesHeaderParser
 from email.utils import formataddr, getaddresses, parsedate_to_datetime
 from functools import cached_property
 from typing import Any
@@ -26,6 +27,7 @@ from .fields import (
     ThreadHeaders,
     message_id,
     message_ids,
+    thread_headers,
     unicode_address,
 )
 
@@ -222,6 +224,12 @@ def _is_text_body(content_type: str, filename: str | None, disposition: str) -> 
 
 # Headers that hold addresses: a name in them is encoded on its own.
 _ADDRESS_HEADERS = frozenset({"from", "sender", "to", "cc", "bcc", "reply-to"})
+
+
+def thread_headers_of(block: bytes) -> ThreadHeaders:
+    """The thread headers of a block of header lines alone, such as an IMAP
+    server answers for ``BODY[HEADER.FIELDS (...)]``."""
+    return thread_headers(BytesHeaderParser().parsebytes(block).get)
 
 
 def from_headers(headers: Iterable[tuple[str, str]]) -> ParsedMessage:

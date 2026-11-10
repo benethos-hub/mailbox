@@ -45,6 +45,8 @@ LIBRARY_HOMES = {
     "sqlite3": f"{PACKAGE}.data.storage.sqlite",
     "imapclient": f"{PACKAGE}.data.protocols.imap",
     "imap_tools": f"{PACKAGE}.data.mail.parse",
+    # Messages in RFC 5322, whatever protocol carries them.
+    "email": f"{PACKAGE}.data.mail",
     "smtplib": f"{PACKAGE}.data.protocols.smtp",
     # TLS contexts, for every protocol that connects.
     "ssl": f"{PACKAGE}.data.protocols.transport",

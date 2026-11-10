@@ -8,11 +8,10 @@ import re
 from collections.abc import Callable
 from contextlib import AbstractContextManager, suppress
 from datetime import datetime
-from email.parser import BytesHeaderParser
 from typing import Any
 
 from ....errors import ProviderError, ProviderUnavailableError
-from ...mail import fields, parse
+from ...mail import parse
 from .. import transport
 from ..transport import names, text
 
@@ -145,10 +144,6 @@ def with_code(client: Any, code: str, command: Callable[[], Any]) -> list[Any]:
     answer = command()
     found: list[Any] = codes.pop(code, None) or [answer]
     return found
-
-
-def thread_headers(header_block: bytes) -> fields.ThreadHeaders:
-    return fields.thread_headers(BytesHeaderParser().parsebytes(header_block).get)
 
 
 def quietly(command: Callable[[], Any]) -> None:
