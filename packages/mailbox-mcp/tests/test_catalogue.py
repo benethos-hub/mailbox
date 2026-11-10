@@ -13,7 +13,7 @@ from mcp.server.mcpserver.exceptions import ToolError
 from benethos_mailbox_mcp import cli, server
 from benethos_mailbox_mcp import tools as catalogue
 
-EVERY_OPERATION = {need for tool in catalogue.TOOLS for need in tool.needs}
+from .rights_helpers import EVERY_OPERATION
 
 
 async def test_it_lists_every_tool_as_a_server_with_every_right() -> None:

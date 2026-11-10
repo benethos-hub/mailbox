@@ -24,6 +24,8 @@ from benethos_mailbox_mcp.errors import (
 )
 from benethos_mailbox_mcp.tools import reading, writing
 
+from .rights_helpers import EVERY_OPERATION
+
 READ = ["get_message", "list_all_messages", "list_folders", "list_messages"]
 ME = {
     "user_id": "usr_1",
@@ -95,9 +97,6 @@ async def test_a_tool_call_through_the_server(api: Callable) -> None:
         "list_folders", {"account_id": "acc_1"}
     )
     assert "Inbox" in json.dumps(result, default=str)
-
-
-EVERY_OPERATION = {need for tool in catalogue.TOOLS for need in tool.needs}
 
 
 @pytest.mark.parametrize(
@@ -256,16 +255,15 @@ ROOT_README = Path(__file__).resolve().parents[3] / "README.md"
 async def test_the_readme_lists_every_tool(readme: Path) -> None:
     """The tool table of the README, which the service's UI repeats, in
     the order of TOOLS, which the bundle's manifest follows too."""
-    every = {need for tool in catalogue.TOOLS for need in tool.needs}
-    tools = {tool.name for tool in await server.build_server(every).list_tools()}
+    every = await server.build_server(EVERY_OPERATION).list_tools()
+    tools = {tool.name for tool in every}
     listed = re.findall(r"^\| `(\w+)` \|", readme.read_text(encoding="utf-8"), re.M)
     assert set(listed) == tools
     assert listed == [tool.fn.__name__ for tool in catalogue.TOOLS]
 
 
 async def test_every_tool_carries_its_title_and_hints() -> None:
-    every = {need for tool in catalogue.TOOLS for need in tool.needs}
-    tools = await server.build_server(every).list_tools()
+    tools = await server.build_server(EVERY_OPERATION).list_tools()
     assert {tool.name for tool in tools} == set(HINTS)
     for tool in tools:
         hints = tool.annotations

@@ -17,8 +17,11 @@ from mcp.shared.memory import create_client_server_memory_streams
 
 from benethos_mailbox_client import MailboxClient
 from benethos_mailbox_mcp import server
+from benethos_mailbox_mcp.tools import TOOLS
 
 LIST_CHANGED = "notifications/tools/list_changed"
+# Every operation a tool needs: a token that may do all of them.
+EVERY_OPERATION = {need for tool in TOOLS for need in tool.needs}
 READ = ["get_message", "get_attachment", "list_all_messages", "list_folders"]
 ME: dict[str, Any] = {
     "user_id": "usr_1",
