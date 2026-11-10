@@ -50,6 +50,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   an `ApiError` with the code `unexpected_response`. The MCP server,
   which asks the service what its token may do while it runs, ended on
   such an answer. It now keeps its tools and asks again.
+- The MCP tool `get_thread` said the bodies together are cut at
+  `max_chars`. Each mail keeps at least 200 characters, so twenty mails
+  can bring more. The description now says so. What the tool does is
+  unchanged.
 
 ## [0.6.1] - 2026-11-07
 
