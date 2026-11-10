@@ -205,8 +205,9 @@ containers/               # images/ (one folder per image), and one folder
 .github/workflows/        # ci.yml: the organisation's workflows from
                           #   benethos-hub/.github (lint, tests, audit,
                           #   lowest versions per package, coverage
-                          #   badge, CodeQL, hadolint), fresh install,
-                          #   images,
+                          #   badge, CodeQL, hadolint, brand assets),
+                          #   fresh install, images, the UI in real
+                          #   browsers,
                           #   publish.yml: on a release, through the
                           #   organisation's actions, the four packages
                           #   to PyPI, in the order of their dependencies,
