@@ -29,6 +29,7 @@ from benethos_mailbox_common.values import text
 
 from . import __version__, render
 from .client import Connect, MailboxClient
+from .config import APP
 from .errors import (
     ApiError,
     ConfigurationError,
@@ -89,11 +90,7 @@ def build_server(
                 tasks.cancel_scope.cancel()
                 held.client = None
 
-    server = MCPServer(
-        name="benethos-mailbox-mcp",
-        title="mailbox-mcp",
-        version=__version__,
-        instructions=_INSTRUCTIONS,
+    server = _new_server(
         lifespan=lifespan,
         middleware=[listeners.middleware],
         subscriptions=listeners.bus,
@@ -101,6 +98,18 @@ def build_server(
     rights = held.rights = _Rights(server, held, listeners, every)
     _serve(server, held, _chosen(set(operations)))
     return server
+
+
+def _new_server(**extra: Any) -> MCPServer:
+    """The MCP library's server under this server's name, version and
+    instructions, with ``extra`` for it."""
+    return MCPServer(
+        name=APP,
+        title="mailbox-mcp",
+        version=__version__,
+        instructions=_INSTRUCTIONS,
+        **extra,
+    )
 
 
 CATALOGUE = (
@@ -116,12 +125,7 @@ def build_catalogue(*, transport: str = "stdio") -> MCPServer:
     service or a token. It reaches no service: it has no client and asks
     for no rights."""
     held = _Held(running=Running(transport))
-    server = MCPServer(
-        name="benethos-mailbox-mcp",
-        title="mailbox-mcp",
-        version=__version__,
-        instructions=_INSTRUCTIONS,
-    )
+    server = _new_server()
     _serve(server, held, list(TOOLS), catalogue=True)
     return server
 

@@ -41,7 +41,7 @@ def _build_parser() -> argparse.ArgumentParser:
     environment, which win over the settings file, which wins over the
     defaults of ``config.Settings``. The bearer token has no option: an
     argument shows in the process list."""
-    parser = argparse.ArgumentParser(prog="benethos-mailbox-mcp")
+    parser = argparse.ArgumentParser(prog=config.APP)
     parser.add_argument("--version", action="version", version=__version__)
     parser.add_argument(
         "--list-tools",
@@ -158,7 +158,7 @@ def _catalogue(
         return None
     if environment.token:
         sys.exit(
-            "benethos-mailbox-mcp: MAILBOX_MCP_CATALOGUE lists the tools "
+            f"{config.APP}: MAILBOX_MCP_CATALOGUE lists the tools "
             "without a service. Unset MAILBOX_SERVICE_TOKEN, or unset "
             "MAILBOX_MCP_CATALOGUE to use the tools."
         )
@@ -178,7 +178,7 @@ def _built(settings: config.Settings, environment: Environment) -> server.MCPSer
     try:
         operations = anyio.run(_at_start, connect)
     except (MailboxError, ToolError) as exc:
-        sys.exit(f"benethos-mailbox-mcp: {exc}")
+        sys.exit(f"{config.APP}: {exc}")
     built = server.build_server(
         operations,
         connect,
@@ -199,7 +199,7 @@ def main(argv: list[str] | None = None) -> None:
     try:
         found = config.settings_file(args.env_file)
     except FileNotFoundError as exc:
-        sys.exit(f"benethos-mailbox-mcp: {exc}")
+        sys.exit(f"{config.APP}: {exc}")
     settings = _settings(parser, args, found)
     configure_logging(settings.log_level)
     if found is not None:
@@ -209,7 +209,7 @@ def main(argv: list[str] | None = None) -> None:
     token = bearer.get_secret_value() if bearer else None
     refused = _unguarded(settings, token)
     if refused:
-        sys.exit(f"benethos-mailbox-mcp: {refused}")
+        sys.exit(f"{config.APP}: {refused}")
     # No line names either token. Noted, a slip still writes ***.
     for secret in (environment.token, token):
         if secret:
