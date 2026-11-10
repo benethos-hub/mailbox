@@ -546,12 +546,16 @@ packages/mailbox-mcp/
     __main__.py         # python -m, calls cli.py
     cli.py              # the command line: options, MAILBOX_MCP_*, the
                         #   log in the lines of mailbox-common, its
-                        #   tokens noted for masking, the start over
-                        #   stdio or HTTP
+                        #   tokens noted for masking, --list-tools, the
+                        #   catalogue or the start over stdio or HTTP,
+                        #   HTTP on an open address only with its guards
     server.py           # build_server: the MCP library's server with
                         #   the tools the token's rights allow, each
                         #   logged when it fails, asked again while
-                        #   it runs
+                        #   it runs. build_catalogue: every tool, none
+                        #   run but server_status (CATALOGUE).
+                        #   tools_json: the tools as a client lists
+                        #   them, docs/mcp-tools.json
     listeners.py        # the clients told that the tool list changed:
                         #   their connections, the announcement, the
                         #   bus of listen streams
@@ -560,9 +564,12 @@ packages/mailbox-mcp/
                         #   and what the kinds share
       base.py           # Tool, reads()/changes(), result(): text and
                         #   images, client(): the one of the server the
-                        #   tool runs in, made in its lifespan
+                        #   tool runs in, made in its lifespan, the
+                        #   arguments every kind takes (AccountId,
+                        #   MessageId, DraftId, FolderId, Limit, Cursor)
       compose.py        # what drafts and sending share: addresses, the
-                        #   message a tool's arguments describe
+                        #   message a tool's arguments describe, and
+                        #   those arguments (Addresses ... AttachFrom)
       accounts.py       # list_accounts, which reports the kinds
       reading.py        # folders, search, a message, what is new,
                         #   attachments, a link to one for another
@@ -584,8 +591,9 @@ packages/mailbox-mcp/
                         #   (reason), what one tells of the token's
                         #   rights
     config.py           # Settings (MAILBOX_MCP_* and the service's
-                        #   address and token), the optional .env and
-                        #   the folder of the system, from mailbox-common
+                        #   address and token, catalogue), the optional
+                        #   .env and the folder of the system, from
+                        #   mailbox-common
 ```
 
 The modules stand in lines, each importing only lines below:
@@ -604,7 +612,8 @@ these lines, the tools behind their package, and one home per library.
 **A tool of the MCP server** is a function in `tools/<kind>.py` with
 its line in that module's `TOOLS`: its title, the rights it needs, and
 whether it is read-only, destructive or idempotent. The server
-registers it only for a token that holds one of those rights. The
+registers it only for a token that holds one of those rights, and the
+catalogue registers every tool. The
 function is thin: it names what it wants in its own terms, the client
 package makes the request, and `render.py` shapes what the model sees, with
 mail content inside the foreign-content marker. A tool never spells
@@ -612,8 +621,10 @@ out a path, a query name or a field of the API, and never speaks HTTP
 itself. Its docstring is the description the model reads. An argument
 may carry a description of its own and its bounds, in `Annotated` with
 `Field`. The server checks the bounds before the tool runs. Its test is
-in `tests/tools/`, against `httpx.MockTransport`, and the README's table
-names it.
+in `tests/tools/`, against `httpx.MockTransport`. The tables of the
+package's README and of the root README name it, and
+`docs/mcp-tools.json` holds it as a client lists it
+(`test_tools_snapshot.py`).
 
 What the service and the MCP server both need is a package of its own,
 `mailbox-common`, since the MCP server cannot see the service. It sees
@@ -699,7 +710,7 @@ service or the MCP server defines one of its functions again.
 | a wire protocol | a module in `data/protocols/`, one library, in our types. The adapters compose it |
 | an autodiscovery source | a module in `data/discovery/`, behind `DiscoverySource`, put in order in `sources.py` |
 | a command of the CLI | a module in `cli/` with `add` and `run`, its line in `COMMANDS`. It builds the service through `assembly/` |
-| a tool of the MCP server | `tools/<kind>.py` of the MCP package with its line in `TOOLS` there, its request in the client package, its answer through `render.py` (section 3) |
+| a tool of the MCP server | `tools/<kind>.py` of the MCP package with its line in `TOOLS` there, its request in the client package, its answer through `render.py` (section 3), then `docs/mcp-tools.json` is regenerated |
 | a request of the Python client | the module of its resource in `endpoints/` of the client package, and one line on each client (section 3) |
 | a library | one wrapper module, in the layer that needs it, and nowhere else. The wrapper maps into our types and our errors |
 | an error | `errors.py`, a subclass of `MailboxServiceError`. `web/errors.py` gives it a status |
@@ -922,6 +933,12 @@ imapclient boundary), never by patching deep inside a library.
   `<subject>_helpers.py`. The clocks a test moves itself are in
   `clocks.py`. No test module imports another, which
   `test_code_rules.py` checks in all four packages.
+- The UI in real browsers is a suite apart,
+  `packages/mailbox-service/tests/browser/`, not beside the code of
+  `web/pages/` it tests: it needs the dependency group `browser`,
+  Playwright's browsers and fixtures of its own in its `conftest.py`,
+  and it is collected only with `MAILBOX_BROWSER_TESTS=1`
+  (CLAUDE.md, Verifying).
 - What checks the repository across the four packages, the publishing,
   the workflows, the READMEs, the trees of section 3, the boundaries and
   the JavaScript the UI ships, is in `tests/` at its root. Beside them

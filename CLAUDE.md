@@ -205,8 +205,9 @@ containers/               # images/ (one folder per image), and one folder
 .github/workflows/        # ci.yml: the organisation's workflows from
                           #   benethos-hub/.github (lint, tests, audit,
                           #   lowest versions per package, coverage
-                          #   badge, CodeQL, hadolint), fresh install,
-                          #   images,
+                          #   badge, CodeQL, hadolint, brand assets),
+                          #   fresh install, images, the UI in real
+                          #   browsers,
                           #   publish.yml: on a release, through the
                           #   organisation's actions, the four packages
                           #   to PyPI, in the order of their dependencies,
@@ -370,12 +371,13 @@ test accounts for golden rule 1.
 
 - Commit only when the user asks. Clear, descriptive messages.
 - `main` is protected: no direct push, no force push, a linear history,
-  and every CI job but `coverage-badge`, `codeql` and `dockerfile-lint` must
-  pass. Most are the organisation's reusable workflows, named
+  and every CI job but `coverage-badge`, `codeql`, `dockerfile-lint` and
+  `browser` must pass. Most are the organisation's reusable workflows, named
   `<job> / <name>`, such as `test / Python 3.15`, `lowest-mcp / Python 3.11`,
   `audit / Dependency audit` and `brand / Brand assets`. `codeql` and
   `dockerfile-lint` file what they find under Security, Code scanning, and a
-  merge does not wait for them. Every change reaches `main` as a pull request.
+  merge does not wait for them, nor for `browser`, the UI in real browsers.
+  Every change reaches `main` as a pull request.
 - The flow: a branch per work stream, created before the first edit.
   Commit, push the branch, open the pull request with `gh pr create`.
   The user merges it on GitHub as a squash merge. Afterwards pull `main`

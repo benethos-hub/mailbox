@@ -320,8 +320,12 @@ Its own process, its own log on stderr, its own rules, the same spirit:
   over HTTP its address and whether a bearer token is required, the
   service's URL and which tools were registered, and before those a
   `WARNING` per account that reads mail and sends anywhere. A
-  `WARNING` over HTTP without a bearer token, and over stdio where one
-  is set and ignored.
+  `WARNING` over HTTP on a loopback address without a bearer token, and
+  over stdio where one is set and ignored.
+- As a catalogue (`MAILBOX_MCP_CATALOGUE`), one `WARNING` at start that
+  it lists every tool and runs none but `server_status`, without a
+  service, instead of the lines above. A call it refuses writes
+  nothing.
 - `INFO` when the tools changed while it runs: which came and went, and
   how many clients were told, with the same `WARNING`s after it.
   `WARNING` once when the service could not be asked, `INFO` when it

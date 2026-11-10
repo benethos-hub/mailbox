@@ -336,7 +336,8 @@ written as the service writes its own: in colour on a terminal unless
 it read, the transport, the service's address and the tools it serves,
 and warns where its token may read mail and send it to any address. Over
 HTTP on a loopback bind without `MAILBOX_MCP_BEARER_TOKEN` it warns as
-well. A tool that
+well. As a catalogue it writes one warning at start instead, that it
+lists every tool and runs none, and nothing for a call it refuses. A tool that
 fails writes a warning with the tool's name and the error's code, or
 why it failed where there is none, such as a PDF that took too long,
 never its arguments. `httpx`, `httpcore` and the MCP library write from

@@ -587,9 +587,11 @@ receiver reports nothing. Built last, if at all.
   are. A test checks the templates and the stylesheet for it.
   `assets/vendor/package-lock.json` records the version of each, for
   the freshness report, and a test holds it to what the UI ships. A
-  new version of htmx moves the file, its note and the lockfile
-  together, and is compared before and after in a real browser, since
-  neither the tests nor the live checks run JavaScript.
+  new version of htmx moves the file, its note with the digest of the
+  file in its npm package, and the lockfile together. The browser
+  suite (section 8, rule 7) is the one check that runs its JavaScript:
+  it runs outside the default test run, and the CI job `browser` runs
+  it.
 
 ## 8. Rules for building and extending
 
