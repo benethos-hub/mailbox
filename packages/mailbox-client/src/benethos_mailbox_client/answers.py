@@ -75,6 +75,13 @@ def api_error(response: httpx.Response) -> ApiError:
     return ApiError(response.status_code, "unexpected_response", response.reason_phrase)
 
 
+def unreadable() -> ApiError:
+    """An answer httpx could not read, such as a body that is not what its
+    ``Content-Encoding`` says. 502, as a gateway names a bad answer of the
+    server behind it."""
+    return ApiError(502, "unexpected_response", "the answer could not be read")
+
+
 def failure(exc: httpx.TransportError, base_url: str, seconds: float) -> MailboxError:
     """What went wrong on the way: a service that answers too slowly is
     running, one that cannot be reached is not."""

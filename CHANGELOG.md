@@ -45,6 +45,15 @@ adheres to [Semantic Versioning](https://semver.org/).
   which cannot be read answered with an error 500 outside the error
   envelope. It is now `400` with the code `bad_request`, as any other
   forged cursor.
+- The client raised httpx's own error for an answer it could not read,
+  such as a body that is not what its `Content-Encoding` says. It is now
+  an `ApiError` with the code `unexpected_response`. The MCP server,
+  which asks the service what its token may do while it runs, ended on
+  such an answer. It now keeps its tools and asks again.
+- The MCP tool `get_thread` said the bodies together are cut at
+  `max_chars`. Each mail keeps at least 200 characters, so twenty mails
+  can bring more. The description now says so. What the tool does is
+  unchanged.
 
 ## [0.6.1] - 2026-11-07
 

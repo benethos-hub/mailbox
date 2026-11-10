@@ -10,7 +10,7 @@ from typing import Any, TypeVar
 import httpx
 
 from . import endpoints
-from .answers import api_error, failure, read
+from .answers import api_error, failure, read, unreadable
 from .attachments import Collected, attachment
 from .calls import Call, awaiting, timeouts
 from .environment import connection
@@ -71,6 +71,8 @@ class MailboxClient:
             )
         except httpx.TransportError as exc:
             raise failure(exc, self.base_url, call.timeout) from None
+        except httpx.HTTPError:
+            raise unreadable() from None
         return read(call, response)
 
     async def request(
@@ -215,4 +217,6 @@ class MailboxClient:
                         break
         except httpx.TransportError as exc:
             raise failure(exc, self.base_url, call.timeout) from None
+        except httpx.HTTPError:
+            raise unreadable() from None
         return attachment(response.headers, collected)

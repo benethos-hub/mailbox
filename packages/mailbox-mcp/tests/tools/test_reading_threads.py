@@ -4,10 +4,11 @@ each mail marked as foreign content, the bodies sharing max_chars."""
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
+from typing import Any, get_type_hints
 
 import pytest
 
+from benethos_mailbox_mcp import render
 from benethos_mailbox_mcp.errors import ToolError
 from benethos_mailbox_mcp.tools import reading
 
@@ -96,6 +97,26 @@ async def test_a_long_thread_reads_its_newest(
     assert "note: the oldest mail left out, the newest 2 follow" in text
     assert 'source="acc_1/msg_1"' not in text
     assert f"{BASE}/messages/msg_1" not in [c.path for c in handler.calls]
+
+
+async def test_each_mail_keeps_its_least_share(api: Callable) -> None:
+    """Twenty mails share max_chars, but none is cut below MIN_SHARE, as
+    the description of max_chars says."""
+    numbers = range(1, 21)
+    long = {f"msg_{n}": mail(n, "x" * 1000) for n in numbers}
+    found = thread(*numbers)
+    api(
+        routes={
+            f"{BASE}/threads/thr_1": found,
+            **{f"{BASE}/messages/{k}": v for k, v in long.items()},
+        }
+    )
+    text = await reading.get_thread("acc_1", thread_id="thr_1", max_chars=1000)
+    assert text.count("x" * render.MIN_SHARE) == 20
+    assert "x" * (render.MIN_SHARE + 1) not in text
+    hints = get_type_hints(reading.get_thread, include_extras=True)
+    [field] = hints["max_chars"].__metadata__
+    assert f"at least {render.MIN_SHARE}" in field.description
 
 
 async def test_a_truncated_thread_says_so(api: Callable) -> None:

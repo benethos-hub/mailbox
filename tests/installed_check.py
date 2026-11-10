@@ -58,6 +58,8 @@ CLIENT = "benethos-mailbox-client"
 COMMON = "benethos-mailbox-common"
 # How long the service may take to answer, and the whole MCP conversation.
 TIMEOUT = 60.0
+# The service's settings in the environment.
+PREFIX = "MAILBOX_SERVICE_"
 
 failures: list[str] = []
 
@@ -100,11 +102,13 @@ def scratch_folder() -> Iterator[Path]:
 
 def service_env(scratch: Path, port: int) -> dict[str, str]:
     """A service of this script: its data in ``scratch``, the master key in
-    the environment once ``keys generate`` made it, no background sync."""
+    the environment once ``keys generate`` made it, no background sync.
+    No ``MAILBOX_SERVICE_*`` of this machine reaches it."""
     settings = scratch / "empty.env"
     settings.write_text("", encoding="utf-8")
+    machine = {k: v for k, v in os.environ.items() if not k.startswith(PREFIX)}
     return {
-        **os.environ,
+        **machine,
         "MAILBOX_SERVICE_ENV_FILE": str(settings),
         "MAILBOX_SERVICE_DATA_DIR": str(scratch / "data"),
         "MAILBOX_SERVICE_STORAGE": "sqlite",

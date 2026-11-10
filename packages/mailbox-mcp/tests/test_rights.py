@@ -115,6 +115,17 @@ async def test_a_service_that_does_not_answer_leaves_the_tools(
     assert caplog.text.count("could not ask what the token may do") == 1
 
 
+async def test_an_answer_that_cannot_be_decoded_leaves_the_tools() -> None:
+    """It ends neither the asking nor the server."""
+    service = Service(ME)
+    async with connected(following(service, READ)) as client:
+        before = await client.tools()
+        service.garbled = True
+        asked = service.asked
+        await until(lambda: service.asked >= asked + 3)
+        assert await client.tools() == before
+
+
 async def test_without_an_interval_it_asks_only_at_start() -> None:
     """A tool refused for a missing right asks nothing either."""
     service = Service(ME)

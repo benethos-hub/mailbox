@@ -149,7 +149,7 @@ Everything the client raises is a `MailboxError`:
 | `ConfigurationError` | no token, or an address it refuses |
 | `ServiceUnavailableError` | the service cannot be reached |
 | `ServiceTimeoutError` | the service took the request but did not answer in time |
-| `ApiError` | the API answered with an error: `status`, `code`, `message`, and `retry_after`, the seconds a limit asks to wait, else `None` |
+| `ApiError` | the API answered with an error: `status`, `code`, `message`, and `retry_after`, the seconds a limit asks to wait, else `None`. An answer of another shape, or one that cannot be read, has the code `unexpected_response` |
 
 ## Inside
 
