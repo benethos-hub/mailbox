@@ -29,7 +29,7 @@ from benethos_mailbox_common.values import text
 
 from . import __version__, render
 from .client import Connect, MailboxClient
-from .config import APP
+from .config import APP, variable
 from .errors import (
     ApiError,
     ConfigurationError,
@@ -113,9 +113,9 @@ def _new_server(**extra: Any) -> MCPServer:
 
 
 CATALOGUE = (
-    "This server only lists its tools (MAILBOX_MCP_CATALOGUE) and calls "
-    "none. Start it with MAILBOX_SERVICE_TOKEN and without "
-    "MAILBOX_MCP_CATALOGUE to use them."
+    f"This server only lists its tools ({variable('catalogue')}) and calls "
+    f"none. Start it with {variable('service_token')} and without "
+    f"{variable('catalogue')} to use them."
 )
 
 

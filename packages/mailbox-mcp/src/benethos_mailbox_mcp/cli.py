@@ -157,10 +157,11 @@ def _catalogue(
     if not settings.catalogue:
         return None
     if environment.token:
+        catalogue = config.variable("catalogue")
         sys.exit(
-            f"{config.APP}: MAILBOX_MCP_CATALOGUE lists the tools "
-            "without a service. Unset MAILBOX_SERVICE_TOKEN, or unset "
-            "MAILBOX_MCP_CATALOGUE to use the tools."
+            f"{config.APP}: {catalogue} lists the tools without a service. "
+            f"Unset {config.variable('service_token')}, or unset {catalogue} "
+            "to use the tools."
         )
     built = server.build_catalogue(transport=settings.transport)
     logger.warning(
