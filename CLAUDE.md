@@ -245,6 +245,7 @@ tests/                    # what the repository holds, across the four
                           #   contents at the top
   test_module_tree.py     # the trees of docs/ARCHITECTURE.md section 3
                           #   against the disk
+  test_layout.py          # this file's project layout against the disk
   test_packaging.py       # the LICENSE copies, the Python versions, one
                           #   version and its examples in the
                           #   documentation
