@@ -112,6 +112,28 @@ def _csv(value: str) -> list[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
+def _unguarded(settings: config.Settings, bearer: str | None) -> str | None:
+    """Why the server may not serve as set, else None. Over HTTP on an
+    address other hosts reach it needs the token of its clients and the
+    Host or Origin values they use. Without them anything that reaches
+    the port could use every tool, and a web page could reach it through
+    DNS rebinding. A catalogue serves no working tool."""
+    if settings.transport == "stdio" or settings.catalogue:
+        return None
+    if settings.host in transport.LOCALHOST_BINDS:
+        return None
+    listed = _csv(settings.allowed_hosts) or _csv(settings.allowed_origins)
+    if bearer and listed:
+        return None
+    return (
+        f"over HTTP on {settings.host} it needs "
+        f"{config.variable('bearer_token')} and "
+        f"{config.variable('allowed_hosts')} or "
+        f"{config.variable('allowed_origins')}. Bind 127.0.0.1 to run "
+        "without them."
+    )
+
+
 def configure_logging(level: str) -> None:
     """The lines of the service's log (``benethos_mailbox_common.log.lines``):
     short and in colour on a terminal, else plain, a noted secret masked."""
@@ -184,6 +206,9 @@ def main(argv: list[str] | None = None) -> None:
     environment = _service(settings)
     bearer = settings.bearer_token
     token = bearer.get_secret_value() if bearer else None
+    refused = _unguarded(settings, token)
+    if refused:
+        sys.exit(f"benethos-mailbox-mcp: {refused}")
     # No line names either token. Noted, a slip still writes ***.
     for secret in (environment.token, token):
         if secret:

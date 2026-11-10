@@ -18,6 +18,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The MCP server over HTTP on an address other hosts reach, such as
+  `0.0.0.0` in its image, no longer starts without
+  `MAILBOX_MCP_BEARER_TOKEN` and `MAILBOX_MCP_ALLOWED_HOSTS` or
+  `MAILBOX_MCP_ALLOWED_ORIGINS`. Before, it started with a warning and
+  admitted anyone who reached the port. On `127.0.0.1` and over stdio
+  nothing changes.
 - The MCP tools describe every parameter, the ids by the tool that
   answers them. Each tool says when to use it rather than a related
   one, whether it changes anything, and what it answers. What the tools
