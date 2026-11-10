@@ -41,6 +41,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 - A page of the UI given a return address whose host cannot be read,
   such as `next=//[`, answered with a plain error 500. It now goes to
   the page's own default, as for any address outside the UI.
+- A cursor of a Microsoft account's message list that names a host
+  which cannot be read answered with an error 500 outside the error
+  envelope. It is now `400` with the code `bad_request`, as any other
+  forged cursor.
 
 ## [0.6.1] - 2026-11-07
 
