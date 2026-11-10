@@ -22,9 +22,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   answers them. Each tool says when to use it rather than a related
   one, whether it changes anything, and what it answers. What the tools
   do is unchanged.
-- The images install fastapi 0.162.2 and pypdfium2 5.15.1 from the
-  lockfile. pypdfium2 5.15.1 brings PDFium 8149 and fixes a rare error
-  when its objects are closed while the garbage collector runs.
+- The images install fastapi 0.162.2, pypdfium2 5.15.2 and
+  publicsuffixlist 1.1.2.20261109 from the lockfile. pypdfium2 brings
+  PDFium 8149 and fixes a rare error when its objects are closed while
+  the garbage collector runs or the interpreter shuts down.
 
 ### Fixed
 
