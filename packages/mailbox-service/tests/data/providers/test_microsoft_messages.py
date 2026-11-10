@@ -26,7 +26,7 @@ from benethos_mailbox_service.errors import (
 
 from ...graph_fake import FakeGraph
 from ...microsoft_adapter import adapter
-from ...provider_ops import delete, update
+from ...provider_helpers import delete, update
 
 # --- reading --------------------------------------------------------------------------
 

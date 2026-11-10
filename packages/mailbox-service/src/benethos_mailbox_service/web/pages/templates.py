@@ -209,6 +209,20 @@ def is_htmx(request: Request) -> bool:
     return request.headers.get("HX-Request") == "true"
 
 
+def leave(request: Request, redirect: Response) -> Response:
+    """``redirect``, which htmx follows as a whole page."""
+    if is_htmx(request):
+        return Response(
+            status_code=204, headers={"HX-Redirect": redirect.headers["location"]}
+        )
+    return redirect
+
+
+def redirect_to(request: Request, target: str) -> Response:
+    """To ``target``: a 303, which htmx follows as a whole page."""
+    return leave(request, RedirectResponse(target, status_code=303))
+
+
 def back(
     request: Request,
     path: str,

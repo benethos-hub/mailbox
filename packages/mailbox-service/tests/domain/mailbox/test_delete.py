@@ -19,7 +19,7 @@ from benethos_mailbox_service.errors import (
 from ...conftest import bearer_for
 from ...imap_adapter import provider
 from ...imap_fake import FakeFolder, FakeMailBox, make_message
-from ...provider_ops import delete
+from ...provider_helpers import delete
 
 MESSAGE = mappers.message_id("INBOX", 7, 3)
 

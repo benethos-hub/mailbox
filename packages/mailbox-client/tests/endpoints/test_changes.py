@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 
 from benethos_mailbox_client import Change, Changes
 
-from ..fake_api import FakeApi
+from ..api_fake import FakeApi
 
 AT = datetime(2026, 10, 1, 8, 0, tzinfo=UTC)
 

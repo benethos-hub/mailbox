@@ -12,7 +12,6 @@ A server-sent event stream is read line by line, each line up to a limit.
 
 from __future__ import annotations
 
-import ssl
 from collections.abc import AsyncIterator, Mapping
 from contextlib import asynccontextmanager
 from typing import Any
@@ -23,7 +22,7 @@ import httpx
 from benethos_mailbox_common.values import canonical
 
 from ....errors import ProviderError
-from ..transport import Pick
+from ..transport import Pick, system_context
 from .api import MAX_BYTES, TIMEOUT, Answer
 from .base import parse_url, pinned_request, read_capped, unreachable, wire_host
 
@@ -36,9 +35,8 @@ def _client(transport: httpx.AsyncBaseTransport | None) -> httpx.AsyncClient:
         transport=transport,
         follow_redirects=False,
         trust_env=False,
-        # The CAs of the system, as ssl.create_default_context reads them,
-        # SSL_CERT_FILE included.
-        verify=ssl.create_default_context(),
+        # The CAs of the system, SSL_CERT_FILE included.
+        verify=system_context(),
     )
 
 

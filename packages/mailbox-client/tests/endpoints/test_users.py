@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 
 from benethos_mailbox_client import Grant, User
 
-from ..fake_api import USER, FakeApi
+from ..api_fake import USER, FakeApi
 
 GRANT = Grant(
     accounts=("acc_1",),

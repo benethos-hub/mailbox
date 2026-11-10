@@ -326,7 +326,8 @@ packages/mailbox-service/
       mail/             # messages in RFC 5322, whatever protocol carries
                         #   them. __init__.py offers the modules
         compose.py      # outgoing messages as bytes (email)
-        parse.py        # incoming bytes parsed (imap-tools' mail parser)
+        parse.py        # incoming bytes parsed (imap-tools' mail parser),
+                        #   a block of header lines alone (email)
         convert.py      # a parsed message to Message / MessageSummary
         fields.py       # one header field: a Message-ID as one token,
                         #   an address in Unicode
@@ -549,11 +550,14 @@ packages/mailbox-mcp/
                         #   tokens noted for masking, --list-tools, the
                         #   catalogue or the start over stdio or HTTP,
                         #   HTTP on an open address only with its guards
-    server.py           # build_server: the MCP library's server with
-                        #   the tools the token's rights allow, each
-                        #   logged when it fails, asked again while
-                        #   it runs. build_catalogue: every tool, none
-                        #   run but server_status (CATALOGUE).
+    server.py           # start: what the token may do, asked at the
+                        #   service, then build_server: the MCP
+                        #   library's server with the tools the token's
+                        #   rights allow, each logged when it fails,
+                        #   asked again while it runs. Server: that
+                        #   library's class. build_catalogue: every
+                        #   tool, none run but server_status
+                        #   (CATALOGUE).
                         #   tools_json: the tools as a client lists
                         #   them, docs/mcp-tools.json
     listeners.py        # the clients told that the tool list changed:
@@ -931,8 +935,8 @@ imapclient boundary), never by patching deep inside a library.
   named after its subject: a fake in `<subject>_fake.py`, an adapter on
   its fake in `<kind>_adapter.py`, anything else in
   `<subject>_helpers.py`. The clocks a test moves itself are in
-  `clocks.py`. No test module imports another, which
-  `test_code_rules.py` checks in all four packages.
+  `clocks.py`. No test module imports another, and every other module
+  is named so, which `test_code_rules.py` checks in all four packages.
 - The UI in real browsers is a suite apart,
   `packages/mailbox-service/tests/browser/`, not beside the code of
   `web/pages/` it tests: it needs the dependency group `browser`,

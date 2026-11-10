@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from . import accounts, drafts, reading, sending, status, writing
 from .base import MAX_LIMIT, Tool, calling, client
-from .status import Running, Seen, reporting
+from .status import Running, Seen, reporting, saw, seen_at_start
 
 TOOLS = (
     *accounts.TOOLS,
@@ -32,6 +32,8 @@ __all__ = [
     "drafts",
     "reading",
     "reporting",
+    "saw",
+    "seen_at_start",
     "sending",
     "status",
     "writing",

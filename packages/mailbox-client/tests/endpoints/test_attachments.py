@@ -10,7 +10,7 @@ import pytest
 
 from benethos_mailbox_client import ApiError, AttachmentLink, Secret
 
-from ..fake_api import FakeApi
+from ..api_fake import FakeApi
 
 LINK = {
     "url": "https://mail.test/v1/links/" + "s" * 128,

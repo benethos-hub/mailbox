@@ -30,7 +30,7 @@ from ...services import OAuth
 from ...urls import oauth_callback
 from ..deps import Actor, Viewer
 from ..forms import failing, text_of
-from ..templates import back, is_htmx, local_path, render
+from ..templates import back, is_htmx, leave, local_path, render
 
 router = APIRouter()
 
@@ -154,11 +154,11 @@ async def device_check(
             error = f"{kind.value} has not seen the sign-in yet."
             return back(request, _device_url(started, here), error=error)
     except MailboxServiceError as exc:
-        return _leave(request, back(request, here, error=redact.redact(exc.message)))
+        return leave(request, back(request, here, error=redact.redact(exc.message)))
     if account is None:
         return Response(status_code=204)
     page = f"/ui/accounts/{account.id}"
-    return _leave(request, back(request, page, f"{account.email} signed in."))
+    return leave(request, back(request, page, f"{account.email} signed in."))
 
 
 def _device_url(started: DeviceSignIn, here: str) -> str:
@@ -167,12 +167,3 @@ def _device_url(started: DeviceSignIn, here: str) -> str:
         f"/ui/oauth/{started.provider.value}/device/{quote(started.id, safe='')}"
         f"?back={quote(here, safe='')}"
     )
-
-
-def _leave(request: Request, redirect: Response) -> Response:
-    """A redirect, which htmx follows as a whole page."""
-    if is_htmx(request):
-        return Response(
-            status_code=204, headers={"HX-Redirect": redirect.headers["location"]}
-        )
-    return redirect

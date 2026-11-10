@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 
 from benethos_mailbox_client import Hint, MailServer, SourceReport
 
-from ..fake_api import ACCOUNT, FakeApi
+from ..api_fake import ACCOUNT, FakeApi
 
 FOUND = {
     "email": "me@example.com",

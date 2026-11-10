@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 
 from benethos_mailbox_client import Address, Thread, ThreadSummary
 
-from ..fake_api import SUMMARY, FakeApi
+from ..api_fake import SUMMARY, FakeApi
 
 THREAD = {
     "id": "thr_1",

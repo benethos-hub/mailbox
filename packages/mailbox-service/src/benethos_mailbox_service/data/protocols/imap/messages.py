@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 from ....common.chunks import batched
 from ....common.clock import utc_now
 from ....errors import BadRequestError, NotSupportedError, ProviderError
-from ...mail import ThreadHeaders
+from ...mail import ThreadHeaders, parse
 from ..transport import text
 from .responses import (
     capabilities,
@@ -19,7 +19,6 @@ from .responses import (
     part,
     received,
     structure,
-    thread_headers,
     translated,
     with_code,
 )
@@ -123,7 +122,7 @@ class Messages:
         in the selected folder. Reads only those headers and never sets
         ``\\Seen``."""
         return {
-            uid: thread_headers(part(data, b"BODY[HEADER.FIELDS"))
+            uid: parse.thread_headers_of(part(data, b"BODY[HEADER.FIELDS"))
             for uid, data in self._fetch(uids, [_THREAD_HEADERS]).items()
         }
 

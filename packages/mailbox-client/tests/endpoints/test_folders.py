@@ -6,7 +6,7 @@ from collections.abc import Callable
 
 from benethos_mailbox_client import Folder
 
-from ..fake_api import FOLDER, SUBFOLDER, FakeApi
+from ..api_fake import FOLDER, SUBFOLDER, FakeApi
 
 
 async def test_list_folders(make_client: Callable) -> None:

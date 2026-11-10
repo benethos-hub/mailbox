@@ -18,7 +18,7 @@ from benethos_mailbox_service.data.providers import (
 )
 from benethos_mailbox_service.errors import MailboxServiceError, NotFoundError
 
-from ...mailboxes import KINDS, Box, box, file_alone, inline_only, mail
+from ...conformance_helpers import KINDS, Box, box, file_alone, inline_only, mail
 
 
 @pytest.fixture(params=KINDS)
