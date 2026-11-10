@@ -83,7 +83,7 @@ def build_server(
             held.client = made
             tasks.start_soon(rights.look)
             if every > 0:
-                tasks.start_soon(rights.follow, every)
+                tasks.start_soon(rights.follow)
             try:
                 yield
             finally:
@@ -220,10 +220,10 @@ class _Rights:
         self._trouble: str | None = None
         self._asked_at: float | None = None
 
-    async def follow(self, every: float) -> None:
+    async def follow(self) -> None:
         """Asks every ``every`` seconds, until the token is refused."""
         while not self.refused:
-            await anyio.sleep(every)
+            await anyio.sleep(self.every)
             await self.ask()
 
     async def after(self, exc: MailboxError) -> None:
