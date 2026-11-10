@@ -17,8 +17,8 @@ from fastapi.testclient import TestClient
 from benethos_mailbox_service.assembly import create_app
 from benethos_mailbox_service.config import Settings
 
+from ..conformance_helpers import ADDRESS, KINDS, Box, box, mail, services_of
 from ..conftest import admin_bearer
-from ..mailboxes import ADDRESS, KINDS, Box, box, mail, services_of
 
 PDF = b"%PDF-1.4 conformance"
 # What UNIFORM.md names as work, where a test meets it.

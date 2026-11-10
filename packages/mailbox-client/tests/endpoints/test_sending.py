@@ -7,7 +7,7 @@ from collections.abc import Callable
 
 from benethos_mailbox_client import Sent
 
-from ..fake_api import BODY, SENT, FakeApi
+from ..api_fake import BODY, SENT, FakeApi
 
 
 async def test_send_message(make_client: Callable) -> None:

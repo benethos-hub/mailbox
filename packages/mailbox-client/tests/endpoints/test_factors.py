@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 
 from benethos_mailbox_client import SecondFactor, TotpDevice
 
-from ..fake_api import FakeApi
+from ..api_fake import FakeApi
 
 
 async def test_get_second_factor(make_client: Callable) -> None:

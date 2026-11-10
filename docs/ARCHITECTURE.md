@@ -935,8 +935,8 @@ imapclient boundary), never by patching deep inside a library.
   named after its subject: a fake in `<subject>_fake.py`, an adapter on
   its fake in `<kind>_adapter.py`, anything else in
   `<subject>_helpers.py`. The clocks a test moves itself are in
-  `clocks.py`. No test module imports another, which
-  `test_code_rules.py` checks in all four packages.
+  `clocks.py`. No test module imports another, and every other module
+  is named so, which `test_code_rules.py` checks in all four packages.
 - The UI in real browsers is a suite apart,
   `packages/mailbox-service/tests/browser/`, not beside the code of
   `web/pages/` it tests: it needs the dependency group `browser`,

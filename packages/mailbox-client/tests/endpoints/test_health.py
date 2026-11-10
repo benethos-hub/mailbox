@@ -6,7 +6,7 @@ from collections.abc import Callable
 
 from benethos_mailbox_client import Health
 
-from ..fake_api import FakeApi
+from ..api_fake import FakeApi
 
 
 async def test_health(make_client: Callable) -> None:

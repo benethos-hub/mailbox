@@ -247,6 +247,23 @@ def test_no_test_module_imports_another() -> None:
     assert not violations, "imports a test module:\n  " + "\n  ".join(violations)
 
 
+# A module of a test folder that is no test (docs/ARCHITECTURE.md 13).
+HELPER = re.compile(r"conftest|clocks|.+_fake(_.+)?|.+_adapter|.+_helpers|__init__")
+
+
+def test_a_helper_of_the_tests_is_named_after_its_kind() -> None:
+    """A fake in ``<subject>_fake.py``, an adapter on it in
+    ``<kind>_adapter.py``, anything else in ``<subject>_helpers.py``, in
+    the tests of all four packages. ``tests/installed_check.py`` at the
+    root is no helper but a script."""
+    violations = [
+        path.relative_to(REPOSITORY).as_posix()
+        for path in sorted((REPOSITORY / "packages").glob("*/tests/**/*.py"))
+        if not path.stem.startswith("test_") and not HELPER.fullmatch(path.stem)
+    ]
+    assert not violations, "a helper named otherwise:\n  " + "\n  ".join(violations)
+
+
 # A fixture each module of a server of its own brings, by design: the
 # one of tests/conftest.py is the IMAP server.
 OWN_SERVER = "server"

@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 
 from benethos_mailbox_client import Marks, Me, MeAccount, Permissions, Sending
 
-from ..fake_api import ME, FakeApi
+from ..api_fake import ME, FakeApi
 
 
 async def test_me(make_client: Callable) -> None:

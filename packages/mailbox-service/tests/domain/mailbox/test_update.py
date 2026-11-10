@@ -27,7 +27,7 @@ from benethos_mailbox_service.errors import (
 from ...conftest import bearer_for, memory_of, relearn
 from ...imap_adapter import provider
 from ...imap_fake import FakeMailBox
-from ...provider_ops import update
+from ...provider_helpers import update
 
 ANY_KEYWORD = frozenset({"\\Seen", "\\Flagged", "\\*"})
 
