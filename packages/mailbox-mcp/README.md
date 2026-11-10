@@ -13,7 +13,7 @@
 
 [![benethos-mailbox-mcp on Glama](https://glama.ai/mcp/servers/benethos-hub/mailbox/badges/card.svg)](https://glama.ai/mcp/servers/benethos-hub/mailbox)
 
-> **Beta, version 0.6.1.** Usable with real accounts. A breaking change
+> **Beta, version 0.7.0.** Usable with real accounts. A breaking change
 > of the API or the configuration is announced in the changelog. Stored
 > data is carried forward by migrations.
 
@@ -354,7 +354,7 @@ The image `ghcr.io/benethos-hub/benethos-mailbox-mcp` serves over
 streamable HTTP on port 8000, as an unprivileged user, and the command
 below runs it on a read-only root file system. A client that starts
 the server over stdio needs no image.
-Tags: the version (`0.6.1`), the minor version (`0.6`) and `latest`.
+Tags: the version (`0.7.0`), the minor version (`0.7`) and `latest`.
 
 ### With docker run
 
@@ -372,7 +372,7 @@ docker run -d --name mailbox-mcp --restart unless-stopped --network mailbox \
   -e MAILBOX_SERVICE_TOKEN=<token> \
   -e MAILBOX_MCP_BEARER_TOKEN=<a long random token> \
   -e MAILBOX_MCP_ALLOWED_HOSTS=127.0.0.1:8000,localhost:8000 \
-  ghcr.io/benethos-hub/benethos-mailbox-mcp:0.6.1
+  ghcr.io/benethos-hub/benethos-mailbox-mcp:0.7.0
 ```
 
 Inside the container the server binds to `0.0.0.0`. So
