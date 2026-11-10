@@ -1,5 +1,6 @@
 """The command line of the MCP server: its options over the settings
-(``config``), the log, and the start over stdio or streamable HTTP.
+(``config``), the log, and the start over stdio or streamable HTTP, or
+as a catalogue. ``--list-tools`` prints the tools and starts nothing.
 The tools and what the token may do are ``server``'s."""
 
 from __future__ import annotations

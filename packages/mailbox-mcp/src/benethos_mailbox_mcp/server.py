@@ -5,6 +5,8 @@ the tools that need one of those rights: a model never sees a tool it could
 not use (CONCEPT 8). While it runs it asks again every
 ``MAILBOX_MCP_RIGHTS_SECONDS`` and when a tool is refused for want of a
 right, changes its tools to match and tells its clients (``listeners``).
+A catalogue (``build_catalogue``) asks nothing: it lists every tool and
+runs none but ``server_status``, and ``tools_json`` writes that list.
 """
 
 from __future__ import annotations
