@@ -43,7 +43,10 @@ name: Freshness
 # The run after Publish is for the index job, which installs the freshly
 # published package from PyPI: a release that does not install stands in the
 # alarm issue within minutes instead of at the next cron. The reason is in
-# docs/freshness.md of benethos-hub/.github, under "Calling it".
+# docs/freshness.md of benethos-hub/.github, under "Calling it". Each job
+# runs after a Publish of this repository only, from a release or by hand:
+# a workflow of that name in a fork's pull request completes as well and
+# would start a run here.
 
 on:
   schedule:
@@ -66,6 +69,11 @@ jobs:
   # conversion of a result and an error on the way to a client.
   newest:
     name: Newest versions allowed
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.head_repository.full_name == github.repository
+      && (github.event.workflow_run.event == 'release'
+      || github.event.workflow_run.event == 'workflow_dispatch'))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -88,6 +96,11 @@ jobs:
 
   npm-outdated:
     name: Outdated npm packages
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.head_repository.full_name == github.repository
+      && (github.event.workflow_run.event == 'release'
+      || github.event.workflow_run.event == 'workflow_dispatch'))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -110,6 +123,11 @@ jobs:
 
   npm-audit:
     name: Known npm vulnerabilities
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.head_repository.full_name == github.repository
+      && (github.event.workflow_run.event == 'release'
+      || github.event.workflow_run.event == 'workflow_dispatch'))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -135,7 +153,12 @@ jobs:
   freshness:
     name: Freshness report
     needs: [newest, npm-outdated, npm-audit]
-    if: ${{ !cancelled() }}
+    if: >-
+      !cancelled() && (
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.head_repository.full_name == github.repository
+      && (github.event.workflow_run.event == 'release'
+      || github.event.workflow_run.event == 'workflow_dispatch')))
     uses: benethos-hub/.github/.github/workflows/freshness.yml@main
     permissions:
       contents: read

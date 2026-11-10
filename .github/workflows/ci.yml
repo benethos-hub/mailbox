@@ -387,10 +387,11 @@ jobs:
         run: docker run --rm benethos-mailbox-mcp:ci --version
 
       # What a directory such as Glama sees: the image in a sandbox, no
-      # service, no token, the tool list read over stdio.
+      # service, no token, the tool list read over stdio. It must hold
+      # every tool of docs/mcp-tools.json, the tools as a client lists them.
       - name: Smoke test (the MCP server image lists every tool as a catalogue)
         run: |
-          expected=$(grep -c '^| `[a-z_]*` |' packages/mailbox-mcp/README.md)
+          expected=$(jq length docs/mcp-tools.json)
           listed=$(printf '%s\n' \
             '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"ci","version":"0"}}}' \
             '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
@@ -398,8 +399,8 @@ jobs:
             | timeout 60 docker run -i --rm -e MAILBOX_MCP_CATALOGUE=true \
                 benethos-mailbox-mcp:ci --transport stdio \
             | jq -s '[.[] | select(.id == 2)][0].result.tools | length')
-          echo "listed $listed tools, the README names $expected"
+          echo "listed $listed tools, docs/mcp-tools.json names $expected"
           if [ "$listed" != "$expected" ]; then
-            echo "::error::the catalogue lists $listed tools, the README names $expected"
+            echo "::error::the catalogue lists $listed tools, docs/mcp-tools.json names $expected"
             exit 1
           fi
