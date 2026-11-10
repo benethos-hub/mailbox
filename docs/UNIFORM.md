@@ -221,7 +221,7 @@ larger piece that is neither, and runs on its own.
   or filter, it answers the old query's next page, without
   `invalid_cursor` (`microsoft/provider.py`). *Bug.* Done: the
   cursor is bound to the folder and the search, and another list's
-  answers `invalid_cursor`.
+  answers `400 bad_request`, an invalid cursor.
 - **`has_attachments` can come out three ways for one message.** The
   field in a list is a header guess (`multipart/mixed`), `get_message`
   counts the parts, and the filter is the provider's own. *Concept
@@ -600,8 +600,10 @@ Decided 2026-10-12, each with the options weighed and why.
   the sent copy. The provider sections of CONCEPT.md (5.2 to 5.6) keep
   how each adapter works, and say what the account lacks rather than
   how its answers differ.
-- **The live checks.** Each provider's check covers its capabilities:
-  what it announces works, what it lacks answers `501`. Gmail's check
+- **The live checks.** The checks of Gmail, JMAP and POP3 hold the
+  account to the capabilities it names: what it announces works, what
+  it lacks answers `501`. The checks of IMAP and Microsoft do not
+  compare them. Gmail's check
   sends a reply and reads it in the original's thread. Microsoft's check
   marks a reply and, with `--large`, sends a large mail.
 

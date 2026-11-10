@@ -136,8 +136,9 @@ The QR code holds the `otpauth://` URI: issuer `Mailbox`, and the user
 name with the host of the service as the account, so two deployments
 show apart in the app. It is drawn by `segno`, pure Python without
 dependencies under the BSD licence, behind `web/pages/qr.py`. The page
-embeds it as SVG, so the content security policy keeps out inline
-scripts and styles.
+shows it as an image, an SVG in a data URI, which the content security
+policy admits as an image (`img-src data:`). No inline markup reaches
+the page.
 
 **Removing for another user:**
 

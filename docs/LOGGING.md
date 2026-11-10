@@ -145,7 +145,7 @@ the audit keeps as well are listed in [AUDIT.md](AUDIT.md) section 2.
 |---|---|---|---|
 | INFO | signed in to the UI [with a code of D] | user, source, how: `password`, `password+totp`, `password+recovery`, the device | after the code, for a user with a second factor |
 | WARNING | failed sign-in to the UI as X: reason | the user when the name is a user's, else "an unknown name", reason, source | |
-| WARNING | someone typed a wrong code to sign in to the UI as X | user, source | after the right password ([AUTHENTICATION.md](AUTHENTICATION.md) 3) |
+| WARNING | someone typed a wrong code to sign in to the UI as X | user, source | after the right password ([AUTHENTICATION.md](AUTHENTICATION.md) 4) |
 | WARNING | X signed in with a recovery code, N left | user, count, source | its app is gone or out of reach |
 | WARNING | X signed in to the UI, which ended its oldest session / its N oldest sessions: at most M at once | user, count, limit, source | a user holds a few sessions at most ([LIMITS.md](LIMITS.md)). Many in a row may be a stolen password |
 | INFO | signed out | user | |
@@ -320,12 +320,15 @@ Its own process, its own log on stderr, its own rules, the same spirit:
   over HTTP its address and whether a bearer token is required, the
   service's URL and which tools were registered, and before those a
   `WARNING` per account that reads mail and sends anywhere. A
-  `WARNING` over HTTP on a loopback address without a bearer token, and
-  over stdio where one is set and ignored.
+  `WARNING` over HTTP without a bearer token, which only a loopback
+  address or a catalogue allows, and over stdio where one is set and
+  ignored.
 - As a catalogue (`MAILBOX_MCP_CATALOGUE`), one `WARNING` at start that
   it lists every tool and runs none but `server_status`, without a
-  service, instead of the lines above. A call it refuses writes
-  nothing.
+  service. It stands in place of the warnings per account and of the
+  line with the service's URL and the tools. The lines for the
+  settings file, the transport and the bearer token stay. A call it
+  refuses writes nothing.
 - `INFO` when the tools changed while it runs: which came and went, and
   how many clients were told, with the same `WARNING`s after it.
   `WARNING` once when the service could not be asked, `INFO` when it
@@ -392,13 +395,15 @@ Its own process, its own log on stderr, its own rules, the same spirit:
 7. **Every new activity has a test** with `caplog`: the level, the text,
    and that no secret of the test is in it. A test walks the catalogue:
    each class has a level and a line, and no field of a type that holds
-   a secret or mail content. `test_logs.py` keeps a test that a noted
-   secret is masked in message, argument and traceback.
+   a secret or mail content. `tests/log/test_lines.py` of
+   `mailbox-common` keeps a test that a noted secret is masked in the
+   message and the traceback of a line, plain or for a terminal.
 8. **The CLI prints, the service logs.** A command talks to the person
    at the terminal on stderr, and a command that changes the database
-   (`users`, `keys`, `restore`) records the same as an activity, so the
-   audit keeps it. A command sets up no log, so its line reaches no
-   handler, and the log page shows the lines of its own process alone.
+   (`users`, `keys`, `restore`) records the same as an activity. The
+   audit keeps those marked `audited`, which are those of `users`. A
+   command sets up no log, so its line reaches no handler, and the log
+   page shows the lines of its own process alone.
 9. **One time in every line.** Every line writes the time alike, at
    every place and in every format: ISO 8601, the local time of the
    machine, to the millisecond, with the offset:
@@ -428,6 +433,8 @@ domain/
     base.py          Activity: who, from where, when, level, audited, line()
     recorder.py      ActivityLog.record(activity): the log line, and the
                        audit record of AUDIT.md for one marked audited
+    audit.py         Audit: the records of AUDIT.md kept, purged and
+                       listed, and audited(), the names it keeps
     catalogue/       one module per area, the areas of section 7.2
       system.py        start, schema, stop, loops, recovery key, log
                          read, keys, backups

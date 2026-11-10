@@ -298,8 +298,8 @@ is the only non-password way into Yahoo and AOL, once a provider grants
 it. Password and app password work. XOAUTH2 waits for the refresher: the
 IMAP and SMTP modules speak it, but an account with `auth: xoauth2`
 answers `501` until the service can renew its token. Server extensions
-used where offered: `IDLE` (push), `CONDSTORE` / `QRESYNC` (cheap
-delta), `UIDPLUS` and `MOVE`.
+used where offered: `IDLE` (push), `CONDSTORE` (flags another client
+changed), `UIDPLUS` and `MOVE`. `QRESYNC` is not used.
 
 Gmail and Microsoft accounts *could* run over IMAP too, but their native
 APIs give stable ids, threads, labels, delta and push, and need the same
@@ -517,7 +517,7 @@ live against a Gmail account (`live/gmail.py`):
   by its `Message-ID` (`rfc822msgid:`). Gmail threads a reply only when
   told the thread, besides `In-Reply-To`, `References` and the subject.
 - Changes come from `history.list` since a history id, polled by the
-  worker (`DELTA`). Push through Pub/Sub is not built (IDEAS.md).
+  worker (`Deltas`). Push through Pub/Sub is not built (IDEAS.md).
 
 ### 5.6 JMAP as a second generic protocol
 
@@ -601,9 +601,10 @@ that tells a third party which domain is being set up can be switched off.
 
 #### Sources, in order
 
-Each source is asked in turn. The first confident answer wins, the others
-still run in parallel with a short timeout, so a slow source does not hold
-up the result.
+All sources are asked at once, each with a timeout of 10 seconds, so a
+slow source does not hold up the result. Their candidates are merged
+and ranked: confirmed before unconfirmed, reachable before unreachable,
+JMAP before the rest, then by the order of their sources.
 
 | # | Source | What it asks | Covers |
 |---|---|---|---|
@@ -710,12 +711,12 @@ too much. GMX, web.de and T-Online answer with a CAPTCHA or a temporary
 lock, and a locked account also locks out its owner's other mail programs.
 The service therefore behaves conservatively towards every provider:
 
-- **One rate limiter per account.** Every request to a provider passes it,
-  retries and paging follow-ups included. The limits come from the preset of
-  the provider (5.8), with a cautious default for unknown servers: 60
-  requests a minute with a burst of 10, set by
+- **One rate limiter per IMAP or POP3 account.** Every request to its
+  server passes it, retries and paging follow-ups included: 60 requests
+  a minute with a burst of 10, set by
   `MAILBOX_SERVICE_IMAP_REQUESTS_PER_MINUTE` and
-  `MAILBOX_SERVICE_IMAP_BURST`.
+  `MAILBOX_SERVICE_IMAP_BURST`, or for one account by its
+  `max_requests_per_minute`. No preset carries a limit.
 - **Few connections.** One IMAP connection per account for commands, a
   second one only for `IDLE`. Never one per API request.
 - **A failed login is not retried.** After one authentication failure the
@@ -740,7 +741,8 @@ The service therefore behaves conservatively towards every provider:
   minutes of RFC 2177 run out. Each watched account waits in a thread of
   its own, outside the pool that answers requests, at most
   `MAILBOX_SERVICE_SYNC_WATCHERS` (50) at once. Further accounts are
-  polled only. Polling intervals are per preset and conservative.
+  polled only. Every account is polled at one interval,
+  `MAILBOX_SERVICE_SYNC_INTERVAL`, 300 seconds by default.
 - **Say who we are.** The IMAP `ID` command (RFC 2971) sends name and
   version where the server supports it. Some providers require it.
 
@@ -749,8 +751,8 @@ The service therefore behaves conservatively towards every provider:
 To be kept in mind from the first IMAP line on, and covered by tests:
 
 - **Folder names** travel in modified UTF-7 (RFC 3501): "Entwürfe" arrives as
-  `Entw&APw-rfe`. `UTF8=ACCEPT` (RFC 6855) is used where the server offers
-  it. The API only ever shows the decoded name.
+  `Entw&APw-rfe`. `UTF8=ACCEPT` (RFC 6855) is not used. The API only
+  ever shows the decoded name.
 - **Special folders without `SPECIAL-USE`.** Many servers name them in the
   mailbox language: Gesendet, Entwürfe, Papierkorb, Spam, Archiv. A name
   list per language maps them to roles when the server announces none.
@@ -836,7 +838,8 @@ each kind's connection, and the UI draws the form from it.
 ## 6. REST API
 
 Base path `/v1`, JSON, bearer authentication on everything except
-`/health`. `{acc}` stands for `/v1/accounts/{account_id}`.
+`/health` and `GET /v1/links/{secret}`, the link to an attachment
+(6.3). `{acc}` stands for `/v1/accounts/{account_id}`.
 
 ### 6.1 Accounts
 
@@ -1232,7 +1235,8 @@ advisor" need, whichever account it went to.
 
   ```json
   {"items": [...], "next_cursor": "...",
-   "incomplete": [{"account_id": "acc_x", "code": "provider_error"}]}
+   "incomplete": [{"account_id": "acc_x", "code": "provider_error",
+                   "message": "..."}]}
   ```
 - Every item carries its `account_id`.
 
@@ -1270,8 +1274,9 @@ Rules, all built and tested:
 - `operationId` is the route function name (`list_messages`,
   `send_message`), unique and stable. Client generators and the MCP server
   depend on it.
-- Every `/v1` operation declares the `bearerAuth` scheme and documents its
-  error responses with the `ErrorResponse` schema.
+- Every `/v1` operation but `get_linked_attachment` declares the
+  `bearerAuth` scheme. Each documents its error responses with the
+  `ErrorResponse` schema.
 - Every `/v1` operation declares its required right as `x-permission`
   (7.5).
 - Interactive docs at `/docs` (Swagger UI) and `/redoc`.
@@ -1319,7 +1324,7 @@ the data, rather than a readable file.
         │ DEK  256-bit data key, decrypted into memory at start
         ▼
  credentials: account_id │ field │ key_id │ nonce │ AES-256-GCM ciphertext
-                                            AAD = "{account_id}:{field}"
+                                 AAD = "credential:{account_id}:{field}"
 ```
 
 - **Cipher:** AES-256-GCM (`cryptography`, `AESGCM`) with a random 96-bit
@@ -1353,8 +1358,9 @@ the data, rather than a readable file.
   Manager limit of 2560 bytes per entry. A passphrase-derived key was
   considered and left out: it would have to be typed after every start, and
   background fetching would stop whenever nobody did.
-- **First start** creates KEK and DEK and prints a **recovery key** once
-  (the KEK, base32-encoded, like a BitLocker recovery key). Without KEK and
+- **`keys init`** creates KEK and DEK and prints a **recovery key**
+  (the KEK, base32-encoded, like a BitLocker recovery key). An admin can
+  show it again in the UI (UI.md 6.5). Without KEK and
   recovery key the credentials are gone, and every account has to be
   reconnected. The mail itself is not affected.
 - **Rotation, planned:** `benethos-mailbox-service keys rotate` re-wraps
@@ -1854,7 +1860,7 @@ account and re-issuing every token.
 
 - **`benethos-mailbox-service backup <file>`** takes a consistent snapshot while
   the service runs (SQLite online backup API) and adds a manifest: service
-  version, schema version, key id, time, checksum.
+  version, schema version, time, checksum.
 - **The whole backup file is encrypted** (AES-256-GCM, key derived from the
   KEK), not only the credentials inside it. A stolen backup reveals not
   even the list of accounts.
@@ -1868,7 +1874,7 @@ account and re-issuing every token.
   large the database. Backups of format 1, one ciphertext of the whole
   database, are still read.
 - **The KEK is deliberately not in the backup.** Restoring needs the KEK on
-  the same machine, or the **recovery key** from the first start (7.3).
+  the same machine, or the **recovery key** of `keys init` (7.3).
   Keep backup file and recovery key in different places. Either alone is
   useless, which is the point. The recovery codes of the second factor
   are hashed under a key of the vault as well, so they too count only
@@ -1898,8 +1904,8 @@ so `uvx benethos-mailbox-mcp` stays small and the REST-only rule is
 enforced by the dependency list itself. A test checks that no module
 imports the service.
 
-It calls the REST API through the client, which reads
-`MAILBOX_SERVICE_URL` and `MAILBOX_SERVICE_TOKEN`. The URL is `https`, or `http` to this machine only, since the token
+It calls the REST API through the client, with the
+`MAILBOX_SERVICE_URL` and `MAILBOX_SERVICE_TOKEN` of its settings. The URL is `https`, or `http` to this machine only, since the token
 goes with every request. `MAILBOX_SERVICE_ALLOW_HTTP=1` allows `http` to
 another host, e.g. between containers (**decided 2026-09-27**). A URL
 with a user or password is refused: the address is named in the error
@@ -1909,7 +1915,8 @@ is not passed on: the server acts as the user of its own API token, for
 every client alike. Host and Origin are checked against DNS rebinding.
 On an address other hosts reach, such as `0.0.0.0`, it does not start
 without the bearer token and a list of allowed hosts or origins
-(**decided 2026-11-10**). At
+(**decided 2026-11-10**). A catalogue starts without them, since it
+runs no tool but `server_status`. At
 start it asks `/v1/me` what its user may do, and only those tools exist.
 It asks again while it runs and tells its clients when they change
 (7.5).
@@ -1964,6 +1971,10 @@ runs none but `server_status`, which answers as usual. It is set only
 where a directory builds the server, never by default: a server with a
 token keeps to the token's rights unchanged, and a token beside the
 catalogue stops the start.
+
+`benethos-mailbox-mcp --list-tools` prints the tools as a client lists
+them, as JSON, without starting a server. `docs/mcp-tools.json` holds
+that list, and a test compares it with the code.
 
 Principles:
 
@@ -2140,7 +2151,7 @@ Its interface has no stability promise yet.
 | Web | FastAPI, uvicorn, pydantic v2, pydantic-settings |
 | Storage | SQLite (stdlib `sqlite3`) |
 | Crypto | `cryptography` (AES-256-GCM), `keyring` |
-| Mail | IMAPClient, imap-tools (parser), smtplib, poplib, httpx (JMAP, Graph) |
+| Mail | IMAPClient, imap-tools (parser), smtplib, poplib, httpx (JMAP, Graph, Gmail) |
 | MCP | `mcp` 2.x |
 | Quality | pytest, pytest-asyncio, pytest-cov (≥ 80 %), ruff, mypy, GitHub Actions, CodeQL and hadolint under Code scanning |
 | Container | non-root image, compose file bound to the loopback address |
@@ -2160,15 +2171,22 @@ Its interface has no stability promise yet.
   memory.
 - Gmail and Graph adapter tests use `httpx.MockTransport` with recorded,
   anonymized response shapes.
-- `live/` holds manual smoke scripts, outside `testpaths`. They run
-  against **test accounts on an IMAP server of our own**. Its address and
-  the list of test accounts are local, unversioned configuration, and only
-  accounts listed there count as confirmed test accounts (golden rule 1 in
-  CLAUDE.md).
+- `live/` holds manual checks, outside `testpaths`. They run against
+  **test accounts**: on an IMAP server of our own, a Microsoft and a
+  Gmail test account, and the test mail server in a container. The
+  server's address and the list of test accounts are local, unversioned
+  configuration, and only accounts listed there count as confirmed test
+  accounts (golden rule 1 in CLAUDE.md).
 - The traps of 5.10 (folder names in modified UTF-7, localised special
   folders, broken charsets, IDN, SMTPUTF8) get fixtures of their own.
 - Contract tests: committed OpenAPI document, unique `operationId`s, bearer
-  and error responses on every protected route.
+  and error responses on every protected route. The tools of the MCP
+  server are committed as well, in `docs/mcp-tools.json`.
+- The configuration UI runs in Chrome, Firefox and WebKit through
+  Playwright, a suite of its own in
+  `packages/mailbox-service/tests/browser`. The default run leaves it
+  out, and the CI job `browser` runs it. It is the one check that runs
+  the UI's JavaScript.
 
 ## 11. Roadmap
 
@@ -2194,7 +2212,9 @@ Undecided ideas are collected in [IDEAS.md](IDEAS.md).
    its packages `mailbox-service`, `mailbox-client` (since 2026-10-07)
    and `mailbox-mcp`. On PyPI they keep the names
    `benethos-mailbox-service`, `benethos-mailbox-client` and
-   `benethos-mailbox-mcp`, on ghcr.io the two images as well.
+   `benethos-mailbox-mcp`, on ghcr.io the two images as well. A fourth
+   package, `mailbox-common`, came with 0.4.0, on PyPI as
+   `benethos-mailbox-common`.
 3. **Gmail priority:** is Gmail needed early, or are GMX / web.de /
    T-Online over IMAP the main use? Microsoft accounts are supported
    already (phase 5). **Answered 2026-10-08:** Gmail came after the

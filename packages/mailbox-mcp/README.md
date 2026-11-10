@@ -291,7 +291,9 @@ the service cannot be reached.
 starts the server in a sandbox and reads its tool list, without a
 service or a token. The server then lists every tool, asks the service
 nothing and refuses every call but `server_status`, naming the setting.
-With `MAILBOX_SERVICE_TOKEN` set beside it, it does not start. In use,
+With `MAILBOX_SERVICE_TOKEN` set beside it, it does not start. Over
+HTTP a catalogue needs neither the bearer token nor a list of hosts,
+on any address, since it runs no tool but `server_status`. In use,
 leave it off: a server with a token offers the tools its token allows.
 
 ## Over HTTP
@@ -335,9 +337,9 @@ written as the service writes its own: in colour on a terminal unless
 `NO_COLOR` is set, plain elsewhere, its tokens masked as `***`. At start it names the settings file
 it read, the transport, the service's address and the tools it serves,
 and warns where its token may read mail and send it to any address. Over
-HTTP on a loopback bind without `MAILBOX_MCP_BEARER_TOKEN` it warns as
-well. As a catalogue it writes one warning at start instead, that it
-lists every tool and runs none, and nothing for a call it refuses. A tool that
+HTTP without `MAILBOX_MCP_BEARER_TOKEN` it warns as well. As a catalogue
+it names no service and no tools. It warns at start that it lists
+every tool and runs none, and writes nothing for a call it refuses. A tool that
 fails writes a warning with the tool's name and the error's code, or
 why it failed where there is none, such as a PDF that took too long,
 never its arguments. `httpx`, `httpcore` and the MCP library write from
@@ -419,7 +421,7 @@ beside `server_status`, and it lists no account. The tools:
 | `list_folders` | `mail.read` | folders with id, name, role, parent and counts |
 | `search_messages` | `mail.read` | find mail by text, sender, recipient, subject (each one line of up to 200 characters), days, flags, attachments, in one account, several or all, in the inbox or a folder, or with `all` in every folder but the trash and junk, each hit with the first 120 characters of its text |
 | `get_message` | `mail.read` | one mail as plain text, cut to `max_chars`, 4,000 by default, with its headers, `bcc` and `reply_to` among them, its folders, its marks in words, its keywords, its attachments with id, type and size, an inline one such as a logo marked `(inline)`, and for a draft the mail it answers |
-| `get_thread` | `mail.read` | a conversation in every folder, oldest first, from a mail of it such as a search hit or from its thread id: the newest 20 mails as plain text, sharing `max_chars`, 12,000 by default |
+| `get_thread` | `mail.read` | a conversation in every folder, oldest first, from a mail of it such as a search hit or from its thread id: the newest 20 mails as plain text, sharing `max_chars`, 12,000 by default, each mail at least 200 characters |
 | `whats_new` | `mail.read` | mail created, updated or deleted since the `state` of an earlier call, ids only, in one account, several or all |
 | `get_attachment` | `mail.read` | an attachment: images up to 5 MiB as images, PDF pages as PNG images (`first_page`, `pages`, up to 10, 4 megapixels a page and 12 together), text as text, HTML as the text a reader sees, both cut to `max_chars`, 20,000 by default. Other types and larger images by name only. An image, PDF or text above 10 MiB is refused, and a PDF whose pages take longer than 30 seconds to render. |
 | `share_attachment` | `mail.share` | a link to an attachment for another service, which fetches the file itself without it passing through the model: a URL that service fetches once, without a token, until it ends, after the service's `MAILBOX_SERVICE_LINK_SECONDS`, 120 by default, or sooner with `expires_in`, with when it ends, the type, the size and the file name |

@@ -424,6 +424,11 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
   and uptime, with `details` the service as the server last saw it, its
   version from `/health`. Live-checked in `live/mcp_stdio.py` and
   `live/mcp_http.py`
+- **A catalogue of the MCP server's tools without a service (8)**,
+  decided 2026-11-09, done: `MAILBOX_MCP_CATALOGUE=true` lists every
+  tool and refuses every call but `server_status`, and `--list-tools`
+  prints the tools as a client lists them, kept in
+  `docs/mcp-tools.json`
 
 Open in this phase, each planned in CONCEPT.md:
 

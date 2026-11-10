@@ -73,8 +73,10 @@ docker compose up -d
 ```
 
 The master key lives in `development/secrets/master_key`. The MCP server
-starts with `docker compose --profile mcp up -d`. Compose reads these variables from
-the environment or from an `.env` beside the file, not versioned:
+starts with `docker compose --profile mcp up -d`. It needs
+`MAILBOX_SERVICE_TOKEN` and `MAILBOX_MCP_BEARER_TOKEN` and does not
+start without them. Compose reads these variables from the environment
+or from an `.env` beside the file, not versioned:
 
 | Variable | Default | What it is |
 |---|---|---|

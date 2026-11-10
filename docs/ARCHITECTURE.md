@@ -120,8 +120,12 @@ that the domain picks no storage implementation, and that SQLite is
 reached through `data/storage/` alone. `tests/test_code_rules.py`
 checks that the data layer logs nothing above `DEBUG` and the domain
 nothing but activities, that a broad `except` raises or records, the
-sizes of modules and classes, and that a helper of `common/` exists
-once. The architecture test also checks that the
+sizes of modules and classes, that a helper of `common/` exists
+once, that a template asks what the page may do and never the kind
+of an account, that the headers of htmx stand in
+`web/pages/templates.py` alone, and that no `__init__.py` defines a
+class. It also holds the rules of section 13 for the tests and the
+live checks. The architecture test also checks that the
 packages of the domain and of data are imported through
 their `__init__.py`, export what others import, have no cycle, and keep
 their lines. Nothing below reaches `assembly/` or `cli/`, the assembly
@@ -226,7 +230,9 @@ packages/mailbox-service/
         session.py      # sign-in with a password, server-side sessions,
                         #   the pending sign-in before the code
         qr.py           # QR codes as SVG data URIs (segno)
-        templates.py    # Jinja2: filters, render, Post/Redirect/Get
+        templates.py    # Jinja2: filters, render, Post/Redirect/Get,
+                        #   and what htmx sends and follows (is_htmx,
+                        #   leave, redirect_to)
         grants.py       # the grant editor's rows, read back into grants
         editor.py       # the editor of rights on a user's or a role's page
         mailform.py     # the mail form: fields to a message, shown again
@@ -478,7 +484,8 @@ packages/mailbox-client/
       compose.py        # message_body: what drafts and sending share
       generic.py        # request(): any route, its JSON as it comes
     answers.py          # an answer read: its JSON, the error envelope
-                        #   as ApiError, a failure on the way
+                        #   as ApiError, an answer that cannot be
+                        #   read, a failure on the way
     attachments.py      # an attachment's bytes in chunks, up to a
                         #   limit, what its headers say
     environment.py      # the address and the token: from the
@@ -569,13 +576,15 @@ packages/mailbox-mcp/
       base.py           # Tool, reads()/changes(), result(): text and
                         #   images, client(): the one of the server the
                         #   tool runs in, made in its lifespan, the
-                        #   arguments every kind takes (AccountId,
-                        #   MessageId, DraftId, FolderId, Limit, Cursor)
+                        #   arguments the kinds share (AccountId,
+                        #   MessageId, AttachmentId, DraftId, FolderId,
+                        #   Limit, Cursor)
       compose.py        # what drafts and sending share: addresses, the
                         #   message a tool's arguments describe, and
                         #   those arguments (Addresses ... AttachFrom)
       accounts.py       # list_accounts, which reports the kinds
-      reading.py        # folders, search, a message, what is new,
+      reading.py        # folders, search, a message, a thread, what
+                        #   is new,
                         #   attachments, a link to one for another
                         #   service
       writing.py        # change messages, create, rename or move a
@@ -584,6 +593,8 @@ packages/mailbox-mcp/
       sending.py        # send a mail, send a draft
       status.py         # server_status: what runs, from memory, and
                         #   the service as the server last saw it
+                        #   (Running, Seen), which saw and
+                        #   seen_at_start keep
     render.py           # what the model sees of mail, marked as foreign
     pdf.py              # PDF pages as PNG (pypdfium2)
     client.py           # the client package's MailboxClient, the
@@ -597,7 +608,9 @@ packages/mailbox-mcp/
     config.py           # Settings (MAILBOX_MCP_* and the service's
                         #   address and token, catalogue), the optional
                         #   .env and the folder of the system, from
-                        #   mailbox-common
+                        #   mailbox-common, APP, the program's name,
+                        #   and variable(): a setting's name in the
+                        #   environment
 ```
 
 The modules stand in lines, each importing only lines below:
@@ -612,6 +625,8 @@ The modules stand in lines, each importing only lines below:
 
 `tests/test_architecture.py` of the MCP package keeps the modules in
 these lines, the tools behind their package, and one home per library.
+The command line imports nothing of `tools`: the tools and what the
+token may do are `server`'s.
 
 **A tool of the MCP server** is a function in `tools/<kind>.py` with
 its line in that module's `TOOLS`: its title, the rights it needs, and
@@ -628,7 +643,9 @@ may carry a description of its own and its bounds, in `Annotated` with
 in `tests/tools/`, against `httpx.MockTransport`. The tables of the
 package's README and of the root README name it, and
 `docs/mcp-tools.json` holds it as a client lists it
-(`test_tools_snapshot.py`).
+(`test_tools_snapshot.py`). The manifest of the Claude Desktop bundle,
+`.github/publish/mcpb/manifest.json`, lists it with the first sentence
+of its description (`test_mcpb.py`).
 
 What the service and the MCP server both need is a package of its own,
 `mailbox-common`, since the MCP server cannot see the service. It sees
@@ -714,7 +731,7 @@ service or the MCP server defines one of its functions again.
 | a wire protocol | a module in `data/protocols/`, one library, in our types. The adapters compose it |
 | an autodiscovery source | a module in `data/discovery/`, behind `DiscoverySource`, put in order in `sources.py` |
 | a command of the CLI | a module in `cli/` with `add` and `run`, its line in `COMMANDS`. It builds the service through `assembly/` |
-| a tool of the MCP server | `tools/<kind>.py` of the MCP package with its line in `TOOLS` there, its request in the client package, its answer through `render.py` (section 3), then `docs/mcp-tools.json` is regenerated |
+| a tool of the MCP server | `tools/<kind>.py` of the MCP package with its line in `TOOLS` there, its request in the client package, its answer through `render.py` (section 3), then `docs/mcp-tools.json` is regenerated and the bundle's manifest names it |
 | a request of the Python client | the module of its resource in `endpoints/` of the client package, and one line on each client (section 3) |
 | a library | one wrapper module, in the layer that needs it, and nowhere else. The wrapper maps into our types and our errors |
 | an error | `errors.py`, a subclass of `MailboxServiceError`. `web/errors.py` gives it a status |
@@ -782,8 +799,8 @@ technology says the seam is in the wrong place.
 4. **Two exceptions:** pydantic, which is how this project writes its
    types, and anyio, which is how it writes concurrency. No `asyncio`
    beside it, and a thread only where a blocking library is wrapped.
-5. **The standard library is a library too.** `sqlite3`, `smtplib` and
-   `ssl` have homes as httpx does.
+5. **The standard library is a library too.** `sqlite3`, `smtplib`,
+   `poplib`, `ssl` and `email` have homes as httpx does.
 
 ## 8. Encapsulation and replaceable parts
 
@@ -826,7 +843,7 @@ noticing. Every change is measured against that.
 | Authentication | credential kinds of a user (CONCEPT 7.5, [AUTHENTICATION.md](AUTHENTICATION.md)) | API token, password for the UI | OAuth client credentials |
 | Second factor | `SecondFactors` in `domain/auth/factors.py`, the frame over its methods and the recovery codes | TOTP (`domain/auth/totp.py`, `data/secrets/totp.py`) | a further method beside it, e.g. passkeys |
 | QR code | `data_uri` in `web/pages/qr.py` | segno | another QR library |
-| Client ↔ service | the REST API, `docs/openapi.json` | the package `mailbox-client`: each endpoint in `endpoints/`, sent by an async and a sync client over httpx. The MCP server uses it | a generated client, another HTTP library in `client.py`, `sync.py` and the modules that read an answer |
+| Client ↔ service | the REST API, `docs/openapi.json` | the package `mailbox-client`: each endpoint in `endpoints/`, sent by an async and a sync client over httpx. The MCP server uses it | a generated client, another HTTP library in `client.py`, `sync.py`, `calls.py`, `environment.py` and the modules that read an answer |
 
 **When you add something new**, ask first where its seam is. A new
 provider is a new module behind `Reads`, not a branch in a route. A
@@ -931,9 +948,12 @@ imapclient boundary), never by patching deep inside a library.
   `tests/integration/`. The fakes and `conftest.py` are at the top.
   A fixture that tests of more than one module take is in the
   `conftest.py` of their nearest common folder, never imported from a
-  test module. A helper they share is in a module of its own there,
-  named after its subject: a fake in `<subject>_fake.py`, an adapter on
-  its fake in `<kind>_adapter.py`, anything else in
+  test module. A test module defines no fixture under the name of one
+  in a `conftest.py` above it, and two test modules of a folder share
+  no fixture name. A helper they share is in a module of its own there,
+  named after its subject: a fake in `<subject>_fake.py`, a part of a
+  large one in `<subject>_fake_<part>.py`, an adapter on its fake in
+  `<kind>_adapter.py`, anything else in
   `<subject>_helpers.py`. The clocks a test moves itself are in
   `clocks.py`. No test module imports another, and every other module
   is named so, which `test_code_rules.py` checks in all four packages.
@@ -944,8 +964,9 @@ imapclient boundary), never by patching deep inside a library.
   and it is collected only with `MAILBOX_BROWSER_TESTS=1`
   (CLAUDE.md, Verifying).
 - What checks the repository across the four packages, the publishing,
-  the workflows, the READMEs, the trees of section 3, the boundaries and
-  the JavaScript the UI ships, is in `tests/` at its root. Beside them
+  the workflows, the READMEs, the trees of section 3, the project
+  layout of CLAUDE.md, the boundaries and the JavaScript the UI ships,
+  is in `tests/` at its root. Beside them
   `installed_check.py` is not a test: the packages as installed, as real
   processes, run by hand and by `freshness.yml`. Each package's tests
   stay its own and run alone.
@@ -991,7 +1012,8 @@ imapclient boundary), never by patching deep inside a library.
   `test_architecture.py` of the client and the MCP server checks both
   for its package and its tests, that of `mailbox-common` the length
   of its modules, `test_code_rules.py` of the service for the
-  service, its tests and `live/`. Past that, the subject has
+  service, its tests, the tests at the root of the repository and
+  `live/`. Past that, the subject has
   parts, and each part is a module.
 - A package holds a handful of modules. Past that, it holds areas, and
   each area is a package.

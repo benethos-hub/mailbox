@@ -42,8 +42,9 @@ done. Update the roadmap in the same commit that finishes an item.
 - Windows, PowerShell or Bash. Python 3.11-3.15. CI measures the
   coverage on the newest and builds the fresh install with it. A new
   version goes into the CI matrix, `coverage-python`, `UV_PYTHON` of
-  fresh-install and browser, the classifiers and this line at once, as
-  `test_packaging.py` checks.
+  fresh-install and browser, the classifiers, the table of
+  `docs/CONCEPT.md` 9 and this line at once, as `test_packaging.py`
+  checks.
 - Set up: `uv sync` (the workspace dev group holds pytest, ruff, mypy).
 - Configuration: one folder per package under `config/`, e.g.
   `config/benethos-mailbox-service/.env` (not versioned) beside its
@@ -184,11 +185,11 @@ assets/                   # brand/: the organisation's brand assets,
                           #   light and dark. build.py makes the
                           #   shipped copies in the service's
                           #   static/img/, with --social the social
-                          #   preview, with --diagram the diagram.
+                          #   preview, with --diagram the diagram,
+                          #   with --icon brand/icon.png for the MCP
+                          #   Registry and the Claude Desktop bundle.
                           #   icons.py makes the UI's icon sprite
                           #   from a pinned Bootstrap Icons package.
-                          #   --icon renders brand/icon.png for the MCP
-                          #   Registry and the Claude Desktop bundle.
                           #   vendor/: the versions of the JavaScript
                           #   packages the UI ships, a package-lock.json
                           #   for the freshness report, nothing installs
@@ -290,7 +291,9 @@ packages/
                           #   fakes, conftest.py and what checks the whole
                           #   service
       test_architecture.py  # checks the layering on every run
-      test_code_rules.py    # logging, handlers, sizes, helpers once
+      test_code_rules.py    # logging, handlers, sizes, helpers once,
+                            #   htmx in one module, the rules for
+                            #   the tests and live/
       test_openapi.py       # docs/openapi.json equals the code's
       test_cli.py           # the command line
       test_errors.py        # the errors every layer raises
@@ -346,7 +349,8 @@ Never write a test that reaches a real mail server, and never one that skips
 itself without credentials. Live checks are manual scripts in `live/`, outside
 `testpaths`.
 They run against test accounts: on an IMAP server of our own, the
-Microsoft test account, and the test mail server in a container. The
+Microsoft test account, the Gmail test account, and the test mail
+server in a container. The
 server's address and the list of test accounts are local, unversioned
 configuration, and only the accounts listed there count as confirmed
 test accounts for golden rule 1.
@@ -406,18 +410,26 @@ common package to it, the service the common package.
    `benethos-mailbox-client==X.Y.Z` and
    `benethos-mailbox-common[paths,settings]==X.Y.Z` in the MCP server's
    and `benethos-mailbox-common[paths,settings]==X.Y.Z` in the
-   service's, then `uv lock` and `uv sync`. `test_packaging.py` names
-   every version example in the documentation that still shows the old
-   one.
+   service's, then `uv lock` and `uv sync`. Set it as well in
+   `.github/publish/mcp-registry/server.json`, there also in the
+   bundle's address, in `.github/publish/mcpb/manifest.json` and in
+   `containers/production/.env.example`, and regenerate
+   `docs/openapi.json`, which carries it. `test_packaging.py` names
+   every such place and every version example in the documentation
+   that still shows the old one.
 3. Close `[Unreleased]` in `CHANGELOG.md` as `[X.Y.Z] - <date>`, in the
    same commit as step 2: `test_packaging.py` holds the version to the
-   newest release the changelog names.
+   newest release the changelog names. At its foot, move the link
+   `[Unreleased]` to `compare/vX.Y.Z...HEAD` and add the link
+   `[X.Y.Z]`.
 4. Freeze the migrations new in this release: add `fingerprint(N)` of
    each to `RELEASED` in `tests/data/storage/test_sqlite.py`.
 5. After the squash merge: an annotated tag `vX.Y.Z` on `main`, pushed,
    then `gh release create vX.Y.Z --verify-tag --title X.Y.Z` with the
    changelog section as the notes. The published release starts `publish.yml`, which
-   uploads the four packages to PyPI and both images to GHCR.
+   uploads the four packages to PyPI and both images to GHCR, attaches
+   the Claude Desktop bundle to the release and sends the entry to the
+   MCP Registry.
 6. Check what shipped: the four packages on PyPI, each image's tags
    `X.Y.Z`, `X.Y` and `latest` on the same revision, the bundle
    `benethos-mailbox-mcp-X.Y.Z.mcpb` and `benethos-mailbox-mcp.mcpb` on

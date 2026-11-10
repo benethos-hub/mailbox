@@ -39,8 +39,8 @@ Towards the mail servers:
 | Limit | Counts | Default | Past it | Set by |
 |---|---|---|---|---|
 | IMAP and POP3 pace | per account, commands and SMTP sends | 60 a minute, 10 at once | the request waits | `MAILBOX_SERVICE_IMAP_REQUESTS_PER_MINUTE`, `MAILBOX_SERVICE_IMAP_BURST`, the account's `max_requests_per_minute` |
-| Unreachable server | per IMAP or POP3 account, SMTP included | 3 attempts with backoff, then a pause of 30 seconds, doubled up to 15 minutes | `502 provider_unavailable`, the account shows `unreachable` | `MAILBOX_SERVICE_IMAP_ATTEMPTS`, `MAILBOX_SERVICE_IMAP_FIRST_PAUSE`, `MAILBOX_SERVICE_IMAP_LONGEST_PAUSE` |
-| Rejected login | per account | no new attempt until the credential is replaced or the account is verified | `502 provider_auth_failed`, the account shows `needs_reauth` | fixed |
+| Unreachable server | per IMAP or POP3 account. A send over SMTP is tried once and neither starts the pause nor waits for it | 3 attempts with backoff, then a pause of 30 seconds, doubled up to 15 minutes | `502 provider_unavailable`, the account shows `unreachable` | `MAILBOX_SERVICE_IMAP_ATTEMPTS`, `MAILBOX_SERVICE_IMAP_FIRST_PAUSE`, `MAILBOX_SERVICE_IMAP_LONGEST_PAUSE` |
+| Rejected login | per account, SMTP included | no new attempt until the credential is replaced or the account is verified | `502 provider_auth_failed`, the account shows `needs_reauth` | fixed |
 | Watched accounts | for the whole service | 50 at once, an IMAP one waiting in IDLE in a thread of its own, a JMAP one on its event source | further accounts are polled only | `MAILBOX_SERVICE_SYNC_WATCHERS` |
 | Microsoft Graph | per account | a pause as long as Graph's `Retry-After` | `502 provider_unavailable` | Graph |
 | Gmail API | per account | 8 requests at once for one listing, and a pause as long as Gmail's `Retry-After`. Gmail's own quota is 250 units a second per account. A `403` for the quota counts as busy. An error of Gmail's own side, such as `500 backendError`, is tried twice more after a pause of up to 1 and 2 seconds, where the request changes nothing when it runs twice | the request waits, or `502 provider_unavailable` | Gmail, the 8 are fixed |

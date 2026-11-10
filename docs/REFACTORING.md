@@ -622,7 +622,8 @@ Where the code differed from the tables, and what was accepted. **Decided
   that ends for good. Since #72 it is `_loop` in
   `assembly/lifecycle.py`.
 - **A2**: the helper is `log_time` in `common/clock.py`, as
-  LOGGING.md 6.9 names the time of a log line.
+  LOGGING.md 6.9 names the time of a log line. Since the package
+  `mailbox-common` it is in its `log/lines.py` (15.2).
 - **B14**: the six `why()` of the activity catalogue stay, since their
   reasons are of different types.
 - **C8**: the Microsoft adapter keeps its folder roles, which come from

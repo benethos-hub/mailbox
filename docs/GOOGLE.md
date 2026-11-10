@@ -166,7 +166,8 @@ when access is taken back under the Google account's security settings.
 ## How Gmail looks through the API
 
 - **Folders** are labels. Inbox, Sent, Drafts, Trash and Spam have their
-  roles, and so do the labels a person made. A label named `Work/2026`
+  roles. The labels a person made are folders without a role. A label
+  named `Work/2026`
   sits in `Work`. Renaming `Work` renames the labels inside it too.
 - **All Mail** is the folder `ALL_MAIL` with the role `all`: every
   message outside the trash and the spam. It is no label at Gmail.
