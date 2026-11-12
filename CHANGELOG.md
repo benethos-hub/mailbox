@@ -8,7 +8,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- The images install fastapi 0.162.3 from the lockfile.
+- The images install fastapi 0.162.5 and annotated-doc 0.0.6 from the
+  lockfile.
 
 ## [0.7.0] - 2026-11-10
 
