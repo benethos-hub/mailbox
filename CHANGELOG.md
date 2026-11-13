@@ -15,6 +15,12 @@ adheres to [Semantic Versioning](https://semver.org/).
   lockfile.
 - The images build with uv 0.13.8.
 
+### Fixed
+
+- The Audit page of the UI named a sign-in with a second factor as one
+  with a token. It now reads `the UI, with a code` or `the UI, with a
+  recovery code`.
+
 ## [0.7.0] - 2026-11-10
 
 ### Added
