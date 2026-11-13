@@ -1,7 +1,7 @@
 {# The rows of the audit of administration, for its page and the card on
    a user's page. ``outcomes``: the tag class of each outcome,
    ``user_pages``: whether a user's name links to its page. #}
-{% macro credential_of(r) %}{% if not r.credential %}not signed in{% elif r.credential == "password" %}the UI{% elif r.credential == "host" %}a command on the host{% else %}token <span class="mono">{{ r.credential[6:22] }}…</span>{% endif %}{% endmacro %}
+{% macro credential_of(r) %}{% if not r.credential %}not signed in{% elif r.credential == "password" %}the UI{% elif r.credential == "password+totp" %}the UI, with a code{% elif r.credential == "password+recovery" %}the UI, with a recovery code{% elif r.credential == "host" %}a command on the host{% else %}token <span class="mono">{{ r.credential[6:22] }}…</span>{% endif %}{% endmacro %}
 
 {% macro activity_rows(records, outcomes, user_pages, who=True) %}
 <div class="table-scroll">

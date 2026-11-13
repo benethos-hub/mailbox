@@ -1,6 +1,6 @@
 # Concept of Mailbox
 
-> **Status: draft, 2026-09-24. The software is beta, version 0.7.0.**
+> **Status: draft, 2026-09-24. The software is beta, version 0.7.1.**
 > Describes the target design. What is built today is marked in
 > [ROADMAP.md](ROADMAP.md). Facts about third-party products were taken
 > from their public documentation on 2026-09-24. Items marked
@@ -465,8 +465,8 @@ an app password is the credential to ask for.
 
 ### 5.5 Google: the verification question
 
-The Gmail scopes this service needs (`gmail.modify`, or `mail.google.com`
-for IMAP) are **restricted scopes**. A publicly distributed app using them
+The Gmail scope this service asks for, `https://mail.google.com/`, is a
+**restricted scope**. A publicly distributed app using it
 needs Google's verification plus a yearly security assessment (CASA). That
 is out of reach for a self-hosted open-source project, and it does not have
 to be reached:
@@ -484,8 +484,8 @@ to be reached:
   account then goes to `needs_reauth` (7.4).
 - Push: `users.watch` publishes to Cloud Pub/Sub and has to be renewed at
   least every 7 days. Without Pub/Sub, the worker polls `history.list`,
-  which is cheap. **Polling is the default**, Pub/Sub an option, since it
-  needs another piece of Google Cloud set up.
+  which is cheap. **The worker polls.** Pub/Sub is not built, since it
+  needs another piece of Google Cloud set up (IDEAS.md).
 - Quota: 250 units per user per second. Irrelevant for one person's
   mailbox, relevant for a bulk import.
 
@@ -532,8 +532,8 @@ built in.
 - Implemented directly over httpx. It is a small JSON protocol, and a
   wrapper library would be one more dependency with its own licence to
   check.
-- Stalwart runs in a container and serves as the JMAP (and IMAP) server
-  for integration tests (10).
+- Stalwart runs in a container as the test mail server, and
+  `live/jmap.py` checks the adapter against it (10).
 
 **Decided 2026-10-06, built:**
 
@@ -617,9 +617,10 @@ JMAP before the rest, then by the order of their sources.
 | 7 | **SRV records**, planned | RFC 6186: `_imaps._tcp`, `_imap._tcp`, `_submission._tcp`, `_submissions._tcp` | mail servers that publish SRV |
 | 8 | **Guessing**, planned | `imap.{domain}`, `mail.{domain}`, `smtp.{domain}` on 993/143 and 465/587 | last resort, lowest confidence |
 
-For every IMAP or SMTP candidate the service then reads the server's
-`CAPABILITY`: which auth mechanisms it offers (`AUTH=XOAUTH2`,
-`AUTH=PLAIN`) decides whether to ask for OAuth or a password. The
+For the IMAP or POP3 server of a candidate the service then reads what
+the server announces before a login, for four servers at most. One
+that refuses a password login (`LOGINDISABLED`) and offers
+`AUTH=XOAUTH2` asks for OAuth. An SMTP server is not asked. The
 account's own capabilities are read from the server when the account
 connects (5.11, rule 4).
 
@@ -685,7 +686,8 @@ registered that domain.
 POST rather than GET, so the address does not end up in access logs. A
 candidate carries: adapter, servers with host, port and encryption, the
 credential kind to ask for, OAuth provider if any, hints with help links,
-`source`, `confirmed` (4 above), and per server what its `CAPABILITY` answered.
+`source`, `confirmed` (4 above), and for the server it reads mail from
+what that one announced.
 `POST /v1/accounts` then takes the chosen candidate plus the credential, and
 verifies before it stores (7.4). The configuration UI is the main user:
 address field, result, then either an OAuth button or a password field.
@@ -1057,7 +1059,8 @@ Rules of the implementation for drafts (phase 2):
 - A deleted draft is gone for good, not moved to the trash.
 - `send_draft` sends the draft as stored, with the date of the send, and
   then deletes it. The sent folder gets its read copy as with `send`. The
-  reference a draft kept marks its original. A draft without recipients
+  reference a draft kept marks its original, where the caller may change
+  that message itself (`update_message`). A draft without recipients
   answers `400`. It needs only `send_draft`: the draft was written by
   whoever may write drafts.
 
@@ -1222,9 +1225,9 @@ advisor" need, whichever account it went to.
   left out silently, like in `list_accounts`.
 - `folder` takes a **role** only (`inbox`, `sent`, …), since folder ids
   belong to one account.
-- The accounts are asked in parallel, the results merged by date, newest
-  first. The cursor is opaque and carries the position in every account.
-  Each account gives the start of its own list: IMAP lists by arrival,
+- The accounts are asked in parallel, the results merged by the time
+  received, newest first. The cursor is opaque and carries the position
+  in every account. Each account gives the start of its own list: IMAP lists by arrival,
   so an old mail filed late may come a page early, but no message is
   skipped or given twice. Each page is newest first. An account reads
   at most ten of its own pages for one page of the list. Where the
@@ -1354,8 +1357,9 @@ the data, rather than a readable file.
     `MAILBOX_SERVICE_KEY_FILE` a command stops, and `paths` suggests
     `master.key` in the config folder.
 
-  Only 32 bytes go into the keyring, well inside the Windows Credential
-  Manager limit of 2560 bytes per entry. A passphrase-derived key was
+  Only the key goes into the keyring, as the 64 characters of the
+  recovery key, well inside the Windows Credential Manager limit of
+  2560 bytes per entry. A passphrase-derived key was
   considered and left out: it would have to be typed after every start, and
   background fetching would stop whenever nobody did.
 - **`keys init`** creates KEK and DEK and prints a **recovery key**
@@ -2164,9 +2168,9 @@ Its interface has no stability promise yet.
   Additionally a Stalwart container, which speaks IMAP, SMTP and JMAP,
   for an optional integration job (5.6). The container is
   `containers/test-mail-server/`, since 2026-10-06: IMAP, POP3, SMTP and
-  JMAP, two accounts and a local test CA, made by `setup.sh` on any
-  machine with Docker. `live/pop3.py` and `live/jmap.py` check those
-  adapters against it. The integration job is not built yet.
+  JMAP, two accounts and a local test CA, made by `setup.sh` on a
+  machine with Docker and `openssl`. `live/pop3.py` and `live/jmap.py`
+  check those adapters against it. The integration job is not built yet.
 - The JMAP adapter's tests use `httpx.MockTransport` with a JMAP server in
   memory.
 - Gmail and Graph adapter tests use `httpx.MockTransport` with recorded,

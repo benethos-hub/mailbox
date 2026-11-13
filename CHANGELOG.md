@@ -6,11 +6,20 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-11-13
+
 ### Changed
 
-- The images install fastapi 0.162.5, annotated-doc 0.0.6 and
-  publicsuffixlist 1.1.2.20261112 from the lockfile.
+- The images install fastapi 0.162.6, annotated-doc 0.0.6,
+  pydantic-settings 2.16.3 and publicsuffixlist 1.1.2.20261113 from the
+  lockfile.
 - The images build with uv 0.13.8.
+
+### Fixed
+
+- The Audit page of the UI named a sign-in with a second factor as one
+  with a token. It now reads `the UI, with a code` or `the UI, with a
+  recovery code`.
 
 ## [0.7.0] - 2026-11-10
 
@@ -2053,7 +2062,8 @@ the configuration may change without notice.
 - One error envelope `{"error": {"code", "message"}}`, authentication errors
   included.
 
-[Unreleased]: https://github.com/benethos-hub/mailbox/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/benethos-hub/mailbox/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/benethos-hub/mailbox/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/benethos-hub/mailbox/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/benethos-hub/mailbox/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/benethos-hub/mailbox/compare/v0.5.2...v0.6.0

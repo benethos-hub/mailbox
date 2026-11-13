@@ -11,7 +11,7 @@
 [![Sponsor](https://raw.githubusercontent.com/benethos-hub/.github/main/profile/badges/sponsor.svg)](https://github.com/sponsors/BeneODev)
 [![PayPal](https://raw.githubusercontent.com/benethos-hub/.github/main/profile/badges/paypal.svg)](https://paypal.me/BeneODev)
 
-> **Beta, version 0.7.0.** Usable with real accounts. A breaking change
+> **Beta, version 0.7.1.** Usable with real accounts. A breaking change
 > of the API or the configuration is announced in the changelog. Stored
 > data is carried forward by migrations.
 
@@ -164,7 +164,7 @@ names the settings file it read and the database at start.
 |---|---|---|
 | `MAILBOX_SERVICE_HOST`, `MAILBOX_SERVICE_PORT` | `127.0.0.1`, `8080` | where the service listens (`serve --host/--port` win) |
 | `MAILBOX_SERVICE_PUBLIC_URL` | from each request | the address people reach the service at, e.g. behind a proxy. The OAuth redirect address is built from it. |
-| `MAILBOX_SERVICE_FORWARDED_ALLOW_IPS` | | behind a reverse proxy: its address, whose `X-Forwarded-*` headers give the client address, scheme and host. Empty: only a proxy on `127.0.0.1` is believed. Behind a proxy elsewhere that is not named, every visitor counts as the proxy's address. |
+| `MAILBOX_SERVICE_FORWARDED_ALLOW_IPS` | | behind a reverse proxy: its address, whose `X-Forwarded-For` and `X-Forwarded-Proto` headers give the client address and the scheme. Empty: only a proxy on `127.0.0.1` is believed. Behind a proxy elsewhere that is not named, every visitor counts as the proxy's address. |
 | `MAILBOX_SERVICE_RATE_LIMIT_PER_MINUTE` | `120` | requests a minute per API token or UI session, a burst of half as many at once. `0` switches the limit off. |
 | `MAILBOX_SERVICE_RATE_LIMIT_ANONYMOUS_PER_MINUTE` | `30` | the same per client address, for requests without a credential |
 | `MAILBOX_SERVICE_LOG_LEVEL` | `INFO` | `critical`, `error`, `warning`, `info`, `debug` or `trace`, see [Logs](#logs) |
@@ -325,13 +325,13 @@ from the environment only and sets `MAILBOX_SERVICE_HOST=0.0.0.0`,
 `MAILBOX_SERVICE_DATA_DIR=/data`, `MAILBOX_SERVICE_KEY_PROVIDER=file` and
 `MAILBOX_SERVICE_KEY_FILE=/run/secrets/master_key`. The database lives in the
 volume at `/data`. The master key is a file mounted at
-`/run/secrets/master_key`. Tags: the version (`0.7.0`), the minor version
+`/run/secrets/master_key`. Tags: the version (`0.7.1`), the minor version
 (`0.7`) and `latest`.
 
 ### With docker run
 
 ```sh
-IMAGE=ghcr.io/benethos-hub/benethos-mailbox-service:0.7.0
+IMAGE=ghcr.io/benethos-hub/benethos-mailbox-service:0.7.1
 
 # once: a master key file, the keys in the database, the first user
 docker run --rm "$IMAGE" keys generate > master_key
@@ -366,7 +366,7 @@ does the first start in one run:
 sh setup.sh
 ```
 
-The version runs as named in its `.env`, `MAILBOX_VERSION=0.7.0`. Its
+The version runs as named in its `.env`, `MAILBOX_VERSION=0.7.1`. Its
 [README](https://github.com/benethos-hub/mailbox/blob/main/containers/production/README.md)
 has the same steps by hand, the update, backup and restore, HTTPS
 with Caddy or a proxy of your own, and the MCP server instances.

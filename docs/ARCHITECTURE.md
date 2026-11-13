@@ -750,14 +750,17 @@ technology says the seam is in the wrong place.
    for a pattern: `accounts`, not `services`. `mailbox`, not `core`.
 2. **`__init__.py` exports, it does not implement.** It imports what
    others may use and lists it in `__all__`. Code longer than a few
-   lines lives in a module.
+   lines lives in a module. The exception is the `__init__.py` that
+   puts its package together: `main()` and the parser in `cli/`,
+   `install()` and its helpers in `web/`, `web/api/` and `web/pages/`
+   (section 3).
 3. **A package is imported through its `__init__.py`**, from the names
    in `__all__`, never a module inside it. So a package can split or
    merge its modules without its callers noticing. Tests may reach
    inside, since they test the inside.
 4. **A package that offers modules as namespaces says so** in
    `__all__`: `activity` offers its areas, `data.mail` its formats.
-   The caller then writes `said.UiSignIn(...)` or `compose.build(...)`.
+   The caller then writes `said.UiSignIn(...)` or `compose.message(...)`.
 5. **No cycle between packages.** What two packages both need goes to a
    package below both, or is handed in where the services are wired
    (`build_services`), as `AccountService` gets `on_delete`.
@@ -774,9 +777,11 @@ technology says the seam is in the wrong place.
 - A name comes from where it is defined, or from its package's
   `__init__.py`. Never through a third module that happens to import
   it.
-- An import stands at the top of the module. The one exception is a
-  library that is slow or optional to load, imported inside the
+- An import stands at the top of the module. There are two exceptions.
+  A library that is slow or optional to load is imported inside the
   function that uses it, in its wrapper, with a comment that says why.
+  A command in `cli/` imports in its `run()` what only that command
+  needs, so the parser and the other commands do not load it.
 - No `import *`. No re-export without `__all__`.
 - A module imports what it uses, not what its callers might want.
 

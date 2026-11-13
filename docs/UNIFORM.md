@@ -213,8 +213,8 @@ larger piece that is neither, and runs on its own.
   compares. **Gmail and Microsoft match whole words or prefixes**, JMAP
   as its server does. No adapter can make the provider's index match
   parts of words. *Concept (6.7).*
-- **On Microsoft, `from`, `to` or `subject` switch the list to Graph's
-  `$search`.** `unread`, `starred` and `has_attachments=false` are then
+- **On Microsoft, `q`, `from`, `to` or `subject` switch the list to
+  Graph's `$search`.** `unread`, `starred` and `has_attachments=false` are then
   checked after each page, so a page can come back short or empty with
   a `next_cursor`. Documented with 6.7. Stays.
 - **A Microsoft cursor keeps its first query.** Sent with another folder
@@ -294,8 +294,8 @@ larger piece that is neither, and runs on its own.
 - **Gmail's own folders refuse neutral operations with `400`**: no
   subfolder in the inbox, no move into Sent or Drafts. Rule R2. Open:
   the domain refuses a change of a folder with a role with `409` first
-  (CONCEPT 6.2), Gmail's `400` reaches only its own folders without a
-  role.
+  (CONCEPT 6.2). Gmail's `400` is left for a folder made or moved below
+  one of its own and for a message moved into Sent or Drafts.
 - **Microsoft shows Outbox, Conversation History and similar folders
   without a role**, as if a person had made them. Renaming them fails at
   Graph with a general error. Stays.

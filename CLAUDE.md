@@ -142,8 +142,8 @@ done. Update the roadmap in the same commit that finishes an item.
   `uv run python live/gmail.py --connect` once (a person signs in in
   the browser), then `uv run python live/gmail.py` checks the adapter
   against the Gmail test account in `live/.env` with that client. It
-  makes a label inside a label, renames and removes them, writes,
-  replaces and deletes a draft, sends one mail from it to the first
+  makes a label inside a label, renames the outer one and removes both,
+  writes, replaces and deletes a draft, sends one mail from it to the first
   test account, deleted for good there, stars, labels, unlabels and
   labels again, reads the thread of and archives the copy in Sent,
   deletes it for good, and

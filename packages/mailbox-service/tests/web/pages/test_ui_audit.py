@@ -9,6 +9,8 @@ from fastapi.testclient import TestClient
 
 from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import Grant
+from benethos_mailbox_service.domain.activity import Actor
+from benethos_mailbox_service.domain.activity import auth as said
 
 from ...conftest import ADMIN, browser_admin, browser_user
 from ...ui_helpers import sign_in
@@ -33,6 +35,22 @@ def test_the_page_lists_who_did_what(
     assert "Anna <b>" not in page
     assert f'href="/ui/audit?record={anna.id}"' in page
     assert 'class="tag ok">done' in page
+
+
+def test_a_sign_in_with_a_second_factor_is_none_with_a_token(
+    app_client: TestClient, services: Services
+) -> None:
+    """A row says how its user came: with a code or a recovery code
+    beside the password it is the UI still, never a token."""
+    sign_in(app_client, *browser_admin(services))
+    anna = services.users.create_user(ADMIN, "Anna", [], [READER])
+    for credential in ("password+totp", "password+recovery"):
+        by = Actor.signed_in(anna.name, anna.id, "192.0.2.7", credential)
+        services.activity.record(said.UiSignIn(by=by))
+    page = app_client.get("/ui/audit").text
+    assert "the UI, with a code from 192.0.2.7" in page
+    assert "the UI, with a recovery code from 192.0.2.7" in page
+    assert "token <span" not in page
 
 
 def test_the_filter_bar_narrows_the_list(

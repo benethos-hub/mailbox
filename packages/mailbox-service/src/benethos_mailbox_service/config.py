@@ -48,11 +48,12 @@ class Settings(files.FileSettings):
     # must know. Empty: taken from each request.
     public_url: str | None = None
     # Behind a reverse proxy: the proxy's address (or several, separated by
-    # commas, or "*"), whose X-Forwarded-For, -Proto and -Host headers are
-    # believed. They give the client address that the sign-in throttle and
-    # the request limit count, the scheme the session cookie's Secure flag
-    # follows and the host the OAuth redirect is built from without a
-    # public URL. Empty: only a proxy on 127.0.0.1 is believed.
+    # commas, or "*"), whose X-Forwarded-For and X-Forwarded-Proto headers
+    # are believed. They give the client address that the sign-in throttle
+    # and the request limit count and the scheme the session cookie's
+    # Secure flag follows. The host the OAuth redirect is built from
+    # without a public URL is the Host header as the proxy passes it on.
+    # Empty: only a proxy on 127.0.0.1 is believed.
     forwarded_allow_ips: str | None = None
     # As uvicorn names them, in any case.
     log_level: Literal["critical", "error", "warning", "info", "debug", "trace"] = (

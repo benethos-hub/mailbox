@@ -13,7 +13,7 @@
 
 [![benethos-mailbox-mcp on Glama](https://glama.ai/mcp/servers/benethos-hub/mailbox/badges/card.svg)](https://glama.ai/mcp/servers/benethos-hub/mailbox)
 
-> **Beta, version 0.7.0.** Usable with real accounts. A breaking change
+> **Beta, version 0.7.1.** Usable with real accounts. A breaking change
 > of the API or the configuration is announced in the changelog. Stored
 > data is carried forward by migrations.
 
@@ -356,7 +356,7 @@ The image `ghcr.io/benethos-hub/benethos-mailbox-mcp` serves over
 streamable HTTP on port 8000, as an unprivileged user, and the command
 below runs it on a read-only root file system. A client that starts
 the server over stdio needs no image.
-Tags: the version (`0.7.0`), the minor version (`0.7`) and `latest`.
+Tags: the version (`0.7.1`), the minor version (`0.7`) and `latest`.
 
 ### With docker run
 
@@ -374,7 +374,7 @@ docker run -d --name mailbox-mcp --restart unless-stopped --network mailbox \
   -e MAILBOX_SERVICE_TOKEN=<token> \
   -e MAILBOX_MCP_BEARER_TOKEN=<a long random token> \
   -e MAILBOX_MCP_ALLOWED_HOSTS=127.0.0.1:8000,localhost:8000 \
-  ghcr.io/benethos-hub/benethos-mailbox-mcp:0.7.0
+  ghcr.io/benethos-hub/benethos-mailbox-mcp:0.7.1
 ```
 
 Inside the container the server binds to `0.0.0.0`. So
@@ -403,7 +403,8 @@ starts it beside a service built from the repository, with the profile
 ## Tools
 
 At start the server asks `/v1/me` what its token may do and offers only
-the tools that fit. While it runs it asks again every
+the tools that fit. Where the service does not answer then or refuses
+the token, the server does not start. While it runs it asks again every
 `MAILBOX_MCP_RIGHTS_SECONDS`, and when a tool is refused for a
 missing right, and tells its client when the tools change
 (`notifications/tools/list_changed`), so a right granted or taken away
@@ -419,7 +420,7 @@ beside `server_status`, and it lists no account. The tools:
 |---|---|---|
 | `list_accounts` | – | the accounts, their addresses, what may be done on each, the limits on sending, a warning where the token may read and send anywhere, what an account cannot do, such as a POP3 mailbox without folders, the marks it writes (`marks_written`), and an account that needs a person, such as a new sign-in |
 | `list_folders` | `mail.read` | folders with id, name, role, parent and counts |
-| `search_messages` | `mail.read` | find mail by text, sender, recipient, subject (each one line of up to 200 characters), days, flags, attachments, in one account, several or all, in the inbox or a folder, or with `all` in every folder but the trash and junk, each hit with the first 120 characters of its text |
+| `search_messages` | `mail.read` | find mail by text, sender, recipient, subject (each one line of up to 200 characters), days, flags, attachments, in one account, several or all, in the inbox or a folder, or with `all` in every folder but the trash and junk, each hit with the first 120 characters of its text where the account gives a preview, which IMAP and POP3 accounts do not |
 | `get_message` | `mail.read` | one mail as plain text, cut to `max_chars`, 4,000 by default, with its headers, `bcc` and `reply_to` among them, its folders, its marks in words, its keywords, its attachments with id, type and size, an inline one such as a logo marked `(inline)`, and for a draft the mail it answers |
 | `get_thread` | `mail.read` | a conversation in every folder, oldest first, from a mail of it such as a search hit or from its thread id: the newest 20 mails as plain text, sharing `max_chars`, 12,000 by default, each mail at least 200 characters |
 | `whats_new` | `mail.read` | mail created, updated or deleted since the `state` of an earlier call, ids only, in one account, several or all |
