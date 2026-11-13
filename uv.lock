@@ -1378,11 +1378,11 @@ wheels = [
 
 [[package]]
 name = "publicsuffixlist"
-version = "1.1.2.20261112"
+version = "1.1.2.20261113"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/3e/c3/367196cb989cdf4e501356d62647a7ea1e22f3fd13c95272af74e9c06c97/publicsuffixlist-1.1.2.20261112.tar.gz", hash = "sha256:0acf084db01084d26181eeb1d820f82d66bf9573ce92d0f842c6536064cdddd4", size = 107016, upload-time = "2026-11-12T10:55:33.703Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/fb/62/1cde468a0c78ae179c19fbf68c258a01ebc1764e02c743469744564b1a9e/publicsuffixlist-1.1.2.20261113.tar.gz", hash = "sha256:e35920e29b42f6c716d29814658b60ee2673bf02309cac375455b561e1d11da4", size = 107018, upload-time = "2026-11-13T10:50:34.205Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/04/cf/6326c0cc6e41e6464eb4f25845ab5628d54d705e93ccf662246642b04d54/publicsuffixlist-1.1.2.20261112-py3-none-any.whl", hash = "sha256:3c1cbc5c7e2cb11a4eb672ed7dab6ad1ac8e736164b648c217a8c85c50e64611", size = 109778, upload-time = "2026-11-12T10:55:32.073Z" },
+    { url = "https://files.pythonhosted.org/packages/97/96/8eff034d02051ed5bd30f0f694ab2a272272c6ad72636ea464f16fa569b9/publicsuffixlist-1.1.2.20261113-py3-none-any.whl", hash = "sha256:837494f6dcb18ccb90b104b1741b25688c07a0d34a05baa9062d74cefc0c0b6e", size = 109784, upload-time = "2026-11-13T10:50:32.941Z" },
 ]
 
 [[package]]
@@ -1547,7 +1547,7 @@ wheels = [
 
 [[package]]
 name = "pydantic-settings"
-version = "2.16.2"
+version = "2.16.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic" },
@@ -1555,9 +1555,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "typing-inspection" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d0/31/21d21e0e38a8f5f7a7f0cde22820117b6d17d6bc36f348129527f915d7f4/pydantic_settings-2.16.2.tar.gz", hash = "sha256:3dc08ffabed2bbd5dc2dd55ead7b78b4e4c5cd776aecd04310db5f1224caaf46", size = 309225, upload-time = "2026-10-28T11:14:28.066Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/59/28/227c843eedd29bd78e132e5aafa420d83154b10465c312f9c21ff2eaf77d/pydantic_settings-2.16.3.tar.gz", hash = "sha256:10e36f616623ebb586c05ca3d3cd22927146869db413d4f14c20c514442a1337", size = 311716, upload-time = "2026-11-13T11:18:30.102Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/39/88/4131c51ff87b7cd7f82a1194d0c0a2b7ca68c72d9da04c3b7e69ab91a79f/pydantic_settings-2.16.2-py3-none-any.whl", hash = "sha256:8d523e5c129b097686bde019bd6109bff53f4c8c3f63f1ddf9933ffa42e5ab4f", size = 81994, upload-time = "2026-10-28T11:14:26.716Z" },
+    { url = "https://files.pythonhosted.org/packages/4c/26/3e68379ca313b6aa58e11fbd8b28d5c6f1b9f4428d70222ba021a76797ec/pydantic_settings-2.16.3-py3-none-any.whl", hash = "sha256:d1db16a2d34006323a1b42c0640898da58adfbad7ec30baaa9e2b18aafc08999", size = 82679, upload-time = "2026-11-13T11:18:28.73Z" },
 ]
 
 [[package]]
