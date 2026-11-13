@@ -561,8 +561,9 @@ receiver reports nothing. Built last, if at all.
   an icon alone, its word the tooltip (`title`) and, with the record's
   name, what a screen reader hears (`aria-label`). A touch screen
   shows no tooltip: an icon that is not plain on its own (Sends,
-  Verify) gets its word back there and in a narrow window. Pencil,
-  bin, plus and envelope stand alone.
+  Download original, Mark read, Delete for good) gets its word back
+  there and in a narrow window. Pencil, bin, plus and envelope stand
+  alone.
 - **The question before a form**: a form that changes much carries
   `data-confirm`, the question and in a sentence after it what happens
   and what stays. `app.js` asks it in the page's own dialog, with the

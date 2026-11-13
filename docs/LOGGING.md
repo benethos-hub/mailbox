@@ -63,7 +63,7 @@ of an ordinary deployment fits on one screen.
 as rule 6.9 says. The source of an
 activity is its area and its name: `activity.auth.signed_in`,
 `activity.users.token_revoked` (section 7.2). The source of a technical
-line is its module: `domain.sync.worker`. The console and the log page show
+line is its module: `common.ratelimit`. The console and the log page show
 the source without the package's name in front, the plain lines for a
 container or the journal with it. The message is one sentence in the
 past tense, in this order:
@@ -284,7 +284,8 @@ limits themselves, and how they work together, are in
 
 A limit that keeps being hit is logged once per lockout or pause, not
 per refused request: the throttle logs when it locks, the provider
-pause when it starts. Each refused request still answers `429` with
+pause when it starts. The send limit is the exception: it logs each
+send it stops. Each refused request still answers `429` with
 `Retry-After`, and the access log has the line.
 
 **HTTP requests are limited.** **Decided 2026-09-28:** a limit per
@@ -302,8 +303,8 @@ requests without, both as tokens per minute with a burst, in
 - A burst of half as many passes at once. That covers a client that
   starts with several calls at once. `0` switches a limit off.
 - `/health` is not limited.
-- The OpenAPI document names the `429` once, in its description, not at
-  every operation.
+- The OpenAPI document names the `429` in its description and at every
+  operation that takes a token.
 
 A wrong credential is left to the sign-in throttle, which locks the
 address after ten failures by default. A valid token passes a locked
@@ -402,8 +403,9 @@ Its own process, its own log on stderr, its own rules, the same spirit:
    at the terminal on stderr, and a command that changes the database
    (`users`, `keys`, `restore`) records the same as an activity. The
    audit keeps those marked `audited`, which are those of `users`. A
-   command sets up no log, so its line reaches no handler, and the log
-   page shows the lines of its own process alone.
+   command sets up no log, so a line below WARNING reaches no handler
+   and a warning reaches stderr as Python writes it without one. The
+   log page shows the lines of its own process alone.
 9. **One time in every line.** Every line writes the time alike, at
    every place and in every format: ISO 8601, the local time of the
    machine, to the millisecond, with the offset:

@@ -148,7 +148,9 @@ cp compose.override.yaml.example compose.override.yaml
 
 Then the example's two instances: `mcp-assistant` for a client on this
 host, `mcp-agent` for clients elsewhere through Caddy. Keep, rename or
-remove them. For each instance:
+remove them. The block `mcp-agent` reads `MAILBOX_DOMAIN`: while `.env`
+names no domain, remove it, or every `docker compose` command stops
+with `set MAILBOX_DOMAIN in .env`. For each instance:
 
 1. In the UI, a user with the rights of the instance, and a token.
 2. Its tokens in `secrets/mcp/<name>.env`, readable by you alone:

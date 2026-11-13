@@ -33,7 +33,7 @@ everything else is the proposal.
 8. **Every route names its right.** `x-permission` in the OpenAPI
    document, checked by a test. A new route cannot slip out unguarded.
    `/health` alone has none: it takes no token and tells only that the
-   service runs.
+   service runs and its version.
 9. **Someone is always named.** Every call is made by a user, so the
    audit and the log name one.
 

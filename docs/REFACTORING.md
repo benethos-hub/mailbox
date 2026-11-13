@@ -458,8 +458,9 @@ and `integration/test_redact.py` too, if it tests the module alone.
 `tests/data/mail/` and `tests/data/secrets/` are empty today, while
 `test_html_mail.py`, `test_secrets.py`, `test_passwords.py` and
 `test_backup.py` sit in `integration/`: each is checked for whether it
-tests one layer, and moves if so. Built: `test_ratelimit.py` and
-`test_redact.py` are in `tests/common/`. The four in `integration/`
+tests one layer, and moves if so. Built: `test_ratelimit.py` is in
+`tests/common/`, and `test_redact.py` was. Since the package
+`mailbox-common` it is in its `tests/log/` (15.2). The four in `integration/`
 reach the command line, the domain or a provider beside the module
 they are named for, and stay.
 

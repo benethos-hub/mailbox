@@ -757,7 +757,7 @@ technology says the seam is in the wrong place.
    inside, since they test the inside.
 4. **A package that offers modules as namespaces says so** in
    `__all__`: `activity` offers its areas, `data.mail` its formats.
-   The caller then writes `said.UiSignIn(...)` or `compose.build(...)`.
+   The caller then writes `said.UiSignIn(...)` or `compose.message(...)`.
 5. **No cycle between packages.** What two packages both need goes to a
    package below both, or is handed in where the services are wired
    (`build_services`), as `AccountService` gets `on_delete`.

@@ -101,9 +101,9 @@ some folders, such as the invoices, and end after a week.
   fixed list of recipients, at most a few times a day.
 - **React instead of polling.** Signed webhooks tell your own system
   about new mail, a ticket tool or an internal dashboard for example.
-- **Traceable.** Every send is recorded in the audit: by whom, when and
-  under which grant. So is every sign-in and every change to users,
-  tokens, roles, accounts and webhooks.
+- **Traceable.** Every send is recorded in the audit: by whom, with
+  which token, to whom and when. So is every sign-in and every change
+  to users, tokens, roles, accounts and webhooks.
 - **One inbox for your own tools.** A dashboard or a small internal app
   lists, searches and answers mail from every account with one client.
 - **Self-hosted.** The service stores the credentials encrypted. Mail

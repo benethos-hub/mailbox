@@ -28,7 +28,7 @@ Towards the callers of the service:
 | A secret shown once | per session, e.g. a new token or recovery codes | 5 minutes until the page that shows it | gone, make a new one | `MAILBOX_SERVICE_SHOWN_ONCE_MINUTES` |
 | Code of a second factor | per pending sign-in, between the password and the code | 5 minutes, 5 wrong codes | sign in again with the password | fixed |
 | Second factor not confirmed | per session adding a device | 15 minutes from showing the QR code | start again | fixed |
-| Devices of a second factor | per user | 10 | `409` on adding one | fixed |
+| Devices of a second factor | per user | 10 | the page offers no further device | fixed |
 | Discoveries | per user | 10 in any minute, each domain's findings kept a day | `429 rate_limited` | `MAILBOX_SERVICE_DISCOVERY_PER_MINUTE`, the day is fixed |
 | Sends | per user and account, under a grant | `max_sends_per_day` in any 24 hours | `429 send_limit_reached` | the grant |
 | Recipients | per send, under a grant | the grant's `recipients` | `403 recipient_not_allowed` | the grant |
@@ -165,13 +165,15 @@ nothing again. Its SMTP connection passes the account's pace like any
 IMAP command.
 
 **Discovery.** It counts per user, 10 in any minute. A domain looked up
-within the last day is answered from the cache and reaches no host, but
-it still counts.
+within the last day is answered from the cache, and no source is asked
+again. The mail servers found are still read, four at most, and the
+lookup still counts.
 
 **The log.** Each limit writes one line when it engages, not one per
 refused request: a lockout when it starts and when it ends, a limit on
-requests when a caller first runs out. The access log has every refused
-request.
+requests when a caller first runs out. The limit on sends is the
+exception: each send it stops writes a line, and a record in the audit
+of sends. The access log has every refused request.
 
 ## 4. State
 
