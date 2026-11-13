@@ -10,7 +10,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- The images install fastapi 0.162.5, annotated-doc 0.0.6,
+- The images install fastapi 0.162.6, annotated-doc 0.0.6,
   pydantic-settings 2.16.3 and publicsuffixlist 1.1.2.20261113 from the
   lockfile.
 - The images build with uv 0.13.8.
