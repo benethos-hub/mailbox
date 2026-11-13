@@ -6,6 +6,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-11-13
+
 ### Changed
 
 - The images install fastapi 0.162.5, annotated-doc 0.0.6 and
@@ -2053,7 +2055,8 @@ the configuration may change without notice.
 - One error envelope `{"error": {"code", "message"}}`, authentication errors
   included.
 
-[Unreleased]: https://github.com/benethos-hub/mailbox/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/benethos-hub/mailbox/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/benethos-hub/mailbox/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/benethos-hub/mailbox/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/benethos-hub/mailbox/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/benethos-hub/mailbox/compare/v0.5.2...v0.6.0
