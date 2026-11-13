@@ -1,6 +1,6 @@
 # HTTPS in front of Mailbox, with the profile https of compose.yaml. Caddy
-# sets X-Forwarded-For, -Proto and -Host, which the service believes from
-# Caddy's address alone.
+# sets X-Forwarded-For and -Proto, which the service believes from
+# Caddy's address alone, and passes the Host header on.
 #
 # MAILBOX_TLS in .env says where the certificate comes from:
 #   acme      Let's Encrypt, the default. The ports 80 and 443 must reach

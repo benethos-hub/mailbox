@@ -7,7 +7,7 @@ that sees raw messages share them. The domain uses ``compose`` for replies.
 holds those that tie a message to its conversation. The text of an HTML-only
 mail comes from ``benethos_mailbox_common.mail.plaintext``. Callers
 import the modules from here, ``from ..mail import compose``, and call
-``compose.build(...)``.
+``compose.message(...)``.
 """
 
 from __future__ import annotations
