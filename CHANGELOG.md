@@ -6,6 +6,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- The images install fastapi 0.163.0 and publicsuffixlist
+  1.1.2.20261114 from the lockfile.
+
 ## [0.7.1] - 2026-11-13
 
 ### Changed
