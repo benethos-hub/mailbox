@@ -6,6 +6,14 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- The images install imapclient 4.2.0, fastapi 0.163.1 and
+  publicsuffixlist 1.1.2.20261115 from the lockfile. imapclient 4.2.0
+  refuses NUL, CR and LF in the arguments of an IMAP command. The
+  service already refuses them in folder names, keywords and search
+  text.
+
 ## [0.7.2] - 2026-11-14
 
 ### Changed

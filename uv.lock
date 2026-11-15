@@ -593,7 +593,7 @@ wheels = [
 
 [[package]]
 name = "fastapi"
-version = "0.163.0"
+version = "0.163.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "annotated-doc" },
@@ -604,9 +604,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "typing-inspection" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f1/98/5411252e1c08bdd919c5d55774cebe9da0bebfb174c4e4ffa1a5821935ff/fastapi-0.163.0.tar.gz", hash = "sha256:ef55fa066d74b922aac7231af7869c4469b88ca00cac5d0421e42ceee213a902", size = 543109, upload-time = "2026-11-14T16:53:16.356Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a4/62/19000d0f3699cacaeffe8a3c4cc7046d87aac3291163ffeb2ef08b82d859/fastapi-0.163.1.tar.gz", hash = "sha256:3d364b02a68b67292e833ff2dfed3b8dc3aeadf73e271c15316c6c166668792f", size = 544796, upload-time = "2026-11-15T09:51:31.271Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/de/b0/2d68e967b2fc6012ef1e7e91253c8222a2a895a45dee3677562deb93987e/fastapi-0.163.0-py3-none-any.whl", hash = "sha256:7572550ab4935e3ff373dc0191aea410d6c48127cc5477bc290b992fe539e345", size = 154381, upload-time = "2026-11-14T16:53:14.67Z" },
+    { url = "https://files.pythonhosted.org/packages/20/b6/2424da1e40825d3fc54539621811f34e21472499677c9490e4967270e38e/fastapi-0.163.1-py3-none-any.whl", hash = "sha256:68f2d8050f5c3583121c0d203046cc7def5c16a7d6c43a0e7707a8ea610fe2d3", size = 154541, upload-time = "2026-11-15T09:51:29.726Z" },
 ]
 
 [[package]]
@@ -782,11 +782,11 @@ wheels = [
 
 [[package]]
 name = "imapclient"
-version = "4.1.0"
+version = "4.2.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/8d/f7/4e2d2e93313d7d7542a8378200ea931ff4e29b730d9eb5a9d8debafcbc68/imapclient-4.1.0.tar.gz", hash = "sha256:b7cefa7c9bf3ec029c007dfade191480b82eb3816fc20ab23ef48e7aec841a7f", size = 71344, upload-time = "2026-09-18T11:21:57.568Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/22/5d/16a67e0e40549d544b87bed63399906195bcfe5664b5a5384c13ad1ce64e/imapclient-4.2.0.tar.gz", hash = "sha256:777102ced48ab22e3fc372982bb5bed1497c4cc438864d6ec1c9f327ab5f3b3a", size = 72489, upload-time = "2026-11-14T22:43:37.161Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/52/49/12fe5860e37f2e915ecbcc6c743bc71c84c6d0f4c9002f3c5a66f79b172d/imapclient-4.1.0-py3-none-any.whl", hash = "sha256:5fd62ab2a099494ed2a5a21e7bda03c1e99e3d55bdedb4e9c12c8176873a8fe4", size = 56039, upload-time = "2026-09-18T11:21:56.499Z" },
+    { url = "https://files.pythonhosted.org/packages/1b/fc/930798e5519b49102c1407017b9edb65dcd59a1b293a49099eba2ed9a062/imapclient-4.2.0-py3-none-any.whl", hash = "sha256:329593a186e55e0601766dd0c8fc7e2edc0be76bd95479c84bd624624c4dcec5", size = 56453, upload-time = "2026-11-14T22:43:36.2Z" },
 ]
 
 [[package]]
@@ -1378,11 +1378,11 @@ wheels = [
 
 [[package]]
 name = "publicsuffixlist"
-version = "1.1.2.20261114"
+version = "1.1.2.20261115"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/78/3a/6269ef2a75db13e23be5fe75f31c3d8c4b62aea2c94397f028206c101647/publicsuffixlist-1.1.2.20261114.tar.gz", hash = "sha256:67dc369c63c7b6bfa62554a016972997a17a8eb37950d328099e476949642e84", size = 107089, upload-time = "2026-11-14T10:10:34.972Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/55/e7/39f936542ed674fdd86c341d5555de6d4bf870b63f1c3581f3d4b7716fe1/publicsuffixlist-1.1.2.20261115.tar.gz", hash = "sha256:ffad5c498cfe331181ab051b994978e639418e7d9bd24336b9d2f4cba8455343", size = 107538, upload-time = "2026-11-15T10:42:00.464Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/9b/a3/a56b0f177ada88bf82f719b2ac583d8fe7313049577f90e8a48225310af9/publicsuffixlist-1.1.2.20261114-py3-none-any.whl", hash = "sha256:1ffcf243dfdbd379cda190d63788cca3245511c81294f4761b6222daab50736f", size = 109861, upload-time = "2026-11-14T10:10:33.459Z" },
+    { url = "https://files.pythonhosted.org/packages/2d/a1/e17d16e217bf6f97619164f5a3b44a3664f03ad03e16092dc6069c3d24a2/publicsuffixlist-1.1.2.20261115-py3-none-any.whl", hash = "sha256:fb4eab5a45685f3b4c44495d2fff52b8e625bb6e60c3f1920e7916ae5c0a09e6", size = 110228, upload-time = "2026-11-15T10:41:59.235Z" },
 ]
 
 [[package]]
