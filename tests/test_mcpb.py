@@ -145,3 +145,12 @@ def test_the_job_packs_after_the_upload_and_attaches_twice() -> None:
     assert staged < locked < packed
     assert "--frozen" not in job  # the lock is made here, used on install
     assert f"name: {project_of(MCP)['name']}\n" in job
+
+
+def test_each_attempt_asks_pypi_again_for_every_package_of_the_release() -> None:
+    """A retry that reads a package of this release from uv's cache sees
+    the answer from before its upload again (0.7.3, 0.7.4)."""
+    job = workflow_job("mcpb-bundle")
+    lock = job[job.index("uv lock") : job.index("exit 0")]
+    for package in ("mcp", "client", "common"):
+        assert f"--refresh-package benethos-mailbox-{package}" in lock

@@ -221,11 +221,17 @@ jobs:
         run: uv run --no-project .github/publish/mcpb/build.py "$RUNNER_TEMP/bundle"
 
       # PyPI's index can name a fresh upload a little later than the upload.
+      # Each attempt asks again for all three packages of this release the
+      # bundle needs. uv keeps an answer without the new version in its
+      # cache, so an attempt that reads it from there fails again.
       - name: Lock it to the version on PyPI
         run: |
           set -euo pipefail
           for attempt in 1 2 3 4 5 6; do
-            if uv lock --directory "$RUNNER_TEMP/bundle" --refresh-package benethos-mailbox-mcp; then
+            if uv lock --directory "$RUNNER_TEMP/bundle" \
+              --refresh-package benethos-mailbox-mcp \
+              --refresh-package benethos-mailbox-client \
+              --refresh-package benethos-mailbox-common; then
               exit 0
             fi
             echo "attempt ${attempt} found no release yet, trying again in 30 s"
