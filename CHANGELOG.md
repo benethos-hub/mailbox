@@ -6,6 +6,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- The images install python-multipart 0.0.34 from the lockfile, the
+  service image publicsuffixlist 1.1.2.20261116, the MCP server's
+  image httpx2 and httpcore2 2.16.2.
+
 ## [0.7.3] - 2026-11-15
 
 ### Changed
