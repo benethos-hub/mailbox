@@ -1,6 +1,6 @@
 # Concept of Mailbox
 
-> **Status: draft, 2026-09-24. The software is beta, version 0.7.3.**
+> **Status: draft, 2026-09-24. The software is beta, version 0.7.4.**
 > Describes the target design. What is built today is marked in
 > [ROADMAP.md](ROADMAP.md). Facts about third-party products were taken
 > from their public documentation on 2026-09-24. Items marked

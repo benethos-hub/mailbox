@@ -6,6 +6,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.4] - 2026-11-16
+
 ### Changed
 
 - The images install python-multipart 0.0.34 from the lockfile, the
@@ -2085,7 +2087,8 @@ the configuration may change without notice.
 - One error envelope `{"error": {"code", "message"}}`, authentication errors
   included.
 
-[Unreleased]: https://github.com/benethos-hub/mailbox/compare/v0.7.3...HEAD
+[Unreleased]: https://github.com/benethos-hub/mailbox/compare/v0.7.4...HEAD
+[0.7.4]: https://github.com/benethos-hub/mailbox/compare/v0.7.3...v0.7.4
 [0.7.3]: https://github.com/benethos-hub/mailbox/compare/v0.7.2...v0.7.3
 [0.7.2]: https://github.com/benethos-hub/mailbox/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/benethos-hub/mailbox/compare/v0.7.0...v0.7.1
