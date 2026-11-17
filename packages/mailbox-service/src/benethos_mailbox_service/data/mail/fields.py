@@ -7,6 +7,7 @@ import re
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from ...common.hosts import idna_ascii, idna_unicode
 from ...errors import BadRequestError
 
 # The content type of an attachment that names none.
@@ -64,7 +65,7 @@ def ascii_domain(email: str) -> str:
     local, at, domain = email.rpartition("@")
     if not at or domain.isascii():
         return email
-    return f"{local}@{domain.encode('idna').decode('ascii')}"
+    return f"{local}@{idna_ascii(domain)}"
 
 
 def wire_address(email: str) -> str:
@@ -83,6 +84,6 @@ def unicode_address(email: str) -> str:
     if not at or "xn--" not in domain.lower():
         return email
     try:
-        return f"{local}@{domain.encode('ascii').decode('idna')}"
+        return f"{local}@{idna_unicode(domain)}"
     except UnicodeError:
         return email

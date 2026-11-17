@@ -10,6 +10,8 @@ from __future__ import annotations
 import ipaddress
 import re
 
+import idna
+
 # One label in ASCII: letters, digits, inner hyphens.
 _LABEL = re.compile(r"(?!-)[a-z0-9-]{1,63}(?<!-)")
 # The top-level label: letters, or an internationalised one in punycode.
@@ -28,8 +30,8 @@ def ascii_host(host: str) -> str | None:
     broken ``xn--`` label."""
     host = host.strip().lower().rstrip(".")
     try:
-        written = host.encode("idna").decode("ascii")
-        written.encode("ascii").decode("idna")
+        written = idna_ascii(host)
+        idna_unicode(written)
     except UnicodeError:
         return None
     return written
@@ -39,9 +41,30 @@ def unicode_host(host: str) -> str:
     """``host`` as a person reads it, punycode decoded. Unchanged when it
     cannot be decoded."""
     try:
-        return host.encode("ascii").decode("idna")
+        return idna_unicode(host)
     except UnicodeError:
         return host
+
+
+def idna_ascii(domain: str) -> str:
+    """``domain`` in ASCII as registries and mail programs write it, IDNA
+    2008 (UTS #46, non-transitional): ``straße.de`` is
+    ``xn--strae-oqa.de``, not ``strasse.de``, which Python's own codec
+    (IDNA 2003) makes of it. A domain in ASCII keeps its labels, the codec
+    checks their lengths. Raises ``UnicodeError`` for a domain IDNA cannot
+    write."""
+    if domain.isascii():
+        return domain.encode("idna").decode("ascii")
+    return idna.encode(domain, uts46=True, transitional=False).decode("ascii")
+
+
+def idna_unicode(domain: str) -> str:
+    """``domain`` with each ``xn--`` label in Unicode, the others as they
+    are. Raises ``UnicodeError`` for a broken ``xn--`` label."""
+    return ".".join(
+        idna.decode(label) if label.lower().startswith("xn--") else label
+        for label in domain.split(".")
+    )
 
 
 def is_host_name(host: str, *, dotted: bool = True) -> bool:

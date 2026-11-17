@@ -20,6 +20,8 @@ from benethos_mailbox_service.common.hosts import (
         (" mail.example.com ", "mail.example.com"),
         ("bücher.de", "xn--bcher-kva.de"),
         ("xn--bcher-kva.de", "xn--bcher-kva.de"),
+        # IDNA 2008, not "strasse.de" (review 2026-11-17, finding 5).
+        ("straße.de", "xn--strae-oqa.de"),
         ("a..b", None),
         ("xn--zz.de", None),
         ("x" * 64 + ".de", None),
@@ -33,6 +35,8 @@ def test_unicode_host() -> None:
     assert unicode_host("xn--bcher-kva.de") == "bücher.de"
     assert unicode_host("example.de") == "example.de"
     assert unicode_host("xn--zz.de") == "xn--zz.de"
+    assert unicode_host("xn--strae-oqa.de") == "straße.de"
+    assert unicode_host("_dmarc.xn--bcher-kva.de") == "_dmarc.bücher.de"
 
 
 @pytest.mark.parametrize(

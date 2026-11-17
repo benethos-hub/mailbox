@@ -32,6 +32,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 - A grant's recipients compare without regard to case alone. `ß` matched
   `ss` before, so a grant for `weiß@example.org` allowed
   `weiss@example.org`, another mailbox, and `*@straße.de` another domain.
+- A domain beyond ASCII is written as IDNA 2008, as registries and mail
+  programs do. Python's own codec made `strasse.de` of `straße.de`, so a
+  mail to `info@straße.de` went to `info@strasse.de`, and the discovery
+  of `straße.de` asked the servers of `strasse.de`.
 
 ## [0.7.5] - 2026-11-17
 

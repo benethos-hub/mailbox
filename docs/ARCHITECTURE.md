@@ -113,8 +113,8 @@ The three layers and what each may import:
   a result or an error.
 
 `tests/test_architecture.py` checks the direction, the cross-cutting
-modules, that `common/` stays on the standard library, anyio and
-`mailbox-common`, that FastAPI stays in
+modules, that `common/` stays on the standard library, anyio, idna (host
+names as IDNA 2008) and `mailbox-common`, that FastAPI stays in
 `web/` (and `assembly/`), that providers are reached through the registry,
 that the domain picks no storage implementation, and that SQLite is
 reached through `data/storage/` alone. `tests/test_code_rules.py`
