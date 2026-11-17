@@ -125,6 +125,8 @@ def test_a_snippet_is_one_short_line() -> None:
     shown = render.summary(mail(snippet="Dear Ann,\n\n" + "x" * 300))
     assert shown["snippet"] == ("Dear Ann, " + "x" * 300)[: render.SNIPPET_CHARS]
     assert "snippet" not in render.summary(mail())
+    # Blank alone: no key, as answers.py says (review 2026-11-17, finding 13).
+    assert "snippet" not in render.summary(mail(snippet=" \n "))
 
 
 def test_an_inline_attachment_says_so() -> None:
