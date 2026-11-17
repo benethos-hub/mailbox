@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Any
+from typing import Annotated
 
 from pydantic import Field
 
-from .. import render
+from .. import answers, render
 from .base import AccountId, Cursor, DraftId, Limit, changes, client, reads
 from .compose import (
     Action,
@@ -28,7 +28,7 @@ async def list_drafts(
     account_id: AccountId,
     limit: Limit = 20,
     cursor: Cursor = None,
-) -> dict[str, Any]:
+) -> answers.Drafts:
     """The drafts of an account, newest first. get_message reads one by
     its id. It reads only. Use it to find a draft for send_draft,
     update_draft or delete_draft."""
@@ -55,7 +55,7 @@ async def create_draft(
     reply_to: ReplyTo = None,
     attachments: Attachments = None,
     attach_from: AttachFrom = None,
-) -> dict[str, Any]:
+) -> answers.Draft:
     """Write a draft into the drafts folder. Nothing is sent. With
     original_id it answers or forwards that message: the service adds
     recipients of a reply, the subject prefix and the quote. Recipients may
@@ -100,7 +100,7 @@ async def update_draft(
         list[str] | None,
         Field(description="Ids of the stored draft's attachments to keep"),
     ] = None,
-) -> dict[str, Any]:
+) -> answers.Draft:
     """Replace a draft as a whole: what is left out is gone afterwards,
     attachments too unless keep_attachments names them. Read it with
     get_message first to keep parts of it. A draft that answers a message

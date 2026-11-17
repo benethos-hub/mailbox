@@ -9,13 +9,13 @@ and wrapped in a marker that says where it comes from.
 from __future__ import annotations
 
 import re
-from typing import Any
 
 from benethos_mailbox_common.mail import addresses, marks, plaintext
 
 # Named apart from the parameter text of cut().
 from benethos_mailbox_common.values import text as text_values
 
+from . import answers
 from .models import (
     Address,
     Changes,
@@ -64,9 +64,9 @@ def address(value: Address | None) -> str:
     return addresses.readable(text_values.joined(name) if name else None, value.email)
 
 
-def summary(item: MessageSummary) -> dict[str, Any]:
+def summary(item: MessageSummary) -> answers.Summary:
     """A message in a list, without what the model does not need."""
-    return {
+    found: answers.Summary = {
         "id": item.id,
         "account_id": item.account_id,
         "date": _date(item),
@@ -76,10 +76,17 @@ def summary(item: MessageSummary) -> dict[str, Any]:
         "starred": item.starred,
         "has_attachments": item.has_attachments,
         "folders": item.folder_ids,
-        **_keywords(item.keywords),
-        **({"thread_id": item.thread_id} if item.thread_id else {}),
-        **({"snippet": _snippet(item.snippet)} if item.snippet else {}),
     }
+    shown, others = _marks(item.keywords)
+    if shown:
+        found["marks"] = shown
+    if others:
+        found["keywords"] = others
+    if item.thread_id:
+        found["thread_id"] = item.thread_id
+    if item.snippet:
+        found["snippet"] = _snippet(item.snippet)
+    return found
 
 
 def _snippet(text: str) -> str:
@@ -87,11 +94,15 @@ def _snippet(text: str) -> str:
     return text_values.joined(text).strip()[:SNIPPET_CHARS]
 
 
-def _keywords(keywords: list[str]) -> dict[str, list[str]]:
-    """The marks a person sees, in words, and the other keywords, each
-    where there are any."""
+def _marks(keywords: list[str]) -> tuple[list[str], list[str]]:
+    """The marks a person sees, in words, and the other keywords."""
     shown = [mark.word for mark in marks.marks_of(keywords)]
-    others = [k for k in keywords if marks.mark_of(k) is None]
+    return shown, [k for k in keywords if marks.mark_of(k) is None]
+
+
+def _keywords(keywords: list[str]) -> dict[str, list[str]]:
+    """The marks and the other keywords, each where there are any."""
+    shown, others = _marks(keywords)
     return {
         **({"marks": shown} if shown else {}),
         **({"keywords": others} if others else {}),
@@ -185,9 +196,9 @@ def thread(account_id: str, found: Thread, mails: list[Message], max_chars: int)
 MIN_SHARE = 200
 
 
-def page(found: Page) -> dict[str, Any]:
+def page(found: Page) -> answers.Page:
     """A page of summaries, with the accounts that did not answer."""
-    result: dict[str, Any] = {
+    result: answers.Page = {
         "messages": [summary(item) for item in found.items],
         "next_cursor": found.next_cursor,
         "note": SUMMARY_NOTE,
@@ -203,7 +214,7 @@ CHANGES_NOTE = (
 )
 
 
-def changes(found: Changes) -> dict[str, Any]:
+def changes(found: Changes) -> answers.Changes:
     """A page of the change feed. Ids and types only, nothing a sender
     wrote, so nothing to mark as foreign."""
     return {
@@ -222,7 +233,7 @@ def changes(found: Changes) -> dict[str, Any]:
     }
 
 
-def outcome(found: Outcome) -> dict[str, Any]:
+def outcome(found: Outcome) -> answers.Outcome:
     """A batch: the ids done, and per failed id why not."""
     return {
         "done": found.done,
@@ -230,7 +241,7 @@ def outcome(found: Outcome) -> dict[str, Any]:
     }
 
 
-def folder(found: Folder) -> dict[str, Any]:
+def folder(found: Folder) -> answers.Folder:
     return {
         "id": found.id,
         "name": found.name,
@@ -280,11 +291,11 @@ ATTENTION = {
 }
 
 
-def account(found: MeAccount, can: list[str]) -> dict[str, Any]:
+def account(found: MeAccount, can: list[str]) -> answers.Account:
     """``can`` follows the account's operations: what the caller may do
     there and the account can do."""
     able = found.capabilities
-    shown: dict[str, Any] = {
+    shown: answers.Account = {
         "id": found.id,
         "email": found.email,
         "name": found.display_name,
@@ -322,7 +333,7 @@ def sending(limit: Sending) -> str:
     return f"{to}, at most {limit.max_per_day} a day, {limit.left} left now"
 
 
-def draft(item: MessageSummary) -> dict[str, Any]:
+def draft(item: MessageSummary) -> answers.Draft:
     return {
         "id": item.id,
         "date": _date(item),
@@ -331,8 +342,8 @@ def draft(item: MessageSummary) -> dict[str, Any]:
     }
 
 
-def sent(result: Sent) -> dict[str, Any]:
-    found: dict[str, Any] = {
+def sent(result: Sent) -> answers.Sent:
+    found: answers.Sent = {
         "sent": True,
         "message_id_header": result.message_id_header,
     }

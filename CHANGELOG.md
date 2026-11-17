@@ -6,6 +6,15 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- The MCP server's tools that answer JSON name its fields in their
+  output schema: `list_accounts`, `list_folders`, `search_messages`,
+  `whats_new`, `update_messages`, `create_folder`, `update_folder`,
+  `list_drafts`, `create_draft`, `update_draft`, `send_message` and
+  `send_draft`. Each schema said "an object" before. The answers
+  themselves are unchanged: a key without a value is still left out.
+
 ## [0.7.5] - 2026-11-17
 
 ### Fixed

@@ -69,20 +69,6 @@ ALLOWED = {
     "service data/mail/convert.py summary_fields": "fields of a model",
     "service data/mail/convert.py thread_fields": "fields of a model",
     "service data/mail/convert.py message_fields": "fields of a model",
-    # What the check found when it came to modules offered as a namespace,
-    # ``from . import compose``, left for a change of its own (2026-11-17).
-    "mcp tools/accounts.py list_accounts": "found 2026-11-17",
-    "mcp tools/drafts.py create_draft": "found 2026-11-17",
-    "mcp tools/drafts.py list_drafts": "found 2026-11-17",
-    "mcp tools/drafts.py update_draft": "found 2026-11-17",
-    "mcp tools/reading.py list_folders": "found 2026-11-17",
-    "mcp tools/reading.py search_messages": "found 2026-11-17",
-    "mcp tools/reading.py whats_new": "found 2026-11-17",
-    "mcp tools/sending.py send_draft": "found 2026-11-17",
-    "mcp tools/sending.py send_message": "found 2026-11-17",
-    "mcp tools/writing.py create_folder": "found 2026-11-17",
-    "mcp tools/writing.py update_folder": "found 2026-11-17",
-    "mcp tools/writing.py update_messages": "found 2026-11-17",
 }
 
 
