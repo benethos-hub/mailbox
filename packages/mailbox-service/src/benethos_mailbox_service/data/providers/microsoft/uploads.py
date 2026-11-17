@@ -36,12 +36,12 @@ async def create_draft(
     draft back."""
     if len(raw) <= ONE_REQUEST:
         return await _from_mime(graph, raw)
-    rest, files = compose.without_attachments(raw)
-    draft = await _from_mime(graph, rest)
-    if not files:
+    detached = compose.without_attachments(raw)
+    draft = await _from_mime(graph, detached.message)
+    if not detached.attachments:
         return draft
     try:
-        for file in files:
+        for file in detached.attachments:
             await _attach(graph, draft.id, file)
     except MailboxServiceError as exc:
         try:

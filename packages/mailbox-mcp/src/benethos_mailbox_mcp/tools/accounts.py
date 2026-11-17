@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
-
-from .. import render
+from .. import answers, render
 from . import drafts, reading, sending, writing
 from .base import Tool, client
 
@@ -15,7 +13,7 @@ CAPABILITIES = ("read", "write", "drafts", "send", "share")
 _KINDS = (*reading.TOOLS, *writing.TOOLS, *drafts.TOOLS, *sending.TOOLS)
 
 
-async def list_accounts() -> list[dict[str, Any]]:
+async def list_accounts() -> list[answers.Account]:
     """The mail accounts you may use: id, address and what you may do there
     (read, write, drafts, send, share). Call it first: other tools take the
     account id. It reads only. Where you may send, `sending` names the

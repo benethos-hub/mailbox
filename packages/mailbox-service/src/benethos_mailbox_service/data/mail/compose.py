@@ -23,7 +23,7 @@ from benethos_mailbox_common.mail import addresses, plaintext
 from benethos_mailbox_common.values import text
 
 from ..models import Address, DraftMessage, Message, MessageReference, Recipient
-from .fields import ascii_domain, wire_address
+from .fields import ThreadHeaders, ascii_domain, wire_address
 from .fields import message_id as one_message_id
 from .parse import ParsedMessage
 
@@ -54,7 +54,7 @@ def new_message_id(sender_email: str) -> str:
     return make_msgid(domain=wire_address(sender_email).rpartition("@")[2] or None)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Extras:
     """What a reply or a forward adds to a message."""
 
@@ -190,16 +190,20 @@ def outgoing(draft: bytes, date: datetime, message_id: str) -> Outgoing:
 # --- replies and forwards --------------------------------------------------------
 
 
-def references(original_raw: bytes) -> tuple[str | None, tuple[str, ...]]:
-    """The original's Message-ID, and the References a reply carries: the
-    original's own, then its Message-ID (RFC 5322 3.6.4). Read as
-    ``convert`` reads them."""
+def references(original_raw: bytes) -> ThreadHeaders:
+    """The headers of a reply to the original: In-Reply-To, the
+    original's Message-ID, and the References, the original's own, then
+    its Message-ID (RFC 5322 3.6.4). Read as ``convert`` reads them. The
+    reply's own Message-ID is made when it is written."""
     original = ParsedMessage(original_raw)
     message_id = original.message_id
     chain = tuple(original.references)
     if not chain and original.in_reply_to:
         chain = (original.in_reply_to,)
-    return message_id, (*chain, message_id) if message_id else chain
+    return ThreadHeaders(
+        in_reply_to=message_id,
+        references=(*chain, message_id) if message_id else chain,
+    )
 
 
 def prefixed(prefix: str, subject: str | None) -> str:
@@ -279,7 +283,15 @@ class Attached(NamedTuple):
     inline: bool
 
 
-def without_attachments(raw: bytes) -> tuple[bytes, list[Attached]]:
+@dataclass(frozen=True, slots=True)
+class Detached:
+    """A message without the parts attached to it, and those parts."""
+
+    message: bytes
+    attachments: tuple[Attached, ...] = ()
+
+
+def without_attachments(raw: bytes) -> Detached:
     """``raw`` without the parts attached to it, and those parts, for a
     provider that takes a large message's attachments one by one. The
     headers and the body stay as they are. A body left alone in its
@@ -287,10 +299,10 @@ def without_attachments(raw: bytes) -> tuple[bytes, list[Attached]]:
     without attachments has it."""
     mail = message_from_bytes(raw, policy=SMTP)
     if not mail.is_multipart():
-        return raw, []
+        return Detached(raw)
     parts = list(mail.iter_attachments())
     if not parts:
-        return raw, []
+        return Detached(raw)
     taken = {id(part) for part in parts}
     kept: list[MimePart] = [p for p in mail.iter_parts() if id(p) not in taken]
     if len(kept) == 1:
@@ -298,7 +310,7 @@ def without_attachments(raw: bytes) -> tuple[bytes, list[Attached]]:
     else:
         payload: list[MimePart | str] = list(kept)
         mail.set_payload(payload)
-    return mail.as_bytes(), [_attached(part) for part in parts]
+    return Detached(mail.as_bytes(), tuple(_attached(part) for part in parts))
 
 
 def _take_place(mail: EmailMessage, body: MimePart) -> None:

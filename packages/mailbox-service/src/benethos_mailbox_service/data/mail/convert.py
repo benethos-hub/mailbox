@@ -63,7 +63,7 @@ def message_fields(msg: ParsedMessage) -> dict[str, Any]:
     }
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class StoredDraft:
     """What a stored draft holds, in the terms a new version of it uses."""
 

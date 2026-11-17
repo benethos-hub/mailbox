@@ -33,17 +33,17 @@ class EffectiveView:
 def view_of(rights: EffectiveRights) -> EffectiveView:
     rows = []
     for account in rights.accounts:
-        groups, operations = permissions.summarize(
-            account.rights, permissions.ON_AN_ACCOUNT
-        )
+        shown = permissions.summarize(account.rights, permissions.ON_AN_ACCOUNT)
         rows.append(
             AccountRow(
                 email=account.email,
-                groups=groups,
-                operations=operations,
+                groups=shown.groups,
+                operations=shown.operations,
                 sending=account.sending,
                 warnings=account.warnings,
             )
         )
-    groups, operations = permissions.summarize(rights.operations, permissions.SERVICE)
-    return EffectiveView(accounts=rows, groups=groups, operations=operations)
+    shown = permissions.summarize(rights.operations, permissions.SERVICE)
+    return EffectiveView(
+        accounts=rows, groups=shown.groups, operations=shown.operations
+    )

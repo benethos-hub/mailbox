@@ -11,7 +11,7 @@ from pydantic import Field
 from benethos_mailbox_common.mail import plaintext
 from benethos_mailbox_common.values import sizes
 
-from .. import pdf, render
+from .. import answers, pdf, render
 from ..errors import ToolError
 from ..models import Message
 from .base import (
@@ -28,7 +28,7 @@ from .base import (
 )
 
 
-async def list_folders(account_id: AccountId) -> list[dict[str, Any]]:
+async def list_folders(account_id: AccountId) -> list[answers.Folder]:
     """The folders of an account: id, name, role (inbox, sent, drafts, trash,
     junk, archive, all) and counts. It reads only. Use it for a folder's
     id. search_messages, update_messages and create_folder take a role
@@ -105,7 +105,7 @@ async def search_messages(
     ] = None,
     limit: Limit = 20,
     cursor: Cursor = None,
-) -> dict[str, Any]:
+) -> answers.Page:
     """Find mail, newest first. All filters narrow together. To search every
     folder, give folder all. Without an account it searches every account
     you may read, or those of account_ids, and folder must be a role.
@@ -155,7 +155,7 @@ async def whats_new(
             ge=1, le=MAX_CHANGES, description="At most this many changes in one answer"
         ),
     ] = 50,
-) -> dict[str, Any]:
+) -> answers.Changes:
     """What changed since an earlier call: mail created, updated (moved,
     flags) or deleted, oldest first, ids only. Of one account, several or
     all. Call once without since to get a state, later pass that state as

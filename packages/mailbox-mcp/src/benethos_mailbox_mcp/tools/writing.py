@@ -8,7 +8,7 @@ from pydantic import Field
 
 from benethos_mailbox_common.mail import marks
 
-from .. import render
+from .. import answers, render
 from ..errors import ToolError
 from .base import AccountId, FolderId, changes, client
 
@@ -61,7 +61,7 @@ async def update_messages(
     trash: Annotated[
         bool, Field(description="Into the trash, alone and without other changes")
     ] = False,
-) -> dict[str, Any]:
+) -> answers.Outcome:
     """Change mail of one account: mark read or unread, star, move,
     archive, label, add and remove keywords, or put into the trash. Where
     a mail can be in several folders at once, add_folders puts it in one
@@ -108,7 +108,7 @@ async def create_folder(
         str | None,
         Field(description="Folder id or role to create it in. Left out: the top"),
     ] = None,
-) -> dict[str, Any]:
+) -> answers.FolderName:
     """Create a folder in an account. Answers its id, which update_messages
     takes as move_to. Fails on an account without folders, which
     list_accounts names under unsupported. To rename or move a folder that
@@ -127,7 +127,7 @@ async def update_folder(
         str | None, Field(description="Folder id or role to move it into")
     ] = None,
     to_top: Annotated[bool, Field(description="Move it to the top")] = False,
-) -> dict[str, Any]:
+) -> answers.FolderName:
     """Rename a folder or move it, with the mail and folders inside. Answers
     its id from now on, which can change with the name and the place.
     Other mail programs then find the folder under its new name. To make a

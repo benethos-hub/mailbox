@@ -596,6 +596,8 @@ packages/mailbox-mcp/
                         #   (Running, Seen), which saw and
                         #   seen_at_start keep
     render.py           # what the model sees of mail, marked as foreign
+    answers.py          # what a tool answers as JSON, by name: one
+                        #   TypedDict per answer, the output schema
     pdf.py              # PDF pages as PNG (pypdfium2)
     client.py           # the client package's MailboxClient, the
                         #   one way to the REST API
@@ -620,7 +622,7 @@ The modules stand in lines, each importing only lines below:
  server · transport
  tools · listeners
  client · render · pdf
- models · errors · config
+ models · errors · config · answers
 ```
 
 `tests/test_architecture.py` of the MCP package keeps the modules in

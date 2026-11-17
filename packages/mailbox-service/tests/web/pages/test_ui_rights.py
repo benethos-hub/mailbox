@@ -27,11 +27,11 @@ from ...ui_helpers import post, sign_in
 
 
 def test_summarize_names_whole_groups_and_the_rest() -> None:
-    groups, rest = permissions.summarize(
+    shown = permissions.summarize(
         [*permissions.GROUPS["mail.read"], "create_draft"], permissions.ON_AN_ACCOUNT
     )
-    assert groups == ["mail.read"]
-    assert rest == ["create_draft"]
+    assert shown.groups == ["mail.read"]
+    assert shown.operations == ["create_draft"]
 
 
 def test_rights_of_joins_roles_and_grants(services: Services, account_id: str) -> None:

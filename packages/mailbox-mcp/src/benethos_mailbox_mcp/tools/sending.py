@@ -6,7 +6,7 @@ from typing import Any
 
 from benethos_mailbox_common.values import canonical, secret
 
-from .. import render
+from .. import answers, render
 from .base import AccountId, DraftId, changes, client
 from .compose import (
     Action,
@@ -48,7 +48,7 @@ async def send_message(
     reply_to: ReplyTo = None,
     attachments: Attachments = None,
     attach_from: AttachFrom = None,
-) -> dict[str, Any]:
+) -> answers.Sent:
     """Send a mail at once. It cannot be taken back. With original_id it
     answers or forwards that message, and a reply without recipients goes
     where the original asks answers to go, its Reply-To, else its sender.
@@ -76,7 +76,7 @@ async def send_message(
     return render.sent(await client().send_message(account_id, body, key))
 
 
-async def send_draft(account_id: AccountId, draft_id: DraftId) -> dict[str, Any]:
+async def send_draft(account_id: AccountId, draft_id: DraftId) -> answers.Sent:
     """Send a draft as it is stored. It cannot be taken back. Afterwards the
     draft is gone. It answers the id of the copy in the sent folder where
     the account keeps one. Use it once a draft from create_draft or

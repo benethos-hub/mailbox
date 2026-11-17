@@ -14,6 +14,7 @@ grant, and the audit of administration in ``service``.
 from __future__ import annotations
 
 from collections.abc import Iterable
+from dataclasses import dataclass
 
 from ...errors import BadRequestError
 
@@ -175,9 +176,16 @@ def permission_of(operation: str) -> str | None:
     return GROUP_OF.get(operation)
 
 
-def summarize(
-    operations: Iterable[str], scope: Iterable[str]
-) -> tuple[list[str], list[str]]:
+@dataclass(frozen=True, slots=True)
+class Summary:
+    """Operations as ``summarize`` shows them: the groups held whole, and
+    the single operations left."""
+
+    groups: list[str]
+    operations: list[str]
+
+
+def summarize(operations: Iterable[str], scope: Iterable[str]) -> Summary:
     """``operations`` as whole groups and single operations, for display.
     A group counts as whole when every one of its operations in ``scope``
     is among them. The rest are single operations."""
@@ -195,7 +203,7 @@ def summarize(
         if not any(part < other for other in whole.values())
     ]
     covered = frozenset[str]().union(*whole.values())
-    return groups, sorted(held - covered)
+    return Summary(groups, sorted(held - covered))
 
 
 def expand(names: Iterable[str]) -> frozenset[str]:
@@ -215,13 +223,22 @@ def expand(names: Iterable[str]) -> frozenset[str]:
     return frozenset(result)
 
 
-def expand_known(names: Iterable[str]) -> tuple[frozenset[str], list[str]]:
+@dataclass(frozen=True, slots=True)
+class Known:
+    """What names read back from storage give: the operations of those
+    still known, and the names that are not."""
+
+    operations: frozenset[str]
+    unknown: list[str]
+
+
+def expand_known(names: Iterable[str]) -> Known:
     """``expand`` for names read back from storage: the operations of the
     names still known, and the names that are not. A right renamed since
     the grant was written grants nothing, and must not lock everyone out."""
     known = known_names()
     unknown = [n for n in names if n not in known]
-    return expand(n for n in names if n not in unknown), unknown
+    return Known(expand(n for n in names if n not in unknown), unknown)
 
 
 def known_names() -> frozenset[str]:

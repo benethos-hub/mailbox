@@ -9,11 +9,88 @@
       "type": "object"
     },
     "outputSchema": {
+      "$defs": {
+        "Account": {
+          "description": "An account, what the caller may do there, and what it lacks.",
+          "properties": {
+            "id": {
+              "title": "Id",
+              "type": "string"
+            },
+            "email": {
+              "title": "Email",
+              "type": "string"
+            },
+            "name": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Name"
+            },
+            "can": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Can",
+              "type": "array"
+            },
+            "unsupported": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Unsupported",
+              "type": "array"
+            },
+            "marks_written": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Marks Written",
+              "type": "array"
+            },
+            "sending": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Sending",
+              "type": "array"
+            },
+            "warning": {
+              "title": "Warning",
+              "type": "string"
+            },
+            "status": {
+              "title": "Status",
+              "type": "string"
+            },
+            "attention": {
+              "title": "Attention",
+              "type": "string"
+            },
+            "last_sync": {
+              "title": "Last Sync",
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "email",
+            "name",
+            "can"
+          ],
+          "title": "Account",
+          "type": "object"
+        }
+      },
       "properties": {
         "result": {
           "items": {
-            "additionalProperties": true,
-            "type": "object"
+            "$ref": "#/$defs/Account"
           },
           "title": "Result",
           "type": "array"
@@ -50,11 +127,79 @@
       "type": "object"
     },
     "outputSchema": {
+      "$defs": {
+        "Folder": {
+          "description": "A folder of an account.",
+          "properties": {
+            "id": {
+              "title": "Id",
+              "type": "string"
+            },
+            "name": {
+              "title": "Name",
+              "type": "string"
+            },
+            "role": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Role"
+            },
+            "parent": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Parent"
+            },
+            "unread": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Unread"
+            },
+            "total": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Total"
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "role",
+            "parent",
+            "unread",
+            "total"
+          ],
+          "title": "Folder",
+          "type": "object"
+        }
+      },
       "properties": {
         "result": {
           "items": {
-            "additionalProperties": true,
-            "type": "object"
+            "$ref": "#/$defs/Folder"
           },
           "title": "Result",
           "type": "array"
@@ -277,8 +422,145 @@
       "type": "object"
     },
     "outputSchema": {
-      "additionalProperties": true,
-      "title": "search_messagesDictOutput",
+      "$defs": {
+        "Summary": {
+          "properties": {
+            "id": {
+              "title": "Id",
+              "type": "string"
+            },
+            "account_id": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Account Id"
+            },
+            "date": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date"
+            },
+            "from": {
+              "title": "From",
+              "type": "string"
+            },
+            "subject": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Subject"
+            },
+            "unread": {
+              "title": "Unread",
+              "type": "boolean"
+            },
+            "starred": {
+              "title": "Starred",
+              "type": "boolean"
+            },
+            "has_attachments": {
+              "title": "Has Attachments",
+              "type": "boolean"
+            },
+            "folders": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Folders",
+              "type": "array"
+            },
+            "marks": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Marks",
+              "type": "array"
+            },
+            "keywords": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Keywords",
+              "type": "array"
+            },
+            "thread_id": {
+              "title": "Thread Id",
+              "type": "string"
+            },
+            "snippet": {
+              "title": "Snippet",
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "account_id",
+            "date",
+            "from",
+            "subject",
+            "unread",
+            "starred",
+            "has_attachments",
+            "folders"
+          ],
+          "title": "Summary",
+          "type": "object"
+        }
+      },
+      "description": "A page of summaries, with the accounts that did not answer.",
+      "properties": {
+        "messages": {
+          "items": {
+            "$ref": "#/$defs/Summary"
+          },
+          "title": "Messages",
+          "type": "array"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Next Cursor"
+        },
+        "note": {
+          "title": "Note",
+          "type": "string"
+        },
+        "accounts_not_answering": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Accounts Not Answering",
+          "type": "array"
+        }
+      },
+      "required": [
+        "messages",
+        "next_cursor",
+        "note"
+      ],
+      "title": "Page",
       "type": "object"
     },
     "annotations": {
@@ -472,8 +754,66 @@
       "type": "object"
     },
     "outputSchema": {
-      "additionalProperties": true,
-      "title": "whats_newDictOutput",
+      "$defs": {
+        "Change": {
+          "description": "A change of the feed: its type and the message's ids.",
+          "properties": {
+            "type": {
+              "title": "Type",
+              "type": "string"
+            },
+            "id": {
+              "title": "Id",
+              "type": "string"
+            },
+            "account_id": {
+              "title": "Account Id",
+              "type": "string"
+            },
+            "at": {
+              "title": "At",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "account_id",
+            "at"
+          ],
+          "title": "Change",
+          "type": "object"
+        }
+      },
+      "description": "A page of the change feed, and the state to pass as since.",
+      "properties": {
+        "changes": {
+          "items": {
+            "$ref": "#/$defs/Change"
+          },
+          "title": "Changes",
+          "type": "array"
+        },
+        "state": {
+          "title": "State",
+          "type": "string"
+        },
+        "more": {
+          "title": "More",
+          "type": "boolean"
+        },
+        "note": {
+          "title": "Note",
+          "type": "string"
+        }
+      },
+      "required": [
+        "changes",
+        "state",
+        "more",
+        "note"
+      ],
+      "title": "Changes",
       "type": "object"
     },
     "annotations": {
@@ -737,8 +1077,49 @@
       "type": "object"
     },
     "outputSchema": {
-      "additionalProperties": true,
-      "title": "update_messagesDictOutput",
+      "$defs": {
+        "Failure": {
+          "description": "A message a batch could not change, and why.",
+          "properties": {
+            "id": {
+              "title": "Id",
+              "type": "string"
+            },
+            "error": {
+              "title": "Error",
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "error"
+          ],
+          "title": "Failure",
+          "type": "object"
+        }
+      },
+      "description": "A batch: the ids done, and per failed id why not.",
+      "properties": {
+        "done": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Done",
+          "type": "array"
+        },
+        "failed": {
+          "items": {
+            "$ref": "#/$defs/Failure"
+          },
+          "title": "Failed",
+          "type": "array"
+        }
+      },
+      "required": [
+        "done",
+        "failed"
+      ],
+      "title": "Outcome",
       "type": "object"
     },
     "annotations": {
@@ -788,8 +1169,22 @@
       "type": "object"
     },
     "outputSchema": {
-      "additionalProperties": true,
-      "title": "create_folderDictOutput",
+      "description": "A folder just made, renamed or moved: its id from now on.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ],
+      "title": "FolderName",
       "type": "object"
     },
     "annotations": {
@@ -858,8 +1253,22 @@
       "type": "object"
     },
     "outputSchema": {
-      "additionalProperties": true,
-      "title": "update_folderDictOutput",
+      "description": "A folder just made, renamed or moved: its id from now on.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ],
+      "title": "FolderName",
       "type": "object"
     },
     "annotations": {
@@ -910,8 +1319,82 @@
       "type": "object"
     },
     "outputSchema": {
-      "additionalProperties": true,
-      "title": "list_draftsDictOutput",
+      "$defs": {
+        "Draft": {
+          "description": "A draft in a list, or the one just written.",
+          "properties": {
+            "id": {
+              "title": "Id",
+              "type": "string"
+            },
+            "date": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date"
+            },
+            "to": {
+              "title": "To",
+              "type": "string"
+            },
+            "subject": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Subject"
+            }
+          },
+          "required": [
+            "id",
+            "date",
+            "to",
+            "subject"
+          ],
+          "title": "Draft",
+          "type": "object"
+        }
+      },
+      "description": "A page of drafts.",
+      "properties": {
+        "drafts": {
+          "items": {
+            "$ref": "#/$defs/Draft"
+          },
+          "title": "Drafts",
+          "type": "array"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Next Cursor"
+        },
+        "note": {
+          "title": "Note",
+          "type": "string"
+        }
+      },
+      "required": [
+        "drafts",
+        "next_cursor",
+        "note"
+      ],
+      "title": "Drafts",
       "type": "object"
     },
     "annotations": {
@@ -1158,8 +1641,46 @@
       "type": "object"
     },
     "outputSchema": {
-      "additionalProperties": true,
-      "title": "create_draftDictOutput",
+      "description": "A draft in a list, or the one just written.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Date"
+        },
+        "to": {
+          "title": "To",
+          "type": "string"
+        },
+        "subject": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Subject"
+        }
+      },
+      "required": [
+        "id",
+        "date",
+        "to",
+        "subject"
+      ],
+      "title": "Draft",
       "type": "object"
     },
     "annotations": {
@@ -1430,8 +1951,46 @@
       "type": "object"
     },
     "outputSchema": {
-      "additionalProperties": true,
-      "title": "update_draftDictOutput",
+      "description": "A draft in a list, or the one just written.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Date"
+        },
+        "to": {
+          "title": "To",
+          "type": "string"
+        },
+        "subject": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Subject"
+        }
+      },
+      "required": [
+        "id",
+        "date",
+        "to",
+        "subject"
+      ],
+      "title": "Draft",
       "type": "object"
     },
     "annotations": {
@@ -1725,8 +2284,37 @@
       "type": "object"
     },
     "outputSchema": {
-      "additionalProperties": true,
-      "title": "send_messageDictOutput",
+      "description": "A mail sent: its Message-ID, the copy in Sent, who refused it.",
+      "properties": {
+        "sent": {
+          "title": "Sent",
+          "type": "boolean"
+        },
+        "message_id_header": {
+          "title": "Message Id Header",
+          "type": "string"
+        },
+        "sent_copy_id": {
+          "title": "Sent Copy Id",
+          "type": "string"
+        },
+        "refused": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Refused",
+          "type": "array"
+        },
+        "original_marked": {
+          "title": "Original Marked",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "sent",
+        "message_id_header"
+      ],
+      "title": "Sent",
       "type": "object"
     },
     "annotations": {
@@ -1762,8 +2350,37 @@
       "type": "object"
     },
     "outputSchema": {
-      "additionalProperties": true,
-      "title": "send_draftDictOutput",
+      "description": "A mail sent: its Message-ID, the copy in Sent, who refused it.",
+      "properties": {
+        "sent": {
+          "title": "Sent",
+          "type": "boolean"
+        },
+        "message_id_header": {
+          "title": "Message Id Header",
+          "type": "string"
+        },
+        "sent_copy_id": {
+          "title": "Sent Copy Id",
+          "type": "string"
+        },
+        "refused": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Refused",
+          "type": "array"
+        },
+        "original_marked": {
+          "title": "Original Marked",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "sent",
+        "message_id_header"
+      ],
+      "title": "Sent",
       "type": "object"
     },
     "annotations": {

@@ -16,7 +16,7 @@ from pydantic import SecretStr, ValidationError
 
 from benethos_mailbox_service.assembly import Services, build_services, create_app
 from benethos_mailbox_service.config import Settings
-from benethos_mailbox_service.data.mail import compose
+from benethos_mailbox_service.data.mail import ThreadHeaders, compose
 from benethos_mailbox_service.data.models import (
     Address,
     Grant,
@@ -62,7 +62,9 @@ def test_prefixed(subject: str | None, expected: str) -> None:
 
 def test_references_carry_the_chain() -> None:
     raw = b"Message-ID: <3@x>\r\nReferences: <1@x> <2@x>\r\n\r\nbody"
-    assert compose.references(raw) == ("<3@x>", ("<1@x>", "<2@x>", "<3@x>"))
+    assert compose.references(raw) == ThreadHeaders(
+        in_reply_to="<3@x>", references=("<1@x>", "<2@x>", "<3@x>")
+    )
 
 
 def test_references_folded_by_the_sender() -> None:
@@ -70,12 +72,16 @@ def test_references_folded_by_the_sender() -> None:
         b"Message-ID: <3@x>\r\nReferences: <1@x>\r\n <2@x>\r\n"
         b"In-Reply-To: <2@x>\r\n\r\nbody"
     )
-    assert compose.references(raw) == ("<3@x>", ("<1@x>", "<2@x>", "<3@x>"))
+    assert compose.references(raw) == ThreadHeaders(
+        in_reply_to="<3@x>", references=("<1@x>", "<2@x>", "<3@x>")
+    )
 
 
 def test_references_from_in_reply_to_alone() -> None:
     raw = b"Message-ID: <3@x>\r\nIn-Reply-To: <2@x>\r\n\r\nbody"
-    assert compose.references(raw) == ("<3@x>", ("<2@x>", "<3@x>"))
+    assert compose.references(raw) == ThreadHeaders(
+        in_reply_to="<3@x>", references=("<2@x>", "<3@x>")
+    )
 
 
 def test_a_quote() -> None:
