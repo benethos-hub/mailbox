@@ -72,7 +72,12 @@ async def test_a_redirect_with_the_same_server_named_in_full() -> None:
 
 @pytest.mark.parametrize(
     ("location", "message"),
-    [("", "without a path"), ("relative", "without a path")],
+    [
+        ("", "without a path"),
+        ("relative", "without a path"),
+        # A host urlsplit cannot read (review 2026-11-17, finding 8).
+        ("https://[/x", "cannot be read"),
+    ],
 )
 async def test_redirects_without_a_path(location: str, message: str) -> None:
     def handler(request: httpx.Request) -> httpx.Response:
@@ -97,6 +102,7 @@ async def test_endless_redirects() -> None:
         ({"capabilities": {}}, "no JMAP mail"),
         (session_body(apiUrl=None), "lacks a URL"),
         (session_body(apiUrl="no-path"), "without a path"),
+        (session_body(apiUrl="https://[/api"), "cannot be read"),
     ],
 )
 async def test_sessions_that_cannot_serve(body: Any, message: str) -> None:

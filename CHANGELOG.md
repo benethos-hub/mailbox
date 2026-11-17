@@ -44,6 +44,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   discovery of servers and webhooks took a bundle of their own before,
   so a private authority named there counted for IMAP, POP3, SMTP and
   JMAP alone.
+- A JMAP server that redirects to, or names in its session, a URL that
+  cannot be read is the server's failure (`502`), no longer a `500`.
 
 ## [0.7.5] - 2026-11-17
 
