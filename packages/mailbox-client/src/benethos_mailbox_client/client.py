@@ -5,18 +5,16 @@ it asks and what it answers is described in ``endpoints``."""
 from __future__ import annotations
 
 from types import TracebackType
-from typing import Any, TypeVar
+from typing import Any
 
 import httpx
 
 from . import endpoints
-from .answers import api_error, failure, read, unreadable
+from .answers import api_error, read, translated
 from .attachments import Collected, attachment
-from .calls import Call, awaiting, timeouts
+from .calls import Call, T, awaiting, timeouts
 from .environment import connection
 from .models import Attachment
-
-T = TypeVar("T")
 
 
 class MailboxClient:
@@ -61,7 +59,7 @@ class MailboxClient:
 
     async def send(self, call: Call[T]) -> T:
         """Send ``call`` and read its answer."""
-        try:
+        with translated(self.base_url, call.timeout):
             response = await self._http.request(
                 call.method,
                 call.path,
@@ -70,10 +68,6 @@ class MailboxClient:
                 headers=call.headers,
                 timeout=call.timeouts,
             )
-        except httpx.TransportError as exc:
-            raise failure(exc, self.base_url, call.timeout) from None
-        except httpx.HTTPError:
-            raise unreadable() from None
         return read(call, response)
 
     async def request(
@@ -206,7 +200,7 @@ class MailboxClient:
         and file name. Reading stops where the limit is passed."""
         call = endpoints.get_attachment(account_id, message_id, attachment_id)
         collected = Collected(max_bytes)
-        try:
+        with translated(self.base_url, call.timeout):
             async with self._http.stream(
                 call.method, call.path, timeout=call.timeouts
             ) as response:
@@ -216,8 +210,4 @@ class MailboxClient:
                 async for chunk in response.aiter_bytes():
                     if not collected.add(chunk):
                         break
-        except httpx.TransportError as exc:
-            raise failure(exc, self.base_url, call.timeout) from None
-        except httpx.HTTPError:
-            raise unreadable() from None
         return attachment(response.headers, collected)

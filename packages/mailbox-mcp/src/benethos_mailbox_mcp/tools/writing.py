@@ -114,7 +114,7 @@ async def create_folder(
     list_accounts names under unsupported. To rename or move a folder that
     exists, use update_folder. Folders are not deleted by any tool."""
     folder = await client().create_folder(account_id, name, parent)
-    return {"id": folder.id, "name": folder.name}
+    return render.folder_name(folder)
 
 
 async def update_folder(
@@ -140,7 +140,7 @@ async def update_folder(
     if parent is not None:
         moved["parent_id"] = parent
     folder = await client().update_folder(account_id, folder_id, name=name, **moved)
-    return {"id": folder.id, "name": folder.name}
+    return render.folder_name(folder)
 
 
 TOOLS = (

@@ -32,13 +32,21 @@ BATCH_ACTIONS = ("disable", "enable", "give_role", "take_role")
 
 
 @dataclass(frozen=True, slots=True)
+class Refused:
+    """A user a batch could not change: its name and why."""
+
+    name: str
+    reason: str
+
+
+@dataclass(frozen=True, slots=True)
 class BatchOutcome:
-    """What a batch did: the users it changed, or for each one it could
-    not change, its name and why, and then it changed none. A user that
-    was as asked already is in neither."""
+    """What a batch did: the users it changed, or each one it could not
+    change, and then it changed none. A user that was as asked already is
+    in neither."""
 
     changed: list[User]
-    refused: list[tuple[str, str]]
+    refused: list[Refused]
 
 
 @dataclass(frozen=True)
@@ -290,13 +298,14 @@ class UserService:
             raise BadRequestError("choose a role")
         if not user_ids:
             raise BadRequestError("tick at least one user")
-        planned, refused = [], []
+        planned: list[_Planned] = []
+        refused: list[Refused] = []
         for user_id in dict.fromkeys(user_ids):
             try:
                 one = self._plan_one(access, user_id, action, role or "")
             except MailboxServiceError as exc:
                 name = self._name_of(user_id)
-                refused.append((name, exc.message))
+                refused.append(Refused(name, exc.message))
                 self._activity.record(
                     said.UserChangeRefused(
                         by=Actor.of(access),

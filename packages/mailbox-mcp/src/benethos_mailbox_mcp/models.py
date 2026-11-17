@@ -6,7 +6,6 @@ from __future__ import annotations
 from benethos_mailbox_client import (
     Address,
     AttachedFile,
-    Attachment,
     AttachmentSource,
     Changes,
     Folder,
@@ -27,7 +26,6 @@ from benethos_mailbox_client import (
 __all__ = [
     "Address",
     "AttachedFile",
-    "Attachment",
     "AttachmentSource",
     "Changes",
     "Folder",

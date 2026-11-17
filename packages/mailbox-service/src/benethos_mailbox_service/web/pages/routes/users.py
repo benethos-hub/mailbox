@@ -110,7 +110,7 @@ async def change_users(
     here = local_path(back_to, "/ui/users")
     with failing(here):
         done = users.change_users(caller, user or [], action, role or None)
-    refused = "; ".join(f"{name}: {why}" for name, why in done.refused)
+    refused = "; ".join(f"{r.name}: {r.reason}" for r in done.refused)
     if refused:
         return back(request, here, None, f"Nothing changed. {refused}.")
     message = f"{text.plural(len(done.changed), 'user')} changed."

@@ -25,8 +25,6 @@ from ..models import Address
 from .fields import (
     OCTET_STREAM,
     ThreadHeaders,
-    message_id,
-    message_ids,
     thread_headers,
     unicode_address,
 )
@@ -158,21 +156,21 @@ class ParsedMessage:
 
     @property
     def message_id(self) -> str | None:
-        return message_id(self.header("message-id"))
+        return self.thread_headers.message_id
 
     @property
     def in_reply_to(self) -> str | None:
         """The first id In-Reply-To names: a folded header comes unfolded."""
-        return next(iter(message_ids(self.header("in-reply-to"))), None)
+        return self.thread_headers.in_reply_to
 
     @property
     def references(self) -> list[str]:
         """The ids References names, oldest first."""
-        return message_ids(self.header("references"))
+        return list(self.thread_headers.references)
 
     @property
     def thread_headers(self) -> ThreadHeaders:
-        return ThreadHeaders(self.message_id, self.in_reply_to, tuple(self.references))
+        return thread_headers(self.header)
 
     @property
     def content_type(self) -> str:

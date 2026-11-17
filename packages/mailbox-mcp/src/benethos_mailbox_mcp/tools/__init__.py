@@ -1,8 +1,8 @@
 """The tools of the MCP server, one module per kind: ``reading``,
 ``writing``, ``drafts`` and ``sending``, the kinds ``list_accounts``
-reports, ``accounts`` for ``list_accounts`` itself, and ``status`` for
-``server_status``. Each module holds its tools and their part of
-``TOOLS``, every tool.
+reports, ``share`` among them in ``reading``, ``accounts`` for
+``list_accounts`` itself, and ``status`` for ``server_status``. Each
+module holds its tools and their part of ``TOOLS``, every tool.
 """
 
 from __future__ import annotations

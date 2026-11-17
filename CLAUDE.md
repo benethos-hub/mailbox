@@ -240,6 +240,8 @@ tests/                    # what the repository holds, across the four
                           #   packages
   test_boundaries.py      # records, not tuples, where a package hands
                           #   values on, in all four
+  test_api_names.py       # names the MCP server takes from the API,
+                          #   held to docs/openapi.json
   test_readmes.py         # the links of every README, of docs/ and of
                           #   this file lead somewhere, and a README of
                           #   two sections or more lists them in its

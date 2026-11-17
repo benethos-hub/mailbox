@@ -6,18 +6,16 @@ it answers is described in ``endpoints``."""
 from __future__ import annotations
 
 from types import TracebackType
-from typing import Any, TypeVar
+from typing import Any
 
 import httpx
 
 from . import endpoints
-from .answers import api_error, failure, read, unreadable
+from .answers import api_error, read, translated
 from .attachments import Collected, attachment
-from .calls import Call, blocking, timeouts
+from .calls import Call, T, blocking, timeouts
 from .environment import connection
 from .models import Attachment
-
-T = TypeVar("T")
 
 
 class SyncMailboxClient:
@@ -63,7 +61,7 @@ class SyncMailboxClient:
 
     def send(self, call: Call[T]) -> T:
         """Send ``call`` and read its answer."""
-        try:
+        with translated(self.base_url, call.timeout):
             response = self._http.request(
                 call.method,
                 call.path,
@@ -72,10 +70,6 @@ class SyncMailboxClient:
                 headers=call.headers,
                 timeout=call.timeouts,
             )
-        except httpx.TransportError as exc:
-            raise failure(exc, self.base_url, call.timeout) from None
-        except httpx.HTTPError:
-            raise unreadable() from None
         return read(call, response)
 
     def request(
@@ -208,7 +202,7 @@ class SyncMailboxClient:
         and file name. Reading stops where the limit is passed."""
         call = endpoints.get_attachment(account_id, message_id, attachment_id)
         collected = Collected(max_bytes)
-        try:
+        with translated(self.base_url, call.timeout):
             with self._http.stream(
                 call.method, call.path, timeout=call.timeouts
             ) as response:
@@ -218,8 +212,4 @@ class SyncMailboxClient:
                 for chunk in response.iter_bytes():
                     if not collected.add(chunk):
                         break
-        except httpx.TransportError as exc:
-            raise failure(exc, self.base_url, call.timeout) from None
-        except httpx.HTTPError:
-            raise unreadable() from None
         return attachment(response.headers, collected)

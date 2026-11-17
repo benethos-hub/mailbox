@@ -1,7 +1,8 @@
 """At a package boundary, values travel as named records (docs/ARCHITECTURE.md
 9). For each package of the workspace, what it offers is checked: an
 answer is no tuple and no dict, a parameter carries no type of a package
-above it, and a dataclass is frozen and slotted.
+above it, a dataclass is frozen and slotted, a class is no NamedTuple and
+a field of a dataclass holds no tuple of fixed length.
 
 What a package offers: every module of a group of mailbox-common; what
 mailbox-client exports, and the answer of each endpoint, which is a
@@ -69,6 +70,10 @@ ALLOWED = {
     "service data/mail/convert.py summary_fields": "fields of a model",
     "service data/mail/convert.py thread_fields": "fields of a model",
     "service data/mail/convert.py message_fields": "fields of a model",
+    # Pairs as their reader takes them: a value and its label for a form's
+    # choice, a name and its value for a query string.
+    "service data/models/connections.py SettingField": "value and label",
+    "service data/protocols/oauth/values.py Endpoints": "query pairs",
 }
 
 
@@ -201,13 +206,42 @@ def _not_frozen_and_slotted(node: ast.ClassDef) -> bool:
     return False
 
 
+def _positional(annotation: ast.expr) -> bool:
+    """Whether an annotation holds a tuple of fixed length, such as
+    ``tuple[str, str]``, read by position. ``tuple[str, ...]`` is a
+    sequence, as a list is."""
+    for node in ast.walk(annotation):
+        if not (
+            isinstance(node, ast.Subscript)
+            and isinstance(node.value, ast.Name)
+            and node.value.id in ("tuple", "Tuple")
+        ):
+            continue
+        items = node.slice.elts if isinstance(node.slice, ast.Tuple) else [node.slice]
+        if not any(isinstance(i, ast.Constant) and i.value is Ellipsis for i in items):
+            return True
+    return False
+
+
+def _class_breach(node: ast.ClassDef) -> str | None:
+    if any(ast.unparse(base).endswith("NamedTuple") for base in node.bases):
+        return "a tuple, not a record"
+    if _not_frozen_and_slotted(node):
+        return "a dataclass not frozen and slotted"
+    for item in node.body:
+        if isinstance(item, ast.AnnAssign) and _positional(item.annotation):
+            field = ast.unparse(item.target)
+            return f"holds {field}: {ast.unparse(item.annotation)}"
+    return None
+
+
 def _breaches() -> dict[str, str]:
     found = {}
     for item in offered():
         node = item.node
         if isinstance(node, ast.ClassDef):
-            if _not_frozen_and_slotted(node):
-                found[item.key] = "a dataclass not frozen and slotted"
+            if why := _class_breach(node):
+                found[item.key] = why
             continue
         if answer := _answer(node):
             found[item.key] = f"answers {answer}"

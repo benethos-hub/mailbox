@@ -5,6 +5,8 @@ clients."""
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any
 
 import httpx
@@ -96,3 +98,15 @@ def failure(exc: httpx.TransportError, base_url: str, seconds: float) -> Mailbox
         f"mailbox-service is not reachable at {base_url}. "
         "Start it with `benethos-mailbox-service serve`."
     )
+
+
+@contextmanager
+def translated(base_url: str, seconds: float) -> Iterator[None]:
+    """A request inside it fails as the clients name it: ``failure`` on
+    the way, ``unreadable`` for an answer httpx could not read."""
+    try:
+        yield
+    except httpx.TransportError as exc:
+        raise failure(exc, base_url, seconds) from None
+    except httpx.HTTPError:
+        raise unreadable() from None

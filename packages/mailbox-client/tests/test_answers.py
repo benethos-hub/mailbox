@@ -15,6 +15,7 @@ from benethos_mailbox_client import (
     ServiceTimeoutError,
     ServiceUnavailableError,
 )
+from benethos_mailbox_client.answers import translated
 
 
 async def test_error_envelope_becomes_api_error(make_client: Callable) -> None:
@@ -152,3 +153,34 @@ async def test_a_limit_says_how_long_to_wait(
     with pytest.raises(ApiError) as caught:
         await client.request("GET", "/v1/accounts")
     assert caught.value.retry_after == wait
+
+
+def _request(failing: Exception | None) -> None:
+    """A request inside ``translated``, which fails with ``failing``."""
+    if failing is not None:
+        raise failing
+
+
+def test_translated_names_a_failure_on_the_way() -> None:
+    with pytest.raises(ServiceUnavailableError, match="http://127.0.0.1:9"):
+        with translated("http://127.0.0.1:9", 30):
+            _request(httpx.ConnectError("refused"))
+
+
+def test_translated_names_an_answer_it_could_not_read() -> None:
+    with pytest.raises(ApiError) as raised:
+        with translated("http://127.0.0.1:9", 30):
+            _request(httpx.DecodingError("bad gzip"))
+    assert (raised.value.status, raised.value.code) == (502, "unexpected_response")
+    assert raised.value.message == "the answer could not be read"
+
+
+def test_translated_lets_the_clients_own_errors_pass() -> None:
+    with pytest.raises(ApiError, match="gone"):
+        with translated("http://127.0.0.1:9", 30):
+            _request(ApiError(404, "not_found", "gone"))
+
+
+def test_translated_lets_an_answer_through() -> None:
+    with translated("http://127.0.0.1:9", 30):
+        _request(None)

@@ -15,14 +15,20 @@ from email.parser import BytesHeaderParser, BytesParser
 from email.policy import SMTP, default
 from email.utils import format_datetime, getaddresses, make_msgid
 from html import escape
-from typing import NamedTuple
 
 from pydantic import ValidationError
 
 from benethos_mailbox_common.mail import addresses, plaintext
 from benethos_mailbox_common.values import text
 
-from ..models import Address, DraftMessage, Message, MessageReference, Recipient
+from ..models import (
+    Address,
+    DraftMessage,
+    Message,
+    MessageReference,
+    OutgoingAttachment,
+    Recipient,
+)
 from .fields import ThreadHeaders, ascii_domain, wire_address
 from .fields import message_id as one_message_id
 from .parse import ParsedMessage
@@ -60,8 +66,8 @@ class Extras:
 
     in_reply_to: str | None = None
     references: tuple[str, ...] = ()
-    # (filename, content type, data) of the original's attachments.
-    attachments: tuple[tuple[str, str, bytes], ...] = ()
+    # The original's attachments, before the message's own.
+    attachments: tuple[OutgoingAttachment, ...] = ()
     # The original itself, attached as message/rfc822.
     attached_message: bytes | None = None
 
@@ -136,11 +142,13 @@ def _parts(mail: EmailMessage, message: DraftMessage, extras: Extras) -> None:
     mail.set_content(body_text(message))
     if message.html is not None:
         mail.add_alternative(message.html, subtype="html")
-    files = [(a.filename, a.content_type, a.data) for a in message.attachments]
-    for filename, content_type, data in [*extras.attachments, *files]:
-        maintype, _, subtype = text.joined(content_type).partition("/")
+    for file in [*extras.attachments, *message.attachments]:
+        maintype, _, subtype = text.joined(file.content_type).partition("/")
         mail.add_attachment(
-            data, maintype=maintype, subtype=subtype, filename=text.joined(filename)
+            file.data,
+            maintype=maintype,
+            subtype=subtype,
+            filename=text.joined(file.filename),
         )
     if extras.attached_message is not None:
         original = message_from_bytes(extras.attached_message, policy=default)
@@ -155,7 +163,8 @@ def body_text(message: DraftMessage) -> str:
     return plaintext.from_html(message.html) if message.html else ""
 
 
-class Outgoing(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class Outgoing:
     """A stored draft made ready to send."""
 
     raw: bytes
@@ -169,8 +178,7 @@ def outgoing(draft: bytes, date: datetime, message_id: str) -> Outgoing:
     ``message_id`` is used where the draft has none, as one another mail
     client made may lack it."""
     mail = BytesParser(policy=SMTP).parsebytes(draft)
-    fields = [str(v) for name in ("To", "Cc", "Bcc") for v in mail.get_all(name, [])]
-    recipients = list(dict.fromkeys(a for _, a in getaddresses(fields) if a))
+    recipients = list(dict.fromkeys(_addressed(mail)))
     reference = mail.get(REFERENCE_HEADER)
     del mail["Bcc"]
     del mail[REFERENCE_HEADER]
@@ -185,6 +193,12 @@ def outgoing(draft: bytes, date: datetime, message_id: str) -> Outgoing:
         str(reference) if reference else None,
         kept or message_id,
     )
+
+
+def _addressed(mail: MimePart) -> list[str]:
+    """The addresses To, Cc and Bcc name, in their order."""
+    fields = [str(v) for name in ("To", "Cc", "Bcc") for v in mail.get_all(name, [])]
+    return [address for _, address in getaddresses(fields) if address]
 
 
 # --- replies and forwards --------------------------------------------------------
@@ -261,19 +275,15 @@ def with_bcc(raw: bytes, recipients: list[str]) -> bytes:
     provider that reads the recipients from the message itself."""
     head, separator, body = raw.partition(b"\r\n\r\n")
     headers = BytesHeaderParser(policy=default).parsebytes(head + separator)
-    named = {
-        address.lower()
-        for _, address in getaddresses(
-            [str(v) for n in ("To", "Cc", "Bcc") for v in headers.get_all(n, [])]
-        )
-    }
+    named = {address.lower() for address in _addressed(headers)}
     hidden = [ascii_domain(r) for r in recipients if r.lower() not in named]
     if not hidden:
         return raw
     return head + b"\r\nBcc: " + ", ".join(hidden).encode() + separator + body
 
 
-class Attached(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class Attached:
     """A part attached to a message, as a provider takes it on its own."""
 
     filename: str | None

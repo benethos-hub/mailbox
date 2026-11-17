@@ -10,11 +10,14 @@ from __future__ import annotations
 from typing import Any, TypeVar
 
 from ....data.mail import compose
-from ....data.models import DraftMessage, Message, MessageReference, Recipient
+from ....data.models import (
+    DraftMessage,
+    Message,
+    MessageReference,
+    OutgoingAttachment,
+    Recipient,
+)
 from ....errors import BadRequestError
-
-# (filename, content type, data) of one of the original's attachments.
-AttachedFile = tuple[str, str, bytes]
 
 # A message to send or a draft: what goes in comes out, filled in.
 M = TypeVar("M", bound=DraftMessage)
@@ -53,7 +56,7 @@ def forward(
     forward_as: str,
     original: Message,
     raw: bytes,
-    files: list[AttachedFile],
+    files: list[OutgoingAttachment],
     quote: bool = True,
 ) -> tuple[M, compose.Extras]:
     """``inline``: quoted with its headers, ``files`` attached.

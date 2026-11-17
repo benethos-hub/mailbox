@@ -252,6 +252,11 @@ def folder(found: Folder) -> answers.Folder:
     }
 
 
+def folder_name(found: Folder) -> answers.FolderName:
+    """A folder just made, renamed or moved: its id from now on."""
+    return {"id": found.id, "name": found.name}
+
+
 # What the model reads beside an account it may read mail in and send it
 # anywhere from (CONCEPT 7.7).
 READ_AND_SEND_WARNING = (
@@ -339,6 +344,15 @@ def draft(item: MessageSummary) -> answers.Draft:
         "date": _date(item),
         "to": ", ".join(address(a) for a in item.to) or "-",
         "subject": item.subject,
+    }
+
+
+def drafts(found: Page) -> answers.Drafts:
+    """A page of drafts."""
+    return {
+        "drafts": [draft(item) for item in found.items],
+        "next_cursor": found.next_cursor,
+        "note": DRAFTS_NOTE,
     }
 
 

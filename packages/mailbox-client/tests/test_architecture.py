@@ -112,6 +112,20 @@ def test_httpx_where_requests_are_made_or_read() -> None:
     assert not violations, "httpx outside its homes:\n  " + "\n  ".join(violations)
 
 
+def test_the_clients_leave_httpx_errors_to_answers() -> None:
+    """A failure of httpx becomes the client's error in one place,
+    ``answers.translated``, for both clients alike."""
+    violations = [
+        f"{name}:{node.lineno}"
+        for name in ("client.py", "sync.py")
+        for node in ast.walk(ast.parse((ROOT / name).read_text("utf-8")))
+        if isinstance(node, ast.ExceptHandler)
+        and node.type is not None
+        and "httpx." in ast.unparse(node.type)
+    ]
+    assert not violations, "catches httpx itself:\n  " + "\n  ".join(violations)
+
+
 def test_the_endpoints_are_imported_through_their_package() -> None:
     """A module of ``endpoints/`` is reached from outside through the
     package alone, so the package can split or merge its modules."""
