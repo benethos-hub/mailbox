@@ -13,7 +13,7 @@ from benethos_mailbox_common.mail import addresses as typed_addresses
 
 from ..client import message_body
 from ..errors import ToolError
-from ..models import AttachmentSource, OutgoingFile, Recipient, Reference
+from ..models import Address, AttachmentSource, OutgoingFile, Recipient, Reference
 
 Addresses = Annotated[
     list[str] | None,
@@ -132,12 +132,12 @@ AttachFrom = Annotated[
 def recipients(addresses: list[str] | None) -> list[Recipient]:
     """``Name <address>`` or plain addresses, as the model wrote them,
     one in each."""
-    found = []
+    found: list[Recipient] = []
     for value in addresses or []:
         typed = typed_addresses.parsed(value)
         if len(typed) != 1 or "@" not in typed[0].email:
             raise ToolError(f"not an address: {value}")
-        found.append((typed[0].email, typed[0].name))
+        found.append(Address(typed[0].email, typed[0].name))
     return found
 
 

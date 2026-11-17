@@ -6,6 +6,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `benethos-mailbox-client`: `message_body` takes a recipient as an
+  `Address` record too, beside the pair of email and name.
+
 ### Changed
 
 - The MCP server's tools that answer JSON name its fields in their

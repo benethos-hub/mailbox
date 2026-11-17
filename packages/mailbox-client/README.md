@@ -70,11 +70,11 @@ For code without an event loop, `SyncMailboxClient` has the same
 methods (`close()` for `aclose()`) and answers the same records:
 
 ```python
-from benethos_mailbox_client import SyncMailboxClient, message_body
+from benethos_mailbox_client import Address, SyncMailboxClient, message_body
 
 with SyncMailboxClient() as mailbox:
     body = message_body(
-        to=[("someone@example.org", None)],
+        to=[Address("someone@example.org")],
         cc=[],
         bcc=[],
         subject="Hello",

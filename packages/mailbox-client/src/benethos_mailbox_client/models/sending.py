@@ -4,8 +4,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-# An address with an optional display name.
-Recipient = tuple[str, str | None]
+from .messages import Address
+
+# An address with an optional display name: an Address, or its email and
+# name as a pair.
+Recipient = Address | tuple[str, str | None]
 
 
 @dataclass(frozen=True, slots=True)
