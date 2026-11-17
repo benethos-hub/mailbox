@@ -5,18 +5,16 @@ it asks and what it answers is described in ``endpoints``."""
 from __future__ import annotations
 
 from types import TracebackType
-from typing import Any, TypeVar
+from typing import Any
 
 import httpx
 
 from . import endpoints
 from .answers import api_error, read, translated
 from .attachments import Collected, attachment
-from .calls import Call, awaiting, timeouts
+from .calls import Call, T, awaiting, timeouts
 from .environment import connection
 from .models import Attachment
-
-T = TypeVar("T")
 
 
 class MailboxClient:

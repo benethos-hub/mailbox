@@ -6,18 +6,16 @@ it answers is described in ``endpoints``."""
 from __future__ import annotations
 
 from types import TracebackType
-from typing import Any, TypeVar
+from typing import Any
 
 import httpx
 
 from . import endpoints
 from .answers import api_error, read, translated
 from .attachments import Collected, attachment
-from .calls import Call, blocking, timeouts
+from .calls import Call, T, blocking, timeouts
 from .environment import connection
 from .models import Attachment
-
-T = TypeVar("T")
 
 
 class SyncMailboxClient:
