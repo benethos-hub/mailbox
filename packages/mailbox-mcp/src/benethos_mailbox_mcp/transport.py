@@ -1,4 +1,5 @@
-"""The MCP server over HTTP (streamable HTTP), behind a bearer guard.
+"""The MCP server over stdio, and over HTTP (streamable HTTP) behind a
+bearer guard.
 
 The only module that imports ``uvicorn``. The SDK's own runner builds the
 app and starts uvicorn in one step, which leaves nowhere to put the guard,

@@ -9,7 +9,10 @@ only what lies below. Each library has one home.
 from __future__ import annotations
 
 import ast
+import re
 from pathlib import Path
+
+from benethos_mailbox_mcp.tools import TOOLS
 
 PACKAGE = "benethos_mailbox_mcp"
 ROOT = Path(__file__).resolve().parents[1] / "src" / PACKAGE
@@ -202,3 +205,16 @@ def test_no_module_is_named_like_its_package() -> None:
         if path.stem == path.parent.name
     ]
     assert not named, "named like its package:\n  " + "\n  ".join(named)
+
+
+def test_a_tool_answers_text_a_result_or_a_named_answer() -> None:
+    """JSON goes out as a TypedDict of answers.py, so its output schema
+    names the fields (review 2026-11-17, finding 14)."""
+    named = re.compile(r"(list\[)?answers\.\w+\]?")
+    loose = [
+        tool.fn.__name__
+        for tool in TOOLS
+        if (kind := str(tool.fn.__annotations__["return"])) not in ("ToolResult", "str")
+        and not named.fullmatch(kind)
+    ]
+    assert loose == []

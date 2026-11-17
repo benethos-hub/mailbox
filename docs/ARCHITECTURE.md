@@ -571,7 +571,8 @@ packages/mailbox-mcp/
     listeners.py        # the clients told that the tool list changed:
                         #   their connections, the announcement, the
                         #   bus of listen streams
-    transport.py        # streamable HTTP: bearer guard, host check (uvicorn)
+    transport.py        # stdio, and streamable HTTP: bearer guard, host
+                        #   check (uvicorn)
     tools/              # one module per kind with its part of TOOLS,
                         #   and what the kinds share
       base.py           # Tool, reads()/changes(), result(): text and
@@ -638,7 +639,8 @@ registers it only for a token that holds one of those rights, and the
 catalogue registers every tool. The
 function is thin: it names what it wants in its own terms, the client
 package makes the request, and `render.py` shapes what the model sees, with
-mail content inside the foreign-content marker. A tool never spells
+mail content inside the foreign-content marker. An answer in JSON is a
+`TypedDict` of `answers.py`, filled by `render.py`. A tool never spells
 out a path, a query name or a field of the API, and never speaks HTTP
 itself. Its docstring is the description the model reads. An argument
 may carry a description of its own and its bounds, in `Annotated` with
@@ -734,7 +736,7 @@ service or the MCP server defines one of its functions again.
 | a wire protocol | a module in `data/protocols/`, one library, in our types. The adapters compose it |
 | an autodiscovery source | a module in `data/discovery/`, behind `DiscoverySource`, put in order in `sources.py` |
 | a command of the CLI | a module in `cli/` with `add` and `run`, its line in `COMMANDS`. It builds the service through `assembly/` |
-| a tool of the MCP server | `tools/<kind>.py` of the MCP package with its line in `TOOLS` there, its request in the client package, its answer through `render.py` (section 3), then `docs/mcp-tools.json` is regenerated and the bundle's manifest names it |
+| a tool of the MCP server | `tools/<kind>.py` of the MCP package with its line in `TOOLS` there, its request in the client package, its answer a `TypedDict` in `answers.py`, filled by `render.py` (section 3), then `docs/mcp-tools.json` is regenerated and the bundle's manifest names it |
 | a request of the Python client | the module of its resource in `endpoints/` of the client package, and one line on each client (section 3) |
 | a library | one wrapper module, in the layer that needs it, and nowhere else. The wrapper maps into our types and our errors |
 | an error | `errors.py`, a subclass of `MailboxServiceError`. `web/errors.py` gives it a status |
@@ -901,6 +903,10 @@ imapclient boundary), never by patching deep inside a library.
   and say why in the docstring.
   Example: `benethos_mailbox_common.paths.folders`: `system_folders(app)`
   returns `SystemFolders(config, data)`, not a tuple.
+  The answers of the MCP server's tools are named too, as `TypedDict`s
+  in `answers.py`: the MCP library makes each tool's output schema from
+  them, and a key without a value stays out of the answer rather than
+  going as null.
   `tests/test_boundaries.py` at the root of the repository checks it for
   the four packages: what each offers, and the methods of the domain services
   the web layer reaches. Its `ALLOWED` names what stays, with the
