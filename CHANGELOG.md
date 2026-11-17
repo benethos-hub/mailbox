@@ -6,6 +6,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.5] - 2026-11-17
+
 ### Fixed
 
 - The MCP server's log holds `httpx2` and `httpcore2` at `warning` too,
@@ -13,6 +15,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   Their `info` lines would name a request's URL. The server asks the
   service through httpx, which was held already, and makes no request
   through httpx2, so nothing reached the log.
+
+### Changed
+
+- The images build with uv 0.13.9.
 
 ## [0.7.4] - 2026-11-16
 
@@ -2095,7 +2101,8 @@ the configuration may change without notice.
 - One error envelope `{"error": {"code", "message"}}`, authentication errors
   included.
 
-[Unreleased]: https://github.com/benethos-hub/mailbox/compare/v0.7.4...HEAD
+[Unreleased]: https://github.com/benethos-hub/mailbox/compare/v0.7.5...HEAD
+[0.7.5]: https://github.com/benethos-hub/mailbox/compare/v0.7.4...v0.7.5
 [0.7.4]: https://github.com/benethos-hub/mailbox/compare/v0.7.3...v0.7.4
 [0.7.3]: https://github.com/benethos-hub/mailbox/compare/v0.7.2...v0.7.3
 [0.7.2]: https://github.com/benethos-hub/mailbox/compare/v0.7.1...v0.7.2
