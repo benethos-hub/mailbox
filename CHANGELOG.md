@@ -6,6 +6,14 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- The MCP server's log holds `httpx2` and `httpcore2` at `warning` too,
+  the copies of httpx and httpcore that the MCP library 2.x brings.
+  Their `info` lines would name a request's URL. The server asks the
+  service through httpx, which was held already, and makes no request
+  through httpx2, so nothing reached the log.
+
 ## [0.7.4] - 2026-11-16
 
 ### Changed

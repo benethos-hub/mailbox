@@ -342,8 +342,10 @@ it names no service and no tools. It warns at start that it lists
 every tool and runs none, and writes nothing for a call it refuses. A tool that
 fails writes a warning with the tool's name and the error's code, or
 why it failed where there is none, such as a PDF that took too long,
-never its arguments. `httpx`, `httpcore` and the MCP library write from
-`warning` on, since a request's URL carries search terms and message ids.
+never its arguments. `httpx`, `httpcore`, their copies `httpx2` and
+`httpcore2` that the MCP library brings, and the MCP library itself
+write from `warning` on, since a request's URL carries search terms and
+message ids.
 
 Towards the service it waits 5 seconds for a connection, 30 seconds for
 an answer and 120 seconds for an attachment, which may be large. Past

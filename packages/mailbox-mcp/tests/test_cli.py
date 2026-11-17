@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import logging
 import re
 from collections.abc import Callable
@@ -52,16 +53,24 @@ def test_main_runs_stdio_with_the_allowed_tools(
     assert runs == [(ALLOWED, 60, "stdio")]
 
 
+@pytest.mark.parametrize("name", ["httpx", "httpx2"])
 def test_the_log_names_no_request_url(
-    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+    name: str, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
-    for name in ("httpx", "httpcore"):
-        monkeypatch.setattr(logging.getLogger(name), "level", logging.NOTSET)
+    for held in cli.HELD_AT_WARNING:
+        monkeypatch.setattr(logging.getLogger(held), "level", logging.NOTSET)
     cli.configure_logging("INFO")
     with caplog.at_level(logging.INFO):
-        logging.getLogger("httpx").info("HTTP Request: GET /v1/messages?q=invoice")
+        logging.getLogger(name).info("HTTP Request: GET /v1/messages?q=invoice")
     assert "invoice" not in caplog.text
-    assert logging.getLogger("httpx").getEffectiveLevel() == logging.WARNING
+    assert logging.getLogger(name).getEffectiveLevel() == logging.WARNING
+
+
+def test_every_held_logger_is_an_installed_module() -> None:
+    """A name no installed module logs under holds nothing, as when a
+    library moves to new names, the way the MCP library moved to httpx2."""
+    missing = [n for n in cli.HELD_AT_WARNING if importlib.util.find_spec(n) is None]
+    assert missing == []
 
 
 def test_main_without_the_service(monkeypatch: pytest.MonkeyPatch) -> None:
