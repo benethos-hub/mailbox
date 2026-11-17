@@ -32,12 +32,7 @@ async def list_drafts(
     """The drafts of an account, newest first. get_message reads one by
     its id. It reads only. Use it to find a draft for send_draft,
     update_draft or delete_draft."""
-    page = await client().list_drafts(account_id, limit, cursor)
-    return {
-        "drafts": [render.draft(item) for item in page.items],
-        "next_cursor": page.next_cursor,
-        "note": render.DRAFTS_NOTE,
-    }
+    return render.drafts(await client().list_drafts(account_id, limit, cursor))
 
 
 async def create_draft(
