@@ -35,7 +35,8 @@ HELPER_LIBRARIES = {"anyio", "benethos_mailbox_common", "idna"}
 # Assemble the app from the layers and may therefore reach anywhere.
 ASSEMBLY = {"assembly", "cli", "__main__", "logs"}
 
-# Web frameworks live in the web layer. assembly/ builds the app, so it may too.
+# Web frameworks live in the web layer. assembly/web.py builds the app, so it
+# may too.
 WEB_LIBRARIES = {"fastapi", "starlette"}
 
 # One library, one home (docs/ARCHITECTURE.md): the only module, or
@@ -175,10 +176,11 @@ def test_the_database_stays_behind_the_storage_package() -> None:
 
 
 def test_web_framework_stays_in_the_web_layer() -> None:
+    """Under web/, and in assembly/web.py, which builds the app
+    (docs/ARCHITECTURE.md 7), not in the rest of what assembles."""
     violations = []
     for name, path in modules():
-        part = own_part(name)
-        if part == "web" or part in ASSEMBLY:
+        if own_part(name) == "web" or name == f"{PACKAGE}.assembly.web":
             continue
         for imported, line in _imports(path):
             if imported.split(".")[0] in WEB_LIBRARIES:
