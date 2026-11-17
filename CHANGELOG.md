@@ -29,6 +29,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   environment for a service over http. The token went in clear to a
   proxy named by `HTTP_PROXY`, or on Windows by the system. Over https a
   proxy of the environment still counts.
+- A grant's recipients compare without regard to case alone. `ß` matched
+  `ss` before, so a grant for `weiß@example.org` allowed
+  `weiss@example.org`, another mailbox, and `*@straße.de` another domain.
 
 ## [0.7.5] - 2026-11-17
 
