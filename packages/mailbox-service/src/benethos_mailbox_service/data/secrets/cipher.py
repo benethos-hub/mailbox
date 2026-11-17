@@ -6,6 +6,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import os
+from dataclasses import dataclass
 
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives import hashes
@@ -24,10 +25,18 @@ def new_key() -> bytes:
     return AESGCM.generate_key(bit_length=KEY_BYTES * 8)
 
 
-def encrypt(key: bytes, plaintext: bytes, aad: bytes) -> tuple[bytes, bytes]:
+@dataclass(frozen=True, slots=True)
+class Encrypted:
+    """What ``encrypt`` makes: the nonce and the ciphertext with its tag."""
+
+    nonce: bytes
+    ciphertext: bytes
+
+
+def encrypt(key: bytes, plaintext: bytes, aad: bytes) -> Encrypted:
     """A fresh random nonce and the ciphertext, authenticated with ``aad``."""
     nonce = os.urandom(NONCE_BYTES)
-    return nonce, AESGCM(key).encrypt(nonce, plaintext, aad)
+    return Encrypted(nonce, AESGCM(key).encrypt(nonce, plaintext, aad))
 
 
 def decrypt(key: bytes, nonce: bytes, ciphertext: bytes, aad: bytes) -> bytes:

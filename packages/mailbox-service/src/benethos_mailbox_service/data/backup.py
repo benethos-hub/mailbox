@@ -94,8 +94,9 @@ def write_backup(
     try:
         with source.open("rb") as plain, target.open("ab") as out:
             for index, block, last in _blocks(plain):
-                nonce, sealed = cipher.encrypt(key, block, _aad(header, index, last))
-                out.write(nonce + _mark(last) + _length(len(sealed)) + sealed)
+                found = cipher.encrypt(key, block, _aad(header, index, last))
+                sealed = found.ciphertext
+                out.write(found.nonce + _mark(last) + _length(len(sealed)) + sealed)
     except OSError as exc:
         target.unlink(missing_ok=True)
         raise BackupError(f"{target} cannot be written: {exc.strerror}") from None

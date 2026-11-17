@@ -171,7 +171,8 @@ def test_a_backup_of_version_1_is_still_read(tmp_path: Path) -> None:
     manifest = Manifest("0.2.0", inspect_file(db), "now", _digest(db))
     header = MAGIC_1 + json.dumps(asdict(manifest)).encode() + b"\n"
     key = cipher.derive(master, b"mailbox-service backup v1")
-    nonce, sealed = cipher.encrypt(key, db.read_bytes(), header)
+    found = cipher.encrypt(key, db.read_bytes(), header)
+    nonce, sealed = found.nonce, found.ciphertext
     (tmp_path / "old.bak").write_bytes(header + nonce + sealed)
     assert read_backup(tmp_path / "old.bak", master, tmp_path / "out.db") == manifest
     assert (tmp_path / "out.db").read_bytes() == db.read_bytes()

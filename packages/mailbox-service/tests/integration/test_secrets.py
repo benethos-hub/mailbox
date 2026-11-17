@@ -64,7 +64,8 @@ def vault(provider: MemoryKeyProvider | None = None) -> CredentialVault:
 
 def test_cipher_round_trip_and_tamper() -> None:
     key = cipher.new_key()
-    nonce, ciphertext = cipher.encrypt(key, b"secret", b"aad")
+    found = cipher.encrypt(key, b"secret", b"aad")
+    nonce, ciphertext = found.nonce, found.ciphertext
     assert cipher.decrypt(key, nonce, ciphertext, b"aad") == b"secret"
     with pytest.raises(cipher.DecryptionError):
         cipher.decrypt(key, nonce, ciphertext, b"other aad")

@@ -83,8 +83,8 @@ class CredentialVault:
             self._provider.store(kek)
         key_id = secret.new_id("key")
         dek = cipher.new_key()
-        nonce, wrapped = cipher.encrypt(kek, dek, _key_aad(key_id))
-        self._keys.add(WrappedKey(key_id, nonce, wrapped))
+        wrapped = cipher.encrypt(kek, dek, _key_aad(key_id))
+        self._keys.add(WrappedKey(key_id, wrapped.nonce, wrapped.ciphertext))
         self._dek = (key_id, dek)
         return encode_recovery(kek)
 
@@ -122,10 +122,10 @@ class CredentialVault:
         key_id, dek = self._data_key()
         aad = _credential_aad(account_id, field)
         redact.note(value.get_secret_value())
-        nonce, ciphertext = cipher.encrypt(dek, value.get_secret_value().encode(), aad)
+        found = cipher.encrypt(dek, value.get_secret_value().encode(), aad)
         self._credentials.put(
             EncryptedCredential(
-                account_id, field, key_id, nonce, ciphertext, self._clock()
+                account_id, field, key_id, found.nonce, found.ciphertext, self._clock()
             )
         )
 
@@ -156,8 +156,8 @@ class CredentialVault:
         secret, encrypted with the data key and bound to ``label``."""
         key_id, dek = self._data_key()
         plain = value.get_secret_value().encode()
-        nonce, ciphertext = cipher.encrypt(dek, plain, _sealed_aad(label))
-        return Sealed(key_id, nonce, ciphertext)
+        found = cipher.encrypt(dek, plain, _sealed_aad(label))
+        return Sealed(key_id, found.nonce, found.ciphertext)
 
     def unseal(self, label: str, sealed: Sealed) -> SecretStr:
         return self._open(f"the secret of {label}", sealed, _sealed_aad(label))

@@ -81,7 +81,6 @@ ALLOWED = {
     "mcp tools/writing.py create_folder": "found 2026-11-17",
     "mcp tools/writing.py update_folder": "found 2026-11-17",
     "mcp tools/writing.py update_messages": "found 2026-11-17",
-    "service data/secrets/cipher.py encrypt": "found 2026-11-17",
     "service domain/rights/permissions.py expand_known": "found 2026-11-17",
     "service domain/rights/permissions.py of_scope": "found 2026-11-17",
     "service domain/rights/permissions.py summarize": "found 2026-11-17",
