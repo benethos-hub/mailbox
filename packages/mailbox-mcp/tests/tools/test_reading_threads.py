@@ -3,6 +3,7 @@ each mail marked as foreign content, the bodies sharing max_chars."""
 
 from __future__ import annotations
 
+import inspect
 from collections.abc import Callable
 from typing import Any, get_type_hints
 
@@ -136,3 +137,11 @@ async def test_a_mail_without_a_thread(api: Callable) -> None:
     api(routes={f"{BASE}/messages/msg_1": {**mail(1), "thread_id": None}})
     with pytest.raises(ToolError, match="names no thread"):
         await reading.get_thread("acc_1", message_id="msg_1")
+
+
+def test_the_description_names_the_numbers_the_tool_keeps() -> None:
+    """The newest mails read and the least share of each, as the code
+    holds them (review 2026-11-17, finding 19)."""
+    described = inspect.getdoc(reading.get_thread) or ""
+    assert f"newest {reading.MAX_THREAD_MAILS} mails" in described
+    assert f"at least {render.MIN_SHARE} characters" in described
