@@ -25,6 +25,12 @@ logger = logging.getLogger(__name__)
 
 TRANSPORTS = get_args(config.Transport)
 LOG_LEVELS = get_args(config.LogLevel)
+# Loggers held at WARNING whatever the level. httpx names every request
+# with its URL at INFO, and a URL carries search terms and message ids.
+# The client asks the service through httpx, the MCP library brings
+# httpx2, its own copy under new names. The MCP library names each
+# request. The client keeps this log in its files.
+HELD_AT_WARNING = ("httpx", "httpcore", "httpx2", "httpcore2", "mcp")
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -132,10 +138,7 @@ def configure_logging(level: str) -> None:
     # stderr only: on stdio, stdout carries the JSON-RPC stream.
     package = __name__.rpartition(".")[0]
     logging.basicConfig(level=level, handlers=[lines.stderr_handler(package)])
-    # httpx names every request with its URL at INFO, and a URL carries
-    # search terms and message ids. The MCP library names each request.
-    # The client keeps this log in its files.
-    for name in ("httpx", "httpcore", "mcp"):
+    for name in HELD_AT_WARNING:
         logging.getLogger(name).setLevel(logging.WARNING)
 
 
