@@ -26,7 +26,7 @@ from mcp.types import ToolAnnotations
 
 from benethos_mailbox_common.values import text
 
-from . import __version__, render
+from . import __version__
 from .client import Connect, MailboxClient
 from .config import APP, variable
 from .errors import (
@@ -433,5 +433,16 @@ def operations_of(me: Me) -> set[str]:
 
 def _warn(me: Me) -> None:
     """Where the token may read mail and send it to any address."""
-    for warning in render.warnings_of(me):
+    for warning in warnings_of(me):
         logger.warning("%s", warning)
+
+
+def warnings_of(me: Me) -> list[str]:
+    """One line per account the token can read mail in and send to any
+    address from: what an injected instruction needs to carry data out."""
+    return [
+        f"{account.email or account.id}: this token can read mail and send it "
+        "to any address. Narrow sending with a grant's recipients."
+        for account in me.accounts
+        if "read_and_send_anywhere" in account.warnings
+    ]

@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 
 from benethos_mailbox_client import Account, Marks, Paged, StoredCredential
 
-from ..api_fake import ACCOUNT, FakeApi
+from .api_fake import ACCOUNT, FakeApi
 
 
 async def test_list_accounts(make_client: Callable) -> None:

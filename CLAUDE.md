@@ -242,10 +242,14 @@ tests/                    # what the repository holds, across the four
                           #   values on, in all four
   test_api_names.py       # names the MCP server takes from the API,
                           #   held to docs/openapi.json
+  test_code_rules.py      # the rules for the tests of all four
+                          #   packages and for live/, no class in a
+                          #   package's entry, sizes here and in live/,
+                          #   how the others use mailbox-common
   test_readmes.py         # the links of every README, of docs/ and of
                           #   this file lead somewhere, and a README of
                           #   two sections or more lists them in its
-                          #   contents at the top
+                          #   contents at the top, under the 3D icon
   test_module_tree.py     # the trees of docs/ARCHITECTURE.md section 3
                           #   against the disk
   test_layout.py          # this file's project layout against the disk
@@ -294,8 +298,8 @@ packages/
                           #   service
       test_architecture.py  # checks the layering on every run
       test_code_rules.py    # logging, handlers, sizes, helpers once,
-                            #   htmx in one module, the rules for
-                            #   the tests and live/
+                            #   htmx in one module, the tests of the
+                            #   data layer
       test_openapi.py       # docs/openapi.json equals the code's
       test_cli.py           # the command line
       test_errors.py        # the errors every layer raises

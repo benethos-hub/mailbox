@@ -19,7 +19,7 @@ from benethos_mailbox_service.errors import (
 )
 
 from ...conftest import ADMIN
-from ...factor_helpers import (
+from ..factor_helpers import (
     SECRET,
     SOURCE,
     START,

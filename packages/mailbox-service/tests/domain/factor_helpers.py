@@ -15,8 +15,8 @@ from benethos_mailbox_service.data.models import ActivityFilter, Grant, User
 from benethos_mailbox_service.data.secrets import totp
 from benethos_mailbox_service.domain.rights import Access
 
-from .clocks import Clock
-from .conftest import ADMIN, CHEAP
+from ..clocks import Clock
+from ..conftest import ADMIN, CHEAP
 
 SECRET = "correct horse battery staple"
 SOURCE = "10.0.0.1"

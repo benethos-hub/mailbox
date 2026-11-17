@@ -122,10 +122,11 @@ checks that the data layer logs nothing above `DEBUG` and the domain
 nothing but activities, that a broad `except` raises or records, the
 sizes of modules and classes, that a helper of `common/` exists
 once, that a template asks what the page may do and never the kind
-of an account, that the headers of htmx stand in
-`web/pages/templates.py` alone, and that no `__init__.py` defines a
-class. It also holds the rules of section 13 for the tests and the
-live checks. The architecture test also checks that the
+of an account, and that the headers of htmx stand in
+`web/pages/templates.py` alone. The `tests/test_code_rules.py` at the
+root of the repository checks that no `__init__.py` of the four
+packages defines a class, and holds the rules of section 13 for the
+tests and the live checks. The architecture test also checks that the
 packages of the domain and of data are imported through
 their `__init__.py`, export what others import, have no cycle, and keep
 their lines. Nothing below reaches `assembly/` or `cli/`, the assembly
@@ -969,8 +970,10 @@ imapclient boundary), never by patching deep inside a library.
   large one in `<subject>_fake_<part>.py`, an adapter on its fake in
   `<kind>_adapter.py`, anything else in
   `<subject>_helpers.py`. The clocks a test moves itself are in
-  `clocks.py`. No test module imports another, and every other module
-  is named so, which `test_code_rules.py` checks in all four packages.
+  `clocks.py`. No test module imports another, every other module
+  is named so and lies in the nearest common folder of the modules that
+  import it, which `tests/test_code_rules.py` at the root checks in all
+  four packages.
 - The UI in real browsers is a suite apart,
   `packages/mailbox-service/tests/browser/`, not beside the code of
   `web/pages/` it tests: it needs the dependency group `browser`,
@@ -979,8 +982,9 @@ imapclient boundary), never by patching deep inside a library.
   (CLAUDE.md, Verifying).
 - What checks the repository across the four packages, the publishing,
   the workflows, the READMEs, the trees of section 3, the project
-  layout of CLAUDE.md, the boundaries and the JavaScript the UI ships,
-  is in `tests/` at its root. Beside them
+  layout of CLAUDE.md, the boundaries, the rules for the tests of every
+  package and for `live/`, and the JavaScript the UI ships, is in
+  `tests/` at its root. Beside them
   `installed_check.py` is not a test: the packages as installed, as real
   processes, run by hand and by `freshness.yml`. Each package's tests
   stay its own and run alone.
@@ -995,7 +999,8 @@ imapclient boundary), never by patching deep inside a library.
   with httpx, or with FastAPI's test client for a service it started in
   its own process.
 - A rule on the layout has a check in `test_architecture.py` or, for the
-  code itself, `test_code_rules.py`, or it is not a rule yet: the
+  code itself, `test_code_rules.py`, of a package for its own source and
+  at the root for what spans the packages, or it is not a rule yet: the
   layers, the lines, the imports through `__init__.py`, the homes of the
   libraries, who logs what, the sizes of section 15. Naming and style
   (section 14) are for the review.
@@ -1027,8 +1032,8 @@ imapclient boundary), never by patching deep inside a library.
   `test_architecture.py` of the client and the MCP server checks both
   for its package and its tests, that of `mailbox-common` the length
   of its modules, `test_code_rules.py` of the service for the
-  service, its tests, the tests at the root of the repository and
-  `live/`. Past that, the subject has
+  service and its tests, `tests/test_code_rules.py` at the root for the
+  tests there and `live/`. Past that, the subject has
   parts, and each part is a module.
 - A package holds a handful of modules. Past that, it holds areas, and
   each area is a package.

@@ -64,7 +64,13 @@ LIBRARY_HOMES = {
     # And the settings file.
     "pydantic_settings": "benethos_mailbox_common.settings.files",
     "segno": f"{PACKAGE}.web.pages.qr",
+    # The server of the command serve.
+    "uvicorn": f"{PACKAGE}.cli.serve",
 }
+# Libraries used across the layers, each for a reason of its own: the
+# records and the async runtime of the whole service, the shared package.
+# The web libraries have a rule of their own.
+UNHOMED = {"pydantic", "anyio", "benethos_mailbox_common"} | WEB_LIBRARIES
 
 
 def _from_imports(path: Path) -> list[tuple[str, ast.ImportFrom]]:
@@ -244,6 +250,25 @@ def test_each_wrapped_library_has_one_home() -> None:
             if home is not None and name != home and not name.startswith(home + "."):
                 violations.append(f"{name}:{line} imports {imported}, home is {home}")
     assert not violations, "library outside its home:\n  " + "\n  ".join(violations)
+
+
+def test_every_library_has_a_home_or_a_reason() -> None:
+    """A library without a home could be imported anywhere: each one the
+    service imports is in ``LIBRARY_HOMES`` or in ``UNHOMED``."""
+    loose = sorted(
+        {
+            f"{top} ({name}:{line})"
+            for name, path in modules()
+            for imported, line in _imports(path)
+            for top in [imported.split(".")[0]]
+            if top
+            and top not in sys.stdlib_module_names
+            and top not in (PACKAGE, "__future__")
+            and top not in LIBRARY_HOMES
+            and top not in UNHOMED
+        }
+    )
+    assert not loose, "a library without a home:\n  " + "\n  ".join(loose)
 
 
 # --- the packages of the domain and of data (docs/REFACTORING.md 2, 8.4) -------------

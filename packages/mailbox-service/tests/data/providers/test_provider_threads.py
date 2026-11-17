@@ -16,12 +16,12 @@ from benethos_mailbox_service.data.providers.microsoft import (
 )
 from benethos_mailbox_service.errors import NotFoundError
 
-from ... import gmail_adapter, jmap_adapter, microsoft_adapter
 from ...gmail_fake import FakeGmail
 from ...graph_fake import FakeGraph
 from ...imap_adapter import provider
 from ...imap_fake import FakeMailBox, make_message
 from ...jmap_fake import FakeJmap
+from . import gmail_adapter, jmap_adapter, microsoft_adapter
 
 # --- Gmail ---------------------------------------------------------------------------
 

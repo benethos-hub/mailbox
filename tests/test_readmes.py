@@ -199,3 +199,45 @@ def test_the_check_sees_what_is_broken(tmp_path: Path) -> None:
     assert not _broken(
         readme, "https://github.com/benethos-hub/mailbox/blob/main/LICENSE"
     )
+
+
+def test_the_readme_shows_the_diagram_light_and_dark() -> None:
+    readme = (ROOT / "README.md").read_text("utf-8")
+    assert (
+        '<source srcset="assets/architecture/architecture-dark.png"'
+        ' media="(prefers-color-scheme: dark)">' in readme
+    )
+    assert '<img src="assets/architecture/architecture.png" alt="' in readme
+
+
+# PyPI shows no relative image: a package's README names it in full.
+_RAW = "https://raw.githubusercontent.com/benethos-hub/mailbox/main/"
+READMES = {
+    "README.md": "",
+    "containers/README.md": "../",
+    "containers/production/README.md": "../../",
+    "containers/test-mail-server/README.md": "../../",
+    "packages/mailbox-service/README.md": _RAW,
+    "packages/mailbox-client/README.md": _RAW,
+    "packages/mailbox-mcp/README.md": _RAW,
+    "packages/mailbox-common/README.md": _RAW,
+}
+
+
+@pytest.mark.parametrize(("readme", "prefix"), READMES.items())
+def test_every_readme_has_the_3d_icon_in_its_heading(readme: str, prefix: str) -> None:
+    first = (ROOT / readme).read_text("utf-8").splitlines()[0]
+    assert first.startswith(
+        f'# <img src="{prefix}assets/brand/icon.svg" alt="" height="36"'
+        ' align="absmiddle"> '
+    ), first
+
+
+def test_every_readme_is_named() -> None:
+    found = {
+        path.relative_to(ROOT).as_posix()
+        for folder in ("", "containers/", "packages/")
+        for path in (ROOT / folder).glob("**/README.md" if folder else "README.md")
+        if "vendor" not in path.parts
+    }
+    assert found == set(READMES)

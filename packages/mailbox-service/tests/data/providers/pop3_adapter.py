@@ -13,9 +13,9 @@ from benethos_mailbox_service.data.protocols.smtp import SmtpSession
 from benethos_mailbox_service.data.providers import Timing
 from benethos_mailbox_service.data.providers.pop3 import Pop3Provider, mappers
 
-from .imap_fake import make_message
-from .pop3_fake import FakePop3Server
-from .smtp_fake import FakeSmtpServer
+from ...imap_fake import make_message
+from ...pop3_fake import FakePop3Server
+from ...smtp_fake import FakeSmtpServer
 
 SETTINGS = {"host": "pop.example.com", "username": "me@example.com"}
 INBOX = mappers.folder_id()

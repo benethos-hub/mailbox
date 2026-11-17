@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 
 from benethos_mailbox_client import Token
 
-from ..api_fake import FakeApi
+from .api_fake import FakeApi
 
 TOKEN = {
     "id": "tok_1",

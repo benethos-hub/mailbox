@@ -11,6 +11,7 @@ the endpoints, the records and the errors know no HTTP library.
 from __future__ import annotations
 
 import ast
+import sys
 import tomllib
 from pathlib import Path
 
@@ -29,6 +30,9 @@ LINES = (
     {"models", "errors"},
 )
 HTTPX_HOMES = {"client", "sync", "calls", "answers", "attachments", "environment"}
+# Every library the package imports beside the standard library, each with
+# its homes above.
+LIBRARIES = {"httpx"}
 
 
 def _modules() -> list[tuple[str, str, ast.Module]]:
@@ -110,6 +114,22 @@ def test_httpx_where_requests_are_made_or_read() -> None:
         if not ours and imported.split(".")[0] == "httpx" and unit not in HTTPX_HOMES
     ]
     assert not violations, "httpx outside its homes:\n  " + "\n  ".join(violations)
+
+
+def test_every_library_has_a_home() -> None:
+    """Beside the standard library the client imports httpx alone, whose
+    homes ``HTTPX_HOMES`` names."""
+    loose = sorted(
+        {
+            f"{imported} ({where}:{line})"
+            for _, where, tree in _modules()
+            for imported, line, ours in _imports(where, tree)
+            if not ours
+            and imported.split(".")[0] not in sys.stdlib_module_names
+            and imported.split(".")[0] not in LIBRARIES
+        }
+    )
+    assert not loose, "a library without a home:\n  " + "\n  ".join(loose)
 
 
 def test_the_clients_leave_httpx_errors_to_answers() -> None:

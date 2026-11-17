@@ -28,9 +28,9 @@ from benethos_mailbox_service.errors import (
     NotSupportedError,
 )
 
-from ...gmail_adapter import adapter
 from ...gmail_fake import TOKEN, FakeGmail
 from ...oauth_fake import Tokens
+from .gmail_adapter import adapter
 
 # --- mappers --------------------------------------------------------------------------
 

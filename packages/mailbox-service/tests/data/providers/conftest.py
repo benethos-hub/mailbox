@@ -8,8 +8,8 @@ from benethos_mailbox_service.data.providers.jmap import JmapProvider
 
 from ...gmail_fake import FakeGmail
 from ...graph_fake import FakeGraph
-from ...jmap_adapter import adapter
 from ...jmap_fake import FakeJmap
+from .jmap_adapter import adapter
 
 
 @pytest.fixture

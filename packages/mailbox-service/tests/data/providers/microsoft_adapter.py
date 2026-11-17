@@ -10,8 +10,8 @@ from benethos_mailbox_service.data.providers import (
 )
 from benethos_mailbox_service.data.providers.microsoft import MicrosoftProvider
 
-from .graph_fake import TOKEN, FakeGraph
-from .oauth_fake import Tokens
+from ...graph_fake import TOKEN, FakeGraph
+from ...oauth_fake import Tokens
 
 
 def adapter(graph: FakeGraph, tokens: TokenSource | None = None) -> MicrosoftProvider:

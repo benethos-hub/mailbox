@@ -314,3 +314,50 @@ def test_uvicorn_brings_no_log_format_of_its_own(
     monkeypatch.setattr(uvicorn, "Server", Server)
     transport.run_http(lambda *a: None, host="127.0.0.1", port=1, log_level="INFO")  # type: ignore[arg-type]
     assert made["log_config"] is None
+
+
+def _serving(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """The hosts ``serve_http`` would run on, with nothing started."""
+    ran: list[str] = []
+    monkeypatch.setattr(transport, "http_app", lambda *_, **__: object())
+    monkeypatch.setattr(
+        transport, "run_http", lambda app, *, host, **_: ran.append(host)
+    )
+    return ran
+
+
+def _serve_open(**given: Any) -> None:
+    transport.serve_http(
+        server.build_catalogue(transport="streamable-http"),
+        host="0.0.0.0",
+        port=8000,
+        path="/mcp",
+        allowed_hosts=given.get("allowed_hosts", []),
+        allowed_origins=[],
+        log_level="INFO",
+        token=given.get("token"),
+        catalogue=given.get("catalogue", False),
+    )
+
+
+@pytest.mark.parametrize(
+    "given", [{}, {"token": "bearer"}, {"allowed_hosts": ["mcp.example.org"]}]
+)
+def test_an_open_bind_without_its_guard_is_refused(
+    monkeypatch: pytest.MonkeyPatch, given: dict[str, Any]
+) -> None:
+    """The rule holds for every caller of ``serve_http``, not only for
+    the command line (review 2026-11-17, finding 26)."""
+    ran = _serving(monkeypatch)
+    with pytest.raises(transport.UnguardedError, match="MAILBOX_MCP_BEARER_TOKEN and"):
+        _serve_open(**given)
+    assert ran == []
+
+
+def test_an_open_bind_serves_with_its_guard_or_as_a_catalogue(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    ran = _serving(monkeypatch)
+    _serve_open(token="bearer", allowed_hosts=["mcp.example.org"])
+    _serve_open(catalogue=True)
+    assert ran == ["0.0.0.0", "0.0.0.0"]

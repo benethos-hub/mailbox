@@ -11,7 +11,7 @@ from pydantic import SecretStr
 from benethos_mailbox_service.data.protocols import ServerClient
 from benethos_mailbox_service.data.providers.jmap import JmapProvider
 
-from .jmap_fake import HOST, PASSWORD, TOKEN, USER, FakeJmap
+from ...jmap_fake import HOST, PASSWORD, TOKEN, USER, FakeJmap
 
 NOW = datetime(2026, 10, 6, 12, 0, tzinfo=UTC)
 

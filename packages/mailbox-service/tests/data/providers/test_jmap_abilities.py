@@ -8,8 +8,8 @@ import pytest
 
 from benethos_mailbox_service.data.models import Capability, Mark
 
-from ...jmap_adapter import adapter
 from ...jmap_fake import FakeJmap
+from .jmap_adapter import adapter
 
 
 @pytest.fixture

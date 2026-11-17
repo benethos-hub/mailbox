@@ -22,7 +22,7 @@ from benethos_mailbox_client import (
     Reference,
 )
 
-from ..api_fake import MESSAGE, PAGE, SUMMARY, FakeApi
+from .api_fake import MESSAGE, PAGE, SUMMARY, FakeApi
 
 AT = datetime(2026, 10, 1, 8, 0, tzinfo=UTC)
 # SUMMARY and MESSAGE of api_fake, as the client reads them.

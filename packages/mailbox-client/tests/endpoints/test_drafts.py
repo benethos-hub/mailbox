@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from ..api_fake import BODY, FakeApi
+from .api_fake import BODY, FakeApi
 
 
 async def test_list_drafts(make_client: Callable) -> None:

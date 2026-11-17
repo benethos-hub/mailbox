@@ -53,11 +53,6 @@ def test_no_module_is_long() -> None:
     assert not long
 
 
-# The packages that use this one.
-CONSUMERS = ("mailbox-service", "mailbox-mcp")
-PACKAGES = ROOT.parents[2]
-
-
 def _groups() -> list[Path]:
     return sorted(p for p in ROOT.iterdir() if (p / "__init__.py").is_file())
 
@@ -105,51 +100,6 @@ def test_a_module_imports_only_inside_its_group() -> None:
                 if crosses:
                     violations.append(f"{group.name}/{path.name}:{node.lineno}")
     assert not violations, "across groups:\n  " + "\n  ".join(violations)
-
-
-def test_a_caller_imports_a_module_from_its_group() -> None:
-    """``from benethos_mailbox_common.log import lines``, never
-    ``benethos_mailbox_common.log.lines``. Tests may reach inside."""
-    violations = []
-    for consumer in CONSUMERS:
-        for path in sorted((PACKAGES / consumer / "src").rglob("*.py")):
-            for node in ast.walk(ast.parse(path.read_text("utf-8"))):
-                if isinstance(node, ast.ImportFrom) and not node.level:
-                    names = [node.module or ""]
-                elif isinstance(node, ast.Import):
-                    names = [alias.name for alias in node.names]
-                else:
-                    continue
-                for name in names:
-                    if name.startswith(f"{PACKAGE}.") and name.count(".") > 1:
-                        where = path.relative_to(PACKAGES).as_posix()
-                        violations.append(f"{where}:{node.lineno} {name}")
-    assert not violations, "deeper than a group:\n  " + "\n  ".join(violations)
-
-
-def _functions(path: Path) -> set[str]:
-    """The functions a module defines at its top level, without a leading
-    underscore."""
-    tree = ast.parse(path.read_text("utf-8"))
-    return {
-        node.name.lstrip("_")
-        for node in tree.body
-        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)
-    }
-
-
-def test_a_function_of_the_package_exists_once() -> None:
-    """No module of the service or the MCP server defines a function of
-    this package again, under its name or with a leading underscore."""
-    shared = set().union(*(_functions(p) for p in ROOT.rglob("*.py")))
-    violations = []
-    for consumer in CONSUMERS:
-        source = PACKAGES / consumer / "src"
-        for path in sorted(source.rglob("*.py")):
-            name = path.relative_to(PACKAGES).as_posix()
-            for function in sorted(_functions(path) & shared):
-                violations.append(f"{name}: {function}")
-    assert not violations, "a copy of a helper:\n  " + "\n  ".join(violations)
 
 
 def test_no_module_is_named_like_its_package() -> None:

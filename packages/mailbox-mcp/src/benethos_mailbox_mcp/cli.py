@@ -111,24 +111,16 @@ def _csv(value: str) -> list[str]:
 
 
 def _unguarded(settings: config.Settings, bearer: str | None) -> str | None:
-    """Why the server may not serve as set, else None. Over HTTP on an
-    address other hosts reach it needs the token of its clients and the
-    Host or Origin values they use. Without them anything that reaches
-    the port could use every tool, and a web page could reach it through
-    DNS rebinding. A catalogue serves no working tool."""
+    """Why the server may not serve as set, else None: the rule of
+    ``transport.unguarded``, asked before the service is. A catalogue
+    serves no working tool."""
     if settings.transport == "stdio" or settings.catalogue:
         return None
-    if settings.host in transport.LOCALHOST_BINDS:
-        return None
-    listed = _csv(settings.allowed_hosts) or _csv(settings.allowed_origins)
-    if bearer and listed:
-        return None
-    return (
-        f"over HTTP on {settings.host} it needs "
-        f"{config.variable('bearer_token')} and "
-        f"{config.variable('allowed_hosts')} or "
-        f"{config.variable('allowed_origins')}. Bind 127.0.0.1 to run "
-        "without them."
+    return transport.unguarded(
+        settings.host,
+        bearer,
+        _csv(settings.allowed_hosts),
+        _csv(settings.allowed_origins),
     )
 
 
@@ -217,4 +209,5 @@ def main(argv: list[str] | None = None) -> None:
         allowed_origins=_csv(settings.allowed_origins),
         log_level=settings.log_level,
         token=token,
+        catalogue=settings.catalogue,
     )
