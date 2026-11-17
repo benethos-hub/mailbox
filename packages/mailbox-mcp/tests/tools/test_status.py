@@ -13,7 +13,8 @@ import pytest
 
 from benethos_mailbox_client import MailboxClient
 from benethos_mailbox_mcp import __version__, server
-from benethos_mailbox_mcp.tools import Running, status
+from benethos_mailbox_mcp.errors import ApiError
+from benethos_mailbox_mcp.tools import Running, Seen, status
 
 from ..rights_helpers import (
     ME,
@@ -235,3 +236,29 @@ def test_the_start_saw_the_service_take_the_token() -> None:
         "yes",
     )
     assert seen.checked is not None
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        ApiError(502, "unexpected_response", "Bad Gateway"),
+        ApiError(504, "unexpected_response", "Gateway Timeout"),
+        ApiError(502, "unexpected_response", "the answer could not be read"),
+    ],
+)
+def test_a_gateway_in_front_of_the_service_tells_nothing_of_it(
+    error: ApiError,
+) -> None:
+    """Caddy in front of a stopped service, or an answer the client could
+    not read: what was seen stands (review 2026-11-17, finding 9)."""
+    before = Running(seen=Seen(reachable="no", token_valid="no"))
+    seen = status.saw(before, error).seen
+    assert (seen.reachable, seen.token_valid) == ("no", "no")
+
+
+def test_a_failure_of_a_provider_is_the_service_answering() -> None:
+    """The service's own 502, with its code, came from a service that
+    took the token."""
+    error = ApiError(502, "provider_error", "the mail server failed")
+    seen = status.saw(Running(seen=Seen(token_valid="no")), error).seen
+    assert (seen.reachable, seen.token_valid) == ("yes", "yes")

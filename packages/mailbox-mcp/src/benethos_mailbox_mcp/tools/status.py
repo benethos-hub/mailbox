@@ -56,6 +56,10 @@ class Running:
 # What the service may answer before it looked at the token: a limit on
 # the address, or no user yet.
 _BEFORE_THE_TOKEN = frozenset({429, 503})
+# What a gateway answers in front of a service that is down, or the client
+# for an answer it could not read: no envelope, so not the service's own
+# answer. A provider's failure is the service's own 502, with its code.
+_FROM_A_GATEWAY = frozenset({502, 504})
 
 
 def saw(
@@ -71,6 +75,10 @@ def saw(
     reached no one."""
     if isinstance(exc, ConfigurationError):
         return running
+    if isinstance(exc, ApiError) and _not_the_service(exc):
+        # Whether the service runs and takes the token is as unknown as
+        # before: what was seen of it stands.
+        return replace(running, seen=replace(running.seen, checked=time.monotonic()))
     seen = running.seen
     valid = seen.token_valid
     if exc is None or isinstance(exc, ApiError):
@@ -92,6 +100,10 @@ def saw(
         version=version or seen.version,
     )
     return replace(running, seen=seen)
+
+
+def _not_the_service(exc: ApiError) -> bool:
+    return exc.status in _FROM_A_GATEWAY and exc.code == "unexpected_response"
 
 
 def seen_at_start(token_set: bool) -> Seen:

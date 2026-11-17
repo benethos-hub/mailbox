@@ -46,6 +46,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   JMAP alone.
 - A JMAP server that redirects to, or names in its session, a URL that
   cannot be read is the server's failure (`502`), no longer a `500`.
+- `server_status` of the MCP server no longer counts a `502` or `504` of a
+  proxy in front of a stopped service, or an answer it could not read, as
+  the service running and taking the token. What it saw before stands.
 
 ## [0.7.5] - 2026-11-17
 
