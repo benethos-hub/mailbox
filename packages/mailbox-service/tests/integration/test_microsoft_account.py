@@ -29,6 +29,7 @@ from benethos_mailbox_service.data.providers.microsoft import MicrosoftProvider
 from benethos_mailbox_service.data.providers.microsoft import (
     endpoints as microsoft_endpoints,
 )
+from benethos_mailbox_service.domain import paging
 
 from ..conftest import admin_bearer, bearer_for, set_master_key
 from ..graph_fake import TOKEN, FakeGraph
@@ -136,3 +137,31 @@ def test_a_token_of_drafts_reads_no_inbox_through_a_cursor(
     answer = client.get(f"{base}/drafts", params={"cursor": forged})
     assert answer.status_code == 400
     assert "Payroll" not in answer.text
+
+
+def test_a_thread_row_shows_nothing_beyond_the_folders_of_a_grant(
+    graph: FakeGraph, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A grant on the inbox alone, and a cursor of the inbox's threads with
+    the path of the archive: a thread with a mail in the inbox would show
+    the subject of its mail in the archive (review 2026-11-17, finding 2)."""
+    set_master_key(monkeypatch)
+    archive = graph.new_folder("Archive", graph.root)
+    graph.add_message(subject="Plan")
+    graph.add_message(folder=archive, subject="Secret plan")
+    services, client, account_id = _connected(graph)
+    client.headers.update(
+        bearer_for(
+            services,
+            Grant(accounts=[account_id], allow=["mail.read"], folders=["inbox"]),
+        )
+    )
+    inbox = graph.well_known["inbox"]
+    path = f"/me/mailFolders/{archive}/messages?$top=50"
+    provider = rules.bound_cursor("m_", rules.cursor_scope(inbox, None), path)
+    forged = paging.encode_cursor("t_", [provider, []])
+    answer = client.get(
+        f"/v1/accounts/{account_id}/threads",
+        params={"folder": "inbox", "cursor": forged},
+    )
+    assert "Secret" not in answer.text
