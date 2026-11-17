@@ -36,6 +36,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   programs do. Python's own codec made `strasse.de` of `straße.de`, so a
   mail to `info@straße.de` went to `info@strasse.de`, and the discovery
   of `straße.de` asked the servers of `strasse.de`.
+- A file of a stored mail is attached again by `attachments_from` and
+  `keep_attachments` whatever its name, as the mail carried it. A name
+  longer than 200 characters answered `500` before.
 
 ## [0.7.5] - 2026-11-17
 

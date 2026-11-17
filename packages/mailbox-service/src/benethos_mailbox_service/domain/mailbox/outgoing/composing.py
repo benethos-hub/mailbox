@@ -4,7 +4,6 @@ its original, the attachments it names of other messages fetched."""
 
 from __future__ import annotations
 
-import base64
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
@@ -110,12 +109,15 @@ class Composer:
     async def attachment(
         self, account_id: str, message_id: str, attachment_id: str
     ) -> OutgoingAttachment:
-        """An attachment of a stored message, to attach again."""
+        """An attachment of a stored message, to attach again. Not checked
+        as a caller's would be: a stranger named it, and a name too long for
+        the API, which the message carried, goes again as it came, on one
+        line, as ``Recipient`` takes a stored display name in ``make``."""
         found = await self._calls.attachment(account_id, message_id, attachment_id)
-        return OutgoingAttachment(
-            filename=found.filename or attachment_id,
+        return OutgoingAttachment.model_construct(
+            filename=text.joined(found.filename or attachment_id),
             content_type=found.content_type,
-            data=base64.b64encode(found.data),
+            data=found.data,
         )
 
     async def _answer(
