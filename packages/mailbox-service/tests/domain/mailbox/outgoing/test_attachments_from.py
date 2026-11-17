@@ -120,3 +120,41 @@ def test_they_count_toward_the_size_limit(
     answer = client.post(f"/v1/accounts/{invoice}/send", json=body())
     assert answer.status_code == 400
     assert "the attachments exceed" in answer.json()["error"]["message"]
+
+
+def test_a_stored_file_with_a_name_too_long_for_the_api_goes_again(
+    client: TestClient, services: Services, account_id: str
+) -> None:
+    """A stranger's name of 201 characters: attached again as it came, by
+    attachments_from and by keep_attachments (review 2026-11-17,
+    finding 6)."""
+    name = "a" * 197 + ".pdf"
+    memory = memory_of(services, account_id)
+    memory.messages[0].attachments.append(
+        Attachment(id="att_9", filename=name, content_type="application/pdf", size=4)
+    )
+    memory.attachment_data[("m0", "att_9")] = b"%PDF"
+    source = {"message_id": "m0", "attachment_id": "att_9"}
+    sent = client.post(
+        f"/v1/accounts/{account_id}/send", json=body(attachments_from=[source])
+    )
+    assert sent.status_code == 200, sent.text
+    [(_, _, raw)] = memory.outbox
+    assert files(raw) == [(name, "application/pdf", b"%PDF")]
+    created = client.post(
+        f"/v1/accounts/{account_id}/drafts", json=body(attachments_from=[source])
+    )
+    assert created.status_code == 201, created.text
+    draft_id = created.json()["id"]
+    [stored] = client.get(f"/v1/accounts/{account_id}/messages/{draft_id}").json()[
+        "attachments"
+    ]
+    kept = client.put(
+        f"/v1/accounts/{account_id}/drafts/{draft_id}",
+        json={
+            **body(attachments_from=[]),
+            "subject": "Again",
+            "keep_attachments": [stored["id"]],
+        },
+    )
+    assert kept.status_code == 200, kept.text

@@ -32,6 +32,30 @@ adheres to [Semantic Versioning](https://semver.org/).
 - A grant's recipients compare without regard to case alone. `ß` matched
   `ss` before, so a grant for `weiß@example.org` allowed
   `weiss@example.org`, another mailbox, and `*@straße.de` another domain.
+- A domain beyond ASCII is written as IDNA 2008, as registries and mail
+  programs do. Python's own codec made `strasse.de` of `straße.de`, so a
+  mail to `info@straße.de` went to `info@strasse.de`, and the discovery
+  of `straße.de` asked the servers of `strasse.de`.
+- A file of a stored mail is attached again by `attachments_from` and
+  `keep_attachments` whatever its name, as the mail carried it. A name
+  longer than 200 characters answered `500` before.
+- Every connection of the service trusts the certificate authorities of
+  the system, `SSL_CERT_FILE` included. Microsoft Graph, Gmail, the
+  discovery of servers and webhooks took a bundle of their own before,
+  so a private authority named there counted for IMAP, POP3, SMTP and
+  JMAP alone.
+- A JMAP server that redirects to, or names in its session, a URL that
+  cannot be read is the server's failure (`502`), no longer a `500`.
+- `server_status` of the MCP server no longer counts a `502` or `504` of a
+  proxy in front of a stopped service, or an answer it could not read, as
+  the service running and taking the token. What it saw before stands.
+- A second `restore` in the same second keeps the copy of the database
+  the first one kept, as `….before-restore-<time>-2`. It replaced that
+  copy before, the only one of the original.
+- `get_attachment` of the MCP server queues no work for a PDF it gave
+  up on: a call still waiting for its turn renders nothing. Each call on
+  a slow PDF added a whole render before, and other PDFs ran out of time
+  behind them.
 
 ## [0.7.5] - 2026-11-17
 

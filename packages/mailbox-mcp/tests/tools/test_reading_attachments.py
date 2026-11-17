@@ -9,6 +9,7 @@ import time
 import zlib
 from collections.abc import Callable
 
+import anyio
 import httpx
 import pytest
 from mcp.types import ContentBlock, ImageContent, TextContent
@@ -211,7 +212,7 @@ def test_a_charset_left_by_the_client_falls_back_to_utf_8() -> None:
 async def test_a_pdf_that_renders_too_long_is_given_up(
     make_client: Callable, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    def slow(*args: object) -> pdf.Pages:
+    def slow(*args: object, **kwargs: object) -> pdf.Pages:
         time.sleep(0.5)
         return pdf.Pages([], 1, 1)
 
@@ -220,6 +221,28 @@ async def test_a_pdf_that_renders_too_long_is_given_up(
     make_client(serving(make_pdf(1), "application/pdf", "a.pdf"))
     with pytest.raises(ToolError, match="longer than 0.05 seconds"):
         await call()
+
+
+async def test_a_pdf_given_up_before_its_turn_renders_nothing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Two calls on a slow PDF: the one under way runs to its end, the one
+    still waiting renders nothing (review 2026-11-17, finding 11)."""
+    runs: list[int] = []
+
+    def slow(*args: object) -> pdf.Pages:
+        runs.append(1)
+        time.sleep(0.3)
+        return pdf.Pages([], 1, 1)
+
+    monkeypatch.setattr(pdf, "_render", slow)
+    monkeypatch.setattr(reading, "PDF_SECONDS", 0.05)
+    for _ in range(2):
+        with pytest.raises(ToolError, match="longer than"):
+            await reading._pdf(b"%PDF", 1, 1)
+    # Both threads are left: the first renders, the second waits its turn.
+    await anyio.sleep(1)
+    assert runs == [1]
 
 
 def test_many_pages_share_the_budget_of_one_call() -> None:

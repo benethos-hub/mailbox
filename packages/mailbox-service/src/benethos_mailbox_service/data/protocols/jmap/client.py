@@ -9,7 +9,7 @@ from collections.abc import AsyncIterator, Callable, Iterable, Mapping
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import SplitResult, urlsplit
 
 import anyio
 
@@ -144,7 +144,7 @@ class JmapClient:
         """The path a redirect points to, on the same server only: the
         credential goes with every request."""
         location = answer.headers.get("location") or ""
-        parts = urlsplit(location)
+        parts = _split(location)
         if parts.netloc:
             same = (
                 parts.scheme == "https"
@@ -158,7 +158,7 @@ class JmapClient:
                 )
         if not parts.path.startswith("/"):
             raise ProviderError("the JMAP session redirects without a path")
-        return parts.path + (f"?{parts.query}" if parts.query else "")
+        return path_and_query(location)
 
     # --- calls ----------------------------------------------------------------------
 
@@ -301,9 +301,20 @@ def _session(body: bytes) -> Session:
 def _own(url: str) -> str:
     """The path and query of a URL the session names, for the server the
     account names (see the module's docstring)."""
-    if not urlsplit(url).path.startswith("/"):
+    if not _split(url).path.startswith("/"):
         raise ProviderError("the JMAP session names a URL without a path")
     return path_and_query(url)
+
+
+def _split(url: str) -> SplitResult:
+    """A URL of the server's, taken apart. One ``urlsplit`` cannot read,
+    such as a host ``[``, is the server's failure, not ours."""
+    try:
+        return urlsplit(url)
+    except ValueError:
+        raise ProviderError(
+            "the JMAP session names a URL that cannot be read"
+        ) from None
 
 
 def _expand(template: str, **values: str) -> str:

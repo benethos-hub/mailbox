@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import re
 import sqlite3
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -175,6 +176,28 @@ def test_a_restore_that_fails_leaves_the_database_in_place(
     assert path.read_bytes() == before
     assert not staged.exists()
     assert list(path.parent.glob("mailbox.db.before-restore-*")) == []
+
+
+def test_two_restores_in_one_second_keep_every_database(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The second keeps the first copy, the only one of the original
+    (review 2026-11-17, finding 10)."""
+    monkeypatch.setattr(backup, "migrate_file", lambda path: None)
+    second = datetime(2026, 11, 17, 10, tzinfo=UTC)
+    monkeypatch.setattr(backup, "utc_now", lambda: second)
+    target = tmp_path / "mailbox.db"
+    target.write_bytes(b"ORIGINAL")
+    for n in (1, 2):
+        staged = tmp_path / f"staged-{n}"
+        staged.write_bytes(f"RESTORED{n}".encode())
+        backup._replace(target, staged)
+    kept = "mailbox.db.before-restore-20261117T100000Z"
+    assert {p.name: p.read_bytes() for p in tmp_path.iterdir()} == {
+        "mailbox.db": b"RESTORED2",
+        kept: b"ORIGINAL",
+        f"{kept}-2": b"RESTORED1",
+    }
 
 
 def test_backup_never_overwrites(machine: Path) -> None:

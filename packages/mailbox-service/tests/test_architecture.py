@@ -12,6 +12,7 @@ imports another in a circle. The packages of both keep their lines.
 from __future__ import annotations
 
 import ast
+import re
 import sys
 from pathlib import Path
 
@@ -27,9 +28,9 @@ LAYERS = {"data": 0, "domain": 1, "web": 2}
 # A module (config.py) or a package (common/).
 CROSS_CUTTING = {"config", "errors", "common"}
 
-# Shared helpers: the standard library, anyio, the common package and each
-# other, nothing else.
-HELPER_LIBRARIES = {"anyio", "benethos_mailbox_common"}
+# Shared helpers: the standard library, anyio, the common package, idna
+# (host names as IDNA 2008, hosts.py) and each other, nothing else.
+HELPER_LIBRARIES = {"anyio", "benethos_mailbox_common", "idna"}
 
 # Assemble the app from the layers and may therefore reach anywhere.
 ASSEMBLY = {"assembly", "cli", "__main__", "logs"}
@@ -55,6 +56,7 @@ LIBRARY_HOMES = {
     "dns": f"{PACKAGE}.data.discovery.dns",
     "defusedxml": f"{PACKAGE}.data.discovery.autoconfig",
     "publicsuffixlist": f"{PACKAGE}.data.discovery.suffix",
+    "idna": f"{PACKAGE}.common.hosts",
     "jinja2": f"{PACKAGE}.web.pages.templates",
     # The folders of the operating system come from the common package.
     "platformdirs": "benethos_mailbox_common.paths.folders",
@@ -129,8 +131,8 @@ def test_cross_cutting_modules_import_no_layer() -> None:
 
 def test_shared_helpers_use_the_standard_library_and_anyio() -> None:
     """common/ holds helpers that know no layer, so it depends on nothing
-    but the standard library and anyio, how the project writes
-    concurrency."""
+    but the standard library, anyio, how the project writes concurrency,
+    and idna, how it writes a host name."""
     violations = []
     for path in _cross_cutting_files(HELPERS):
         for imported, line in _imports(path):
@@ -182,6 +184,18 @@ def test_web_framework_stays_in_the_web_layer() -> None:
             if imported.split(".")[0] in WEB_LIBRARIES:
                 violations.append(f"{name}:{line} imports {imported}")
     assert not violations, "web framework outside web/:\n  " + "\n  ".join(violations)
+
+
+def test_tls_trust_is_chosen_in_one_place() -> None:
+    """Every HTTP client verifies against one store, the CAs of the system:
+    ``verify=`` stands in ``data/protocols/http/base.py`` alone."""
+    one = f"{PACKAGE}.data.protocols.http.base"
+    found = [
+        name
+        for name, path in modules()
+        if name != one and re.search(r"verify=", path.read_text("utf-8"))
+    ]
+    assert found == [], "an HTTP client choosing its own trust store"
 
 
 def test_providers_are_reached_through_the_registry() -> None:

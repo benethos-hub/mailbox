@@ -84,8 +84,8 @@ def summary(item: MessageSummary) -> answers.Summary:
         found["keywords"] = others
     if item.thread_id:
         found["thread_id"] = item.thread_id
-    if item.snippet:
-        found["snippet"] = _snippet(item.snippet)
+    if snippet := _snippet(item.snippet or ""):
+        found["snippet"] = snippet
     return found
 
 

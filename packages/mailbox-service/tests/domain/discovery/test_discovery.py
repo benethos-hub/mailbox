@@ -14,6 +14,7 @@ from benethos_mailbox_service.data.models import (
     Hint,
 )
 from benethos_mailbox_service.domain.discovery import service as discovery_module
+from benethos_mailbox_service.domain.discovery.candidates import query_of
 from benethos_mailbox_service.errors import (
     ProviderUnavailableError,
 )
@@ -225,3 +226,9 @@ async def test_a_failed_lookup_is_not_cached() -> None:
     await s.discover(ADMIN, "a@firma.example")
     await s.discover(ADMIN, "a@firma.example")
     assert len(source.queries) == 2
+
+
+def test_a_domain_with_sharp_s_is_asked_as_idna_2008() -> None:
+    """Not as strasse.de, a domain of someone else (review 2026-11-17,
+    finding 5)."""
+    assert query_of("u@straße.de").domain == "xn--strae-oqa.de"
