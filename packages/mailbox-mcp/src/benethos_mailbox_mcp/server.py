@@ -54,7 +54,7 @@ from .tools import (
 
 logger = logging.getLogger(__name__)
 
-# The MCP library's server, as the command line and the transport see it.
+# The MCP library's server, as the command line sees it.
 Server = MCPServer
 
 _INSTRUCTIONS = """\
