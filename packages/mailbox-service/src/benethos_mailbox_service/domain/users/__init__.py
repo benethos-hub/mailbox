@@ -10,7 +10,7 @@ from .factors import SecondFactorService
 from .passwords import OneTimePassword, PasswordService
 from .roles import RoleService
 from .rules import UserRules
-from .service import BATCH_ACTIONS, BatchOutcome, UserService
+from .service import BATCH_ACTIONS, BatchOutcome, Refused, UserService
 from .tokens import TokenService
 from .totp import TotpConfirmed, TotpService, TotpSetup
 
@@ -22,6 +22,7 @@ __all__ = [
     "EffectiveRights",
     "OneTimePassword",
     "PasswordService",
+    "Refused",
     "RoleService",
     "SecondFactorService",
     "Sending",

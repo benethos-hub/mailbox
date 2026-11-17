@@ -8,6 +8,7 @@ from benethos_mailbox_service.assembly import Services, build_services
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import ActivityFilter
 from benethos_mailbox_service.domain.rights.access import Access
+from benethos_mailbox_service.domain.users import Refused
 from benethos_mailbox_service.errors import BadRequestError, ConflictError
 
 from ...conftest import ADMIN
@@ -21,8 +22,8 @@ def test_a_batch_changes_every_user_or_none_and_names_the_refused(
     wide = services.users.create_user(ADMIN, "wide", [], [], service=["admin"])
     done = services.users.change_users(narrow, [one.id, wide.id], "disable")
     assert done.changed == []
-    [(name, why)] = done.refused
-    assert name == "wide" and "lacks" in why
+    [refused] = done.refused
+    assert refused.name == "wide" and "lacks" in refused.reason
     assert not services.users.get_user(ADMIN, one.id).disabled
     alone = services.users.change_users(narrow, [one.id], "disable")
     assert [u.name for u in alone.changed] == ["one"]
@@ -31,7 +32,7 @@ def test_a_batch_changes_every_user_or_none_and_names_the_refused(
     with pytest.raises(BadRequestError):
         services.users.change_users(ADMIN, [one.id], "give_role")
     unknown = services.users.change_users(ADMIN, [one.id], "give_role", "nobody")
-    assert unknown.refused == [("one", "unknown role: nobody")]
+    assert unknown.refused == [Refused("one", "unknown role: nobody")]
 
 
 def test_each_user_a_batch_refused_is_audited(services: Services) -> None:
@@ -39,9 +40,9 @@ def test_each_user_a_batch_refused_is_audited(services: Services) -> None:
     narrow = Access("usr_n", "narrow", [], service=["users.manage"])
     wide = services.users.create_user(ADMIN, "wide", [], [], service=["admin"])
     batch = [one.id, wide.id, "usr_gone"]
-    [(_, lacks), (_, gone)] = services.users.change_users(
-        narrow, batch, "disable"
-    ).refused
+    [lacks, gone] = [
+        r.reason for r in services.users.change_users(narrow, batch, "disable").refused
+    ]
     services.users.change_users(ADMIN, [one.id], "give_role", "nobody")
     matching = ActivityFilter(activity="users.change_refused")
     records = services.audit.list_activity(ADMIN, limit=10, matching=matching)
