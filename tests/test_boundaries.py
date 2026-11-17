@@ -6,8 +6,9 @@ above it, and a dataclass is frozen and slotted.
 What a package offers: every module of a group of mailbox-common; what
 mailbox-client exports, and the answer of each endpoint, which is a
 method of both clients; what a package of the service or the MCP server
-names in ``__all__``, and the public methods of the domain services the
-web layer reaches through ``Services``.
+names in ``__all__``, all of a module it offers so, and the public
+methods of the domain services the web layer reaches through
+``Services``.
 
 ``ALLOWED`` names what stays as it is, and why. An entry that no longer
 matches fails, so the list cannot grow stale."""
@@ -61,6 +62,33 @@ ALLOWED = {
     "service data/protocols/jmap/answers.py result": "a JMAP answer",
     # Filled during one pass of the sync, then applied at once.
     "service data/storage/index.py IndexChanges": "built up, then applied",
+    # Fields of a model, which each provider spreads into its own with
+    # what only it knows.
+    "service data/mail/convert.py summary_fields": "fields of a model",
+    "service data/mail/convert.py thread_fields": "fields of a model",
+    "service data/mail/convert.py message_fields": "fields of a model",
+    # What the check found when it came to modules offered as a namespace,
+    # ``from . import compose``, left for a change of its own (2026-11-17).
+    "mcp tools/accounts.py list_accounts": "found 2026-11-17",
+    "mcp tools/drafts.py create_draft": "found 2026-11-17",
+    "mcp tools/drafts.py list_drafts": "found 2026-11-17",
+    "mcp tools/drafts.py update_draft": "found 2026-11-17",
+    "mcp tools/reading.py list_folders": "found 2026-11-17",
+    "mcp tools/reading.py search_messages": "found 2026-11-17",
+    "mcp tools/reading.py whats_new": "found 2026-11-17",
+    "mcp tools/sending.py send_draft": "found 2026-11-17",
+    "mcp tools/sending.py send_message": "found 2026-11-17",
+    "mcp tools/writing.py create_folder": "found 2026-11-17",
+    "mcp tools/writing.py update_folder": "found 2026-11-17",
+    "mcp tools/writing.py update_messages": "found 2026-11-17",
+    "service data/mail/compose.py Extras": "found 2026-11-17",
+    "service data/mail/convert.py StoredDraft": "found 2026-11-17",
+    "service data/mail/parse.py ParsedAttachment": "found 2026-11-17",
+    "service data/mail/parse.py PartShape": "found 2026-11-17",
+    "service data/secrets/cipher.py encrypt": "found 2026-11-17",
+    "service domain/rights/permissions.py expand_known": "found 2026-11-17",
+    "service domain/rights/permissions.py of_scope": "found 2026-11-17",
+    "service domain/rights/permissions.py summarize": "found 2026-11-17",
 }
 
 
@@ -93,6 +121,18 @@ def _defined(package: str, path: Path, names: set[str] | None) -> Iterator[Offer
         yield Offered(package, module, node.name, node)
 
 
+def _namespaces(
+    package: str, init: Path, node: ast.ImportFrom, names: set[str]
+) -> Iterator[Offered]:
+    """A module offered as a namespace, ``from . import compose``: all it
+    defines in public. A package offered so has its own ``__init__.py``,
+    read on its own."""
+    for alias in node.names:
+        module = init.parent / f"{alias.name}.py"
+        if (alias.asname or alias.name) in names and module.is_file():
+            yield from _defined(package, module, None)
+
+
 def _exported(package: str) -> Iterator[Offered]:
     """What each ``__init__.py`` names in ``__all__``, where it is defined."""
     for init in sorted(SRC[package].rglob("__init__.py")):
@@ -106,6 +146,9 @@ def _exported(package: str) -> Iterator[Offered]:
         yield from _defined(package, init, names)
         for node in tree.body:
             if not (isinstance(node, ast.ImportFrom) and node.level == 1):
+                continue
+            if node.module is None:
+                yield from _namespaces(package, init, node, names)
                 continue
             taken = {a.name for a in node.names if (a.asname or a.name) in names}
             base = init.parent / (node.module or "").replace(".", "/")
@@ -216,6 +259,7 @@ def test_the_check_reaches_every_package() -> None:
     assert "client models/messages.py Message" in names
     assert "service domain/users/totp.py TotpService.begin" in names
     assert "common values/text.py joined" in names
+    assert "service data/mail/compose.py references" in names
 
 
 # What the rule below found when it came, left for a change of its own
