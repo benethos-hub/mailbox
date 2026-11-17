@@ -30,7 +30,7 @@ def reply(
 ) -> tuple[M, compose.Extras]:
     """``reply`` or ``reply_all``, in the original's thread. Without
     ``quote`` the text is left as it is."""
-    in_reply_to, chain = compose.references(raw)
+    thread = compose.references(raw)
     changes: dict[str, Any] = {
         "subject": message.subject or compose.prefixed("Re:", original.subject),
     }
@@ -44,7 +44,7 @@ def reply(
         changes.update(_recipients(original, action, own_address))
     return (
         message.model_copy(update=changes),
-        compose.Extras(in_reply_to=in_reply_to, references=chain),
+        compose.Extras(in_reply_to=thread.in_reply_to, references=thread.references),
     )
 
 

@@ -21,13 +21,13 @@ def test_the_files_come_off_and_the_rest_stays() -> None:
     forwarded["Subject"] = "Earlier"
     forwarded.set_content("Before")
     mail.add_attachment(forwarded, filename="forwarded.eml")
-    rest, files = compose.without_attachments(mail.as_bytes())
-    left = message_from_bytes(rest, policy=default)
+    detached = compose.without_attachments(mail.as_bytes())
+    left = message_from_bytes(detached.message, policy=default)
     assert left["Message-ID"] == "<plan@example.com>"
     assert list(left.iter_attachments()) == []
     body = left.get_body(("plain",))
     assert body is not None and body.get_content().strip() == "Hello"
-    pdf, eml = files
+    pdf, eml = detached.attachments
     assert (pdf.filename, pdf.content_type, pdf.data) == (
         "offer.pdf",
         "application/pdf",
@@ -44,8 +44,9 @@ def test_a_body_left_alone_is_the_whole_message() -> None:
     mail["Subject"] = "Plan"
     mail.set_content("Hello")
     mail.add_attachment(b"%PDF", "application", "pdf", filename="offer.pdf")
-    rest, [pdf] = compose.without_attachments(mail.as_bytes())
-    left = message_from_bytes(rest, policy=default)
+    detached = compose.without_attachments(mail.as_bytes())
+    [pdf] = detached.attachments
+    left = message_from_bytes(detached.message, policy=default)
     assert left.get_content_type() == "text/plain"
     assert left["Subject"] == "Plan"
     assert left.get_content().strip() == "Hello"
@@ -54,4 +55,4 @@ def test_a_body_left_alone_is_the_whole_message() -> None:
 
 def test_a_message_without_files_stays_as_it_is() -> None:
     raw = b"Subject: Plan\r\nContent-Type: text/plain\r\n\r\nHello\r\n"
-    assert compose.without_attachments(raw) == (raw, [])
+    assert compose.without_attachments(raw) == compose.Detached(raw)
