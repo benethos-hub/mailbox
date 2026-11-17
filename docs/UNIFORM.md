@@ -165,7 +165,8 @@ larger piece that is neither, and runs on its own.
   UI only (`web/pages/templates.py`). The MCP server shows them raw.
   With the fixed list of marks, the list and its words move to
   `mailbox-common`, used by the UI and the MCP server. Done: its
-  `mail/marks.py` holds the marks with their words and icons.
+  `mail/marks.py` holds the marks with their words. The UI picks
+  their icons in `web/pages/templates.py`.
 
 ### 4.2 Listing without a folder, and across accounts
 

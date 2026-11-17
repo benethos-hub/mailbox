@@ -7,7 +7,7 @@ from __future__ import annotations
 import base64
 from typing import Any
 
-from ..models import AttachmentSource, OutgoingFile, Recipient, Reference
+from ..models import Address, AttachmentSource, OutgoingFile, Recipient, Reference
 
 
 def message_body(
@@ -24,6 +24,7 @@ def message_body(
     attachments_from: list[AttachmentSource] | None = None,
 ) -> dict[str, Any]:
     """The body of a draft or a message to send, as the API takes it.
+    A recipient is an ``Address`` or its email and name as a pair.
     ``reference``: the message answered or forwarded, as a ``Reference``
     or as its id and the action (reply, reply_all, forward).
     ``attachments_from``: attachments of other messages of the account,
@@ -52,7 +53,10 @@ def message_body(
 
 
 def _recipient(recipient: Recipient) -> dict[str, str]:
-    email, name = recipient
+    if isinstance(recipient, Address):
+        email, name = recipient.email, recipient.name
+    else:
+        email, name = recipient
     return {"email": email, "name": name} if name else {"email": email}
 
 

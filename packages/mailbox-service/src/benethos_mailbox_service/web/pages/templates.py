@@ -125,6 +125,22 @@ def protocol_flags(values: Iterable[str]) -> list[str]:
     return found
 
 
+# The icon of each mark in the sprite, by its name in Bootstrap Icons.
+MARK_ICONS = {
+    marks.ANSWERED.keyword: "reply",
+    marks.FORWARDED.keyword: "forward",
+    marks.DRAFT.keyword: "pencil",
+    marks.JUNK.keyword: "slash-circle",
+    marks.NOT_JUNK.keyword: "check-circle",
+    marks.PHISHING.keyword: "exclamation-circle",
+}
+
+
+def mark_icon(mark: marks.Mark) -> str:
+    """The icon a list draws for ``mark``."""
+    return MARK_ICONS[mark.keyword]
+
+
 def replied(values: Iterable[str]) -> list[marks.Mark]:
     """Whether a message was answered or forwarded, as a list shows it."""
     return [m for m in marks.marks_of(values) if m in (marks.ANSWERED, marks.FORWARDED)]
@@ -153,6 +169,7 @@ templates.env.filters.update(
     own_keywords=own_keywords,
     protocol_flags=protocol_flags,
     replied=replied,
+    mark_icon=mark_icon,
     segment=segment,
     signs_in_at=signs_in_at,
 )
