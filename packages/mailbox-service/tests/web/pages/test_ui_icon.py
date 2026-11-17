@@ -1,7 +1,6 @@
-"""The project's icon: in the configuration UI, in the heading of every
-README, and the script that makes the shipped copy from the source in
-``assets/brand/``. Also the README's architecture diagram, which the same
-script renders."""
+"""The project's icon: in the configuration UI, and the script that
+makes the shipped copy from the source in ``assets/brand/``. Also the
+architecture diagram of the README, which the same script renders."""
 
 from __future__ import annotations
 
@@ -125,50 +124,6 @@ def test_the_architecture_diagram_has_the_size_of_its_page() -> None:
         assert png.startswith(b"\x89PNG\r\n\x1a\n"), image.name
         size = tuple(int.from_bytes(png[at : at + 4], "big") for at in (16, 20))
         assert size == (width * build.DIAGRAM_SCALE, height * build.DIAGRAM_SCALE)
-
-
-def test_the_readme_shows_the_diagram_light_and_dark() -> None:
-    readme = (REPOSITORY / "README.md").read_text("utf-8")
-    assert (
-        '<source srcset="assets/architecture/architecture-dark.png"'
-        ' media="(prefers-color-scheme: dark)">' in readme
-    )
-    assert '<img src="assets/architecture/architecture.png" alt="' in readme
-
-
-# PyPI shows no relative image: a package's README names it in full.
-_RAW = "https://raw.githubusercontent.com/benethos-hub/mailbox/main/"
-READMES = {
-    "README.md": "",
-    "containers/README.md": "../",
-    "containers/production/README.md": "../../",
-    "containers/test-mail-server/README.md": "../../",
-    "packages/mailbox-service/README.md": _RAW,
-    "packages/mailbox-client/README.md": _RAW,
-    "packages/mailbox-mcp/README.md": _RAW,
-    "packages/mailbox-common/README.md": _RAW,
-}
-
-
-@pytest.mark.parametrize(("readme", "prefix"), READMES.items())
-def test_every_readme_has_the_3d_icon_in_its_heading(readme: str, prefix: str) -> None:
-    first = (REPOSITORY / readme).read_text("utf-8").splitlines()[0]
-    assert first.startswith(
-        f'# <img src="{prefix}assets/brand/icon.svg" alt="" height="36"'
-        ' align="absmiddle"> '
-    ), first
-
-
-def test_every_readme_is_named() -> None:
-    found = {
-        path.relative_to(REPOSITORY).as_posix()
-        for folder in ("", "containers/", "packages/")
-        for path in (REPOSITORY / folder).glob(
-            "**/README.md" if folder else "README.md"
-        )
-        if "vendor" not in path.parts
-    }
-    assert found == set(READMES)
 
 
 def test_a_source_without_its_manifest_is_refused() -> None:

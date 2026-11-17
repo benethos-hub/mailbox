@@ -6,9 +6,7 @@ does, how large a module and a class may grow, and that a helper of
 from __future__ import annotations
 
 import ast
-import os
 import re
-from collections.abc import Iterator
 from pathlib import Path
 
 from .source_helpers import HELPERS, PACKAGE, ROOT, modules, own_part
@@ -129,14 +127,10 @@ def test_a_broad_handler_raises_or_records() -> None:
 # by subject.
 MAX_LINES = 500
 MAX_METHODS = 30
-# Where the limits hold: the package, its tests and the live checks.
+# Where the limits hold: the package and its tests. The tests at the
+# repository's root hold them for those and for the live checks.
 REPOSITORY = Path(__file__).resolve().parents[3]
-SIZED = (
-    ROOT,
-    Path(__file__).resolve().parent,
-    REPOSITORY / "tests",
-    REPOSITORY / "live",
-)
+SIZED = (ROOT, Path(__file__).resolve().parent)
 
 
 def test_modules_and_classes_stay_small() -> None:
@@ -229,198 +223,6 @@ def test_htmx_is_spoken_in_one_module() -> None:
         if path != home and spoken.search(path.read_text("utf-8"))
     ]
     assert not violations, "htmx outside templates.py:\n  " + "\n  ".join(violations)
-
-
-def test_no_test_module_imports_another() -> None:
-    """What tests of several modules share is a fixture in the conftest.py
-    of their nearest common folder, or a helper in a module of its own
-    there (docs/ARCHITECTURE.md 13): a test module is no library. In the
-    tests of all four packages."""
-    violations = []
-    for path in sorted((REPOSITORY / "packages").glob("*/tests/**/*.py")):
-        for node in ast.walk(ast.parse(path.read_text("utf-8"))):
-            if not (isinstance(node, ast.ImportFrom) and node.level):
-                continue
-            # from .test_x import y, and from . import test_x
-            named = [node.module or ""] + [a.name for a in node.names]
-            if any(n.split(".")[-1].startswith("test_") for n in named):
-                name = path.relative_to(REPOSITORY).as_posix()
-                violations.append(f"{name}:{node.lineno} from {node.module or '.'}")
-    assert not violations, "imports a test module:\n  " + "\n  ".join(violations)
-
-
-# A module of a test folder that is no test (docs/ARCHITECTURE.md 13).
-HELPER = re.compile(r"conftest|clocks|.+_fake(_.+)?|.+_adapter|.+_helpers|__init__")
-
-
-def test_a_helper_of_the_tests_is_named_after_its_kind() -> None:
-    """A fake in ``<subject>_fake.py``, an adapter on it in
-    ``<kind>_adapter.py``, anything else in ``<subject>_helpers.py``, in
-    the tests of all four packages. ``tests/installed_check.py`` at the
-    root is no helper but a script."""
-    violations = [
-        path.relative_to(REPOSITORY).as_posix()
-        for path in sorted((REPOSITORY / "packages").glob("*/tests/**/*.py"))
-        if not path.stem.startswith("test_") and not HELPER.fullmatch(path.stem)
-    ]
-    assert not violations, "a helper named otherwise:\n  " + "\n  ".join(violations)
-
-
-def _helpers_imported(path: Path) -> Iterator[Path]:
-    """The helpers of the tests a module imports by a relative import."""
-    for node in ast.walk(ast.parse(path.read_text("utf-8"))):
-        if not (isinstance(node, ast.ImportFrom) and node.level):
-            continue
-        base = path.parents[node.level - 1]
-        if node.module:
-            names = [node.module]
-        else:
-            names = [alias.name for alias in node.names]
-        for name in names:
-            found = base.joinpath(*name.split(".")).with_suffix(".py")
-            if found.is_file() and HELPER.fullmatch(found.stem):
-                yield found
-
-
-# A helper every folder of a suite reads, kept at the top of it.
-EVERYWHERE = {"clocks", "conftest", "__init__"}
-# Left at the top by review 2026-11-17: the tests at the repository's
-# root keep a module of the same name and kind at the top of theirs.
-AT_THE_TOP = {"packages/mailbox-service/tests/scripts_helpers.py"}
-
-
-def test_a_helper_sits_in_the_nearest_folder_of_its_importers() -> None:
-    """A helper lives in the nearest common folder of the modules that
-    import it (docs/ARCHITECTURE.md 13), in the tests of all four
-    packages. ``clocks.py`` is for every folder of a suite."""
-    importers: dict[Path, set[Path]] = {}
-    for path in sorted((REPOSITORY / "packages").glob("*/tests/**/*.py")):
-        for helper in _helpers_imported(path):
-            importers.setdefault(helper, set()).add(path.parent)
-    violations = []
-    for helper, folders in sorted(importers.items()):
-        if helper.stem in EVERYWHERE:
-            continue
-        name = helper.relative_to(REPOSITORY).as_posix()
-        nearest = Path(os.path.commonpath(sorted(folders)))
-        if helper.parent != nearest and name not in AT_THE_TOP:
-            violations.append(f"{name} -> {nearest.relative_to(REPOSITORY).as_posix()}")
-    assert not violations, "a helper away from its importers:\n  " + "\n  ".join(
-        violations
-    )
-
-
-# A fixture each module of a server of its own brings, by design: the
-# one of tests/conftest.py is the IMAP server.
-OWN_SERVER = "server"
-# What the two rules below found when they came, left for a change of its
-# own (2026-10-29): a module beside the fixture of a conftest, and two
-# modules of a folder with a fixture of one name.
-SHADOWING = {
-    ("domain/changes/test_changes_delta.py", "clock"),
-    ("domain/sync/test_jmap_sync.py", "client"),
-    ("domain/sync/test_take_up.py", "services"),
-}
-REPEATED = {
-    ("domain/accounts", "world"),
-    ("domain/mailbox/outgoing", "box"),
-    ("web/pages", "endpoint"),
-}
-
-
-def _fixtures(path: Path) -> set[str]:
-    """The names of the fixtures a module defines at its top."""
-    found = set()
-    for node in ast.parse(path.read_text("utf-8")).body:
-        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            continue
-        for decorator in node.decorator_list:
-            target = decorator.func if isinstance(decorator, ast.Call) else decorator
-            if isinstance(target, ast.Attribute) and target.attr == "fixture":
-                found.add(node.name)
-    return found
-
-
-def _test_modules() -> list[tuple[Path, Path]]:
-    """Every test module of the four packages, with its package's tests."""
-    return [
-        (tests, path)
-        for tests in sorted((REPOSITORY / "packages").glob("*/tests"))
-        for path in sorted(tests.rglob("test_*.py"))
-    ]
-
-
-def test_no_test_module_hides_a_fixture_of_a_conftest() -> None:
-    """A module that defines a fixture of a conftest.py above it under the
-    same name leaves a reader to guess which one holds (ARCHITECTURE 13)."""
-    violations = []
-    for tests, path in _test_modules():
-        name = path.relative_to(tests).as_posix()
-        mine = _fixtures(path) - {OWN_SERVER}
-        for folder in [path.parent, *path.parent.parents]:
-            conftest = folder / "conftest.py"
-            if conftest.exists():
-                for fixture in sorted(mine & _fixtures(conftest)):
-                    if (name, fixture) not in SHADOWING:
-                        violations.append(f"{name}: {fixture}")
-            if folder == tests:
-                break
-    assert not violations, "hides a fixture of a conftest:\n  " + "\n  ".join(
-        violations
-    )
-
-
-def test_two_test_modules_of_a_folder_share_no_fixture_name() -> None:
-    """A fixture two modules of a folder need goes to its conftest.py, or
-    each names its own (ARCHITECTURE 13)."""
-    seen: dict[tuple[Path, str], list[str]] = {}
-    for tests, path in _test_modules():
-        folder = path.parent.relative_to(tests).as_posix()
-        for fixture in _fixtures(path) - {OWN_SERVER}:
-            if (folder, fixture) not in REPEATED:
-                seen.setdefault((path.parent, fixture), []).append(path.name)
-    violations = [
-        f"{folder.relative_to(REPOSITORY).as_posix()}: {fixture} in {', '.join(names)}"
-        for (folder, fixture), names in sorted(seen.items())
-        if len(names) > 1
-    ]
-    assert not violations, "a fixture name twice:\n  " + "\n  ".join(violations)
-
-
-def test_no_live_script_imports_another() -> None:
-    """What the live checks share is in live/checks/ (ARCHITECTURE 13): a
-    script is no library, and importing one loads all it needs."""
-    live = REPOSITORY / "live"
-    scripts = {path.stem for path in live.glob("*.py")}
-    violations = []
-    for path in sorted(live.glob("*.py")):
-        for node in ast.walk(ast.parse(path.read_text("utf-8"))):
-            if isinstance(node, ast.ImportFrom) and not node.level:
-                named = [node.module or ""]
-            elif isinstance(node, ast.Import):
-                named = [alias.name for alias in node.names]
-            else:
-                continue
-            for module in named:
-                if module.split(".")[0] in scripts:
-                    violations.append(f"{path.name}:{node.lineno} {module}")
-    assert len(scripts) > 5
-    assert not violations, "a live script imports another:\n  " + "\n  ".join(
-        violations
-    )
-
-
-def test_no_package_entry_defines_a_class() -> None:
-    """The entry of a package offers, it does not implement
-    (ARCHITECTURE 5.2): no __init__.py of the four packages defines a
-    class."""
-    violations = [
-        f"{path.relative_to(REPOSITORY).as_posix()}: {node.name}"
-        for path in sorted((REPOSITORY / "packages").glob("*/src/**/__init__.py"))
-        for node in ast.parse(path.read_text("utf-8")).body
-        if isinstance(node, ast.ClassDef)
-    ]
-    assert not violations, "a class in a package's entry:\n  " + "\n  ".join(violations)
 
 
 # What the rule below found when it came, left for a change of its own
