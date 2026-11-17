@@ -15,6 +15,13 @@ adheres to [Semantic Versioning](https://semver.org/).
   `send_draft`. Each schema said "an object" before. The answers
   themselves are unchanged: a key without a value is still left out.
 
+### Fixed
+
+- A list of a Microsoft account's messages or drafts shows only what lies
+  in the folder asked for. A cursor made up by the caller could name
+  another folder's path, so a token that may reach drafts alone could
+  read the summaries of the inbox.
+
 ## [0.7.5] - 2026-11-17
 
 ### Fixed

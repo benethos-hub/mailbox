@@ -41,6 +41,10 @@ async def list_messages(
     if "$search" in query:
         found = await _immutable(graph, found)
     items = [mappers.summary(item) for item in found]
+    if folder_id != rules.ALL:
+        # A cursor carries a path of Graph's: only what lies in the folder
+        # asked for counts, whatever that path lists.
+        items = [i for i in items if folder_id in i.folder_ids]
     if folder_id == rules.ALL:
         # Graph lists every folder: the trash and junk leave after
         # each page, so a page can come back short.
