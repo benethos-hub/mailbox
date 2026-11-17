@@ -16,6 +16,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   service through httpx, which was held already, and makes no request
   through httpx2, so nothing reached the log.
 
+### Changed
+
+- The images build with uv 0.13.9.
+
 ## [0.7.4] - 2026-11-16
 
 ### Changed
