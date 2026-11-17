@@ -8,7 +8,11 @@ rather than sent as null, since the model reads every key: those are
 
 from __future__ import annotations
 
-from typing import NotRequired, TypedDict
+from typing import NotRequired
+
+# TypedDict of typing_extensions, not of typing: pydantic reads the one
+# of typing only from Python 3.12 on.
+from typing_extensions import TypedDict
 
 # A message in a list, without what the model does not need. "from" is
 # a keyword of Python, so this one is written as a call.
