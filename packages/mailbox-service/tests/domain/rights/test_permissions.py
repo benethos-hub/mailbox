@@ -64,6 +64,13 @@ def test_expand_rejects_unknown_names() -> None:
         permissions.expand(["mail.everything"])
 
 
+def test_stored_names_may_come_as_a_generator() -> None:
+    """Walked twice, so taken as a list first (review 2026-11-17, finding
+    12)."""
+    names = ["mail.read", "mail.gone"]
+    assert permissions.expand_known(n for n in names) == permissions.expand_known(names)
+
+
 def test_a_stored_right_that_no_longer_exists_grants_nothing() -> None:
     known = permissions.expand_known(["get_account", "mail.gone"])
     assert known.operations == {"get_account"}
