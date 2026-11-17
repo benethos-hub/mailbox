@@ -18,6 +18,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   across accounts, carries a seal of the service. A cursor made up or
   changed is refused with `400 bad_request`, "invalid cursor", and so is
   one from before the service started last: its list starts again.
+- `benethos-mailbox-common`: `mail.marks.Mark` has no field `icon`. A
+  mark is its keyword, its word and whether it shows. The configuration
+  UI picks its icons itself.
 
 ### Fixed
 

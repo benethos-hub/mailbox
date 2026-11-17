@@ -13,8 +13,10 @@ from types import ModuleType
 import pytest
 from fastapi.testclient import TestClient
 
+from benethos_mailbox_common.mail import marks
 from benethos_mailbox_service.common.clock import utc_now
 from benethos_mailbox_service.web.pages.templates import (
+    MARK_ICONS,
     STATIC_DIR,
     TEMPLATE_DIR,
     ago,
@@ -52,6 +54,13 @@ def test_the_sprite_holds_the_icons_the_script_names() -> None:
     assert f"Bootstrap Icons {icons.VERSION}, MIT licence" in sprite
     assert "<script" not in sprite and "style=" not in sprite
     assert "MIT License" in icons.LICENSE.read_text("utf-8")
+
+
+def test_every_mark_has_an_icon_in_the_sprite() -> None:
+    """The UI picks the icon of each mark of ``mailbox-common``, which
+    names none (review 2026-11-17, finding 27)."""
+    assert set(MARK_ICONS) == {mark.keyword for mark in marks.MARKS}
+    assert set(MARK_ICONS.values()) <= _held()
 
 
 def test_an_icon_of_another_shape_is_refused() -> None:

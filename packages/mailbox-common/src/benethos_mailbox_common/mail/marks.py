@@ -1,6 +1,7 @@
-"""The marks of RFC 8621 a person sees on a message, and the words and
-icons for them. The UI and the MCP server show marks through these and
-spell no ``$`` keyword of their own (docs/UNIFORM.md, U3).
+"""The marks of RFC 8621 a person sees on a message, and the words for
+them. The UI and the MCP server show marks through these and spell no
+``$`` keyword of their own (docs/UNIFORM.md, U3). How the UI draws one
+is the UI's.
 
 ``$seen`` and ``$flagged`` are no marks here: they are read and starred.
 A ``$`` keyword that is no mark, such as ``$important``, is a keyword.
@@ -14,22 +15,21 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True, slots=True)
 class Mark:
-    """One mark: its keyword, the word a person reads, the name of its
-    icon (Bootstrap Icons), and whether a person cares to see it.
-    ``$notjunk`` only says a mail is not junk, which shows nothing."""
+    """One mark: its keyword, the word a person reads, and whether a
+    person cares to see it. ``$notjunk`` only says a mail is not junk,
+    which shows nothing."""
 
     keyword: str
     word: str
-    icon: str
     shown: bool = True
 
 
-ANSWERED = Mark("$answered", "answered", "reply")
-FORWARDED = Mark("$forwarded", "forwarded", "forward")
-DRAFT = Mark("$draft", "draft", "pencil")
-JUNK = Mark("$junk", "junk", "slash-circle")
-NOT_JUNK = Mark("$notjunk", "not junk", "check-circle", shown=False)
-PHISHING = Mark("$phishing", "phishing", "exclamation-circle")
+ANSWERED = Mark("$answered", "answered")
+FORWARDED = Mark("$forwarded", "forwarded")
+DRAFT = Mark("$draft", "draft")
+JUNK = Mark("$junk", "junk")
+NOT_JUNK = Mark("$notjunk", "not junk", shown=False)
+PHISHING = Mark("$phishing", "phishing")
 
 MARKS: tuple[Mark, ...] = (ANSWERED, FORWARDED, DRAFT, JUNK, NOT_JUNK, PHISHING)
 _BY_KEYWORD = {mark.keyword: mark for mark in MARKS}
