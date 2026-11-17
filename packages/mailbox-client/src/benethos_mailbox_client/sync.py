@@ -44,6 +44,7 @@ class SyncMailboxClient:
             headers=found.headers,
             timeout=timeouts(),
             transport=transport,
+            trust_env=found.trust_env,
         )
 
     def __enter__(self) -> SyncMailboxClient:

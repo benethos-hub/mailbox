@@ -127,7 +127,9 @@ fields:
 The token travels in a header. Over http the client talks only to this
 machine. To another machine it needs https, or
 `MAILBOX_SERVICE_ALLOW_HTTP=1` (`allow_http=True`) for a network you
-trust, such as between containers.
+trust, such as between containers. Over http the client takes no proxy
+from the environment, so the token cannot reach one in clear. Over
+https it follows `HTTPS_PROXY` and the like.
 
 A client made without an address or a token reads the environment when
 it is made. A program that makes clients for a long time can read it

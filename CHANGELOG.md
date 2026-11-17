@@ -25,6 +25,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   in the folder asked for. A cursor made up by the caller could name
   another folder's path, so a token that may reach drafts alone could
   read the summaries of the inbox.
+- The Python client, and the MCP server with it, takes no proxy from the
+  environment for a service over http. The token went in clear to a
+  proxy named by `HTTP_PROXY`, or on Windows by the system. Over https a
+  proxy of the environment still counts.
 
 ## [0.7.5] - 2026-11-17
 
