@@ -178,8 +178,7 @@ def outgoing(draft: bytes, date: datetime, message_id: str) -> Outgoing:
     ``message_id`` is used where the draft has none, as one another mail
     client made may lack it."""
     mail = BytesParser(policy=SMTP).parsebytes(draft)
-    fields = [str(v) for name in ("To", "Cc", "Bcc") for v in mail.get_all(name, [])]
-    recipients = list(dict.fromkeys(a for _, a in getaddresses(fields) if a))
+    recipients = list(dict.fromkeys(_addressed(mail)))
     reference = mail.get(REFERENCE_HEADER)
     del mail["Bcc"]
     del mail[REFERENCE_HEADER]
@@ -194,6 +193,12 @@ def outgoing(draft: bytes, date: datetime, message_id: str) -> Outgoing:
         str(reference) if reference else None,
         kept or message_id,
     )
+
+
+def _addressed(mail: MimePart) -> list[str]:
+    """The addresses To, Cc and Bcc name, in their order."""
+    fields = [str(v) for name in ("To", "Cc", "Bcc") for v in mail.get_all(name, [])]
+    return [address for _, address in getaddresses(fields) if address]
 
 
 # --- replies and forwards --------------------------------------------------------
@@ -270,12 +275,7 @@ def with_bcc(raw: bytes, recipients: list[str]) -> bytes:
     provider that reads the recipients from the message itself."""
     head, separator, body = raw.partition(b"\r\n\r\n")
     headers = BytesHeaderParser(policy=default).parsebytes(head + separator)
-    named = {
-        address.lower()
-        for _, address in getaddresses(
-            [str(v) for n in ("To", "Cc", "Bcc") for v in headers.get_all(n, [])]
-        )
-    }
+    named = {address.lower() for address in _addressed(headers)}
     hidden = [ascii_domain(r) for r in recipients if r.lower() not in named]
     if not hidden:
         return raw
