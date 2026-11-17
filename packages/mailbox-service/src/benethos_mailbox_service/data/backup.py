@@ -276,11 +276,13 @@ def _replace(target: Path, staged: Path) -> None:
         raise
     if target.exists():
         stamp = utc_now().strftime("%Y%m%dT%H%M%SZ")
-        kept = target.with_name(f"{target.name}.before-restore-{stamp}")
+        kept = _free(target.with_name(f"{target.name}.before-restore-{stamp}"))
         try:
             # A second name for the old file: the database stays in place
             # until the new one replaces it in one step.
             os.link(target, kept)
+        except FileExistsError:
+            raise  # taken since _free looked: never replace a kept copy
         except OSError:
             target.replace(kept)  # a file system without hard links
         # A journal left by a crash belongs to the old file. Beside the
@@ -290,6 +292,17 @@ def _replace(target: Path, staged: Path) -> None:
             if journal.exists():
                 journal.replace(kept.with_name(kept.name + suffix))
     staged.replace(target)
+
+
+def _free(path: Path) -> Path:
+    """``path``, or the first of ``path-2``, ``path-3`` and so on that is
+    not taken: a second restore in the same second keeps the copy the
+    first one made."""
+    found, n = path, 1
+    while found.exists():
+        n += 1
+        found = path.with_name(f"{path.name}-{n}")
+    return found
 
 
 def _backup_key(master_key: bytes) -> bytes:

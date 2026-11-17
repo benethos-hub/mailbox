@@ -49,6 +49,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `server_status` of the MCP server no longer counts a `502` or `504` of a
   proxy in front of a stopped service, or an answer it could not read, as
   the service running and taking the token. What it saw before stands.
+- A second `restore` in the same second keeps the copy of the database
+  the first one kept, as `….before-restore-<time>-2`. It replaced that
+  copy before, the only one of the original.
 
 ## [0.7.5] - 2026-11-17
 
