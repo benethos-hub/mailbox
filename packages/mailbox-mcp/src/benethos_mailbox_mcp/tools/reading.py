@@ -3,6 +3,8 @@ them."""
 
 from __future__ import annotations
 
+import threading
+from functools import partial
 from typing import Annotated, Any
 
 import anyio
@@ -404,14 +406,18 @@ TOOLS = (
 
 async def _pdf(data: bytes, first_page: int, pages: int) -> pdf.Pages:
     """The pages as images, given up after ``PDF_SECONDS``: a PDF made to
-    take long must not hold the tool. The thread runs on to its end, and
-    the next PDF waits for it in ``pdf.render``."""
+    take long must not hold the tool. A render under way runs on to its
+    end, and the next PDF waits for it in ``pdf.render``. One still
+    waiting for its turn renders nothing."""
+    abandoned = threading.Event()
     try:
         with anyio.fail_after(PDF_SECONDS):
             return await anyio.to_thread.run_sync(
-                pdf.render, data, first_page, pages, abandon_on_cancel=True
+                partial(pdf.render, data, first_page, pages, abandoned=abandoned),
+                abandon_on_cancel=True,
             )
     except TimeoutError:
+        abandoned.set()
         raise ToolError(
             f"the PDF took longer than {PDF_SECONDS} seconds to render",
             kind="the PDF took too long",

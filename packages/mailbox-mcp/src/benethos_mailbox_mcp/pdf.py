@@ -36,10 +36,21 @@ class Pages:
     total: int  # pages in the document
 
 
-def render(data: bytes, first: int, count: int, dpi: int = DPI) -> Pages:
+def render(
+    data: bytes,
+    first: int,
+    count: int,
+    dpi: int = DPI,
+    *,
+    abandoned: threading.Event | None = None,
+) -> Pages:
     """Pages ``first`` to ``first + count - 1`` as PNG, as far as they exist,
-    within MAX_TOTAL_PIXELS together."""
+    within MAX_TOTAL_PIXELS together. ``abandoned``: set by a caller that
+    gave up waiting. A call still waiting for its turn then renders
+    nothing, so a PDF asked for again and again queues no work."""
     with _ONE_AT_A_TIME:
+        if abandoned is not None and abandoned.is_set():
+            raise ToolError("the PDF was given up before its turn")
         return _render(data, first, count, dpi)
 
 

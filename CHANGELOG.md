@@ -52,6 +52,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 - A second `restore` in the same second keeps the copy of the database
   the first one kept, as `….before-restore-<time>-2`. It replaced that
   copy before, the only one of the original.
+- `get_attachment` of the MCP server queues no work for a PDF it gave
+  up on: a call still waiting for its turn renders nothing. Each call on
+  a slow PDF added a whole render before, and other PDFs ran out of time
+  behind them.
 
 ## [0.7.5] - 2026-11-17
 
