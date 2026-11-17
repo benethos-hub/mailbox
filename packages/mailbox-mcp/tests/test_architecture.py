@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import ast
 import re
+import sys
 from pathlib import Path
 
 from benethos_mailbox_mcp.tools import TOOLS
@@ -47,7 +48,12 @@ LIBRARY_HOMES = {
     # the common package.
     "platformdirs": set(),
     "pydantic_settings": set(),
+    # TypedDict for pydantic before Python 3.12.
+    "typing_extensions": {"answers"},
 }
+# Libraries used across the modules: the records of the tool arguments,
+# the async runtime, the shared package.
+UNHOMED = {"pydantic", "anyio", "benethos_mailbox_common"}
 
 
 def _modules() -> list[tuple[str, Path]]:
@@ -160,6 +166,24 @@ def test_each_library_has_one_home() -> None:
             if homes is not None and name not in homes:
                 violations.append(f"{name}:{line} imports {imported[1:]}")
     assert not violations, "library outside its home:\n  " + "\n  ".join(violations)
+
+
+def test_every_library_has_a_home_or_a_reason() -> None:
+    """A library without a home could be imported anywhere: each one the
+    server imports is in ``LIBRARY_HOMES`` or in ``UNHOMED``."""
+    loose = sorted(
+        {
+            f"{top} ({name}:{line})"
+            for name, path in _modules()
+            for imported, line in _imports(name, path)
+            if imported.startswith("!")
+            for top in [imported[1:].split(".")[0]]
+            if top not in sys.stdlib_module_names
+            and top not in LIBRARY_HOMES
+            and top not in UNHOMED
+        }
+    )
+    assert not loose, "a library without a home:\n  " + "\n  ".join(loose)
 
 
 def test_the_command_line_leaves_the_tools_to_the_server() -> None:
