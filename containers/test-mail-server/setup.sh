@@ -17,7 +17,7 @@ admin_env="$secrets/admin.env"
 accounts_env="$secrets/accounts.env"
 # An exact version: Docker keeps a tag it has as it is, and CLI 1.0.13 cannot
 # read the schema of Stalwart 1.0 and later.
-cli_image="ghcr.io/stalwartlabs/cli:1.0.14"
+cli_image="ghcr.io/stalwartlabs/cli:2.0.0"
 network="mailbox-test-mail-server_default"
 domain="mailbox.test"
 hostname="mail.$domain"
