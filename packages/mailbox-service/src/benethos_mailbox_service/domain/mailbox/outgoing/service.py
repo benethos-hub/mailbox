@@ -29,6 +29,7 @@ from ...accounts import NEEDS, drafts
 from ...activity import ActivityLog
 from ...rights import Access
 from ..calls import Calls
+from ..cursors import Cursors
 from . import checks
 from .composing import Composer
 from .delivering import Delivery
@@ -42,10 +43,12 @@ class Outgoing:
         calls: Calls,
         idempotency: Idempotency,
         sends: SendControl,
+        cursors: Cursors,
         clock: Callable[[], datetime] = utc_now,
         activity: ActivityLog | None = None,
     ) -> None:
         self._calls = calls
+        self._cursors = cursors
         self._idempotency = idempotency
         self._sends = sends
         self._composer = Composer(calls, clock)
@@ -143,10 +146,11 @@ class Outgoing:
     ) -> Page[MessageSummary]:
         access.require("list_drafts", account_id)
         await self._calls.require(account_id, NEEDS["list_drafts"])
+        opened = self._cursors.open(cursor)
         page = await self._calls.call(
-            account_id, lambda p: drafts(p).list_drafts(limit=limit, cursor=cursor)
+            account_id, lambda p: drafts(p).list_drafts(limit=limit, cursor=opened)
         )
-        return await self._calls.published_page(account_id, page)
+        return self._cursors.sealed(await self._calls.published_page(account_id, page))
 
     async def create_draft(
         self, access: Access, account_id: str, draft: DraftMessage

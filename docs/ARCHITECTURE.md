@@ -295,7 +295,8 @@ packages/mailbox-service/
                         #   by threads (threads),
                         #   the fingerprint of a request
                         #   (fingerprint), links to attachments for
-                        #   another service (links)
+                        #   another service (links), the cursors of
+                        #   the lists, sealed with an HMAC (cursors)
         outgoing/       # Outgoing: replies, sending and drafts
                         #   (service, with composing, delivering and
                         #   checks, replies), grant limits and the send

@@ -42,6 +42,7 @@ from ..rights import Access
 from ..sync import SyncService
 from .across import AcrossAccounts, in_reach
 from .calls import Calls, public
+from .cursors import Cursors
 from .folders import Folders
 from .outgoing import Idempotency, Outgoing, SendControl
 from .reach import of_the_account, outside, reach_of
@@ -67,12 +68,15 @@ class MailboxService:
         thread_messages: int = THREAD_MESSAGES,
     ) -> None:
         self._calls = Calls(adapters, sync)
+        self._cursors = Cursors()
         self._changes = sync.feed
         self._across = AcrossAccounts(self._calls)
         self._folders = Folders(self._calls)
         self._threads = Threads(self._calls, self._folders, thread_messages)
         # Sending, drafts and the audit of sends: mailbox.outgoing.send_message.
-        self.outgoing = Outgoing(self._calls, idempotency, sends, clock, activity)
+        self.outgoing = Outgoing(
+            self._calls, idempotency, sends, self._cursors, clock, activity
+        )
 
     def forget_account(self, account_id: str) -> None:
         """An account is deleted: what was noted of its messages goes."""
@@ -182,15 +186,16 @@ class MailboxService:
         folder, reach = await self._folders.listed(
             access, account_id, folder_id or FolderRole.INBOX
         )
+        opened = self._cursors.open(cursor)
         page = await self._calls.call(
             account_id,
             lambda p: p.list_messages(
-                folder, limit=limit, cursor=cursor, search=search
+                folder, limit=limit, cursor=opened, search=search
             ),
         )
         if reach is not None:
             page = in_reach(page, reach)
-        return await self._calls.published_page(account_id, page)
+        return self._cursors.sealed(await self._calls.published_page(account_id, page))
 
     async def get_message(
         self, access: Access, account_id: str, message_id: str
@@ -217,9 +222,14 @@ class MailboxService:
         cursor: str | None,
     ) -> Page[ThreadSummary]:
         """The threads of a folder, newest first: ``threads``."""
-        return await self._threads.list_threads(
-            access, account_id, folder_id=folder_id, limit=limit, cursor=cursor
+        page = await self._threads.list_threads(
+            access,
+            account_id,
+            folder_id=folder_id,
+            limit=limit,
+            cursor=self._cursors.open(cursor),
         )
+        return self._cursors.sealed(page)
 
     async def get_thread(
         self, access: Access, account_id: str, thread_id: str
@@ -389,14 +399,15 @@ class MailboxService:
         cursor: str | None,
     ) -> MessagePage:
         """Messages of several accounts, merged newest first: ``across``."""
-        return await self._across.list_all_messages(
+        page = await self._across.list_all_messages(
             access,
             account_ids=account_ids,
             folder_role=folder_role,
             search=search,
             limit=limit,
-            cursor=cursor,
+            cursor=self._cursors.open(cursor),
         )
+        return self._cursors.sealed(page)
 
 
 def _heard(

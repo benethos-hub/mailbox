@@ -13,9 +13,9 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
-from benethos_mailbox_service.assembly import build_services, create_app
+from benethos_mailbox_service.assembly import Services, build_services, create_app
 from benethos_mailbox_service.config import Settings
-from benethos_mailbox_service.data.models import ProviderType
+from benethos_mailbox_service.data.models import Grant, ProviderType
 from benethos_mailbox_service.data.protocols.http import ApiClient
 from benethos_mailbox_service.data.protocols.oauth import App, OAuthClient
 from benethos_mailbox_service.data.providers import (
@@ -23,13 +23,14 @@ from benethos_mailbox_service.data.providers import (
     ProviderSettings,
     Reads,
     TokenSource,
+    rules,
 )
 from benethos_mailbox_service.data.providers.microsoft import MicrosoftProvider
 from benethos_mailbox_service.data.providers.microsoft import (
     endpoints as microsoft_endpoints,
 )
 
-from ..conftest import admin_bearer, set_master_key
+from ..conftest import admin_bearer, bearer_for, set_master_key
 from ..graph_fake import TOKEN, FakeGraph
 from ..oauth_fake import TokenEndpoint, granted, id_token, state_of
 
@@ -39,11 +40,9 @@ def graph() -> FakeGraph:
     return FakeGraph()
 
 
-def test_connect_read_and_send_through_the_api(
-    graph: FakeGraph, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    set_master_key(monkeypatch)
-    graph.add_message(subject="Welcome")
+def _connected(graph: FakeGraph) -> tuple[Services, TestClient, str]:
+    """A service with the Graph fake, the admin's client of its API, and
+    the Microsoft account the admin connected."""
     endpoint = TokenEndpoint(
         granted(TOKEN, "rt-1", id_token=id_token(email="me@example.org")),
         # The account's own adapter renews once, from the stored token.
@@ -87,7 +86,16 @@ def test_connect_read_and_send_through_the_api(
     account = anyio.run(
         lambda: services.oauth.finish(caller, ProviderType.MICROSOFT, state, "code")
     )
-    base = f"/v1/accounts/{account.id}"
+    return services, client, account.id
+
+
+def test_connect_read_and_send_through_the_api(
+    graph: FakeGraph, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    set_master_key(monkeypatch)
+    graph.add_message(subject="Welcome")
+    _, client, account_id = _connected(graph)
+    base = f"/v1/accounts/{account_id}"
     roles = {f["role"] for f in client.get(f"{base}/folders").json()}
     assert {"inbox", "sent", "drafts", "trash"} <= roles
     listed = client.get(f"{base}/messages", params={"folder": "inbox"}).json()
@@ -107,3 +115,24 @@ def test_connect_read_and_send_through_the_api(
     assert draft.status_code == 201, draft.text
     listed_drafts: Any = client.get(f"{base}/drafts").json()
     assert [d["id"] for d in listed_drafts["items"]] == [draft.json()["id"]]
+
+
+def test_a_token_of_drafts_reads_no_inbox_through_a_cursor(
+    graph: FakeGraph, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A cursor of the drafts with the path of the inbox, made up by a
+    token that may reach drafts alone (review 2026-11-17, finding 1)."""
+    set_master_key(monkeypatch)
+    graph.add_message(subject="Payroll")
+    services, client, account_id = _connected(graph)
+    client.headers.update(
+        bearer_for(services, Grant(accounts=[account_id], allow=["drafts"]))
+    )
+    base = f"/v1/accounts/{account_id}"
+    assert client.get(f"{base}/messages", params={"folder": "inbox"}).status_code == 403
+    path = f"/me/mailFolders/{graph.well_known['inbox']}/messages?$top=50"
+    scope = rules.cursor_scope(graph.well_known["drafts"], None)
+    forged = rules.bound_cursor("m_", scope, path)
+    answer = client.get(f"{base}/drafts", params={"cursor": forged})
+    assert answer.status_code == 400
+    assert "Payroll" not in answer.text
