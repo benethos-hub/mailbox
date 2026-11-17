@@ -57,6 +57,13 @@ class Connection:
     base_url: str
     headers: dict[str, str] = field(repr=False)
 
+    @property
+    def trust_env(self) -> bool:
+        """Whether a proxy of the environment may carry the requests: over
+        https only. Over http the token would reach the proxy in clear,
+        and the service is on this machine or a network named trusted."""
+        return self.base_url.startswith("https://")
+
 
 def connection(
     base_url: str | None, token: str | None, allow_http: bool | None

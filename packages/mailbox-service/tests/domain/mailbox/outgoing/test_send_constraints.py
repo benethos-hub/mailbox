@@ -57,6 +57,11 @@ def sender(services: Services, account_id: str, **limits: object) -> dict[str, s
         ("*@example.org", "example.org", False),
         ("*@example.org", "@example.org", False),
         ("*@example.org", "a@b@example.org", False),
+        # Case alone: ß is no ss, a domain with ß is another domain
+        # (review 2026-11-17, finding 4).
+        ("weiß@example.org", "weiss@example.org", False),
+        ("*@straße.de", "x@strasse.de", False),
+        ("*@Straße.de", "x@STRAßE.de", True),
     ],
 )
 def test_recipient_matches(pattern: str, address: str, matches: bool) -> None:
@@ -73,6 +78,7 @@ def test_recipient_matches(pattern: str, address: str, matches: bool) -> None:
         ("*@a.org", "bob@a.org", True),
         ("bob@a.org", "*@a.org", False),
         ("bob@a.org", "bob@a.org", True),
+        ("*@straße.de", "*@strasse.de", False),
     ],
 )
 def test_pattern_covers(outer: str, inner: str, covers: bool) -> None:

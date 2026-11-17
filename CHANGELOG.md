@@ -14,6 +14,24 @@ adheres to [Semantic Versioning](https://semver.org/).
   `list_drafts`, `create_draft`, `update_draft`, `send_message` and
   `send_draft`. Each schema said "an object" before. The answers
   themselves are unchanged: a key without a value is still left out.
+- The cursor of a list of messages, drafts or threads, and of the list
+  across accounts, carries a seal of the service. A cursor made up or
+  changed is refused with `400 bad_request`, "invalid cursor", and so is
+  one from before the service started last: its list starts again.
+
+### Fixed
+
+- A list of a Microsoft account's messages or drafts shows only what lies
+  in the folder asked for. A cursor made up by the caller could name
+  another folder's path, so a token that may reach drafts alone could
+  read the summaries of the inbox.
+- The Python client, and the MCP server with it, takes no proxy from the
+  environment for a service over http. The token went in clear to a
+  proxy named by `HTTP_PROXY`, or on Windows by the system. Over https a
+  proxy of the environment still counts.
+- A grant's recipients compare without regard to case alone. `ß` matched
+  `ss` before, so a grant for `weiß@example.org` allowed
+  `weiss@example.org`, another mailbox, and `*@straße.de` another domain.
 
 ## [0.7.5] - 2026-11-17
 

@@ -323,7 +323,7 @@ def recipient_matches(pattern: str, address: str) -> bool:
     A local part with ``%`` or ``!`` matches no domain: some servers route
     ``bob%evil.org@domain`` on to evil.org. Only its exact address does.
     Nor does an address without a local part or with a second ``@``."""
-    pattern, address = pattern.casefold(), address.casefold()
+    pattern, address = pattern.lower(), address.lower()
     if pattern == ANY_RECIPIENT:
         return True
     if pattern.startswith("*@"):
@@ -343,8 +343,8 @@ _ROUTING = "%!"
 
 def pattern_covers(outer: str, inner: str) -> bool:
     """Whether every address ``inner`` matches is one ``outer`` matches."""
-    if inner.casefold() == ANY_RECIPIENT:
+    if inner.lower() == ANY_RECIPIENT:
         return outer == ANY_RECIPIENT
     if inner.startswith("*@"):
-        return outer == ANY_RECIPIENT or outer.casefold() == inner.casefold()
+        return outer == ANY_RECIPIENT or outer.lower() == inner.lower()
     return recipient_matches(outer, inner)

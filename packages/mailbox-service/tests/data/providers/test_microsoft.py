@@ -164,6 +164,17 @@ async def test_a_forged_cursor_is_refused(graph: FakeGraph, cursor: str) -> None
     assert graph.requests == []
 
 
+async def test_a_cursor_lists_nothing_beyond_its_folder(graph: FakeGraph) -> None:
+    """A cursor of the drafts with the path of the inbox: the drafts list
+    shows no mail of the inbox (review 2026-11-17, finding 1)."""
+    graph.add_message(subject="Payroll")
+    drafts = graph.well_known["drafts"]
+    path = f"/me/mailFolders/{graph.well_known['inbox']}/messages?$top=50"
+    forged = rules.bound_cursor("m_", rules.cursor_scope(drafts, None), path)
+    page = await adapter(graph).list_drafts(limit=10, cursor=forged)
+    assert page.items == []
+
+
 async def test_every_call_asks_for_immutable_ids(graph: FakeGraph) -> None:
     await adapter(graph).list_folders()
     assert all(r.headers["prefer"] == 'IdType="ImmutableId"' for r in graph.requests)

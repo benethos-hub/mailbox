@@ -146,3 +146,19 @@ def test_a_url_with_a_user_or_password_is_refused(kind: type, url: str) -> None:
     with pytest.raises(ConfigurationError, match="user or password") as caught:
         kind(base_url=url, token="tok")
     assert "pw_SECRET" not in str(caught.value)
+
+
+@pytest.mark.parametrize("kind", KINDS)
+@pytest.mark.parametrize(
+    ("url", "proxied"),
+    [("http://127.0.0.1:8080", False), ("https://mail.example.org", True)],
+)
+def test_a_proxy_of_the_environment_only_over_https(
+    kind: type, url: str, proxied: bool, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Over http the token would reach the proxy in clear (review
+    2026-11-17, finding 3)."""
+    for name in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY"):
+        monkeypatch.setenv(name, "http://proxy.example:3128")
+    client = kind(base_url=url, token="tok")
+    assert bool(client._http._mounts) is proxied

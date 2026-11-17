@@ -42,6 +42,7 @@ class MailboxClient:
             headers=found.headers,
             timeout=timeouts(),
             transport=transport,
+            trust_env=found.trust_env,
         )
 
     async def __aenter__(self) -> MailboxClient:
