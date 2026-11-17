@@ -32,7 +32,7 @@ from .fields import (
 )
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class ParsedAttachment:
     filename: str | None
     content_type: str
@@ -52,7 +52,7 @@ class ParsedAttachment:
         return attached(self.content_id, self.disposition)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class PartShape:
     """A part of a message without its content, as IMAP's BODYSTRUCTURE,
     Gmail's parts or JMAP's attachments describe it. ``content_type`` in

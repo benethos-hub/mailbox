@@ -54,7 +54,7 @@ def new_message_id(sender_email: str) -> str:
     return make_msgid(domain=wire_address(sender_email).rpartition("@")[2] or None)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Extras:
     """What a reply or a forward adds to a message."""
 
