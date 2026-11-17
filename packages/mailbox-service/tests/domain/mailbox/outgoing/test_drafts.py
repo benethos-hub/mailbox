@@ -81,13 +81,13 @@ def test_a_draft_keeps_bcc_and_reference_until_it_is_sent() -> None:
     assert stored[compose.REFERENCE_HEADER] == "reply msg_1"
 
     later = datetime(2026, 9, 25, 8, 0, tzinfo=UTC)
-    out, recipients, reference, message_id = compose.outgoing(raw, later, "<x@y>")
-    sent = message_from_bytes(out)
-    assert recipients == ["bob@example.com", "carol@example.com"]
-    assert reference == "reply msg_1"
+    made = compose.outgoing(raw, later, "<x@y>")
+    sent = message_from_bytes(made.raw)
+    assert made.recipients == ["bob@example.com", "carol@example.com"]
+    assert made.reference == "reply msg_1"
     assert sent["Bcc"] is None and sent[compose.REFERENCE_HEADER] is None
     assert sent["Date"] == "Fri, 25 Sep 2026 08:00:00 +0000"
-    assert sent["Message-ID"] == stored["Message-ID"] == message_id
+    assert sent["Message-ID"] == stored["Message-ID"] == made.message_id
 
 
 def test_a_message_to_send_keeps_no_bcc_header() -> None:

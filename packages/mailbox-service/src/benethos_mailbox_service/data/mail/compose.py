@@ -15,7 +15,6 @@ from email.parser import BytesHeaderParser, BytesParser
 from email.policy import SMTP, default
 from email.utils import format_datetime, getaddresses, make_msgid
 from html import escape
-from typing import NamedTuple
 
 from pydantic import ValidationError
 
@@ -164,7 +163,8 @@ def body_text(message: DraftMessage) -> str:
     return plaintext.from_html(message.html) if message.html else ""
 
 
-class Outgoing(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class Outgoing:
     """A stored draft made ready to send."""
 
     raw: bytes
@@ -282,7 +282,8 @@ def with_bcc(raw: bytes, recipients: list[str]) -> bytes:
     return head + b"\r\nBcc: " + ", ".join(hidden).encode() + separator + body
 
 
-class Attached(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class Attached:
     """A part attached to a message, as a provider takes it on its own."""
 
     filename: str | None
