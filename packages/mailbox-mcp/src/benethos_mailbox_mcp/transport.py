@@ -34,6 +34,35 @@ _REFUSED = b'{"error":{"code":"unauthorized","message":"bearer token required"}}
 LOCALHOST_BINDS = frozenset({"127.0.0.1", "localhost", "::1"})
 
 
+class UnguardedError(ValueError):
+    """An open bind without the token of the clients and the hosts they
+    use: ``serve_http`` refuses it."""
+
+
+def unguarded(
+    host: str,
+    token: str | None,
+    allowed_hosts: list[str],
+    allowed_origins: list[str],
+) -> str | None:
+    """Why serving over HTTP on ``host`` may not be, else None. On an
+    address other hosts reach it needs the token of its clients and the
+    Host or Origin values they use. Without them anything that reaches
+    the port could use every tool, and a web page could reach it through
+    DNS rebinding."""
+    if host in LOCALHOST_BINDS:
+        return None
+    if token and (allowed_hosts or allowed_origins):
+        return None
+    return (
+        f"over HTTP on {host} it needs "
+        f"{variable('bearer_token')} and "
+        f"{variable('allowed_hosts')} or "
+        f"{variable('allowed_origins')}. Bind 127.0.0.1 to run "
+        "without them."
+    )
+
+
 def bearer_middleware(app: ASGIApp, token: str) -> ASGIApp:
     """``app``, answering HTTP requests without ``Authorization: Bearer
     <token>`` with 401."""
@@ -161,9 +190,14 @@ def serve_http(
     allowed_origins: list[str],
     log_level: str,
     token: str | None,
+    catalogue: bool = False,
 ) -> None:
     """Over streamable HTTP, behind the bearer guard where ``token`` is
-    set."""
+    set. An open bind without the guard raises ``UnguardedError``, but for
+    a ``catalogue``, which serves no working tool."""
+    refused = unguarded(host, token, allowed_hosts, allowed_origins)
+    if refused and not catalogue:
+        raise UnguardedError(refused)
     logger.info(
         "Starting mailbox-mcp (streamable HTTP) on http://%s:%s%s",
         host,
