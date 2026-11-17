@@ -12,6 +12,7 @@ imports another in a circle. The packages of both keep their lines.
 from __future__ import annotations
 
 import ast
+import re
 import sys
 from pathlib import Path
 
@@ -183,6 +184,18 @@ def test_web_framework_stays_in_the_web_layer() -> None:
             if imported.split(".")[0] in WEB_LIBRARIES:
                 violations.append(f"{name}:{line} imports {imported}")
     assert not violations, "web framework outside web/:\n  " + "\n  ".join(violations)
+
+
+def test_tls_trust_is_chosen_in_one_place() -> None:
+    """Every HTTP client verifies against one store, the CAs of the system:
+    ``verify=`` stands in ``data/protocols/http/base.py`` alone."""
+    one = f"{PACKAGE}.data.protocols.http.base"
+    found = [
+        name
+        for name, path in modules()
+        if name != one and re.search(r"verify=", path.read_text("utf-8"))
+    ]
+    assert found == [], "an HTTP client choosing its own trust store"
 
 
 def test_providers_are_reached_through_the_registry() -> None:

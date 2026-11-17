@@ -22,22 +22,19 @@ import httpx
 from benethos_mailbox_common.values import canonical
 
 from ....errors import ProviderError
-from ..transport import Pick, system_context
+from ..transport import Pick
 from .api import MAX_BYTES, TIMEOUT, Answer
-from .base import parse_url, pinned_request, read_capped, unreachable, wire_host
+from .base import (
+    new_client,
+    parse_url,
+    pinned_request,
+    read_capped,
+    unreachable,
+    wire_host,
+)
 
 # A line of an event stream: one event's data is a small JSON object.
 MAX_LINE = 64 * 1024
-
-
-def _client(transport: httpx.AsyncBaseTransport | None) -> httpx.AsyncClient:
-    return httpx.AsyncClient(
-        transport=transport,
-        follow_redirects=False,
-        trust_env=False,
-        # The CAs of the system, SSL_CERT_FILE included.
-        verify=system_context(),
-    )
 
 
 class ServerClient:
@@ -51,7 +48,8 @@ class ServerClient:
         """``pick`` checks the host of each request. Without it the name is
         connected to as it is."""
         self._pick = pick
-        self._client = _client(transport)
+        # Each request sets its own timeout (_request, lines).
+        self._client = new_client(transport, timeout)
         self._timeout = timeout
         self._max_bytes = max_bytes
 

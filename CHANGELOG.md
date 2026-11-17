@@ -39,6 +39,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 - A file of a stored mail is attached again by `attachments_from` and
   `keep_attachments` whatever its name, as the mail carried it. A name
   longer than 200 characters answered `500` before.
+- Every connection of the service trusts the certificate authorities of
+  the system, `SSL_CERT_FILE` included. Microsoft Graph, Gmail, the
+  discovery of servers and webhooks took a bundle of their own before,
+  so a private authority named there counted for IMAP, POP3, SMTP and
+  JMAP alone.
 
 ## [0.7.5] - 2026-11-17
 

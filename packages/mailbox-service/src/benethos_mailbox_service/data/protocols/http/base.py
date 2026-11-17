@@ -9,19 +9,22 @@ from collections.abc import Mapping
 import httpx
 
 from ....errors import ProviderError, ProviderUnavailableError
+from ..transport import system_context
 
 
 def new_client(
     transport: httpx.AsyncBaseTransport | None, timeout: float
 ) -> httpx.AsyncClient:
-    """Certificates verified, no proxy from the environment, redirects
-    left to the caller."""
+    """Certificates verified against the CAs of the system,
+    ``SSL_CERT_FILE`` included, as for every protocol: one store for every
+    connection. No proxy from the environment, redirects left to the
+    caller."""
     return httpx.AsyncClient(
         transport=transport,
         timeout=timeout,
         follow_redirects=False,
         trust_env=False,
-        verify=True,
+        verify=system_context(),
     )
 
 
