@@ -992,7 +992,8 @@ imapclient boundary), never by patching deep inside a library.
   scripts share is in `live/checks/`, one module per subject. What a
   script does with mail on the way goes through the Python client. What
   it asks of the API itself, a status code or an error code, it asks
-  with httpx.
+  with httpx, or with FastAPI's test client for a service it started in
+  its own process.
 - A rule on the layout has a check in `test_architecture.py` or, for the
   code itself, `test_code_rules.py`, or it is not a rule yet: the
   layers, the lines, the imports through `__init__.py`, the homes of the
