@@ -19,7 +19,7 @@ from benethos_mailbox_service.errors import NotFoundError
 from ...conftest import ADMIN
 from ...imap_fake import FakeFolder, FakeMailBox, make_message
 from ..sync_helpers import header
-from ..thread_helpers import answer, every_thread, synced
+from .thread_helpers import answer, every_thread, synced
 
 
 @pytest.fixture

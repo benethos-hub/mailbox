@@ -6,7 +6,9 @@ does, how large a module and a class may grow, and that a helper of
 from __future__ import annotations
 
 import ast
+import os
 import re
+from collections.abc import Iterator
 from pathlib import Path
 
 from .source_helpers import HELPERS, PACKAGE, ROOT, modules, own_part
@@ -262,6 +264,50 @@ def test_a_helper_of_the_tests_is_named_after_its_kind() -> None:
         if not path.stem.startswith("test_") and not HELPER.fullmatch(path.stem)
     ]
     assert not violations, "a helper named otherwise:\n  " + "\n  ".join(violations)
+
+
+def _helpers_imported(path: Path) -> Iterator[Path]:
+    """The helpers of the tests a module imports by a relative import."""
+    for node in ast.walk(ast.parse(path.read_text("utf-8"))):
+        if not (isinstance(node, ast.ImportFrom) and node.level):
+            continue
+        base = path.parents[node.level - 1]
+        if node.module:
+            names = [node.module]
+        else:
+            names = [alias.name for alias in node.names]
+        for name in names:
+            found = base.joinpath(*name.split(".")).with_suffix(".py")
+            if found.is_file() and HELPER.fullmatch(found.stem):
+                yield found
+
+
+# A helper every folder of a suite reads, kept at the top of it.
+EVERYWHERE = {"clocks", "conftest", "__init__"}
+# Left at the top by review 2026-11-17: the tests at the repository's
+# root keep a module of the same name and kind at the top of theirs.
+AT_THE_TOP = {"packages/mailbox-service/tests/scripts_helpers.py"}
+
+
+def test_a_helper_sits_in_the_nearest_folder_of_its_importers() -> None:
+    """A helper lives in the nearest common folder of the modules that
+    import it (docs/ARCHITECTURE.md 13), in the tests of all four
+    packages. ``clocks.py`` is for every folder of a suite."""
+    importers: dict[Path, set[Path]] = {}
+    for path in sorted((REPOSITORY / "packages").glob("*/tests/**/*.py")):
+        for helper in _helpers_imported(path):
+            importers.setdefault(helper, set()).add(path.parent)
+    violations = []
+    for helper, folders in sorted(importers.items()):
+        if helper.stem in EVERYWHERE:
+            continue
+        name = helper.relative_to(REPOSITORY).as_posix()
+        nearest = Path(os.path.commonpath(sorted(folders)))
+        if helper.parent != nearest and name not in AT_THE_TOP:
+            violations.append(f"{name} -> {nearest.relative_to(REPOSITORY).as_posix()}")
+    assert not violations, "a helper away from its importers:\n  " + "\n  ".join(
+        violations
+    )
 
 
 # A fixture each module of a server of its own brings, by design: the

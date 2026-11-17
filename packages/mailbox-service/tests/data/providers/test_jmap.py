@@ -39,8 +39,8 @@ from benethos_mailbox_service.errors import (
 )
 
 from ...imap_fake import make_message
-from ...jmap_adapter import NOW, adapter
 from ...jmap_fake import HOST, PASSWORD, TOKEN, USER, FakeJmap
+from .jmap_adapter import NOW, adapter
 
 
 @pytest.fixture

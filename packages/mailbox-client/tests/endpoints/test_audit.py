@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 
 from benethos_mailbox_client import Activity
 
-from ..api_fake import FakeApi
+from .api_fake import FakeApi
 
 ROW = {
     "id": "aud_1",

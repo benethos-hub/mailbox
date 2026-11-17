@@ -8,9 +8,9 @@ from datetime import UTC, datetime
 from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.providers.imap import mappers
 
-from ..conftest import ADMIN
-from ..imap_fake import make_message
-from .sync_helpers import header
+from ...conftest import ADMIN
+from ...imap_fake import make_message
+from ..sync_helpers import header
 
 SENT = mappers.folder_id("Sent")
 INBOX = mappers.folder_id("INBOX")

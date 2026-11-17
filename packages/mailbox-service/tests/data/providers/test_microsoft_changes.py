@@ -20,8 +20,8 @@ from benethos_mailbox_service.errors import (
 )
 
 from ...graph_fake import TOKEN, FakeGraph
-from ...microsoft_adapter import adapter
 from ...oauth_fake import Tokens
+from .microsoft_adapter import adapter
 
 # --- changing -------------------------------------------------------------------------
 

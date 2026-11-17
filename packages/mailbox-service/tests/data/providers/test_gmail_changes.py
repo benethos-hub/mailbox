@@ -39,9 +39,9 @@ from benethos_mailbox_service.errors import (
     ProviderUnavailableError,
 )
 
-from ... import gmail_adapter
 from ...gmail_fake import TOKEN, FakeGmail
 from ...oauth_fake import Tokens
+from . import gmail_adapter
 
 NOW = datetime(2026, 10, 9, 12, 0, tzinfo=UTC)
 

@@ -28,7 +28,7 @@ from benethos_mailbox_service.errors import (
 from ...conftest import ADMIN, admin_bearer
 from ...imap_fake import FakeFolder, FakeMailBox, make_message
 from ...jmap_fake import FakeJmap
-from ..thread_helpers import INBOX, SENT, answer, every_thread, synced
+from .thread_helpers import INBOX, SENT, answer, every_thread, synced
 
 
 @pytest.fixture

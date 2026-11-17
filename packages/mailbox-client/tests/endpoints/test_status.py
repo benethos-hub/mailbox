@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from ..api_fake import FakeApi
+from .api_fake import FakeApi
 
 
 async def test_get_status(make_client: Callable) -> None:

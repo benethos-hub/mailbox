@@ -31,7 +31,7 @@ from benethos_mailbox_service.errors import (
 
 from ...clocks import Clock
 from ...conftest import ADMIN, CHEAP
-from ...factor_helpers import credentials
+from ..factor_helpers import credentials
 
 SECRET = "correct horse battery staple"
 OTHER = "a different long passphrase"

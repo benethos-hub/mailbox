@@ -10,12 +10,12 @@ from benethos_mailbox_service.data.providers import Places
 from benethos_mailbox_service.data.providers.jmap import JmapProvider
 from benethos_mailbox_service.data.providers.memory import MemoryProvider
 
-from ...gmail_adapter import adapter as gmail_adapter
 from ...gmail_fake import FakeGmail
 from ...graph_fake import FakeGraph
 from ...imap_fake import make_message
 from ...jmap_fake import FakeJmap
-from ...microsoft_adapter import adapter as microsoft_adapter
+from .gmail_adapter import adapter as gmail_adapter
+from .microsoft_adapter import adapter as microsoft_adapter
 
 
 @pytest.fixture

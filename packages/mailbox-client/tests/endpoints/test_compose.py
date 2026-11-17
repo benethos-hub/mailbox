@@ -9,7 +9,7 @@ from benethos_mailbox_client import (
     message_body,
 )
 
-from ..api_fake import BODY
+from .api_fake import BODY
 
 
 def test_message_body() -> None:

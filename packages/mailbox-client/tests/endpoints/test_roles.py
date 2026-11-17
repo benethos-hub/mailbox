@@ -6,7 +6,7 @@ from collections.abc import Callable
 
 from benethos_mailbox_client import Grant, Role
 
-from ..api_fake import FakeApi
+from .api_fake import FakeApi
 
 ROLE = {
     "id": "readers",

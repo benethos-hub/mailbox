@@ -12,8 +12,8 @@ from benethos_mailbox_service.common.clock import utc_now
 from benethos_mailbox_service.data.protocols.http import ApiClient
 from benethos_mailbox_service.data.providers.gmail import GmailProvider
 
-from .gmail_fake import TOKEN, FakeGmail
-from .oauth_fake import Tokens
+from ...gmail_fake import TOKEN, FakeGmail
+from ...oauth_fake import Tokens
 
 
 def adapter(

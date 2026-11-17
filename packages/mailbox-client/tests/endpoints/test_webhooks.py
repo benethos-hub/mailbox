@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 
 from benethos_mailbox_client import Secret, Webhook, WebhookPost
 
-from ..api_fake import FakeApi
+from .api_fake import FakeApi
 
 WEBHOOK = {
     "id": "whk_1",
