@@ -108,7 +108,7 @@ class Access:
         self.unknown = frozenset(
             name
             for names in (service, *(grant.allow for grant in grants))
-            for name in permissions.expand_known(names)[1]
+            for name in permissions.expand_known(names).unknown
         )
         # A grant that has expired grants nothing (PERMISSIONS.md 8.4).
         self._now = now or utc_now()
@@ -296,7 +296,7 @@ def _rule(grant: Grant) -> _Rule:
     recipients = None if grant.recipients is None else tuple(grant.recipients)
     if recipients is not None and ANY_RECIPIENT in recipients:
         recipients = None
-    operations, _ = permissions.expand_known(grant.allow)
+    operations = permissions.expand_known(grant.allow).operations
     # A grant gives rights on accounts alone, whatever it names.
     operations &= permissions.ON_AN_ACCOUNT
     return _Rule(
@@ -314,7 +314,7 @@ def _expired(rule: _Rule, now: datetime) -> bool:
 
 def _service_operations(names: Iterable[str]) -> frozenset[str]:
     """The operations of the service that ``names`` give."""
-    operations, _ = permissions.expand_known(names)
+    operations = permissions.expand_known(names).operations
     return operations & permissions.SERVICE
 
 

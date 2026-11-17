@@ -52,6 +52,8 @@ ALLOWED = {
     "service domain/sync/service.py SyncService.thread_ids": "thread per message id",
     "service domain/system/status.py StatusService.healths": "health per account id",
     "service data/protocols/http/api.py standard_refusals": "error per status",
+    # A sequence of names, as a list is, not a record with fields.
+    "service domain/rights/permissions.py of_scope": "the operations of a name",
     # Free JSON: the settings of an account as the API and the store hold
     # them, and an answer of a JMAP server.
     "service data/providers/registry.py settings_defaults": "account settings",
@@ -81,9 +83,6 @@ ALLOWED = {
     "mcp tools/writing.py create_folder": "found 2026-11-17",
     "mcp tools/writing.py update_folder": "found 2026-11-17",
     "mcp tools/writing.py update_messages": "found 2026-11-17",
-    "service domain/rights/permissions.py expand_known": "found 2026-11-17",
-    "service domain/rights/permissions.py of_scope": "found 2026-11-17",
-    "service domain/rights/permissions.py summarize": "found 2026-11-17",
 }
 
 

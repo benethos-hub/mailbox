@@ -65,9 +65,9 @@ def test_expand_rejects_unknown_names() -> None:
 
 
 def test_a_stored_right_that_no_longer_exists_grants_nothing() -> None:
-    operations, unknown = permissions.expand_known(["get_account", "mail.gone"])
-    assert operations == {"get_account"}
-    assert unknown == ["mail.gone"]
+    known = permissions.expand_known(["get_account", "mail.gone"])
+    assert known.operations == {"get_account"}
+    assert known.unknown == ["mail.gone"]
 
 
 def test_every_operation_has_exactly_one_group_but_users_read() -> None:
@@ -83,14 +83,14 @@ def test_every_operation_has_exactly_one_group_but_users_read() -> None:
 
 
 def test_summarize_names_the_larger_group_alone() -> None:
-    groups, rest = permissions.summarize(
+    shown = permissions.summarize(
         permissions.GROUPS["users.manage"], permissions.SERVICE
     )
-    assert groups == ["users.manage"] and rest == []
-    groups, rest = permissions.summarize(
+    assert shown == permissions.Summary(["users.manage"], [])
+    shown = permissions.summarize(
         [*permissions.GROUPS["users.read"], "create_token"], permissions.SERVICE
     )
-    assert groups == ["users.read"] and rest == ["create_token"]
+    assert shown == permissions.Summary(["users.read"], ["create_token"])
 
 
 @pytest.mark.parametrize(
