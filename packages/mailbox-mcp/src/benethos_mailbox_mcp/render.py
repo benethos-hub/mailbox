@@ -20,7 +20,6 @@ from .models import (
     Address,
     Changes,
     Folder,
-    Me,
     MeAccount,
     Message,
     MessageSummary,
@@ -368,17 +367,6 @@ def sent(result: Sent) -> answers.Sent:
     if result.original_marked is not None:
         found["original_marked"] = result.original_marked
     return found
-
-
-def warnings_of(me: Me) -> list[str]:
-    """One line per account the token can read mail in and send to any
-    address from: what an injected instruction needs to carry data out."""
-    return [
-        f"{account.email or account.id}: this token can read mail and send it "
-        "to any address. Narrow sending with a grant's recipients."
-        for account in me.accounts
-        if "read_and_send_anywhere" in account.warnings
-    ]
 
 
 def foreign(source: str, text: str) -> str:
