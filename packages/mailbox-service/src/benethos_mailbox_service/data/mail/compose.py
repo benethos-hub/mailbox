@@ -22,7 +22,14 @@ from pydantic import ValidationError
 from benethos_mailbox_common.mail import addresses, plaintext
 from benethos_mailbox_common.values import text
 
-from ..models import Address, DraftMessage, Message, MessageReference, Recipient
+from ..models import (
+    Address,
+    DraftMessage,
+    Message,
+    MessageReference,
+    OutgoingAttachment,
+    Recipient,
+)
 from .fields import ThreadHeaders, ascii_domain, wire_address
 from .fields import message_id as one_message_id
 from .parse import ParsedMessage
@@ -60,8 +67,8 @@ class Extras:
 
     in_reply_to: str | None = None
     references: tuple[str, ...] = ()
-    # (filename, content type, data) of the original's attachments.
-    attachments: tuple[tuple[str, str, bytes], ...] = ()
+    # The original's attachments, before the message's own.
+    attachments: tuple[OutgoingAttachment, ...] = ()
     # The original itself, attached as message/rfc822.
     attached_message: bytes | None = None
 
@@ -136,11 +143,13 @@ def _parts(mail: EmailMessage, message: DraftMessage, extras: Extras) -> None:
     mail.set_content(body_text(message))
     if message.html is not None:
         mail.add_alternative(message.html, subtype="html")
-    files = [(a.filename, a.content_type, a.data) for a in message.attachments]
-    for filename, content_type, data in [*extras.attachments, *files]:
-        maintype, _, subtype = text.joined(content_type).partition("/")
+    for file in [*extras.attachments, *message.attachments]:
+        maintype, _, subtype = text.joined(file.content_type).partition("/")
         mail.add_attachment(
-            data, maintype=maintype, subtype=subtype, filename=text.joined(filename)
+            file.data,
+            maintype=maintype,
+            subtype=subtype,
+            filename=text.joined(file.filename),
         )
     if extras.attached_message is not None:
         original = message_from_bytes(extras.attached_message, policy=default)

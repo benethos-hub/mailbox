@@ -137,17 +137,18 @@ class Composer:
             return replies.reply(
                 message, reference.action, original, raw, own_address, reference.quote
             )
-        files: list[replies.AttachedFile] = []
+        files: list[OutgoingAttachment] = []
         if reference.forward_as == "inline" and reference.quote:
             for attachment in original.attachments:
                 content = await self._calls.attachment(
                     account_id, reference.message_id, attachment.id
                 )
+                # Not checked, as in ``attachment``: a stranger named it.
                 files.append(
-                    (
-                        attachment.filename or attachment.id,
-                        attachment.content_type,
-                        content.data,
+                    OutgoingAttachment.model_construct(
+                        filename=attachment.filename or attachment.id,
+                        content_type=attachment.content_type,
+                        data=content.data,
                     )
                 )
         return replies.forward(
