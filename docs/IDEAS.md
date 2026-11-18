@@ -231,6 +231,17 @@ the service to search itself.
   storage and time to sync, and the mail's content at rest in the
   service.
 
+## Breaking changes found against the last release
+
+Collected 2026-11-18. `docs/client-interface.json` and
+`docs/common-interface.json` show every change of the two libraries as
+a diff. A tool such as `griffe check` could compare the packages with
+the last release tag and name the changes that break a caller, a
+removed name, a parameter gone or moved, a default changed, as a check
+of the CI or of a release. It needs a development dependency and the
+history of the repository in the CI, and it names breaks only, not
+additions.
+
 ## Further
 
 - **Outbox with scheduled sending** (`send_at`): sending is queued,

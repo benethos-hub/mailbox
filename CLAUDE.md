@@ -22,7 +22,15 @@ done. Update the roadmap in the same commit that finishes an item.
    Likewise `docs/mcp-tools.json` holds the MCP server's tools as a client
    lists them. After any change to a tool, regenerate it with
    `uv run benethos-mailbox-mcp --list-tools > docs/mcp-tools.json` and
-   review the diff of its descriptions like code.
+   review the diff of its descriptions like code. And
+   `docs/client-interface.json` and `docs/common-interface.json` hold the
+   public interface of the two libraries others import. After any change
+   to a name, a signature, a field or a default there, regenerate them
+   with `uv run python tests/interface.py benethos_mailbox_client >
+   docs/client-interface.json`, the same with `benethos_mailbox_common`,
+   and review the diff like code: a removed or changed name breaks
+   whoever imports it. The client's requests are held to
+   `docs/openapi.json` as well, their paths, parameters and bodies.
 5. **Secrets never travel.** Provider passwords, OAuth tokens and API tokens
    are never logged, never returned in a response and redacted from error
    text. No real address, credential or message content in any versioned file.
@@ -242,6 +250,8 @@ tests/                    # what the repository holds, across the four
                           #   values on, in all four
   test_api_names.py       # names the MCP server takes from the API,
                           #   held to docs/openapi.json
+  test_interfaces.py      # docs/client-interface.json and
+                          #   docs/common-interface.json against the code
   test_code_rules.py      # the rules for the tests of all four
                           #   packages and for live/, no class in a
                           #   package's entry, sizes here and in live/,
@@ -268,6 +278,8 @@ tests/                    # what the repository holds, across the four
   installed_check.py      # not a test: the packages as installed, as real
                           #   processes, without an account or a mail
                           #   server, run by hand and by freshness.yml
+  interface.py            # not a test: the public interface of a
+                          #   package as JSON, for the records in docs/
 docs/
   CONCEPT.md              # design
   ARCHITECTURE.md         # layers, modules, seams, rules for new code
@@ -288,6 +300,9 @@ docs/
   openapi.json            # generated, checked in, guarded by a test
   mcp-tools.json          # the MCP server's tools as a client lists them,
                           #   generated, checked in, guarded by a test
+  client-interface.json   # the public interface of mailbox-client and
+  common-interface.json   #   of mailbox-common, generated, checked in,
+                          #   guarded by a test
 packages/
   mailbox-service/            # the service, runs permanently
     src/benethos_mailbox_service/   # layers and modules: docs/ARCHITECTURE.md
