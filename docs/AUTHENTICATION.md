@@ -136,6 +136,14 @@ made it among them, cannot change the user's password without the
 user's device. Setting a password for a user leaves its second factor
 as it is.
 
+**Changing the own password** on the page Password asks for the
+current password and, for a user with a second factor, the second
+factor as well, as adding a device does: whoever holds an open session
+and the password alone cannot lock the person out. The forced change
+after the sign-in asks for none, as the step after the password asked
+for it a moment before. The second factor is checked after the new
+password passed its rules, so a refused one uses up no recovery code.
+
 ## 5. Devices: adding, renaming, removing
 
 Everything is on the person's own page **Second factor**, reached from
@@ -425,4 +433,6 @@ the mail accounts. A second factor there is the provider's.
 
 - Passkeys as the second method of the second factor, after the
   password, not in place of it (section 3.2).
+- Changing the own password after the current password and the second
+  factor, except the forced change after the sign-in (section 4).
 - The library `fido2` by Yubico, behind `data/secrets/passkeys.py`.

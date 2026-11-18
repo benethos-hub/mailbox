@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+import asyncio
+import re
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -10,6 +12,7 @@ from fastapi.testclient import TestClient
 from benethos_mailbox_service.assembly import Services, create_app
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import Grant
+from benethos_mailbox_service.data.secrets import totp
 from benethos_mailbox_service.domain.auth.signin import SignedIn
 from benethos_mailbox_service.web.pages.session import IDLE, SessionStore
 
@@ -284,6 +287,34 @@ def test_a_password_set_by_someone_else_is_changed_first(
     assert "Password changed." in changed.text
     assert app_client.get("/ui/mail").status_code == 200
     try_sign_in(TestClient(app_client.app), "Anna", mine)
+
+
+def test_a_second_factor_guards_the_password_change(
+    master_key: None, app_client: TestClient, services: Services
+) -> None:
+    services.vault.initialize()
+    name, password = browser_admin(services)
+    user = services.auth.user_named(name)
+    assert user is not None
+    access = services.auth.access_of(user.id)
+    assert access is not None
+    begun = asyncio.run(services.totp.begin(access, "Phone", UI_PASSWORD))
+    now = totp.code(begun.secret, totp.step_of(datetime.now(UTC)))
+    codes = services.totp.confirm(access, begun.name, begun.secret, now).recovery_codes
+    try_sign_in(app_client, name, password)
+    nonce = re.search(
+        r'name="nonce" value="([^"]+)"', app_client.get("/ui/login/code").text
+    )
+    assert nonce is not None
+    app_client.post("/ui/login/code", data={"code": codes[0], "nonce": nonce.group(1)})
+    page = app_client.get("/ui/password").text
+    assert "data-ways" in page and 'id="f-password-totp"' in page
+    new = "a brand new long passphrase"
+    fields = {"current_password": password, "new_password": new, "repeat_password": new}
+    refused = post(app_client, "/ui/password", fields)
+    assert "the code is not right" in refused.text
+    changed = post(app_client, "/ui/password", {**fields, "code": codes[1]})
+    assert "Password changed." in changed.text
 
 
 def test_a_changed_password_signs_out_the_other_sessions(
