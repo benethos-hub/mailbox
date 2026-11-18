@@ -259,6 +259,7 @@ def user_page(
         can_set_password=caller.allows("set_password"),
         can_remove_factor=caller.allows("remove_second_factor"),
         can_remove_device=caller.allows("remove_totp_device"),
+        can_remove_passkey=caller.allows("remove_passkey"),
         factor=if_allowed(
             caller,
             "get_second_factor",

@@ -89,7 +89,7 @@
 {% elif tab == "access" %}
 {% call facts("Sign-in", tags=state) %}
   {% call fact("To the UI") %}{% if not user.ui_sign_in %}off: an API user, tokens only{% elif sign_in.must_change %}with a password set for it, to change at the next sign-in{% elif sign_in.has_password %}with a password{% else %}not possible: no password yet{% endif %}{% if is_me and user.ui_sign_in %} · <a href="/ui/password">Change your password</a>{% endif %}{% endcall %}
-  {% if user.ui_sign_in %}{% call fact("Second factor") %}{% if sign_in.second_factor %}<span class="tag ok">on</span> a code of an authenticator app after the password{% else %}off{% endif %}{% if is_me %} · <a href="/ui/second-factor">{% if sign_in.second_factor %}Your devices{% else %}Set up a second factor{% endif %}</a>{% endif %}{% endcall %}{% endif %}
+  {% if user.ui_sign_in %}{% call fact("Second factor") %}{% if sign_in.second_factor %}<span class="tag ok">on</span> a code or a passkey after the password{% else %}off{% endif %}{% if is_me %} · <a href="/ui/second-factor">{% if sign_in.second_factor %}Your devices{% else %}Set up a second factor{% endif %}</a>{% endif %}{% endcall %}{% endif %}
   {{ fact("Last sign-in", sign_in.last_sign_in_at | when) }}
 {% endcall %}
 
@@ -121,20 +121,32 @@
 {% endcall %}
 {% endif %}
 
-{% if not is_me and factor and factor.totp %}
-{% call related("Second factor", count=factor.totp | length, meta="authenticator apps (TOTP), " ~ factor.recovery_codes_left ~ " recovery codes left. Only " ~ user.name ~ " adds one.") %}
+{% if not is_me and factor and (factor.totp or factor.passkeys) %}
+{% call related("Second factor", count=(factor.totp | length) + (factor.passkeys | length), meta="authenticator apps (TOTP) and passkeys, " ~ factor.recovery_codes_left ~ " recovery codes left. Only " ~ user.name ~ " adds one.") %}
   <div class="body tight">
     <div class="table-scroll">
       <table>
-        <thead><tr><th>Authenticator app</th><th>Added</th><th>Last used</th><th class="actions"><span class="sr">Actions</span></th></tr></thead>
+        <thead><tr><th>Device</th><th>Method</th><th>Added</th><th>Last used</th><th class="actions"><span class="sr">Actions</span></th></tr></thead>
         <tbody>
           {% for device in factor.totp %}
           <tr>
             <td class="name">{{ device.name }}</td>
+            <td>Authenticator app</td>
             <td>{{ ago(device.created_at) }}</td>
             <td>{{ ago(device.last_used_at) }}</td>
             <td class="actions">
               {% if can_remove_device %}{{ action("/ui/users/" ~ user.id ~ "/second-factor/totp/" ~ device.id ~ "/remove", "Remove", confirm="Remove the device " ~ device.name ~ " of " ~ user.name ~ "? Its codes work no more. The user's sessions end.", cls="small danger", icon="trash", alone=True, name="Remove " ~ device.name) }}{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+          {% for key in factor.passkeys %}
+          <tr>
+            <td class="name">{{ key.name }}</td>
+            <td>Passkey</td>
+            <td>{{ ago(key.created_at) }}</td>
+            <td>{{ ago(key.last_used_at) }}</td>
+            <td class="actions">
+              {% if can_remove_passkey %}{{ action("/ui/users/" ~ user.id ~ "/second-factor/passkeys/" ~ key.id ~ "/remove", "Remove", confirm="Remove the passkey " ~ key.name ~ " of " ~ user.name ~ "? It signs in no more. The user's sessions end.", cls="small danger", icon="trash", alone=True, name="Remove " ~ key.name) }}{% endif %}
             </td>
           </tr>
           {% endfor %}

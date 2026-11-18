@@ -14,6 +14,7 @@ from ....domain.auth import SETUP
 from ...services import TotpDevices
 from ..deps import Actor
 from ..forms import failing
+from ..passkeys import answered
 from ..session import PendingTotp, session_of, show_once
 from ..templates import back
 from .factor import CODES, FACTOR_PAGE
@@ -32,9 +33,11 @@ async def begin(
     name: Annotated[str, Form()] = "",
     password: Annotated[str, Form()] = "",
     code: Annotated[str, Form()] = "",
+    passkey: Annotated[str, Form()] = "",
 ) -> Response:
+    proof = answered(request, passkey)
     with failing(FACTOR_PAGE):
-        begun = await totp.begin(caller, name, password, code)
+        begun = await totp.begin(caller, name, password, code, proof)
     session_of(request).totp = PendingTotp(begun.name, begun.secret, utc_now() + SETUP)
     return back(request, FACTOR_PAGE)
 
@@ -90,9 +93,11 @@ async def remove_own(
     device: Annotated[str, Form()] = "",
     password: Annotated[str, Form()] = "",
     code: Annotated[str, Form()] = "",
+    passkey: Annotated[str, Form()] = "",
 ) -> Response:
+    proof = answered(request, passkey)
     with failing(FACTOR_PAGE):
-        stamp = await totp.remove_own(caller, device, password, code)
+        stamp = await totp.remove_own(caller, device, password, code, proof)
     session_of(request).factor = stamp
     if stamp is None:
         return back(request, FACTOR_PAGE, "Device removed. The second factor is off.")
@@ -117,10 +122,15 @@ async def remove_ticked(
     device: Annotated[list[str] | None, Form()] = None,
     password: Annotated[str, Form()] = "",
     code: Annotated[str, Form()] = "",
+    passkey: Annotated[str, Form()] = "",
 ) -> Response:
-    """The devices ticked in the list, after one password and one code."""
+    """The devices ticked in the list, after one password and one code or
+    passkey."""
+    proof = answered(request, passkey)
     with failing(FACTOR_PAGE):
-        stamp = await totp.remove_own_devices(caller, device or [], password, code)
+        stamp = await totp.remove_own_devices(
+            caller, device or [], password, code, proof
+        )
     session_of(request).factor = stamp
     if stamp is None:
         return back(request, FACTOR_PAGE, "Devices removed. The second factor is off.")

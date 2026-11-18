@@ -14,6 +14,7 @@ from ...services import Log, Recovery
 from ..deps import Actor, Viewer
 from ..filters import Field, filter_bar
 from ..forms import failing
+from ..passkeys import answered, offer
 from ..session import show_once, take_once
 from ..templates import PAGE_SIZE, back, page_links, render
 
@@ -59,6 +60,7 @@ async def recovery_key(
         page="recovery",
         key=take_once(request, "recovery_key"),
         needs_code=recovery.needs_code(caller),
+        passkey_options=offer(request, caller.user_id),
     )
 
 
@@ -69,10 +71,12 @@ async def show_recovery_key(
     recovery: Recovery,
     password: Annotated[str, Form()] = "",
     code: Annotated[str, Form()] = "",
+    passkey: Annotated[str, Form()] = "",
 ) -> Response:
-    """The key after the password once more, and a code with a second
-    factor. Kept for the next page only, never in the URL."""
+    """The key after the password once more, and a code or a passkey with
+    a second factor. Kept for the next page only, never in the URL."""
+    proof = answered(request, passkey)
     with failing(RECOVERY_PAGE):
-        key = await recovery.show(caller, password, code)
+        key = await recovery.show(caller, password, code, proof)
     show_once(request, "recovery_key", key)
     return back(request, RECOVERY_PAGE)

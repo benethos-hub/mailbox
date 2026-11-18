@@ -8,6 +8,16 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Passkeys as a second method of the second factor of the UI sign-in,
+  beside authenticator apps (TOTP). A person adds them on the page
+  Second factor, and after the password a passkey signs in as a code
+  does. A passkey also stands in for a code wherever one is asked:
+  adding or removing a device, new recovery codes, the recovery key.
+  The recovery codes and the step after the password are shared. A
+  browser makes passkeys for a service at a name over HTTPS or at
+  localhost, not at an address alone. The audit names
+  `users.passkey_added`, `users.passkey_renamed` and
+  `users.passkey_removed`, and a sign-in `password+passkey`.
 - `benethos-mailbox-client`: `message_body` takes a recipient as an
   `Address` record too, beside the pair of email and name.
 - `get_second_factor` answers a user's `passkeys` beside `totp`, each

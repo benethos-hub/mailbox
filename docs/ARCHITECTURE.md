@@ -231,6 +231,8 @@ packages/mailbox-service/
         session.py      # sign-in with a password, server-side sessions,
                         #   the pending sign-in before the code
         qr.py           # QR codes as SVG data URIs (segno)
+        passkeys.py     # a passkey's challenge where a code is asked,
+                        #   the browser's answer taken from a form
         templates.py    # Jinja2: filters, render, Post/Redirect/Get,
                         #   and what htmx sends and follows (is_htmx,
                         #   leave, redirect_to)
