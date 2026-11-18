@@ -47,6 +47,7 @@ async def test_search_passes_filters_and_answers_summaries(api: Callable) -> Non
                 "snippet": "Hello",
                 "keywords": ["$answered"],
                 "folder_ids": ["INBOX", "Label_1"],
+                "sender_check": {"result": "pass", "domain": "example.com"},
             }
         ],
         "next_cursor": "c1",
@@ -72,6 +73,7 @@ async def test_search_passes_filters_and_answers_summaries(api: Callable) -> Non
                 "starred": False,
                 "has_attachments": False,
                 "folders": ["INBOX", "Label_1"],
+                "sender_check": {"result": "pass", "domain": "example.com"},
                 "marks": ["answered"],
                 "snippet": "Hello",
             }

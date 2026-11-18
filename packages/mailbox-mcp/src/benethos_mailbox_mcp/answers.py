@@ -14,8 +14,18 @@ from typing import NotRequired
 # of typing only from Python 3.12 on.
 from typing_extensions import TypedDict
 
+
 # A message in a list, without what the model does not need. "from" is
 # a keyword of Python, so this one is written as a call.
+class SenderCheck(TypedDict):
+    """The receiving server's check of the domain in from: its result,
+    the domain where it named one, and why it is unknown."""
+
+    result: str
+    domain: NotRequired[str]
+    reason: NotRequired[str]
+
+
 Summary = TypedDict(
     "Summary",
     {
@@ -28,6 +38,7 @@ Summary = TypedDict(
         "starred": bool,
         "has_attachments": bool,
         "folders": list[str],
+        "sender_check": SenderCheck,
         "marks": NotRequired[list[str]],
         "keywords": NotRequired[list[str]],
         "thread_id": NotRequired[str],

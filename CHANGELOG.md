@@ -22,6 +22,12 @@ adheres to [Semantic Versioning](https://semver.org/).
   every host below a domain. Without it the sender check stays unknown.
   Gmail and Microsoft accounts need no setting: they read the entry of
   `mx.google.com` and of `mx.microsoft.com`.
+- The MCP server shows `sender_check`: each summary carries its
+  `result`, with `domain` and `reason` where set, and `get_message` and
+  `get_thread` name it in a line before the sender's content. The
+  server's instructions, the note of a list and the descriptions of
+  these tools say what it means: the receiving server's statement about
+  the domain in `from`, never about the content.
 - Passkeys as a second method of the second factor of the UI sign-in,
   beside authenticator apps (TOTP). A person adds them on the page
   Second factor, and after the password a passkey signs in as a code
