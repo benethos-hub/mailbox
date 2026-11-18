@@ -140,6 +140,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   servers write it. It took the domain of `a@straße.de` for
   `strasse.de` before, so a signature of `strasse.de` passed for it,
   and the real `xn--strae-oqa.de` did not.
+- The sender check judges the address in `From` only when it is the one
+  the message shows as its sender. A broken, folded `From` could show
+  one address and have the check pass for another.
 
 ## [0.7.5] - 2026-11-17
 

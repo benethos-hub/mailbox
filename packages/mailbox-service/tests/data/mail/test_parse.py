@@ -8,6 +8,7 @@ from email.message import EmailMessage
 
 import pytest
 
+from benethos_mailbox_service.data.mail import authentication, convert
 from benethos_mailbox_service.data.mail.parse import (
     ParsedMessage,
     PartShape,
@@ -183,3 +184,22 @@ def test_every_value_of_a_header_and_the_one_sender() -> None:
 def test_no_sole_sender(sender: bytes) -> None:
     raw = sender + b"Subject: Hi\r\n\r\nHello\r\n"
     assert ParsedMessage(raw).sole_sender is None
+
+
+def test_a_from_read_two_ways_has_no_sole_sender() -> None:
+    """A folded From after an open quote: the shown sender is one address,
+    the raw header another. The check judges neither."""
+    raw = (
+        b"Authentication-Results: mx.example.org; dmarc=pass"
+        b" header.from=evil.example\r\n"
+        b'From: "a@bank.example""\r\n <b@evil.example>\r\n'
+        b"Subject: x\r\n\r\nbody\r\n"
+    )
+    parsed = ParsedMessage(raw)
+    trust = authentication.Trust(("mx.example.org",))
+    assert convert.summary_fields(parsed, trust)["sender_check"].result != "pass"
+
+
+def test_a_sole_sender_compares_without_case_and_in_ascii() -> None:
+    raw = b"From: Ann <Ann@xn--bcher-kva.example>\r\nSubject: Hi\r\n\r\nHello\r\n"
+    assert ParsedMessage(raw).sole_sender == "Ann@xn--bcher-kva.example"

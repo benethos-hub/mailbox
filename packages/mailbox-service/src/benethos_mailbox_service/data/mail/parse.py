@@ -25,6 +25,7 @@ from typing import Any
 from imap_tools import MailMessage
 from imap_tools.utils import decode_value, replace_html_ct_charset
 
+from ...common.hosts import ascii_host
 from ..models import Address
 from .fields import (
     OCTET_STREAM,
@@ -152,10 +153,18 @@ class ParsedMessage:
 
     @property
     def sole_sender(self) -> str | None:
-        """The address in ``From`` when it names exactly one, else None."""
+        """The address in ``From`` when it names exactly one and it is the
+        one ``sender`` shows, else None: a header read two ways is judged
+        by neither."""
         found = [address for _, address in getaddresses(self.all_headers("from"))]
         found = [address for address in found if address]
-        return found[0] if len(found) == 1 else None
+        shown = self.sender
+        if len(found) != 1 or shown is None:
+            return None
+        judged = _comparable(found[0])
+        if judged is None or judged != _comparable(shown.email):
+            return None
+        return found[0]
 
     @property
     def received(self) -> datetime | None:
@@ -304,6 +313,14 @@ def _encoded(name: str, value: str) -> str:
         pairs = getaddresses([value])
         return ", ".join(formataddr(pair, charset="utf-8") for pair in pairs)
     return Header(value, "utf-8").encode()
+
+
+def _comparable(address: str) -> str | None:
+    """``address`` in lower case with its domain in ASCII, None where the
+    domain cannot be written so."""
+    local, _, domain = address.rpartition("@")
+    written = ascii_host(domain)
+    return f"{local.lower()}@{written}" if written is not None else None
 
 
 def _address(value: Any) -> Address:
