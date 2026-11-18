@@ -3,6 +3,8 @@ in a list and on the page of an account."""
 
 from __future__ import annotations
 
+import html
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -72,3 +74,20 @@ def test_another_domain_is_named() -> None:
     found = sender_tag(other)
     assert (found.text, found.cls) == ("not checked", "")
     assert found.title == "The server checked another domain: example.net."
+
+
+@pytest.mark.parametrize(("check", "count"), [(PASSED, 0), (UNKNOWN, 0), (FAILED, 1)])
+def test_a_list_names_a_failed_check_alone(
+    ui: TestClient,
+    services: Services,
+    account_id: str,
+    check: SenderCheck,
+    count: int,
+) -> None:
+    memory = memory_of(services, account_id)
+    for message in memory.messages:
+        message.sender_check = UNKNOWN
+    memory.messages[0].sender_check = check
+    page = html.unescape(ui.get(f"/ui/accounts/{account_id}/mail").text)
+    assert page.count("check failed") == count
+    assert "checked: example.com" not in page
