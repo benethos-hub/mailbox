@@ -45,7 +45,8 @@ class Settings(files.FileSettings):
     port: int = Field(default=8080, ge=1, le=65535)
     # The address people reach the service at, e.g. https://mail.example.org
     # behind a proxy. Builds the OAuth redirect address, which the provider
-    # must know. Empty: taken from each request.
+    # must know. It also fixes the origin and the RP ID of passkeys
+    # (docs/AUTHENTICATION.md). Empty: taken from each request.
     public_url: str | None = None
     # Behind a reverse proxy: the proxy's address (or several, separated by
     # commas, or "*"), whose X-Forwarded-For and X-Forwarded-Proto headers
