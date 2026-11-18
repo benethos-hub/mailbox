@@ -31,6 +31,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   1.1.2.20261117. imapclient 4.3.0 refuses NUL, CR and LF in every IMAP
   command, also in those it hands to imaplib. The service already
   refuses them in folder names, keywords and search text.
+- The UI ships htmx 4.0.2 instead of 4.0.1. It fixes swaps in Chrome 124
+  to 145.
 
 ### Fixed
 
