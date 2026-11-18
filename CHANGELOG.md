@@ -40,6 +40,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   the code page after the password and for each step that asks for the
   second factor. Adding a device or a passkey, new recovery codes and
   the recovery key ask in a dialog.
+- The pages of the second factor are clearer: the step is a named
+  group, a refused dialog opens again with its reason, a wrong code
+  shows its field first again, the browser's answer about a passkey
+  shows as a notice, and the page says at its top whether the second
+  factor is on.
 - The MCP server's tools that answer JSON name its fields in their
   output schema: `list_accounts`, `list_folders`, `search_messages`,
   `whats_new`, `update_messages`, `create_folder`, `update_folder`,

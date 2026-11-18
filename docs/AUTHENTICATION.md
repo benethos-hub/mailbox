@@ -121,7 +121,8 @@ A user may hold several passkeys, each with a name of its own,
    recovery code (section 6). It shows one method at a time, the first
    the user has and the browser can use, in this order: a passkey, a
    code of an app, a recovery code. **Try another way** lists the
-   others. Nothing stores which one was used. A wrong code or passkey
+   others. Nothing stores which one was used. After a wrong code the
+   page shows the field of that code first again. A wrong code or passkey
    counts as a failed sign-in for the address and the name, as a wrong
    password does. After **five wrong tries** the pending sign-in ends,
    and the person starts again with the password.
@@ -435,4 +436,6 @@ the mail accounts. A second factor there is the provider's.
   password, not in place of it (section 3.2).
 - Changing the own password after the current password and the second
   factor, except the forced change after the sign-in (section 4).
+- After a wrong code the code page shows the field of that code first
+  again (section 4).
 - The library `fido2` by Yubico, behind `data/secrets/passkeys.py`.
