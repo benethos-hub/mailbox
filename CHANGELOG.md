@@ -88,6 +88,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- A message moved or deleted through the API while the service syncs the
+  account keeps its id. Before, a sync pass that read the folders around
+  the move could drop the id, which then answered `404` and came back as
+  a new message, or give the old place a new id that answered `404`.
+  The feed reported a `message.deleted` and a `message.created` for it.
 - `text_body` and `html_body` of a message whose text part names a
   Western single-byte charset (windows-1252, iso-8859-1, iso-8859-15,
   us-ascii) but holds UTF-8 read as UTF-8. Such a mail showed "fÃ¼r"

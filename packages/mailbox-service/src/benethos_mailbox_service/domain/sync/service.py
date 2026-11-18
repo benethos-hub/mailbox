@@ -23,7 +23,8 @@ already there are not new.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable, Iterator, Mapping
+from contextlib import contextmanager
 from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import TypeVar
@@ -66,12 +67,25 @@ from .passes import (
     report,
 )
 from .threads import REFERENCES, IndexThreads, new_thread_id
+from .writes import OwnWrites
 
 T = TypeVar("T")
 
 
 def new_message_id() -> str:
     return secret.new_id("msg")
+
+
+# How often a pass reads again when a change of ours overtook it, before
+# it leaves the index to the next pass.
+ATTEMPTS = 3
+
+
+@dataclass(frozen=True, slots=True)
+class Overtaken:
+    """A pass a change of ours overtook: nothing of it was applied."""
+
+    folders: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -108,6 +122,7 @@ class SyncService:
         self._activity = activity or ActivityLog(clock)
         self._locks: KeyedLocks[str] = KeyedLocks()
         self._states: dict[str, SyncState] = {}
+        self._writes = OwnWrites()
 
     @property
     def feed(self) -> ChangeFeed:
@@ -185,11 +200,26 @@ class SyncService:
             self._index.relocate(
                 account_id, replace(entry, native_id=native, folder_id=folder_id)
             )
+            self._writes.done(account_id)
+
+    @contextmanager
+    def writing(self, account_id: str) -> Iterator[None]:
+        """A change of ours to messages, from the provider's call to the
+        index following it: a pass it overtakes applies nothing."""
+        with self._writes.writing(account_id):
+            yield
+
+    @contextmanager
+    def pausing(self, account_id: str) -> Iterator[None]:
+        """Inside ``writing``, around a pass the change asks for itself."""
+        with self._writes.pausing(account_id):
+            yield
 
     def forget_account(self, account_id: str) -> None:
         """An account is deleted: its ids and its sync state go."""
         self._index.forget_account(account_id)
         self._states.pop(account_id, None)
+        self._writes.forget(account_id)
 
     def folder_of(self, account_id: str, message_id: str) -> str | None:
         """The folder the index has for a message, None where it keeps no
@@ -203,6 +233,7 @@ class SyncService:
         """A message is gone for good: its id answers 404 from now on."""
         if self.mapped(account_id):
             self._index.drop(account_id, message_id)
+            self._writes.done(account_id)
 
     def changed(self, change: MailboxChange) -> None:
         """Record a change in the change feed."""
@@ -357,9 +388,26 @@ class SyncService:
             return  # asked again with the next change of folders
 
     async def _sync(self, account_id: str) -> Counts:
+        """A pass, read again where a change of ours overtook it. After
+        ``ATTEMPTS`` the index stays as it was and the folder states are
+        not kept, so the next pass reads the folders again."""
+        account = self._adapters.record(account_id)
+        for _ in range(ATTEMPTS):
+            found = await self._attempt(account_id)
+            if isinstance(found, Counts):
+                return found
+            self._activity.record(said.PassOvertaken(by=SERVICE, account=account))
+        self._activity.record(
+            said.PassGivenUp(by=SERVICE, account=account, attempts=ATTEMPTS)
+        )
+        return Counts(found.folders)
+
+    async def _attempt(self, account_id: str) -> Counts | Overtaken:
         """Compare the folders whose state changed with the index: what
         arrived, left, moved, or changed its flags. Then thread what
-        arrived, and a portion of the entries without a thread."""
+        arrived, and a portion of the entries without a thread. Nothing
+        is applied where a change of ours runs or ended since it began."""
+        mark = self._writes.mark(account_id)
         states = await self._adapters.call(account_id, lambda p: p.folder_states())
         before = self._index.folder_states(account_id)
         await self._other_folders(account_id, states, before)
@@ -373,6 +421,9 @@ class SyncService:
             flagged = await self._flagged(account_id, changed, before, seen)
             moved = moves(seen)
             changes = index_changes(states, seen, moved, self._new_id)
+            # No await between this check and the writing below.
+            if self._writes.overtaken(account_id, mark):
+                return Overtaken(len(states))
             self._index.apply(account_id, changes)
             if before:
                 found = report(account_id, seen, moved, changes, flagged, len(states))

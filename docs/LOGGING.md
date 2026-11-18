@@ -206,6 +206,8 @@ each account and compares.
 |---|---|---|---|
 | INFO | the worker started: interval, push | settings | |
 | DEBUG | synced A: N folders, +a −r ~u | account, counts | added, removed, updated |
+| DEBUG | read A again: a change made through the service overtook the pass | account | the pass applied nothing |
+| INFO | left the index of A to the next pass: changes made through the service overtook N attempts | account, attempts | |
 | WARNING | sync of A failed: reason | account, reason | |
 | ERROR | sync of A failed | account, traceback | the same activity, for a failure that is not a `MailboxServiceError` (rule 6.5) |
 | INFO | watching A / A cannot push changes: polling only | account | |
@@ -600,6 +602,8 @@ and that each is listed here.
 | `mailbox.links_purged` | links to attachments used or ended, purged |
 | `sync.worker_started` | the worker started |
 | `sync.synced` | a pass over an account, with counts |
+| `sync.pass_overtaken` | a pass a change of ours overtook, read again |
+| `sync.pass_given_up` | a pass overtaken on every attempt, left to the next |
 | `sync.failed` | a pass that failed |
 | `sync.watching` | the worker watches an account |
 | `sync.push_unavailable` | an account cannot push changes |
