@@ -242,3 +242,22 @@ async def test_contents_and_headers(
 async def test_no_flags_to_compare(server: FakePop3Server) -> None:
     adapter = provider(server)
     assert not isinstance(adapter, FlagChanges)
+
+
+async def test_the_sender_check_reads_the_entry_of_the_own_server() -> None:
+    entry = "mx.example.org; dmarc=pass header.from=example.com"
+    box = FakePop3Server()
+    box.add(
+        "uid-1",
+        make_message("Checked", extra_headers={"Authentication-Results": entry}),
+    )
+    adapter = provider(box, authserv_id="mx.example.org")
+    page = await adapter.list_messages(INBOX, limit=1, cursor=None, search=None)
+    listed = page.items[0]
+    assert listed.sender_check.result == "pass"
+    assert listed.sender_check.domain == "example.com"
+    whole = await adapter.get_message(listed.id)
+    assert whole.sender_check == listed.sender_check
+    # Without the name of its receiving server the account cannot tell.
+    plain = await provider(box).list_messages(INBOX, limit=1, cursor=None, search=None)
+    assert plain.items[0].sender_check.reason == "account"

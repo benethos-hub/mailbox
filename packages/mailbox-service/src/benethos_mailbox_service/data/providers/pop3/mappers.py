@@ -12,7 +12,7 @@ from typing import Any
 
 from ....common import opaque
 from ....errors import missing, missing_message
-from ...mail import convert, parse
+from ...mail import authentication, convert, parse
 from ...models import Folder, FolderRole, Message, MessageSummary
 from .. import rules
 
@@ -60,16 +60,21 @@ def parse_cursor(value: str) -> rules.After:
     return rules.After(*parts)
 
 
-def summary(msg: parse.ParsedMessage, uid: str) -> MessageSummary:
+def summary(
+    msg: parse.ParsedMessage, uid: str, trust: authentication.Trust | None
+) -> MessageSummary:
+    """``trust``: the account's receiving server, for the sender check."""
     return MessageSummary.model_validate(
-        {**convert.summary_fields(msg), **_pop3_fields(msg, uid)}
+        {**convert.summary_fields(msg, trust), **_pop3_fields(msg, uid)}
     )
 
 
-def message(msg: parse.ParsedMessage, uid: str) -> Message:
+def message(
+    msg: parse.ParsedMessage, uid: str, trust: authentication.Trust | None
+) -> Message:
     return Message.model_validate(
         {
-            **convert.summary_fields(msg),
+            **convert.summary_fields(msg, trust),
             **_pop3_fields(msg, uid),
             **convert.message_fields(msg),
         }
