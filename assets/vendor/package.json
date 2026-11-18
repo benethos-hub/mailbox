@@ -4,6 +4,6 @@
   "description": "The versions of the JavaScript packages the UI ships, for the freshness report. Nothing is installed from here.",
   "dependencies": {
     "bootstrap-icons": "1.13.2",
-    "htmx.org": "4.0.1"
+    "htmx.org": "4.0.2"
   }
 }
