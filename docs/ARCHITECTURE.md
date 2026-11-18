@@ -236,7 +236,9 @@ packages/mailbox-service/
         passkeys.py     # the second step of a page: the ways it offers
                         #   (Ways, ways, offered, first_way), a
                         #   passkey's challenge where a code is asked,
-                        #   the browser's answer taken from a form
+                        #   the browser's answer taken from a form, the
+                        #   service as passkeys see it (passkey_party,
+                        #   passkeys_work)
         templates.py    # Jinja2: filters, render, Post/Redirect/Get,
                         #   and what htmx sends and follows (is_htmx,
                         #   leave, redirect_to)
@@ -313,7 +315,8 @@ packages/mailbox-service/
                         #   audit (sending), the Idempotency-Key
                         #   (idempotency). Reads through ..calls and
                         #   ..reach
-      sync/             # SyncService (stable message ids, the sync pass),
+      sync/             # SyncService (stable message ids), the sync pass
+                        #   and how the passes went (runner, SyncRunner),
                         #   what a pass finds (passes), the threads the
                         #   index keeps (threads), our own changes a pass
                         #   must not overwrite (writes), SyncWorker

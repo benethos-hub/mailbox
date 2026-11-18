@@ -6,7 +6,7 @@ credentials (CONCEPT 7.5).
 
 from __future__ import annotations
 
-from .devices import MAX_DEVICE_NAME, MAX_DEVICES
+from .devices import MAX_DEVICE_NAME, MAX_DEVICES, SETUP
 from .factors import CODE_TRIES, PENDING, SecondFactors
 from .passkeys import Answer, Passkeys
 from .passwords import MAX_LENGTH as MAX_PASSWORD
@@ -17,7 +17,7 @@ from .service import MAX_CODE, MAX_NAME, AuthService
 from .signin import SignedIn, SignInState
 from .throttle import SignInThrottle
 from .tokens import IssuedToken, TokenState
-from .totp import SETUP, Totp
+from .totp import Totp
 
 __all__ = [
     "Answer",

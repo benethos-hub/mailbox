@@ -12,15 +12,36 @@ the template ``components/factor.html`` shows one at a time.
 
 from __future__ import annotations
 
+import ipaddress
 from dataclasses import dataclass
+from urllib.parse import urlsplit
 
 from fastapi import Request
 
-from ...data.secrets import Begun, totp
+from ...data.secrets import Begun, Party, totp
 from ...domain.auth import Answer
 from ..services import get_auth
-from ..urls import passkey_party, passkeys_work
+from ..urls import public_base
 from .session import session_of
+
+
+def passkey_party(request: Request) -> Party:
+    """The service as a browser's passkeys see it: the host of
+    ``public_base`` and its origin."""
+    parts = urlsplit(public_base(request))
+    return Party(parts.hostname or "localhost", f"{parts.scheme}://{parts.netloc}")
+
+
+def passkeys_work(party: Party) -> bool:
+    """Whether a browser makes passkeys for ``party``: over HTTPS at a
+    name, or at localhost. Never at an address alone."""
+    try:
+        ipaddress.ip_address(party.id)
+        return False
+    except ValueError:
+        pass
+    local = party.id == "localhost" or party.id.endswith(".localhost")
+    return local or party.origin.startswith("https://")
 
 
 @dataclass(frozen=True)

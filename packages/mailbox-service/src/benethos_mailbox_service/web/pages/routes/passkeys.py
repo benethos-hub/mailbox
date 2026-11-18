@@ -12,10 +12,9 @@ from fastapi.responses import Response
 from ....common.clock import utc_now
 from ....domain.auth import SETUP, Answer
 from ...services import PasskeyDevices
-from ...urls import passkey_party, passkeys_work
 from ..deps import Actor
 from ..forms import failing
-from ..passkeys import answered, first_way
+from ..passkeys import answered, first_way, passkey_party, passkeys_work
 from ..session import PendingPasskey, session_of
 from ..templates import back
 from .factor import FACTOR_PAGE, device_added, devices_removed

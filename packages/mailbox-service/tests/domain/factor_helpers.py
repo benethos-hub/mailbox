@@ -1,23 +1,19 @@
-"""What the tests of the second factor share: a clock that steps, the
-services on it, a user with a password, and devices added the way the
-page adds them."""
+"""What the tests of the second factor share: a user with a password,
+and devices added the way the page adds them. The clock that steps and
+the services on it are fixtures of conftest.py."""
 
 from __future__ import annotations
 
-from collections.abc import Iterator
 from datetime import UTC, datetime
 
-import pytest
-
-from benethos_mailbox_service.assembly import Services, build_services
-from benethos_mailbox_service.config import Settings
+from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import ActivityFilter, Grant, User
 from benethos_mailbox_service.data.secrets import Party, totp
 from benethos_mailbox_service.domain.auth import Answer
 from benethos_mailbox_service.domain.rights import Access
 
 from ..clocks import Clock
-from ..conftest import ADMIN, CHEAP
+from ..conftest import ADMIN
 from ..passkey_fake import Authenticator
 
 SECRET = "correct horse battery staple"
@@ -25,21 +21,6 @@ PARTY = Party("mail.example.org", "https://mail.example.org")
 SOURCE = "10.0.0.1"
 READER = Grant(accounts=["*"], allow=["mail.read"])
 START = datetime(2026, 10, 9, 12, 0, 5, tzinfo=UTC)
-
-
-@pytest.fixture
-def clock() -> Clock:
-    return Clock(START)
-
-
-@pytest.fixture
-def services(master_key: None, clock: Clock) -> Iterator[Services]:
-    built = build_services(
-        Settings(storage="memory"), password_hasher=CHEAP, clock=clock
-    )
-    built.vault.initialize()
-    yield built
-    built.close()
 
 
 async def anna(services: Services) -> User:

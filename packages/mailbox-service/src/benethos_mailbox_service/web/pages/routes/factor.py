@@ -16,10 +16,10 @@ from ....data.secrets import totp
 from ....domain.auth import MAX_DEVICE_NAME, MAX_DEVICES, SETUP
 from ....domain.users import DeviceAdded
 from ...services import Factors
-from ...urls import passkey_party, passkeys_work, public_host
+from ...urls import public_host
 from ..deps import Actor, Viewer
 from ..forms import failing
-from ..passkeys import answered, first_way, offered
+from ..passkeys import answered, first_way, offered, passkey_party, passkeys_work
 from ..qr import data_uri
 from ..session import PendingTotp, session_of, show_once, take_once
 from ..templates import back, render

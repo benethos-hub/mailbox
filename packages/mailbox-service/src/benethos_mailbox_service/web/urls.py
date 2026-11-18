@@ -3,13 +3,11 @@ and the path of a request as the log names it."""
 
 from __future__ import annotations
 
-import ipaddress
 from urllib.parse import urlsplit
 
 from fastapi import Request
 
 from ..data.models import ProviderType
-from ..data.secrets import Party
 from .state import app_settings
 
 # Where a link to an attachment is used: ``api.PREFIX`` and the router of
@@ -26,25 +24,6 @@ def public_base(request: Request) -> str:
 def public_host(request: Request) -> str:
     """The host name of ``public_base``, without scheme and port."""
     return urlsplit(public_base(request)).hostname or "localhost"
-
-
-def passkey_party(request: Request) -> Party:
-    """The service as a browser's passkeys see it: the host of
-    ``public_base`` and its origin."""
-    parts = urlsplit(public_base(request))
-    return Party(parts.hostname or "localhost", f"{parts.scheme}://{parts.netloc}")
-
-
-def passkeys_work(party: Party) -> bool:
-    """Whether a browser makes passkeys for ``party``: over HTTPS at a
-    name, or at localhost. Never at an address alone."""
-    try:
-        ipaddress.ip_address(party.id)
-        return False
-    except ValueError:
-        pass
-    local = party.id == "localhost" or party.id.endswith(".localhost")
-    return local or party.origin.startswith("https://")
 
 
 def client_address(request: Request) -> str:
