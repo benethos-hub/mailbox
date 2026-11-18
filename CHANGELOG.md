@@ -28,6 +28,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   server's instructions, the note of a list and the descriptions of
   these tools say what it means: the receiving server's statement about
   the domain in `from`, never about the content.
+- The configuration UI shows the sender check beside the sender of a
+  message, and `check failed` in lists. The account page of an IMAP,
+  POP3 or JMAP account shows, when asked, the names receiving servers
+  wrote into its newest ten mails.
 - Passkeys as a second method of the second factor of the UI sign-in,
   beside authenticator apps (TOTP). A person adds them on the page
   Second factor, and after the password a passkey signs in as a code
