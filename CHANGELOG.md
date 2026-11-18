@@ -152,6 +152,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   answers. It answered `500` before. Its sender check is the same in
   the list as in the message, also where the entry names such an
   address.
+- The sender check of a Microsoft account is `unreadable` for a mail
+  with several addresses in `From`, as for every other kind. Graph
+  names the first alone, and the check passed for it.
 - A passkey whose answer is cut short is refused on the page Second
   factor. It answered `500` before.
 

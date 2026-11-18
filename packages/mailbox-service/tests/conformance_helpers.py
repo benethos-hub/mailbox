@@ -89,13 +89,14 @@ def mail(
     text: str = "Hello",
     file: bytes | None = None,
     headers: Sequence[tuple[str, str]] = (),
+    sender: str = "Alice <alice@example.com>",
 ) -> bytes:
     """A mail to the mailbox, with a file where ``file`` is given, and
     ``headers`` on top, a name as often as it is given."""
     found = EmailMessage()
     for name, value in headers:
         found[name] = value
-    found["From"] = "Alice <alice@example.com>"
+    found["From"] = sender
     found["To"] = ADDRESS
     found["Subject"] = subject
     found["Date"] = "Tue, 01 Sep 2026 10:00:00 +0000"
@@ -296,15 +297,19 @@ def _microsoft() -> Box:
 
     def put(raw: bytes) -> None:
         parsed = parse.ParsedMessage(raw)
+        sender = parsed.sender
         server.add_message(
             raw=raw,
             subject=parsed.subject,
+            # Graph names one sender, the first of the From header.
+            **{"from": {"emailAddress": {"address": sender.email}}} if sender else {},
             # Graph counts no inline part as an attachment.
             hasAttachments=any(a.attached for a in parsed.attachments),
             internetMessageId=parsed.message_id,
             internetMessageHeaders=[
-                {"name": "Authentication-Results", "value": value}
-                for value in parsed.all_headers("Authentication-Results")
+                {"name": name, "value": value}
+                for name in ("From", "Authentication-Results")
+                for value in parsed.all_headers(name)
             ],
         )
 

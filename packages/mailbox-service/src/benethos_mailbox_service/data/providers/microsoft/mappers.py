@@ -101,13 +101,12 @@ def keywords(item: GraphMessage) -> list[str]:
 
 def summary(item: GraphMessage) -> MessageSummary:
     sender = _address(item.sender)
-    entries = [
-        h.value
-        for h in item.internet_message_headers
-        if h is not None
-        and h.value is not None
-        and (h.name or "").lower() == "authentication-results"
-    ]
+    entries = _header(item, "authentication-results")
+    shown = sender.email if sender else None
+    # Graph names one sender. Where it hands out the From header, that
+    # decides whether it names one alone.
+    written = _header(item, "from")
+    judged = parse.sole_address(written, shown) if written else shown
     return MessageSummary(
         id=item.id,
         thread_id=item.conversation_id,
@@ -122,10 +121,17 @@ def summary(item: GraphMessage) -> MessageSummary:
         starred=item.flag is not None and item.flag.flag_status == "flagged",
         keywords=keywords(item),
         has_attachments=bool(item.has_attachments),
-        sender_check=authentication.sender_check(
-            entries, sender.email if sender else None, TRUST
-        ),
+        sender_check=authentication.sender_check(entries, judged, TRUST),
     )
+
+
+def _header(item: GraphMessage, name: str) -> list[str]:
+    """Every value of the header ``name`` (lower case) Graph handed out."""
+    return [
+        h.value
+        for h in item.internet_message_headers
+        if h is not None and h.value is not None and (h.name or "").lower() == name
+    ]
 
 
 def message(item: GraphMessage, raw: bytes) -> Message:

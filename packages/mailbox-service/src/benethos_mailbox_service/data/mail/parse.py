@@ -160,17 +160,9 @@ class ParsedMessage:
     @property
     def sole_sender(self) -> str | None:
         """The address in ``From`` when it names exactly one and it is the
-        one ``sender`` shows, else None: a header read two ways is judged
-        by neither."""
-        found = [address for _, address in getaddresses(self.all_headers("from"))]
-        found = [address for address in found if address]
+        one ``sender`` shows, else None (``sole_address``)."""
         shown = self.sender
-        if len(found) != 1 or shown is None:
-            return None
-        judged = _comparable(found[0])
-        if judged is None or judged != _comparable(shown.email):
-            return None
-        return found[0]
+        return sole_address(self.all_headers("from"), shown.email if shown else None)
 
     @property
     def received(self) -> datetime | None:
@@ -305,6 +297,19 @@ def from_headers(headers: Iterable[tuple[str, str]]) -> ParsedMessage:
     a message of SMTPUTF8: an address beyond ASCII has no other form."""
     lines = [f"{name}: {' '.join(value.split())}" for name, value in headers]
     return ParsedMessage(("\r\n".join(lines) + "\r\n\r\n").encode("utf-8"))
+
+
+def sole_address(values: list[str], shown: str | None) -> str | None:
+    """The address the values of a ``From`` header name when they name
+    exactly one and it is ``shown``, the sender a reader sees, else None:
+    a header read two ways is judged by neither."""
+    found = [address for _, address in getaddresses(values) if address]
+    if len(found) != 1 or shown is None:
+        return None
+    judged = _comparable(found[0])
+    if judged is None or judged != _comparable(shown):
+        return None
+    return found[0]
 
 
 def _comparable(address: str) -> str | None:
