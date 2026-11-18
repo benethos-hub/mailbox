@@ -452,3 +452,14 @@ def test_the_account_menu_links_to_the_factor_and_says_its_state(
         r'href="/ui/second-factor">.*?Second factor <span class="hint">off', menu
     )
     assert "second-factor/remove" not in page
+
+
+def test_a_code_with_a_space_signs_in(
+    app_client: TestClient, services: Services
+) -> None:
+    name, password = browser_user(services, READER)
+    secret, _ = with_factor(services, name)
+    try_sign_in(app_client, name, password)
+    code = code_after(secret)
+    assert code_form(app_client, f"{code[:3]} {code[3:]}") == "/ui"
+    assert credentials(services) == ["password+totp"]
