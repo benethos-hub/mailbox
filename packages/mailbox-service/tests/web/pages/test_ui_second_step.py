@@ -49,3 +49,11 @@ def test_the_code_page_names_the_step_to_a_screen_reader(
     try_sign_in(app_client, name, password)
     page = app_client.get("/ui/login/code").text
     assert '<legend class="sr">Confirm it is you</legend>' in page
+
+
+@pytest.mark.usefixtures("factor_on")
+def test_a_code_field_shows_the_form_of_a_code(app_client: TestClient) -> None:
+    page = app_client.get("/ui/second-factor").text
+    assert '<input id="f-codes-totp" class="code" name="code"' in page
+    assert '<input id="f-codes-recovery" class="code" name="code"' in page
+    assert 'placeholder="XXXXX-XXXXX-XXXXX"' in page

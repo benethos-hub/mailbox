@@ -23,13 +23,13 @@
   {% if ways.totp %}
   <div class="field" data-way="totp">
     <label for="f-{{ id }}-totp">6-digit code from your authenticator app</label>
-    <input id="f-{{ id }}-totp" name="code" inputmode="numeric" autocomplete="one-time-code" spellcheck="false" maxlength="40" required />
+    <input id="f-{{ id }}-totp" class="code" name="code" inputmode="numeric" autocomplete="one-time-code" spellcheck="false" maxlength="40" required />
     <span class="hint" data-ways-only>Or a recovery code, which then works no more.</span>
   </div>
   {% endif %}
   <div class="field" data-way="recovery"{% if ways.totp %} hidden{% endif %}>
     <label for="f-{{ id }}-recovery">Recovery code</label>
-    <input id="f-{{ id }}-recovery" name="code" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="40" required{% if ways.totp %} disabled{% endif %} />
+    <input id="f-{{ id }}-recovery" class="code" name="code" placeholder="XXXXX-XXXXX-XXXXX" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="40" required{% if ways.totp %} disabled{% endif %} />
     <span class="hint">It works once.</span>
   </div>
   {% if ways.elsewhere %}<p class="hint">Your passkeys work at the public address of this service over HTTPS, not here.</p>{% endif %}

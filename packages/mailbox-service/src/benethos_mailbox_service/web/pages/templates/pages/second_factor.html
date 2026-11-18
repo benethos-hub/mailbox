@@ -29,7 +29,7 @@
     <div class="form-grid">
       <div class="field">
         <label for="f-confirm">The code {{ setup.name }} shows now</label>
-        <input id="f-confirm" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,7}" maxlength="7" required autofocus />
+        <input id="f-confirm" class="code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,7}" maxlength="7" required autofocus />
       </div>
     </div>
     <div class="form-actions"><button class="primary" type="submit">{{ icon("check-lg") }} {% if on %}Add device{% else %}Turn on{% endif %}</button></div>
