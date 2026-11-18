@@ -5,12 +5,16 @@ case, and a limit per user (docs/AUTHENTICATION.md 5)."""
 from __future__ import annotations
 
 from collections.abc import Sequence
+from datetime import timedelta
 
 from ...errors import BadRequestError, ConflictError
 
 # Devices of one method of one user, and the length of a device's name.
 MAX_DEVICES = 10
 MAX_DEVICE_NAME = 60
+# A new device of any method not yet confirmed is dropped after this: a
+# secret shown, or a passkey's registration begun.
+SETUP = timedelta(minutes=15)
 
 
 def checked_name(

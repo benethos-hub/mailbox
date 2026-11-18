@@ -9,7 +9,7 @@ to is ``factors``, who may add or remove one ``domain/users/totp.py``.
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from pydantic import SecretStr
 
@@ -21,10 +21,6 @@ from ...data.models import TotpDevice
 from ...data.secrets import CredentialVault, totp
 from ...data.storage import StoredTotpDevice, TotpRepository
 from .devices import checked_name
-
-# A secret shown for a new device and not yet confirmed is dropped after
-# this.
-SETUP = timedelta(minutes=15)
 
 
 class Totp:
