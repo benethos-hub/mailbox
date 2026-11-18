@@ -48,8 +48,7 @@ def first_way(code: str, passkey: str) -> str | None:
 def ways(request: Request, user_id: str, options: str | None) -> Ways:
     """The methods of the user's second factor, with ``options``, the
     challenge the page offers for its passkeys."""
-    factors = get_auth(request).factors
-    state = factors.state(user_id) if factors is not None else None
+    state = get_auth(request).factor_state(user_id)
     return Ways(
         totp=bool(state and state.totp),
         options=options,
@@ -68,10 +67,9 @@ def challenge(request: Request, user_id: str) -> Begun | None:
     browsers make no passkeys, such as at an address alone, or for a user
     without one."""
     party = passkey_party(request)
-    factors = get_auth(request).factors
-    if factors is None or not passkeys_work(party):
+    if not passkeys_work(party):
         return None
-    return factors.challenge(user_id, party)
+    return get_auth(request).factor_challenge(user_id, party)
 
 
 def offer(request: Request, user_id: str) -> str | None:

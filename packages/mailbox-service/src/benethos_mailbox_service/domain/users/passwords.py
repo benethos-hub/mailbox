@@ -53,8 +53,7 @@ class PasswordService:
         """Whether changing the caller's own password asks for its second
         factor: when it has one, unless the password is one to change at
         this sign-in, whose step after the password asked for it."""
-        factors = self._auth.factors
-        if factors is None or not factors.has(access.user_id):
+        if not self._auth.has_second_factor(access.user_id):
             return False
         return not self._auth.sign_in_state(access.user_id).must_change
 
