@@ -93,6 +93,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   the move could drop the id, which then answered `404` and came back as
   a new message, or give the old place a new id that answered `404`.
   The feed reported a `message.deleted` and a `message.created` for it.
+- A batch that names a message another program moved keeps the ids of
+  the messages it moved itself. Two copies of one `Message-ID` among
+  them answered `404` after the batch before, and the feed reported
+  them deleted.
 - `text_body` and `html_body` of a message whose text part names a
   Western single-byte charset (windows-1252, iso-8859-1, iso-8859-15,
   us-ascii) but holds UTF-8 read as UTF-8. Such a mail showed "fÃ¼r"
