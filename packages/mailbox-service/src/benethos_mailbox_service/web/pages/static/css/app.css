@@ -701,6 +701,14 @@ dialog.ask .buttons { display: flex; justify-content: flex-end; gap: 8px; paddin
   .nav-folded .nav a { padding: 8px 10px; }
 }
 
+/* On a phone the description of a card stands in a line of its own
+ * under the title, its count and its action. */
+@media (max-width: 560px) {
+  .card > header { flex-wrap: wrap; }
+  .card > header .right { order: 1; }
+  .card > header .meta:not(.count) { order: 2; flex-basis: 100%; }
+}
+
 /* Where no tooltip shows, an icon that is not plain on its own gets its
  * word back. */
 @media (max-width: 860px), (hover: none) {

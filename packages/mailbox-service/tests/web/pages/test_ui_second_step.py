@@ -187,3 +187,12 @@ def test_a_hint_belongs_to_its_field_and_a_text_to_its_dialog(
     assert '<span class="hint" id="f-codes-recovery-hint">' in page
     assert 'aria-describedby="new-codes-text"' in page
     assert '<p id="new-codes-text">' in page
+
+
+@pytest.mark.usefixtures("factor_on")
+def test_the_count_of_a_card_is_told_from_its_description(
+    app_client: TestClient,
+) -> None:
+    page = app_client.get("/ui/second-factor").text
+    assert '<span class="meta count">1</span>' in page
+    assert '<span class="meta">A code from any of them works.</span>' in page
