@@ -13,8 +13,8 @@ everything else is the proposal.
 ## 1. Principles
 
 1. **Rights belong to users, not to tokens.** A user is a person, the
-   MCP server, a script. A token, a password, later a second factor are
-   ways for the user to prove who it is. Rights are changed in one
+   MCP server, a script. A token, a password, a second factor are ways
+   for the user to prove who it is. Rights are changed in one
    place, credentials come and go.
 2. **Default deny.** A user may do what a grant allows, nothing else.
    There are no deny rules: what is not allowed is refused.
@@ -147,7 +147,7 @@ from becoming a way up:
 - **Nobody locks itself out.** A user cannot delete or disable itself
   and cannot take its own UI sign-in.
 - **The recovery key and the service log are `admin` only**, the key
-  after the password again, and a code with a second factor.
+  after the password again, and the second factor for a user with one.
 
 ## 6. Credentials and kinds of user
 

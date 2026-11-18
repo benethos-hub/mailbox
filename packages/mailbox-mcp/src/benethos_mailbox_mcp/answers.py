@@ -15,8 +15,6 @@ from typing import NotRequired
 from typing_extensions import TypedDict
 
 
-# A message in a list, without what the model does not need. "from" is
-# a keyword of Python, so this one is written as a call.
 class SenderCheck(TypedDict):
     """The receiving server's check of the domain in from: its result,
     the domain where it named one, and why it is unknown."""
@@ -26,6 +24,8 @@ class SenderCheck(TypedDict):
     reason: NotRequired[str]
 
 
+# A message in a list, without what the model does not need. "from" is
+# a keyword of Python, so this one is written as a call.
 Summary = TypedDict(
     "Summary",
     {

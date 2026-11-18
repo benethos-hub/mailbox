@@ -235,6 +235,9 @@ Ids are opaque strings to clients. Nothing may parse them.
   missing attachment, draft or folder is not a moved message.
 - **Ambiguous matches are never guessed.** Several candidates with the same
   `Message-ID`, or none, and the old id answers `404`.
+- **A change of ours during a pass.** A sync pass that a change made
+  through the service overtook applies nothing and reads again, three
+  times at most.
 
 ## 5. Provider adapters and libraries
 
