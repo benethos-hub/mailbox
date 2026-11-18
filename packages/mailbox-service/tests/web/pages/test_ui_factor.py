@@ -79,10 +79,10 @@ def test_a_wrong_code_comes_back_and_the_last_try_ends_it(
     name, password = browser_user(services, READER)
     with_factor(services, name)
     try_sign_in(app_client, name, password)
-    assert code_form(app_client, "000000") == "/ui/login/code?wrong=1"
+    assert code_form(app_client, "000000") == "/ui/login/code?wrong=1&code=app"
     assert "Wrong code" in app_client.get("/ui/login/code?wrong=1").text
     for _ in range(3):
-        assert code_form(app_client, "000000") == "/ui/login/code?wrong=1"
+        assert code_form(app_client, "000000") == "/ui/login/code?wrong=1&code=app"
     assert code_form(app_client, "000000") == "/ui/login?notice=code_tries"
     assert "Too many wrong codes" in app_client.get("/ui/login?notice=code_tries").text
     gone = app_client.get("/ui/login/code", follow_redirects=False)

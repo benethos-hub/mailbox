@@ -152,7 +152,9 @@ def _session(
 
 
 @router.get("/login/code")
-async def code_page(request: Request, wrong: int = 0) -> Response:
+async def code_page(request: Request, wrong: int = 0, code: str = "") -> Response:
+    """``code``: after a wrong code of the app ("app") or a recovery code
+    ("recovery"), the page shows that field first."""
     pending = store_of(request).pending(request.cookies.get(PENDING_COOKIE))
     if pending is None:
         return _to_login("code_expired")
@@ -165,6 +167,7 @@ async def code_page(request: Request, wrong: int = 0) -> Response:
         nonce=pending.csrf,
         err=WRONG_CODE if wrong else None,
         ways=ways(request, pending.user_id, begun.options if begun else None),
+        first=_FIRST.get(code),
     )
 
 
@@ -195,10 +198,23 @@ async def sign_in_with_code(
         return _to_login("throttled", minutes=max(1, -(-exc.retry_after // 60)))
     except UnauthorizedError:
         if store.missed(pending_id):
-            return RedirectResponse(f"{CODE_PAGE}?wrong=1", status_code=303)
+            return RedirectResponse(_wrong(code, passkey), status_code=303)
         return _to_login("code_tries")
     store.drop_pending(pending_id)
     return _session(request, store, signed, pending.next)
+
+
+# The method a wrong code came by, shown first again on the code page.
+_FIRST = {"app": "totp", "recovery": "recovery"}
+
+
+def _wrong(code: str, passkey: str) -> str:
+    """The code page after a wrong try. A code sent shows its field first
+    again: digits alone are a code of the app, else a recovery code."""
+    if passkey or not code:
+        return f"{CODE_PAGE}?wrong=1"
+    kind = "app" if code.replace(" ", "").isdigit() else "recovery"
+    return f"{CODE_PAGE}?wrong=1&code={kind}"
 
 
 def _to_login(notice: str, **values: int) -> Response:

@@ -8,11 +8,13 @@
    of the first code shows alone, and it takes a code of the app and a
    recovery code alike. ``focus``: the step starts the page, as on the
    code page after the password. ``legend``: the step names itself, else
-   only to a screen reader, where the page has the same title. #}
+   only to a screen reader, where the page has the same title.
+   ``first``: the method shown first when the user has it, "totp" or
+   "recovery", as after a wrong code. #}
 {% from "components/ui.html" import icon %}
 
-{% macro second_step(id, ways, focus=False, legend=True) %}
-<fieldset class="factor-step" data-ways{% if focus %} data-ways-focus{% endif %}>
+{% macro second_step(id, ways, focus=False, legend=True, first=None) %}
+<fieldset class="factor-step" data-ways{% if focus %} data-ways-focus{% endif %}{% if first %} data-ways-first="{{ first }}"{% endif %}>
   <legend{% if not legend %} class="sr"{% endif %}>Confirm it is you</legend>
   {% if ways.options %}
   <div data-way="passkey" data-passkey-options="{{ ways.options }}" hidden>

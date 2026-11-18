@@ -3,6 +3,8 @@ methods, the list of the others (docs/UI.md 6.3)."""
 
 from __future__ import annotations
 
+import re
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -91,3 +93,27 @@ def test_a_refused_dialog_opens_again_with_the_reason(app_client: TestClient) ->
     assert page.count('class="notice err"') == 1
     # Once: the next page opens nothing.
     assert "data-open" not in app_client.get("/ui/second-factor").text
+
+
+@pytest.mark.parametrize(
+    ("code", "first"), [("000 000", "totp"), ("AAAAA-AAAAA-AAAAA", "recovery")]
+)
+def test_after_a_wrong_code_its_field_shows_first(
+    app_client: TestClient, services: Services, code: str, first: str
+) -> None:
+    services.vault.initialize()
+    name, password = browser_admin(services)
+    with_factor(services, name)
+    try_sign_in(app_client, name, password)
+    page = app_client.get("/ui/login/code").text
+    nonce = re.search(r'name="nonce" value="([^"]+)"', page)
+    assert nonce is not None
+    wrong = app_client.post(
+        "/ui/login/code",
+        data={"code": code, "nonce": nonce.group(1)},
+        follow_redirects=False,
+    )
+    assert wrong.headers["location"].startswith("/ui/login/code?wrong=1&code=")
+    again = app_client.get(wrong.headers["location"]).text
+    assert f'data-ways-first="{first}"' in again
+    assert "data-ways-first" not in app_client.get("/ui/login/code").text
