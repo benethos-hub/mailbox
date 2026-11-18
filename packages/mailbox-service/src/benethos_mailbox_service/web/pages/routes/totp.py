@@ -15,14 +15,12 @@ from ...services import TotpDevices
 from ..deps import Actor
 from ..forms import failing
 from ..passkeys import answered, first_way
-from ..session import PendingTotp, session_of, show_once
+from ..session import PendingTotp, session_of
 from ..templates import back
-from .factor import CODES, FACTOR_PAGE
+from .factor import FACTOR_PAGE, device_added, devices_removed
 from .users import access_tab
 
 router = APIRouter()
-
-SIGNED_OUT = "Other sessions are signed out."
 
 
 @router.post("/second-factor/totp/begin")
@@ -56,14 +54,8 @@ async def confirm(
         return back(request, FACTOR_PAGE, error="The setup ran out. Start again.")
     with failing(FACTOR_PAGE):
         confirmed = totp.confirm(caller, setup.name, setup.secret, code)
-    # This session carries on with the new device, every other one of the
-    # user ends at its next request.
-    session.factor = confirmed.stamp
     session.totp = None
-    if confirmed.recovery_codes:
-        show_once(request, CODES, "\n".join(confirmed.recovery_codes))
-        return back(request, FACTOR_PAGE, f"Second factor on. {SIGNED_OUT}")
-    return back(request, FACTOR_PAGE, f"Device {setup.name} added. {SIGNED_OUT}")
+    return device_added(request, confirmed, f"Device {setup.name} added.")
 
 
 @router.post("/second-factor/totp/cancel")
@@ -100,10 +92,7 @@ async def remove_own(
         FACTOR_PAGE, dialog=f"remove-{device}", first=first_way(code, passkey)
     ):
         stamp = await totp.remove_own(caller, device, password, code, proof)
-    session_of(request).factor = stamp
-    if stamp is None:
-        return back(request, FACTOR_PAGE, "Device removed. The second factor is off.")
-    return back(request, FACTOR_PAGE, f"Device removed. {SIGNED_OUT}")
+    return devices_removed(request, stamp, "Device removed.")
 
 
 @router.post("/users/{user_id}/second-factor/totp/{device_id}/remove")
@@ -133,7 +122,4 @@ async def remove_ticked(
         stamp = await totp.remove_own_devices(
             caller, device or [], password, code, proof
         )
-    session_of(request).factor = stamp
-    if stamp is None:
-        return back(request, FACTOR_PAGE, "Devices removed. The second factor is off.")
-    return back(request, FACTOR_PAGE, f"Devices removed. {SIGNED_OUT}")
+    return devices_removed(request, stamp, "Devices removed.")
