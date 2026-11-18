@@ -58,6 +58,10 @@ SenderCheckReason = Literal[
 ]
 
 
+# The check a sender check's result comes from.
+SenderCheckMethod = Literal["dmarc", "dkim", "spf"]
+
+
 class SenderCheck(BaseModel):
     """What the account's receiving server stated about the domain in
     `from`, read from its one Authentication-Results entry. A fact about
@@ -77,7 +81,7 @@ class SenderCheck(BaseModel):
         default=None,
         description="Whether `domain` is the domain in `from`. Null without `domain`.",
     )
-    method: Literal["dmarc", "dkim", "spf"] | None = Field(
+    method: SenderCheckMethod | None = Field(
         default=None, description="The check the result comes from."
     )
     reason: SenderCheckReason | None = Field(

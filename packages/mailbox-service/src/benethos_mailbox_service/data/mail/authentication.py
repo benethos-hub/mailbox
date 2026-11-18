@@ -17,16 +17,24 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+from typing import Literal, get_args
 
 from ...common.hosts import ascii_host, is_host_name
-from ..models import SenderCheck
+from ..models import (
+    UNKNOWN_ACCOUNT,
+    SenderCheck,
+    SenderCheckMethod,
+    SenderCheckReason,
+)
 
 # A longer entry is not read.
 MAX_ENTRY = 8192
 # The part of an entry its authserv-id is read from.
 _HEAD = 1024
 _ERRORS = frozenset({"temperror", "permerror"})
-_CHECKS = frozenset({"dmarc", "dkim", "spf"})
+_CHECKS = frozenset(get_args(SenderCheckMethod))
+# The checks that may stand in for DMARC, in the order they are asked.
+_WITHOUT_DMARC: tuple[Literal["dkim", "spf"], ...] = ("dkim", "spf")
 
 
 @dataclass(frozen=True, slots=True)
@@ -61,7 +69,7 @@ def sender_check(
     one or with several, ``trust``: the account's own server, None where
     the account cannot tell."""
     if trust is None:
-        return _unknown("account")
+        return UNKNOWN_ACCOUNT.model_copy()
     own = [e for e in entries if (i := _authserv_id(e)) and trust.trusts(i)]
     if not own:
         return _unknown("no_entry")
@@ -74,8 +82,8 @@ def sender_check(
     return _judged(results, sender_domain)
 
 
-def _unknown(reason: str) -> SenderCheck:
-    return SenderCheck.model_validate({"result": "unknown", "reason": reason})
+def _unknown(reason: SenderCheckReason) -> SenderCheck:
+    return SenderCheck(result="unknown", reason=reason)
 
 
 @dataclass(frozen=True, slots=True)
@@ -130,8 +138,8 @@ def _by_dmarc(result: _Result, sender: str) -> SenderCheck:
 def _without_dmarc(results: list[_Result], sender: str) -> SenderCheck:
     """DKIM or SPF that passed for exactly the domain of the sender, else
     why not."""
-    others: list[tuple[str, str]] = []
-    for method in ("dkim", "spf"):
+    others: list[tuple[Literal["dkim", "spf"], str]] = []
+    for method in _WITHOUT_DMARC:
         for result in results:
             if result.method != method or result.result != "pass":
                 continue
@@ -139,25 +147,18 @@ def _without_dmarc(results: list[_Result], sender: str) -> SenderCheck:
             if domain is None:
                 continue
             if domain == sender:
-                return SenderCheck.model_validate(
-                    {
-                        "result": "pass",
-                        "domain": sender,
-                        "matches_from": True,
-                        "method": method,
-                    }
+                return SenderCheck(
+                    result="pass", domain=sender, matches_from=True, method=method
                 )
             others.append((method, domain))
     if others:
         method, domain = others[0]
-        return SenderCheck.model_validate(
-            {
-                "result": "unknown",
-                "domain": domain,
-                "matches_from": False,
-                "method": method,
-                "reason": "other_domain",
-            }
+        return SenderCheck(
+            result="unknown",
+            domain=domain,
+            matches_from=False,
+            method=method,
+            reason="other_domain",
         )
     if any(r.method in _CHECKS and r.result in _ERRORS for r in results):
         return _unknown("error")

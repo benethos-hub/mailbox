@@ -49,6 +49,7 @@ from .discovery import (
 from .folders import Folder, FolderCreate, FolderRole, FolderUpdate
 from .messages import (
     SEARCH_TEXT_PATTERN,
+    UNKNOWN_ACCOUNT,
     Address,
     Attachment,
     AttachmentContent,
@@ -57,6 +58,7 @@ from .messages import (
     MessageSummary,
     MessageUpdate,
     SenderCheck,
+    SenderCheckMethod,
     SenderCheckReason,
     as_keyword,
     received_or_written,
@@ -157,7 +159,9 @@ __all__ = [
     "SEARCH_TEXT_PATTERN",
     "Security",
     "SenderCheck",
+    "SenderCheckMethod",
     "SenderCheckReason",
+    "UNKNOWN_ACCOUNT",
     "SendFilter",
     "SendOutcome",
     "SendRecord",
