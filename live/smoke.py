@@ -3,10 +3,11 @@
     uv run python live/smoke.py [--show] [--wrong-password]
 
 Read-only: discovers each address, connects it, lists folders and messages,
-reads one message and its source, and checks that reading changed no
-unread flag and that ids stay the same. Then lists across all accounts and
-syncs each account once. ``--show`` prints the messages of the first page:
-sender, recipients, subject, attachment names and the start of the text.
+reads one message, its sender check and its source, and checks that reading
+changed no unread flag and that ids stay the same. Then lists across all
+accounts and syncs each account once. ``--show`` prints the messages of the
+first page: sender, recipients, subject, attachment names and the start of
+the text.
 ``--wrong-password`` also tries one login with a wrong password, which the
 server may count against the account.
 
@@ -130,6 +131,7 @@ def smoke_account(
             f"text {len(body.get('text_body') or '')} chars, "
             f"{len(body.get('attachments', []))} attachments",
         )
+        check_sender(run, body, show)
         raw = client.get(f"/v1/accounts/{account_id}/messages/{first}/raw")
         run.check("raw source", raw.status_code == 200, f"{len(raw.content)} bytes")
         if show:
@@ -147,6 +149,20 @@ def smoke_account(
         )
         check_search(run, client, account_id, items[0])
     return account_id
+
+
+def check_sender(run: Run, body: dict[str, Any], show: bool) -> None:
+    """The receiving server's check of the newest message: one of three
+    results. Without ``show`` its result and reason only, never the
+    domain."""
+    found = body.get("sender_check")
+    check = found if isinstance(found, dict) else {}
+    told = str(check.get("result"))
+    if check.get("reason"):
+        told += f" ({check['reason']})"
+    if show and check.get("domain"):
+        told += f", {check['domain']}"
+    run.check("sender check", check.get("result") in ("pass", "fail", "unknown"), told)
 
 
 def check_search(

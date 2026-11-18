@@ -436,6 +436,10 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
   tool and refuses every call but `server_status`, and `--list-tools`
   prints the tools as a client lists them, kept in
   `docs/mcp-tools.json`
+- **The sender check of a message (6.3)**, decided 2026-11-18, done:
+  `sender_check` from the receiving server's `Authentication-Results`,
+  in the API, the client, the MCP server and the UI, for every kind of
+  account. Live-checked in `live/smoke.py`
 
 Open in this phase, each planned in CONCEPT.md:
 
