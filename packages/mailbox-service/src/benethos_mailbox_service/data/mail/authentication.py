@@ -19,6 +19,7 @@ import re
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 
+from ...common.hosts import ascii_host
 from ..models import SenderCheck
 
 # A longer entry is not read.
@@ -193,15 +194,12 @@ def _checked(value: str) -> str:
 
 
 def _domain_of(sender: str | None) -> str | None:
-    """The domain of the sender's address, in its ASCII form."""
+    """The domain of the sender's address, in its ASCII form (IDNA 2008,
+    as the servers write it)."""
     if not sender or "@" not in sender:
         return None
-    domain = sender.rpartition("@")[2]
-    try:
-        ascii_domain = domain.encode("idna").decode("ascii")
-    except UnicodeError:
-        return None
-    return host(ascii_domain)
+    written = ascii_host(sender.rpartition("@")[2])
+    return host(written) if written is not None else None
 
 
 def authserv_ids(entries: Sequence[str]) -> list[str]:

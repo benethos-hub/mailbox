@@ -134,6 +134,13 @@ adheres to [Semantic Versioning](https://semver.org/).
   a slow PDF added a whole render before, and other PDFs ran out of time
   behind them.
 
+### Security
+
+- The sender check compares a domain beyond ASCII as IDNA 2008, as the
+  servers write it. It took the domain of `a@straße.de` for
+  `strasse.de` before, so a signature of `strasse.de` passed for it,
+  and the real `xn--strae-oqa.de` did not.
+
 ## [0.7.5] - 2026-11-17
 
 ### Fixed
