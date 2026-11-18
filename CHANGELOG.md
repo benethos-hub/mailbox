@@ -71,13 +71,14 @@ adheres to [Semantic Versioning](https://semver.org/).
   `list_drafts`, `create_draft`, `update_draft`, `send_message` and
   `send_draft`. Each schema said "an object" before. The answers
   themselves are unchanged: a key without a value is still left out.
-- The cursor of a list of messages, drafts or threads, and of the list
-  across accounts, carries a seal of the service. A cursor made up or
-  changed is refused with `400 bad_request`, "invalid cursor", and so is
-  one from before the service started last: its list starts again.
-- `benethos-mailbox-common`: `mail.marks.Mark` has no field `icon`. A
-  mark is its keyword, its word and whether it shows. The configuration
-  UI picks its icons itself.
+- **Breaking:** the cursor of a list of messages, drafts or threads,
+  and of the list across accounts, carries a seal of the service. A
+  cursor made up or changed is refused with `400 bad_request`, "invalid
+  cursor", and so is one from before the service started last: its list
+  starts again.
+- **Breaking:** `benethos-mailbox-common`: `mail.marks.Mark` has no
+  field `icon`. A mark is its keyword, its word and whether it shows.
+  The configuration UI picks its icons itself.
 - The images install platformdirs 4.14.7 from the lockfile, the service
   image fastapi 0.163.2, imapclient 4.3.0 and publicsuffixlist
   1.1.2.20261117. imapclient 4.3.0 refuses NUL, CR and LF in every IMAP
