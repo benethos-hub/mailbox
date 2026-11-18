@@ -18,7 +18,7 @@ from ...services import Passwords, get_auth
 from ...urls import client_address
 from ..deps import Actor, Viewer
 from ..forms import failing
-from ..passkeys import answer, answered, challenge, offered, ways
+from ..passkeys import answer, answered, challenge, first_way, offered, ways
 from ..session import (
     COOKIE,
     PASSWORD_PAGE,
@@ -204,16 +204,18 @@ async def sign_in_with_code(
     return _session(request, store, signed, pending.next)
 
 
-# The method a wrong code came by, shown first again on the code page.
+# The method a wrong code came by, shown first again on the code page,
+# by the word of its address.
 _FIRST = {"app": "totp", "recovery": "recovery"}
 
 
 def _wrong(code: str, passkey: str) -> str:
     """The code page after a wrong try. A code sent shows its field first
-    again: digits alone are a code of the app, else a recovery code."""
-    if passkey or not code:
+    again (``first_way``)."""
+    way = first_way(code, passkey)
+    if way is None:
         return f"{CODE_PAGE}?wrong=1"
-    kind = "app" if code.replace(" ", "").isdigit() else "recovery"
+    kind = next(word for word, named in _FIRST.items() if named == way)
     return f"{CODE_PAGE}?wrong=1&code={kind}"
 
 
@@ -277,7 +279,7 @@ async def change_password(
     if new_password != repeat_password:
         return back(request, PASSWORD_PAGE, error="The two new passwords differ.")
     proof = answered(request, passkey)
-    with failing(PASSWORD_PAGE):
+    with failing(PASSWORD_PAGE, first=first_way(code, passkey)):
         stamp = await passwords.change_password(
             caller, current_password, new_password, code, proof
         )

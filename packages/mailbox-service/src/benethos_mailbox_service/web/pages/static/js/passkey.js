@@ -10,7 +10,7 @@
 // data-passkey-options with one of the person's passkeys and puts the
 // answer in its hidden field "passkey". data-ways-focus puts the cursor
 // in the step when the page opens, data-ways-first names the method shown
-// first when the user has it.
+// first when the user has it, on the step or on a dialog opened again.
 // A <button data-passkey-create="options"> makes a new passkey and sends
 // its answer in the hidden field "answer".
 // A passkey is offered only where the browser makes passkeys, and an
@@ -139,7 +139,10 @@ function start(step) {
   for (const pick of step.querySelectorAll("[data-way-pick]")) {
     pick.hidden = !ways.some((way) => way.dataset.way === pick.dataset.wayPick);
   }
-  const first = ways.find((way) => way.dataset.way === step.dataset.waysFirst);
+  // A dialog opened again after a refusal names it for its step.
+  const named =
+    step.dataset.waysFirst || step.closest("dialog[data-open]")?.dataset.waysFirst;
+  const first = ways.find((way) => way.dataset.way === named);
   show(step, (first || ways[0]).dataset.way);
   if ("waysFocus" in step.dataset) focus(step);
 }

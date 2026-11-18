@@ -15,7 +15,7 @@ from ...services import PasskeyDevices
 from ...urls import passkey_party, passkeys_work
 from ..deps import Actor
 from ..forms import failing
-from ..passkeys import answered
+from ..passkeys import answered, first_way
 from ..session import PendingPasskey, session_of, show_once
 from ..templates import back
 from .factor import CODES, FACTOR_PAGE
@@ -44,7 +44,7 @@ async def begin(
     if not passkeys_work(party):
         return back(request, FACTOR_PAGE, error=ELSEWHERE)
     proof = answered(request, passkey)
-    with failing(FACTOR_PAGE, dialog="add-passkey"):
+    with failing(FACTOR_PAGE, dialog="add-passkey", first=first_way(code, passkey)):
         begun = await passkeys.begin(caller, name, password, party, code, proof)
     session_of(request).passkey = PendingPasskey(
         begun.name, begun.begun.options, begun.begun.challenge, utc_now() + SETUP
@@ -110,7 +110,7 @@ async def remove_own(
     code or passkey."""
     proof = answered(request, passkey)
     dialog = f"remove-{device[0]}" if device and len(device) == 1 else None
-    with failing(FACTOR_PAGE, dialog=dialog):
+    with failing(FACTOR_PAGE, dialog=dialog, first=first_way(code, passkey)):
         stamp = await passkeys.remove_own(caller, device or [], password, code, proof)
     session_of(request).factor = stamp
     if stamp is None:

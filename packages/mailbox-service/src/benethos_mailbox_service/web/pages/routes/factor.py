@@ -18,7 +18,7 @@ from ...services import Factors
 from ...urls import passkey_party, passkeys_work, public_host
 from ..deps import Actor, Viewer
 from ..forms import failing
-from ..passkeys import answered, offered
+from ..passkeys import answered, first_way, offered
 from ..qr import data_uri
 from ..session import PendingTotp, session_of, show_once, take_once
 from ..templates import back, render
@@ -75,7 +75,7 @@ async def renew_codes(
     passkey: Annotated[str, Form()] = "",
 ) -> Response:
     proof = answered(request, passkey)
-    with failing(FACTOR_PAGE, dialog="new-codes"):
+    with failing(FACTOR_PAGE, dialog="new-codes", first=first_way(code, passkey)):
         codes = await factors.renew_codes(caller, password, code, proof)
     show_once(request, CODES, "\n".join(codes))
     return back(request, FACTOR_PAGE, "New recovery codes. The old ones stop working.")

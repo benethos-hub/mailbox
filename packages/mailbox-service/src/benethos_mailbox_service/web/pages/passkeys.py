@@ -36,6 +36,15 @@ class Ways:
     elsewhere: bool
 
 
+def first_way(code: str, passkey: str) -> str | None:
+    """The method a form refused for its second factor came by, shown
+    first when it comes back: "totp" for digits alone, "recovery" for
+    another code. None for a passkey or nothing."""
+    if passkey or not code:
+        return None
+    return "totp" if code.replace(" ", "").isdigit() else "recovery"
+
+
 def ways(request: Request, user_id: str, options: str | None) -> Ways:
     """The methods of the user's second factor, with ``options``, the
     challenge the page offers for its passkeys."""

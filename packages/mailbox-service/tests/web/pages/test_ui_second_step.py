@@ -87,7 +87,7 @@ def test_a_refused_dialog_opens_again_with_the_reason(app_client: TestClient) ->
         app_client, "/ui/second-factor/codes", {"password": "wrong", "code": "000000"}
     )
     page = refused.text
-    opened = page.index('aria-describedby="new-codes-text" data-open>')
+    opened = page.index('aria-describedby="new-codes-text" data-open')
     reason = page.index('<div class="notice err" role="alert">')
     assert opened < reason
     assert page.count('class="notice err"') == 1
@@ -196,3 +196,36 @@ def test_the_count_of_a_card_is_told_from_its_description(
     page = app_client.get("/ui/second-factor").text
     assert '<span class="meta count">1</span>' in page
     assert '<span class="meta">A code from any of them works.</span>' in page
+
+
+@pytest.mark.usefixtures("factor_on")
+def test_a_dialog_opened_again_shows_the_field_of_its_code_first(
+    app_client: TestClient,
+) -> None:
+    refused = post(
+        app_client,
+        "/ui/second-factor/codes",
+        {"password": UI_PASSWORD, "code": "000000"},
+    ).text
+    assert 'data-open data-ways-first="totp">' in refused
+    again = post(
+        app_client,
+        "/ui/second-factor/codes",
+        {"password": UI_PASSWORD, "code": "AAAAA-AAAAA-AAAAA"},
+    ).text
+    assert 'data-open data-ways-first="recovery">' in again
+
+
+@pytest.mark.usefixtures("factor_on")
+def test_the_password_page_shows_the_field_of_a_wrong_code_first(
+    app_client: TestClient,
+) -> None:
+    new = "a brand new long passphrase"
+    fields = {"current_password": UI_PASSWORD, "new_password": new}
+    refused = post(
+        app_client,
+        "/ui/password",
+        {**fields, "repeat_password": new, "code": "000000"},
+    ).text
+    assert 'data-ways-first="totp"' in refused
+    assert "data-ways-first" not in app_client.get("/ui/password").text
