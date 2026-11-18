@@ -117,7 +117,7 @@ def test_removing_every_device(client: TestClient, services: Services) -> None:
     url = f"/v1/users/{user.id}/second-factor"
     assert client.delete(url).status_code == 204
     assert client.get(f"/v1/users/{user.id}").json()["second_factor"] is False
-    assert not services.factors.has(user.id)
+    assert not services.auth.has_second_factor(user.id)
     gone = client.delete(url)
     assert gone.status_code == 404
     assert gone.json()["error"]["message"] == "Anna has no second factor"
@@ -149,4 +149,4 @@ def test_reading_and_removing_need_their_rights(
     assert refused.status_code == 403
     nobody = bearer_for(services, READER)
     assert app_client.get(url, headers=nobody).status_code == 403
-    assert services.factors.has(user.id)
+    assert services.auth.has_second_factor(user.id)

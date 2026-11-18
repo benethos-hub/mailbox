@@ -21,6 +21,7 @@ from ....domain.accounts import (
     SeenName,
     connection_of,
     connections,
+    takes_server_name,
 )
 from ....domain.discovery import connectable, sign_ins
 from ....domain.rights import Access
@@ -41,10 +42,6 @@ router = APIRouter()
 _FIELDS = {f.name: f for c in connections() for f in c.fields}
 SETTING_FIELDS = tuple(_FIELDS)
 NUMBERS = {name for name, field in _FIELDS.items() if field.number}
-
-
-# The setting that names the receiving server, for the sender check.
-SERVER_NAME = "authserv_id"
 
 # What an account can do, in a person's words, in the order shown: why a
 # button is missing on its mail pages. The rest is not for a person.
@@ -291,7 +288,7 @@ async def account(
     if (
         request.query_params.get("suggest") == "1"
         and caller.allows("update_account", account_id)
-        and _takes_server_name(accounts.get(caller, account_id))
+        and takes_server_name(accounts.get(caller, account_id).provider)
     ):
         try:
             names = await accounts.server_names(caller, account_id)
@@ -300,12 +297,6 @@ async def account(
                 request, caller, account_id, accounts, status, err=exc.message
             )
     return _account_page(request, caller, account_id, accounts, status, names=names)
-
-
-def _takes_server_name(account: Account) -> bool:
-    """Whether a person names the account's receiving server: IMAP, POP3
-    and JMAP. Gmail and Microsoft name theirs themselves."""
-    return any(f.name == SERVER_NAME for f in connection_of(account.provider).fields)
 
 
 def _account_page(
@@ -342,7 +333,7 @@ def _account_page(
         can=_can(found),
         sets_marks=_marks(found),
         sync=status.sync_of(caller, account_id),
-        takes_server_name=_takes_server_name(found),
+        takes_server_name=takes_server_name(found.provider),
         names=names,
     )
 

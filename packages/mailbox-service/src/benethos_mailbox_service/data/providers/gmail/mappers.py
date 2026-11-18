@@ -54,7 +54,7 @@ SUMMARY_HEADERS = (
     "Date",
     "Content-Type",
     "Message-ID",
-    "Authentication-Results",
+    authentication.HEADER,
 )
 # The name Gmail's receiving servers write at the start of their
 # Authentication-Results, the same for every Gmail account.

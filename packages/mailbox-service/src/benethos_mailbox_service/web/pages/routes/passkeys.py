@@ -16,14 +16,13 @@ from ...urls import passkey_party, passkeys_work
 from ..deps import Actor
 from ..forms import failing
 from ..passkeys import answered, first_way
-from ..session import PendingPasskey, session_of, show_once
+from ..session import PendingPasskey, session_of
 from ..templates import back
-from .factor import CODES, FACTOR_PAGE
+from .factor import FACTOR_PAGE, device_added, devices_removed
 from .users import access_tab
 
 router = APIRouter()
 
-SIGNED_OUT = "Other sessions are signed out."
 ELSEWHERE = (
     "Passkeys work at a name over HTTPS, or at localhost. Open the UI at its "
     "public address."
@@ -68,13 +67,7 @@ async def confirm(
     made = Answer(passkey_party(request), setup.challenge, answer)
     with failing(FACTOR_PAGE):
         added = passkeys.confirm(caller, setup.name, made)
-    # This session carries on with the new passkey, every other one of the
-    # user ends at its next request.
-    session.factor = added.stamp
-    if added.recovery_codes:
-        show_once(request, CODES, "\n".join(added.recovery_codes))
-        return back(request, FACTOR_PAGE, f"Second factor on. {SIGNED_OUT}")
-    return back(request, FACTOR_PAGE, f"Passkey {setup.name} added. {SIGNED_OUT}")
+    return device_added(request, added, f"Passkey {setup.name} added.")
 
 
 @router.post("/second-factor/passkeys/cancel")
@@ -112,10 +105,7 @@ async def remove_own(
     dialog = f"remove-{device[0]}" if device and len(device) == 1 else None
     with failing(FACTOR_PAGE, dialog=dialog, first=first_way(code, passkey)):
         stamp = await passkeys.remove_own(caller, device or [], password, code, proof)
-    session_of(request).factor = stamp
-    if stamp is None:
-        return back(request, FACTOR_PAGE, "Passkey removed. The second factor is off.")
-    return back(request, FACTOR_PAGE, f"Passkey removed. {SIGNED_OUT}")
+    return devices_removed(request, stamp, "Passkey removed.")
 
 
 @router.post("/users/{user_id}/second-factor/passkeys/{passkey_id}/remove")

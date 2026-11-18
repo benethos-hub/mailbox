@@ -32,7 +32,7 @@ class JmapAccount:
         credentials: CredentialReader,
         auth: str,
         username: str,
-        trust: authentication.Trust | None = None,
+        trust: authentication.Trust | None,
     ) -> None:
         """``trust``: the receiving server whose Authentication-Results
         entry the sender check of a message reads."""

@@ -11,7 +11,8 @@ from collections.abc import Callable
 from datetime import datetime
 
 from ...common.clock import utc_now
-from ...data.models import ApiToken, User
+from ...data.models import ApiToken, SecondFactor, User
+from ...data.secrets import Begun, Party
 from ...data.storage import RoleRepository, TokenRepository, UserRepository
 from ...errors import (
     BadRequestError,
@@ -170,6 +171,27 @@ class AuthService:
         """Which devices of a second factor the user has, None without
         one."""
         return self.factors.stamp(user_id) if self.factors is not None else None
+
+    def has_second_factor(self, user_id: str) -> bool:
+        """Whether the user has a device of any method."""
+        return self.factors is not None and self.factors.has(user_id)
+
+    def factor_state(self, user_id: str) -> SecondFactor | None:
+        """The user's devices of each method and its recovery codes left,
+        None where the service keeps no second factor."""
+        return self.factors.state(user_id) if self.factors is not None else None
+
+    def factor_challenge(self, user_id: str, party: Party) -> Begun | None:
+        """The options to sign with one of the user's passkeys at
+        ``party``, None for a user without one."""
+        if self.factors is None:
+            return None
+        return self.factors.challenge(user_id, party)
+
+    def remove_second_factor(self, user_id: str) -> None:
+        """Every method of the user and its recovery codes."""
+        if self.factors is not None:
+            self.factors.remove(user_id)
 
     async def confirm(self, access: Access, password: str) -> None:
         """The signed-in user's password once more, before a step that

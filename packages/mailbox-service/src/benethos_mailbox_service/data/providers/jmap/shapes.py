@@ -8,6 +8,7 @@ from typing import Annotated
 
 from pydantic import Field, NonNegativeInt
 
+from ...mail import authentication
 from ...protocols import wire
 
 Text = Annotated[str | None, wire.OrNone]
@@ -46,7 +47,7 @@ class BodyPart(wire.CamelShape):
     cid: Text = None
 
 
-AUTHENTICATION_RESULTS = "header:Authentication-Results:asRaw:all"
+AUTHENTICATION_RESULTS = f"header:{authentication.HEADER}:asRaw:all"
 
 
 class Email(wire.CamelShape):

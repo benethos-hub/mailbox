@@ -14,6 +14,7 @@ from fastapi.responses import HTMLResponse, Response
 from ....common.clock import utc_now
 from ....data.secrets import totp
 from ....domain.auth import MAX_DEVICE_NAME, MAX_DEVICES, SETUP
+from ....domain.users import DeviceAdded
 from ...services import Factors
 from ...urls import passkey_party, passkeys_work, public_host
 from ..deps import Actor, Viewer
@@ -31,6 +32,29 @@ FACTOR_PAGE = "/ui/second-factor"
 ISSUER = "Mailbox"
 # Where the recovery codes wait for the next page, one per line.
 CODES = "recovery_codes"
+# Said after a change of the second factor that ends the other sessions.
+SIGNED_OUT = "Other sessions are signed out."
+
+
+def device_added(request: Request, added: DeviceAdded, done: str) -> Response:
+    """The end of adding a device of any method: this session carries on
+    with it, every other one of the user ends at its next request. The
+    first device turns the second factor on and brings the recovery
+    codes, shown once."""
+    session_of(request).factor = added.stamp
+    if added.recovery_codes:
+        show_once(request, CODES, "\n".join(added.recovery_codes))
+        return back(request, FACTOR_PAGE, f"Second factor on. {SIGNED_OUT}")
+    return back(request, FACTOR_PAGE, f"{done} {SIGNED_OUT}")
+
+
+def devices_removed(request: Request, stamp: str | None, done: str) -> Response:
+    """The end of removing own devices of any method. None for ``stamp``:
+    the last one went, and the second factor with it."""
+    session_of(request).factor = stamp
+    if stamp is None:
+        return back(request, FACTOR_PAGE, f"{done} The second factor is off.")
+    return back(request, FACTOR_PAGE, f"{done} {SIGNED_OUT}")
 
 
 @router.get("/second-factor")

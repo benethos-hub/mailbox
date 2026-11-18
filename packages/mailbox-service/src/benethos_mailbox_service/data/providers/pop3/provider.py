@@ -294,11 +294,7 @@ def _authserv_ids(session: Pop3Session, limit: int) -> list[list[str]]:
     their headers alone."""
     newest = list(reversed(session.unique_ids()))[:limit]
     return [
-        authentication.authserv_ids(
-            parse.ParsedMessage(session.headers(number)).all_headers(
-                "Authentication-Results"
-            )
-        )
+        convert.server_names(parse.ParsedMessage(session.headers(number)))
         for number, _ in newest
     ]
 

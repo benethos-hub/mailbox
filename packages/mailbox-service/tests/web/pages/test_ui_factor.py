@@ -422,7 +422,7 @@ def test_an_administrator_removes_a_device_then_every_one(
     assert anna.get("/ui", follow_redirects=False).status_code == 303
     every = post(ui, f"/ui/users/{user.id}/second-factor/remove")
     assert "Second factor removed." in every.text
-    assert not services.factors.has(user.id)
+    assert not services.auth.has_second_factor(user.id)
 
 
 def test_a_reader_sees_the_devices_but_removes_none(
@@ -438,7 +438,7 @@ def test_a_reader_sees_the_devices_but_removes_none(
     assert "second-factor/remove" not in page and "/totp/" not in page
     refused = post(app_client, f"/ui/users/{user.id}/second-factor/remove")
     assert "missing right: remove_second_factor" in refused.text
-    assert services.factors.has(user.id)
+    assert services.auth.has_second_factor(user.id)
 
 
 def test_the_account_menu_links_to_the_factor_and_says_its_state(

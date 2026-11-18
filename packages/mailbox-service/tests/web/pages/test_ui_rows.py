@@ -105,7 +105,7 @@ def test_ticked_devices_go_after_one_password_and_one_code(
         {"device": ticked, "password": password, "code": codes[2]},
     )
     assert "Devices removed. The second factor is off." in removed.text
-    assert not services.factors.has(user.id)
+    assert not services.auth.has_second_factor(user.id)
 
 
 @pytest.mark.usefixtures("master_key")

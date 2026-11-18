@@ -24,8 +24,7 @@ class RecoveryKey:
     def needs_code(self, access: Access) -> bool:
         """Whether the caller confirms with a code or a passkey of its
         second factor."""
-        factors = self._auth.factors
-        return factors is not None and factors.has(access.user_id)
+        return self._auth.has_second_factor(access.user_id)
 
     async def show(
         self,

@@ -367,8 +367,7 @@ class UserService:
 
     def _remove_factor(self, user_id: str) -> None:
         """The second factor goes with the password."""
-        if self._auth.factors is not None:
-            self._auth.factors.remove(user_id)
+        self._auth.remove_second_factor(user_id)
 
     def _require_free(self, name: str, user_id: str | None = None) -> None:
         """A person signs in with the name: one user per name, whatever

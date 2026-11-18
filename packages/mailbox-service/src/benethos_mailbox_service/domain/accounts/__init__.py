@@ -23,7 +23,7 @@ from .abilities import (
     writes,
 )
 from .adapters import Adapters
-from .connections import connection_of, connections
+from .connections import connection_of, connections, takes_server_name
 from .device import DeviceSignIn
 from .oauth import OAuthService
 from .service import AccountHooks, AccountService, Rename, SeenName
@@ -52,5 +52,6 @@ __all__ = [
     "watches",
     "writes",
     "connection_of",
+    "takes_server_name",
     "connections",
 ]

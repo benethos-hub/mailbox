@@ -101,7 +101,7 @@ def keywords(item: GraphMessage) -> list[str]:
 
 def summary(item: GraphMessage) -> MessageSummary:
     sender = _address(item.sender)
-    entries = _header(item, "authentication-results")
+    entries = _header(item, authentication.HEADER.lower())
     shown = sender.email if sender else None
     # Graph names one sender. Where it hands out the From header, that
     # decides whether it names one alone.

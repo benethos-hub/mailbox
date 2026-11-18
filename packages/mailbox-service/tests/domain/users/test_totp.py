@@ -60,14 +60,14 @@ async def test_a_wrong_first_code_stores_nothing(
     wrong = totp.code(secret, totp.step_of(clock()) + 5)
     with pytest.raises(BadRequestError):
         services.totp.confirm(access, name, secret, wrong)
-    assert not services.factors.has(user.id)
+    assert not services.auth.has_second_factor(user.id)
 
 
 async def test_the_first_device_turns_the_factor_on(
     services: Services, clock: Clock
 ) -> None:
     user, _, codes = await with_factor(services, clock)
-    assert services.factors.has(user.id)
+    assert services.auth.has_second_factor(user.id)
     assert len(codes) == RECOVERY_CODES == len(set(codes))
     state = services.factors.mine(access_of(services, user))
     assert [d.name for d in state.totp] == ["Phone"]
@@ -248,7 +248,7 @@ async def test_the_last_device_removed_turns_the_factor_off(
         access, device_id(services, user, "Phone"), SECRET, codes[0]
     )
     assert stamp is None
-    assert not services.factors.has(user.id)
+    assert not services.auth.has_second_factor(user.id)
     assert services.factors.mine(access).recovery_codes_left == 0
     assert details(services, "users.totp_removed") == [
         "removed its authenticator app Phone, the last one: the second factor is off"
@@ -305,7 +305,7 @@ async def test_an_administrator_removes_every_device(
         user.id, now_code(secret, clock), source=SOURCE
     )
     services.factors.remove(ADMIN, user.id)
-    assert not services.factors.has(user.id)
+    assert not services.auth.has_second_factor(user.id)
     with pytest.raises(UnauthorizedError):
         services.auth.session_access(user.id, signed.stamp, factor=signed.factor)
     with pytest.raises(NotFoundError):
@@ -334,13 +334,13 @@ async def test_removing_another_needs_its_rights(
         services.totp.remove_device(
             access_of(services, helper), user.id, device_id(services, user, "Phone")
         )
-    assert services.factors.has(user.id)
+    assert services.auth.has_second_factor(user.id)
 
 
 async def test_the_host_removes_it_by_name(services: Services, clock: Clock) -> None:
     user, _, _ = await with_factor(services, clock)
     assert services.factors.reset(" anna ").id == user.id
-    assert not services.factors.has(user.id)
+    assert not services.auth.has_second_factor(user.id)
     assert credentials(services, "users.factor_removed") == ["host"]
     with pytest.raises(NotFoundError, match="no second factor"):
         services.factors.reset("Anna")
@@ -353,13 +353,13 @@ async def test_the_factor_goes_with_the_ui_sign_in(
 ) -> None:
     user, _, _ = await with_factor(services, clock)
     services.users.update_user(ADMIN, user.id, ui_sign_in=False)
-    assert not services.factors.has(user.id)
+    assert not services.auth.has_second_factor(user.id)
 
 
 async def test_the_factor_goes_with_the_user(services: Services, clock: Clock) -> None:
     user, _, _ = await with_factor(services, clock)
     services.users.delete_user(ADMIN, user.id)
-    assert not services.factors.has(user.id)
+    assert not services.auth.has_second_factor(user.id)
 
 
 async def test_a_disabled_user_keeps_its_factor(
@@ -367,7 +367,7 @@ async def test_a_disabled_user_keeps_its_factor(
 ) -> None:
     user, _, _ = await with_factor(services, clock)
     services.users.update_user(ADMIN, user.id, disabled=True)
-    assert services.factors.has(user.id)
+    assert services.auth.has_second_factor(user.id)
 
 
 async def test_a_password_set_by_another_keeps_the_factor(
@@ -375,7 +375,7 @@ async def test_a_password_set_by_another_keeps_the_factor(
 ) -> None:
     user, _, _ = await with_factor(services, clock)
     await services.passwords.one_time_password(ADMIN, user.id)
-    assert services.factors.has(user.id)
+    assert services.auth.has_second_factor(user.id)
 
 
 async def test_several_devices_go_after_one_password_and_one_code(
@@ -395,7 +395,7 @@ async def test_several_devices_go_after_one_password_and_one_code(
     with pytest.raises(BadRequestError):
         await services.totp.remove_own_devices(access, [], SECRET, codes[1])
     stamp = await services.totp.remove_own_devices(access, both, SECRET, codes[1])
-    assert stamp is None and not services.factors.has(user.id)
+    assert stamp is None and not services.auth.has_second_factor(user.id)
     assert sorted(details(services, "users.totp_removed")) == [
         "removed its authenticator app Phone",
         "removed its authenticator app Tablet, the last one: the second factor is off",

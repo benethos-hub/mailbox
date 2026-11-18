@@ -44,9 +44,6 @@ class SecondFactorService:
         self._rules = rules
         self._activity = activity
 
-    def has(self, user_id: str) -> bool:
-        return self._factors.has(user_id)
-
     def mine(self, access: Access) -> SecondFactor:
         """The caller's own methods and recovery codes left."""
         return self._factors.state(access.user_id)

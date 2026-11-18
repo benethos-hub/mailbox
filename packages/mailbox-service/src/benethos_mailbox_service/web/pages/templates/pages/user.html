@@ -107,11 +107,11 @@
     <div class="form-grid">
       <div class="field">
         <label for="f-new">New password</label>
-        <input id="f-new" name="new_password" type="password" autocomplete="new-password" minlength="15" maxlength="256" required />
+        <input id="f-new" name="new_password" type="password" autocomplete="new-password" minlength="{{ MIN_PASSWORD }}" maxlength="{{ MAX_PASSWORD }}" required />
       </div>
       <div class="field">
         <label for="f-repeat">New password again</label>
-        <input id="f-repeat" name="repeat_password" type="password" autocomplete="new-password" minlength="15" maxlength="256" required />
+        <input id="f-repeat" name="repeat_password" type="password" autocomplete="new-password" minlength="{{ MIN_PASSWORD }}" maxlength="{{ MAX_PASSWORD }}" required />
       </div>
     </div>
     <span class="hint">{{ user.name }} must change it at the next sign-in.</span>

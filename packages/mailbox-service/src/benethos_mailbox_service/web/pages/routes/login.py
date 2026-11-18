@@ -30,6 +30,7 @@ from ..session import (
     store_of,
 )
 from ..templates import back, local_path, render
+from .factor import SIGNED_OUT
 
 router = APIRouter()
 
@@ -58,7 +59,7 @@ WRONG_CODE = (
     "Wrong code or passkey. Try the newest code of the app, a passkey, "
     "or a recovery code."
 )
-SIGNED_OUT = "signed_out"
+NOTICE_SIGNED_OUT = "signed_out"
 
 
 @router.get("/login")
@@ -83,7 +84,7 @@ async def login_page(
         nonce=nonce,
         next=local_path(next, PATH),
         err=NOTICES.get(notice or "", "").format(minutes=max(1, minutes)) or None,
-        msg="Signed out." if notice == SIGNED_OUT else None,
+        msg="Signed out." if notice == NOTICE_SIGNED_OUT else None,
     )
     _set(response, request, LOGIN_COOKIE, nonce)
     response.delete_cookie(PENDING_COOKIE, path=PATH)
@@ -241,7 +242,7 @@ def _set(response: Response, request: Request, name: str, value: str) -> None:
 async def logout(request: Request, caller: Actor) -> Response:
     store_of(request).drop(request.cookies.get(COOKIE))
     get_auth(request).sign_out(caller)
-    response = _to_login(SIGNED_OUT)
+    response = _to_login(NOTICE_SIGNED_OUT)
     response.delete_cookie(COOKIE, path=PATH)
     return response
 
@@ -289,4 +290,4 @@ async def change_password(
     session = session_of(request)
     session.stamp = stamp
     session.must_change = False
-    return back(request, PATH, "Password changed. Other sessions are signed out.")
+    return back(request, PATH, f"Password changed. {SIGNED_OUT}")

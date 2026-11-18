@@ -251,7 +251,7 @@ def test_reset_totp_command(
     out, err = capsys.readouterr()
     assert out == "" and "Removed the second factor of admin" in err
     services = build_services(Settings())
-    assert not services.factors.has(user.id)
+    assert not services.auth.has_second_factor(user.id)
     services.close()
     assert main(["users", "reset-second-factor", "admin"]) == 1
     assert "admin has no second factor" in capsys.readouterr().err
