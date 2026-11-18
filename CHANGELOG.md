@@ -145,6 +145,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   for a recovery code before and refused.
 - The audit page names a sign-in with a passkey "the UI, with a
   passkey". It showed it as a token before.
+- The `409` for removing one's own second factor through the API says
+  it is done with a code or a passkey, not with a code alone.
 - A passkey whose answer is cut short is refused on the page Second
   factor. It answered `500` before.
 
