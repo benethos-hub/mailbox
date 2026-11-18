@@ -9,9 +9,10 @@ at localhost: browsers make no passkey for an address."""
 from __future__ import annotations
 
 from collections.abc import Iterator
+from dataclasses import dataclass
 
 import pytest
-from playwright.sync_api import Page, Playwright, expect
+from playwright.sync_api import CDPSession, Page, Playwright, expect
 
 from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.config import Settings
@@ -23,8 +24,25 @@ from .conftest import _RECORD, apart, served, violations
 READER = Grant(accounts=["*"], allow=["mail.read"])
 
 
+@dataclass(frozen=True)
+class Chromium:
+    """A page of Chromium and its virtual authenticator."""
+
+    page: Page
+    devtools: CDPSession
+    authenticator: str
+
+    def verifies(self, on: bool) -> None:
+        """Whether the authenticator confirms its user: off, the browser
+        answers as when the person cancels."""
+        self.devtools.send(
+            "WebAuthn.setUserVerified",
+            {"authenticatorId": self.authenticator, "isUserVerified": on},
+        )
+
+
 @pytest.fixture
-def chromium(playwright: Playwright) -> Iterator[Page]:
+def chromium(playwright: Playwright) -> Iterator[Chromium]:
     """A page of Chromium with a virtual authenticator that holds
     passkeys, verifies its user and needs no touch."""
     browser = playwright.chromium.launch()
@@ -33,7 +51,7 @@ def chromium(playwright: Playwright) -> Iterator[Page]:
     page = context.new_page()
     devtools = context.new_cdp_session(page)
     devtools.send("WebAuthn.enable")
-    devtools.send(
+    added = devtools.send(
         "WebAuthn.addVirtualAuthenticator",
         {
             "options": {
@@ -46,7 +64,7 @@ def chromium(playwright: Playwright) -> Iterator[Page]:
             }
         },
     )
-    yield page
+    yield Chromium(page, devtools, added["authenticatorId"])
     browser.close()
 
 
@@ -58,10 +76,21 @@ def _password(page: Page, base: str, name: str, password: str) -> None:
     page.click('form[action="/ui/login"] button[type="submit"]')
 
 
+def _not_confirmed(chromium: Chromium) -> None:
+    """On the code page: a passkey not confirmed says so, and the form
+    is free again."""
+    page = chromium.page
+    chromium.verifies(False)
+    page.click('form[action="/ui/login/code"] button[type="submit"]')
+    expect(page.locator("[data-passkey-status]")).to_contain_text("not used")
+    expect(page.locator('form[action="/ui/login/code"] button.primary')).to_be_enabled()
+    chromium.verifies(True)
+
+
 def test_a_passkey_is_made_and_signs_in(
-    master_key: None, chromium: Page, settings: Settings, services: Services
+    master_key: None, chromium: Chromium, settings: Settings, services: Services
 ) -> None:
-    page = chromium
+    page = chromium.page
     services.vault.initialize()
     name, password = apart(browser_user, services, READER)
     # Two sign-ins in a few seconds pass the brake on unknown callers.
@@ -87,6 +116,7 @@ def test_a_passkey_is_made_and_signs_in(
         page.context.clear_cookies()
         _password(page, base, name, password)
         page.wait_for_url(f"{base}/ui/login/code")
+        _not_confirmed(chromium)
         # The passkey shows first. Another way lists the recovery code
         # beside it, and the passkey picked there signs in at once.
         expect(page.locator('[data-way="passkey"]')).to_be_visible()

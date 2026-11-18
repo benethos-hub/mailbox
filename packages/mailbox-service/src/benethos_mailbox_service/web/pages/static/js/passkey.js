@@ -69,9 +69,25 @@ function answerOf(credential) {
 
 const works = "PublicKeyCredential" in window && Boolean(navigator.credentials);
 
+// The browser's answer in the form's notice, which shows only with a
+// text.
 function say(form, text) {
   const status = form.querySelector("[data-passkey-status]");
-  if (status) status.textContent = text;
+  if (!status) return;
+  status.textContent = text;
+  status.hidden = !text;
+}
+
+// While the browser asks, the form takes no second click: its buttons
+// are locked and the notice says it waits. ``busy`` false frees them.
+function waiting(form, buttons, busy) {
+  if (busy) {
+    form.dataset.passkeyBusy = "";
+  } else {
+    delete form.dataset.passkeyBusy;
+  }
+  for (const button of buttons) button.disabled = busy;
+  say(form, busy ? "Waiting for your browser…" : "");
 }
 
 // The methods of a step this browser can use, in their order.
@@ -127,17 +143,28 @@ function start(step) {
 }
 
 async function sign(form, way) {
-  const options = request(JSON.parse(way.dataset.passkeyOptions));
-  const credential = await navigator.credentials.get({ publicKey: options });
-  way.querySelector("[name=passkey]").value = answerOf(credential);
+  const buttons = form.querySelectorAll("[type=submit]");
+  waiting(form, buttons, true);
+  try {
+    const options = request(JSON.parse(way.dataset.passkeyOptions));
+    const credential = await navigator.credentials.get({ publicKey: options });
+    way.querySelector("[name=passkey]").value = answerOf(credential);
+  } finally {
+    waiting(form, buttons, false);
+  }
   form.requestSubmit();
 }
 
 async function create(button) {
   const form = button.form;
-  const options = creation(JSON.parse(button.dataset.passkeyCreate));
-  const credential = await navigator.credentials.create({ publicKey: options });
-  form.elements.answer.value = answerOf(credential);
+  waiting(form, [button], true);
+  try {
+    const options = creation(JSON.parse(button.dataset.passkeyCreate));
+    const credential = await navigator.credentials.create({ publicKey: options });
+    form.elements.answer.value = answerOf(credential);
+  } finally {
+    waiting(form, [button], false);
+  }
   form.requestSubmit();
 }
 
@@ -151,7 +178,7 @@ function failed(form, error, made) {
         ? "No passkey was made. Try again."
         : "The browser made no passkey: " + (error && error.message)
       : cancelled
-        ? "No passkey was used. Go on to try again, or try another way."
+        ? "The passkey was not used. Try again, or try another way."
         : "The browser used no passkey: " + (error && error.message),
   );
 }
@@ -187,7 +214,7 @@ window.addEventListener(
     if (!way || way.querySelector("[name=passkey]").value) return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    say(form, "");
+    if ("passkeyBusy" in form.dataset) return;
     sign(form, way).catch((error) => failed(form, error, false));
   },
   true,
@@ -215,7 +242,7 @@ document.addEventListener("click", (event) => {
   const button = event.target.closest?.("[data-passkey-create]");
   if (!button || !button.form) return;
   event.preventDefault();
-  say(button.form, "");
+  if ("passkeyBusy" in button.form.dataset) return;
   create(button).catch((error) => failed(button.form, error, true));
 });
 

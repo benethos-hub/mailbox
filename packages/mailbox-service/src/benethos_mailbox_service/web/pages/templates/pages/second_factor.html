@@ -49,8 +49,8 @@
     <input type="hidden" name="answer" value="" />
     <div class="form-actions">
       <button class="primary" type="button" data-passkey-create="{{ making.options }}" hidden>{{ icon("key") }} {% if on %}Make the passkey{% else %}Make the passkey and turn on{% endif %}</button>
-      <span class="hint" data-passkey-status role="status"></span>
     </div>
+    <p class="notice warn factor-status" data-passkey-status role="status" hidden></p>
     <p class="notice warn" data-passkey-missing hidden>This browser makes no passkeys.</p>
   </form>
   <form method="post" action="/ui/second-factor/passkeys/cancel">

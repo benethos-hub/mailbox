@@ -68,3 +68,12 @@ def test_the_list_of_the_methods_says_what_each_is(app_client: TestClient) -> No
     assert "Choose how to confirm" in page
     assert "The 6-digit code the app shows now" in page
     assert "One of the codes you saved. Each works once." in page
+
+
+@pytest.mark.usefixtures("factor_on")
+def test_the_answer_of_the_browser_is_a_notice(app_client: TestClient) -> None:
+    page = app_client.get("/ui/second-factor").text
+    assert (
+        '<p class="notice warn factor-status" data-passkey-status role="status" hidden>'
+        in page
+    )

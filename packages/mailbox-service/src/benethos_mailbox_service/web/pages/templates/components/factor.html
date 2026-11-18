@@ -33,7 +33,7 @@
     <span class="hint">It works once.</span>
   </div>
   {% if ways.elsewhere %}<p class="hint">Your passkeys work at the public address of this service over HTTPS, not here.</p>{% endif %}
-  <span class="hint" data-passkey-status role="status"></span>
+  <p class="notice warn factor-status" data-passkey-status role="status" hidden></p>
   <button class="link factor-other" type="button" data-ways-other aria-expanded="false" aria-controls="f-{{ id }}-ways" hidden>Try another way</button>
   <div class="factor-choices" id="f-{{ id }}-ways" role="group" aria-labelledby="f-{{ id }}-ways-label" data-ways-choices hidden>
     <span class="label" id="f-{{ id }}-ways-label">Choose how to confirm</span>
