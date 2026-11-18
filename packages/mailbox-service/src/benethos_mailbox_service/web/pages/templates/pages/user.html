@@ -135,7 +135,7 @@
             <td>{{ ago(device.created_at) }}</td>
             <td>{{ ago(device.last_used_at) }}</td>
             <td class="actions">
-              {% if can_remove_device %}{{ action("/ui/users/" ~ user.id ~ "/second-factor/totp/" ~ device.id ~ "/remove", "Remove", confirm="Remove the device " ~ device.name ~ " of " ~ user.name ~ "? Its codes work no more. The user's sessions end.", cls="small danger", icon="trash", alone=True, name="Remove " ~ device.name) }}{% endif %}
+              {% if can_remove_device %}{{ action("/ui/users/" ~ user.id ~ "/second-factor/totp/" ~ device.id ~ "/remove", "Remove", confirm="Remove the device " ~ device.name ~ " of " ~ user.name ~ "? Its codes stop working. The user's sessions end.", cls="small danger", icon="trash", alone=True, name="Remove " ~ device.name) }}{% endif %}
             </td>
           </tr>
           {% endfor %}
@@ -146,7 +146,7 @@
             <td>{{ ago(key.created_at) }}</td>
             <td>{{ ago(key.last_used_at) }}</td>
             <td class="actions">
-              {% if can_remove_passkey %}{{ action("/ui/users/" ~ user.id ~ "/second-factor/passkeys/" ~ key.id ~ "/remove", "Remove", confirm="Remove the passkey " ~ key.name ~ " of " ~ user.name ~ "? It signs in no more. The user's sessions end.", cls="small danger", icon="trash", alone=True, name="Remove " ~ key.name) }}{% endif %}
+              {% if can_remove_passkey %}{{ action("/ui/users/" ~ user.id ~ "/second-factor/passkeys/" ~ key.id ~ "/remove", "Remove", confirm="Remove the passkey " ~ key.name ~ " of " ~ user.name ~ "? It no longer signs them in. The user's sessions end.", cls="small danger", icon="trash", alone=True, name="Remove " ~ key.name) }}{% endif %}
             </td>
           </tr>
           {% endfor %}
