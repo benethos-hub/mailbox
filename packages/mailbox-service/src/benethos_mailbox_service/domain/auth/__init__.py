@@ -6,6 +6,7 @@ credentials (CONCEPT 7.5).
 
 from __future__ import annotations
 
+from .devices import MAX_DEVICE_NAME, MAX_DEVICES
 from .factors import CODE_TRIES, PENDING, SecondFactors
 from .passwords import Passwords
 from .recovery import HASH_LABEL, RecoveryCodes
@@ -13,7 +14,7 @@ from .service import MAX_NAME, AuthService
 from .signin import SignedIn, SignInState
 from .throttle import SignInThrottle
 from .tokens import IssuedToken, TokenState
-from .totp import MAX_DEVICE_NAME, MAX_DEVICES, SETUP, Totp
+from .totp import SETUP, Totp
 
 __all__ = [
     "CODE_TRIES",

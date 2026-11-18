@@ -20,14 +20,11 @@ from ...common.clock import utc_now
 from ...data.models import TotpDevice
 from ...data.secrets import CredentialVault, totp
 from ...data.storage import StoredTotpDevice, TotpRepository
-from ...errors import BadRequestError, ConflictError
+from .devices import checked_name
 
 # A secret shown for a new device and not yet confirmed is dropped after
 # this.
 SETUP = timedelta(minutes=15)
-# Devices of one user, and the length of a device's name.
-MAX_DEVICES = 10
-MAX_DEVICE_NAME = 60
 
 
 class Totp:
@@ -60,20 +57,8 @@ class Totp:
         """``name`` as a device of the user may be called: not empty, not
         too long, no line breaks, not the name of another of its devices,
         whatever the case. A new device needs a free place too."""
-        name = " ".join(name.split())
-        if not name:
-            raise BadRequestError("a device needs a name")
-        if len(name) > MAX_DEVICE_NAME:
-            raise BadRequestError(
-                f"a device's name has at most {MAX_DEVICE_NAME} characters"
-            )
-        devices = self._repository.devices(user_id)
-        wanted = name.casefold()
-        if any(d.name.casefold() == wanted and d.id != device_id for d in devices):
-            raise ConflictError(f"a device named {name} exists")
-        if device_id is None and len(devices) >= MAX_DEVICES:
-            raise ConflictError(f"at most {MAX_DEVICES} devices: remove one first")
-        return name
+        held = [(d.id, d.name) for d in self._repository.devices(user_id)]
+        return checked_name(name, held, device_id, "device")
 
     def check(self, user_id: str, presented: str) -> str | None:
         """The name of the device whose code ``presented`` is, not taken

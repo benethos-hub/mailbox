@@ -8,8 +8,8 @@ import pytest
 
 from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.secrets import totp
+from benethos_mailbox_service.domain.auth import MAX_DEVICES
 from benethos_mailbox_service.domain.auth.recovery import RECOVERY_CODES
-from benethos_mailbox_service.domain.auth.totp import MAX_DEVICES
 from benethos_mailbox_service.errors import (
     BadRequestError,
     ConflictError,
