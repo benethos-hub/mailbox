@@ -71,7 +71,8 @@ done. Update the roadmap in the same commit that finishes an item.
   `http://127.0.0.1:8080/ui` as `admin`, choose a password, and make a
   token on the user's page for the API (`/docs`).
 - Live checks: `uv run python live/smoke.py [--show] [--wrong-password]`
-  (read-only, the folder `all` among it) and
+  (read-only, the folder `all` among it, and the `sender_check` of the
+  newest message, without `--show` its result and reason only) and
   `uv run python live/changes.py [--keep]` (sends one test mail from the
   second test account to the first, flags and moves it, replies,
   forwards and sends a draft back to the second, checks that the mail

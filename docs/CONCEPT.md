@@ -1001,6 +1001,80 @@ transaction of its audit record, before its bytes are read. The limit
 on requests answers there with the same `404` as well. The answer
 carries `Cache-Control: no-store`.
 
+#### The sender check
+
+Every message carries `sender_check`: what the account's own receiving
+server stated about the domain in `from`. The server writes it into the
+header `Authentication-Results` (RFC 8601) when the mail arrives. It is
+a fact about the sender's domain. It says nothing about the content.
+The service reads it with each request and stores nothing. It hands out
+no header as it stands, and no free text of a header reaches the API,
+the log or an error.
+
+**Decided 2026-11-18:**
+
+- The strict line. `pass` means the account's own server confirmed the
+  domain in `from`. In doubt the result is `unknown`.
+- Exactly one entry under the own server's name counts. Two make it
+  `unknown`. Entries under another name are passed over.
+- Without a DMARC result, a DKIM or SPF pass counts where its domain
+  equals the domain in `from`.
+- For IMAP, POP3 and JMAP a person names the server at the account.
+- ARC is not read.
+- The field and the capability are named `sender_check`.
+- The service, the Python client, the MCP server and the UI show it.
+
+The fields: `result` is `pass`, `fail` or `unknown`. `domain` is the
+domain the server checked, `matches_from` whether it is the one in
+`from`, `method` one of `dmarc`, `dkim` and `spf`. `reason` says why
+the result is `unknown`. The first row that applies counts:
+
+| Situation | `result` | `domain` | `matches_from` | `method` | `reason` |
+|---|---|---|---|---|---|
+| The account names no receiving server | `unknown` | | | | `account` |
+| No `Authentication-Results` under the own server's name | `unknown` | | | | `no_entry` |
+| More than one under that name | `unknown` | | | | `several_entries` |
+| The one cannot be read, or a domain in it is no host name | `unknown` | | | | `unreadable` |
+| `dmarc=pass`, `header.from` equals the domain in `from` | `pass` | that domain | `true` | `dmarc` | |
+| `dmarc=pass`, `header.from` missing or another | `unknown` | `header.from` where given | `false` | `dmarc` | `from_differs` |
+| `dmarc=fail` | `fail` | `header.from` where given | the comparison | `dmarc` | |
+| No DMARC result, `dkim=pass` for the domain in `from` (`header.d`, else the domain of `header.i`) | `pass` | that domain | `true` | `dkim` | |
+| No DMARC result, `spf=pass`, the domain of `smtp.mailfrom` equals the domain in `from` | `pass` | that domain | `true` | `spf` | |
+| No DMARC result, DKIM or SPF passed for another domain only | `unknown` | the other | `false` | `dkim` or `spf` | `other_domain` |
+| No DMARC result, a `temperror` or `permerror` | `unknown` | | | | `error` |
+| Anything else | `unknown` | | | | `no_proof` |
+
+"No DMARC result" is any value but `pass` and `fail`, such as `none`,
+`skipped` or `bestguesspass`. Domains are compared without case and
+without a dot at their end. The organisational domain does not count.
+The domain in `from` is that of its one address. `from` with no
+address, several or one without a domain is `unreadable`. A domain
+leaves the service only as a host name: ASCII letters, digits, dashes
+and dots, 253 characters at most, in lower case. Only the header named
+exactly `Authentication-Results` counts, never
+`ARC-Authentication-Results` or `X-MS-Exchange-Authentication-Results`.
+
+Where the server's name comes from:
+
+- **IMAP, POP3, JMAP:** the account's setting `authserv_id`, one host
+  name or more with commas, with a leading dot for every host below a
+  domain. Without it the result is `unknown` with `account`, and the
+  account lacks the capability `sender_check`.
+- **Gmail:** `mx.google.com`, for every account.
+- **Microsoft:** `mx.microsoft.com`, for every account. Graph hands out
+  the headers of a message only when asked, so a list asks for them as
+  well. Measured for 21 mails: 313 KB instead of 25 KB between Graph and
+  the service, in the same time.
+
+What it cannot tell:
+
+- Whoever names the server relies on it to remove entries under its
+  name that a mail brings along (RFC 8601 section 5). Measured
+  2026-11-18: the Stalwart of the test mail server keeps them in a mail
+  a signed-in user submits.
+- A domain that only looks like another, and a display name that names
+  someone else, pass as long as the domain itself is confirmed.
+
 ### 6.4 Sending and drafts
 
 | Method | Path | Purpose |
@@ -1851,6 +1925,10 @@ What applies in both modes:
    recipients, never content, so it can be reviewed afterwards.
 7. **Deleting** permanently is its own right (`mail.delete`), since an
    injected instruction can also destroy.
+8. **The sender check** (6.3) stands outside the delimiters: it is the
+   receiving server's statement about the domain in `from`, not the
+   sender's words. The server instructions say that `pass` confirms the
+   domain and nothing about the content.
 
 Recipient constraints and send limits therefore come with the MCP send
 tools, not later (see [ROADMAP.md](ROADMAP.md)).

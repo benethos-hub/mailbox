@@ -219,6 +219,13 @@ page: its facts, then its messages in every folder, oldest first, each
 with its folder. Below the text of a message a card names the others of
 its conversation and opens the conversation's page.
 
+Beside the sender a message shows the receiving server's check of its
+domain (CONCEPT 6.3) as a tag: `checked: example.com`, `check failed`
+or `not checked`, the reason as its title. A list shows only
+`check failed`. The account page names `sender check` among what the
+account can do, and the **Change** card of an IMAP, POP3 or JMAP
+account takes the server's name.
+
 A message shows its keywords in a card of their own, as chips, and the
 list shows them as tags. Whoever may change the message removes one
 with the x on its chip and adds one with the field beside them.
