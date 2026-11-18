@@ -8,7 +8,7 @@
 {% include "partials/flash.html" %}
 <form method="post" action="/ui/login/code">
   <input type="hidden" name="nonce" value="{{ nonce }}" />
-  {{ second_step("login", ways, focus=True) }}
+  {{ second_step("login", ways, focus=True, legend=False) }}
   <div class="form-actions">
     <button class="primary" type="submit">{{ icon("check-lg") }} Sign in</button>
     <a href="/ui/login">Cancel</a>

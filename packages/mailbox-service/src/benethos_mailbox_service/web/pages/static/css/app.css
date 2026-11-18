@@ -531,7 +531,11 @@ input:focus, select:focus, textarea:focus, button:focus-visible, a:focus-visible
 
 /* The second step of a form: one method at a time, the others listed
    after "Try another way" (components/factor.html). */
-.factor-step { display: flex; flex-direction: column; gap: 6px; grid-column: 1 / -1; }
+.factor-step {
+  display: flex; flex-direction: column; gap: 6px; grid-column: 1 / -1;
+  border: 0; padding: 0; margin: 0; min-width: 0; max-width: 26rem;
+}
+.factor-step > legend { padding: 0; font-size: 13px; font-weight: 600; color: var(--text); }
 .factor-step > .hint, .factor-say { font-size: 13px; color: var(--text-muted); margin: 0; }
 .factor-step > .hint:empty { display: none; }
 .factor-other { align-self: flex-start; font-size: 13px; }

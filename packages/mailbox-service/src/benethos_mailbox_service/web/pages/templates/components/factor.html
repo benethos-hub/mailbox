@@ -7,11 +7,13 @@
    asks the browser when the form is sent. Without the script the field
    of the first code shows alone, and it takes a code of the app and a
    recovery code alike. ``focus``: the step starts the page, as on the
-   code page after the password. #}
+   code page after the password. ``legend``: the step names itself, else
+   only to a screen reader, where the page has the same title. #}
 {% from "components/ui.html" import icon %}
 
-{% macro second_step(id, ways, focus=False) %}
-<div class="factor-step" data-ways{% if focus %} data-ways-focus{% endif %}>
+{% macro second_step(id, ways, focus=False, legend=True) %}
+<fieldset class="factor-step" data-ways{% if focus %} data-ways-focus{% endif %}>
+  <legend{% if not legend %} class="sr"{% endif %}>Confirm it is you</legend>
   {% if ways.options %}
   <div data-way="passkey" data-passkey-options="{{ ways.options }}" hidden>
     <input type="hidden" name="passkey" value="" disabled />
@@ -39,5 +41,5 @@
     {% if ways.totp %}<button type="button" data-way-pick="totp">{{ icon("shield-lock") }} A code of your authenticator app</button>{% endif %}
     <button type="button" data-way-pick="recovery">{{ icon("journal-text") }} A recovery code</button>
   </div>
-</div>
+</fieldset>
 {% endmacro %}
