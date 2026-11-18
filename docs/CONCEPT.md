@@ -1059,7 +1059,9 @@ Where the server's name comes from:
 - **IMAP, POP3, JMAP:** the account's setting `authserv_id`, one host
   name or more with commas, with a leading dot for every host below a
   domain. Without it the result is `unknown` with `account`, and the
-  account lacks the capability `sender_check`.
+  account lacks the capability `sender_check`. The account page shows,
+  when asked, the names in the newest ten mails of the inbox with how
+  many carry each. A person takes one over. The service never sets it.
 - **Gmail:** `mx.google.com`, for every account.
 - **Microsoft:** `mx.microsoft.com`, for every account. Graph hands out
   the headers of a message only when asked, so a list asks for them as
