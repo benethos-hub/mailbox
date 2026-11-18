@@ -12,7 +12,7 @@ from typing import Any
 import httpx
 import pytest
 
-from benethos_mailbox_service.data.models import MessageUpdate
+from benethos_mailbox_service.data.models import Capability, MessageUpdate
 from benethos_mailbox_service.data.providers.microsoft import (
     messages as microsoft_messages,
 )
@@ -64,6 +64,27 @@ async def test_a_message(graph: FakeGraph) -> None:
     content = await provider.get_attachment(message_id, message.attachments[0].id)
     assert content.data == b"%PDF"
     assert (await provider.get_raw(message_id)).startswith(b"Subject:")
+
+
+async def test_the_sender_check_reads_microsofts_own_entry(graph: FakeGraph) -> None:
+    own = "mx.microsoft.com 1; dmarc=pass header.from=example.com"
+    headers = [
+        {"name": "X-MS-Exchange-Authentication-Results", "value": own},
+        {"name": "authentication-results", "value": own},
+        {"name": "Authentication-Results", "value": "mx.example.org; dmarc=fail"},
+    ]
+    checked = graph.add_message(internetMessageHeaders=headers)
+    bare = graph.add_message()
+    provider = adapter(graph)
+    inbox = graph.well_known["inbox"]
+    page = await provider.list_messages(inbox, limit=50, cursor=None)
+    found = {m.id: m.sender_check for m in page.items}
+    assert found[checked].result == "pass"
+    assert found[checked].domain == "example.com"
+    assert found[bare].reason == "no_entry"
+    whole = await provider.get_message(checked)
+    assert whole.sender_check == found[checked]
+    assert Capability.SENDER_CHECK in (await provider.abilities()).capabilities
 
 
 async def test_date_is_when_it_was_sent_and_received_when_it_came(
