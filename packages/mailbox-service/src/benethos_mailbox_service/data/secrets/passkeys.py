@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import struct
 from collections.abc import Sequence
 from dataclasses import dataclass
 
@@ -35,7 +36,7 @@ from fido2.webauthn import (
 # data. More is not read.
 MAX_ANSWER = 16_384
 # What a broken answer raises inside the library.
-_BROKEN = (ValueError, KeyError, TypeError, AttributeError, IndexError)
+_BROKEN = (ValueError, KeyError, TypeError, AttributeError, IndexError, struct.error)
 
 
 class PasskeyError(ValueError):

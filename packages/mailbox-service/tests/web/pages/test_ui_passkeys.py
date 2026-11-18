@@ -14,6 +14,7 @@ from fastapi.testclient import TestClient
 from benethos_mailbox_service.assembly import Services, create_app
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import ActivityFilter, Grant
+from benethos_mailbox_service.data.secrets import passkeys
 
 from ...conftest import ADMIN, UI_PASSWORD, browser_user
 from ...passkey_fake import Authenticator
@@ -275,3 +276,23 @@ def test_without_https_the_page_offers_no_passkey(services: Services) -> None:
         {"name": "Laptop", "password": UI_PASSWORD},
     )
     assert "Passkeys work at a name over HTTPS, or at localhost" in refused.text
+
+
+def test_a_passkey_without_a_kept_challenge_is_a_wrong_try(
+    at_https: TestClient, services: Services, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The challenge went with the first try. A passkey sent after it is
+    no answer to anything: a wrong try, never checked."""
+    name, laptop = signed_up(at_https, services)
+    browser = TestClient(at_https.app)
+    try_sign_in(browser, name, UI_PASSWORD)
+    page = browser.get("/ui/login/code").text
+    answer = laptop.get(options(page))
+    assert code_page(browser, page, code="000000").startswith("/ui/login/code?wrong")
+    checked: list[object] = []
+    real = passkeys.asserted
+    monkeypatch.setattr(
+        passkeys, "asserted", lambda *args: checked.append(args) or real(*args)
+    )
+    assert code_page(browser, page, passkey=answer) == "/ui/login/code?wrong=1"
+    assert checked == []

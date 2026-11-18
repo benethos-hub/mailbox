@@ -234,6 +234,14 @@ def test_concurrency_is_written_with_anyio() -> None:
     assert offenders == []
 
 
+def test_host_names_are_written_as_idna_2008_in_one_place() -> None:
+    """Python's codec ``idna`` is IDNA 2003, which makes ``strasse.de`` of
+    ``straße.de``. Host names are written by ``common/hosts.py`` alone."""
+    codec = re.compile(r"""(?:en|de)code\(\s*["']idna["']""")
+    found = [n for n, path in modules() if codec.search(path.read_text("utf-8"))]
+    assert found == [f"{PACKAGE}.common.hosts"], "IDNA 2003 outside common/hosts.py"
+
+
 def test_every_layer_exists_and_is_documented() -> None:
     """A layer without a docstring is a folder, not a decision."""
     for layer in LAYERS:

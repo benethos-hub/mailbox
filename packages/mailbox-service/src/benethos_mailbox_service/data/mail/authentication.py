@@ -15,19 +15,16 @@ values, never statements.
 
 from __future__ import annotations
 
-import re
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 
+from ...common.hosts import ascii_host, is_host_name
 from ..models import SenderCheck
 
 # A longer entry is not read.
 MAX_ENTRY = 8192
 # The part of an entry its authserv-id is read from.
 _HEAD = 1024
-# A host name in ASCII, lower case, labels of letters, digits and dashes.
-_HOST = re.compile(r"[a-z0-9-]+(?:\.[a-z0-9-]+)*", re.ASCII)
-_MAX_HOST = 253
 _ERRORS = frozenset({"temperror", "permerror"})
 _CHECKS = frozenset({"dmarc", "dkim", "spf"})
 
@@ -49,12 +46,10 @@ class Trust:
 
 def host(value: str) -> str | None:
     """``value`` as a host name in lower case, without a dot at its end,
-    or None where it is none: anything beyond ASCII letters, digits,
-    dashes and dots, or longer than 253 characters."""
+    or None where it is none: labels of ASCII letters, digits and inner
+    dashes, at most 63 characters each and 253 in all."""
     found = value.lower().rstrip(".")
-    if not found or len(found) > _MAX_HOST or not _HOST.fullmatch(found):
-        return None
-    return found
+    return found if is_host_name(found, dotted=False) else None
 
 
 def sender_check(
@@ -193,15 +188,12 @@ def _checked(value: str) -> str:
 
 
 def _domain_of(sender: str | None) -> str | None:
-    """The domain of the sender's address, in its ASCII form."""
+    """The domain of the sender's address, in its ASCII form (IDNA 2008,
+    as the servers write it)."""
     if not sender or "@" not in sender:
         return None
-    domain = sender.rpartition("@")[2]
-    try:
-        ascii_domain = domain.encode("idna").decode("ascii")
-    except UnicodeError:
-        return None
-    return host(ascii_domain)
+    written = ascii_host(sender.rpartition("@")[2])
+    return host(written) if written is not None else None
 
 
 def authserv_ids(entries: Sequence[str]) -> list[str]:

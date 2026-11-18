@@ -133,6 +133,22 @@ adheres to [Semantic Versioning](https://semver.org/).
   up on: a call still waiting for its turn renders nothing. Each call on
   a slow PDF added a whole render before, and other PDFs ran out of time
   behind them.
+- A passkey whose answer is cut short is refused on the page Second
+  factor. It answered `500` before.
+
+### Security
+
+- The sender check compares a domain beyond ASCII as IDNA 2008, as the
+  servers write it. It took the domain of `a@straße.de` for
+  `strasse.de` before, so a signature of `strasse.de` passed for it,
+  and the real `xn--strae-oqa.de` did not.
+- The sender check judges the address in `From` only when it is the one
+  the message shows as its sender. A broken, folded `From` could show
+  one address and have the check pass for another.
+- `settings.authserv_id` refuses a name with a label that starts or ends
+  with a dash or is longer than 63 characters, and the sender check
+  reads no such domain. An account that stored such a name fails to
+  connect until it is changed.
 
 ## [0.7.5] - 2026-11-17
 
