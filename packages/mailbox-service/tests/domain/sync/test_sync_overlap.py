@@ -8,6 +8,7 @@ import pytest
 from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import MessageUpdate
 from benethos_mailbox_service.data.providers.imap import mappers
+from benethos_mailbox_service.errors import NotFoundError
 
 from ...conftest import ADMIN
 from ...imap_fake import FakeMailBox
@@ -66,3 +67,104 @@ async def test_a_move_of_ours_during_a_pass_keeps_the_index_true(
     assert ("message.deleted", FOLDERS[1]) not in told
     message = await services.mailbox.get_message(ADMIN, account, moved)
     assert message.folder_ids == [mappers.folder_id(target)]
+
+
+async def test_a_pass_while_a_change_runs_applies_nothing(
+    imap_services: Services,
+    imap_account_id: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The server has moved the mail, the index does not follow yet."""
+    services, account = imap_services, imap_account_id
+    await services.sync.sync_account(account)
+    moved = (await ids_by_subject(services, account))["Mail 1"]
+    before = services.index.in_folders(account, FOLDERS)
+    states = services.index.folder_states(account)
+    adapter = services.adapters.get(account)
+    real = adapter.update_messages
+
+    async def update(natives: list[str], changes: MessageUpdate) -> object:
+        done = await real(natives, changes)
+        await services.sync.sync_account(account)
+        # Every attempt of the pass was overtaken: nothing applied, and the
+        # folder states not kept for the next pass.
+        assert services.index.in_folders(account, FOLDERS) == before
+        assert services.index.folder_states(account) == states
+        return done
+
+    monkeypatch.setattr(adapter, "update_messages", update)
+    answer = await services.mailbox.update_message(
+        ADMIN, account, moved, MessageUpdate(folder_ids=[FOLDERS[1]])
+    )
+    assert answer.id == moved
+    message = await services.mailbox.get_message(ADMIN, account, moved)
+    assert message.folder_ids == [FOLDERS[1]]
+
+
+async def test_a_pass_overtaken_every_time_leaves_it_to_the_next(
+    imap_services: Services,
+    imap_account_id: str,
+    imap_server: FakeMailBox,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    services, account = imap_services, imap_account_id
+    await services.sync.sync_account(account)
+    ids = await ids_by_subject(services, account)
+    kept, other = ids["Mail 2"], ids["Mail 4"]
+    imap_server.other_client_moves("INBOX", 4, "Archive", 40)
+    before = services.index.in_folders(account, FOLDERS)
+    states = services.index.folder_states(account)
+    [entry] = [e for e in before if e.id == kept]
+    adapter = services.adapters.get(account)
+    real = adapter.folder_contents
+
+    async def contents(folder_id: str) -> list[str]:
+        # A change of ours ends during every read: here one that puts a
+        # message where it already is.
+        services.sync.relocate(account, kept, entry.native_id, entry.folder_id)
+        return await real(folder_id)
+
+    monkeypatch.setattr(adapter, "folder_contents", contents)
+    await services.sync.sync_account(account)
+    assert services.index.in_folders(account, FOLDERS) == before
+    assert services.index.folder_states(account) == states
+    monkeypatch.setattr(adapter, "folder_contents", real)
+    await services.sync.sync_account(account)
+    now = {e.native_id: e.id for e in services.index.in_folders(account, FOLDERS)}
+    assert set(now) == {n for f in FOLDERS for n in await real(f)}
+    # The mail the other client moved kept its id.
+    assert other in now.values()
+
+
+async def test_a_delete_of_ours_during_a_pass_stays_gone(
+    imap_services: Services,
+    imap_account_id: str,
+    imap_server: FakeMailBox,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    services, account = imap_services, imap_account_id
+    await services.sync.sync_account(account)
+    gone = (await ids_by_subject(services, account))["Mail 1"]
+    imap_server.other_client_moves("INBOX", 4, "Archive", 40)
+    adapter = services.adapters.get(account)
+    real = adapter.folder_contents
+    reads: list[str] = []
+
+    async def contents(folder_id: str) -> list[str]:
+        reads.append(folder_id)
+        if len(reads) == 2:
+            await services.mailbox.delete_message(ADMIN, account, gone, True)
+        return await real(folder_id)
+
+    monkeypatch.setattr(adapter, "folder_contents", contents)
+    await services.sync.sync_account(account)
+    monkeypatch.setattr(adapter, "folder_contents", real)
+    with pytest.raises(NotFoundError):
+        await services.mailbox.get_message(ADMIN, account, gone)
+    # Nothing new: the move of the other client keeps its id, and the
+    # place of the deleted mail gets none.
+    assert not [k for k, _, _ in recorded(services, account) if k == "message.created"]
+    on_server = {n for f in FOLDERS for n in await real(f)}
+    assert all(
+        e.native_id in on_server for e in services.index.in_folders(account, FOLDERS)
+    )
