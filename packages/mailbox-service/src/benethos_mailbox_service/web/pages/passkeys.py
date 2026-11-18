@@ -85,10 +85,11 @@ def offer(request: Request, user_id: str) -> str | None:
 
 def answer(request: Request, kept: str | None, passkey: str) -> Answer | None:
     """The browser's answer from a form, to the challenge ``kept``. None
-    when the form carries none, as one with a code does."""
-    if not passkey:
+    when the form carries none, as one with a code does, and when no
+    challenge was kept: an answer to nothing is a wrong try."""
+    if not passkey or kept is None:
         return None
-    return Answer(passkey_party(request), kept or "", passkey)
+    return Answer(passkey_party(request), kept, passkey)
 
 
 def answered(request: Request, passkey: str) -> Answer | None:
