@@ -528,7 +528,7 @@ input:focus, select:focus, textarea:focus, button:focus-visible, a:focus-visible
 .form-grid .wide { grid-column: 1 / -1; }
 .field .field-error { font-size: 13px; color: var(--bad); }
 .field.invalid input, .field.invalid select, .field.invalid textarea { border-color: var(--bad); }
-.form-actions { display: flex; gap: 8px; margin-top: var(--gap); }
+.form-actions { display: flex; gap: 8px; align-items: center; margin-top: var(--gap); }
 
 /* The second step of a form: one method at a time, the others listed
    after "Try another way" (components/factor.html). */
