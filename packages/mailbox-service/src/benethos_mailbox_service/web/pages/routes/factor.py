@@ -75,7 +75,7 @@ async def renew_codes(
     passkey: Annotated[str, Form()] = "",
 ) -> Response:
     proof = answered(request, passkey)
-    with failing(FACTOR_PAGE):
+    with failing(FACTOR_PAGE, dialog="new-codes"):
         codes = await factors.renew_codes(caller, password, code, proof)
     show_once(request, CODES, "\n".join(codes))
     return back(request, FACTOR_PAGE, "New recovery codes. The old ones work no more.")

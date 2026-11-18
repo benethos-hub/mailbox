@@ -108,10 +108,13 @@
 {# A form in a dialog of its own, for a step that asks for more than a
    yes, e.g. removing a device with the password and a code. The caller
    gives the form, with ``dialog_buttons`` at its end. Opened by a
-   ``dialog_button``. Without app.js it shows in the page. #}
+   ``dialog_button``. Without app.js it shows in the page. A form of it
+   refused comes back with the dialog open and the error in it
+   (``open_dialog``). #}
 {% macro form_dialog(id, title, text) %}
-<dialog class="ask form-dialog" id="{{ id }}" aria-labelledby="{{ id }}-title">
-  <div class="body"><h2 id="{{ id }}-title">{{ title }}</h2><p>{{ text }}</p></div>
+{% set again = open_dialog is defined and open_dialog == id %}
+<dialog class="ask form-dialog" id="{{ id }}" aria-labelledby="{{ id }}-title"{% if again %} data-open{% endif %}>
+  <div class="body"><h2 id="{{ id }}-title">{{ title }}</h2><p>{{ text }}</p>{% if again and err %}<div class="notice err" role="alert">{{ err }}</div>{% endif %}</div>
   {{ caller() }}
 </dialog>
 {% endmacro %}

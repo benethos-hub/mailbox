@@ -187,7 +187,7 @@ def render(
     """A page, with what the layout needs: the active navigation entry, the
     entries the caller may open and their dots, the session's CSRF token,
     who is signed in, and the message the form before left in the
-    session."""
+    session, with the dialog to open again as ``open_dialog``."""
     found = found_for(request)
     session = found.session if found is not None else None
     access = found.access if found is not None else None
@@ -201,12 +201,13 @@ def render(
         # For the account menu: whether a code follows the password.
         factor_on=session is not None and session.factor is not None,
     )
-    for key in ("msg", "err"):
+    for key in ("msg", "err", "dialog"):
         kept = (
             store_of(request).take_once(session, key) if session is not None else None
         )
-        if context.get(key) is None:
-            context[key] = kept
+        name = "open_dialog" if key == "dialog" else key
+        if context.get(name) is None:
+            context[name] = kept
     response: HTMLResponse = templates.TemplateResponse(
         request, template, context, status_code=status_code
     )
@@ -245,13 +246,16 @@ def back(
     path: str,
     message: str | None = None,
     error: str | None = None,
+    dialog: str | None = None,
 ) -> Response:
     """Post/Redirect/Get: the browser lands on a GET, a reload repeats
     nothing. The message waits in the session for the next page, never in
-    the URL, so a link cannot put words into the UI. Many paths carry an
-    id from the URL, so this is where every one of them stays in the UI."""
+    the URL, so a link cannot put words into the UI, and so does the id of
+    a ``dialog`` the next page opens again with the error. Many paths
+    carry an id from the URL, so this is where every one of them stays in
+    the UI."""
     try:
-        for key, value in (("msg", message), ("err", error)):
+        for key, value in (("msg", message), ("err", error), ("dialog", dialog)):
             if value:
                 show_once(request, key, value)
     except SignInRequiredError:

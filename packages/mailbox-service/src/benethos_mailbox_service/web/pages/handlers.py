@@ -50,7 +50,7 @@ async def form_failed(request: Request, exc: FormFailedError) -> Response:
             return await page if inspect.isawaitable(page) else page
         except MailboxServiceError:
             pass  # the page itself is gone: back with the message
-    return back(request, exc.path, error=exc.error)
+    return back(request, exc.path, error=exc.error, dialog=exc.dialog)
 
 
 async def csrf_refused(request: Request, _: CsrfRefusedError) -> HTMLResponse:

@@ -67,23 +67,36 @@ Again = Callable[[str], Response | Awaitable[Response]]
 class FormFailedError(Exception):
     """A form did not go through. With ``again`` its page is shown again
     with what was typed and ``error``, else the browser goes back to
-    ``path`` with ``error``. The pages' error handler does either."""
+    ``path`` with ``error``, and with ``dialog`` that page opens the
+    dialog of this id again, the error in it. The pages' error handler
+    does either."""
 
-    def __init__(self, path: str, error: str, again: Again | None = None) -> None:
+    def __init__(
+        self,
+        path: str,
+        error: str,
+        again: Again | None = None,
+        dialog: str | None = None,
+    ) -> None:
         super().__init__(error)
         self.path = path
         self.error = error
         self.again = again
+        self.dialog = dialog
 
 
 @contextmanager
-def failing(path: str, prefix: str = "", again: Again | None = None) -> Iterator[None]:
+def failing(
+    path: str, prefix: str = "", again: Again | None = None, dialog: str | None = None
+) -> Iterator[None]:
     """A domain error or a form error inside sends the browser back to
     ``path`` with the message, ``prefix`` in front of it, or shows the
-    form's page ``again``: an editor keeps what was typed (docs/UI.md 4.7)."""
+    form's page ``again``: an editor keeps what was typed (docs/UI.md 4.7).
+    A form sent from a dialog names it as ``dialog``: the page opens it
+    again with the message."""
     try:
         yield
     except (MailboxServiceError, FormError) as exc:
         raise FormFailedError(
-            path, redact.redact(f"{prefix}{exc.message}"), again
+            path, redact.redact(f"{prefix}{exc.message}"), again, dialog
         ) from None

@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from benethos_mailbox_service.assembly import Services
 
 from ...conftest import browser_admin
-from ...ui_helpers import try_sign_in
+from ...ui_helpers import post, try_sign_in
 from .factor_page_helpers import code_form, with_factor
 
 pytestmark = pytest.mark.usefixtures("master_key")
@@ -77,3 +77,17 @@ def test_the_answer_of_the_browser_is_a_notice(app_client: TestClient) -> None:
         '<p class="notice warn factor-status" data-passkey-status role="status" hidden>'
         in page
     )
+
+
+@pytest.mark.usefixtures("factor_on")
+def test_a_refused_dialog_opens_again_with_the_reason(app_client: TestClient) -> None:
+    refused = post(
+        app_client, "/ui/second-factor/codes", {"password": "wrong", "code": "000000"}
+    )
+    page = refused.text
+    opened = page.index('id="new-codes" aria-labelledby="new-codes-title" data-open>')
+    reason = page.index('<div class="notice err" role="alert">')
+    assert opened < reason
+    assert page.count('class="notice err"') == 1
+    # Once: the next page opens nothing.
+    assert "data-open" not in app_client.get("/ui/second-factor").text

@@ -44,7 +44,7 @@ async def begin(
     if not passkeys_work(party):
         return back(request, FACTOR_PAGE, error=ELSEWHERE)
     proof = answered(request, passkey)
-    with failing(FACTOR_PAGE):
+    with failing(FACTOR_PAGE, dialog="add-passkey"):
         begun = await passkeys.begin(caller, name, password, party, code, proof)
     session_of(request).passkey = PendingPasskey(
         begun.name, begun.begun.options, begun.begun.challenge, utc_now() + SETUP
@@ -109,7 +109,8 @@ async def remove_own(
     """One passkey, or those ticked in the list, after one password and one
     code or passkey."""
     proof = answered(request, passkey)
-    with failing(FACTOR_PAGE):
+    dialog = f"remove-{device[0]}" if device and len(device) == 1 else None
+    with failing(FACTOR_PAGE, dialog=dialog):
         stamp = await passkeys.remove_own(caller, device or [], password, code, proof)
     session_of(request).factor = stamp
     if stamp is None:
