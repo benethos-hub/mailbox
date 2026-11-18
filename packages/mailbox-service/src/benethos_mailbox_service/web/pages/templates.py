@@ -33,6 +33,7 @@ from ...domain.system import Attention
 from ...errors import MailboxServiceError
 from ..services import get_status
 from .navigation import navigation, own_page
+from .sender import sender_tag
 from .session import PATH, SignInRequiredError, found_for, show_once, store_of
 
 HERE = Path(__file__).resolve().parent
@@ -172,6 +173,7 @@ templates.env.filters.update(
     mark_icon=mark_icon,
     segment=segment,
     signs_in_at=signs_in_at,
+    sender_tag=sender_tag,
 )
 templates.env.globals.update(APP_NAME="Mailbox", VERSION=__version__)
 
