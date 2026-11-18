@@ -423,6 +423,28 @@
     },
     "outputSchema": {
       "$defs": {
+        "SenderCheck": {
+          "description": "The receiving server's check of the domain in from: its result,\nthe domain where it named one, and why it is unknown.",
+          "properties": {
+            "result": {
+              "title": "Result",
+              "type": "string"
+            },
+            "domain": {
+              "title": "Domain",
+              "type": "string"
+            },
+            "reason": {
+              "title": "Reason",
+              "type": "string"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "title": "SenderCheck",
+          "type": "object"
+        },
         "Summary": {
           "properties": {
             "id": {
@@ -485,6 +507,9 @@
               "title": "Folders",
               "type": "array"
             },
+            "sender_check": {
+              "$ref": "#/$defs/SenderCheck"
+            },
             "marks": {
               "items": {
                 "type": "string"
@@ -517,7 +542,8 @@
             "unread",
             "starred",
             "has_attachments",
-            "folders"
+            "folders",
+            "sender_check"
           ],
           "title": "Summary",
           "type": "object"
