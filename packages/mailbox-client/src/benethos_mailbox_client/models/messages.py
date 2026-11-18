@@ -17,6 +17,20 @@ class Address:
 
 
 @dataclass(frozen=True, slots=True)
+class SenderCheck:
+    """What the account's receiving server stated about the domain of the
+    sender, never about the content. ``result`` is "pass", "fail" or
+    "unknown", ``reason`` says why it is unknown: "account" when the
+    account cannot tell."""
+
+    result: str
+    domain: str | None = None
+    matches_from: bool | None = None
+    method: str | None = None  # "dmarc", "dkim" or "spf"
+    reason: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class AttachedFile:
     """An attachment as a message lists it. ``get_attachment`` reads its
     bytes by ``id``."""
@@ -56,6 +70,11 @@ class MessageSummary:
     starred: bool
     keywords: list[str]
     has_attachments: bool
+    # Given by name, after the fields of a whole message as well.
+    sender_check: SenderCheck = field(
+        default_factory=lambda: SenderCheck("unknown", reason="account"),
+        kw_only=True,
+    )
 
 
 @dataclass(frozen=True, slots=True)

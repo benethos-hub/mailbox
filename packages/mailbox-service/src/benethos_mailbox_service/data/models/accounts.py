@@ -56,6 +56,9 @@ class Capability(StrEnum):
     # A send names the recipients the server refused at once. Without it
     # they come back later as a bounce mail, and `refused` stays empty.
     REFUSED = "refused"
+    # A message's `sender_check` reads the receiving server's statement
+    # about its sender. Without it the field is always `unknown`.
+    SENDER_CHECK = "sender_check"
 
 
 class Mark(StrEnum):

@@ -30,6 +30,7 @@ from .messages import (
     Outcome,
     Page,
     Reference,
+    SenderCheck,
 )
 from .paging import Paged
 from .rights import Grant, Permissions
@@ -83,6 +84,7 @@ __all__ = [
     "AttachmentLink",
     "Message",
     "MessageSummary",
+    "SenderCheck",
     "Reference",
     "Change",
     "Changes",

@@ -47,6 +47,7 @@
       "SecondFactor",
       "Secret",
       "SendRecord",
+      "SenderCheck",
       "Sending",
       "Sent",
       "ServiceTimeoutError",
@@ -975,6 +976,7 @@
       "SecondFactor",
       "Secret",
       "SendRecord",
+      "SenderCheck",
       "Sending",
       "Sent",
       "SourceReport",
@@ -1653,6 +1655,11 @@
         "has_attachments": {
           "type": "bool"
         },
+        "sender_check": {
+          "type": "SenderCheck",
+          "default": "<lambda>()",
+          "keyword": true
+        },
         "cc": {
           "type": "list[Address]"
         },
@@ -1729,6 +1736,11 @@
         },
         "has_attachments": {
           "type": "bool"
+        },
+        "sender_check": {
+          "type": "SenderCheck",
+          "default": "<lambda>()",
+          "keyword": true
         }
       }
     },
@@ -1804,6 +1816,33 @@
         "quote": {
           "type": "bool",
           "default": "True"
+        }
+      }
+    },
+    "SenderCheck": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "result": {
+          "type": "str"
+        },
+        "domain": {
+          "type": "str | None",
+          "default": "None"
+        },
+        "matches_from": {
+          "type": "bool | None",
+          "default": "None"
+        },
+        "method": {
+          "type": "str | None",
+          "default": "None"
+        },
+        "reason": {
+          "type": "str | None",
+          "default": "None"
         }
       }
     }

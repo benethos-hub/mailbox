@@ -45,6 +45,57 @@ class Address(BaseModel):
     name: str | None = None
 
 
+# Why a sender check is unknown: the account, or the message.
+SenderCheckReason = Literal[
+    "account",
+    "no_entry",
+    "several_entries",
+    "unreadable",
+    "from_differs",
+    "other_domain",
+    "error",
+    "no_proof",
+]
+
+
+class SenderCheck(BaseModel):
+    """What the account's receiving server stated about the domain in
+    `from`, read from its one Authentication-Results entry. A fact about
+    the sender's domain, never about the content."""
+
+    result: Literal["pass", "fail", "unknown"] = Field(
+        description="`pass`: the server confirmed the domain in `from`. "
+        "`fail`: its DMARC check of that domain failed. `unknown`: nothing "
+        "can be told, `reason` says why. Unknown is no failure."
+    )
+    domain: str | None = Field(
+        default=None,
+        description="The domain the server stated something about, a host "
+        "name in lower case. Null without one.",
+    )
+    matches_from: bool | None = Field(
+        default=None,
+        description="Whether `domain` is the domain in `from`. Null without `domain`.",
+    )
+    method: Literal["dmarc", "dkim", "spf"] | None = Field(
+        default=None, description="The check the result comes from."
+    )
+    reason: SenderCheckReason | None = Field(
+        default=None,
+        description="Why the result is `unknown`. `account`: the account "
+        "cannot tell, see its `capabilities`. `no_entry`: no entry of the "
+        "receiving server. `several_entries`: more than one. `unreadable`: "
+        "the entry or the sender cannot be read. `from_differs`: DMARC "
+        "passed for another domain. `other_domain`: DKIM or SPF passed for "
+        "another domain only. `error`: a check ended in an error. "
+        "`no_proof`: nothing confirms the domain in `from`.",
+    )
+
+
+# Where the account cannot tell.
+UNKNOWN_ACCOUNT = SenderCheck(result="unknown", reason="account")
+
+
 class MessageSummary(BaseModel):
     id: str
     account_id: str | None = None
@@ -83,6 +134,14 @@ class MessageSummary(BaseModel):
         "the HTML. Counted the same way in a list and in a whole message, "
         "except in a list of a POP3 account, which reads the headers alone "
         "and guesses from them: whether the message is multipart/mixed.",
+    )
+    sender_check: SenderCheck = Field(
+        default_factory=lambda: UNKNOWN_ACCOUNT.model_copy(),
+        description="What the account's receiving server stated about the "
+        "domain in `from`, read from its Authentication-Results entry. A "
+        "fact about the sender's domain, never about the content. See "
+        "`capabilities` of the account for whether it can be other than "
+        "`unknown`.",
     )
 
     model_config = {"populate_by_name": True, "serialize_by_alias": True}

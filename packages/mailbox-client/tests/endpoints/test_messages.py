@@ -20,6 +20,7 @@ from benethos_mailbox_client import (
     Outcome,
     Page,
     Reference,
+    SenderCheck,
 )
 
 from .api_fake import MESSAGE, PAGE, SUMMARY, FakeApi
@@ -41,6 +42,7 @@ READ_SUMMARY = MessageSummary(
     starred=False,
     keywords=["work"],
     has_attachments=True,
+    sender_check=SenderCheck("pass", "example.com", True, "dmarc"),
 )
 READ_MESSAGE = Message(
     **{name: getattr(READ_SUMMARY, name) for name in READ_SUMMARY.__slots__},
@@ -75,6 +77,18 @@ async def test_list_messages(make_client: Callable) -> None:
     )
     down = NotAnswering("acc_2", "provider_timeout", "timed out")
     assert found == Page([READ_SUMMARY], "c2", ["acc_2: timed out"], [down])
+
+
+async def test_a_summary_without_a_sender_check_cannot_tell(
+    make_client: Callable,
+) -> None:
+    """A service before the field answers none: unknown, as the service
+    says of an account that cannot tell."""
+    older = {k: v for k, v in SUMMARY.items() if k != "sender_check"}
+    found = await make_client(FakeApi({**PAGE, "items": [older]})).list_messages(
+        "acc_1"
+    )
+    assert found.items[0].sender_check == SenderCheck("unknown", reason="account")
 
 
 async def test_get_message(make_client: Callable) -> None:

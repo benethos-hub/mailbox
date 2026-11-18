@@ -8,6 +8,14 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Each message carries `sender_check`: what the account's receiving
+  server stated about the domain in `from`, read from its
+  Authentication-Results entry. `result` is `pass`, `fail` or `unknown`,
+  with `domain`, `matches_from`, `method` and, for `unknown`, a
+  `reason`. It is a fact about the sender's domain, never about the
+  content. The account's capability `sender_check` says whether it can
+  be other than `unknown`. `benethos-mailbox-client`: the record
+  `SenderCheck` and `MessageSummary.sender_check`.
 - Passkeys as a second method of the second factor of the UI sign-in,
   beside authenticator apps (TOTP). A person adds them on the page
   Second factor, and after the password a passkey signs in as a code
