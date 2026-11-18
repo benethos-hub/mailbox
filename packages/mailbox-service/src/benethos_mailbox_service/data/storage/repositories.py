@@ -22,6 +22,7 @@ from .credentials import (
 from .idempotency import IdempotencyRepository, InMemoryIdempotencyRepository
 from .index import InMemoryMessageIndexRepository, MessageIndexRepository
 from .links import InMemoryLinkRepository, LinkRepository
+from .passkeys import InMemoryPasskeyRepository, PasskeyRepository
 from .passwords import InMemoryPasswordRepository, PasswordRepository
 from .recovery_codes import InMemoryRecoveryCodeRepository, RecoveryCodeRepository
 from .sends import InMemorySendLogRepository, SendLogRepository
@@ -36,6 +37,7 @@ from .sqlite import (
     SqliteKeyRepository,
     SqliteLinkRepository,
     SqliteMessageIndexRepository,
+    SqlitePasskeyRepository,
     SqlitePasswordRepository,
     SqliteRecoveryCodeRepository,
     SqliteRoleRepository,
@@ -98,6 +100,7 @@ class Repositories:
     tokens: TokenRepository
     passwords: PasswordRepository
     totp: TotpRepository
+    passkeys: PasskeyRepository
     recovery_codes: RecoveryCodeRepository
     keys: KeyRepository
     credentials: CredentialRepository
@@ -127,6 +130,7 @@ def open_repositories(
             tokens=InMemoryTokenRepository(),
             passwords=InMemoryPasswordRepository(),
             totp=InMemoryTotpRepository(),
+            passkeys=InMemoryPasskeyRepository(),
             recovery_codes=InMemoryRecoveryCodeRepository(),
             keys=InMemoryKeyRepository(),
             credentials=InMemoryCredentialRepository(),
@@ -146,6 +150,7 @@ def open_repositories(
         tokens=SqliteTokenRepository(db),
         passwords=SqlitePasswordRepository(db),
         totp=SqliteTotpRepository(db),
+        passkeys=SqlitePasskeyRepository(db),
         recovery_codes=SqliteRecoveryCodeRepository(db),
         keys=SqliteKeyRepository(db),
         credentials=SqliteCredentialRepository(db),

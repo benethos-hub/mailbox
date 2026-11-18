@@ -18,6 +18,7 @@ from .database import (
 from .idempotency import SqliteIdempotencyRepository
 from .index import SqliteMessageIndexRepository
 from .links import SqliteLinkRepository
+from .passkeys import SqlitePasskeyRepository
 from .passwords import SqlitePasswordRepository
 from .recovery_codes import SqliteRecoveryCodeRepository
 from .sends import SqliteSendLogRepository
@@ -40,6 +41,7 @@ __all__ = [
     "SqliteRoleRepository",
     "SqliteAuditRepository",
     "SqliteRecoveryCodeRepository",
+    "SqlitePasskeyRepository",
     "SqliteTotpRepository",
     "SqliteSendLogRepository",
     "SqliteTokenRepository",

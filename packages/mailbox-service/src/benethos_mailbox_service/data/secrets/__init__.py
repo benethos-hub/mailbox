@@ -1,13 +1,14 @@
 """Credential encryption: cipher, key providers, and the vault that uses both.
-Password hashes, and the one-time codes of a second factor.
+Password hashes, the one-time codes of a second factor and its passkeys.
 
-``cryptography`` is imported in ``cipher`` only, ``keyring`` in ``keys`` only.
-The backup encrypts with ``cipher``, offered as a module, as ``totp`` is.
+``cryptography`` is imported in ``cipher`` only, ``keyring`` in ``keys``
+only, ``fido2`` in ``passkeys`` only. The backup encrypts with ``cipher``,
+offered as a module, as ``totp`` and ``passkeys`` are.
 """
 
 from __future__ import annotations
 
-from . import cipher, totp
+from . import cipher, passkeys, totp
 from .keys import (
     EnvKeyProvider,
     FileKeyProvider,
@@ -32,5 +33,6 @@ __all__ = [
     "cipher",
     "decode_recovery",
     "encode_recovery",
+    "passkeys",
     "totp",
 ]
