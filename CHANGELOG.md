@@ -143,6 +143,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 - A code of an authenticator app typed with a space, `123 456` as many
   apps show it, signs in and confirms a step of the UI. It was taken
   for a recovery code before and refused.
+- The audit page names a sign-in with a passkey "the UI, with a
+  passkey". It showed it as a token before.
 - A passkey whose answer is cut short is refused on the page Second
   factor. It answered `500` before.
 

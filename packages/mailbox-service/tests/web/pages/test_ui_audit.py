@@ -44,12 +44,13 @@ def test_a_sign_in_with_a_second_factor_is_none_with_a_token(
     beside the password it is the UI still, never a token."""
     sign_in(app_client, *browser_admin(services))
     anna = services.users.create_user(ADMIN, "Anna", [], [READER])
-    for credential in ("password+totp", "password+recovery"):
+    for credential in ("password+totp", "password+recovery", "password+passkey"):
         by = Actor.signed_in(anna.name, anna.id, "192.0.2.7", credential)
         services.activity.record(said.UiSignIn(by=by))
     page = app_client.get("/ui/audit").text
     assert "the UI, with a code from 192.0.2.7" in page
     assert "the UI, with a recovery code from 192.0.2.7" in page
+    assert "the UI, with a passkey from 192.0.2.7" in page
     assert "token <span" not in page
 
 
