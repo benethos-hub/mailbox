@@ -18,7 +18,7 @@ class SignInState:
     # sign-in. False without a password.
     must_change: bool
     last_sign_in_at: datetime | None
-    # A code of an authenticator app is asked after the password.
+    # The second factor is asked after the password.
     second_factor: bool = False
 
 

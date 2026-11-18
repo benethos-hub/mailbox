@@ -177,8 +177,9 @@ class UserInfo(User):
     )
     second_factor: bool = Field(
         description=(
-            "Whether the UI sign-in asks for a code of an authenticator app "
-            "after the password. The user sets one up in the UI."
+            "Whether the UI sign-in asks for the second factor after the "
+            "password: a code of an authenticator app, a passkey or a "
+            "recovery code. The user sets one up in the UI."
         )
     )
 

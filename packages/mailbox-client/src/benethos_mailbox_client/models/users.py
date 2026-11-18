@@ -14,7 +14,8 @@ from .secrets import Secret
 class User:
     """Someone or something that calls the service. ``service`` are its
     rights bound to no account, ``ui_sign_in`` whether it may sign in to
-    the UI, ``second_factor`` whether a code follows its password."""
+    the UI, ``second_factor`` whether the second factor follows its
+    password."""
 
     id: str
     name: str
