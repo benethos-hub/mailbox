@@ -57,3 +57,14 @@ def test_a_code_field_shows_the_form_of_a_code(app_client: TestClient) -> None:
     assert '<input id="f-codes-totp" class="code" name="code"' in page
     assert '<input id="f-codes-recovery" class="code" name="code"' in page
     assert 'placeholder="XXXXX-XXXXX-XXXXX"' in page
+
+
+@pytest.mark.usefixtures("factor_on")
+def test_the_list_of_the_methods_says_what_each_is(app_client: TestClient) -> None:
+    page = app_client.get("/ui/password").text
+    assert 'aria-expanded="false" aria-controls="f-password-ways"' in page
+    assert 'id="f-password-ways" role="group"' in page
+    assert 'aria-labelledby="f-password-ways-label"' in page
+    assert "Choose how to confirm" in page
+    assert "The 6-digit code the app shows now" in page
+    assert "One of the codes you saved. Each works once." in page

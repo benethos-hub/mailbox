@@ -93,10 +93,10 @@ def test_a_passkey_is_made_and_signs_in(
         expect(page.locator('[data-way="recovery"]')).to_be_hidden()
         page.click("button[data-ways-other]")
         expect(page.locator("button[data-way-pick]:visible")).to_have_count(2)
-        # Sent while the list shows, the form waits for a pick.
-        page.click('form[action="/ui/login/code"] button[type="submit"]')
+        # While the list shows, the form's button waits for a pick.
+        send = page.locator('form[action="/ui/login/code"] button[type="submit"]')
+        expect(send).to_be_disabled()
         expect(page.locator('button[data-way-pick="passkey"]')).to_be_focused()
-        assert page.url == f"{base}/ui/login/code"
         page.click('button[data-way-pick="passkey"]')
         page.wait_for_url(f"{base}/ui")
         assert violations(page) == []

@@ -34,12 +34,12 @@
   </div>
   {% if ways.elsewhere %}<p class="hint">Your passkeys work at the public address of this service over HTTPS, not here.</p>{% endif %}
   <span class="hint" data-passkey-status role="status"></span>
-  <button class="link factor-other" type="button" data-ways-other hidden>Try another way</button>
-  <div class="factor-choices" data-ways-choices hidden>
-    <span class="label">Confirm it with</span>
-    {% if ways.options %}<button type="button" data-way-pick="passkey">{{ icon("key") }} A passkey <span class="hint">PIN, fingerprint, face or security key</span></button>{% endif %}
-    {% if ways.totp %}<button type="button" data-way-pick="totp">{{ icon("shield-lock") }} A code of your authenticator app</button>{% endif %}
-    <button type="button" data-way-pick="recovery">{{ icon("journal-text") }} A recovery code</button>
+  <button class="link factor-other" type="button" data-ways-other aria-expanded="false" aria-controls="f-{{ id }}-ways" hidden>Try another way</button>
+  <div class="factor-choices" id="f-{{ id }}-ways" role="group" aria-labelledby="f-{{ id }}-ways-label" data-ways-choices hidden>
+    <span class="label" id="f-{{ id }}-ways-label">Choose how to confirm</span>
+    {% if ways.options %}<button type="button" data-way-pick="passkey">{{ icon("key") }} Passkey <span class="hint">PIN, fingerprint, face or security key</span></button>{% endif %}
+    {% if ways.totp %}<button type="button" data-way-pick="totp">{{ icon("shield-lock") }} Authenticator app code <span class="hint">The 6-digit code the app shows now</span></button>{% endif %}
+    <button type="button" data-way-pick="recovery">{{ icon("journal-text") }} Recovery code <span class="hint">One of the codes you saved. Each works once.</span></button>
   </div>
 </fieldset>
 {% endmacro %}

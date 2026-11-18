@@ -114,7 +114,7 @@ def test_a_passkey_signs_in_after_the_password(
     page = browser.get("/ui/login/code").text
     # The passkey first, the others listed after "Try another way".
     assert 'data-way="passkey"' in page and 'data-way-pick="passkey"' in page
-    assert 'data-way-pick="recovery"' in page and "A recovery code" in page
+    assert 'data-way-pick="recovery"' in page and "Recovery code" in page
     assert 'data-way="totp"' not in page
     # The passkey is a block of its own, as strong as a field.
     assert 'class="factor-pass"' in page

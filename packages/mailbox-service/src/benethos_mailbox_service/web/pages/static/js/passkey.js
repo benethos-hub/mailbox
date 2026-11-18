@@ -85,7 +85,15 @@ function active(step) {
   return step.querySelector("[data-way]:not([hidden])");
 }
 
+// The buttons that send the form of the step, locked or free.
+function lock(form, locked) {
+  for (const button of form?.querySelectorAll("[type=submit]") || []) {
+    button.disabled = locked;
+  }
+}
+
 // Shows the method ``name`` of the step, its fields on, the others off.
+// A method shown frees the form's buttons again.
 function show(step, name) {
   for (const way of step.querySelectorAll("[data-way]")) {
     const on = way.dataset.way === name;
@@ -94,7 +102,10 @@ function show(step, name) {
   }
   for (const hint of step.querySelectorAll("[data-ways-only]")) hint.hidden = true;
   step.querySelector("[data-ways-choices]").hidden = true;
-  step.querySelector("[data-ways-other]").hidden = usable(step).length < 2;
+  const other = step.querySelector("[data-ways-other]");
+  other.hidden = usable(step).length < 2;
+  other.setAttribute("aria-expanded", "false");
+  if (name !== null) lock(step.closest("form"), false);
   say(step.closest("form") || step, "");
 }
 
@@ -145,17 +156,22 @@ function failed(form, error, made) {
   );
 }
 
-// The list of the methods in place of the one shown, its fields off.
+// The list of the methods in place of the one shown, its fields off
+// and the form's buttons locked until a pick.
 function choose(step) {
   show(step, null);
-  step.querySelector("[data-ways-other]").hidden = true;
+  const other = step.querySelector("[data-ways-other]");
+  other.setAttribute("aria-expanded", "true");
+  other.hidden = true;
   step.querySelector("[data-ways-choices]").hidden = false;
+  lock(step.closest("form"), true);
   step.querySelector("[data-way-pick]:not([hidden])")?.focus();
 }
 
 // A form whose step shows the passkey asks for it before it is sent,
-// and one whose step lists the methods waits for a pick. Capturing at
-// the window, the form goes nowhere else until then.
+// and one whose step lists the methods waits for a pick, also when the
+// Enter key sends it. Capturing at the window, the form goes nowhere
+// else until then.
 window.addEventListener(
   "submit",
   (event) => {
