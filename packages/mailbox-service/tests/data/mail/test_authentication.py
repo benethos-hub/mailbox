@@ -288,6 +288,11 @@ def test_host() -> None:
     assert host("") is None
 
 
+@pytest.mark.parametrize("value", ["-bad-.de", "a-.example.org", "x" * 64 + ".org"])
+def test_a_label_no_host_name_has_is_none(value: str) -> None:
+    assert host(value) is None
+
+
 # IDNA 2008, as servers write it: ß stays, it is no "ss".
 def test_a_sharp_s_is_not_the_domain_with_ss() -> None:
     entry = "mx.example.org; dkim=pass header.d=strasse.de"

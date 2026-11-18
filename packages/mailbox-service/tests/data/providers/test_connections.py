@@ -58,7 +58,8 @@ def test_the_names_of_the_receiving_server() -> None:
 
 
 @pytest.mark.parametrize(
-    "value", ["mx example.org", "mx.exämple.org", "..example.org", "a_b.org", 7]
+    "value",
+    ["mx example.org", "mx.exämple.org", "..example.org", "a_b.org", "-bad-.de", 7],
 )
 def test_a_name_that_is_no_host_is_refused(value: object) -> None:
     with pytest.raises(BadRequestError, match="settings.authserv_id must be"):

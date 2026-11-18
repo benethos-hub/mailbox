@@ -143,6 +143,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 - The sender check judges the address in `From` only when it is the one
   the message shows as its sender. A broken, folded `From` could show
   one address and have the check pass for another.
+- `settings.authserv_id` refuses a name with a label that starts or ends
+  with a dash or is longer than 63 characters, and the sender check
+  reads no such domain. An account that stored such a name fails to
+  connect until it is changed.
 
 ## [0.7.5] - 2026-11-17
 
