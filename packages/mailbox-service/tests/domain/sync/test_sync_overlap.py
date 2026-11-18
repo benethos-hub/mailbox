@@ -3,15 +3,17 @@ writes a view into the index that the change made old."""
 
 from __future__ import annotations
 
+import logging
+
 import pytest
 
 from benethos_mailbox_service.assembly import Services
-from benethos_mailbox_service.data.models import MessageUpdate
+from benethos_mailbox_service.data.models import MessageBatch, MessageUpdate
 from benethos_mailbox_service.data.providers.imap import mappers
 from benethos_mailbox_service.errors import NotFoundError
 
 from ...conftest import ADMIN
-from ...imap_fake import FakeMailBox
+from ...imap_fake import FakeMailBox, make_message
 from ..sync_helpers import ids_by_subject, recorded
 
 FOLDERS = [mappers.folder_id("INBOX"), mappers.folder_id("Archive")]
@@ -168,3 +170,67 @@ async def test_a_delete_of_ours_during_a_pass_stays_gone(
     assert all(
         e.native_id in on_server for e in services.index.in_folders(account, FOLDERS)
     )
+
+
+async def test_a_batch_with_a_stale_id_keeps_the_ids_it_moved(
+    imap_services: Services, imap_account_id: str, imap_server: FakeMailBox
+) -> None:
+    """The stale id asks for a pass. The moves the server made already are
+    in the index before it reads, so two copies of one Message-ID keep
+    their ids."""
+    services, account = imap_services, imap_account_id
+    for uid in (5, 6):
+        imap_server.add("INBOX", uid, make_message("Dup"))
+    await services.sync.sync_account(account)
+    page = await services.mailbox.list_messages(
+        ADMIN, account, folder_id=None, limit=50, cursor=None
+    )
+    dups = [m.id for m in page.items if m.subject == "Dup"]
+    stale = (await ids_by_subject(services, account))["Mail 4"]
+    imap_server.other_client_moves("INBOX", 4, "Archive", 40)
+    batch = MessageBatch(
+        ids=[*dups, stale],
+        action="update",
+        changes=MessageUpdate(folder_ids=[FOLDERS[1]]),
+    )
+    outcomes = await services.mailbox.batch_messages(ADMIN, account, batch)
+    assert all(o.ok for o in outcomes.results), outcomes
+    for message_id in [*dups, stale]:
+        message = await services.mailbox.get_message(ADMIN, account, message_id)
+        assert message.folder_ids == [FOLDERS[1]]
+    deleted = [
+        i for kind, i, _ in recorded(services, account) if kind == "message.deleted"
+    ]
+    assert not set(deleted) & set(dups)
+
+
+async def test_a_pass_given_up_is_no_pass(
+    imap_services: Services,
+    imap_account_id: str,
+    imap_server: FakeMailBox,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Every attempt overtaken: the account's state names no new pass, and
+    the log says "again" only where an attempt follows."""
+    services, account = imap_services, imap_account_id
+    await services.sync.sync_account(account)
+    kept = (await ids_by_subject(services, account))["Mail 2"]
+    imap_server.other_client_moves("INBOX", 4, "Archive", 40)
+    [entry] = [e for e in services.index.in_folders(account, FOLDERS) if e.id == kept]
+    before = services.sync.state(account)
+    adapter = services.adapters.get(account)
+    real = adapter.folder_contents
+
+    async def contents(folder_id: str) -> list[str]:
+        services.sync.relocate(account, kept, entry.native_id, entry.folder_id)
+        return await real(folder_id)
+
+    monkeypatch.setattr(adapter, "folder_contents", contents)
+    caplog.set_level(logging.DEBUG, logger="benethos_mailbox_service.activity")
+    await services.sync.sync_account(account)
+    assert services.sync.state(account) == before
+    names = [r.name.rsplit(".", 1)[1] for r in caplog.records]
+    assert names.count("pass_overtaken") == 2
+    assert names.count("pass_given_up") == 1
+    assert "synced" not in names

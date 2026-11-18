@@ -148,8 +148,15 @@ class ParsedMessage:
 
     def all_headers(self, name: str) -> list[str]:
         """Every value of the header ``name``, in their order, as the
-        message writes them."""
-        return [str(value) for value in self._parsed.obj.get_all(name, [])]
+        message writes them. Raw UTF-8 (RFC 6532) reads as UTF-8: the
+        parser keeps such bytes as surrogates, which ``get_all`` would
+        hand on as a ``Header`` that reads as replacement characters."""
+        wanted = name.lower()
+        return [
+            str(value).encode("utf-8", "surrogateescape").decode("utf-8", "replace")
+            for key, value in self._parsed.obj.raw_items()
+            if key.lower() == wanted
+        ]
 
     @property
     def sole_sender(self) -> str | None:

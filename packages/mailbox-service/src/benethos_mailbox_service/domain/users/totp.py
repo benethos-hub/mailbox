@@ -146,7 +146,7 @@ class TotpService:
         """One device of another user, within the caller's rights. Its
         sessions end."""
         if user_id == access.user_id:
-            raise ConflictError("remove your own devices with a code")
+            raise ConflictError("remove your own devices with a code or a passkey")
         user = self._rules.managed(access, "remove_totp_device", user_id)
         self._remove(user, device_id, Actor.of(access))
 

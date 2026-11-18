@@ -80,7 +80,7 @@ class SecondFactorService:
         """Every method of another user and the recovery codes, within the
         caller's rights. Its sessions end."""
         if user_id == access.user_id:
-            raise ConflictError("remove your own devices with a code")
+            raise ConflictError("remove your own devices with a code or a passkey")
         user = self._rules.managed(access, "remove_second_factor", user_id)
         if not self._factors.has(user_id):
             raise NotFoundError(f"{user.name} has no second factor")

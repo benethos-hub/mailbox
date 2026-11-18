@@ -202,22 +202,26 @@ class Calls:
         """Change messages. Returns the outcome per id."""
         results: dict[str, MessageSummary | MailboxServiceError] = {}
         folders: dict[str, str] = {}
+
+        def settle(message_id: str, native: str, outcome: MessageSummary) -> None:
+            _follow(self._sync, account_id, message_id, native, outcome)
+            folders[message_id] = folder_of(outcome)
+
         with self._sync.writing(account_id):
-            outcomes, natives = await self._on_messages(
-                account_id, ids, lambda p, n: writes(p).update_messages(n, changes)
+            outcomes = await self._on_messages(
+                account_id,
+                ids,
+                lambda p, n: writes(p).update_messages(n, changes),
+                settle,
             )
             threads = self._sync.thread_ids(account_id, ids)
             for message_id, outcome in outcomes.items():
                 if isinstance(outcome, MailboxServiceError):
                     results[message_id] = outcome
                     continue
-                _follow(
-                    self._sync, account_id, message_id, natives[message_id], outcome
-                )
                 results[message_id] = public(
                     outcome, message_id, account_id, threads.get(message_id)
                 )
-                folders[message_id] = folder_of(outcome)
         self._sync.changed(MessagesUpdated(account_id, _done(results), folders))
         return results
 
@@ -236,24 +240,30 @@ class Calls:
         """Into the trash, or for good. Returns the outcome per id."""
         results: dict[str, None | MailboxServiceError] = {}
         folders: dict[str, str] = {}
+
+        def settle(
+            message_id: str, native: str, outcome: MessageSummary | None
+        ) -> None:
+            if permanent:
+                was = self._sync.folder_of(account_id, message_id)
+                folders[message_id] = was or ""
+                self._sync.forget(account_id, message_id)
+            elif outcome is not None:
+                _follow(self._sync, account_id, message_id, native, outcome)
+                folders[message_id] = folder_of(outcome)
+
         with self._sync.writing(account_id):
-            outcomes, natives = await self._on_messages(
-                account_id, ids, lambda p, n: deletes(p).delete_messages(n, permanent)
+            outcomes = await self._on_messages(
+                account_id,
+                ids,
+                lambda p, n: deletes(p).delete_messages(n, permanent),
+                settle,
             )
             for message_id, outcome in outcomes.items():
                 if isinstance(outcome, MailboxServiceError):
                     results[message_id] = outcome
-                    continue
-                if permanent:
-                    was = self._sync.folder_of(account_id, message_id)
-                    folders[message_id] = was or ""
-                    self._sync.forget(account_id, message_id)
-                elif outcome is not None:
-                    _follow(
-                        self._sync, account_id, message_id, natives[message_id], outcome
-                    )
-                    folders[message_id] = folder_of(outcome)
-                results[message_id] = None
+                else:
+                    results[message_id] = None
         done = _done(results)
         self._sync.changed(
             MessagesDeleted(account_id, done, folders)
@@ -274,14 +284,19 @@ class Calls:
         account_id: str,
         ids: list[str],
         run: Callable[[Reads, list[str]], Awaitable[Outcomes[T]]],
-    ) -> tuple[Outcomes[T], dict[str, str]]:
+        settle: Callable[[str, str, T], None],
+    ) -> Outcomes[T]:
         """Run a provider operation on the messages behind ``ids``. Those
         the provider does not find where the index says get one sync and a
-        second try. Returns the outcome per id and the provider id used.
-        Called inside ``writing`` of the sync."""
+        second try. ``settle`` brings the index in line with each success,
+        given our id and the provider id used, before a pass reads: the
+        pass must find the moves of this change where they are. Returns
+        the outcome per id. Called inside ``writing`` of the sync."""
         natives = {i: n for i, n in self._sync.natives(account_id, ids).items() if n}
         outcomes: Outcomes[T] = {i: missing_message(i) for i in ids if i not in natives}
-        outcomes.update(await self._run_on(account_id, natives, run))
+        first = await self._run_on(account_id, natives, run)
+        _settle_each(first, natives, settle)
+        outcomes.update(first)
         missing = [i for i in natives if isinstance(outcomes[i], MessageNotFoundError)]
         if missing and self._sync.mapped(account_id):
             # The pass looks for them: it must not count this change.
@@ -289,14 +304,15 @@ class Calls:
                 moved = await self._gone.after_a_pass(
                     account_id, {i: natives[i] for i in missing}
                 )
-            outcomes.update(await self._run_on(account_id, moved, run))
-            natives.update(moved)
+            second = await self._run_on(account_id, moved, run)
+            _settle_each(second, moved, settle)
+            outcomes.update(second)
         for message_id, outcome in outcomes.items():
             if isinstance(outcome, MessageNotFoundError):
                 outcomes[message_id] = MessageNotFoundError(
                     f"message {message_id} not found"
                 )
-        return outcomes, natives
+        return outcomes
 
     async def _run_on(
         self,
@@ -331,7 +347,8 @@ class Gone:
         """Messages the provider did not find where the index says: one sync
         pass, and the new place of those that moved. One looked up in vain
         since the last pass gets no pass of its own: a caller that names a
-        stale id again and again does not sync the account each time."""
+        stale id again and again does not sync the account each time, nor
+        after a pass given up, which counts as none: until the next pass."""
         if self._known(account_id, self._passes(account_id), natives):
             return {}
         await self._sync.sync_account(account_id)
@@ -374,6 +391,17 @@ async def _folders_of(provider: Reads, native: str) -> list[str]:
             raise missing_message(native)
         return found[native]
     return list((await provider.get_message(native)).folder_ids)
+
+
+def _settle_each(
+    outcomes: Outcomes[T],
+    natives: dict[str, str],
+    settle: Callable[[str, str, T], None],
+) -> None:
+    """``settle`` for each success among ``outcomes``."""
+    for message_id, outcome in outcomes.items():
+        if not isinstance(outcome, MailboxServiceError):
+            settle(message_id, natives[message_id], outcome)
 
 
 def _follow(

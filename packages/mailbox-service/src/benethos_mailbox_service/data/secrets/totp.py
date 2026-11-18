@@ -52,6 +52,18 @@ def code(secret: bytes, step: int) -> str:
     return str(number % 10**DIGITS).zfill(DIGITS)
 
 
+def normalized(presented: str) -> str:
+    """A code as typed, without the spaces an app shows in it."""
+    return "".join(presented.split())
+
+
+def is_code(presented: str) -> bool:
+    """Whether ``presented`` has the form of a code: ``DIGITS`` digits of
+    ASCII, spaces aside."""
+    found = normalized(presented)
+    return len(found) == DIGITS and found.isascii() and found.isdigit()
+
+
 def matching_step(
     secret: bytes, presented: str, at: datetime, after: int | None = None
 ) -> int | None:
@@ -59,9 +71,9 @@ def matching_step(
     ``at``. None when it is none of them, or when its step is not later
     than ``after``, the step of the last code taken: each code works
     once."""
-    presented = presented.strip()
-    if len(presented) != DIGITS or not presented.isdigit():
+    if not is_code(presented):
         return None
+    presented = normalized(presented)
     now = step_of(at)
     for step in range(now - DRIFT, now + DRIFT + 1):
         if after is not None and step <= after:

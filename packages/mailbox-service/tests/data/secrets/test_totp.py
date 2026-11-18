@@ -104,3 +104,13 @@ def test_the_uri_names_issuer_account_and_secret() -> None:
 def test_the_uri_quotes_what_a_label_cannot_hold() -> None:
     uri = totp.uri(RFC_SECRET, "Mailbox", "Anna Maria/ops?")
     assert "/Mailbox:Anna%20Maria%2Fops%3F?" in uri
+
+
+def test_a_code_with_a_space_is_the_code() -> None:
+    """Many apps show the code as two groups of three."""
+    at = datetime(2026, 11, 18, 12, 0, tzinfo=UTC)
+    right = totp.code(RFC_SECRET, totp.step_of(at))
+    spaced = f"{right[:3]} {right[3:]}"
+    assert totp.matching_step(RFC_SECRET, spaced, at) == totp.step_of(at)
+    assert totp.is_code(spaced) and totp.is_code(right)
+    assert not totp.is_code("12345") and not totp.is_code("١٢٣٤٥٦")

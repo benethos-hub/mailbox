@@ -127,11 +127,11 @@ def test_nobody_removes_its_own_through_the_api(
     client: TestClient, services: Services
 ) -> None:
     me = client.get("/v1/me").json()["user_id"]
-    assert client.delete(f"/v1/users/{me}/second-factor").status_code == 409
-    own = f"/v1/users/{me}/second-factor/totp/tfa_x"
-    assert client.delete(own).status_code == 409
-    own = f"/v1/users/{me}/second-factor/passkeys/psk_x"
-    assert client.delete(own).status_code == 409
+    for own in ("", "/totp/tfa_x", "/passkeys/psk_x"):
+        refused = client.delete(f"/v1/users/{me}/second-factor{own}")
+        assert refused.status_code == 409
+        said = refused.json()["error"]["message"]
+        assert said.endswith("with a code or a passkey"), said
 
 
 def test_reading_and_removing_need_their_rights(

@@ -16,7 +16,7 @@ from typing import Literal
 from benethos_mailbox_common.values import secret
 
 from ...data.models import SecondFactor
-from ...data.secrets import Begun, Party
+from ...data.secrets import Begun, Party, totp
 from .passkeys import Answer, Passkeys
 from .recovery import RecoveryCodes
 from .totp import Totp
@@ -87,7 +87,7 @@ class SecondFactors:
         if answer is not None:
             passkey = self.passkeys.check(user_id, answer)
             return Taken("passkey", passkey) if passkey is not None else None
-        if presented.strip().isdigit():
+        if totp.is_code(presented):
             device = self.totp.check(user_id, presented)
             if device is not None:
                 return Taken("totp", device)

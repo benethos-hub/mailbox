@@ -262,3 +262,12 @@ async def test_new_codes_need_a_factor(services: Services) -> None:
     access = access_of(services, await anna(services))
     with pytest.raises(ConflictError):
         await services.factors.renew_codes(access, SECRET, "123456")
+
+
+async def test_a_code_with_a_space_signs_in(services: Services, clock: Clock) -> None:
+    user, secret, _ = await with_factor(services, clock)
+    code = now_code(secret, clock)
+    factors = services.auth.factors
+    assert factors is not None
+    taken = factors.check(user.id, f"{code[:3]} {code[3:]}")
+    assert taken is not None and taken.kind == "totp"

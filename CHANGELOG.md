@@ -93,6 +93,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   the move could drop the id, which then answered `404` and came back as
   a new message, or give the old place a new id that answered `404`.
   The feed reported a `message.deleted` and a `message.created` for it.
+- A batch that names a message another program moved keeps the ids of
+  the messages it moved itself. Two copies of one `Message-ID` among
+  them answered `404` after the batch before, and the feed reported
+  them deleted.
 - `text_body` and `html_body` of a message whose text part names a
   Western single-byte charset (windows-1252, iso-8859-1, iso-8859-15,
   us-ascii) but holds UTF-8 read as UTF-8. Such a mail showed "fÃ¼r"
@@ -133,6 +137,16 @@ adheres to [Semantic Versioning](https://semver.org/).
   up on: a call still waiting for its turn renders nothing. Each call on
   a slow PDF added a whole render before, and other PDFs ran out of time
   behind them.
+- The sender check reads a `From` written raw in UTF-8 (RFC 6532), such
+  as `a@bücher.de`. It was `unreadable` for IMAP, POP3 and a single
+  message of Gmail and JMAP before.
+- A code of an authenticator app typed with a space, `123 456` as many
+  apps show it, signs in and confirms a step of the UI. It was taken
+  for a recovery code before and refused.
+- The audit page names a sign-in with a passkey "the UI, with a
+  passkey". It showed it as a token before.
+- The `409` for removing one's own second factor through the API says
+  it is done with a code or a passkey, not with a code alone.
 - A passkey whose answer is cut short is refused on the page Second
   factor. It answered `500` before.
 
