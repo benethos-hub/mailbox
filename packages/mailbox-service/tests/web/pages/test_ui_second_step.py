@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 
 from benethos_mailbox_service.assembly import Services
 
-from ...conftest import browser_admin
+from ...conftest import UI_PASSWORD, browser_admin
 from ...ui_helpers import post, try_sign_in
 from .factor_page_helpers import code_form, with_factor
 
@@ -147,3 +147,15 @@ def test_new_recovery_codes_start_in_the_head_of_their_card(
     assert 'data-dialog="new-codes"' in head
     # Nine codes left: no warning, so no body.
     assert rest.strip() == ""
+
+
+def test_new_codes_and_their_card_have_titles_of_their_own(
+    app_client: TestClient, factor_on: list[str]
+) -> None:
+    made = post(
+        app_client,
+        "/ui/second-factor/codes",
+        {"password": UI_PASSWORD, "code": factor_on[0]},
+    ).text
+    assert made.count("<h2>Your new recovery codes</h2>") == 1
+    assert made.count("<h2>Recovery codes</h2>") == 1

@@ -10,7 +10,7 @@
 {% set on = devices or keys %}
 {% if codes %}
 <section class="card">
-  <header><h2>Recovery codes</h2><span class="right"><span class="tag warn">shown this once</span></span></header>
+  <header><h2>Your new recovery codes</h2><span class="right"><span class="tag warn">shown this once</span></span></header>
   <div class="body">
     <p class="muted">Each signs you in once in place of a code of a device or a passkey, e.g. when a phone is lost. Keep them apart from your devices, in a password manager or on paper.</p>
     <div class="secret-line"><ul class="codes secret" id="recovery-codes">{% for code in codes %}<li>{{ code }}</li>{% endfor %}</ul>{{ copy_button("recovery-codes", "Copy all codes") }}</div>
