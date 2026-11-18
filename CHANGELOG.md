@@ -137,6 +137,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   up on: a call still waiting for its turn renders nothing. Each call on
   a slow PDF added a whole render before, and other PDFs ran out of time
   behind them.
+- The sender check reads a `From` written raw in UTF-8 (RFC 6532), such
+  as `a@bücher.de`. It was `unreadable` for IMAP, POP3 and a single
+  message of Gmail and JMAP before.
 - A code of an authenticator app typed with a space, `123 456` as many
   apps show it, signs in and confirms a step of the UI. It was taken
   for a recovery code before and refused.

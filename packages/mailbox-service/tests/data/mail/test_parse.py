@@ -203,3 +203,17 @@ def test_a_from_read_two_ways_has_no_sole_sender() -> None:
 def test_a_sole_sender_compares_without_case_and_in_ascii() -> None:
     raw = b"From: Ann <Ann@xn--bcher-kva.example>\r\nSubject: Hi\r\n\r\nHello\r\n"
     assert ParsedMessage(raw).sole_sender == "Ann@xn--bcher-kva.example"
+
+
+def test_a_raw_utf_8_from_is_judged() -> None:
+    """RFC 6532: an address beyond ASCII written raw in UTF-8."""
+    raw = (
+        "Authentication-Results: mx.example.org; dmarc=pass"
+        " header.from=xn--bcher-kva.de\r\n"
+        "From: Jörg <a@bücher.de>\r\nSubject: Hi\r\n\r\nHello\r\n"
+    ).encode()
+    parsed = ParsedMessage(raw)
+    assert parsed.all_headers("from") == ["Jörg <a@bücher.de>"]
+    trust = authentication.Trust(("mx.example.org",))
+    found = convert.summary_fields(parsed, trust)["sender_check"]
+    assert (found.result, found.domain) == ("pass", "xn--bcher-kva.de")
