@@ -242,6 +242,7 @@ packages/mailbox-service/
         forms.py        # form errors, failing: back with the message,
                         #   model_of and text_of: what a form holds
         rights.py       # what the mail pages offer, by the rights on an account
+        sender.py       # the tag of a message's sender check, in words
         effective.py    # a user's effective rights, grouped for reading
         errors.py       # errors as a page
         security.py     # the security headers of every answer under

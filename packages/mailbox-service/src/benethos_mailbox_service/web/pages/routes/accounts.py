@@ -52,6 +52,7 @@ CAN = {
     Capability.DRAFTS: "drafts",
     Capability.SEND: "send",
     Capability.PUSH: "push",
+    Capability.SENDER_CHECK: "sender check",
 }
 
 

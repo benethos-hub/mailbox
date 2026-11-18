@@ -1,4 +1,4 @@
-{% from "components/ui.html" import icon, pager, tick_all %}
+{% from "components/ui.html" import icon, pager, sender_check, tick_all %}
 {# A page of messages. ``emails``: the account column, for lists across
    accounts, None for one account's list. ``selectable``: a tick box per
    message for the form ``batch``. ``open_as``: "mail", or "drafts" for
@@ -20,7 +20,7 @@
       <tr class="{{ 'unread' if m.unread }}">
         {% if selectable %}<td class="tick"><input type="checkbox" name="ids" value="{{ m.id }}" form="batch" aria-label="Select {{ m.subject | or_missing }}" /></td>{% endif %}
         {% if emails is not none %}<td class="muted">{{ emails.get(m.account_id, m.account_id) }}</td>{% endif %}
-        <td>{{ m.sender | address }}</td>
+        <td>{{ m.sender | address }}{% if m.sender_check.result == "fail" %} {{ sender_check(m.sender_check) }}{% endif %}</td>
         <td class="name">
           <a href="/ui/accounts/{{ m.account_id }}/{{ open_as }}/{{ m.id }}">{{ m.subject | or_missing }}</a>
           {% if m.snippet %}<span class="sub">{{ m.snippet }}</span>{% endif %}

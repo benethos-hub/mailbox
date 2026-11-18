@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import action, breadcrumb, csrf_field, dialog_button, dialog_buttons, folder_options, form_dialog, icon, link_button with context %}
+{% from "components/ui.html" import action, breadcrumb, csrf_field, dialog_button, dialog_buttons, folder_options, form_dialog, icon, link_button, sender_check with context %}
 {% block title %}{{ message.subject | or_missing }} · {{ APP_NAME }}{% endblock %}
 {% block heading %}{{ message.subject | or_missing }}{% endblock %}
 {% block subheading %}{{ breadcrumb(trail) }}{% endblock %}
@@ -31,7 +31,7 @@
 <section class="card">
   <div class="body">
     <dl class="facts">
-      <dt>From</dt><dd>{{ message.sender | address }}</dd>
+      <dt>From</dt><dd>{{ message.sender | address }} {{ sender_check(message.sender_check) }}</dd>
       <dt>To</dt><dd>{{ message.to | addresses }}</dd>
       {% if message.cc %}<dt>Cc</dt><dd>{{ message.cc | addresses }}</dd>{% endif %}
       {% if message.bcc %}<dt>Bcc</dt><dd>{{ message.bcc | addresses }}</dd>{% endif %}
