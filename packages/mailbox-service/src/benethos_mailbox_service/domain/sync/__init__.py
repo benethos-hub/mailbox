@@ -5,7 +5,8 @@ polling and IDLE (``SyncWorker``).
 
 from __future__ import annotations
 
-from .service import SyncService, SyncState
+from .runner import SyncState
+from .service import SyncService
 from .worker import SyncWorker, WorkerState
 
 __all__ = [

@@ -313,7 +313,8 @@ packages/mailbox-service/
                         #   audit (sending), the Idempotency-Key
                         #   (idempotency). Reads through ..calls and
                         #   ..reach
-      sync/             # SyncService (stable message ids, the sync pass),
+      sync/             # SyncService (stable message ids), the sync pass
+                        #   and how the passes went (runner, SyncRunner),
                         #   what a pass finds (passes), the threads the
                         #   index keeps (threads), our own changes a pass
                         #   must not overwrite (writes), SyncWorker

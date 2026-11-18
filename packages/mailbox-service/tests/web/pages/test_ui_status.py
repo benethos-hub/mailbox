@@ -22,7 +22,7 @@ from ...ui_helpers import post, sign_in
 
 def failed_sync(services: Services, account_id: str) -> None:
     """The account's last sync failed, as the worker keeps it in memory."""
-    services.sync._states[account_id] = SyncState(
+    services.sync._runner._states[account_id] = SyncState(
         last_error="503 from server", last_error_at=utc_now()
     )
 
