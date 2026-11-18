@@ -93,6 +93,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   the move could drop the id, which then answered `404` and came back as
   a new message, or give the old place a new id that answered `404`.
   The feed reported a `message.deleted` and a `message.created` for it.
+- A draft replaced through the API while the service syncs the account
+  keeps its id, and a draft deleted is gone at once. A sync pass that
+  read the drafts folder between the server's answer and the index
+  could give the new draft a new id, the old one answering `404`.
 - A batch that names a message another program moved keeps the ids of
   the messages it moved itself. Two copies of one `Message-ID` among
   them answered `404` after the batch before, and the feed reported

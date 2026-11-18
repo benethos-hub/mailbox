@@ -10,6 +10,7 @@ use it do.
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
+from contextlib import nullcontext
 from typing import Any, TypeVar
 
 from ...data.models import (
@@ -24,7 +25,7 @@ from ...data.models import (
 from ...data.providers import Places, Reads
 from ...data.storage import IndexEntry
 from ...errors import MailboxServiceError, MessageNotFoundError, missing_message
-from ..accounts import Adapters, Needs, deletes, writes
+from ..accounts import Adapters, Needs, deletes, drafts, writes
 from ..changes import MailboxChange, MessagesDeleted, MessagesUpdated
 from ..sync import SyncService
 
@@ -79,10 +80,14 @@ class Calls:
         account_id: str,
         message_id: str,
         operation: Callable[[Reads, str], Awaitable[T]],
+        *,
+        pausing: bool = False,
     ) -> T:
         """Run an operation on the message behind one of our ids. Where
         the provider no longer finds it there, one sync and its new place.
-        Anything else it does not find is not ours to follow."""
+        Anything else it does not find is not ours to follow. ``pausing``:
+        called inside ``writing`` of the sync, which the pass it asks for
+        must not count."""
 
         def run(native: str) -> Awaitable[T]:
             return self.call(account_id, lambda p: operation(p, native))
@@ -95,7 +100,8 @@ class Calls:
         try:
             return await run(native)
         except MessageNotFoundError:
-            moved = await self._gone.after_a_pass(account_id, {message_id: native})
+            with self._sync.pausing(account_id) if pausing else nullcontext():
+                moved = await self._gone.after_a_pass(account_id, {message_id: native})
             if message_id not in moved:
                 raise missing_message(message_id) from None
             return await run(moved[message_id])
@@ -161,6 +167,33 @@ class Calls:
             items=await self.published(account_id, page.items),
             next_cursor=page.next_cursor,
         )
+
+    async def replace_draft(
+        self, account_id: str, draft_id: str, raw: bytes
+    ) -> MessageSummary:
+        """Store ``raw`` in place of a draft. Its id follows the new place
+        before a sync pass may read, as with every change of ours."""
+        with self._sync.writing(account_id):
+            saved = await self.on_message(
+                account_id,
+                draft_id,
+                lambda p, native: drafts(p).save_draft(raw, native),
+                pausing=True,
+            )
+            self.relocate(account_id, draft_id, saved)
+        return saved
+
+    async def delete_draft(self, account_id: str, draft_id: str) -> None:
+        """A draft deleted for good, its id gone with it before a sync pass
+        may read."""
+        with self._sync.writing(account_id):
+            await self.on_message(
+                account_id,
+                draft_id,
+                lambda p, native: drafts(p).delete_draft(native),
+                pausing=True,
+            )
+            self.forget(account_id, draft_id)
 
     def relocate(self, account_id: str, message_id: str, now: MessageSummary) -> None:
         """A message we stored anew: its id points to the new place."""
