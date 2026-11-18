@@ -15,7 +15,7 @@ from . import mappers
 
 
 class Mailbox:
-    def __init__(self, session: ImapSession, trust: authentication.Trust | None = None):
+    def __init__(self, session: ImapSession, trust: authentication.Trust | None):
         """``trust``: the account's receiving server, whose entry the
         sender check of a message reads."""
         self.session = session

@@ -7,7 +7,7 @@ import json
 
 import pytest
 from cryptography.hazmat.primitives.asymmetric import ec
-from fido2.utils import websafe_encode
+from fido2.utils import websafe_decode, websafe_encode
 
 from benethos_mailbox_service.data.secrets import passkeys
 from benethos_mailbox_service.data.secrets.passkeys import Party, PasskeyError
@@ -28,12 +28,12 @@ def test_a_registration_asks_the_user_to_be_verified() -> None:
     assert options["rp"] == {"name": "Mailbox", "id": "mail.example.org"}
     assert options["user"]["name"] == "anna"
     # A digest of the id: WebAuthn takes 64 bytes at most.
-    assert len(passkeys.from_base64url(options["user"]["id"])) == 32
+    assert len(websafe_decode(options["user"]["id"])) == 32
     assert options["authenticatorSelection"]["userVerification"] == "required"
     assert options["excludeCredentials"] == [
-        {"type": "public-key", "id": passkeys.to_base64url(b"\x01" * 16)}
+        {"type": "public-key", "id": websafe_encode(b"\x01" * 16)}
     ]
-    assert challenge_of(begun.options) == passkeys.from_base64url(begun.challenge)
+    assert challenge_of(begun.options) == websafe_decode(begun.challenge)
 
 
 def test_a_created_passkey_signs_in() -> None:

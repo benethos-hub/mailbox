@@ -398,7 +398,6 @@ tr.unread td.name { font-weight: 650; }
 
 .card .body > p:first-child { margin-top: 0; }
 .card .body > p:last-child { margin-bottom: 0; }
-.small-print { font-size: 13px; }
 
 /* Lines to act on, each with its link, e.g. what needs attention. */
 ul.lines { list-style: none; margin: 0 0 12px; padding: 0; }

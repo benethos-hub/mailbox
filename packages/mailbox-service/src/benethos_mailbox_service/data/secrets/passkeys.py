@@ -20,7 +20,6 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from fido2.server import Fido2Server
-from fido2.utils import websafe_decode, websafe_encode
 from fido2.webauthn import (
     AttestedCredentialData,
     AuthenticationResponse,
@@ -136,15 +135,6 @@ def asserted(
     except _BROKEN as exc:
         raise PasskeyError("the passkey was not accepted") from exc
     return Asserted(read.raw_id, read.response.authenticator_data.counter)
-
-
-def to_base64url(raw: bytes) -> str:
-    """Bytes as WebAuthn writes them in JSON: base64url without padding."""
-    return websafe_encode(raw)
-
-
-def from_base64url(text: str) -> bytes:
-    return websafe_decode(text)
 
 
 def _server(party: Party) -> Fido2Server:

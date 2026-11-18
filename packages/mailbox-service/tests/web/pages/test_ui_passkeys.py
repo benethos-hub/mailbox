@@ -198,7 +198,7 @@ def test_a_passkey_is_renamed_and_removed(
         },
     )
     assert "Passkey removed. The second factor is off." in removed.text
-    assert not services.factors.has(user.id)
+    assert not services.auth.has_second_factor(user.id)
 
 
 def test_an_administrator_removes_a_passkey(
@@ -215,7 +215,7 @@ def test_an_administrator_removes_a_passkey(
         ui, f"/ui/users/{user.id}/second-factor/passkeys/{passkey.id}/remove"
     )
     assert "Passkey removed." in removed.text
-    assert not services.factors.has(user.id)
+    assert not services.auth.has_second_factor(user.id)
     assert anna.get("/ui", follow_redirects=False).status_code == 303
 
 
@@ -242,7 +242,7 @@ def test_a_setup_without_an_answer_stores_nothing(
     assert "not created" in refused.text
     user = services.auth.user_named(name)
     assert user is not None
-    assert not services.factors.has(user.id)
+    assert not services.auth.has_second_factor(user.id)
 
 
 def test_a_cancelled_setup_is_gone(at_https: TestClient, services: Services) -> None:
