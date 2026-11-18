@@ -287,3 +287,18 @@ def _functions(path: Path) -> set[str]:
         for node in tree.body
         if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)
     }
+
+
+def test_no_helper_but_conftest_defines_a_fixture() -> None:
+    """A fixture of a helper reaches a test module by an import, beside
+    the fixtures of the conftest.py files, which it may hide unseen: the
+    rule above reads only what a test module defines itself. A fixture
+    goes to the nearest conftest.py (ARCHITECTURE 13)."""
+    violations = [
+        path.relative_to(ROOT).as_posix()
+        for path in sorted((ROOT / "packages").glob("*/tests/**/*.py"))
+        if not path.stem.startswith("test_")
+        and path.stem != "conftest"
+        and _fixtures(path)
+    ]
+    assert not violations, "a fixture in a helper:\n  " + "\n  ".join(violations)

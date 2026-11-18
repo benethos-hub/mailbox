@@ -32,16 +32,12 @@ from ..factor_helpers import (
     Clock,
     access_of,
     anna,
-    clock,
     credentials,
     now_code,
-    services,
     with_factor,
 )
 
 pytestmark = pytest.mark.usefixtures("master_key")
-# The fixtures come from factor_helpers.
-__all__ = ["clock", "services"]
 
 # --- recovery codes -------------------------------------------------------------
 
@@ -104,85 +100,91 @@ def test_a_recovery_code_needs_the_key_it_was_hashed_with() -> None:
 
 
 async def test_recovery_codes_are_stored_keyed_and_bound_to_the_user(
-    services: Services, clock: Clock, monkeypatch: pytest.MonkeyPatch
+    factor_services: Services, factor_clock: Clock, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The same code of two users hashes apart, and never as plain SHA-256:
     without the master key a stolen database allows no guess."""
     monkeypatch.setattr(recovery, "new_recovery_code", lambda: "ABCDE-FGHJK-MNPQR")
-    user, _, _ = await with_factor(services, clock)
+    user, _, _ = await with_factor(factor_services, factor_clock)
     text = "ABCDEFGHJKMNPQR"
-    stored = services.repositories.recovery_codes
-    key_id, annas = services.vault.keyed_hash(HASH_LABEL, f"{user.id}:{text}")
-    _, berts = services.vault.keyed_hash(HASH_LABEL, f"usr_bert:{text}")
-    assert not stored.use(user.id, key_id, digest(text), clock())
-    assert not stored.use(user.id, key_id, berts, clock())
-    assert stored.use(user.id, key_id, annas, clock())
+    stored = factor_services.repositories.recovery_codes
+    key_id, annas = factor_services.vault.keyed_hash(HASH_LABEL, f"{user.id}:{text}")
+    _, berts = factor_services.vault.keyed_hash(HASH_LABEL, f"usr_bert:{text}")
+    assert not stored.use(user.id, key_id, digest(text), factor_clock())
+    assert not stored.use(user.id, key_id, berts, factor_clock())
+    assert stored.use(user.id, key_id, annas, factor_clock())
 
 
 async def test_a_recovery_code_of_digits_alone_signs_in(
-    services: Services, clock: Clock, monkeypatch: pytest.MonkeyPatch
+    factor_services: Services, factor_clock: Clock, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Digits go to the authenticator app first, then to the recovery codes."""
     monkeypatch.setattr(recovery, "new_recovery_code", lambda: "12345-67890-12345")
-    user, _, codes = await with_factor(services, clock)
+    user, _, codes = await with_factor(factor_services, factor_clock)
     assert codes[0] == "12345-67890-12345"
-    signed = services.auth.sign_in_with_code(user.id, "123456789012345", source=SOURCE)
+    signed = factor_services.auth.sign_in_with_code(
+        user.id, "123456789012345", source=SOURCE
+    )
     assert signed.factor is not None
-    assert credentials(services, "auth.signed_in") == ["password+recovery"]
+    assert credentials(factor_services, "auth.signed_in") == ["password+recovery"]
 
 
 # --- signing in -----------------------------------------------------------------
 
 
 async def test_the_password_alone_does_not_sign_in(
-    services: Services, clock: Clock
+    factor_services: Services, factor_clock: Clock
 ) -> None:
-    user, _, _ = await with_factor(services, clock)
-    signed = await services.auth.sign_in("Anna", SECRET, source=SOURCE)
+    user, _, _ = await with_factor(factor_services, factor_clock)
+    signed = await factor_services.auth.sign_in("Anna", SECRET, source=SOURCE)
     assert signed.needs_code
-    assert services.auth.sign_in_state(user.id).last_sign_in_at is None
-    assert not credentials(services, "auth.signed_in")
+    assert factor_services.auth.sign_in_state(user.id).last_sign_in_at is None
+    assert not credentials(factor_services, "auth.signed_in")
 
 
-async def test_the_code_signs_in(services: Services, clock: Clock) -> None:
-    user, secret, _ = await with_factor(services, clock)
-    await services.auth.sign_in("Anna", SECRET, source=SOURCE)
-    signed = services.auth.sign_in_with_code(
-        user.id, now_code(secret, clock), source=SOURCE
+async def test_the_code_signs_in(
+    factor_services: Services, factor_clock: Clock
+) -> None:
+    user, secret, _ = await with_factor(factor_services, factor_clock)
+    await factor_services.auth.sign_in("Anna", SECRET, source=SOURCE)
+    signed = factor_services.auth.sign_in_with_code(
+        user.id, now_code(secret, factor_clock), source=SOURCE
     )
     assert not signed.needs_code and signed.factor is not None
-    services.auth.session_access(user.id, signed.stamp, factor=signed.factor)
-    assert credentials(services, "auth.signed_in") == ["password+totp"]
-    assert services.auth.sign_in_state(user.id).last_sign_in_at == clock()
+    factor_services.auth.session_access(user.id, signed.stamp, factor=signed.factor)
+    assert credentials(factor_services, "auth.signed_in") == ["password+totp"]
+    assert factor_services.auth.sign_in_state(user.id).last_sign_in_at == factor_clock()
 
 
-async def test_a_code_signs_in_once(services: Services, clock: Clock) -> None:
-    user, secret, _ = await with_factor(services, clock)
-    code = now_code(secret, clock)
-    services.auth.sign_in_with_code(user.id, code, source=SOURCE)
+async def test_a_code_signs_in_once(
+    factor_services: Services, factor_clock: Clock
+) -> None:
+    user, secret, _ = await with_factor(factor_services, factor_clock)
+    code = now_code(secret, factor_clock)
+    factor_services.auth.sign_in_with_code(user.id, code, source=SOURCE)
     with pytest.raises(UnauthorizedError):
-        services.auth.sign_in_with_code(user.id, code, source=SOURCE)
+        factor_services.auth.sign_in_with_code(user.id, code, source=SOURCE)
 
 
 async def test_a_code_of_the_step_before_still_signs_in(
-    services: Services, clock: Clock
+    factor_services: Services, factor_clock: Clock
 ) -> None:
-    user, secret, _ = await with_factor(services, clock)
-    late = now_code(secret, clock)
-    clock.tick(seconds=totp.STEP_SECONDS)
-    services.auth.sign_in_with_code(user.id, late, source=SOURCE)
+    user, secret, _ = await with_factor(factor_services, factor_clock)
+    late = now_code(secret, factor_clock)
+    factor_clock.tick(seconds=totp.STEP_SECONDS)
+    factor_services.auth.sign_in_with_code(user.id, late, source=SOURCE)
 
 
 async def test_a_wrong_code_counts_as_a_failed_sign_in(
-    services: Services, clock: Clock
+    factor_services: Services, factor_clock: Clock
 ) -> None:
-    user, _, _ = await with_factor(services, clock)
+    user, _, _ = await with_factor(factor_services, factor_clock)
     with pytest.raises(UnauthorizedError):
-        services.auth.sign_in_with_code(user.id, "000000", source=SOURCE)
-    assert credentials(services, "auth.code_failed")
+        factor_services.auth.sign_in_with_code(user.id, "000000", source=SOURCE)
+    assert credentials(factor_services, "auth.code_failed")
     for _ in range(20):
         try:
-            services.auth.sign_in_with_code(user.id, "000000", source=SOURCE)
+            factor_services.auth.sign_in_with_code(user.id, "000000", source=SOURCE)
         except UnauthorizedError:
             continue
         except RateLimitedError:
@@ -192,82 +194,95 @@ async def test_a_wrong_code_counts_as_a_failed_sign_in(
 
 
 async def test_a_code_too_long_is_refused_unchecked(
-    services: Services, clock: Clock
+    factor_services: Services, factor_clock: Clock
 ) -> None:
-    user, _, _ = await with_factor(services, clock)
+    user, _, _ = await with_factor(factor_services, factor_clock)
     with pytest.raises(UnauthorizedError):
-        services.auth.sign_in_with_code(user.id, "1" * 41, source=SOURCE)
+        factor_services.auth.sign_in_with_code(user.id, "1" * 41, source=SOURCE)
 
 
-async def test_a_user_without_a_factor_has_no_code(services: Services) -> None:
-    user = await anna(services)
+async def test_a_user_without_a_factor_has_no_code(factor_services: Services) -> None:
+    user = await anna(factor_services)
     with pytest.raises(UnauthorizedError):
-        services.auth.sign_in_with_code(user.id, "123456", source=SOURCE)
+        factor_services.auth.sign_in_with_code(user.id, "123456", source=SOURCE)
 
 
 async def test_a_recovery_code_signs_in_once_and_is_told(
-    services: Services, clock: Clock
+    factor_services: Services, factor_clock: Clock
 ) -> None:
-    user, _, codes = await with_factor(services, clock)
-    signed = services.auth.sign_in_with_code(user.id, codes[0].lower(), source=SOURCE)
+    user, _, codes = await with_factor(factor_services, factor_clock)
+    signed = factor_services.auth.sign_in_with_code(
+        user.id, codes[0].lower(), source=SOURCE
+    )
     assert signed.factor is not None
-    assert credentials(services, "auth.signed_in") == ["password+recovery"]
-    assert credentials(services, "auth.recovery_code_used")
-    assert services.factors.mine(access_of(services, user)).recovery_codes_left == 9
+    assert credentials(factor_services, "auth.signed_in") == ["password+recovery"]
+    assert credentials(factor_services, "auth.recovery_code_used")
+    assert (
+        factor_services.factors.mine(
+            access_of(factor_services, user)
+        ).recovery_codes_left
+        == 9
+    )
     with pytest.raises(UnauthorizedError):
-        services.auth.sign_in_with_code(user.id, codes[0], source=SOURCE)
+        factor_services.auth.sign_in_with_code(user.id, codes[0], source=SOURCE)
 
 
 async def test_a_disabled_user_does_not_get_past_the_code(
-    services: Services, clock: Clock
+    factor_services: Services, factor_clock: Clock
 ) -> None:
-    user, secret, _ = await with_factor(services, clock)
-    services.users.update_user(ADMIN, user.id, disabled=True)
+    user, secret, _ = await with_factor(factor_services, factor_clock)
+    factor_services.users.update_user(ADMIN, user.id, disabled=True)
     with pytest.raises(UnauthorizedError):
-        services.auth.sign_in_with_code(user.id, now_code(secret, clock), source=SOURCE)
+        factor_services.auth.sign_in_with_code(
+            user.id, now_code(secret, factor_clock), source=SOURCE
+        )
 
 
 # --- recovery codes anew --------------------------------------------------------
 
 
 async def test_new_recovery_codes_replace_the_old(
-    services: Services, clock: Clock
+    factor_services: Services, factor_clock: Clock
 ) -> None:
-    user, _, codes = await with_factor(services, clock)
-    access = access_of(services, user)
-    services.auth.sign_in_with_code(user.id, codes[0], source=SOURCE)
-    fresh = await services.factors.renew_codes(access, SECRET, codes[1])
-    assert services.factors.mine(access).recovery_codes_left == RECOVERY_CODES
+    user, _, codes = await with_factor(factor_services, factor_clock)
+    access = access_of(factor_services, user)
+    factor_services.auth.sign_in_with_code(user.id, codes[0], source=SOURCE)
+    fresh = await factor_services.factors.renew_codes(access, SECRET, codes[1])
+    assert factor_services.factors.mine(access).recovery_codes_left == RECOVERY_CODES
     assert not set(fresh) & set(codes)
     with pytest.raises(UnauthorizedError):
-        services.auth.sign_in_with_code(user.id, codes[2], source=SOURCE)
-    assert credentials(services, "users.codes_renewed")
+        factor_services.auth.sign_in_with_code(user.id, codes[2], source=SOURCE)
+    assert credentials(factor_services, "users.codes_renewed")
 
 
 async def test_new_codes_need_password_and_code(
-    services: Services, clock: Clock
+    factor_services: Services, factor_clock: Clock
 ) -> None:
-    user, secret, codes = await with_factor(services, clock)
-    access = access_of(services, user)
+    user, secret, codes = await with_factor(factor_services, factor_clock)
+    access = access_of(factor_services, user)
     with pytest.raises(BadRequestError, match="password"):
-        await services.factors.renew_codes(access, "not it at all", codes[0])
+        await factor_services.factors.renew_codes(access, "not it at all", codes[0])
     with pytest.raises(BadRequestError, match="code"):
-        await services.factors.renew_codes(access, SECRET, "000000")
+        await factor_services.factors.renew_codes(access, SECRET, "000000")
     # A code of the device does as well as a recovery code.
-    await services.factors.renew_codes(access, SECRET, now_code(secret, clock))
-    assert credentials(services, "auth.confirm_failed")
+    await factor_services.factors.renew_codes(
+        access, SECRET, now_code(secret, factor_clock)
+    )
+    assert credentials(factor_services, "auth.confirm_failed")
 
 
-async def test_new_codes_need_a_factor(services: Services) -> None:
-    access = access_of(services, await anna(services))
+async def test_new_codes_need_a_factor(factor_services: Services) -> None:
+    access = access_of(factor_services, await anna(factor_services))
     with pytest.raises(ConflictError):
-        await services.factors.renew_codes(access, SECRET, "123456")
+        await factor_services.factors.renew_codes(access, SECRET, "123456")
 
 
-async def test_a_code_with_a_space_signs_in(services: Services, clock: Clock) -> None:
-    user, secret, _ = await with_factor(services, clock)
-    code = now_code(secret, clock)
-    factors = services.auth.factors
+async def test_a_code_with_a_space_signs_in(
+    factor_services: Services, factor_clock: Clock
+) -> None:
+    user, secret, _ = await with_factor(factor_services, factor_clock)
+    code = now_code(secret, factor_clock)
+    factors = factor_services.auth.factors
     assert factors is not None
     taken = factors.check(user.id, f"{code[:3]} {code[3:]}")
     assert taken is not None and taken.kind == "totp"

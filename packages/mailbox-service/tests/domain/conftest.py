@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator
 from datetime import UTC, datetime
 from typing import Any
 
@@ -23,8 +24,27 @@ from benethos_mailbox_service.data.providers.imap import ImapProvider
 from benethos_mailbox_service.data.providers.memory import MemoryProvider
 
 from ..clocks import Clock
-from ..conftest import create_account, set_master_key
+from ..conftest import CHEAP, create_account, set_master_key
 from ..imap_fake import FakeFolder, FakeMailBox, make_message
+from .factor_helpers import START
+
+# --- the second factor: a clock that steps, the services on it ------------------
+
+
+@pytest.fixture
+def factor_clock() -> Clock:
+    return Clock(START)
+
+
+@pytest.fixture
+def factor_services(master_key: None, factor_clock: Clock) -> Iterator[Services]:
+    built = build_services(
+        Settings(storage="memory"), password_hasher=CHEAP, clock=factor_clock
+    )
+    built.vault.initialize()
+    yield built
+    built.close()
+
 
 # --- an IMAP account through the real services -----------------------------------
 
