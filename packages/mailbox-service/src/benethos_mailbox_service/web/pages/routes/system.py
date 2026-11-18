@@ -76,7 +76,7 @@ async def show_recovery_key(
     """The key after the password once more, and a code or a passkey with
     a second factor. Kept for the next page only, never in the URL."""
     proof = answered(request, passkey)
-    with failing(RECOVERY_PAGE):
+    with failing(RECOVERY_PAGE, dialog="show-key"):
         key = await recovery.show(caller, password, code, proof)
     show_once(request, "recovery_key", key)
     return back(request, RECOVERY_PAGE)

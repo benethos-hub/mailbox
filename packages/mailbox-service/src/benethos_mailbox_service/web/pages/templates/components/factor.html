@@ -7,37 +7,41 @@
    asks the browser when the form is sent. Without the script the field
    of the first code shows alone, and it takes a code of the app and a
    recovery code alike. ``focus``: the step starts the page, as on the
-   code page after the password. #}
+   code page after the password. ``legend``: the step names itself, else
+   only to a screen reader, where the page has the same title.
+   ``first``: the method shown first when the user has it, "totp" or
+   "recovery", as after a wrong code. #}
 {% from "components/ui.html" import icon %}
 
-{% macro second_step(id, ways, focus=False) %}
-<div class="factor-step" data-ways{% if focus %} data-ways-focus{% endif %}>
+{% macro second_step(id, ways, focus=False, legend=True, first=None) %}
+<fieldset class="factor-step" data-ways{% if focus %} data-ways-focus{% endif %}{% if first %} data-ways-first="{{ first }}"{% endif %}>
+  <legend{% if not legend %} class="sr"{% endif %}>Confirm it is you</legend>
   {% if ways.options %}
   <div data-way="passkey" data-passkey-options="{{ ways.options }}" hidden>
     <input type="hidden" name="passkey" value="" disabled />
-    <p class="factor-say">{{ icon("key") }} Your passkey confirms it. The browser asks for it when you go on.</p>
+    <div class="factor-pass">{{ icon("key") }}<div><strong>Passkey</strong> <span class="hint">Your browser asks for your PIN, fingerprint, face or security key.</span></div></div>
   </div>
   {% endif %}
   {% if ways.totp %}
   <div class="field" data-way="totp">
-    <label for="f-{{ id }}-totp">The code of your authenticator app</label>
-    <input id="f-{{ id }}-totp" name="code" inputmode="numeric" autocomplete="one-time-code" spellcheck="false" maxlength="40" required />
-    <span class="hint" data-ways-only>Or a recovery code, which then works no more.</span>
+    <label for="f-{{ id }}-totp">6-digit code from your authenticator app</label>
+    <input id="f-{{ id }}-totp" class="code" name="code" inputmode="numeric" autocomplete="one-time-code" spellcheck="false" maxlength="40" required />
+    <span class="hint" data-ways-only>A recovery code works here too. Each works once.</span>
   </div>
   {% endif %}
   <div class="field" data-way="recovery"{% if ways.totp %} hidden{% endif %}>
-    <label for="f-{{ id }}-recovery">A recovery code</label>
-    <input id="f-{{ id }}-recovery" name="code" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="40" required{% if ways.totp %} disabled{% endif %} />
-    <span class="hint">It works once.</span>
+    <label for="f-{{ id }}-recovery">Recovery code</label>
+    <input id="f-{{ id }}-recovery" class="code" name="code" placeholder="XXXXX-XXXXX-XXXXX" aria-describedby="f-{{ id }}-recovery-hint" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="40" required{% if ways.totp %} disabled{% endif %} />
+    <span class="hint" id="f-{{ id }}-recovery-hint">Each code works once.</span>
   </div>
   {% if ways.elsewhere %}<p class="hint">Your passkeys work at the public address of this service over HTTPS, not here.</p>{% endif %}
-  <span class="hint" data-passkey-status role="status"></span>
-  <button class="link factor-other" type="button" data-ways-other hidden>Try another way</button>
-  <div class="factor-choices" data-ways-choices hidden>
-    <span class="label">Confirm it with</span>
-    {% if ways.options %}<button type="button" data-way-pick="passkey">{{ icon("key") }} A passkey <span class="hint">PIN, fingerprint, face or security key</span></button>{% endif %}
-    {% if ways.totp %}<button type="button" data-way-pick="totp">{{ icon("shield-lock") }} A code of your authenticator app</button>{% endif %}
-    <button type="button" data-way-pick="recovery">{{ icon("journal-text") }} A recovery code</button>
+  <p class="notice warn factor-status" data-passkey-status role="status" hidden></p>
+  <button class="link factor-other" type="button" data-ways-other aria-expanded="false" aria-controls="f-{{ id }}-ways" hidden>Try another way</button>
+  <div class="factor-choices" id="f-{{ id }}-ways" role="group" aria-labelledby="f-{{ id }}-ways-label" data-ways-choices hidden>
+    <span class="label" id="f-{{ id }}-ways-label">Choose how to confirm</span>
+    {% if ways.options %}<button type="button" data-way-pick="passkey">{{ icon("key") }} Passkey <span class="hint">PIN, fingerprint, face or security key</span></button>{% endif %}
+    {% if ways.totp %}<button type="button" data-way-pick="totp">{{ icon("shield-lock") }} Authenticator app code <span class="hint">The 6-digit code the app shows now</span></button>{% endif %}
+    <button type="button" data-way-pick="recovery">{{ icon("journal-text") }} Recovery code <span class="hint">One of the codes you saved. Each works once.</span></button>
   </div>
-</div>
+</fieldset>
 {% endmacro %}

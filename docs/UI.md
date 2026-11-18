@@ -416,20 +416,24 @@ on both pages.
 
 The second factor ([AUTHENTICATION.md](AUTHENTICATION.md)) has a page of
 its own, **Second factor**, reached from the foot of the sidebar and the
-person's own user page. It has a card per method of the second factor
-and one for the recovery codes. The card **Authenticator app (TOTP)**
+person's own user page. The line under its title says with a tag
+whether the second factor is on or off. It has a card per method of the
+second factor and one for the recovery codes. The card **Authenticator app (TOTP)**
 lists the devices with their name, when each
 was added and last used. **Add a device** asks in a dialog for its name
 and the password, and with a device there already the second factor,
 then shows the QR
-code with the key as text and a field for the first code. The first
+code with the key as text and a field for the first code, in two
+numbered steps, Cancel beside the button. The first
 device brings the ten recovery codes, shown once, with a button that
 copies them all and offered as a text file to download. The pencil on
 a device's row takes the new name, its bin the password and a code in
 the dialog. With two devices or more they can be ticked and removed
 together after one password and one code. The
-Recovery codes card says how many are left, and **Make new codes**
-makes new ones after the password and the second factor in a dialog. Another user's page lists its devices to a user with
+Recovery codes card says how many are left, and **Make new codes** in
+its head makes new ones after the password and the second factor in a
+dialog. New ones show once in a card of their own, **Your new recovery
+codes**. Another user's page lists its devices to a user with
 `get_second_factor`, with **Remove** for one to a user with
 `remove_totp_device`, as the bin on its row, and **Remove every device** to a user with
 `remove_second_factor`. After the password, a user with a factor sees
@@ -437,20 +441,34 @@ the code page, **Confirm it is you**, outside the layout as the
 sign-in is.
 
 Every step that asks for the second factor shows one method at a time
-(`components/factor.html`): a passkey where the user has one and the
-browser makes them, else the code of an authenticator app, else a
-recovery code. **Try another way** lists the methods of the user, each
-a button, and a pick shows its field. A passkey picked there asks the
-browser at once when the form lacks nothing else. Where the passkey
-shows, the form's own button asks the browser for it, then sends the
-form. While the list shows, the form waits for a pick. Nothing stores
-the method used. Without `passkey.js` the field of the first code
-shows alone, and it takes a code of the app and a recovery code alike.
+(`components/factor.html`), in a group named **Confirm it is you**: a
+passkey where the user has one and the browser makes them, else the
+code of an authenticator app, else a recovery code. The passkey is a
+framed block that says what the browser will ask, the code fields set
+their text in the monospace font. **Try another way** lists the methods
+of the user, each a button with a line that says what it is, and a pick
+shows its field. A passkey picked there asks the browser at once when
+the form lacks nothing else. Where the passkey shows, the form's own
+button asks the browser for it, then sends the form. While the browser
+asks, the buttons are locked and a notice says it waits. A passkey not
+used says so in that notice. While the list shows, the form's buttons
+are locked until a pick. Nothing stores the method used. After a wrong
+code the code page shows the field of that code first again. Without
+`passkey.js` the field of the first code shows alone, and it takes a
+code of the app and a recovery code alike.
+
+A dialog of the second factor whose form is refused, a wrong code or
+password, opens again on the page that follows, the message in it and
+not at the top of the page. Without JavaScript the dialogs and the
+forms of a row stand open in the page, and the buttons that open and
+close them are hidden. On a phone the description in the head of a
+card has a line of its own under the title.
 
 The card **Passkeys** works as the one of the authenticator apps.
 **Add a passkey** asks in a dialog for its name and the password,
 and with a factor on the second factor, then shows **Make the
-passkey**, which asks the browser. `passkey.js` offers a passkey only
+passkey**, which asks the browser, Cancel beside it. `passkey.js`
+offers a passkey only
 where the browser makes passkeys, and the page says so where it makes
 none, at an address or over HTTP. Another user's page lists its
 passkeys beside its devices, with **Remove** to a user with

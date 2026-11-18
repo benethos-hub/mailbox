@@ -12,7 +12,7 @@
   <div class="notice warn">Show it only where nobody looks over your shoulder. The service log notes that it was shown, and to whom.</div>
   <div class="form-actions">{{ dialog_button("show-key", "Show", icon="key", alone=False, danger=False) }}</div>
 {% endcall %}
-{% call form_dialog("show-key", "Show the recovery key?", "Confirm it is you.") %}
+{% call form_dialog("show-key", "Show the recovery key?", "Enter your password to show it.") %}
   <form method="post" action="/ui/recovery-key">
     {{ csrf_field() }}
     <input type="hidden" name="name" value="{{ me.name }}" autocomplete="username" />

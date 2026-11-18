@@ -79,6 +79,22 @@ document.addEventListener("click", (event) => {
   if (open) target.querySelector("input:not([type=hidden]), select")?.focus();
 });
 
+// A dialog whose form came back refused opens again, the cursor in its
+// first field.
+function reopen() {
+  const dialog = document.querySelector("dialog[data-open]");
+  if (dialog instanceof HTMLDialogElement && dialog.showModal) {
+    dialog.showModal();
+    dialog.querySelector("input:not([type=hidden]):not([disabled])")?.focus();
+  }
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", reopen);
+} else {
+  reopen();
+}
+
 // <button data-dialog="id"> opens a dialog that holds a form, e.g. one
 // that asks for the password and a code. data-close inside a dialog or a
 // form at a row closes it, nothing is sent.

@@ -3,14 +3,14 @@
 {% from "components/factor.html" import second_step with context %}
 {% block title %}Second factor · {{ APP_NAME }}{% endblock %}
 {% block heading %}Second factor{% endblock %}
-{% block subheading %}<div class="sub">A second step after your password, when you sign in to this UI</div>{% endblock %}
+{% block subheading %}<div class="sub">{% if factor.totp or factor.passkeys %}<span class="tag ok">on</span> Signing in to this UI asks for your password and a second step.{% else %}<span class="tag warn">off</span> Your password alone signs you in to this UI. Add a device or a passkey to turn it on.{% endif %}</div>{% endblock %}
 {% block content %}
 {% set devices = factor.totp %}
 {% set keys = factor.passkeys %}
 {% set on = devices or keys %}
 {% if codes %}
 <section class="card">
-  <header><h2>Recovery codes</h2><span class="right"><span class="tag warn">shown this once</span></span></header>
+  <header><h2>Your new recovery codes</h2><span class="right"><span class="tag warn">shown this once</span></span></header>
   <div class="body">
     <p class="muted">Each signs you in once in place of a code of a device or a passkey, e.g. when a phone is lost. Keep them apart from your devices, in a password manager or on paper.</p>
     <div class="secret-line"><ul class="codes secret" id="recovery-codes">{% for code in codes %}<li>{{ code }}</li>{% endfor %}</ul>{{ copy_button("recovery-codes", "Copy all codes") }}</div>
@@ -21,22 +21,22 @@
 
 {% if qr %}
 {% call card("Scan the code for " ~ setup.name, meta="With an authenticator app, within " ~ minutes ~ " minutes.") %}
+  <p class="muted">1. Scan this code with your authenticator app.</p>
   <img class="qr" src="{{ qr }}" alt="QR code of the device {{ setup.name }}" width="225" height="225" />
-  <p class="muted">Where the camera cannot reach, type in this key:</p>
+  <p class="muted">Or type in this key:</p>
   <div class="secret-line"><code class="secret" id="totp-key">{{ secret }}</code>{{ copy_button("totp-key", "Copy the key") }}</div>
-  <form method="post" action="/ui/second-factor/totp/confirm">
+  <form class="factor-setup" method="post" action="/ui/second-factor/totp/confirm">
     {{ csrf_field() }}
     <div class="form-grid">
       <div class="field">
-        <label for="f-confirm">The code {{ setup.name }} shows now</label>
-        <input id="f-confirm" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,7}" maxlength="7" required autofocus />
+        <label for="f-confirm">2. The 6-digit code {{ setup.name }} shows now</label>
+        <input id="f-confirm" class="code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,7}" maxlength="7" required autofocus />
       </div>
     </div>
-    <div class="form-actions"><button class="primary" type="submit">{{ icon("check-lg") }} {% if on %}Add device{% else %}Turn on{% endif %}</button></div>
+    <div class="form-actions"><button class="primary" type="submit">{{ icon("check-lg") }} {% if on %}Add device{% else %}Turn on{% endif %}</button><button type="submit" form="totp-cancel">Cancel</button></div>
   </form>
-  <form method="post" action="/ui/second-factor/totp/cancel">
+  <form id="totp-cancel" method="post" action="/ui/second-factor/totp/cancel">
     {{ csrf_field() }}
-    <button class="link" type="submit">Cancel</button>
   </form>
 {% endcall %}
 {% endif %}
@@ -44,24 +44,24 @@
 {% if making %}
 {% call card("Make the passkey " ~ making.name, meta="With this device, a security key or a password manager, within " ~ minutes ~ " minutes.") %}
   <p class="muted">The browser asks where to keep it, and for your PIN, fingerprint or face.</p>
-  <form method="post" action="/ui/second-factor/passkeys/confirm">
+  <form class="factor-setup" method="post" action="/ui/second-factor/passkeys/confirm">
     {{ csrf_field() }}
     <input type="hidden" name="answer" value="" />
     <div class="form-actions">
       <button class="primary" type="button" data-passkey-create="{{ making.options }}" hidden>{{ icon("key") }} {% if on %}Make the passkey{% else %}Make the passkey and turn on{% endif %}</button>
-      <span class="hint" data-passkey-status role="status"></span>
+      <button type="submit" form="passkey-cancel">Cancel</button>
     </div>
-    <p class="notice warn" data-passkey-missing hidden>This browser makes no passkeys.</p>
+    <p class="notice warn factor-status" data-passkey-status role="status" hidden></p>
+    <p class="notice warn" data-passkey-missing hidden>This browser does not support passkeys.</p>
   </form>
-  <form method="post" action="/ui/second-factor/passkeys/cancel">
+  <form id="passkey-cancel" method="post" action="/ui/second-factor/passkeys/cancel">
     {{ csrf_field() }}
-    <button class="link" type="submit">Cancel</button>
   </form>
 {% endcall %}
 {% endif %}
 
 {% set can_add = not qr and devices | length < max_devices %}
-{% call related("Authenticator app (TOTP)", count=devices | length, meta=("devices: a code of any of them signs in" if devices else ("none: your passkeys sign you in" if on else "off now: your password alone signs you in")), add=("Add a device" if can_add else None), add_dialog="add-device") %}
+{% call related("Authenticator app (TOTP)", count=devices | length, meta=("A code from any of them works." if devices else "Any authenticator app works."), add=("Add a device" if can_add else None), add_dialog="add-device") %}
   {% if devices | length > 1 %}
   <div class="batch-bar">
     <span class="label">Ticked devices</span>
@@ -105,7 +105,7 @@
 {% endcall %}
 
 {% set can_make = passkeys_work and not making and keys | length < max_devices %}
-{% call related("Passkeys", count=keys | length, meta=("any of them signs in" if keys else "a key pair on a device, a security key or in a password manager"), add=("Add a passkey" if can_make else None), add_dialog="add-passkey") %}
+{% call related("Passkeys", count=keys | length, meta=("Any of them works." if keys else "Kept on a device, a security key or in a password manager."), add=("Add a passkey" if can_make else None), add_dialog="add-passkey") %}
   <div class="body tight">
     <div class="table-scroll">
       <table>
@@ -158,7 +158,7 @@
     {{ csrf_field() }}
     {% call confirm_fields("add", step=on) %}
     <div class="field">
-      <label for="f-name">Its name</label>
+      <label for="f-name">Name</label>
       <input id="f-name" name="name" maxlength="{{ max_name }}" required placeholder="e.g. Phone" />
     </div>
     {% endcall %}
@@ -172,7 +172,7 @@
     {{ csrf_field() }}
     {% call confirm_fields("passkey", step=on) %}
     <div class="field">
-      <label for="f-passkey-name">Its name</label>
+      <label for="f-passkey-name">Name</label>
       <input id="f-passkey-name" name="name" maxlength="{{ max_name }}" required placeholder="e.g. Laptop" />
     </div>
     {% endcall %}
@@ -182,7 +182,7 @@
 {% endif %}
 {% set last = (devices | length) + (keys | length) == 1 %}
 {% for device in devices %}
-{% call form_dialog("remove-" ~ device.id, "Remove " ~ device.name ~ "?", "Its codes work no more." ~ (" It is the last device: the second factor is off then, and the recovery codes go with it." if last else "")) %}
+{% call form_dialog("remove-" ~ device.id, "Remove " ~ device.name ~ "?", "Its codes stop working." ~ (" It is the last device: the second factor is off then, and the recovery codes go with it." if last else "")) %}
   <form method="post" action="/ui/second-factor/totp/remove">
     {{ csrf_field() }}
     <input type="hidden" name="device" value="{{ device.id }}" />
@@ -192,7 +192,7 @@
 {% endcall %}
 {% endfor %}
 {% if devices | length > 1 %}
-{% call form_dialog("remove-ticked", "Remove the ticked devices?", "Their codes work no more. With every device ticked and no passkey, the second factor is off, and the recovery codes go with it.") %}
+{% call form_dialog("remove-ticked", "Remove the ticked devices?", "Their codes stop working. With every device ticked and no passkey, the second factor is off, and the recovery codes go with it.") %}
   <form method="post" action="/ui/second-factor/totp/remove-ticked" id="devices-batch">
     {{ csrf_field() }}
     {{ confirm_fields("remove-ticked") }}
@@ -201,7 +201,7 @@
 {% endcall %}
 {% endif %}
 {% for key in keys %}
-{% call form_dialog("remove-" ~ key.id, "Remove " ~ key.name ~ "?", "It signs in no more. Remove it from the device or the password manager as well." ~ (" It is the last device: the second factor is off then, and the recovery codes go with it." if last else "")) %}
+{% call form_dialog("remove-" ~ key.id, "Remove " ~ key.name ~ "?", "It no longer signs you in. Remove it from the device or the password manager as well." ~ (" It is the last device: the second factor is off then, and the recovery codes go with it." if last else "")) %}
   <form method="post" action="/ui/second-factor/passkeys/remove">
     {{ csrf_field() }}
     <input type="hidden" name="device" value="{{ key.id }}" />
@@ -212,12 +212,10 @@
 {% endfor %}
 
 {% if on %}
-{% call card("Recovery codes", meta=factor.recovery_codes_left ~ " left. New ones replace them all.") %}
-  {% if factor.recovery_codes_left == 0 %}<div class="notice warn">No recovery codes are left. Make new ones.</div>
-  {% elif factor.recovery_codes_left <= 2 %}<div class="notice warn">Few recovery codes are left. Make new ones.</div>{% endif %}
-  <div class="form-actions">{{ dialog_button("new-codes", "Make new codes", icon="arrow-repeat", alone=False, danger=False) }}</div>
+{% call related("Recovery codes", meta=factor.recovery_codes_left ~ " left. New ones replace them all.", add="Make new codes", add_dialog="new-codes", add_icon="arrow-repeat") %}
+  {% if factor.recovery_codes_left <= 2 %}<div class="body">{% if factor.recovery_codes_left == 0 %}<div class="notice warn">No recovery codes are left. Make new ones.</div>{% else %}<div class="notice warn">Few recovery codes are left. Make new ones.</div>{% endif %}</div>{% endif %}
 {% endcall %}
-{% call form_dialog("new-codes", "Make new recovery codes?", "They replace the ones left, which work no more then.") %}
+{% call form_dialog("new-codes", "Make new recovery codes?", "They replace the ones left, which stop working.") %}
   <form method="post" action="/ui/second-factor/codes">
     {{ csrf_field() }}
     {{ confirm_fields("codes") }}

@@ -9,7 +9,8 @@
 // passkey shows, sending the form first signs the challenge of its
 // data-passkey-options with one of the person's passkeys and puts the
 // answer in its hidden field "passkey". data-ways-focus puts the cursor
-// in the step when the page opens.
+// in the step when the page opens, data-ways-first names the method shown
+// first when the user has it.
 // A <button data-passkey-create="options"> makes a new passkey and sends
 // its answer in the hidden field "answer".
 // A passkey is offered only where the browser makes passkeys, and an
@@ -69,9 +70,25 @@ function answerOf(credential) {
 
 const works = "PublicKeyCredential" in window && Boolean(navigator.credentials);
 
+// The browser's answer in the form's notice, which shows only with a
+// text.
 function say(form, text) {
   const status = form.querySelector("[data-passkey-status]");
-  if (status) status.textContent = text;
+  if (!status) return;
+  status.textContent = text;
+  status.hidden = !text;
+}
+
+// While the browser asks, the form takes no second click: its buttons
+// are locked and the notice says it waits. ``busy`` false frees them.
+function waiting(form, buttons, busy) {
+  if (busy) {
+    form.dataset.passkeyBusy = "";
+  } else {
+    delete form.dataset.passkeyBusy;
+  }
+  for (const button of buttons) button.disabled = busy;
+  say(form, busy ? "Waiting for your browser…" : "");
 }
 
 // The methods of a step this browser can use, in their order.
@@ -85,7 +102,15 @@ function active(step) {
   return step.querySelector("[data-way]:not([hidden])");
 }
 
+// The buttons that send the form of the step, locked or free.
+function lock(form, locked) {
+  for (const button of form?.querySelectorAll("[type=submit]") || []) {
+    button.disabled = locked;
+  }
+}
+
 // Shows the method ``name`` of the step, its fields on, the others off.
+// A method shown frees the form's buttons again.
 function show(step, name) {
   for (const way of step.querySelectorAll("[data-way]")) {
     const on = way.dataset.way === name;
@@ -94,7 +119,10 @@ function show(step, name) {
   }
   for (const hint of step.querySelectorAll("[data-ways-only]")) hint.hidden = true;
   step.querySelector("[data-ways-choices]").hidden = true;
-  step.querySelector("[data-ways-other]").hidden = usable(step).length < 2;
+  const other = step.querySelector("[data-ways-other]");
+  other.hidden = usable(step).length < 2;
+  other.setAttribute("aria-expanded", "false");
+  if (name !== null) lock(step.closest("form"), false);
   say(step.closest("form") || step, "");
 }
 
@@ -111,22 +139,34 @@ function start(step) {
   for (const pick of step.querySelectorAll("[data-way-pick]")) {
     pick.hidden = !ways.some((way) => way.dataset.way === pick.dataset.wayPick);
   }
-  show(step, ways[0].dataset.way);
+  const first = ways.find((way) => way.dataset.way === step.dataset.waysFirst);
+  show(step, (first || ways[0]).dataset.way);
   if ("waysFocus" in step.dataset) focus(step);
 }
 
 async function sign(form, way) {
-  const options = request(JSON.parse(way.dataset.passkeyOptions));
-  const credential = await navigator.credentials.get({ publicKey: options });
-  way.querySelector("[name=passkey]").value = answerOf(credential);
+  const buttons = form.querySelectorAll("[type=submit]");
+  waiting(form, buttons, true);
+  try {
+    const options = request(JSON.parse(way.dataset.passkeyOptions));
+    const credential = await navigator.credentials.get({ publicKey: options });
+    way.querySelector("[name=passkey]").value = answerOf(credential);
+  } finally {
+    waiting(form, buttons, false);
+  }
   form.requestSubmit();
 }
 
 async function create(button) {
   const form = button.form;
-  const options = creation(JSON.parse(button.dataset.passkeyCreate));
-  const credential = await navigator.credentials.create({ publicKey: options });
-  form.elements.answer.value = answerOf(credential);
+  waiting(form, [button], true);
+  try {
+    const options = creation(JSON.parse(button.dataset.passkeyCreate));
+    const credential = await navigator.credentials.create({ publicKey: options });
+    form.elements.answer.value = answerOf(credential);
+  } finally {
+    waiting(form, [button], false);
+  }
   form.requestSubmit();
 }
 
@@ -140,22 +180,27 @@ function failed(form, error, made) {
         ? "No passkey was made. Try again."
         : "The browser made no passkey: " + (error && error.message)
       : cancelled
-        ? "No passkey was used. Go on to try again, or try another way."
+        ? "The passkey was not used. Try again, or try another way."
         : "The browser used no passkey: " + (error && error.message),
   );
 }
 
-// The list of the methods in place of the one shown, its fields off.
+// The list of the methods in place of the one shown, its fields off
+// and the form's buttons locked until a pick.
 function choose(step) {
   show(step, null);
-  step.querySelector("[data-ways-other]").hidden = true;
+  const other = step.querySelector("[data-ways-other]");
+  other.setAttribute("aria-expanded", "true");
+  other.hidden = true;
   step.querySelector("[data-ways-choices]").hidden = false;
+  lock(step.closest("form"), true);
   step.querySelector("[data-way-pick]:not([hidden])")?.focus();
 }
 
 // A form whose step shows the passkey asks for it before it is sent,
-// and one whose step lists the methods waits for a pick. Capturing at
-// the window, the form goes nowhere else until then.
+// and one whose step lists the methods waits for a pick, also when the
+// Enter key sends it. Capturing at the window, the form goes nowhere
+// else until then.
 window.addEventListener(
   "submit",
   (event) => {
@@ -171,7 +216,7 @@ window.addEventListener(
     if (!way || way.querySelector("[name=passkey]").value) return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    say(form, "");
+    if ("passkeyBusy" in form.dataset) return;
     sign(form, way).catch((error) => failed(form, error, false));
   },
   true,
@@ -199,7 +244,7 @@ document.addEventListener("click", (event) => {
   const button = event.target.closest?.("[data-passkey-create]");
   if (!button || !button.form) return;
   event.preventDefault();
-  say(button.form, "");
+  if ("passkeyBusy" in button.form.dataset) return;
   create(button).catch((error) => failed(button.form, error, true));
 });
 

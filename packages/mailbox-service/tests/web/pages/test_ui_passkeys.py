@@ -114,8 +114,11 @@ def test_a_passkey_signs_in_after_the_password(
     page = browser.get("/ui/login/code").text
     # The passkey first, the others listed after "Try another way".
     assert 'data-way="passkey"' in page and 'data-way-pick="passkey"' in page
-    assert 'data-way-pick="recovery"' in page and "A recovery code" in page
+    assert 'data-way-pick="recovery"' in page and "Recovery code" in page
     assert 'data-way="totp"' not in page
+    # The passkey is a block of its own, as strong as a field.
+    assert 'class="factor-pass"' in page
+    assert "Your browser asks for your PIN, fingerprint, face or security key." in page
     answer = laptop.get(options(page))
     assert code_page(browser, page, passkey=answer) == "/ui/mail"
     assert browser.get("/ui").status_code == 200
@@ -249,6 +252,8 @@ def test_a_cancelled_setup_is_gone(at_https: TestClient, services: Services) -> 
         "/ui/second-factor/passkeys/begin",
         {"name": "Laptop", "password": UI_PASSWORD},
     )
+    making = at_https.get("/ui/second-factor").text
+    assert '<button type="submit" form="passkey-cancel">Cancel</button>' in making
     page = post(at_https, "/ui/second-factor/passkeys/cancel")
     assert "data-passkey-create" not in page.text
     late = post(at_https, "/ui/second-factor/passkeys/confirm", {"answer": "{}"})

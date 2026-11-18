@@ -86,10 +86,11 @@
    (docs/UI.md 4.2). It creates at its head and acts on its rows. ``add``:
    the word of the plus in its header, which opens the form ``add_form``
    (an id, a ``row_form`` at the head of the table), or with
-   ``add_dialog`` the ``form_dialog`` of that id. #}
-{% macro related(title, count=None, meta=None, add=None, add_form=None, add_open=False, add_dialog=None) %}
+   ``add_dialog`` the ``form_dialog`` of that id. ``add_icon``: the icon
+   beside that word. #}
+{% macro related(title, count=None, meta=None, add=None, add_form=None, add_open=False, add_dialog=None, add_icon="plus-lg") %}
 <section class="card">
-  <header><h2>{{ title }}</h2>{% if count is not none %}<span class="meta">{{ count }}</span>{% endif %}{% if meta %}<span class="meta">{{ meta }}</span>{% endif %}{% if add %}<span class="right">{% if add_dialog %}{{ dialog_button(add_dialog, add, "plus-lg", alone=False, danger=False) }}{% else %}{{ toggle(add_form, add, "plus-lg", alone=False, open=add_open) }}{% endif %}</span>{% endif %}</header>
+  <header><h2>{{ title }}</h2>{% if count is not none %}<span class="meta count">{{ count }}</span>{% endif %}{% if meta %}<span class="meta">{{ meta }}</span>{% endif %}{% if add %}<span class="right">{% if add_dialog %}{{ dialog_button(add_dialog, add, add_icon, alone=False, danger=False) }}{% else %}{{ toggle(add_form, add, add_icon, alone=False, open=add_open) }}{% endif %}</span>{% endif %}</header>
   {{ caller() }}
 </section>
 {% endmacro %}
@@ -108,10 +109,13 @@
 {# A form in a dialog of its own, for a step that asks for more than a
    yes, e.g. removing a device with the password and a code. The caller
    gives the form, with ``dialog_buttons`` at its end. Opened by a
-   ``dialog_button``. Without app.js it shows in the page. #}
+   ``dialog_button``. Without app.js it shows in the page. A form of it
+   refused comes back with the dialog open and the error in it
+   (``open_dialog``). #}
 {% macro form_dialog(id, title, text) %}
-<dialog class="ask form-dialog" id="{{ id }}" aria-labelledby="{{ id }}-title">
-  <div class="body"><h2 id="{{ id }}-title">{{ title }}</h2><p>{{ text }}</p></div>
+{% set again = open_dialog is defined and open_dialog == id %}
+<dialog class="ask form-dialog" id="{{ id }}" aria-labelledby="{{ id }}-title" aria-describedby="{{ id }}-text"{% if again %} data-open{% endif %}>
+  <div class="body"><h2 id="{{ id }}-title">{{ title }}</h2><p id="{{ id }}-text">{{ text }}</p>{% if again and err %}<div class="notice err" role="alert">{{ err }}</div>{% endif %}</div>
   {{ caller() }}
 </dialog>
 {% endmacro %}
