@@ -45,6 +45,40 @@ class Synced(Activity):
 
 
 @dataclass(frozen=True, kw_only=True)
+class PassOvertaken(Activity):
+    """A change of ours overtook a pass: it applied nothing and reads
+    again."""
+
+    name: ClassVar[str] = "pass_overtaken"
+    level: ClassVar[int] = logging.DEBUG
+
+    account: Account
+
+    def says(self) -> str:
+        return (
+            f"read {account(self.account)} again: a change made through the "
+            "service overtook the pass"
+        )
+
+
+@dataclass(frozen=True, kw_only=True)
+class PassGivenUp(Activity):
+    """Changes of ours overtook every attempt: the next pass reads again."""
+
+    name: ClassVar[str] = "pass_given_up"
+
+    account: Account
+    attempts: int
+
+    def says(self) -> str:
+        return (
+            f"left the index of {account(self.account)} to the next pass: "
+            f"changes made through the service overtook {self.attempts} "
+            "attempts"
+        )
+
+
+@dataclass(frozen=True, kw_only=True)
 class SyncFailed(Failure):
     name: ClassVar[str] = "failed"
 

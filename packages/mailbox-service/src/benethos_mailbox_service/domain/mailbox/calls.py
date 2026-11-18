@@ -200,21 +200,24 @@ class Calls:
         self, account_id: str, ids: list[str], changes: MessageUpdate
     ) -> dict[str, MessageSummary | MailboxServiceError]:
         """Change messages. Returns the outcome per id."""
-        outcomes, natives = await self._on_messages(
-            account_id, ids, lambda p, n: writes(p).update_messages(n, changes)
-        )
         results: dict[str, MessageSummary | MailboxServiceError] = {}
         folders: dict[str, str] = {}
-        threads = self._sync.thread_ids(account_id, ids)
-        for message_id, outcome in outcomes.items():
-            if isinstance(outcome, MailboxServiceError):
-                results[message_id] = outcome
-                continue
-            _follow(self._sync, account_id, message_id, natives[message_id], outcome)
-            results[message_id] = public(
-                outcome, message_id, account_id, threads.get(message_id)
+        with self._sync.writing(account_id):
+            outcomes, natives = await self._on_messages(
+                account_id, ids, lambda p, n: writes(p).update_messages(n, changes)
             )
-            folders[message_id] = folder_of(outcome)
+            threads = self._sync.thread_ids(account_id, ids)
+            for message_id, outcome in outcomes.items():
+                if isinstance(outcome, MailboxServiceError):
+                    results[message_id] = outcome
+                    continue
+                _follow(
+                    self._sync, account_id, message_id, natives[message_id], outcome
+                )
+                results[message_id] = public(
+                    outcome, message_id, account_id, threads.get(message_id)
+                )
+                folders[message_id] = folder_of(outcome)
         self._sync.changed(MessagesUpdated(account_id, _done(results), folders))
         return results
 
@@ -231,24 +234,26 @@ class Calls:
         self, account_id: str, ids: list[str], permanent: bool
     ) -> dict[str, None | MailboxServiceError]:
         """Into the trash, or for good. Returns the outcome per id."""
-        outcomes, natives = await self._on_messages(
-            account_id, ids, lambda p, n: deletes(p).delete_messages(n, permanent)
-        )
         results: dict[str, None | MailboxServiceError] = {}
         folders: dict[str, str] = {}
-        for message_id, outcome in outcomes.items():
-            if isinstance(outcome, MailboxServiceError):
-                results[message_id] = outcome
-                continue
-            if permanent:
-                folders[message_id] = self._sync.folder_of(account_id, message_id) or ""
-                self._sync.forget(account_id, message_id)
-            elif outcome is not None:
-                _follow(
-                    self._sync, account_id, message_id, natives[message_id], outcome
-                )
-                folders[message_id] = folder_of(outcome)
-            results[message_id] = None
+        with self._sync.writing(account_id):
+            outcomes, natives = await self._on_messages(
+                account_id, ids, lambda p, n: deletes(p).delete_messages(n, permanent)
+            )
+            for message_id, outcome in outcomes.items():
+                if isinstance(outcome, MailboxServiceError):
+                    results[message_id] = outcome
+                    continue
+                if permanent:
+                    was = self._sync.folder_of(account_id, message_id)
+                    folders[message_id] = was or ""
+                    self._sync.forget(account_id, message_id)
+                elif outcome is not None:
+                    _follow(
+                        self._sync, account_id, message_id, natives[message_id], outcome
+                    )
+                    folders[message_id] = folder_of(outcome)
+                results[message_id] = None
         done = _done(results)
         self._sync.changed(
             MessagesDeleted(account_id, done, folders)
@@ -272,15 +277,18 @@ class Calls:
     ) -> tuple[Outcomes[T], dict[str, str]]:
         """Run a provider operation on the messages behind ``ids``. Those
         the provider does not find where the index says get one sync and a
-        second try. Returns the outcome per id and the provider id used."""
+        second try. Returns the outcome per id and the provider id used.
+        Called inside ``writing`` of the sync."""
         natives = {i: n for i, n in self._sync.natives(account_id, ids).items() if n}
         outcomes: Outcomes[T] = {i: missing_message(i) for i in ids if i not in natives}
         outcomes.update(await self._run_on(account_id, natives, run))
         missing = [i for i in natives if isinstance(outcomes[i], MessageNotFoundError)]
         if missing and self._sync.mapped(account_id):
-            moved = await self._gone.after_a_pass(
-                account_id, {i: natives[i] for i in missing}
-            )
+            # The pass looks for them: it must not count this change.
+            with self._sync.pausing(account_id):
+                moved = await self._gone.after_a_pass(
+                    account_id, {i: natives[i] for i in missing}
+                )
             outcomes.update(await self._run_on(account_id, moved, run))
             natives.update(moved)
         for message_id, outcome in outcomes.items():
