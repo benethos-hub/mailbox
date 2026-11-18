@@ -9,6 +9,7 @@ from collections.abc import Mapping
 
 from ..models import Connection, ProviderType, SettingField, Summary
 from ..protocols import IMAP_PORTS, JMAP_PATH, JMAP_PORT, POP3_PORTS, SMTP_PORTS
+from .settings import AUTHSERV_ID
 
 _SECURITY = (("tls", "tls"), ("starttls", "starttls"))
 
@@ -47,7 +48,7 @@ def _mail_server(protocol: str, ports: Mapping[str, int]) -> tuple[SettingField,
 
 # The receiving server's name, which a person reads from a received mail.
 _AUTHSERV_ID = SettingField(
-    "authserv_id",
+    AUTHSERV_ID,
     "Receiving server's name",
     "As it stands at the start of Authentication-Results in a received mail. "
     "Several with commas. Empty: the sender check stays unknown.",

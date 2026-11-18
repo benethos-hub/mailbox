@@ -7,9 +7,11 @@ import pytest
 
 from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import Grant, ProviderType
-from benethos_mailbox_service.domain.accounts import SeenName
+from benethos_mailbox_service.data.providers import ServerNames
+from benethos_mailbox_service.domain.accounts import SeenName, takes_server_name
 from benethos_mailbox_service.errors import ForbiddenError
 
+from ...conformance_helpers import KINDS, box
 from ...conftest import ADMIN, bearer_for
 from ...imap_fake import FakeMailBox, make_message
 
@@ -56,3 +58,12 @@ async def test_an_account_that_names_its_server_itself_reads_none(
         ADMIN, ProviderType.MEMORY, "m@example.com"
     )
     assert await imap_services.accounts.server_names(ADMIN, account.id) == []
+
+
+@pytest.mark.parametrize("kind", [k for k in KINDS if k != "memory"])
+def test_the_kinds_that_take_a_name_are_those_that_read_names(kind: str) -> None:
+    """A person names the receiving server exactly where the adapter
+    reads the names of the newest mails."""
+    found = box(kind)
+    takes = takes_server_name(found.provider)
+    assert takes == isinstance(found.make(), ServerNames)

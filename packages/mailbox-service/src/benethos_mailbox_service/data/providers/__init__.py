@@ -49,9 +49,10 @@ from .registry import (
     settings_from_servers,
     sign_in,
 )
-from .settings import hosts_in
+from .settings import AUTHSERV_ID, hosts_in
 
 __all__ = [
+    "AUTHSERV_ID",
     "Capability",
     "CredentialReader",
     "FolderChanges",

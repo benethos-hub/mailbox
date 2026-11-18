@@ -127,12 +127,16 @@ def _number(
     return number
 
 
+# The setting that names the account's receiving server.
+AUTHSERV_ID = "authserv_id"
+
+
 def trust_of(settings: ProviderSettings) -> authentication.Trust | None:
     """The names of the account's receiving server in ``authserv_id``,
     several with commas, each a host name or one with a leading dot for
     every host below it. None without one: the sender check stays
     unknown."""
-    value = settings.get("authserv_id")
+    value = settings.get(AUTHSERV_ID)
     if value is None or value == "":
         return None
     if not isinstance(value, str):
@@ -151,7 +155,7 @@ def trust_of(settings: ProviderSettings) -> authentication.Trust | None:
 
 
 _AUTHSERV_ID = (
-    "settings.authserv_id must be host names, several with commas, "
+    f"settings.{AUTHSERV_ID} must be host names, several with commas, "
     "e.g. mx.example.org or .example.org for every host below it"
 )
 
