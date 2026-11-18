@@ -143,7 +143,7 @@ the audit keeps as well are listed in [AUDIT.md](AUDIT.md) section 2.
 
 | Level | Line | Fields | Note |
 |---|---|---|---|
-| INFO | signed in to the UI [with a code of D] | user, source, how: `password`, `password+totp`, `password+recovery`, the device | after the code, for a user with a second factor |
+| INFO | signed in to the UI [with a code of D / with the passkey D] | user, source, how: `password`, `password+totp`, `password+recovery`, `password+passkey`, the device | after the code, for a user with a second factor |
 | WARNING | failed sign-in to the UI as X: reason | the user when the name is a user's, else "an unknown name", reason, source | |
 | WARNING | someone typed a wrong code to sign in to the UI as X | user, source | after the right password ([AUTHENTICATION.md](AUTHENTICATION.md) 4) |
 | WARNING | X signed in with a recovery code, N left | user, count, source | its app is gone or out of reach |
@@ -170,6 +170,9 @@ the sign-in throttle are in 5.9 with the other limits.
 | INFO | X added the authenticator app D to its second factor[, which turns it on] | user, device | TOTP. The first device turns the second factor on |
 | INFO | X renamed its authenticator app D to E | user, both names | TOTP |
 | INFO | X removed its authenticator app D / the authenticator app D of Y[, the last one: the second factor is off] | actor, user, device | TOTP |
+| INFO | X added the passkey D to its second factor[, which turns it on] | user, passkey | The first device turns the second factor on |
+| INFO | X renamed its passkey D to E | user, both names | |
+| INFO | X removed its passkey D / the passkey D of Y[, the last device: the second factor is off] | actor, user, passkey | |
 | INFO | X removed every device of the second factor of Y | actor, user | every method and the recovery codes. The host too, with `users reset-second-factor` |
 | INFO | X made new recovery codes for its second factor | user | |
 | INFO | X issued token Z for Y, with its expiry | actor, token name and id, user, expiry | |

@@ -28,6 +28,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   server's instructions, the note of a list and the descriptions of
   these tools say what it means: the receiving server's statement about
   the domain in `from`, never about the content.
+- The configuration UI shows the sender check beside the sender of a
+  message, and `check failed` in lists. The account page of an IMAP,
+  POP3 or JMAP account shows, when asked, the names receiving servers
+  wrote into its newest ten mails.
 - Passkeys as a second method of the second factor of the UI sign-in,
   beside authenticator apps (TOTP). A person adds them on the page
   Second factor, and after the password a passkey signs in as a code
@@ -71,13 +75,14 @@ adheres to [Semantic Versioning](https://semver.org/).
   `list_drafts`, `create_draft`, `update_draft`, `send_message` and
   `send_draft`. Each schema said "an object" before. The answers
   themselves are unchanged: a key without a value is still left out.
-- The cursor of a list of messages, drafts or threads, and of the list
-  across accounts, carries a seal of the service. A cursor made up or
-  changed is refused with `400 bad_request`, "invalid cursor", and so is
-  one from before the service started last: its list starts again.
-- `benethos-mailbox-common`: `mail.marks.Mark` has no field `icon`. A
-  mark is its keyword, its word and whether it shows. The configuration
-  UI picks its icons itself.
+- **Breaking:** the cursor of a list of messages, drafts or threads,
+  and of the list across accounts, carries a seal of the service. A
+  cursor made up or changed is refused with `400 bad_request`, "invalid
+  cursor", and so is one from before the service started last: its list
+  starts again.
+- **Breaking:** `benethos-mailbox-common`: `mail.marks.Mark` has no
+  field `icon`. A mark is its keyword, its word and whether it shows.
+  The configuration UI picks its icons itself.
 - The images install platformdirs 4.14.7 from the lockfile, the service
   image fastapi 0.163.2, imapclient 4.3.0 and publicsuffixlist
   1.1.2.20261117. imapclient 4.3.0 refuses NUL, CR and LF in every IMAP
@@ -106,29 +111,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   us-ascii) but holds UTF-8 read as UTF-8. Such a mail showed "fÃ¼r"
   for "für" before. Text really written in such a charset reads as
   before.
-- A list of a Microsoft account's messages or drafts shows only what lies
-  in the folder asked for. A cursor made up by the caller could name
-  another folder's path, so a token that may reach drafts alone could
-  read the summaries of the inbox.
-- The Python client, and the MCP server with it, takes no proxy from the
-  environment for a service over http. The token went in clear to a
-  proxy named by `HTTP_PROXY`, or on Windows by the system. Over https a
-  proxy of the environment still counts.
-- A grant's recipients compare without regard to case alone. `ß` matched
-  `ss` before, so a grant for `weiß@example.org` allowed
-  `weiss@example.org`, another mailbox, and `*@straße.de` another domain.
-- A domain beyond ASCII is written as IDNA 2008, as registries and mail
-  programs do. Python's own codec made `strasse.de` of `straße.de`, so a
-  mail to `info@straße.de` went to `info@strasse.de`, and the discovery
-  of `straße.de` asked the servers of `strasse.de`.
 - A file of a stored mail is attached again by `attachments_from` and
   `keep_attachments` whatever its name, as the mail carried it. A name
   longer than 200 characters answered `500` before.
-- Every connection of the service trusts the certificate authorities of
-  the system, `SSL_CERT_FILE` included. Microsoft Graph, Gmail, the
-  discovery of servers and webhooks took a bundle of their own before,
-  so a private authority named there counted for IMAP, POP3, SMTP and
-  JMAP alone.
 - A JMAP server that redirects to, or names in its session, a URL that
   cannot be read is the server's failure (`502`), no longer a `500`.
 - `server_status` of the MCP server no longer counts a `502` or `504` of a
@@ -164,6 +149,26 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+- A list of a Microsoft account's messages or drafts shows only what lies
+  in the folder asked for. A cursor made up by the caller could name
+  another folder's path, so a token that may reach drafts alone could
+  read the summaries of the inbox.
+- The Python client, and the MCP server with it, takes no proxy from the
+  environment for a service over http. The token went in clear to a
+  proxy named by `HTTP_PROXY`, or on Windows by the system. Over https a
+  proxy of the environment still counts.
+- A grant's recipients compare without regard to case alone. `ß` matched
+  `ss` before, so a grant for `weiß@example.org` allowed
+  `weiss@example.org`, another mailbox, and `*@straße.de` another domain.
+- A domain beyond ASCII is written as IDNA 2008, as registries and mail
+  programs do. Python's own codec made `strasse.de` of `straße.de`, so a
+  mail to `info@straße.de` went to `info@strasse.de`, and the discovery
+  of `straße.de` asked the servers of `strasse.de`.
+- Every connection of the service trusts the certificate authorities of
+  the system, `SSL_CERT_FILE` included. Microsoft Graph, Gmail, the
+  discovery of servers and webhooks took a bundle of their own before,
+  so a private authority named there counted for IMAP, POP3, SMTP and
+  JMAP alone.
 - The sender check compares a domain beyond ASCII as IDNA 2008, as the
   servers write it. It took the domain of `a@straße.de` for
   `strasse.de` before, so a signature of `strasse.de` passed for it,

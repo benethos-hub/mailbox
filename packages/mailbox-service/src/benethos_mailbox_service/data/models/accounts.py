@@ -131,7 +131,11 @@ class Account(BaseModel):
         default_factory=dict,
         description=(
             "The connection settings: host, port, security, username, "
-            "smtp_host, ... Never a secret. Secrets are `credentials`."
+            "smtp_host, ... Never a secret. Secrets are `credentials`. "
+            "`authserv_id`: for IMAP, POP3 and JMAP, the receiving server's "
+            "name as it starts its Authentication-Results, several with "
+            "commas, a leading dot for every host below a domain. It turns "
+            "on the sender check."
         ),
     )
     capabilities: list[Capability] = Field(

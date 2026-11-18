@@ -13,7 +13,13 @@ class AccountCreate(BaseModel):
     display_name: str | None = None
     settings: dict[str, str | int | bool] = Field(
         default_factory=dict,
-        description="Provider-specific connection settings: host, port, ...",
+        description=(
+            "Provider-specific connection settings: host, port, ... "
+            "`authserv_id`: for IMAP, POP3 and JMAP, the receiving server's "
+            "name as it starts its Authentication-Results, several with "
+            "commas, a leading dot for every host below a domain. It turns "
+            "on the sender check."
+        ),
     )
     credentials: dict[str, SecretStr] = Field(
         default_factory=dict,
@@ -29,7 +35,8 @@ class AccountUpdate(BaseModel):
         default_factory=dict,
         description=(
             "Settings to change, merged into the current ones. `null` removes "
-            "one. E.g. `smtp_host`, `smtp_port`, `smtp_security` for sending."
+            "one. E.g. `smtp_host`, `smtp_port`, `smtp_security` for sending, "
+            "`authserv_id` for the sender check."
         ),
     )
     credentials: dict[str, SecretStr] = Field(

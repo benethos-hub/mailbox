@@ -10694,7 +10694,7 @@
             },
             "type": "object",
             "title": "Settings",
-            "description": "The connection settings: host, port, security, username, smtp_host, ... Never a secret. Secrets are `credentials`."
+            "description": "The connection settings: host, port, security, username, smtp_host, ... Never a secret. Secrets are `credentials`. `authserv_id`: for IMAP, POP3 and JMAP, the receiving server's name as it starts its Authentication-Results, several with commas, a leading dot for every host below a domain. It turns on the sender check."
           },
           "capabilities": {
             "items": {
@@ -10761,7 +10761,7 @@
             },
             "type": "object",
             "title": "Settings",
-            "description": "Provider-specific connection settings: host, port, ..."
+            "description": "Provider-specific connection settings: host, port, ... `authserv_id`: for IMAP, POP3 and JMAP, the receiving server's name as it starts its Authentication-Results, several with commas, a leading dot for every host below a domain. It turns on the sender check."
           },
           "credentials": {
             "additionalProperties": {
@@ -10931,7 +10931,7 @@
             },
             "type": "object",
             "title": "Settings",
-            "description": "Settings to change, merged into the current ones. `null` removes one. E.g. `smtp_host`, `smtp_port`, `smtp_security` for sending."
+            "description": "Settings to change, merged into the current ones. `null` removes one. E.g. `smtp_host`, `smtp_port`, `smtp_security` for sending, `authserv_id` for the sender check."
           },
           "credentials": {
             "additionalProperties": {
@@ -10991,7 +10991,7 @@
               }
             ],
             "title": "Credential",
-            "description": "How the caller came: `token:<id>`, `password` for the UI, `password+totp` or `password+recovery` for the UI with a second factor, `host` for a command on the host, null without one."
+            "description": "How the caller came: `token:<id>`, `password` for the UI, `password+totp`, `password+recovery` or `password+passkey` for the UI with a second factor, `host` for a command on the host, null without one."
           },
           "record": {
             "anyOf": [
@@ -13862,7 +13862,7 @@
               }
             ],
             "title": "Reason",
-            "description": "Why the result is `unknown`. `account`: the account cannot tell, see its `capabilities`. `no_entry`: no entry of the receiving server. `several_entries`: more than one. `unreadable`: the entry or the sender cannot be read. `from_differs`: DMARC passed for another domain. `other_domain`: DKIM or SPF passed for another domain only. `error`: a check ended in an error. `no_proof`: nothing confirms the domain in `from`."
+            "description": "Why the result is `unknown`. `account`: the account cannot tell, see its `capabilities`. `no_entry`: no entry of the receiving server. `several_entries`: more than one. `unreadable`: the entry or the sender cannot be read. `from_differs`: DMARC passed for another domain, or without naming one. `other_domain`: DKIM or SPF passed for another domain only. `error`: a check ended in an error. `no_proof`: nothing confirms the domain in `from`."
           }
         },
         "type": "object",
@@ -14467,7 +14467,7 @@
           "second_factor": {
             "type": "boolean",
             "title": "Second Factor",
-            "description": "Whether the UI sign-in asks for a code of an authenticator app after the password. The user sets one up in the UI."
+            "description": "Whether the UI sign-in asks for the second factor after the password: a code of an authenticator app, a passkey or a recovery code. The user sets one up in the UI."
           }
         },
         "type": "object",

@@ -50,7 +50,8 @@ The three layers and what each may import:
   no state beyond what a caller holds. Mostly what more than one layer
   needs, but a helper of that kind may live there when one layer needs
   it, such as `trim` and `KeyedLocks`. It imports the standard library,
-  anyio and `mailbox-common`, nothing else. What the MCP server needs as
+  anyio, idna (host names as IDNA 2008) and `mailbox-common`, nothing
+  else. What the MCP server needs as
   well goes to `mailbox-common` (section 3).
 - **A helper exists once.** No module outside `common/` defines a
   function of a name `common/` holds, with or without a leading
@@ -180,7 +181,8 @@ packages/mailbox-service/
                         #   the system's (mailbox-common)
     errors.py           # cross-cutting: MailboxServiceError hierarchy, no HTTP
     common/             # cross-cutting: helpers several layers share,
-                        #   standard library, anyio and mailbox-common only
+                        #   standard library, anyio, idna and
+                        #   mailbox-common only
       opaque.py         # opaque ids and cursors: prefix + base64 JSON,
                         #   and base64 without padding, for passwords and
                         #   OAuth too
@@ -231,7 +233,9 @@ packages/mailbox-service/
         session.py      # sign-in with a password, server-side sessions,
                         #   the pending sign-in before the code
         qr.py           # QR codes as SVG data URIs (segno)
-        passkeys.py     # a passkey's challenge where a code is asked,
+        passkeys.py     # the second step of a page: the ways it offers
+                        #   (Ways, ways, offered, first_way), a
+                        #   passkey's challenge where a code is asked,
                         #   the browser's answer taken from a form
         templates.py    # Jinja2: filters, render, Post/Redirect/Get,
                         #   and what htmx sends and follows (is_htmx,
@@ -751,7 +755,7 @@ service or the MCP server defines one of its functions again.
 | a library | one wrapper module, in the layer that needs it, and nowhere else. The wrapper maps into our types and our errors |
 | an error | `errors.py`, a subclass of `MailboxServiceError`. `web/errors.py` gives it a status |
 | a setting | `config.py`, as `MAILBOX_SERVICE_<NAME>`, with its default and its line in `.env.example` |
-| a helper that knows no layer | `common/`, if it is on the standard library and anyio, does no I/O and holds no state beyond what a caller holds. Else it is not a helper: it belongs to one layer |
+| a helper that knows no layer | `common/`, if it is on the standard library, anyio and idna, does no I/O and holds no state beyond what a caller holds. Else it is not a helper: it belongs to one layer |
 | a helper the MCP server needs as well | `mailbox-common`, in the group of its concern (section 3) |
 | a helper one layer needs | that layer, beside its caller |
 
@@ -849,10 +853,10 @@ noticing. Every change is measured against that.
 
 | Seam | Defined in | Implementations | Exchangeable for |
 |---|---|---|---|
-| Mail provider | `data/providers/base.py` (`Reads`, which every adapter implements, and `Writes`, `Deletes`, `Drafts`, `Sends`, `Watches`, `Deltas`, `FlagChanges`, `Threads`, `Summaries`, `Places` for what it may do beyond, `PROTOCOLS` for the protocol behind each capability. `Capability` and `Abilities` of `data/models/accounts.py`, answered by each adapter's `abilities()` from its server), registry in `data/providers/registry.py`. The domain checks what each operation needs and answers 501 for a lack (`domain/accounts/abilities.py`, `NEEDS`) | memory, imap, microsoft, pop3, jmap, gmail | another protocol or library, e.g. `aioimaplib` for IMAPClient |
+| Mail provider | `data/providers/base.py` (`Reads`, which every adapter implements, and `Writes`, `Deletes`, `Drafts`, `Sends`, `Watches`, `Deltas`, `FlagChanges`, `Threads`, `Summaries`, `Places`, `ServerNames` for what it may do beyond, `PROTOCOLS` for the protocol behind each capability. `Capability` and `Abilities` of `data/models/accounts.py`, answered by each adapter's `abilities()` from its server), registry in `data/providers/registry.py`. The domain checks what each operation needs and answers 501 for a lack (`domain/accounts/abilities.py`, `NEEDS`) | memory, imap, microsoft, pop3, jmap, gmail | another protocol or library, e.g. `aioimaplib` for IMAPClient |
 | Sending | `data/protocols/smtp.py` (`SmtpSession`), and `data/providers/sender.py` (`SmtpSender`), which adapters without sending of their own (IMAP, POP3) hold | stdlib smtplib | e.g. aiosmtplib |
 | Web layer | `web/` | FastAPI, Jinja2 for the UI | another framework, as long as the OpenAPI document stays the same |
-| Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `PasswordRepository`, `KeyRepository`, `CredentialRepository`, `MessageIndexRepository`, `IdempotencyRepository`, `SendLogRepository`, `ChangeLogRepository`, `WebhookRepository`, `AuditRepository`, `LinkRepository`, `TotpRepository`, `RecoveryCodeRepository`) | in-memory, SQLite | another database |
+| Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `PasswordRepository`, `KeyRepository`, `CredentialRepository`, `MessageIndexRepository`, `IdempotencyRepository`, `SendLogRepository`, `ChangeLogRepository`, `WebhookRepository`, `AuditRepository`, `LinkRepository`, `TotpRepository`, `RecoveryCodeRepository`, `PasskeyRepository`) | in-memory, SQLite | another database |
 | Autodiscovery source | `data/discovery/` (`DiscoverySource`) | presets, ISP autoconfig, JMAP well-known and SRV, ISPDB, MX (planned: Microsoft realm, SRV for IMAP and SMTP, guessing) | any further lookup, or one switched off |
 | HTTP | `data/protocols/http/` (`SafeFetcher`, `ApiClient`, `ServerClient`) | httpx | another HTTP client |
 | OAuth token source | `TokenSource` in `data/providers/base.py`, made in `data/protocols/oauth/tokens.py`, each OAuth provider's endpoints and scopes in its own directory, reached through `sign_in` in the registry | refresh token in the vault, access token in memory | another token store |
