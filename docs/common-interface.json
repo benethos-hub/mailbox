@@ -1,0 +1,293 @@
+{
+  "benethos_mailbox_common": {
+    "__all__": [
+      "__version__"
+    ]
+  },
+  "benethos_mailbox_common.log": {
+    "__all__": [
+      "lines",
+      "redact"
+    ]
+  },
+  "benethos_mailbox_common.log.lines": {
+    "Console": {
+      "bases": [
+        "benethos_mailbox_common.log.lines.Redacting"
+      ],
+      "methods": {
+        "__init__": {
+          "signature": "(self, package: 'str' = '', line_of: 'LineOf | None' = None) -> 'None'"
+        },
+        "format": {
+          "signature": "(self, record: 'logging.LogRecord') -> 'str'"
+        }
+      }
+    },
+    "DIM": {
+      "value": "\u001b[2m"
+    },
+    "FORMAT": {
+      "value": "%(asctime)s %(levelname)-8s %(name)s: %(message)s"
+    },
+    "LEVELS": {
+      "source": "{\n    \"critical\": logging.CRITICAL,\n    \"error\": logging.ERROR,\n    \"warning\": logging.WARNING,\n    \"info\": logging.INFO,\n    \"debug\": logging.DEBUG,\n    \"trace\": 5,\n}"
+    },
+    "LineOf": {
+      "source": "Callable[[logging.LogRecord], str | None]"
+    },
+    "RESET": {
+      "value": "\u001b[0m"
+    },
+    "Redacting": {
+      "bases": [
+        "logging.Formatter"
+      ],
+      "methods": {
+        "__init__": {
+          "signature": "(self, fmt: 'str' = '%(asctime)s %(levelname)-8s %(name)s: %(message)s') -> 'None'"
+        },
+        "format": {
+          "signature": "(self, record: 'logging.LogRecord') -> 'str'"
+        },
+        "formatTime": {
+          "signature": "(self, record: 'logging.LogRecord', datefmt: 'str | None' = None) -> 'str'"
+        }
+      }
+    },
+    "SOURCE_WIDTH": {
+      "value": 32
+    },
+    "colours_wanted": {
+      "signature": "() -> 'bool'"
+    },
+    "formatter": {
+      "signature": "(package: 'str', *, colours: 'bool | None' = None, line_of: 'LineOf | None' = None) -> 'logging.Formatter'"
+    },
+    "log_time": {
+      "signature": "(value: 'datetime') -> 'str'"
+    },
+    "short_source": {
+      "signature": "(name: 'str', package: 'str') -> 'str'"
+    },
+    "stderr_handler": {
+      "signature": "(package: 'str', *, colours: 'bool | None' = None, line_of: 'LineOf | None' = None) -> 'logging.Handler'"
+    }
+  },
+  "benethos_mailbox_common.log.redact": {
+    "KEPT": {
+      "value": 256
+    },
+    "MASK": {
+      "value": "***"
+    },
+    "SHORTEST": {
+      "value": 6
+    },
+    "note": {
+      "signature": "(secret: 'str') -> 'None'"
+    },
+    "redact": {
+      "signature": "(text: 'str') -> 'str'"
+    }
+  },
+  "benethos_mailbox_common.mail": {
+    "__all__": [
+      "addresses",
+      "marks",
+      "plaintext"
+    ]
+  },
+  "benethos_mailbox_common.mail.addresses": {
+    "Parsed": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "name": {
+          "type": "str | None"
+        },
+        "email": {
+          "type": "str"
+        }
+      }
+    },
+    "parsed": {
+      "signature": "(text: 'str') -> 'list[Parsed]'"
+    },
+    "readable": {
+      "signature": "(name: 'str | None', email: 'str', *, quoted: 'bool' = False) -> 'str'"
+    }
+  },
+  "benethos_mailbox_common.mail.marks": {
+    "ANSWERED": {
+      "source": "Mark(\"$answered\", \"answered\")"
+    },
+    "DRAFT": {
+      "source": "Mark(\"$draft\", \"draft\")"
+    },
+    "FORWARDED": {
+      "source": "Mark(\"$forwarded\", \"forwarded\")"
+    },
+    "JUNK": {
+      "source": "Mark(\"$junk\", \"junk\")"
+    },
+    "MARKS": {
+      "source": "(ANSWERED, FORWARDED, DRAFT, JUNK, NOT_JUNK, PHISHING)"
+    },
+    "Mark": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "keyword": {
+          "type": "str"
+        },
+        "word": {
+          "type": "str"
+        },
+        "shown": {
+          "type": "bool",
+          "default": "True"
+        }
+      }
+    },
+    "NOT_JUNK": {
+      "source": "Mark(\"$notjunk\", \"not junk\", shown=False)"
+    },
+    "PHISHING": {
+      "source": "Mark(\"$phishing\", \"phishing\")"
+    },
+    "mark_of": {
+      "signature": "(keyword: 'str') -> 'Mark | None'"
+    },
+    "marks_of": {
+      "signature": "(keywords: 'Iterable[str]') -> 'list[Mark]'"
+    },
+    "personal": {
+      "signature": "(keywords: 'Iterable[str]') -> 'list[str]'"
+    },
+    "protocol": {
+      "signature": "(keyword: 'str') -> 'bool'"
+    }
+  },
+  "benethos_mailbox_common.mail.plaintext": {
+    "from_html": {
+      "signature": "(html: 'str') -> 'str'"
+    },
+    "hides": {
+      "signature": "(style: 'str') -> 'bool'"
+    }
+  },
+  "benethos_mailbox_common.paths": {
+    "__all__": [
+      "folders"
+    ]
+  },
+  "benethos_mailbox_common.paths.folders": {
+    "SystemFolders": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "config": {
+          "type": "Path"
+        },
+        "data": {
+          "type": "Path"
+        }
+      }
+    },
+    "named_file": {
+      "signature": "(env_file: 'Path | None', variable: 'str') -> 'Path | None'"
+    },
+    "system_folders": {
+      "signature": "(app: 'str') -> 'SystemFolders'"
+    }
+  },
+  "benethos_mailbox_common.settings": {
+    "__all__": [
+      "files"
+    ]
+  },
+  "benethos_mailbox_common.settings.files": {
+    "FileSettings": {
+      "bases": [
+        "pydantic_settings.main.BaseSettings"
+      ]
+    },
+    "S": {
+      "source": "TypeVar(\"S\", bound=FileSettings)"
+    },
+    "load": {
+      "signature": "(settings: 'type[S]', env_file: 'Path | None', **given: 'Any') -> 'S'"
+    }
+  },
+  "benethos_mailbox_common.values": {
+    "__all__": [
+      "canonical",
+      "secret",
+      "sizes",
+      "text"
+    ]
+  },
+  "benethos_mailbox_common.values.canonical": {
+    "canonical": {
+      "signature": "(value: 'object') -> 'str'"
+    },
+    "compact": {
+      "signature": "(value: 'object') -> 'str'"
+    }
+  },
+  "benethos_mailbox_common.values.secret": {
+    "SHORT": {
+      "value": 24
+    },
+    "STRONG": {
+      "value": 32
+    },
+    "digest": {
+      "signature": "(text: 'str') -> 'str'"
+    },
+    "hmac_hex": {
+      "signature": "(secret: 'str', data: 'bytes') -> 'str'"
+    },
+    "new_id": {
+      "signature": "(prefix: 'str') -> 'str'"
+    },
+    "same": {
+      "signature": "(presented: 'str', expected: 'str') -> 'bool'"
+    },
+    "token": {
+      "signature": "(size: 'int' = 32) -> 'str'"
+    }
+  },
+  "benethos_mailbox_common.values.sizes": {
+    "MIB": {
+      "value": 1048576
+    },
+    "megabytes": {
+      "signature": "(size: 'int') -> 'str'"
+    }
+  },
+  "benethos_mailbox_common.values.text": {
+    "ends_line": {
+      "signature": "(*values: 'str') -> 'bool'"
+    },
+    "escaped": {
+      "signature": "(text: 'str') -> 'str'"
+    },
+    "has_break": {
+      "signature": "(text: 'str') -> 'bool'"
+    },
+    "joined": {
+      "signature": "(text: 'str') -> 'str'"
+    },
+    "plural": {
+      "signature": "(count: 'int', word: 'str') -> 'str'"
+    }
+  }
+}

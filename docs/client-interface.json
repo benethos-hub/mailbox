@@ -1,0 +1,2590 @@
+{
+  "benethos_mailbox_client": {
+    "__all__": [
+      "Account",
+      "AccountHealth",
+      "Activity",
+      "Address",
+      "ApiError",
+      "AttachedFile",
+      "Attachment",
+      "AttachmentLink",
+      "AttachmentSource",
+      "Candidate",
+      "Change",
+      "Changes",
+      "ConfigurationError",
+      "DeviceSignIn",
+      "DeviceSignInState",
+      "Discovery",
+      "Environment",
+      "Failed",
+      "Folder",
+      "Grant",
+      "Health",
+      "Hint",
+      "MailServer",
+      "MailboxClient",
+      "MailboxError",
+      "Marks",
+      "Me",
+      "MeAccount",
+      "Message",
+      "MessageSummary",
+      "NewPassword",
+      "NewToken",
+      "NewWebhook",
+      "NotAnswering",
+      "Outcome",
+      "OutgoingFile",
+      "Page",
+      "Paged",
+      "Passkey",
+      "Permissions",
+      "Recipient",
+      "Reference",
+      "Role",
+      "SecondFactor",
+      "Secret",
+      "SendRecord",
+      "Sending",
+      "Sent",
+      "ServiceTimeoutError",
+      "ServiceUnavailableError",
+      "SourceReport",
+      "Status",
+      "StoredCredential",
+      "SyncMailboxClient",
+      "Thread",
+      "ThreadSummary",
+      "Token",
+      "TotpDevice",
+      "User",
+      "Webhook",
+      "WebhookDetail",
+      "WebhookPost",
+      "WebhookSecret",
+      "Worker",
+      "__version__",
+      "from_environment",
+      "message_body"
+    ]
+  },
+  "benethos_mailbox_client.answers": {
+    "answer": {
+      "signature": "(response: 'httpx.Response') -> 'Any'"
+    },
+    "api_error": {
+      "signature": "(response: 'httpx.Response') -> 'ApiError'"
+    },
+    "failure": {
+      "signature": "(exc: 'httpx.TransportError', base_url: 'str', seconds: 'float') -> 'MailboxError'"
+    },
+    "read": {
+      "signature": "(call: 'Call[T]', response: 'httpx.Response') -> 'T'"
+    },
+    "translated": {
+      "signature": "(base_url: 'str', seconds: 'float') -> 'Iterator[None]'"
+    },
+    "unreadable": {
+      "signature": "() -> 'ApiError'"
+    }
+  },
+  "benethos_mailbox_client.attachments": {
+    "Collected": {
+      "bases": [
+        "builtins.object"
+      ],
+      "methods": {
+        "__init__": {
+          "signature": "(self, max_bytes: 'int') -> 'None'"
+        },
+        "add": {
+          "signature": "(self, chunk: 'bytes') -> 'bool'"
+        }
+      }
+    },
+    "attachment": {
+      "signature": "(headers: 'httpx.Headers', collected: 'Collected') -> 'Attachment'"
+    },
+    "media_type": {
+      "signature": "(value: 'str') -> 'str'"
+    }
+  },
+  "benethos_mailbox_client.calls": {
+    "ATTACHMENT_TIMEOUT": {
+      "value": 120.0
+    },
+    "CONNECT_TIMEOUT": {
+      "value": 5.0
+    },
+    "Call": {
+      "bases": [
+        "typing.Generic"
+      ],
+      "frozen": true,
+      "fields": {
+        "method": {
+          "type": "str"
+        },
+        "path": {
+          "type": "str"
+        },
+        "read": {
+          "type": "Callable[[Any], T]"
+        },
+        "params": {
+          "type": "dict[str, Any]",
+          "default": "dict()"
+        },
+        "json": {
+          "type": "dict[str, Any] | None",
+          "default": "None"
+        },
+        "headers": {
+          "type": "dict[str, str]",
+          "default": "dict()"
+        },
+        "timeout": {
+          "type": "float",
+          "default": "30.0"
+        },
+        "raw": {
+          "type": "bool",
+          "default": "False"
+        }
+      },
+      "methods": {
+        "timeouts": {
+          "property": true
+        }
+      }
+    },
+    "P": {
+      "source": "ParamSpec(\"P\")"
+    },
+    "T": {
+      "source": "TypeVar(\"T\")"
+    },
+    "TIMEOUT": {
+      "value": 30.0
+    },
+    "as_is": {
+      "signature": "(found: 'Any') -> 'Any'"
+    },
+    "awaiting": {
+      "signature": "(make: 'Callable[P, Call[T]]') -> 'Callable[Concatenate[Any, P], Coroutine[Any, Any, T]]'"
+    },
+    "blocking": {
+      "signature": "(make: 'Callable[P, Call[T]]') -> 'Callable[Concatenate[Any, P], T]'"
+    },
+    "given": {
+      "signature": "(values: 'Mapping[str, Any] | None') -> 'dict[str, Any]'"
+    },
+    "nothing": {
+      "signature": "(found: 'Any') -> 'None'"
+    },
+    "path": {
+      "signature": "(*parts: 'str') -> 'str'"
+    },
+    "timeouts": {
+      "signature": "(seconds: 'float' = 30.0) -> 'httpx.Timeout'"
+    }
+  },
+  "benethos_mailbox_client.client": {
+    "MailboxClient": {
+      "bases": [
+        "builtins.object"
+      ],
+      "methods": {
+        "__init__": {
+          "signature": "(self, base_url: 'str | None' = None, token: 'str | None' = None, transport: 'httpx.AsyncBaseTransport | None' = None, allow_http: 'bool | None' = None) -> 'None'"
+        },
+        "aclose": {
+          "signature": "(self) -> 'None'",
+          "async": true
+        },
+        "batch_messages": {
+          "sends": "benethos_mailbox_client.endpoints.messages.batch_messages",
+          "async": true
+        },
+        "create_account": {
+          "sends": "benethos_mailbox_client.endpoints.accounts.create_account",
+          "async": true
+        },
+        "create_draft": {
+          "sends": "benethos_mailbox_client.endpoints.drafts.create_draft",
+          "async": true
+        },
+        "create_folder": {
+          "sends": "benethos_mailbox_client.endpoints.folders.create_folder",
+          "async": true
+        },
+        "create_role": {
+          "sends": "benethos_mailbox_client.endpoints.roles.create_role",
+          "async": true
+        },
+        "create_token": {
+          "sends": "benethos_mailbox_client.endpoints.tokens.create_token",
+          "async": true
+        },
+        "create_user": {
+          "sends": "benethos_mailbox_client.endpoints.users.create_user",
+          "async": true
+        },
+        "create_webhook": {
+          "sends": "benethos_mailbox_client.endpoints.webhooks.create_webhook",
+          "async": true
+        },
+        "delete_account": {
+          "sends": "benethos_mailbox_client.endpoints.accounts.delete_account",
+          "async": true
+        },
+        "delete_draft": {
+          "sends": "benethos_mailbox_client.endpoints.drafts.delete_draft",
+          "async": true
+        },
+        "delete_folder": {
+          "sends": "benethos_mailbox_client.endpoints.folders.delete_folder",
+          "async": true
+        },
+        "delete_message": {
+          "sends": "benethos_mailbox_client.endpoints.messages.delete_message",
+          "async": true
+        },
+        "delete_role": {
+          "sends": "benethos_mailbox_client.endpoints.roles.delete_role",
+          "async": true
+        },
+        "delete_user": {
+          "sends": "benethos_mailbox_client.endpoints.users.delete_user",
+          "async": true
+        },
+        "delete_webhook": {
+          "sends": "benethos_mailbox_client.endpoints.webhooks.delete_webhook",
+          "async": true
+        },
+        "discover_account": {
+          "sends": "benethos_mailbox_client.endpoints.discovery.discover_account",
+          "async": true
+        },
+        "get_account": {
+          "sends": "benethos_mailbox_client.endpoints.accounts.get_account",
+          "async": true
+        },
+        "get_attachment": {
+          "signature": "(self, account_id: 'str', message_id: 'str', attachment_id: 'str', max_bytes: 'int') -> 'Attachment'",
+          "async": true
+        },
+        "get_me": {
+          "sends": "benethos_mailbox_client.endpoints.me.get_me",
+          "async": true
+        },
+        "get_message": {
+          "sends": "benethos_mailbox_client.endpoints.messages.get_message",
+          "async": true
+        },
+        "get_message_raw": {
+          "sends": "benethos_mailbox_client.endpoints.messages.get_message_raw",
+          "async": true
+        },
+        "get_role": {
+          "sends": "benethos_mailbox_client.endpoints.roles.get_role",
+          "async": true
+        },
+        "get_second_factor": {
+          "sends": "benethos_mailbox_client.endpoints.factors.get_second_factor",
+          "async": true
+        },
+        "get_status": {
+          "sends": "benethos_mailbox_client.endpoints.status.get_status",
+          "async": true
+        },
+        "get_thread": {
+          "sends": "benethos_mailbox_client.endpoints.threads.get_thread",
+          "async": true
+        },
+        "get_user": {
+          "sends": "benethos_mailbox_client.endpoints.users.get_user",
+          "async": true
+        },
+        "get_webhook": {
+          "sends": "benethos_mailbox_client.endpoints.webhooks.get_webhook",
+          "async": true
+        },
+        "health": {
+          "sends": "benethos_mailbox_client.endpoints.health.health",
+          "async": true
+        },
+        "list_accounts": {
+          "sends": "benethos_mailbox_client.endpoints.accounts.list_accounts",
+          "async": true
+        },
+        "list_activity": {
+          "sends": "benethos_mailbox_client.endpoints.audit.list_activity",
+          "async": true
+        },
+        "list_all_changes": {
+          "sends": "benethos_mailbox_client.endpoints.changes.list_all_changes",
+          "async": true
+        },
+        "list_all_messages": {
+          "sends": "benethos_mailbox_client.endpoints.messages.list_all_messages",
+          "async": true
+        },
+        "list_all_sends": {
+          "sends": "benethos_mailbox_client.endpoints.sends.list_all_sends",
+          "async": true
+        },
+        "list_changes": {
+          "sends": "benethos_mailbox_client.endpoints.changes.list_changes",
+          "async": true
+        },
+        "list_drafts": {
+          "sends": "benethos_mailbox_client.endpoints.drafts.list_drafts",
+          "async": true
+        },
+        "list_folders": {
+          "sends": "benethos_mailbox_client.endpoints.folders.list_folders",
+          "async": true
+        },
+        "list_messages": {
+          "sends": "benethos_mailbox_client.endpoints.messages.list_messages",
+          "async": true
+        },
+        "list_permissions": {
+          "sends": "benethos_mailbox_client.endpoints.me.list_permissions",
+          "async": true
+        },
+        "list_roles": {
+          "sends": "benethos_mailbox_client.endpoints.roles.list_roles",
+          "async": true
+        },
+        "list_sends": {
+          "sends": "benethos_mailbox_client.endpoints.sends.list_sends",
+          "async": true
+        },
+        "list_threads": {
+          "sends": "benethos_mailbox_client.endpoints.threads.list_threads",
+          "async": true
+        },
+        "list_tokens": {
+          "sends": "benethos_mailbox_client.endpoints.tokens.list_tokens",
+          "async": true
+        },
+        "list_users": {
+          "sends": "benethos_mailbox_client.endpoints.users.list_users",
+          "async": true
+        },
+        "list_webhooks": {
+          "sends": "benethos_mailbox_client.endpoints.webhooks.list_webhooks",
+          "async": true
+        },
+        "poll_device_oauth": {
+          "sends": "benethos_mailbox_client.endpoints.discovery.poll_device_oauth",
+          "async": true
+        },
+        "remove_passkey": {
+          "sends": "benethos_mailbox_client.endpoints.factors.remove_passkey",
+          "async": true
+        },
+        "remove_second_factor": {
+          "sends": "benethos_mailbox_client.endpoints.factors.remove_second_factor",
+          "async": true
+        },
+        "remove_totp_device": {
+          "sends": "benethos_mailbox_client.endpoints.factors.remove_totp_device",
+          "async": true
+        },
+        "renew_webhook_secret": {
+          "sends": "benethos_mailbox_client.endpoints.webhooks.renew_webhook_secret",
+          "async": true
+        },
+        "replace_role": {
+          "sends": "benethos_mailbox_client.endpoints.roles.replace_role",
+          "async": true
+        },
+        "request": {
+          "signature": "(self, method: 'str', path: 'str', *, params: 'dict[str, Any] | None' = None, json: 'dict[str, Any] | None' = None, headers: 'dict[str, str] | None' = None) -> 'Any'",
+          "async": true
+        },
+        "revoke_token": {
+          "sends": "benethos_mailbox_client.endpoints.tokens.revoke_token",
+          "async": true
+        },
+        "send": {
+          "signature": "(self, call: 'Call[T]') -> 'T'",
+          "async": true
+        },
+        "send_draft": {
+          "sends": "benethos_mailbox_client.endpoints.sending.send_draft",
+          "async": true
+        },
+        "send_message": {
+          "sends": "benethos_mailbox_client.endpoints.sending.send_message",
+          "async": true
+        },
+        "set_password": {
+          "sends": "benethos_mailbox_client.endpoints.users.set_password",
+          "async": true
+        },
+        "share_attachment": {
+          "sends": "benethos_mailbox_client.endpoints.attachments.share_attachment",
+          "async": true
+        },
+        "start_device_oauth": {
+          "sends": "benethos_mailbox_client.endpoints.discovery.start_device_oauth",
+          "async": true
+        },
+        "trash_messages": {
+          "sends": "benethos_mailbox_client.endpoints.messages.trash_messages",
+          "async": true
+        },
+        "update_account": {
+          "sends": "benethos_mailbox_client.endpoints.accounts.update_account",
+          "async": true
+        },
+        "update_draft": {
+          "sends": "benethos_mailbox_client.endpoints.drafts.update_draft",
+          "async": true
+        },
+        "update_folder": {
+          "sends": "benethos_mailbox_client.endpoints.folders.update_folder",
+          "async": true
+        },
+        "update_message": {
+          "sends": "benethos_mailbox_client.endpoints.messages.update_message",
+          "async": true
+        },
+        "update_messages": {
+          "sends": "benethos_mailbox_client.endpoints.messages.update_messages",
+          "async": true
+        },
+        "update_user": {
+          "sends": "benethos_mailbox_client.endpoints.users.update_user",
+          "async": true
+        },
+        "update_webhook": {
+          "sends": "benethos_mailbox_client.endpoints.webhooks.update_webhook",
+          "async": true
+        },
+        "verify_account": {
+          "sends": "benethos_mailbox_client.endpoints.accounts.verify_account",
+          "async": true
+        }
+      }
+    }
+  },
+  "benethos_mailbox_client.endpoints": {
+    "__all__": [
+      "batch_messages",
+      "create_account",
+      "create_draft",
+      "create_folder",
+      "create_role",
+      "create_token",
+      "create_user",
+      "create_webhook",
+      "delete_account",
+      "delete_draft",
+      "delete_folder",
+      "delete_message",
+      "delete_role",
+      "delete_user",
+      "delete_webhook",
+      "discover_account",
+      "get_account",
+      "get_attachment",
+      "get_me",
+      "get_message",
+      "get_message_raw",
+      "get_role",
+      "get_second_factor",
+      "get_status",
+      "get_thread",
+      "get_user",
+      "get_webhook",
+      "health",
+      "list_accounts",
+      "list_activity",
+      "list_all_changes",
+      "list_all_messages",
+      "list_all_sends",
+      "list_changes",
+      "list_drafts",
+      "list_folders",
+      "list_messages",
+      "list_permissions",
+      "list_roles",
+      "list_sends",
+      "list_threads",
+      "list_tokens",
+      "list_users",
+      "list_webhooks",
+      "message_body",
+      "poll_device_oauth",
+      "remove_passkey",
+      "remove_second_factor",
+      "remove_totp_device",
+      "renew_webhook_secret",
+      "replace_role",
+      "request",
+      "revoke_token",
+      "send_draft",
+      "send_message",
+      "set_password",
+      "share_attachment",
+      "start_device_oauth",
+      "trash_messages",
+      "update_account",
+      "update_draft",
+      "update_folder",
+      "update_message",
+      "update_messages",
+      "update_user",
+      "update_webhook",
+      "verify_account"
+    ]
+  },
+  "benethos_mailbox_client.endpoints.accounts": {
+    "account": {
+      "signature": "(item: 'dict[str, Any]') -> 'Account'"
+    },
+    "create_account": {
+      "signature": "(provider: 'str', email: 'str', *, display_name: 'str | None' = None, settings: 'dict[str, Any] | None' = None, credentials: 'dict[str, str] | None' = None) -> 'Call[Account]'"
+    },
+    "delete_account": {
+      "signature": "(account_id: 'str') -> 'Call[None]'"
+    },
+    "get_account": {
+      "signature": "(account_id: 'str') -> 'Call[Account]'"
+    },
+    "list_accounts": {
+      "signature": "(*, address: 'str | None' = None, provider: 'str | None' = None, status: 'str | None' = None, limit: 'int | None' = None, cursor: 'str | None' = None) -> 'Call[Paged[Account]]'"
+    },
+    "marks": {
+      "signature": "(item: 'dict[str, Any]') -> 'Marks'"
+    },
+    "update_account": {
+      "signature": "(account_id: 'str', *, display_name: 'str | None | EllipsisType' = Ellipsis, settings: 'dict[str, Any] | None' = None, credentials: 'dict[str, str] | None' = None) -> 'Call[Account]'"
+    },
+    "verify_account": {
+      "signature": "(account_id: 'str') -> 'Call[Account]'"
+    }
+  },
+  "benethos_mailbox_client.endpoints.attachments": {
+    "get_attachment": {
+      "signature": "(account_id: 'str', message_id: 'str', attachment_id: 'str') -> 'Call[Any]'"
+    },
+    "share_attachment": {
+      "signature": "(account_id: 'str', message_id: 'str', attachment_id: 'str', *, expires_in: 'int | None' = None) -> 'Call[AttachmentLink]'"
+    }
+  },
+  "benethos_mailbox_client.endpoints.audit": {
+    "list_activity": {
+      "signature": "(*, user: 'str | None' = None, activity: 'str | None' = None, record: 'str | None' = None, after: 'datetime | None' = None, before: 'datetime | None' = None, limit: 'int | None' = None, cursor: 'str | None' = None) -> 'Call[Paged[Activity]]'"
+    }
+  },
+  "benethos_mailbox_client.endpoints.changes": {
+    "list_all_changes": {
+      "signature": "(*, accounts: 'list[str] | None' = None, since: 'str | None' = None, limit: 'int | None' = None) -> 'Call[Changes]'"
+    },
+    "list_changes": {
+      "signature": "(account_id: 'str', *, since: 'str | None' = None, limit: 'int | None' = None) -> 'Call[Changes]'"
+    }
+  },
+  "benethos_mailbox_client.endpoints.compose": {
+    "message_body": {
+      "signature": "(*, to: 'list[Recipient]', cc: 'list[Recipient]', bcc: 'list[Recipient]', subject: 'str', text: 'str', html: 'str | None', reference: 'tuple[str, str] | Reference | None', reply_to: 'list[Recipient] | None' = None, attachments: 'list[OutgoingFile] | None' = None, attachments_from: 'list[AttachmentSource] | None' = None) -> 'dict[str, Any]'"
+    }
+  },
+  "benethos_mailbox_client.endpoints.discovery": {
+    "discover_account": {
+      "signature": "(email: 'str') -> 'Call[Discovery]'"
+    },
+    "poll_device_oauth": {
+      "signature": "(provider: 'str', sign_in_id: 'str') -> 'Call[DeviceSignInState]'"
+    },
+    "start_device_oauth": {
+      "signature": "(provider: 'str', account_id: 'str | None' = None) -> 'Call[DeviceSignIn]'"
+    }
+  },
+  "benethos_mailbox_client.endpoints.drafts": {
+    "create_draft": {
+      "signature": "(account_id: 'str', message: 'dict[str, Any]') -> 'Call[MessageSummary]'"
+    },
+    "delete_draft": {
+      "signature": "(account_id: 'str', draft_id: 'str') -> 'Call[None]'"
+    },
+    "list_drafts": {
+      "signature": "(account_id: 'str', limit: 'int | None' = None, cursor: 'str | None' = None) -> 'Call[Page]'"
+    },
+    "update_draft": {
+      "signature": "(account_id: 'str', draft_id: 'str', message: 'dict[str, Any]', keep_attachments: 'list[str] | None' = None) -> 'Call[MessageSummary]'"
+    }
+  },
+  "benethos_mailbox_client.endpoints.factors": {
+    "get_second_factor": {
+      "signature": "(user_id: 'str') -> 'Call[SecondFactor]'"
+    },
+    "remove_passkey": {
+      "signature": "(user_id: 'str', passkey_id: 'str') -> 'Call[None]'"
+    },
+    "remove_second_factor": {
+      "signature": "(user_id: 'str') -> 'Call[None]'"
+    },
+    "remove_totp_device": {
+      "signature": "(user_id: 'str', device_id: 'str') -> 'Call[None]'"
+    }
+  },
+  "benethos_mailbox_client.endpoints.folders": {
+    "create_folder": {
+      "signature": "(account_id: 'str', name: 'str', parent_id: 'str | None') -> 'Call[Folder]'"
+    },
+    "delete_folder": {
+      "signature": "(account_id: 'str', folder_id: 'str') -> 'Call[None]'"
+    },
+    "list_folders": {
+      "signature": "(account_id: 'str') -> 'Call[list[Folder]]'"
+    },
+    "update_folder": {
+      "signature": "(account_id: 'str', folder_id: 'str', *, name: 'str | None' = None, parent_id: 'str | None | EllipsisType' = Ellipsis) -> 'Call[Folder]'"
+    }
+  },
+  "benethos_mailbox_client.endpoints.generic": {
+    "request": {
+      "signature": "(method: 'str', where: 'str', *, params: 'dict[str, Any] | None' = None, json: 'dict[str, Any] | None' = None, headers: 'dict[str, str] | None' = None) -> 'Call[Any]'"
+    }
+  },
+  "benethos_mailbox_client.endpoints.health": {
+    "health": {
+      "signature": "() -> 'Call[Health]'"
+    }
+  },
+  "benethos_mailbox_client.endpoints.me": {
+    "get_me": {
+      "signature": "() -> 'Call[Me]'"
+    },
+    "list_permissions": {
+      "signature": "() -> 'Call[Permissions]'"
+    }
+  },
+  "benethos_mailbox_client.endpoints.messages": {
+    "addresses": {
+      "signature": "(found: 'list[dict[str, Any]] | None') -> 'list[Address]'"
+    },
+    "batch_messages": {
+      "signature": "(account_id: 'str', ids: 'list[str]', action: 'str', *, changes: 'dict[str, Any] | None' = None, permanent: 'bool | None' = None) -> 'Call[Outcome]'"
+    },
+    "delete_message": {
+      "signature": "(account_id: 'str', message_id: 'str', *, permanent: 'bool' = False) -> 'Call[None]'"
+    },
+    "get_message": {
+      "signature": "(account_id: 'str', message_id: 'str') -> 'Call[Message]'"
+    },
+    "get_message_raw": {
+      "signature": "(account_id: 'str', message_id: 'str') -> 'Call[bytes]'"
+    },
+    "list_all_messages": {
+      "signature": "(*, accounts: 'list[str] | None' = None, folder: 'str | None' = None, text: 'str | None' = None, sender: 'str | None' = None, to: 'str | None' = None, subject: 'str | None' = None, after: 'str | None' = None, before: 'str | None' = None, unread: 'bool | None' = None, starred: 'bool | None' = None, has_attachments: 'bool | None' = None, limit: 'int | None' = None, cursor: 'str | None' = None) -> 'Call[Page]'"
+    },
+    "list_messages": {
+      "signature": "(account_id: 'str', *, folder: 'str | None' = None, text: 'str | None' = None, sender: 'str | None' = None, to: 'str | None' = None, subject: 'str | None' = None, after: 'str | None' = None, before: 'str | None' = None, unread: 'bool | None' = None, starred: 'bool | None' = None, has_attachments: 'bool | None' = None, limit: 'int | None' = None, cursor: 'str | None' = None) -> 'Call[Page]'"
+    },
+    "message": {
+      "signature": "(found: 'dict[str, Any]') -> 'Message'"
+    },
+    "page": {
+      "signature": "(found: 'dict[str, Any]') -> 'Page'"
+    },
+    "summary": {
+      "signature": "(found: 'dict[str, Any]') -> 'MessageSummary'"
+    },
+    "trash_messages": {
+      "signature": "(account_id: 'str', message_ids: 'list[str]') -> 'Call[Outcome]'"
+    },
+    "update_message": {
+      "signature": "(account_id: 'str', message_id: 'str', *, unread: 'bool | None' = None, starred: 'bool | None' = None, keywords: 'list[str] | None' = None, folder_ids: 'list[str] | None' = None, add_keywords: 'list[str] | None' = None, remove_keywords: 'list[str] | None' = None, add_folder_ids: 'list[str] | None' = None, remove_folder_ids: 'list[str] | None' = None) -> 'Call[MessageSummary]'"
+    },
+    "update_messages": {
+      "signature": "(account_id: 'str', message_ids: 'list[str]', *, unread: 'bool | None' = None, starred: 'bool | None' = None, folder_id: 'str | None' = None, add_keywords: 'list[str] | None' = None, remove_keywords: 'list[str] | None' = None, add_folder_ids: 'list[str] | None' = None, remove_folder_ids: 'list[str] | None' = None) -> 'Call[Outcome]'"
+    }
+  },
+  "benethos_mailbox_client.endpoints.readings": {
+    "R": {
+      "source": "TypeVar(\"R\")"
+    },
+    "maybe_time": {
+      "signature": "(value: 'Any') -> 'datetime | None'"
+    },
+    "paged": {
+      "signature": "(read: 'Callable[[dict[str, Any]], R]') -> 'Callable[[dict[str, Any]], Paged[R]]'"
+    },
+    "time": {
+      "signature": "(value: 'Any') -> 'datetime'"
+    }
+  },
+  "benethos_mailbox_client.endpoints.rights": {
+    "grant": {
+      "signature": "(item: 'dict[str, Any]') -> 'Grant'"
+    },
+    "grants_body": {
+      "signature": "(grants: 'Sequence[Grant] | None') -> 'list[dict[str, Any]] | None'"
+    }
+  },
+  "benethos_mailbox_client.endpoints.roles": {
+    "create_role": {
+      "signature": "(role_id: 'str', *, service: 'list[str] | None' = None, grants: 'Sequence[Grant] | None' = None) -> 'Call[Role]'"
+    },
+    "delete_role": {
+      "signature": "(role_id: 'str') -> 'Call[None]'"
+    },
+    "get_role": {
+      "signature": "(role_id: 'str') -> 'Call[Role]'"
+    },
+    "list_roles": {
+      "signature": "() -> 'Call[list[Role]]'"
+    },
+    "replace_role": {
+      "signature": "(role_id: 'str', *, service: 'list[str] | None' = None, grants: 'Sequence[Grant] | None' = None) -> 'Call[Role]'"
+    },
+    "role": {
+      "signature": "(item: 'dict[str, Any]') -> 'Role'"
+    }
+  },
+  "benethos_mailbox_client.endpoints.sending": {
+    "send_draft": {
+      "signature": "(account_id: 'str', draft_id: 'str', idempotency_key: 'str') -> 'Call[Sent]'"
+    },
+    "send_message": {
+      "signature": "(account_id: 'str', message: 'dict[str, Any]', idempotency_key: 'str') -> 'Call[Sent]'"
+    }
+  },
+  "benethos_mailbox_client.endpoints.sends": {
+    "list_all_sends": {
+      "signature": "(*, accounts: 'list[str] | None' = None, user: 'str | None' = None, outcome: 'str | None' = None, recipient: 'str | None' = None, after: 'datetime | None' = None, before: 'datetime | None' = None, limit: 'int | None' = None, cursor: 'str | None' = None) -> 'Call[Paged[SendRecord]]'"
+    },
+    "list_sends": {
+      "signature": "(account_id: 'str', *, user: 'str | None' = None, outcome: 'str | None' = None, recipient: 'str | None' = None, after: 'datetime | None' = None, before: 'datetime | None' = None, limit: 'int | None' = None, cursor: 'str | None' = None) -> 'Call[Paged[SendRecord]]'"
+    }
+  },
+  "benethos_mailbox_client.endpoints.status": {
+    "get_status": {
+      "signature": "() -> 'Call[Status]'"
+    }
+  },
+  "benethos_mailbox_client.endpoints.threads": {
+    "get_thread": {
+      "signature": "(account_id: 'str', thread_id: 'str') -> 'Call[Thread]'"
+    },
+    "list_threads": {
+      "signature": "(account_id: 'str', *, folder: 'str', limit: 'int | None' = None, cursor: 'str | None' = None) -> 'Call[Paged[ThreadSummary]]'"
+    }
+  },
+  "benethos_mailbox_client.endpoints.tokens": {
+    "create_token": {
+      "signature": "(user_id: 'str', name: 'str', expires_at: 'datetime | None' = None) -> 'Call[NewToken]'"
+    },
+    "list_tokens": {
+      "signature": "(user_id: 'str') -> 'Call[list[Token]]'"
+    },
+    "revoke_token": {
+      "signature": "(user_id: 'str', token_id: 'str') -> 'Call[None]'"
+    },
+    "token": {
+      "signature": "(item: 'dict[str, Any]') -> 'Token'"
+    }
+  },
+  "benethos_mailbox_client.endpoints.users": {
+    "create_user": {
+      "signature": "(name: 'str', *, roles: 'list[str] | None' = None, service: 'list[str] | None' = None, grants: 'Sequence[Grant] | None' = None, ui_sign_in: 'bool | None' = None) -> 'Call[User]'"
+    },
+    "delete_user": {
+      "signature": "(user_id: 'str') -> 'Call[None]'"
+    },
+    "get_user": {
+      "signature": "(user_id: 'str') -> 'Call[User]'"
+    },
+    "list_users": {
+      "signature": "(*, name: 'str | None' = None, role: 'str | None' = None, disabled: 'bool | None' = None, ui_sign_in: 'bool | None' = None, limit: 'int | None' = None, cursor: 'str | None' = None) -> 'Call[Paged[User]]'"
+    },
+    "set_password": {
+      "signature": "(user_id: 'str', password: 'str | None' = None) -> 'Call[NewPassword]'"
+    },
+    "update_user": {
+      "signature": "(user_id: 'str', *, name: 'str | None' = None, roles: 'list[str] | None' = None, service: 'list[str] | None' = None, grants: 'Sequence[Grant] | None' = None, disabled: 'bool | None' = None, ui_sign_in: 'bool | None' = None) -> 'Call[User]'"
+    },
+    "user": {
+      "signature": "(item: 'dict[str, Any]') -> 'User'"
+    }
+  },
+  "benethos_mailbox_client.endpoints.webhooks": {
+    "create_webhook": {
+      "signature": "(url: 'str', *, events: 'list[str] | None' = None, accounts: 'list[str] | None' = None) -> 'Call[NewWebhook]'"
+    },
+    "delete_webhook": {
+      "signature": "(webhook_id: 'str') -> 'Call[None]'"
+    },
+    "get_webhook": {
+      "signature": "(webhook_id: 'str') -> 'Call[WebhookDetail]'"
+    },
+    "list_webhooks": {
+      "signature": "(*, url: 'str | None' = None, account: 'str | None' = None, failing: 'bool | None' = None) -> 'Call[list[Webhook]]'"
+    },
+    "renew_webhook_secret": {
+      "signature": "(webhook_id: 'str') -> 'Call[WebhookSecret]'"
+    },
+    "update_webhook": {
+      "signature": "(webhook_id: 'str', *, url: 'str | None' = None, events: 'list[str] | None' = None, accounts: 'list[str] | None | EllipsisType' = Ellipsis) -> 'Call[Webhook]'"
+    },
+    "webhook": {
+      "signature": "(item: 'dict[str, Any]') -> 'Webhook'"
+    }
+  },
+  "benethos_mailbox_client.environment": {
+    "ALLOW_HTTP_ENV": {
+      "value": "MAILBOX_SERVICE_ALLOW_HTTP"
+    },
+    "Connection": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "base_url": {
+          "type": "str"
+        },
+        "headers": {
+          "type": "dict[str, str]"
+        }
+      },
+      "methods": {
+        "trust_env": {
+          "property": true
+        }
+      }
+    },
+    "DEFAULT_URL": {
+      "value": "http://127.0.0.1:8080"
+    },
+    "Environment": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "url": {
+          "type": "str"
+        },
+        "token": {
+          "type": "str"
+        },
+        "allow_http": {
+          "type": "bool"
+        }
+      }
+    },
+    "TOKEN_ENV": {
+      "value": "MAILBOX_SERVICE_TOKEN"
+    },
+    "URL_ENV": {
+      "value": "MAILBOX_SERVICE_URL"
+    },
+    "connection": {
+      "signature": "(base_url: 'str | None', token: 'str | None', allow_http: 'bool | None') -> 'Connection'"
+    },
+    "from_environment": {
+      "signature": "() -> 'Environment'"
+    },
+    "service_url": {
+      "signature": "() -> 'str'"
+    }
+  },
+  "benethos_mailbox_client.errors": {
+    "ApiError": {
+      "bases": [
+        "benethos_mailbox_client.errors.MailboxError"
+      ],
+      "methods": {
+        "__init__": {
+          "signature": "(self, status: 'int', code: 'str', message: 'str', retry_after: 'int | None' = None) -> 'None'"
+        }
+      }
+    },
+    "ConfigurationError": {
+      "bases": [
+        "benethos_mailbox_client.errors.MailboxError"
+      ]
+    },
+    "MailboxError": {
+      "bases": [
+        "builtins.Exception"
+      ]
+    },
+    "ServiceTimeoutError": {
+      "bases": [
+        "benethos_mailbox_client.errors.MailboxError"
+      ]
+    },
+    "ServiceUnavailableError": {
+      "bases": [
+        "benethos_mailbox_client.errors.MailboxError"
+      ]
+    }
+  },
+  "benethos_mailbox_client.models": {
+    "__all__": [
+      "Account",
+      "AccountHealth",
+      "Activity",
+      "Address",
+      "AttachedFile",
+      "Attachment",
+      "AttachmentLink",
+      "AttachmentSource",
+      "Candidate",
+      "Change",
+      "Changes",
+      "DeviceSignIn",
+      "DeviceSignInState",
+      "Discovery",
+      "Failed",
+      "Folder",
+      "Grant",
+      "Health",
+      "Hint",
+      "MailServer",
+      "Marks",
+      "Me",
+      "MeAccount",
+      "Message",
+      "MessageSummary",
+      "NewPassword",
+      "NewToken",
+      "NewWebhook",
+      "NotAnswering",
+      "Outcome",
+      "OutgoingFile",
+      "Page",
+      "Paged",
+      "Passkey",
+      "Permissions",
+      "Recipient",
+      "Reference",
+      "Role",
+      "SecondFactor",
+      "Secret",
+      "SendRecord",
+      "Sending",
+      "Sent",
+      "SourceReport",
+      "Status",
+      "StoredCredential",
+      "Thread",
+      "ThreadSummary",
+      "Token",
+      "TotpDevice",
+      "User",
+      "Webhook",
+      "WebhookDetail",
+      "WebhookPost",
+      "WebhookSecret",
+      "Worker"
+    ]
+  },
+  "benethos_mailbox_client.models.accounts": {
+    "Account": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "id": {
+          "type": "str"
+        },
+        "provider": {
+          "type": "str"
+        },
+        "email": {
+          "type": "str"
+        },
+        "display_name": {
+          "type": "str | None"
+        },
+        "status": {
+          "type": "str"
+        },
+        "credentials": {
+          "type": "tuple[StoredCredential, ...]"
+        },
+        "settings": {
+          "type": "dict[str, Any]"
+        },
+        "capabilities": {
+          "type": "frozenset[str]"
+        },
+        "marks": {
+          "type": "Marks",
+          "default": "Marks(read=frozenset(), written=frozenset())"
+        },
+        "operations": {
+          "type": "frozenset[str]",
+          "default": "frozenset()"
+        }
+      }
+    },
+    "Marks": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "read": {
+          "type": "frozenset[str]",
+          "default": "frozenset()"
+        },
+        "written": {
+          "type": "frozenset[str]",
+          "default": "frozenset()"
+        }
+      }
+    },
+    "StoredCredential": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "field": {
+          "type": "str"
+        },
+        "updated_at": {
+          "type": "datetime"
+        }
+      }
+    }
+  },
+  "benethos_mailbox_client.models.attachments": {
+    "Attachment": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "data": {
+          "type": "bytes"
+        },
+        "content_type": {
+          "type": "str"
+        },
+        "charset": {
+          "type": "str | None"
+        },
+        "filename": {
+          "type": "str | None"
+        },
+        "complete": {
+          "type": "bool",
+          "default": "True"
+        }
+      }
+    },
+    "AttachmentLink": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "url": {
+          "type": "Secret"
+        },
+        "expires_at": {
+          "type": "datetime"
+        },
+        "content_type": {
+          "type": "str"
+        },
+        "size": {
+          "type": "int"
+        },
+        "filename": {
+          "type": "str | None"
+        }
+      }
+    }
+  },
+  "benethos_mailbox_client.models.audit": {
+    "Activity": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "id": {
+          "type": "str"
+        },
+        "at": {
+          "type": "datetime"
+        },
+        "activity": {
+          "type": "str"
+        },
+        "user_id": {
+          "type": "str | None"
+        },
+        "user_name": {
+          "type": "str"
+        },
+        "credential": {
+          "type": "str | None"
+        },
+        "record": {
+          "type": "str | None"
+        },
+        "source": {
+          "type": "str | None"
+        },
+        "outcome": {
+          "type": "str"
+        },
+        "detail": {
+          "type": "str"
+        }
+      }
+    }
+  },
+  "benethos_mailbox_client.models.changes": {
+    "Change": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "type": {
+          "type": "str"
+        },
+        "id": {
+          "type": "str"
+        },
+        "account_id": {
+          "type": "str"
+        },
+        "at": {
+          "type": "datetime"
+        }
+      }
+    },
+    "Changes": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "changes": {
+          "type": "list[Change]"
+        },
+        "state": {
+          "type": "str"
+        },
+        "more": {
+          "type": "bool"
+        }
+      }
+    }
+  },
+  "benethos_mailbox_client.models.discovery": {
+    "Candidate": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "provider": {
+          "type": "str"
+        },
+        "name": {
+          "type": "str | None"
+        },
+        "credential": {
+          "type": "str"
+        },
+        "oauth_provider": {
+          "type": "str | None"
+        },
+        "servers": {
+          "type": "tuple[MailServer, ...]"
+        },
+        "hints": {
+          "type": "tuple[Hint, ...]"
+        },
+        "source": {
+          "type": "str"
+        },
+        "confirmed": {
+          "type": "bool"
+        },
+        "settings": {
+          "type": "dict[str, Any]"
+        }
+      }
+    },
+    "DeviceSignIn": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "sign_in_id": {
+          "type": "str"
+        },
+        "user_code": {
+          "type": "str"
+        },
+        "verification_uri": {
+          "type": "str"
+        },
+        "expires_at": {
+          "type": "datetime"
+        },
+        "interval": {
+          "type": "int"
+        }
+      }
+    },
+    "DeviceSignInState": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "connected": {
+          "type": "bool"
+        },
+        "account": {
+          "type": "Account | None"
+        }
+      }
+    },
+    "Discovery": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "email": {
+          "type": "str"
+        },
+        "domain": {
+          "type": "str"
+        },
+        "candidates": {
+          "type": "tuple[Candidate, ...]"
+        },
+        "hints": {
+          "type": "tuple[Hint, ...]"
+        },
+        "sources": {
+          "type": "tuple[SourceReport, ...]"
+        }
+      }
+    },
+    "Hint": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "text": {
+          "type": "str"
+        },
+        "url": {
+          "type": "str | None"
+        }
+      }
+    },
+    "MailServer": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "protocol": {
+          "type": "str"
+        },
+        "host": {
+          "type": "str"
+        },
+        "port": {
+          "type": "int"
+        },
+        "security": {
+          "type": "str"
+        },
+        "username": {
+          "type": "str | None"
+        },
+        "path": {
+          "type": "str | None"
+        },
+        "reachable": {
+          "type": "bool | None"
+        },
+        "capabilities": {
+          "type": "tuple[str, ...]"
+        }
+      }
+    },
+    "SourceReport": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "source": {
+          "type": "str"
+        },
+        "outcome": {
+          "type": "str"
+        },
+        "message": {
+          "type": "str | None"
+        }
+      }
+    }
+  },
+  "benethos_mailbox_client.models.factors": {
+    "Passkey": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "id": {
+          "type": "str"
+        },
+        "name": {
+          "type": "str"
+        },
+        "created_at": {
+          "type": "datetime"
+        },
+        "last_used_at": {
+          "type": "datetime | None"
+        }
+      }
+    },
+    "SecondFactor": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "totp": {
+          "type": "tuple[TotpDevice, ...]"
+        },
+        "recovery_codes_left": {
+          "type": "int"
+        },
+        "passkeys": {
+          "type": "tuple[Passkey, ...]",
+          "default": "()"
+        }
+      }
+    },
+    "TotpDevice": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "id": {
+          "type": "str"
+        },
+        "name": {
+          "type": "str"
+        },
+        "created_at": {
+          "type": "datetime"
+        },
+        "last_used_at": {
+          "type": "datetime | None"
+        }
+      }
+    }
+  },
+  "benethos_mailbox_client.models.folders": {
+    "Folder": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "id": {
+          "type": "str"
+        },
+        "name": {
+          "type": "str"
+        },
+        "role": {
+          "type": "str | None"
+        },
+        "unread": {
+          "type": "int | None"
+        },
+        "total": {
+          "type": "int | None"
+        },
+        "parent_id": {
+          "type": "str | None",
+          "default": "None"
+        },
+        "subscribed": {
+          "type": "bool | None",
+          "default": "None"
+        }
+      }
+    }
+  },
+  "benethos_mailbox_client.models.health": {
+    "Health": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "status": {
+          "type": "str"
+        },
+        "version": {
+          "type": "str"
+        }
+      }
+    }
+  },
+  "benethos_mailbox_client.models.me": {
+    "Me": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "user_id": {
+          "type": "str"
+        },
+        "name": {
+          "type": "str"
+        },
+        "accounts": {
+          "type": "list[MeAccount]"
+        },
+        "operations": {
+          "type": "frozenset[str]"
+        }
+      }
+    },
+    "MeAccount": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "id": {
+          "type": "str"
+        },
+        "email": {
+          "type": "str"
+        },
+        "display_name": {
+          "type": "str | None"
+        },
+        "operations": {
+          "type": "frozenset[str]"
+        },
+        "warnings": {
+          "type": "frozenset[str]"
+        },
+        "sending": {
+          "type": "tuple[Sending, ...]",
+          "default": "()"
+        },
+        "capabilities": {
+          "type": "frozenset[str] | None",
+          "default": "None"
+        },
+        "marks": {
+          "type": "Marks | None",
+          "default": "None"
+        },
+        "status": {
+          "type": "str",
+          "default": "'connected'"
+        },
+        "last_sync_at": {
+          "type": "datetime | None",
+          "default": "None"
+        },
+        "attention": {
+          "type": "bool",
+          "default": "False"
+        }
+      }
+    },
+    "Sending": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "recipients": {
+          "type": "tuple[str, ...] | None"
+        },
+        "max_per_day": {
+          "type": "int | None"
+        },
+        "left": {
+          "type": "int | None"
+        }
+      }
+    }
+  },
+  "benethos_mailbox_client.models.messages": {
+    "Address": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "email": {
+          "type": "str"
+        },
+        "name": {
+          "type": "str | None",
+          "default": "None"
+        }
+      }
+    },
+    "AttachedFile": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "id": {
+          "type": "str"
+        },
+        "filename": {
+          "type": "str | None"
+        },
+        "content_type": {
+          "type": "str"
+        },
+        "size": {
+          "type": "int"
+        },
+        "inline": {
+          "type": "bool",
+          "default": "False"
+        }
+      }
+    },
+    "Failed": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "id": {
+          "type": "str"
+        },
+        "error": {
+          "type": "str"
+        },
+        "code": {
+          "type": "str",
+          "default": "'failed'"
+        }
+      }
+    },
+    "Message": {
+      "bases": [
+        "benethos_mailbox_client.models.messages.MessageSummary"
+      ],
+      "frozen": true,
+      "fields": {
+        "id": {
+          "type": "str"
+        },
+        "account_id": {
+          "type": "str | None"
+        },
+        "thread_id": {
+          "type": "str | None"
+        },
+        "folder_ids": {
+          "type": "list[str]"
+        },
+        "subject": {
+          "type": "str | None"
+        },
+        "sender": {
+          "type": "Address | None"
+        },
+        "to": {
+          "type": "list[Address]"
+        },
+        "date": {
+          "type": "datetime | None"
+        },
+        "received": {
+          "type": "datetime | None"
+        },
+        "snippet": {
+          "type": "str | None"
+        },
+        "unread": {
+          "type": "bool"
+        },
+        "starred": {
+          "type": "bool"
+        },
+        "keywords": {
+          "type": "list[str]"
+        },
+        "has_attachments": {
+          "type": "bool"
+        },
+        "cc": {
+          "type": "list[Address]"
+        },
+        "bcc": {
+          "type": "list[Address]"
+        },
+        "reply_to": {
+          "type": "list[Address]"
+        },
+        "message_id_header": {
+          "type": "str | None"
+        },
+        "in_reply_to": {
+          "type": "str | None"
+        },
+        "text_body": {
+          "type": "str | None"
+        },
+        "html_body": {
+          "type": "str | None"
+        },
+        "attachments": {
+          "type": "list[AttachedFile]"
+        },
+        "reference": {
+          "type": "Reference | None"
+        }
+      }
+    },
+    "MessageSummary": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "id": {
+          "type": "str"
+        },
+        "account_id": {
+          "type": "str | None"
+        },
+        "thread_id": {
+          "type": "str | None"
+        },
+        "folder_ids": {
+          "type": "list[str]"
+        },
+        "subject": {
+          "type": "str | None"
+        },
+        "sender": {
+          "type": "Address | None"
+        },
+        "to": {
+          "type": "list[Address]"
+        },
+        "date": {
+          "type": "datetime | None"
+        },
+        "received": {
+          "type": "datetime | None"
+        },
+        "snippet": {
+          "type": "str | None"
+        },
+        "unread": {
+          "type": "bool"
+        },
+        "starred": {
+          "type": "bool"
+        },
+        "keywords": {
+          "type": "list[str]"
+        },
+        "has_attachments": {
+          "type": "bool"
+        }
+      }
+    },
+    "NotAnswering": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "account_id": {
+          "type": "str"
+        },
+        "code": {
+          "type": "str"
+        },
+        "message": {
+          "type": "str"
+        }
+      }
+    },
+    "Outcome": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "done": {
+          "type": "list[str]"
+        },
+        "failed": {
+          "type": "list[Failed]"
+        }
+      }
+    },
+    "Page": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "items": {
+          "type": "list[MessageSummary]"
+        },
+        "next_cursor": {
+          "type": "str | None"
+        },
+        "not_answering": {
+          "type": "list[str]",
+          "default": "list()"
+        },
+        "incomplete": {
+          "type": "list[NotAnswering]",
+          "default": "list()"
+        }
+      }
+    },
+    "Reference": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "message_id": {
+          "type": "str"
+        },
+        "action": {
+          "type": "str"
+        },
+        "forward_as": {
+          "type": "str",
+          "default": "'inline'"
+        },
+        "quote": {
+          "type": "bool",
+          "default": "True"
+        }
+      }
+    }
+  },
+  "benethos_mailbox_client.models.paging": {
+    "Paged": {
+      "bases": [
+        "typing.Generic"
+      ],
+      "frozen": true,
+      "fields": {
+        "items": {
+          "type": "list[R]"
+        },
+        "next_cursor": {
+          "type": "str | None"
+        }
+      }
+    },
+    "R": {
+      "source": "TypeVar(\"R\")"
+    }
+  },
+  "benethos_mailbox_client.models.rights": {
+    "Grant": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "accounts": {
+          "type": "tuple[str, ...]"
+        },
+        "allow": {
+          "type": "tuple[str, ...]"
+        },
+        "recipients": {
+          "type": "tuple[str, ...] | None",
+          "default": "None"
+        },
+        "max_sends_per_day": {
+          "type": "int | None",
+          "default": "None"
+        },
+        "folders": {
+          "type": "tuple[str, ...] | None",
+          "default": "None"
+        },
+        "expires_at": {
+          "type": "datetime | None",
+          "default": "None"
+        }
+      }
+    },
+    "Permissions": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "groups": {
+          "type": "dict[str, tuple[str, ...]]"
+        },
+        "service": {
+          "type": "tuple[str, ...]"
+        }
+      }
+    }
+  },
+  "benethos_mailbox_client.models.roles": {
+    "Role": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "id": {
+          "type": "str"
+        },
+        "service": {
+          "type": "tuple[str, ...]"
+        },
+        "grants": {
+          "type": "tuple[Grant, ...]"
+        }
+      }
+    }
+  },
+  "benethos_mailbox_client.models.secrets": {
+    "Secret": {
+      "bases": [
+        "builtins.object"
+      ],
+      "methods": {
+        "__init__": {
+          "signature": "(self, value: 'str') -> 'None'"
+        },
+        "get_secret_value": {
+          "signature": "(self) -> 'str'"
+        }
+      }
+    }
+  },
+  "benethos_mailbox_client.models.sending": {
+    "AttachmentSource": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "message_id": {
+          "type": "str"
+        },
+        "attachment_id": {
+          "type": "str"
+        }
+      }
+    },
+    "OutgoingFile": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "filename": {
+          "type": "str"
+        },
+        "data": {
+          "type": "bytes"
+        },
+        "content_type": {
+          "type": "str",
+          "default": "'application/octet-stream'"
+        }
+      }
+    },
+    "Recipient": {
+      "source": "Address | tuple[str, str | None]"
+    },
+    "Sent": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "message_id_header": {
+          "type": "str"
+        },
+        "refused": {
+          "type": "list[str]"
+        },
+        "original_marked": {
+          "type": "bool | None",
+          "default": "None"
+        },
+        "sent_copy_id": {
+          "type": "str | None",
+          "default": "None"
+        }
+      }
+    }
+  },
+  "benethos_mailbox_client.models.sends": {
+    "SendRecord": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "id": {
+          "type": "str"
+        },
+        "created_at": {
+          "type": "datetime"
+        },
+        "user_id": {
+          "type": "str"
+        },
+        "credential_id": {
+          "type": "str | None"
+        },
+        "account_id": {
+          "type": "str"
+        },
+        "operation": {
+          "type": "str"
+        },
+        "recipients": {
+          "type": "tuple[str, ...]"
+        },
+        "outcome": {
+          "type": "str"
+        },
+        "error": {
+          "type": "str | None"
+        },
+        "refused": {
+          "type": "tuple[str, ...]"
+        },
+        "message_id_header": {
+          "type": "str | None"
+        }
+      }
+    }
+  },
+  "benethos_mailbox_client.models.status": {
+    "AccountHealth": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "id": {
+          "type": "str"
+        },
+        "email": {
+          "type": "str"
+        },
+        "provider": {
+          "type": "str"
+        },
+        "status": {
+          "type": "str"
+        },
+        "synced": {
+          "type": "bool"
+        },
+        "watching": {
+          "type": "bool"
+        },
+        "last_sync_at": {
+          "type": "datetime | None"
+        },
+        "last_error": {
+          "type": "str | None"
+        },
+        "last_error_at": {
+          "type": "datetime | None"
+        },
+        "attention": {
+          "type": "bool"
+        }
+      }
+    },
+    "Status": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "worker": {
+          "type": "Worker | None"
+        },
+        "accounts": {
+          "type": "tuple[AccountHealth, ...]"
+        }
+      }
+    },
+    "Worker": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "interval": {
+          "type": "float"
+        },
+        "push": {
+          "type": "bool"
+        },
+        "last_pass_at": {
+          "type": "datetime | None"
+        },
+        "watchers": {
+          "type": "int"
+        },
+        "watching": {
+          "type": "int"
+        }
+      }
+    }
+  },
+  "benethos_mailbox_client.models.threads": {
+    "Thread": {
+      "bases": [
+        "benethos_mailbox_client.models.threads.ThreadSummary"
+      ],
+      "frozen": true,
+      "fields": {
+        "id": {
+          "type": "str"
+        },
+        "account_id": {
+          "type": "str"
+        },
+        "subject": {
+          "type": "str | None"
+        },
+        "participants": {
+          "type": "list[Address]"
+        },
+        "message_count": {
+          "type": "int"
+        },
+        "unread_count": {
+          "type": "int"
+        },
+        "date": {
+          "type": "datetime | None"
+        },
+        "snippet": {
+          "type": "str | None"
+        },
+        "folder_ids": {
+          "type": "list[str]"
+        },
+        "truncated": {
+          "type": "bool"
+        },
+        "messages": {
+          "type": "list[MessageSummary]"
+        }
+      }
+    },
+    "ThreadSummary": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "id": {
+          "type": "str"
+        },
+        "account_id": {
+          "type": "str"
+        },
+        "subject": {
+          "type": "str | None"
+        },
+        "participants": {
+          "type": "list[Address]"
+        },
+        "message_count": {
+          "type": "int"
+        },
+        "unread_count": {
+          "type": "int"
+        },
+        "date": {
+          "type": "datetime | None"
+        },
+        "snippet": {
+          "type": "str | None"
+        },
+        "folder_ids": {
+          "type": "list[str]"
+        },
+        "truncated": {
+          "type": "bool"
+        }
+      }
+    }
+  },
+  "benethos_mailbox_client.models.tokens": {
+    "NewToken": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "token": {
+          "type": "Token"
+        },
+        "secret": {
+          "type": "Secret"
+        }
+      }
+    },
+    "Token": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "id": {
+          "type": "str"
+        },
+        "user_id": {
+          "type": "str"
+        },
+        "name": {
+          "type": "str"
+        },
+        "state": {
+          "type": "str"
+        },
+        "created_at": {
+          "type": "datetime"
+        },
+        "expires_at": {
+          "type": "datetime | None"
+        },
+        "last_used_at": {
+          "type": "datetime | None"
+        },
+        "revoked_at": {
+          "type": "datetime | None"
+        }
+      }
+    }
+  },
+  "benethos_mailbox_client.models.users": {
+    "NewPassword": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "password": {
+          "type": "Secret | None"
+        },
+        "must_change": {
+          "type": "bool"
+        }
+      }
+    },
+    "User": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "id": {
+          "type": "str"
+        },
+        "name": {
+          "type": "str"
+        },
+        "roles": {
+          "type": "tuple[str, ...]"
+        },
+        "service": {
+          "type": "tuple[str, ...]"
+        },
+        "grants": {
+          "type": "tuple[Grant, ...]"
+        },
+        "disabled": {
+          "type": "bool"
+        },
+        "ui_sign_in": {
+          "type": "bool"
+        },
+        "has_password": {
+          "type": "bool"
+        },
+        "must_change": {
+          "type": "bool"
+        },
+        "last_sign_in_at": {
+          "type": "datetime | None"
+        },
+        "second_factor": {
+          "type": "bool"
+        }
+      }
+    }
+  },
+  "benethos_mailbox_client.models.webhooks": {
+    "NewWebhook": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "webhook": {
+          "type": "Webhook"
+        },
+        "secret": {
+          "type": "Secret"
+        }
+      }
+    },
+    "Webhook": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "id": {
+          "type": "str"
+        },
+        "url": {
+          "type": "str"
+        },
+        "events": {
+          "type": "tuple[str, ...]"
+        },
+        "accounts": {
+          "type": "tuple[str, ...] | None"
+        },
+        "user_id": {
+          "type": "str"
+        },
+        "created_at": {
+          "type": "datetime"
+        },
+        "last_delivery_at": {
+          "type": "datetime | None"
+        },
+        "last_error": {
+          "type": "str | None"
+        }
+      }
+    },
+    "WebhookDetail": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "webhook": {
+          "type": "Webhook"
+        },
+        "deliveries": {
+          "type": "tuple[WebhookPost, ...]"
+        }
+      }
+    },
+    "WebhookPost": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "delivery_id": {
+          "type": "str"
+        },
+        "at": {
+          "type": "datetime"
+        },
+        "events": {
+          "type": "int"
+        },
+        "status": {
+          "type": "int | None"
+        },
+        "error": {
+          "type": "str | None"
+        }
+      }
+    },
+    "WebhookSecret": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "webhook_id": {
+          "type": "str"
+        },
+        "secret": {
+          "type": "Secret"
+        }
+      }
+    }
+  },
+  "benethos_mailbox_client.sync": {
+    "SyncMailboxClient": {
+      "bases": [
+        "builtins.object"
+      ],
+      "methods": {
+        "__init__": {
+          "signature": "(self, base_url: 'str | None' = None, token: 'str | None' = None, transport: 'httpx.BaseTransport | None' = None, allow_http: 'bool | None' = None) -> 'None'"
+        },
+        "batch_messages": {
+          "sends": "benethos_mailbox_client.endpoints.messages.batch_messages"
+        },
+        "close": {
+          "signature": "(self) -> 'None'"
+        },
+        "create_account": {
+          "sends": "benethos_mailbox_client.endpoints.accounts.create_account"
+        },
+        "create_draft": {
+          "sends": "benethos_mailbox_client.endpoints.drafts.create_draft"
+        },
+        "create_folder": {
+          "sends": "benethos_mailbox_client.endpoints.folders.create_folder"
+        },
+        "create_role": {
+          "sends": "benethos_mailbox_client.endpoints.roles.create_role"
+        },
+        "create_token": {
+          "sends": "benethos_mailbox_client.endpoints.tokens.create_token"
+        },
+        "create_user": {
+          "sends": "benethos_mailbox_client.endpoints.users.create_user"
+        },
+        "create_webhook": {
+          "sends": "benethos_mailbox_client.endpoints.webhooks.create_webhook"
+        },
+        "delete_account": {
+          "sends": "benethos_mailbox_client.endpoints.accounts.delete_account"
+        },
+        "delete_draft": {
+          "sends": "benethos_mailbox_client.endpoints.drafts.delete_draft"
+        },
+        "delete_folder": {
+          "sends": "benethos_mailbox_client.endpoints.folders.delete_folder"
+        },
+        "delete_message": {
+          "sends": "benethos_mailbox_client.endpoints.messages.delete_message"
+        },
+        "delete_role": {
+          "sends": "benethos_mailbox_client.endpoints.roles.delete_role"
+        },
+        "delete_user": {
+          "sends": "benethos_mailbox_client.endpoints.users.delete_user"
+        },
+        "delete_webhook": {
+          "sends": "benethos_mailbox_client.endpoints.webhooks.delete_webhook"
+        },
+        "discover_account": {
+          "sends": "benethos_mailbox_client.endpoints.discovery.discover_account"
+        },
+        "get_account": {
+          "sends": "benethos_mailbox_client.endpoints.accounts.get_account"
+        },
+        "get_attachment": {
+          "signature": "(self, account_id: 'str', message_id: 'str', attachment_id: 'str', max_bytes: 'int') -> 'Attachment'"
+        },
+        "get_me": {
+          "sends": "benethos_mailbox_client.endpoints.me.get_me"
+        },
+        "get_message": {
+          "sends": "benethos_mailbox_client.endpoints.messages.get_message"
+        },
+        "get_message_raw": {
+          "sends": "benethos_mailbox_client.endpoints.messages.get_message_raw"
+        },
+        "get_role": {
+          "sends": "benethos_mailbox_client.endpoints.roles.get_role"
+        },
+        "get_second_factor": {
+          "sends": "benethos_mailbox_client.endpoints.factors.get_second_factor"
+        },
+        "get_status": {
+          "sends": "benethos_mailbox_client.endpoints.status.get_status"
+        },
+        "get_thread": {
+          "sends": "benethos_mailbox_client.endpoints.threads.get_thread"
+        },
+        "get_user": {
+          "sends": "benethos_mailbox_client.endpoints.users.get_user"
+        },
+        "get_webhook": {
+          "sends": "benethos_mailbox_client.endpoints.webhooks.get_webhook"
+        },
+        "health": {
+          "sends": "benethos_mailbox_client.endpoints.health.health"
+        },
+        "list_accounts": {
+          "sends": "benethos_mailbox_client.endpoints.accounts.list_accounts"
+        },
+        "list_activity": {
+          "sends": "benethos_mailbox_client.endpoints.audit.list_activity"
+        },
+        "list_all_changes": {
+          "sends": "benethos_mailbox_client.endpoints.changes.list_all_changes"
+        },
+        "list_all_messages": {
+          "sends": "benethos_mailbox_client.endpoints.messages.list_all_messages"
+        },
+        "list_all_sends": {
+          "sends": "benethos_mailbox_client.endpoints.sends.list_all_sends"
+        },
+        "list_changes": {
+          "sends": "benethos_mailbox_client.endpoints.changes.list_changes"
+        },
+        "list_drafts": {
+          "sends": "benethos_mailbox_client.endpoints.drafts.list_drafts"
+        },
+        "list_folders": {
+          "sends": "benethos_mailbox_client.endpoints.folders.list_folders"
+        },
+        "list_messages": {
+          "sends": "benethos_mailbox_client.endpoints.messages.list_messages"
+        },
+        "list_permissions": {
+          "sends": "benethos_mailbox_client.endpoints.me.list_permissions"
+        },
+        "list_roles": {
+          "sends": "benethos_mailbox_client.endpoints.roles.list_roles"
+        },
+        "list_sends": {
+          "sends": "benethos_mailbox_client.endpoints.sends.list_sends"
+        },
+        "list_threads": {
+          "sends": "benethos_mailbox_client.endpoints.threads.list_threads"
+        },
+        "list_tokens": {
+          "sends": "benethos_mailbox_client.endpoints.tokens.list_tokens"
+        },
+        "list_users": {
+          "sends": "benethos_mailbox_client.endpoints.users.list_users"
+        },
+        "list_webhooks": {
+          "sends": "benethos_mailbox_client.endpoints.webhooks.list_webhooks"
+        },
+        "poll_device_oauth": {
+          "sends": "benethos_mailbox_client.endpoints.discovery.poll_device_oauth"
+        },
+        "remove_passkey": {
+          "sends": "benethos_mailbox_client.endpoints.factors.remove_passkey"
+        },
+        "remove_second_factor": {
+          "sends": "benethos_mailbox_client.endpoints.factors.remove_second_factor"
+        },
+        "remove_totp_device": {
+          "sends": "benethos_mailbox_client.endpoints.factors.remove_totp_device"
+        },
+        "renew_webhook_secret": {
+          "sends": "benethos_mailbox_client.endpoints.webhooks.renew_webhook_secret"
+        },
+        "replace_role": {
+          "sends": "benethos_mailbox_client.endpoints.roles.replace_role"
+        },
+        "request": {
+          "signature": "(self, method: 'str', path: 'str', *, params: 'dict[str, Any] | None' = None, json: 'dict[str, Any] | None' = None, headers: 'dict[str, str] | None' = None) -> 'Any'"
+        },
+        "revoke_token": {
+          "sends": "benethos_mailbox_client.endpoints.tokens.revoke_token"
+        },
+        "send": {
+          "signature": "(self, call: 'Call[T]') -> 'T'"
+        },
+        "send_draft": {
+          "sends": "benethos_mailbox_client.endpoints.sending.send_draft"
+        },
+        "send_message": {
+          "sends": "benethos_mailbox_client.endpoints.sending.send_message"
+        },
+        "set_password": {
+          "sends": "benethos_mailbox_client.endpoints.users.set_password"
+        },
+        "share_attachment": {
+          "sends": "benethos_mailbox_client.endpoints.attachments.share_attachment"
+        },
+        "start_device_oauth": {
+          "sends": "benethos_mailbox_client.endpoints.discovery.start_device_oauth"
+        },
+        "trash_messages": {
+          "sends": "benethos_mailbox_client.endpoints.messages.trash_messages"
+        },
+        "update_account": {
+          "sends": "benethos_mailbox_client.endpoints.accounts.update_account"
+        },
+        "update_draft": {
+          "sends": "benethos_mailbox_client.endpoints.drafts.update_draft"
+        },
+        "update_folder": {
+          "sends": "benethos_mailbox_client.endpoints.folders.update_folder"
+        },
+        "update_message": {
+          "sends": "benethos_mailbox_client.endpoints.messages.update_message"
+        },
+        "update_messages": {
+          "sends": "benethos_mailbox_client.endpoints.messages.update_messages"
+        },
+        "update_user": {
+          "sends": "benethos_mailbox_client.endpoints.users.update_user"
+        },
+        "update_webhook": {
+          "sends": "benethos_mailbox_client.endpoints.webhooks.update_webhook"
+        },
+        "verify_account": {
+          "sends": "benethos_mailbox_client.endpoints.accounts.verify_account"
+        }
+      }
+    }
+  }
+}

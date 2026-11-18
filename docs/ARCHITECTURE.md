@@ -992,8 +992,15 @@ imapclient boundary), never by patching deep inside a library.
   package and for `live/`, and the JavaScript the UI ships, is in
   `tests/` at its root. Beside them
   `installed_check.py` is not a test: the packages as installed, as real
-  processes, run by hand and by `freshness.yml`. Each package's tests
-  stay its own and run alone.
+  processes, run by hand and by `freshness.yml`. Nor is `interface.py`,
+  which writes the public interface of `mailbox-client` and
+  `mailbox-common` for the records in `docs/` that `test_interfaces.py`
+  holds to the code. Each package's tests stay its own and run alone.
+- The client is held to the API by its own tests: every operation is a
+  method of both clients (`test_operations.py`), every record holds the
+  fields of its schema (`models/test_fields.py`), and every request it
+  builds is one the API takes, its method, path, parameters and body
+  (`test_requests.py`).
 - Fakes plug in at a seam: the memory provider, `httpx.MockTransport`,
   a fake `IMAPClient` at the imapclient boundary. Nothing is patched
   deep inside a library.
