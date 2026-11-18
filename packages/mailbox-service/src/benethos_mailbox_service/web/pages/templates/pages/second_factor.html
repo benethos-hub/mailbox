@@ -52,7 +52,7 @@
       <button type="submit" form="passkey-cancel">Cancel</button>
     </div>
     <p class="notice warn factor-status" data-passkey-status role="status" hidden></p>
-    <p class="notice warn" data-passkey-missing hidden>This browser makes no passkeys.</p>
+    <p class="notice warn" data-passkey-missing hidden>This browser does not support passkeys.</p>
   </form>
   <form id="passkey-cancel" method="post" action="/ui/second-factor/passkeys/cancel">
     {{ csrf_field() }}
@@ -158,7 +158,7 @@
     {{ csrf_field() }}
     {% call confirm_fields("add", step=on) %}
     <div class="field">
-      <label for="f-name">Its name</label>
+      <label for="f-name">Name</label>
       <input id="f-name" name="name" maxlength="{{ max_name }}" required placeholder="e.g. Phone" />
     </div>
     {% endcall %}
@@ -172,7 +172,7 @@
     {{ csrf_field() }}
     {% call confirm_fields("passkey", step=on) %}
     <div class="field">
-      <label for="f-passkey-name">Its name</label>
+      <label for="f-passkey-name">Name</label>
       <input id="f-passkey-name" name="name" maxlength="{{ max_name }}" required placeholder="e.g. Laptop" />
     </div>
     {% endcall %}
@@ -182,7 +182,7 @@
 {% endif %}
 {% set last = (devices | length) + (keys | length) == 1 %}
 {% for device in devices %}
-{% call form_dialog("remove-" ~ device.id, "Remove " ~ device.name ~ "?", "Its codes work no more." ~ (" It is the last device: the second factor is off then, and the recovery codes go with it." if last else "")) %}
+{% call form_dialog("remove-" ~ device.id, "Remove " ~ device.name ~ "?", "Its codes stop working." ~ (" It is the last device: the second factor is off then, and the recovery codes go with it." if last else "")) %}
   <form method="post" action="/ui/second-factor/totp/remove">
     {{ csrf_field() }}
     <input type="hidden" name="device" value="{{ device.id }}" />
@@ -192,7 +192,7 @@
 {% endcall %}
 {% endfor %}
 {% if devices | length > 1 %}
-{% call form_dialog("remove-ticked", "Remove the ticked devices?", "Their codes work no more. With every device ticked and no passkey, the second factor is off, and the recovery codes go with it.") %}
+{% call form_dialog("remove-ticked", "Remove the ticked devices?", "Their codes stop working. With every device ticked and no passkey, the second factor is off, and the recovery codes go with it.") %}
   <form method="post" action="/ui/second-factor/totp/remove-ticked" id="devices-batch">
     {{ csrf_field() }}
     {{ confirm_fields("remove-ticked") }}
@@ -201,7 +201,7 @@
 {% endcall %}
 {% endif %}
 {% for key in keys %}
-{% call form_dialog("remove-" ~ key.id, "Remove " ~ key.name ~ "?", "It signs in no more. Remove it from the device or the password manager as well." ~ (" It is the last device: the second factor is off then, and the recovery codes go with it." if last else "")) %}
+{% call form_dialog("remove-" ~ key.id, "Remove " ~ key.name ~ "?", "It no longer signs you in. Remove it from the device or the password manager as well." ~ (" It is the last device: the second factor is off then, and the recovery codes go with it." if last else "")) %}
   <form method="post" action="/ui/second-factor/passkeys/remove">
     {{ csrf_field() }}
     <input type="hidden" name="device" value="{{ key.id }}" />
@@ -215,7 +215,7 @@
 {% call related("Recovery codes", meta=factor.recovery_codes_left ~ " left. New ones replace them all.", add="Make new codes", add_dialog="new-codes", add_icon="arrow-repeat") %}
   {% if factor.recovery_codes_left <= 2 %}<div class="body">{% if factor.recovery_codes_left == 0 %}<div class="notice warn">No recovery codes are left. Make new ones.</div>{% else %}<div class="notice warn">Few recovery codes are left. Make new ones.</div>{% endif %}</div>{% endif %}
 {% endcall %}
-{% call form_dialog("new-codes", "Make new recovery codes?", "They replace the ones left, which work no more then.") %}
+{% call form_dialog("new-codes", "Make new recovery codes?", "They replace the ones left, which stop working.") %}
   <form method="post" action="/ui/second-factor/codes">
     {{ csrf_field() }}
     {{ confirm_fields("codes") }}
