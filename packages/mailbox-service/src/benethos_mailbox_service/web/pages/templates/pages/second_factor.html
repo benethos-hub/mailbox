@@ -3,7 +3,7 @@
 {% from "components/factor.html" import second_step with context %}
 {% block title %}Second factor · {{ APP_NAME }}{% endblock %}
 {% block heading %}Second factor{% endblock %}
-{% block subheading %}<div class="sub">A second step after your password, when you sign in to this UI</div>{% endblock %}
+{% block subheading %}<div class="sub">{% if factor.totp or factor.passkeys %}<span class="tag ok">on</span> Signing in to this UI asks for your password and a second step.{% else %}<span class="tag warn">off</span> Your password alone signs you in to this UI. Add a device or a passkey to turn it on.{% endif %}</div>{% endblock %}
 {% block content %}
 {% set devices = factor.totp %}
 {% set keys = factor.passkeys %}
@@ -61,7 +61,7 @@
 {% endif %}
 
 {% set can_add = not qr and devices | length < max_devices %}
-{% call related("Authenticator app (TOTP)", count=devices | length, meta=("devices: a code of any of them signs in" if devices else ("none: your passkeys sign you in" if on else "off now: your password alone signs you in")), add=("Add a device" if can_add else None), add_dialog="add-device") %}
+{% call related("Authenticator app (TOTP)", count=devices | length, meta=("A code from any of them works." if devices else "Any authenticator app works."), add=("Add a device" if can_add else None), add_dialog="add-device") %}
   {% if devices | length > 1 %}
   <div class="batch-bar">
     <span class="label">Ticked devices</span>
@@ -105,7 +105,7 @@
 {% endcall %}
 
 {% set can_make = passkeys_work and not making and keys | length < max_devices %}
-{% call related("Passkeys", count=keys | length, meta=("any of them signs in" if keys else "a key pair on a device, a security key or in a password manager"), add=("Add a passkey" if can_make else None), add_dialog="add-passkey") %}
+{% call related("Passkeys", count=keys | length, meta=("Any of them works." if keys else "Kept on a device, a security key or in a password manager."), add=("Add a passkey" if can_make else None), add_dialog="add-passkey") %}
   <div class="body tight">
     <div class="table-scroll">
       <table>

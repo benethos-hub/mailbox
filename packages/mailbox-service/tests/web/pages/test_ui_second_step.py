@@ -117,3 +117,20 @@ def test_after_a_wrong_code_its_field_shows_first(
     again = app_client.get(wrong.headers["location"]).text
     assert f'data-ways-first="{first}"' in again
     assert "data-ways-first" not in app_client.get("/ui/login/code").text
+
+
+def test_the_page_says_whether_the_factor_is_on(
+    app_client: TestClient, services: Services
+) -> None:
+    services.vault.initialize()
+    name, password = browser_admin(services)
+    try_sign_in(app_client, name, password)
+    off = app_client.get("/ui/second-factor").text
+    assert '<span class="tag warn">off</span> Your password alone' in off
+    _, codes = with_factor(services, name)
+    try_sign_in(app_client, name, password)
+    code_form(app_client, codes[0])
+    on = app_client.get("/ui/second-factor").text
+    assert '<span class="tag ok">on</span> Signing in to this UI' in on
+    assert "A code from any of them works." in on
+    assert "1 devices" not in on and "devices:" not in on
