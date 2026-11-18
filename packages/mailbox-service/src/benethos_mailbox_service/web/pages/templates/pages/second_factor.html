@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "components/ui.html" import ago, card, copy_button, csrf_field, dialog_button, dialog_buttons, empty, form_dialog, icon, related, row_form, tick, tick_all, toggle with context %}
-{% from "components/factor.html" import code_or_passkey with context %}
+{% from "components/factor.html" import second_step with context %}
 {% block title %}Second factor · {{ APP_NAME }}{% endblock %}
 {% block heading %}Second factor{% endblock %}
 {% block subheading %}<div class="sub">A second step after your password, when you sign in to this UI</div>{% endblock %}
@@ -61,7 +61,7 @@
 {% endif %}
 
 {% set can_add = not qr and devices | length < max_devices %}
-{% call related("Authenticator app (TOTP)", count=devices | length, meta=("devices: a code of any of them signs in" if devices else ("none: your passkeys sign you in" if on else "off now: your password alone signs you in")), add=("Add a device" if can_add else None), add_form="add-device", add_open=not on) %}
+{% call related("Authenticator app (TOTP)", count=devices | length, meta=("devices: a code of any of them signs in" if devices else ("none: your passkeys sign you in" if on else "off now: your password alone signs you in")), add=("Add a device" if can_add else None), add_dialog="add-device") %}
   {% if devices | length > 1 %}
   <div class="batch-bar">
     <span class="label">Ticked devices</span>
@@ -74,27 +74,6 @@
         <thead><tr>{% if devices | length > 1 %}<th class="tick">{{ tick_all("devices-batch", "device") }}</th>{% endif %}<th>Name</th><th>Added</th><th>Last used</th><th class="actions"><span class="sr">Actions</span></th></tr></thead>
         <tbody>
           {% set columns = 5 if devices | length > 1 else 4 %}
-          {% if can_add %}
-          {% call row_form("add-device", columns, open=not on) %}
-            <form method="post" action="/ui/second-factor/totp/begin">
-              {{ csrf_field() }}
-              <input type="hidden" name="username" value="{{ me.name }}" autocomplete="username" />
-              <div class="toolbar">
-                <div class="field">
-                  <label for="f-name">Its name</label>
-                  <input id="f-name" name="name" maxlength="{{ max_name }}" required placeholder="e.g. Phone" />
-                </div>
-                <div class="field">
-                  <label for="f-password">Your password</label>
-                  <input id="f-password" name="password" type="password" autocomplete="current-password" required />
-                </div>
-                {% if on %}{{ code_or_passkey("add") }}{% endif %}
-              </div>
-              <span class="hint">The next step shows its QR code.{% if not on %} Then ten recovery codes, once.{% endif %} Adding a device signs out your other sessions.</span>
-              <div class="form-actions"><button class="primary" type="submit">{{ icon("check-lg") }} Next</button>{% if on %}<button type="button" data-close>Cancel</button>{% endif %}</div>
-            </form>
-          {% endcall %}
-          {% endif %}
           {% for device in devices %}
           <tr>
             {% if devices | length > 1 %}<td class="tick">{{ tick("devices-batch", "device", device.id, "Tick " ~ device.name) }}</td>{% endif %}
@@ -126,33 +105,12 @@
 {% endcall %}
 
 {% set can_make = passkeys_work and not making and keys | length < max_devices %}
-{% call related("Passkeys", count=keys | length, meta=("any of them signs in" if keys else "a key pair on a device, a security key or in a password manager"), add=("Add a passkey" if can_make else None), add_form="add-passkey") %}
+{% call related("Passkeys", count=keys | length, meta=("any of them signs in" if keys else "a key pair on a device, a security key or in a password manager"), add=("Add a passkey" if can_make else None), add_dialog="add-passkey") %}
   <div class="body tight">
     <div class="table-scroll">
       <table>
         <thead><tr><th>Name</th><th>Added</th><th>Last used</th><th class="actions"><span class="sr">Actions</span></th></tr></thead>
         <tbody>
-          {% if can_make %}
-          {% call row_form("add-passkey", 4) %}
-            <form method="post" action="/ui/second-factor/passkeys/begin">
-              {{ csrf_field() }}
-              <input type="hidden" name="username" value="{{ me.name }}" autocomplete="username" />
-              <div class="toolbar">
-                <div class="field">
-                  <label for="f-passkey-name">Its name</label>
-                  <input id="f-passkey-name" name="name" maxlength="{{ max_name }}" required placeholder="e.g. Laptop" />
-                </div>
-                <div class="field">
-                  <label for="f-passkey-password">Your password</label>
-                  <input id="f-passkey-password" name="password" type="password" autocomplete="current-password" required />
-                </div>
-                {% if on %}{{ code_or_passkey("passkey") }}{% endif %}
-              </div>
-              <span class="hint">The next step asks the browser to make it.{% if not on %} Then ten recovery codes, once.{% endif %} Adding a passkey signs out your other sessions.</span>
-              <div class="form-actions"><button class="primary" type="submit">{{ icon("check-lg") }} Next</button><button type="button" data-close>Cancel</button></div>
-            </form>
-          {% endcall %}
-          {% endif %}
           {% for key in keys %}
           <tr>
             <td class="name">{{ key.name }}</td>
@@ -183,16 +141,45 @@
   </div>
 {% endcall %}
 
-{% macro confirm_fields(id) %}
+{% macro confirm_fields(id, step=True) %}
   <input type="hidden" name="username" value="{{ me.name }}" autocomplete="username" />
   <div class="form-grid">
+    {% if caller is defined %}{{ caller() }}{% endif %}
     <div class="field">
       <label for="f-{{ id }}-password">Your password</label>
       <input id="f-{{ id }}-password" name="password" type="password" autocomplete="current-password" required />
     </div>
-    {{ code_or_passkey(id) }}
+    {% if step %}{{ second_step(id, ways) }}{% endif %}
   </div>
 {% endmacro %}
+{% if can_add %}
+{% call form_dialog("add-device", "Add a device", "The next step shows its QR code." ~ ("" if on else " Then ten recovery codes, once.") ~ " Adding a device signs out your other sessions.") %}
+  <form method="post" action="/ui/second-factor/totp/begin">
+    {{ csrf_field() }}
+    {% call confirm_fields("add", step=on) %}
+    <div class="field">
+      <label for="f-name">Its name</label>
+      <input id="f-name" name="name" maxlength="{{ max_name }}" required placeholder="e.g. Phone" />
+    </div>
+    {% endcall %}
+    {{ dialog_buttons("Next", icon="check-lg", danger=False) }}
+  </form>
+{% endcall %}
+{% endif %}
+{% if can_make %}
+{% call form_dialog("add-passkey", "Add a passkey", "The next step asks the browser to make it." ~ ("" if on else " Then ten recovery codes, once.") ~ " Adding a passkey signs out your other sessions.") %}
+  <form method="post" action="/ui/second-factor/passkeys/begin">
+    {{ csrf_field() }}
+    {% call confirm_fields("passkey", step=on) %}
+    <div class="field">
+      <label for="f-passkey-name">Its name</label>
+      <input id="f-passkey-name" name="name" maxlength="{{ max_name }}" required placeholder="e.g. Laptop" />
+    </div>
+    {% endcall %}
+    {{ dialog_buttons("Next", icon="check-lg", danger=False) }}
+  </form>
+{% endcall %}
+{% endif %}
 {% set last = (devices | length) + (keys | length) == 1 %}
 {% for device in devices %}
 {% call form_dialog("remove-" ~ device.id, "Remove " ~ device.name ~ "?", "Its codes work no more." ~ (" It is the last device: the second factor is off then, and the recovery codes go with it." if last else "")) %}
@@ -228,17 +215,13 @@
 {% call card("Recovery codes", meta=factor.recovery_codes_left ~ " left. New ones replace them all.") %}
   {% if factor.recovery_codes_left == 0 %}<div class="notice warn">No recovery codes are left. Make new ones.</div>
   {% elif factor.recovery_codes_left <= 2 %}<div class="notice warn">Few recovery codes are left. Make new ones.</div>{% endif %}
+  <div class="form-actions">{{ dialog_button("new-codes", "Make new codes", icon="arrow-repeat", alone=False, danger=False) }}</div>
+{% endcall %}
+{% call form_dialog("new-codes", "Make new recovery codes?", "They replace the ones left, which work no more then.") %}
   <form method="post" action="/ui/second-factor/codes">
     {{ csrf_field() }}
-    <input type="hidden" name="username" value="{{ me.name }}" autocomplete="username" />
-    <div class="form-grid">
-      <div class="field">
-        <label for="f-codes-password">Your password</label>
-        <input id="f-codes-password" name="password" type="password" autocomplete="current-password" required />
-      </div>
-      {{ code_or_passkey("codes") }}
-    </div>
-    <div class="form-actions"><button type="submit">Make new codes</button></div>
+    {{ confirm_fields("codes") }}
+    {{ dialog_buttons("Make new codes", icon="check-lg", danger=False) }}
   </form>
 {% endcall %}
 {% endif %}

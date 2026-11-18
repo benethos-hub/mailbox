@@ -31,6 +31,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The configuration UI asks for the second factor one method at a
+  time: a passkey, else a code of an authenticator app, else a
+  recovery code, with "Try another way" to the others. This holds for
+  the code page after the password and for each step that asks for the
+  second factor. Adding a device or a passkey, new recovery codes and
+  the recovery key ask in a dialog.
 - The MCP server's tools that answer JSON name its fields in their
   output schema: `list_accounts`, `list_folders`, `search_messages`,
   `whats_new`, `update_messages`, `create_folder`, `update_folder`,

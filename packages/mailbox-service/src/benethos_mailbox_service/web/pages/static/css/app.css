@@ -529,6 +529,17 @@ input:focus, select:focus, textarea:focus, button:focus-visible, a:focus-visible
 .field.invalid input, .field.invalid select, .field.invalid textarea { border-color: var(--bad); }
 .form-actions { display: flex; gap: 8px; margin-top: var(--gap); }
 
+/* The second step of a form: one method at a time, the others listed
+   after "Try another way" (components/factor.html). */
+.factor-step { display: flex; flex-direction: column; gap: 6px; grid-column: 1 / -1; }
+.factor-step > .hint, .factor-say { font-size: 13px; color: var(--text-muted); margin: 0; }
+.factor-step > .hint:empty { display: none; }
+.factor-other { align-self: flex-start; font-size: 13px; }
+.factor-choices { display: flex; flex-direction: column; gap: 6px; }
+.factor-choices .label { font-size: 12px; color: var(--text-muted); }
+.factor-choices button { text-align: left; white-space: normal; }
+.factor-choices button .hint { display: block; font-size: 12px; color: var(--text-faint); }
+
 .check { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text); }
 .check input { margin: 0; }
 .checks { display: flex; flex-wrap: wrap; gap: 6px 16px; }

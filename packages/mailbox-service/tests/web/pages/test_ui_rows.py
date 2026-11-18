@@ -66,9 +66,10 @@ def test_each_device_has_its_pencil_and_bin_and_a_dialog(
     user = services.auth.user_named(name)
     assert user is not None
     phone = _devices(services, user)["Phone"]
-    # The plus in the header opens the form at the head of the list.
-    assert 'data-toggle="add-device" aria-controls="add-device"' in page
-    assert '<tr class="row-form" id="add-device">' in page
+    # The plus in the header opens a dialog that asks for the name, the
+    # password and the second factor.
+    assert 'data-dialog="add-device"' in page
+    assert '<dialog class="ask form-dialog" id="add-device"' in page
     # The pencil folds out the form under its row, the bin opens a dialog
     # that asks for the password and a code.
     assert 'aria-label="Rename Phone"' in page

@@ -1,17 +1,43 @@
-{# The second factor in a form: a code, or a passkey in its place
-   (docs/AUTHENTICATION.md 4, 5). The page hands passkey_options, the
-   challenge of the user's passkeys, or None. static/js/passkey.js shows
-   the button where the browser makes passkeys, signs the challenge,
-   puts the answer in the hidden field and sends the form. #}
+{# The second step of a form: the method that confirms the person, a
+   passkey, a code of an authenticator app or a recovery code
+   (docs/AUTHENTICATION.md 4, 5). The page hands ``ways``, the methods
+   of the user (web/pages/passkeys.py). One shows at a time, the first
+   that works in this order, and "Try another way" lists the others.
+   static/js/passkey.js switches between them, and with a passkey shown
+   asks the browser when the form is sent. Without the script the field
+   of the first code shows alone, and it takes a code of the app and a
+   recovery code alike. ``focus``: the step starts the page, as on the
+   code page after the password. #}
 {% from "components/ui.html" import icon %}
 
-{% macro code_or_passkey(id, label="A code of any of your devices, or a recovery code", autofocus=False) %}
-<div class="field">
-  <label for="f-{{ id }}-code">{{ label }}</label>
-  <input id="f-{{ id }}-code" name="code" autocomplete="one-time-code" spellcheck="false" maxlength="40" required data-passkey-instead{% if autofocus %} autofocus{% endif %} />
-  {% if passkey_options %}
-  <input type="hidden" name="passkey" value="" />
-  <span class="hint"><button class="link" type="button" data-passkey-use="{{ passkey_options }}" hidden>{{ icon("key") }} Use a passkey instead</button> <span data-passkey-status role="status"></span></span>
+{% macro second_step(id, ways, focus=False) %}
+<div class="factor-step" data-ways{% if focus %} data-ways-focus{% endif %}>
+  {% if ways.options %}
+  <div data-way="passkey" data-passkey-options="{{ ways.options }}" hidden>
+    <input type="hidden" name="passkey" value="" disabled />
+    <p class="factor-say">{{ icon("key") }} Your passkey confirms it. The browser asks for it when you go on.</p>
+  </div>
   {% endif %}
+  {% if ways.totp %}
+  <div class="field" data-way="totp">
+    <label for="f-{{ id }}-totp">The code of your authenticator app</label>
+    <input id="f-{{ id }}-totp" name="code" inputmode="numeric" autocomplete="one-time-code" spellcheck="false" maxlength="40" required />
+    <span class="hint" data-ways-only>Or a recovery code, which then works no more.</span>
+  </div>
+  {% endif %}
+  <div class="field" data-way="recovery"{% if ways.totp %} hidden{% endif %}>
+    <label for="f-{{ id }}-recovery">A recovery code</label>
+    <input id="f-{{ id }}-recovery" name="code" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="40" required{% if ways.totp %} disabled{% endif %} />
+    <span class="hint">It works once.</span>
+  </div>
+  {% if ways.elsewhere %}<p class="hint">Your passkeys work at the public address of this service over HTTPS, not here.</p>{% endif %}
+  <span class="hint" data-passkey-status role="status"></span>
+  <button class="link factor-other" type="button" data-ways-other hidden>Try another way</button>
+  <div class="factor-choices" data-ways-choices hidden>
+    <span class="label">Confirm it with</span>
+    {% if ways.options %}<button type="button" data-way-pick="passkey">{{ icon("key") }} A passkey <span class="hint">PIN, fingerprint, face or security key</span></button>{% endif %}
+    {% if ways.totp %}<button type="button" data-way-pick="totp">{{ icon("shield-lock") }} A code of your authenticator app</button>{% endif %}
+    <button type="button" data-way-pick="recovery">{{ icon("journal-text") }} A recovery code</button>
+  </div>
 </div>
 {% endmacro %}

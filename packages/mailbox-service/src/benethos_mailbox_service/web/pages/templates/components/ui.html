@@ -85,10 +85,11 @@
 {# A list that belongs to the record of a detail page, e.g. its tokens
    (docs/UI.md 4.2). It creates at its head and acts on its rows. ``add``:
    the word of the plus in its header, which opens the form ``add_form``
-   (an id, a ``row_form`` at the head of the table). #}
-{% macro related(title, count=None, meta=None, add=None, add_form=None, add_open=False) %}
+   (an id, a ``row_form`` at the head of the table), or with
+   ``add_dialog`` the ``form_dialog`` of that id. #}
+{% macro related(title, count=None, meta=None, add=None, add_form=None, add_open=False, add_dialog=None) %}
 <section class="card">
-  <header><h2>{{ title }}</h2>{% if count is not none %}<span class="meta">{{ count }}</span>{% endif %}{% if meta %}<span class="meta">{{ meta }}</span>{% endif %}{% if add %}<span class="right">{{ toggle(add_form, add, "plus-lg", alone=False, open=add_open) }}</span>{% endif %}</header>
+  <header><h2>{{ title }}</h2>{% if count is not none %}<span class="meta">{{ count }}</span>{% endif %}{% if meta %}<span class="meta">{{ meta }}</span>{% endif %}{% if add %}<span class="right">{% if add_dialog %}{{ dialog_button(add_dialog, add, "plus-lg", alone=False, danger=False) }}{% else %}{{ toggle(add_form, add, "plus-lg", alone=False, open=add_open) }}{% endif %}</span>{% endif %}</header>
   {{ caller() }}
 </section>
 {% endmacro %}

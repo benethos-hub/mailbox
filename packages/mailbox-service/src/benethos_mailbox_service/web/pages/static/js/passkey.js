@@ -1,15 +1,20 @@
-// Passkeys (docs/AUTHENTICATION.md 4, 5). The browser makes and signs
-// them, this script carries its answer into the form that asked.
+// The second factor in a form, and passkeys (docs/AUTHENTICATION.md 4,
+// 5). The browser makes and signs passkeys, this script carries its
+// answer into the form that asked.
 //
-// A <button data-passkey-use="options"> signs the challenge of its
-// options with one of the person's passkeys, puts the answer in the
-// hidden field "passkey" of its form and sends the form. A code field
-// marked data-passkey-instead is not needed then.
+// An element data-ways holds the methods of the second step, each a
+// data-way: "passkey", "totp" or "recovery". One shows at a time, the
+// first that works, with its fields on and the others' off. "Try
+// another way" (data-ways-other) lists them (data-way-pick). Where the
+// passkey shows, sending the form first signs the challenge of its
+// data-passkey-options with one of the person's passkeys and puts the
+// answer in its hidden field "passkey". data-ways-focus puts the cursor
+// in the step when the page opens.
 // A <button data-passkey-create="options"> makes a new passkey and sends
 // its answer in the hidden field "answer".
-// Both stay hidden where the browser has no passkeys, and an element
-// data-passkey-missing shows instead. Without this script a form takes a
-// code alone.
+// A passkey is offered only where the browser makes passkeys, and an
+// element data-passkey-missing shows instead. Without this script the
+// first code field shows alone.
 "use strict";
 
 // base64url, as WebAuthn writes bytes in JSON, to bytes and back.
@@ -62,23 +67,58 @@ function answerOf(credential) {
   });
 }
 
+const works = "PublicKeyCredential" in window && Boolean(navigator.credentials);
+
 function say(form, text) {
   const status = form.querySelector("[data-passkey-status]");
   if (status) status.textContent = text;
 }
 
-async function use(button) {
-  const form = button.form;
-  const instead = [...form.querySelectorAll("[data-passkey-instead]")];
-  for (const field of instead) field.required = false;
-  if (!form.reportValidity()) {
-    for (const field of instead) field.required = true;
-    return;
+// The methods of a step this browser can use, in their order.
+function usable(step) {
+  return [...step.querySelectorAll("[data-way]")].filter(
+    (way) => way.dataset.way !== "passkey" || works,
+  );
+}
+
+function active(step) {
+  return step.querySelector("[data-way]:not([hidden])");
+}
+
+// Shows the method ``name`` of the step, its fields on, the others off.
+function show(step, name) {
+  for (const way of step.querySelectorAll("[data-way]")) {
+    const on = way.dataset.way === name;
+    way.hidden = !on;
+    for (const field of way.querySelectorAll("input")) field.disabled = !on;
   }
-  const options = request(JSON.parse(button.dataset.passkeyUse));
+  for (const hint of step.querySelectorAll("[data-ways-only]")) hint.hidden = true;
+  step.querySelector("[data-ways-choices]").hidden = true;
+  step.querySelector("[data-ways-other]").hidden = usable(step).length < 2;
+  say(step.closest("form") || step, "");
+}
+
+function focus(step) {
+  const way = active(step);
+  const field = way && way.querySelector("input:not([type=hidden])");
+  const target = field || step.closest("form")?.querySelector("[type=submit]");
+  target?.focus();
+}
+
+function start(step) {
+  const ways = usable(step);
+  if (!ways.length) return;
+  for (const pick of step.querySelectorAll("[data-way-pick]")) {
+    pick.hidden = !ways.some((way) => way.dataset.way === pick.dataset.wayPick);
+  }
+  show(step, ways[0].dataset.way);
+  if ("waysFocus" in step.dataset) focus(step);
+}
+
+async function sign(form, way) {
+  const options = request(JSON.parse(way.dataset.passkeyOptions));
   const credential = await navigator.credentials.get({ publicKey: options });
-  form.elements.passkey.value = answerOf(credential);
-  for (const field of instead) field.value = "";
+  way.querySelector("[name=passkey]").value = answerOf(credential);
   form.requestSubmit();
 }
 
@@ -90,27 +130,83 @@ async function create(button) {
   form.requestSubmit();
 }
 
+// NotAllowedError: the person cancelled, or the time ran out.
+function failed(form, error, made) {
+  const cancelled = error && error.name === "NotAllowedError";
+  say(
+    form,
+    made
+      ? cancelled
+        ? "No passkey was made. Try again."
+        : "The browser made no passkey: " + (error && error.message)
+      : cancelled
+        ? "No passkey was used. Go on to try again, or try another way."
+        : "The browser used no passkey: " + (error && error.message),
+  );
+}
+
+// The list of the methods in place of the one shown, its fields off.
+function choose(step) {
+  show(step, null);
+  step.querySelector("[data-ways-other]").hidden = true;
+  step.querySelector("[data-ways-choices]").hidden = false;
+  step.querySelector("[data-way-pick]:not([hidden])")?.focus();
+}
+
+// A form whose step shows the passkey asks for it before it is sent,
+// and one whose step lists the methods waits for a pick. Capturing at
+// the window, the form goes nowhere else until then.
+window.addEventListener(
+  "submit",
+  (event) => {
+    const form = event.target;
+    const choosing = form.querySelector?.("[data-ways-choices]:not([hidden])");
+    if (choosing) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      choosing.querySelector("[data-way-pick]:not([hidden])")?.focus();
+      return;
+    }
+    const way = form.querySelector?.('[data-way="passkey"]:not([hidden])');
+    if (!way || way.querySelector("[name=passkey]").value) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    say(form, "");
+    sign(form, way).catch((error) => failed(form, error, false));
+  },
+  true,
+);
+
 document.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-passkey-use], [data-passkey-create]");
+  const other = event.target.closest?.("[data-ways-other]");
+  if (other) {
+    choose(other.closest("[data-ways]"));
+    return;
+  }
+  const pick = event.target.closest?.("[data-way-pick]");
+  if (pick) {
+    const step = pick.closest("[data-ways]");
+    show(step, pick.dataset.wayPick);
+    const form = step.closest("form");
+    // A passkey picked asks for it at once, when nothing else is missing.
+    if (pick.dataset.wayPick === "passkey" && form?.checkValidity()) {
+      form.requestSubmit();
+    } else {
+      focus(step);
+    }
+    return;
+  }
+  const button = event.target.closest?.("[data-passkey-create]");
   if (!button || !button.form) return;
   event.preventDefault();
   say(button.form, "");
-  const asked = button.dataset.passkeyCreate ? create(button) : use(button);
-  asked.catch((error) => {
-    // NotAllowedError: the person cancelled, or the time ran out.
-    say(
-      button.form,
-      error && error.name === "NotAllowedError"
-        ? "No passkey was used. Try again, or use a code."
-        : "The browser made no passkey: " + (error && error.message),
-    );
-  });
+  create(button).catch((error) => failed(button.form, error, true));
 });
 
 function reveal() {
-  const works = "PublicKeyCredential" in window && navigator.credentials;
-  const shown = works ? "[data-passkey-use], [data-passkey-create]" : "[data-passkey-missing]";
+  const shown = works ? "[data-passkey-create]" : "[data-passkey-missing]";
   for (const element of document.querySelectorAll(shown)) element.hidden = false;
+  for (const step of document.querySelectorAll("[data-ways]")) start(step);
 }
 
 if (document.readyState === "loading") {

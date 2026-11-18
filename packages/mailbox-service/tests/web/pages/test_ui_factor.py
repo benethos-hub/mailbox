@@ -193,8 +193,8 @@ def test_the_first_device_shows_a_qr_code_then_the_recovery_codes_once(
     assert 'href="/ui/second-factor"' in app_client.get("/ui").text
     page = app_client.get("/ui/second-factor").text
     assert "No device yet" in page and 'name="password"' in page
-    # The first device needs no code.
-    assert 'id="f-add-code"' not in page
+    # The first device needs no second step.
+    assert "data-ways" not in page
 
     wrong = post(
         app_client,
@@ -261,7 +261,7 @@ def test_a_further_device_needs_a_code(
     try_sign_in(app_client, name, password)
     code_form(app_client, codes[0])
     page = app_client.get("/ui/second-factor").text
-    assert 'id="f-add-code"' in page
+    assert 'id="f-add-totp"' in page
     refused = post(
         app_client,
         "/ui/second-factor/totp/begin",

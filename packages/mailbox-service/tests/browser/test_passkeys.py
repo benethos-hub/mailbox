@@ -50,6 +50,14 @@ def chromium(playwright: Playwright) -> Iterator[Page]:
     browser.close()
 
 
+def _password(page: Page, base: str, name: str, password: str) -> None:
+    """The sign-in form sent with the name and the password."""
+    page.goto(f"{base}/ui/login")
+    page.fill("#f-name", name)
+    page.fill("#f-password", password)
+    page.click('form[action="/ui/login"] button[type="submit"]')
+
+
 def test_a_passkey_is_made_and_signs_in(
     master_key: None, chromium: Page, settings: Settings, services: Services
 ) -> None:
@@ -60,14 +68,11 @@ def test_a_passkey_is_made_and_signs_in(
     unlimited = settings.model_copy(update={"rate_limit_anonymous_per_minute": 0})
     with served(unlimited, services) as served_at:
         base = served_at.replace("127.0.0.1", "localhost")
-        page.goto(f"{base}/ui/login")
-        page.fill("#f-name", name)
-        page.fill("#f-password", password)
-        page.click('form[action="/ui/login"] button[type="submit"]')
+        _password(page, base, name, password)
         page.wait_for_url(f"{base}/ui")
 
         page.goto(f"{base}/ui/second-factor")
-        page.click('button[data-toggle="add-passkey"]')
+        page.click('button[data-dialog="add-passkey"]')
         page.fill("#f-passkey-name", "Laptop")
         page.fill("#f-passkey-password", password)
         page.click('form[action="/ui/second-factor/passkeys/begin"] button.primary')
@@ -80,14 +85,36 @@ def test_a_passkey_is_made_and_signs_in(
         assert violations(page) == []
 
         page.context.clear_cookies()
-        page.goto(f"{base}/ui/login")
-        page.fill("#f-name", name)
-        page.fill("#f-password", password)
-        page.click('form[action="/ui/login"] button[type="submit"]')
+        _password(page, base, name, password)
         page.wait_for_url(f"{base}/ui/login/code")
-        page.click("button[data-passkey-use]")
+        # The passkey shows first. Another way lists the recovery code
+        # beside it, and the passkey picked there signs in at once.
+        expect(page.locator('[data-way="passkey"]')).to_be_visible()
+        expect(page.locator('[data-way="recovery"]')).to_be_hidden()
+        page.click("button[data-ways-other]")
+        expect(page.locator("button[data-way-pick]:visible")).to_have_count(2)
+        # Sent while the list shows, the form waits for a pick.
+        page.click('form[action="/ui/login/code"] button[type="submit"]')
+        expect(page.locator('button[data-way-pick="passkey"]')).to_be_focused()
+        assert page.url == f"{base}/ui/login/code"
+        page.click('button[data-way-pick="passkey"]')
         page.wait_for_url(f"{base}/ui")
         assert violations(page) == []
+
+        # In a dialog of the page, the passkey confirms when it is sent.
+        page.goto(f"{base}/ui/second-factor")
+        page.click('button[data-dialog="new-codes"]')
+        page.fill("#f-codes-password", password)
+        page.click('form[action="/ui/second-factor/codes"] button.primary')
+        expect(page.get_by_text("New recovery codes.")).to_be_visible()
+        assert violations(page) == []
+
+        # The code page sent with its button asks for the passkey too.
+        page.context.clear_cookies()
+        _password(page, base, name, password)
+        page.wait_for_url(f"{base}/ui/login/code")
+        page.click('form[action="/ui/login/code"] button[type="submit"]')
+        page.wait_for_url(f"{base}/ui")
     found = services.audit.list_activity(
         ADMIN, limit=10, matching=ActivityFilter(activity="auth.signed_in")
     )
