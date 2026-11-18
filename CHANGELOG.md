@@ -32,6 +32,13 @@ adheres to [Semantic Versioning](https://semver.org/).
   message, and `check failed` in lists. The account page of an IMAP,
   POP3 or JMAP account shows, when asked, the names receiving servers
   wrote into its newest ten mails.
+- `GET /v1/accounts/{account_id}/server-names`, operation
+  `list_server_names` in `accounts.manage`, lists the names receiving
+  servers wrote into the newest ten mails of an IMAP, POP3 or JMAP
+  account's inbox, each with how many of them carry it, for choosing
+  `settings.authserv_id`. It needs `update_account`, and a Gmail or
+  Microsoft account answers none. `benethos-mailbox-client`: the record
+  `ServerName` and `list_server_names` in both clients.
 - Passkeys as a second method of the second factor of the UI sign-in,
   beside authenticator apps (TOTP). A person adds them on the page
   Second factor, and after the password a passkey signs in as a code

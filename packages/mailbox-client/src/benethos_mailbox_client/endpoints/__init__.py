@@ -14,6 +14,7 @@ from .accounts import (
     delete_account,
     get_account,
     list_accounts,
+    list_server_names,
     update_account,
     verify_account,
 )
@@ -105,6 +106,7 @@ __all__ = [
     "list_accounts",
     "update_account",
     "verify_account",
+    "list_server_names",
     "create_draft",
     "create_folder",
     "delete_draft",

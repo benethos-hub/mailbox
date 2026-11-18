@@ -3814,6 +3814,165 @@
         "x-permission": "accounts.manage"
       }
     },
+    "/v1/accounts/{account_id}/server-names": {
+      "get": {
+        "tags": [
+          "accounts"
+        ],
+        "summary": "List Server Names",
+        "description": "The names receiving servers wrote into the newest ten mails of the\ninbox, for choosing `settings.authserv_id`. A mail can carry any name:\ntake the one the server writes on every mail. The service never sets\nit. Empty for an account that names its server itself, as Gmail and\nMicrosoft do. Needs `update_account`.",
+        "operationId": "list_server_names",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Account Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerNameList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "The provider cannot do this",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The provider failed or rejected the credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-permission": "accounts.manage"
+      }
+    },
     "/v1/discovery": {
       "post": {
         "tags": [
@@ -13871,6 +14030,50 @@
         ],
         "title": "SenderCheck",
         "description": "What the account's receiving server stated about the domain in\n`from`, read from its one Authentication-Results entry. A fact about\nthe sender's domain, never about the content."
+      },
+      "ServerName": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "The name, in lower case, as it starts an Authentication-Results entry."
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count",
+            "description": "How many of the mails read carry it."
+          },
+          "of": {
+            "type": "integer",
+            "title": "Of",
+            "description": "How many mails were read, ten at most."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "count",
+          "of"
+        ],
+        "title": "ServerName",
+        "description": "A receiving server's name as the newest mails of the inbox carry it."
+      },
+      "ServerNameList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ServerName"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "ServerNameList",
+        "description": "The names receiving servers wrote into the newest mails of the\ninbox, the most frequent first."
       },
       "ServerProtocol": {
         "type": "string",

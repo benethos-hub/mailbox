@@ -7,7 +7,7 @@ from fastapi import APIRouter, Query, status
 from ....data.models import Account, AccountStatus, Page, ProviderType
 from ....domain.accounts import Rename
 from ..deps import Accounts, Caller, Limit
-from ..schemas import AccountCreate, AccountUpdate
+from ..schemas import AccountCreate, AccountUpdate, ServerName, ServerNameList
 
 router = APIRouter(prefix="/accounts", tags=["accounts"])
 
@@ -86,3 +86,18 @@ async def verify_account(
     account_id: str, caller: Caller, accounts: Accounts
 ) -> Account:
     return await accounts.verify(caller, account_id)
+
+
+@router.get("/{account_id}/server-names")
+async def list_server_names(
+    account_id: str, caller: Caller, accounts: Accounts
+) -> ServerNameList:
+    """The names receiving servers wrote into the newest ten mails of the
+    inbox, for choosing `settings.authserv_id`. A mail can carry any name:
+    take the one the server writes on every mail. The service never sets
+    it. Empty for an account that names its server itself, as Gmail and
+    Microsoft do. Needs `update_account`."""
+    found = await accounts.server_names(caller, account_id)
+    return ServerNameList(
+        items=[ServerName(id=n.id, count=n.count, of=n.of) for n in found]
+    )

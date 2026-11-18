@@ -3,7 +3,7 @@ a caller rather than the fields of the API."""
 
 from __future__ import annotations
 
-from .accounts import Account, Marks, StoredCredential
+from .accounts import Account, Marks, ServerName, StoredCredential
 from .attachments import Attachment, AttachmentLink
 from .audit import Activity
 from .changes import Change, Changes
@@ -73,6 +73,7 @@ __all__ = [
     "DeviceSignIn",
     "Candidate",
     "StoredCredential",
+    "ServerName",
     "Account",
     "Paged",
     "Thread",

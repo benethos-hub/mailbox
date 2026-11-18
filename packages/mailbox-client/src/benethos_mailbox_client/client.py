@@ -141,6 +141,7 @@ class MailboxClient:
     update_account = awaiting(endpoints.update_account)
     delete_account = awaiting(endpoints.delete_account)
     verify_account = awaiting(endpoints.verify_account)
+    list_server_names = awaiting(endpoints.list_server_names)
 
     # --- discovery and the sign-in with a code ----------------------------------------
 

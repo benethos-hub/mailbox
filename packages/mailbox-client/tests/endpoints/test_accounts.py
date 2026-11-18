@@ -6,7 +6,13 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import UTC, datetime
 
-from benethos_mailbox_client import Account, Marks, Paged, StoredCredential
+from benethos_mailbox_client import (
+    Account,
+    Marks,
+    Paged,
+    ServerName,
+    StoredCredential,
+)
 
 from .api_fake import ACCOUNT, FakeApi
 
@@ -88,3 +94,10 @@ async def test_update_account_leaves_out_what_stays(make_client: Callable) -> No
     removed = FakeApi(ACCOUNT)
     await make_client(removed).update_account("acc_1", display_name=None)
     assert removed.call() == ("PATCH", "/v1/accounts/acc_1", {}, {"display_name": None})
+
+
+async def test_list_server_names(make_client: Callable) -> None:
+    api = FakeApi({"items": [{"id": "mx.example.org", "count": 9, "of": 10}]})
+    found = await make_client(api).list_server_names("acc_1")
+    assert api.call() == ("GET", "/v1/accounts/acc_1/server-names", {}, None)
+    assert found == [ServerName(id="mx.example.org", count=9, of=10)]

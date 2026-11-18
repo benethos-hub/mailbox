@@ -7,7 +7,13 @@ are. What lives here is what only a caller of the API sends or receives.
 
 from __future__ import annotations
 
-from .accounts import AccountCreate, AccountUpdate, DiscoveryRequest
+from .accounts import (
+    AccountCreate,
+    AccountUpdate,
+    DiscoveryRequest,
+    ServerName,
+    ServerNameList,
+)
 from .errors import ErrorDetail, ErrorResponse
 from .mail import AttachmentLink, DraftReplacement, LinkRequest
 from .oauth import (
@@ -33,6 +39,8 @@ from .users import (
 __all__ = [
     "AccountCreate",
     "AccountUpdate",
+    "ServerName",
+    "ServerNameList",
     "AttachmentLink",
     "DeviceOAuthStart",
     "DeviceOAuthStarted",
