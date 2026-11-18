@@ -50,7 +50,7 @@ nothing secret, and sends, which have their own audit.
 | `id` | `evt_` + 64 hex |
 | `at` | time, UTC |
 | `user_id`, `user_name` | who, the name as it was then |
-| `credential` | `token:<id>`, `password`, `host` for a CLI command, null for a failed sign-in. A sign-in with a second factor: `password+totp`, `password+recovery` |
+| `credential` | `token:<id>`, `password`, `host` for a CLI command, null for a failed sign-in. A sign-in with a second factor: `password+totp`, `password+recovery`, `password+passkey` |
 | `activity` | the activity's name in the log, `<area>.<name>` of LOGGING.md 7.2: `users.token_revoked`, `auth.sign_in_failed` |
 | `record` | the id of the record touched: `usr_`, `acc_`, `tok_`, `whk_`, `lnk_`, a role id |
 | `source` | the client address, null without a request |

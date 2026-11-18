@@ -87,8 +87,9 @@ class ActivityRecord(BaseModel):
     credential: str | None = Field(
         description=(
             "How the caller came: `token:<id>`, `password` for the UI, "
-            "`password+totp` or `password+recovery` for the UI with a second "
-            "factor, `host` for a command on the host, null without one."
+            "`password+totp`, `password+recovery` or `password+passkey` for "
+            "the UI with a second factor, `host` for a command on the host, "
+            "null without one."
         )
     )
     record: str | None = Field(
