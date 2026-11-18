@@ -17,7 +17,7 @@ from ....errors import (
     missing,
     missing_message,
 )
-from ...mail import convert, parse
+from ...mail import authentication, convert, parse
 from ...models import (
     Folder,
     FolderRole,
@@ -232,18 +232,32 @@ def role_of(name: str, flags: set[str]) -> FolderRole | None:
 # --- messages -----------------------------------------------------------------
 
 
-def summary(msg: FetchedMessage, folder: str, uidvalidity: int) -> MessageSummary:
-    fields = {**convert.summary_fields(msg), **_imap_fields(msg, folder, uidvalidity)}
+def summary(
+    msg: FetchedMessage,
+    folder: str,
+    uidvalidity: int,
+    trust: authentication.Trust | None,
+) -> MessageSummary:
+    """``trust``: the account's receiving server, for the sender check."""
+    fields = {
+        **convert.summary_fields(msg, trust),
+        **_imap_fields(msg, folder, uidvalidity),
+    }
     if msg.parts is not None:
         # Counted as in a whole message, from what BODYSTRUCTURE says.
         fields["has_attachments"] = parse.has_attachments(msg.parts)
     return MessageSummary.model_validate(fields)
 
 
-def message(msg: FetchedMessage, folder: str, uidvalidity: int) -> Message:
+def message(
+    msg: FetchedMessage,
+    folder: str,
+    uidvalidity: int,
+    trust: authentication.Trust | None,
+) -> Message:
     return Message.model_validate(
         {
-            **convert.summary_fields(msg),
+            **convert.summary_fields(msg, trust),
             **_imap_fields(msg, folder, uidvalidity),
             **convert.message_fields(msg),
         }

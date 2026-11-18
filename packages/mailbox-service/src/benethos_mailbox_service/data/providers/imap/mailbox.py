@@ -7,6 +7,7 @@ from __future__ import annotations
 from typing import Any
 
 from ....errors import missing
+from ...mail import authentication
 from ...models import Folder, FolderRole
 from ...protocols import ImapSession
 from .. import rules
@@ -14,8 +15,11 @@ from . import mappers
 
 
 class Mailbox:
-    def __init__(self, session: ImapSession):
+    def __init__(self, session: ImapSession, trust: authentication.Trust | None = None):
+        """``trust``: the account's receiving server, whose entry the
+        sender check of a message reads."""
         self.session = session
+        self.trust = trust
         self._folders: list[Folder] | None = None
 
     def fresh(self) -> None:

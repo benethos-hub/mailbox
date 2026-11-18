@@ -76,3 +76,12 @@ async def test_move_alone_cannot_purge(server: FakeMailBox) -> None:
     found = await provider(server).abilities()
     assert Capability.MOVE in found.capabilities
     assert Capability.PURGE not in found.capabilities
+
+
+async def test_the_name_of_the_receiving_server_brings_the_sender_check(
+    server: FakeMailBox,
+) -> None:
+    named = await provider(server, authserv_id="mx.example.org").abilities()
+    assert Capability.SENDER_CHECK in named.capabilities
+    plain = await provider(server).abilities()
+    assert Capability.SENDER_CHECK not in plain.capabilities

@@ -11,12 +11,17 @@ from typing import Any
 
 from ...errors import missing
 from ..models import Address, Attachment, AttachmentContent, MessageReference
+from . import authentication
 from .compose import REFERENCE_HEADER, read_reference
 from .parse import ParsedMessage
 
 
-def summary_fields(msg: ParsedMessage) -> dict[str, Any]:
-    """Subject, sender, recipients and date, from the headers alone."""
+def summary_fields(
+    msg: ParsedMessage, trust: authentication.Trust | None = None
+) -> dict[str, Any]:
+    """Subject, sender, recipients and date, from the headers alone, and
+    what the receiving server ``trust`` names stated about the sender."""
+    entries = msg.all_headers("Authentication-Results")
     return {
         "subject": msg.subject,
         "from": msg.sender,
@@ -25,6 +30,7 @@ def summary_fields(msg: ParsedMessage) -> dict[str, Any]:
         # From the header alone: parts that are attached come in a
         # multipart/mixed, those the body shows in a multipart/related.
         "has_attachments": msg.content_type.startswith("multipart/mixed"),
+        "sender_check": authentication.sender_check(entries, msg.sole_sender, trust),
     }
 
 

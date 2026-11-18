@@ -57,7 +57,7 @@ def list_messages(
         int(m.uid): m for m in box.session.messages.fetch_headers(page) if m.uid
     }
     items = [
-        mappers.summary(messages[uid], folder, validity)
+        mappers.summary(messages[uid], folder, validity, box.trust)
         for uid in page
         if uid in messages
     ]
@@ -76,7 +76,7 @@ def summaries(
     if box.session.select(folder) != validity:
         return {}
     return {
-        by_uid[int(m.uid)]: mappers.summary(m, folder, validity)
+        by_uid[int(m.uid)]: mappers.summary(m, folder, validity, box.trust)
         for m in box.session.messages.fetch_headers(sorted(by_uid))
         if m.uid and int(m.uid) in by_uid
     }
@@ -100,7 +100,7 @@ def _fetch(box: Mailbox, message_id: str) -> tuple[Any, mappers.Place]:
 
 def get_message(box: Mailbox, message_id: str) -> Message:
     message, place = _fetch(box, message_id)
-    return mappers.message(message, place.folder, place.uidvalidity)
+    return mappers.message(message, place.folder, place.uidvalidity, box.trust)
 
 
 def get_attachment(
@@ -148,7 +148,7 @@ def append(
         matches = box.session.messages.search_message_id(header) if header else []
         uid = matches[-1] if matches else None
     found = box.session.messages.fetch_headers([uid]) if uid else []
-    return mappers.summary(found[0], folder, validity) if found else None
+    return mappers.summary(found[0], folder, validity, box.trust) if found else None
 
 
 # --- changing, one folder at a time -----------------------------------------------
@@ -176,7 +176,10 @@ def update_in_folder(
         results.update(_missing(stored, found))
     if target is None:
         results.update(
-            {uid: mappers.summary(m, folder, validity) for uid, m in found.items()}
+            {
+                uid: mappers.summary(m, folder, validity, box.trust)
+                for uid, m in found.items()
+            }
         )
         return results
     try:
@@ -188,7 +191,7 @@ def update_in_folder(
     for uid, message in found.items():
         # Not found in the target at once: the next sync follows it.
         results[uid] = moved.get(uid) or mappers.summary(
-            message, folder, validity
+            message, folder, validity, box.trust
         ).model_copy(update={"folder_ids": [mappers.folder_id(target)]})
     return results
 
@@ -285,7 +288,7 @@ def _move(
         for m in box.session.messages.fetch_headers(list(new_uids.values()))
     }
     return {
-        uid: mappers.summary(fetched[new], target, target_validity)
+        uid: mappers.summary(fetched[new], target, target_validity, box.trust)
         for uid, new in new_uids.items()
         if new in fetched
     }

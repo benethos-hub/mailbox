@@ -115,7 +115,9 @@ def _summaries(
         box.session.select(folder)
         for message in box.session.messages.fetch_headers(uids):
             if message.uid:
-                summary = mappers.summary(message, folder, validities[folder])
+                summary = mappers.summary(
+                    message, folder, validities[folder], box.trust
+                )
                 read[(folder, int(message.uid))] = summary
     return [read[(h.folder, h.uid)] for h in page if (h.folder, h.uid) in read]
 
