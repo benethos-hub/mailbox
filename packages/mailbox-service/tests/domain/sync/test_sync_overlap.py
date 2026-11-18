@@ -8,12 +8,16 @@ import logging
 import pytest
 
 from benethos_mailbox_service.assembly import Services
-from benethos_mailbox_service.data.models import MessageBatch, MessageUpdate
+from benethos_mailbox_service.data.models import (
+    DraftMessage,
+    MessageBatch,
+    MessageUpdate,
+)
 from benethos_mailbox_service.data.providers.imap import mappers
 from benethos_mailbox_service.errors import NotFoundError
 
 from ...conftest import ADMIN
-from ...imap_fake import FakeMailBox, make_message
+from ...imap_fake import FakeFolder, FakeMailBox, make_message
 from ..sync_helpers import ids_by_subject, recorded
 
 FOLDERS = [mappers.folder_id("INBOX"), mappers.folder_id("Archive")]
@@ -234,3 +238,39 @@ async def test_a_pass_given_up_is_no_pass(
     assert names.count("pass_overtaken") == 2
     assert names.count("pass_given_up") == 1
     assert "synced" not in names
+
+
+async def test_a_draft_replaced_while_a_pass_runs_keeps_its_id(
+    imap_services: Services,
+    imap_account_id: str,
+    imap_server: FakeMailBox,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The server holds the new draft, the index does not follow yet, and
+    a pass reads: it must not take the draft's id."""
+    services, account = imap_services, imap_account_id
+    imap_server.folders["Drafts"] = FakeFolder(uidvalidity=3, flags=("\\Drafts",))
+    await services.adapters.learn(account)
+    outgoing = services.mailbox.outgoing
+    first = await outgoing.create_draft(
+        ADMIN, account, DraftMessage(subject="One", text="x")
+    )
+    await services.sync.sync_account(account)
+    adapter = services.adapters.get(account)
+    real = adapter.save_draft
+
+    async def save(raw: bytes, replaces: str | None = None) -> object:
+        saved = await real(raw, replaces)
+        await services.sync.sync_account(account)
+        return saved
+
+    monkeypatch.setattr(adapter, "save_draft", save)
+    second = await outgoing.update_draft(
+        ADMIN, account, first.id, DraftMessage(subject="Two", text="y")
+    )
+    monkeypatch.setattr(adapter, "save_draft", real)
+    assert second.id == first.id
+    message = await services.mailbox.get_message(ADMIN, account, first.id)
+    assert message.subject == "Two"
+    told = [kind for kind, i, _ in recorded(services, account) if i == first.id]
+    assert "message.deleted" not in told

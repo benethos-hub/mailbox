@@ -16,9 +16,8 @@ import codecs
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from email.header import Header
 from email.parser import BytesHeaderParser
-from email.utils import formataddr, getaddresses, parsedate_to_datetime
+from email.utils import getaddresses, parsedate_to_datetime
 from functools import cached_property
 from typing import Any
 
@@ -161,17 +160,9 @@ class ParsedMessage:
     @property
     def sole_sender(self) -> str | None:
         """The address in ``From`` when it names exactly one and it is the
-        one ``sender`` shows, else None: a header read two ways is judged
-        by neither."""
-        found = [address for _, address in getaddresses(self.all_headers("from"))]
-        found = [address for address in found if address]
+        one ``sender`` shows, else None (``sole_address``)."""
         shown = self.sender
-        if len(found) != 1 or shown is None:
-            return None
-        judged = _comparable(found[0])
-        if judged is None or judged != _comparable(shown.email):
-            return None
-        return found[0]
+        return sole_address(self.all_headers("from"), shown.email if shown else None)
 
     @property
     def received(self) -> datetime | None:
@@ -293,10 +284,6 @@ def _is_text_body(content_type: str, filename: str | None, disposition: str) -> 
     )
 
 
-# Headers that hold addresses: a name in them is encoded on its own.
-_ADDRESS_HEADERS = frozenset({"from", "sender", "to", "cc", "bcc", "reply-to"})
-
-
 def thread_headers_of(block: bytes) -> ThreadHeaders:
     """The thread headers of a block of header lines alone, such as an IMAP
     server answers for ``BODY[HEADER.FIELDS (...)]``."""
@@ -306,20 +293,23 @@ def thread_headers_of(block: bytes) -> ThreadHeaders:
 def from_headers(headers: Iterable[tuple[str, str]]) -> ParsedMessage:
     """Headers alone, as an API hands them out decoded (Gmail's
     metadata), parsed as a message without a body. Text beyond ASCII is
-    encoded again (RFC 2047) so the parser reads it as it would read
-    the message itself."""
-    lines = [f"{name}: {_encoded(name, value)}" for name, value in headers]
+    written raw in UTF-8 (RFC 6532), which the parser reads as it reads
+    a message of SMTPUTF8: an address beyond ASCII has no other form."""
+    lines = [f"{name}: {' '.join(value.split())}" for name, value in headers]
     return ParsedMessage(("\r\n".join(lines) + "\r\n\r\n").encode("utf-8"))
 
 
-def _encoded(name: str, value: str) -> str:
-    value = " ".join(value.split())
-    if value.isascii():
-        return value
-    if name.lower() in _ADDRESS_HEADERS:
-        pairs = getaddresses([value])
-        return ", ".join(formataddr(pair, charset="utf-8") for pair in pairs)
-    return Header(value, "utf-8").encode()
+def sole_address(values: list[str], shown: str | None) -> str | None:
+    """The address the values of a ``From`` header name when they name
+    exactly one and it is ``shown``, the sender a reader sees, else None:
+    a header read two ways is judged by neither."""
+    found = [address for _, address in getaddresses(values) if address]
+    if len(found) != 1 or shown is None:
+        return None
+    judged = _comparable(found[0])
+    if judged is None or judged != _comparable(shown):
+        return None
+    return found[0]
 
 
 def _comparable(address: str) -> str | None:

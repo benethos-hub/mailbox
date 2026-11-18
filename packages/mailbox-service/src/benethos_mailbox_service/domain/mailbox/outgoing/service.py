@@ -202,12 +202,7 @@ class Outgoing:
             draft = draft.model_copy(update={"attachments": kept + draft.attachments})
         composed = await self._composer.make(access, account_id, draft, draft=True)
         checks.limited(composed.message.recipients())
-        saved = await self._calls.on_message(
-            account_id,
-            draft_id,
-            lambda p, native: drafts(p).save_draft(composed.raw, native),
-        )
-        self._calls.relocate(account_id, draft_id, saved)
+        saved = await self._calls.replace_draft(account_id, draft_id, composed.raw)
         return await self._calls.published_one(account_id, saved)
 
     async def send_draft(
@@ -270,10 +265,7 @@ class Outgoing:
         await self._delete_draft(account_id, draft_id)
 
     async def _delete_draft(self, account_id: str, draft_id: str) -> None:
-        await self._calls.on_message(
-            account_id, draft_id, lambda p, native: drafts(p).delete_draft(native)
-        )
-        self._calls.forget(account_id, draft_id)
+        await self._calls.delete_draft(account_id, draft_id)
 
 
 class _DraftToSend(BaseModel):

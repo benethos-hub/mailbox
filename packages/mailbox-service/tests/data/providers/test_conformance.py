@@ -165,6 +165,26 @@ async def test_the_sender_check_reads_the_own_entry_alone(kind: str) -> None:
     assert (await adapter.abilities()).has(Capability.SENDER_CHECK)
 
 
+@pytest.mark.parametrize("kind", READERS)
+async def test_a_from_with_two_addresses_is_unreadable(kind: str) -> None:
+    """docs/CONCEPT.md 6.3: one address in From, or no judgement."""
+    found = box(kind)
+    entry = f"{found.authserv_id}; dmarc=pass header.from=example.org"
+    found.put(
+        mail(
+            "Two",
+            headers=[("Authentication-Results", entry)],
+            sender="a@example.org, b@example.net",
+        )
+    )
+    adapter = found.make()
+    page = await adapter.list_messages(await inbox_of(adapter), limit=10, cursor=None)
+    [summary] = page.items
+    assert summary.sender_check.reason == "unreadable"
+    message = await adapter.get_message(summary.id)
+    assert message.sender_check == summary.sender_check
+
+
 @pytest.mark.parametrize("kind", ["imap", "pop3", "jmap"])
 async def test_without_the_servers_name_the_sender_check_cannot_tell(
     kind: str,

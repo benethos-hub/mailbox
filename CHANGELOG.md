@@ -93,6 +93,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   the move could drop the id, which then answered `404` and came back as
   a new message, or give the old place a new id that answered `404`.
   The feed reported a `message.deleted` and a `message.created` for it.
+- A draft replaced through the API while the service syncs the account
+  keeps its id, and a draft deleted is gone at once. A sync pass that
+  read the drafts folder between the server's answer and the index
+  could give the new draft a new id, the old one answering `404`.
 - A batch that names a message another program moved keeps the ids of
   the messages it moved itself. Two copies of one `Message-ID` among
   them answered `404` after the batch before, and the feed reported
@@ -147,6 +151,14 @@ adheres to [Semantic Versioning](https://semver.org/).
   passkey". It showed it as a token before.
 - The `409` for removing one's own second factor through the API says
   it is done with a code or a passkey, not with a code alone.
+- A list, thread or search of a Gmail account with a message whose
+  addresses are beyond ASCII (SMTPUTF8, such as `jörg@example.com`)
+  answers. It answered `500` before. Its sender check is the same in
+  the list as in the message, also where the entry names such an
+  address.
+- The sender check of a Microsoft account is `unreadable` for a mail
+  with several addresses in `From`, as for every other kind. Graph
+  names the first alone, and the check passed for it.
 - A passkey whose answer is cut short is refused on the page Second
   factor. It answered `500` before.
 
