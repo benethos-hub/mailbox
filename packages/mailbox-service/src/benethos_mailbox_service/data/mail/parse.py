@@ -3,6 +3,8 @@
 imap-tools is used here for its mail parser only: headers decoded, addresses,
 dates, text and HTML bodies with broken charsets handled, attachments. It
 speaks no protocol here: the bytes come from IMAP, POP3 or anywhere else.
+The bodies are read here part by part, so that a part labelled with a
+Western single-byte charset whose bytes are UTF-8 reads as UTF-8.
 ``ParsedMessage`` answers in this project's types, so replacing the parser,
 e.g. with the standard library's ``email``, rewrites this module and
 nothing else.
@@ -10,6 +12,7 @@ nothing else.
 
 from __future__ import annotations
 
+import codecs
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -20,6 +23,7 @@ from functools import cached_property
 from typing import Any
 
 from imap_tools import MailMessage
+from imap_tools.utils import decode_value, replace_html_ct_charset
 
 from ..models import Address
 from .fields import (
@@ -176,13 +180,14 @@ class ParsedMessage:
     def content_type(self) -> str:
         return (self.header("content-type") or "").lower()
 
-    @property
+    @cached_property
     def text(self) -> str | None:
-        return self._parsed.text or None
+        return "".join(_bodies(self._parsed, ("text/plain", "text/"))) or None
 
-    @property
+    @cached_property
     def html(self) -> str | None:
-        return self._parsed.html or None
+        found = _bodies(self._parsed, ("text/html",))
+        return "".join(replace_html_ct_charset(h, "utf-8") for h in found) or None
 
     @cached_property
     def attachments(self) -> list[ParsedAttachment]:
@@ -199,6 +204,46 @@ class ParsedMessage:
             for part in self._parsed.attachments
             if not _body(part)
         ]
+
+
+# Charsets of one byte per character that senders name for text they
+# wrote in UTF-8, by the name Python's codecs give them. Every byte is
+# valid in them, so a wrong label shows nowhere but in the text.
+_MISLABELLED = frozenset({"ascii", "cp1252", "iso8859-1", "iso8859-15"})
+
+
+def _bodies(parsed: MailMessage, types: tuple[str, ...]) -> list[str]:
+    """Each part of the body of one of ``types``, decoded, in the order
+    and by the rule of imap-tools: not a container, without a name."""
+    found = []
+    for part in parsed.obj.walk():
+        if part.get_content_maintype() == "multipart" or part.get_filename():
+            continue
+        if part.get_content_type() in types:
+            payload = part.get_payload(decode=True)
+            raw = payload if isinstance(payload, bytes) else b""
+            found.append(_decoded(raw, part.get_content_charset()))
+    return found
+
+
+def _decoded(payload: bytes, charset: str | None) -> str:
+    """The text of a part's bytes in its charset. Bytes beyond ASCII that
+    are valid UTF-8 under the label of a Western single-byte charset are
+    UTF-8: text really written in such a charset is almost never valid
+    UTF-8, as a lone byte for an umlaut is not."""
+    if charset and not payload.isascii() and _single_byte(charset):
+        try:
+            return payload.decode("utf-8")
+        except UnicodeDecodeError:
+            pass
+    return decode_value(payload, charset)
+
+
+def _single_byte(charset: str) -> bool:
+    try:
+        return codecs.lookup(charset).name in _MISLABELLED
+    except LookupError:
+        return False
 
 
 def _body(part: Any) -> bool:
