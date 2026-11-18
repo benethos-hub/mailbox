@@ -187,7 +187,8 @@ def render(
     """A page, with what the layout needs: the active navigation entry, the
     entries the caller may open and their dots, the session's CSRF token,
     who is signed in, and the message the form before left in the
-    session, with the dialog to open again as ``open_dialog``."""
+    session, with the dialog to open again as ``open_dialog`` and the
+    method of the second factor to show first as ``open_first``."""
     found = found_for(request)
     session = found.session if found is not None else None
     access = found.access if found is not None else None
@@ -201,17 +202,22 @@ def render(
         # For the account menu: whether a code follows the password.
         factor_on=session is not None and session.factor is not None,
     )
-    for key in ("msg", "err", "dialog"):
+    for key in ("msg", "err", "dialog", "first"):
         kept = (
             store_of(request).take_once(session, key) if session is not None else None
         )
-        name = "open_dialog" if key == "dialog" else key
+        name = _OPEN.get(key, key)
         if context.get(name) is None:
             context[name] = kept
     response: HTMLResponse = templates.TemplateResponse(
         request, template, context, status_code=status_code
     )
     return response
+
+
+# What a refused form left for the page that follows, by the name the
+# templates read it as.
+_OPEN = {"dialog": "open_dialog", "first": "open_first"}
 
 
 def _attention(request: Request, access: Access) -> Attention | None:
@@ -247,15 +253,18 @@ def back(
     message: str | None = None,
     error: str | None = None,
     dialog: str | None = None,
+    first: str | None = None,
 ) -> Response:
     """Post/Redirect/Get: the browser lands on a GET, a reload repeats
     nothing. The message waits in the session for the next page, never in
     the URL, so a link cannot put words into the UI, and so does the id of
-    a ``dialog`` the next page opens again with the error. Many paths
+    a ``dialog`` the next page opens again with the error, and the method
+    of the second factor it shows ``first``. Many paths
     carry an id from the URL, so this is where every one of them stays in
     the UI."""
     try:
-        for key, value in (("msg", message), ("err", error), ("dialog", dialog)):
+        kept = (("msg", message), ("err", error), ("dialog", dialog), ("first", first))
+        for key, value in kept:
             if value:
                 show_once(request, key, value)
     except SignInRequiredError:

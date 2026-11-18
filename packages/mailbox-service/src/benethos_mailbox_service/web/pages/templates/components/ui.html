@@ -111,10 +111,11 @@
    gives the form, with ``dialog_buttons`` at its end. Opened by a
    ``dialog_button``. Without app.js it shows in the page. A form of it
    refused comes back with the dialog open and the error in it
-   (``open_dialog``). #}
+   (``open_dialog``), the method of its second factor that came first
+   (``open_first``). #}
 {% macro form_dialog(id, title, text) %}
 {% set again = open_dialog is defined and open_dialog == id %}
-<dialog class="ask form-dialog" id="{{ id }}" aria-labelledby="{{ id }}-title" aria-describedby="{{ id }}-text"{% if again %} data-open{% endif %}>
+<dialog class="ask form-dialog" id="{{ id }}" aria-labelledby="{{ id }}-title" aria-describedby="{{ id }}-text"{% if again %} data-open{% if open_first is defined and open_first %} data-ways-first="{{ open_first }}"{% endif %}{% endif %}>
   <div class="body"><h2 id="{{ id }}-title">{{ title }}</h2><p id="{{ id }}-text">{{ text }}</p>{% if again and err %}<div class="notice err" role="alert">{{ err }}</div>{% endif %}</div>
   {{ caller() }}
 </dialog>

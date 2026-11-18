@@ -453,7 +453,8 @@ button asks the browser for it, then sends the form. While the browser
 asks, the buttons are locked and a notice says it waits. A passkey not
 used says so in that notice. While the list shows, the form's buttons
 are locked until a pick. Nothing stores the method used. After a wrong
-code the code page shows the field of that code first again. Without
+code the code page, a dialog opened again and the page Password show
+the field of that code first again. Without
 `passkey.js` the field of the first code shows alone, and it takes a
 code of the app and a recovery code alike.
 

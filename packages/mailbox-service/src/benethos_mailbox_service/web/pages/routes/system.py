@@ -14,7 +14,7 @@ from ...services import Log, Recovery
 from ..deps import Actor, Viewer
 from ..filters import Field, filter_bar
 from ..forms import failing
-from ..passkeys import answered, offered
+from ..passkeys import answered, first_way, offered
 from ..session import show_once, take_once
 from ..templates import PAGE_SIZE, back, page_links, render
 
@@ -76,7 +76,7 @@ async def show_recovery_key(
     """The key after the password once more, and a code or a passkey with
     a second factor. Kept for the next page only, never in the URL."""
     proof = answered(request, passkey)
-    with failing(RECOVERY_PAGE, dialog="show-key"):
+    with failing(RECOVERY_PAGE, dialog="show-key", first=first_way(code, passkey)):
         key = await recovery.show(caller, password, code, proof)
     show_once(request, "recovery_key", key)
     return back(request, RECOVERY_PAGE)

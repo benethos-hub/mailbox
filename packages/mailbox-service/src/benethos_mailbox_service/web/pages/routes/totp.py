@@ -14,7 +14,7 @@ from ....domain.auth import SETUP
 from ...services import TotpDevices
 from ..deps import Actor
 from ..forms import failing
-from ..passkeys import answered
+from ..passkeys import answered, first_way
 from ..session import PendingTotp, session_of, show_once
 from ..templates import back
 from .factor import CODES, FACTOR_PAGE
@@ -36,7 +36,7 @@ async def begin(
     passkey: Annotated[str, Form()] = "",
 ) -> Response:
     proof = answered(request, passkey)
-    with failing(FACTOR_PAGE, dialog="add-device"):
+    with failing(FACTOR_PAGE, dialog="add-device", first=first_way(code, passkey)):
         begun = await totp.begin(caller, name, password, code, proof)
     session_of(request).totp = PendingTotp(begun.name, begun.secret, utc_now() + SETUP)
     return back(request, FACTOR_PAGE)
@@ -96,7 +96,9 @@ async def remove_own(
     passkey: Annotated[str, Form()] = "",
 ) -> Response:
     proof = answered(request, passkey)
-    with failing(FACTOR_PAGE, dialog=f"remove-{device}"):
+    with failing(
+        FACTOR_PAGE, dialog=f"remove-{device}", first=first_way(code, passkey)
+    ):
         stamp = await totp.remove_own(caller, device, password, code, proof)
     session_of(request).factor = stamp
     if stamp is None:
@@ -127,7 +129,7 @@ async def remove_ticked(
     """The devices ticked in the list, after one password and one code or
     passkey."""
     proof = answered(request, passkey)
-    with failing(FACTOR_PAGE, dialog="remove-ticked"):
+    with failing(FACTOR_PAGE, dialog="remove-ticked", first=first_way(code, passkey)):
         stamp = await totp.remove_own_devices(
             caller, device or [], password, code, proof
         )

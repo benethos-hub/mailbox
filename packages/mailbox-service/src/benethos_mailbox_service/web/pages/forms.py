@@ -68,7 +68,8 @@ class FormFailedError(Exception):
     """A form did not go through. With ``again`` its page is shown again
     with what was typed and ``error``, else the browser goes back to
     ``path`` with ``error``, and with ``dialog`` that page opens the
-    dialog of this id again, the error in it. The pages' error handler
+    dialog of this id again, the error in it. ``first``: the method of
+    the second factor that page shows first. The pages' error handler
     does either."""
 
     def __init__(
@@ -77,26 +78,34 @@ class FormFailedError(Exception):
         error: str,
         again: Again | None = None,
         dialog: str | None = None,
+        first: str | None = None,
     ) -> None:
         super().__init__(error)
         self.path = path
         self.error = error
         self.again = again
         self.dialog = dialog
+        self.first = first
 
 
 @contextmanager
 def failing(
-    path: str, prefix: str = "", again: Again | None = None, dialog: str | None = None
+    path: str,
+    prefix: str = "",
+    again: Again | None = None,
+    dialog: str | None = None,
+    first: str | None = None,
 ) -> Iterator[None]:
     """A domain error or a form error inside sends the browser back to
     ``path`` with the message, ``prefix`` in front of it, or shows the
     form's page ``again``: an editor keeps what was typed (docs/UI.md 4.7).
     A form sent from a dialog names it as ``dialog``: the page opens it
-    again with the message."""
+    again with the message. A form with a second factor names the
+    method it came by as ``first`` (``first_way``): the page shows it
+    first again."""
     try:
         yield
     except (MailboxServiceError, FormError) as exc:
         raise FormFailedError(
-            path, redact.redact(f"{prefix}{exc.message}"), again, dialog
+            path, redact.redact(f"{prefix}{exc.message}"), again, dialog, first
         ) from None
