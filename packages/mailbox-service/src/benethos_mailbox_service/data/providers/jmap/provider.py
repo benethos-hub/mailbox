@@ -43,6 +43,7 @@ from ..base import (
     ProviderSettings,
     ThreadMessages,
 )
+from ..settings import trust_of
 from . import drafts, folders, mappers, messages, sending
 from .api import JmapAccount
 from .changes import Changes
@@ -80,6 +81,8 @@ class JmapProvider:
             found.username,
         )
         self._changes = Changes(self._account, now)
+        # Whose Authentication-Results entry a message's sender check reads.
+        self._trust = trust_of(settings)
 
     # --- Reads ------------------------------------------------------------------------
 

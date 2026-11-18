@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from typing import Any, TypeVar
 
 from ...errors import BadRequestError
+from ..mail import authentication
 from ..models import MailServer, ServerProtocol
 from ..protocols import SMTP_PORTS
 from .base import ProviderSettings
@@ -124,6 +125,35 @@ def _number(
     if number is None or not valid(number):
         raise BadRequestError(f"settings.{key} must be {must_be}")
     return number
+
+
+def trust_of(settings: ProviderSettings) -> authentication.Trust | None:
+    """The names of the account's receiving server in ``authserv_id``,
+    several with commas, each a host name or one with a leading dot for
+    every host below it. None without one: the sender check stays
+    unknown."""
+    value = settings.get("authserv_id")
+    if value is None or value == "":
+        return None
+    if not isinstance(value, str):
+        raise BadRequestError(_AUTHSERV_ID)
+    ids = []
+    for part in value.split(","):
+        name = part.strip().lower()
+        if not name:
+            continue
+        below = name.startswith(".")
+        found = authentication.host(name[1:] if below else name)
+        if found is None:
+            raise BadRequestError(_AUTHSERV_ID)
+        ids.append("." + found if below else found)
+    return authentication.Trust(tuple(ids)) if ids else None
+
+
+_AUTHSERV_ID = (
+    "settings.authserv_id must be host names, several with commas, "
+    "e.g. mx.example.org or .example.org for every host below it"
+)
 
 
 def hosts_in(settings: Mapping[str, object]) -> list[Host]:

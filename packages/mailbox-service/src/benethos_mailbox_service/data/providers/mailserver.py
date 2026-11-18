@@ -25,7 +25,7 @@ from ..protocols import Pick, Server, SmtpSession
 from .base import CredentialReader, ProviderSettings
 from .guard import REAL_TIME, Guard, Pace, Timing
 from .sender import SmtpFactory, SmtpSender, smtp_settings
-from .settings import mail_server, rate_of
+from .settings import mail_server, rate_of, trust_of
 
 T = TypeVar("T")
 A = TypeVar("A")
@@ -106,6 +106,8 @@ class MailServerAdapter:
         )
         self._username = login.username
         self._credentials = credentials
+        # Whose Authentication-Results entry a message's sender check reads.
+        self._trust = trust_of(settings)
         pace = pace or Pace()
         rate = rate_of(settings, "max_requests_per_minute", pace.per_minute)
         self._guard = Guard(
