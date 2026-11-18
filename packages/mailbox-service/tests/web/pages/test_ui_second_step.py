@@ -159,3 +159,20 @@ def test_new_codes_and_their_card_have_titles_of_their_own(
     ).text
     assert made.count("<h2>Your new recovery codes</h2>") == 1
     assert made.count("<h2>Recovery codes</h2>") == 1
+
+
+def test_the_setup_of_a_device_cancels_beside_its_button(
+    app_client: TestClient, services: Services
+) -> None:
+    services.vault.initialize()
+    name, password = browser_admin(services)
+    try_sign_in(app_client, name, password)
+    page = post(
+        app_client,
+        "/ui/second-factor/totp/begin",
+        {"name": "Phone", "password": password},
+    ).text
+    assert '<form class="factor-setup"' in page
+    assert '<button type="submit" form="totp-cancel">Cancel</button>' in page
+    assert '<form id="totp-cancel" method="post"' in page
+    assert "2. The 6-digit code Phone shows now" in page

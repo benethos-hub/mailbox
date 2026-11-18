@@ -21,22 +21,22 @@
 
 {% if qr %}
 {% call card("Scan the code for " ~ setup.name, meta="With an authenticator app, within " ~ minutes ~ " minutes.") %}
+  <p class="muted">1. Scan this code with your authenticator app.</p>
   <img class="qr" src="{{ qr }}" alt="QR code of the device {{ setup.name }}" width="225" height="225" />
-  <p class="muted">Where the camera cannot reach, type in this key:</p>
+  <p class="muted">Or type in this key:</p>
   <div class="secret-line"><code class="secret" id="totp-key">{{ secret }}</code>{{ copy_button("totp-key", "Copy the key") }}</div>
-  <form method="post" action="/ui/second-factor/totp/confirm">
+  <form class="factor-setup" method="post" action="/ui/second-factor/totp/confirm">
     {{ csrf_field() }}
     <div class="form-grid">
       <div class="field">
-        <label for="f-confirm">The code {{ setup.name }} shows now</label>
+        <label for="f-confirm">2. The 6-digit code {{ setup.name }} shows now</label>
         <input id="f-confirm" class="code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,7}" maxlength="7" required autofocus />
       </div>
     </div>
-    <div class="form-actions"><button class="primary" type="submit">{{ icon("check-lg") }} {% if on %}Add device{% else %}Turn on{% endif %}</button></div>
+    <div class="form-actions"><button class="primary" type="submit">{{ icon("check-lg") }} {% if on %}Add device{% else %}Turn on{% endif %}</button><button type="submit" form="totp-cancel">Cancel</button></div>
   </form>
-  <form method="post" action="/ui/second-factor/totp/cancel">
+  <form id="totp-cancel" method="post" action="/ui/second-factor/totp/cancel">
     {{ csrf_field() }}
-    <button class="link" type="submit">Cancel</button>
   </form>
 {% endcall %}
 {% endif %}
@@ -44,18 +44,18 @@
 {% if making %}
 {% call card("Make the passkey " ~ making.name, meta="With this device, a security key or a password manager, within " ~ minutes ~ " minutes.") %}
   <p class="muted">The browser asks where to keep it, and for your PIN, fingerprint or face.</p>
-  <form method="post" action="/ui/second-factor/passkeys/confirm">
+  <form class="factor-setup" method="post" action="/ui/second-factor/passkeys/confirm">
     {{ csrf_field() }}
     <input type="hidden" name="answer" value="" />
     <div class="form-actions">
       <button class="primary" type="button" data-passkey-create="{{ making.options }}" hidden>{{ icon("key") }} {% if on %}Make the passkey{% else %}Make the passkey and turn on{% endif %}</button>
+      <button type="submit" form="passkey-cancel">Cancel</button>
     </div>
     <p class="notice warn factor-status" data-passkey-status role="status" hidden></p>
     <p class="notice warn" data-passkey-missing hidden>This browser makes no passkeys.</p>
   </form>
-  <form method="post" action="/ui/second-factor/passkeys/cancel">
+  <form id="passkey-cancel" method="post" action="/ui/second-factor/passkeys/cancel">
     {{ csrf_field() }}
-    <button class="link" type="submit">Cancel</button>
   </form>
 {% endcall %}
 {% endif %}

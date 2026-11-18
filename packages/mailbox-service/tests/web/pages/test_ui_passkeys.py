@@ -252,6 +252,8 @@ def test_a_cancelled_setup_is_gone(at_https: TestClient, services: Services) -> 
         "/ui/second-factor/passkeys/begin",
         {"name": "Laptop", "password": UI_PASSWORD},
     )
+    making = at_https.get("/ui/second-factor").text
+    assert '<button type="submit" form="passkey-cancel">Cancel</button>' in making
     page = post(at_https, "/ui/second-factor/passkeys/cancel")
     assert "data-passkey-create" not in page.text
     late = post(at_https, "/ui/second-factor/passkeys/confirm", {"answer": "{}"})
