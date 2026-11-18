@@ -9,9 +9,11 @@ from __future__ import annotations
 from .devices import MAX_DEVICE_NAME, MAX_DEVICES
 from .factors import CODE_TRIES, PENDING, SecondFactors
 from .passkeys import Answer, Passkeys
+from .passwords import MAX_LENGTH as MAX_PASSWORD
+from .passwords import MIN_LENGTH as MIN_PASSWORD
 from .passwords import Passwords
 from .recovery import HASH_LABEL, RecoveryCodes
-from .service import MAX_NAME, AuthService
+from .service import MAX_CODE, MAX_NAME, AuthService
 from .signin import SignedIn, SignInState
 from .throttle import SignInThrottle
 from .tokens import IssuedToken, TokenState
@@ -25,7 +27,10 @@ __all__ = [
     "PENDING",
     "SETUP",
     "AuthService",
+    "MAX_CODE",
     "MAX_NAME",
+    "MAX_PASSWORD",
+    "MIN_PASSWORD",
     "Passkeys",
     "Passwords",
     "HASH_LABEL",

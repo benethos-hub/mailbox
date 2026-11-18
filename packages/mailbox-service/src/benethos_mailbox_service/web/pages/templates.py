@@ -28,6 +28,7 @@ from ...common.clock import utc_now
 from ...common.urls import path_and_query
 from ...data.models import Address
 from ...domain.accounts import connection_of
+from ...domain.auth import MAX_CODE, MAX_PASSWORD, MIN_PASSWORD
 from ...domain.rights import Access
 from ...domain.system import Attention
 from ...errors import MailboxServiceError
@@ -175,7 +176,14 @@ templates.env.filters.update(
     signs_in_at=signs_in_at,
     sender_tag=sender_tag,
 )
-templates.env.globals.update(APP_NAME="Mailbox", VERSION=__version__)
+templates.env.globals.update(
+    APP_NAME="Mailbox",
+    VERSION=__version__,
+    # The limits the domain checks, for the fields of the forms.
+    MAX_CODE=MAX_CODE,
+    MIN_PASSWORD=MIN_PASSWORD,
+    MAX_PASSWORD=MAX_PASSWORD,
+)
 
 
 def render(
