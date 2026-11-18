@@ -5,6 +5,7 @@ credentials must pass ``checks``."""
 from __future__ import annotations
 
 import builtins
+from collections import Counter
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 
@@ -16,7 +17,12 @@ from benethos_mailbox_common.values import secret as secret_values
 from ...common.hosts import address_problem
 from ...data.models import Abilities, Account, AccountStatus, Page, ProviderType
 from ...data.protocols import HostCheck, Tokens
-from ...data.providers import ProviderSettings, settings_defaults
+from ...data.providers import (
+    ProviderSettings,
+    Reads,
+    ServerNames,
+    settings_defaults,
+)
 from ...data.secrets import CredentialVault
 from ...data.storage import AccountRepository, IdempotencyRepository
 from ...errors import BadRequestError, NotSupportedError
@@ -56,6 +62,19 @@ class AccountHooks:
 
 
 NO_HOOKS = AccountHooks()
+
+# How many of the newest mails ``server_names`` reads.
+NEWEST_MAILS = 10
+
+
+@dataclass(frozen=True, slots=True)
+class SeenName:
+    """A receiving server's name as the newest mails carry it: in
+    ``count`` of the ``of`` mails read."""
+
+    id: str
+    count: int
+    of: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -319,6 +338,28 @@ class AccountService:
                         by=Actor.of(access), account=account, changed=tuple(what)
                     )
                 )
+
+    async def server_names(
+        self, access: Access, account_id: str
+    ) -> builtins.list[SeenName]:
+        """The names receiving servers wrote into the newest mails of the
+        inbox, the most frequent first, for whoever may change the
+        account to choose its own server from. Empty where the account
+        names its server itself, as Gmail and Microsoft do. The service
+        never sets one: a mail can carry any name."""
+        access.require("update_account", account_id)
+
+        async def read(adapter: Reads) -> builtins.list[builtins.list[str]]:
+            if not isinstance(adapter, ServerNames):
+                return []
+            return await adapter.authserv_ids(NEWEST_MAILS)
+
+        mails = await self._adapters.call(account_id, read)
+        counts = Counter(name for names in mails for name in set(names))
+        return [
+            SeenName(name, count, len(mails))
+            for name, count in sorted(counts.items(), key=lambda n: (-n[1], n[0]))
+        ]
 
     async def verify(self, access: Access, account_id: str) -> Account:
         """Log in afresh, e.g. after the credential was changed at the
