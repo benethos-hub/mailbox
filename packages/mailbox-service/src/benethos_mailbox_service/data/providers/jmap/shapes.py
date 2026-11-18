@@ -46,6 +46,9 @@ class BodyPart(wire.CamelShape):
     cid: Text = None
 
 
+AUTHENTICATION_RESULTS = "header:Authentication-Results:asRaw:all"
+
+
 class Email(wire.CamelShape):
     """An email (RFC 8621 4)."""
 
@@ -64,6 +67,11 @@ class Email(wire.CamelShape):
     # The parts beside the body. None where the server sent none.
     attachments: Annotated[list[BodyPart] | None, wire.OrNone] = None
     message_id: Annotated[list[str] | None, wire.OrNone] = None
+    # Every Authentication-Results header as it stands in the message, an
+    # empty list without one. None where the server sent another shape.
+    authentication_results: Annotated[list[str] | None, wire.OrNone] = Field(
+        default=[], alias=AUTHENTICATION_RESULTS
+    )
 
 
 class Thread(wire.CamelShape):

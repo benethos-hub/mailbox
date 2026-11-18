@@ -66,6 +66,13 @@ class ExtendedProperty(wire.CamelShape):
     value: Text = None
 
 
+class Header(wire.CamelShape):
+    """A header of a message as Graph names it."""
+
+    name: Text = None
+    value: Text = None
+
+
 class Message(wire.CamelShape):
     id: str
     conversation_id: Text = None
@@ -83,6 +90,9 @@ class Message(wire.CamelShape):
     has_attachments: Yes = None
     is_draft: Yes = None
     internet_message_id: Text = None
+    # The headers of a received message. Graph leaves them out for some,
+    # and a draft has none.
+    internet_message_headers: list[Annotated[Header | None, wire.OrNone]] = []
     single_value_extended_properties: list[ExtendedProperty] = []
     # In a delta query: the message left the folder or is gone.
     removed: dict[str, object] | None = Field(None, alias="@removed")

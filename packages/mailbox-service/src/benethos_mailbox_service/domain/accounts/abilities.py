@@ -90,6 +90,7 @@ _CANNOT: Mapping[Capability, str] = {
     Capability.PUSH: "report changes by itself",
     Capability.EXTERNAL_CHANGES: "see the changes of other mail programs",
     Capability.REFUSED: "name refused recipients while sending",
+    Capability.SENDER_CHECK: "read the receiving server's check of the sender",
 }
 
 _MARKS = frozenset(Mark)

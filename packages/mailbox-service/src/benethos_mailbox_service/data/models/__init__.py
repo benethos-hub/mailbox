@@ -56,6 +56,8 @@ from .messages import (
     MessageFilter,
     MessageSummary,
     MessageUpdate,
+    SenderCheck,
+    SenderCheckReason,
     as_keyword,
     received_or_written,
 )
@@ -154,6 +156,8 @@ __all__ = [
     "ThreadSummary",
     "SEARCH_TEXT_PATTERN",
     "Security",
+    "SenderCheck",
+    "SenderCheckReason",
     "SendFilter",
     "SendOutcome",
     "SendRecord",

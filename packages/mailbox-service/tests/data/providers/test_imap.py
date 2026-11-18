@@ -455,3 +455,23 @@ async def test_a_wait_in_idle_takes_no_thread_of_the_pool(
     # Everything else takes the default limiter.
     await imap.list_folders()
     assert limiters[-1] is None
+
+
+async def test_the_sender_check_reads_the_entry_of_the_own_server(
+    server: FakeMailBox,
+) -> None:
+    entry = "mx.example.org; dmarc=pass header.from=example.com"
+    headers = {"Authentication-Results": entry}
+    server.add("INBOX", 10, make_message("Checked", extra_headers=headers))
+    imap = provider(server, authserv_id="mx.example.org")
+    page = await imap.list_messages(INBOX, limit=1, cursor=None, search=None)
+    listed = page.items[0]
+    assert listed.sender_check.result == "pass"
+    assert listed.sender_check.domain == "example.com"
+    whole = await imap.get_message(listed.id)
+    assert whole.sender_check == listed.sender_check
+    # Without the name of its receiving server the account cannot tell.
+    plain = await provider(server).list_messages(
+        INBOX, limit=1, cursor=None, search=None
+    )
+    assert plain.items[0].sender_check.reason == "account"

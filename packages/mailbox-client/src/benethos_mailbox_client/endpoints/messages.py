@@ -18,6 +18,7 @@ from ..models import (
     Outcome,
     Page,
     Reference,
+    SenderCheck,
 )
 from .readings import maybe_time
 
@@ -304,7 +305,22 @@ def _summary_fields(found: dict[str, Any]) -> dict[str, Any]:
         "starred": bool(found.get("starred")),
         "keywords": [str(k) for k in found.get("keywords") or []],
         "has_attachments": bool(found.get("has_attachments")),
+        "sender_check": _sender_check(found.get("sender_check")),
     }
+
+
+def _sender_check(found: dict[str, Any] | None) -> SenderCheck:
+    """The sender check of a summary. A service without one answers the
+    service's own default: unknown, the account cannot tell."""
+    if not found:
+        return SenderCheck("unknown", reason="account")
+    return SenderCheck(
+        result=str(found["result"]),
+        domain=found.get("domain"),
+        matches_from=found.get("matches_from"),
+        method=found.get("method"),
+        reason=found.get("reason"),
+    )
 
 
 def _address(found: dict[str, Any]) -> Address:

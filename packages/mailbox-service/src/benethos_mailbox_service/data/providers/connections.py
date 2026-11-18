@@ -41,7 +41,17 @@ def _mail_server(protocol: str, ports: Mapping[str, int]) -> tuple[SettingField,
             "Empty: the login name above.",
             login=True,
         ),
+        _AUTHSERV_ID,
     )
+
+
+# The receiving server's name, which a person reads from a received mail.
+_AUTHSERV_ID = SettingField(
+    "authserv_id",
+    "Receiving server's name",
+    "As it stands at the start of Authentication-Results in a received mail. "
+    "Several with commas. Empty: the sender check stays unknown.",
+)
 
 
 def _sums_up(protocol: str) -> tuple[Summary, ...]:
@@ -88,6 +98,7 @@ CONNECTIONS: Mapping[ProviderType, Connection] = {
                 "With a password. Empty: the address.",
                 login=True,
             ),
+            _AUTHSERV_ID,
         ),
         secret="Password or API token",
         by_hand=True,

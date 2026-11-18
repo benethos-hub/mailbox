@@ -93,6 +93,8 @@ async def test_no_flags_folders_search_or_drafts(server: FakePop3Server) -> None
         Capability.SEND,
         Capability.REFUSED,
     }
+    named = await provider(server, authserv_id="mx.example.org").abilities()
+    assert set(named.capabilities) == {Capability.PURGE, Capability.SENDER_CHECK}
 
 
 def test_the_registry_builds_it(server: FakePop3Server) -> None:

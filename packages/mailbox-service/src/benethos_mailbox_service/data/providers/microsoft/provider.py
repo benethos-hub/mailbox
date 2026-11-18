@@ -70,6 +70,7 @@ ABILITIES = Abilities.of(
         Capability.SENT_COPY,
         Capability.THREADS,
         Capability.EXTERNAL_CHANGES,
+        Capability.SENDER_CHECK,
     },
     read={Mark.DRAFT},
     written={Mark.ANSWERED, Mark.FORWARDED},
@@ -133,9 +134,9 @@ class MicrosoftProvider:
 
     async def abilities(self) -> Abilities:
         """The same for every Microsoft account. Its keywords are Outlook's
-        categories. It reads ``$draft``, and reads and writes ``$answered``
-        and ``$forwarded`` as the verb Outlook last carried out (``marks``,
-        UNIFORM 6.4)."""
+        categories, and its receiving server is known. It reads ``$draft``,
+        and reads and writes ``$answered`` and ``$forwarded`` as the verb
+        Outlook last carried out (``marks``, UNIFORM 6.4)."""
         return ABILITIES
 
     async def verify(self) -> None:

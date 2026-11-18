@@ -18,7 +18,15 @@ from benethos_mailbox_service.data.providers import (
 )
 from benethos_mailbox_service.errors import MailboxServiceError, NotFoundError
 
-from ...conformance_helpers import KINDS, Box, box, file_alone, inline_only, mail
+from ...conformance_helpers import (
+    KINDS,
+    OWN_SERVER,
+    Box,
+    box,
+    file_alone,
+    inline_only,
+    mail,
+)
 
 
 @pytest.fixture(params=KINDS)
@@ -132,3 +140,41 @@ async def test_what_is_written_is_read(found: Box) -> None:
     assert set(able.marks.written) <= set(able.marks.read)
     if able.marks.written:
         assert able.has(Capability.READ_STATE)
+
+
+# The memory adapter keeps what a test hands it and reads no header.
+READERS = [k for k in KINDS if k != "memory"]
+
+
+@pytest.mark.parametrize("kind", READERS)
+async def test_the_sender_check_reads_the_own_entry_alone(kind: str) -> None:
+    found = box(kind)
+    entry = f"{found.authserv_id}; dmarc=pass header.from=example.com"
+    own = ("Authentication-Results", entry)
+    found.put(mail("Passed", headers=[own]))
+    found.put(mail("Twice", headers=[own, own]))
+    adapter = found.make()
+    page = await adapter.list_messages(await inbox_of(adapter), limit=10, cursor=None)
+    listed = {m.subject: m for m in page.items}
+    assert listed["Passed"].sender_check.result == "pass"
+    assert listed["Passed"].sender_check.domain == "example.com"
+    assert listed["Twice"].sender_check.reason == "several_entries"
+    for summary in listed.values():
+        message = await adapter.get_message(summary.id)
+        assert message.sender_check == summary.sender_check, summary.subject
+    assert (await adapter.abilities()).has(Capability.SENDER_CHECK)
+
+
+@pytest.mark.parametrize("kind", ["imap", "pop3", "jmap"])
+async def test_without_the_servers_name_the_sender_check_cannot_tell(
+    kind: str,
+) -> None:
+    found = box(kind, named=False)
+    entry = f"{OWN_SERVER}; dmarc=pass header.from=example.com"
+    found.put(mail("Unnamed", headers=[("Authentication-Results", entry)]))
+    adapter = found.make()
+    page = await adapter.list_messages(await inbox_of(adapter), limit=10, cursor=None)
+    [summary] = page.items
+    assert summary.sender_check.result == "unknown"
+    assert summary.sender_check.reason == "account"
+    assert not (await adapter.abilities()).has(Capability.SENDER_CHECK)

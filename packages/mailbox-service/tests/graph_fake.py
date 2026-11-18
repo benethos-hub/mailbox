@@ -318,7 +318,7 @@ class FakeGraph(FileCalls):
         found = sorted(found, key=lambda m: m["receivedDateTime"], reverse=True)
         skip = int(query.get("$skip", "0"))
         top = int(query.get("$top", "10"))
-        page = found[skip : skip + top]
+        page = [_selected(m, query) for m in found[skip : skip + top]]
         if "$search" in query:
             # As seen live: search ignores the immutable id preference.
             page = [{**m, "id": REST + m["id"]} for m in page]
@@ -372,7 +372,8 @@ class FakeGraph(FileCalls):
         self, method: str, message: dict[str, Any], request: httpx.Request
     ) -> httpx.Response:
         if method == "GET":
-            return _json(200, _expanded(message, request))
+            selected = _selected(message, dict(request.url.params))
+            return _json(200, _expanded(selected, request))
         if method == "PATCH":
             body = json.loads(request.content)
             # Extended properties merge by their id, as Graph keeps them.
@@ -437,6 +438,13 @@ def _expanded(message: dict[str, Any], request: httpx.Request | None) -> Any:
     if request is not None and "$expand" in request.url.params:
         return message
     return {k: v for k, v in message.items() if k != PROPS}
+
+
+def _selected(message: dict[str, Any], query: dict[str, str]) -> dict[str, Any]:
+    """The headers only when asked to select them, as Graph."""
+    if "internetMessageHeaders" in query.get("$select", ""):
+        return message
+    return {k: v for k, v in message.items() if k != "internetMessageHeaders"}
 
 
 def _list(items: Any) -> httpx.Response:

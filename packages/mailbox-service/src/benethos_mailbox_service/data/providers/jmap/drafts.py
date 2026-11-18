@@ -55,7 +55,7 @@ async def save_draft(
             lambda: _destroy(account, replaces, missing_ok=True),
             lambda: _destroy(account, stored.id),
         )
-    return mappers.summary(stored)
+    return mappers.summary(stored, account.trust)
 
 
 async def get_draft(account: JmapAccount, draft_id: str) -> bytes:

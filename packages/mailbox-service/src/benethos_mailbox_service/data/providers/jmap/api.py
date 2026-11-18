@@ -12,6 +12,7 @@ from pydantic import BaseModel
 
 from ....common.chunks import batched
 from ....errors import NotFoundError, ProviderError, missing_message
+from ...mail import authentication
 from ...models import Folder, FolderRole
 from ...protocols import jmap
 from ..base import CredentialReader
@@ -31,8 +32,12 @@ class JmapAccount:
         credentials: CredentialReader,
         auth: str,
         username: str,
+        trust: authentication.Trust | None = None,
     ) -> None:
+        """``trust``: the receiving server whose Authentication-Results
+        entry the sender check of a message reads."""
         self.client = client
+        self.trust = trust
         self._credentials = credentials
         self._auth = auth
         self._username = username

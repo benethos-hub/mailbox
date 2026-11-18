@@ -14,7 +14,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from ....errors import BadRequestError, NotSupportedError
-from ...mail import convert, fields, parse
+from ...mail import authentication, convert, fields, parse
 from ...models import (
     Address,
     Folder,
@@ -48,8 +48,11 @@ WELL_KNOWN: dict[str, FolderRole] = {
 SUMMARY_FIELDS = (
     "id,conversationId,parentFolderId,subject,from,toRecipients,"
     "sentDateTime,receivedDateTime,bodyPreview,isRead,flag,categories,hasAttachments,isDraft,"
-    "internetMessageId"
+    "internetMessageId,internetMessageHeaders"
 )
+# The name Microsoft's receiving servers write at the start of their
+# Authentication-Results, the same for every Microsoft account.
+TRUST = authentication.Trust(("mx.microsoft.com",))
 # What a message is read with: its fields, and the verb Outlook last
 # carried out on it, which says whether it was answered or forwarded.
 SUMMARY_PARAMS = {"$select": SUMMARY_FIELDS, "$expand": marks.EXPAND}
@@ -97,12 +100,20 @@ def keywords(item: GraphMessage) -> list[str]:
 
 
 def summary(item: GraphMessage) -> MessageSummary:
+    sender = _address(item.sender)
+    entries = [
+        h.value
+        for h in item.internet_message_headers
+        if h is not None
+        and h.value is not None
+        and (h.name or "").lower() == "authentication-results"
+    ]
     return MessageSummary(
         id=item.id,
         thread_id=item.conversation_id,
         folder_ids=[item.parent_folder_id] if item.parent_folder_id else [],
         subject=item.subject,
-        sender=_address(item.sender),
+        sender=sender,
         to=_addresses(item.to_recipients),
         date=item.sent_date_time,
         received=item.received_date_time,
@@ -111,6 +122,9 @@ def summary(item: GraphMessage) -> MessageSummary:
         starred=item.flag is not None and item.flag.flag_status == "flagged",
         keywords=keywords(item),
         has_attachments=bool(item.has_attachments),
+        sender_check=authentication.sender_check(
+            entries, sender.email if sender else None, TRUST
+        ),
     )
 
 

@@ -11326,7 +11326,8 @@
           "threads",
           "push",
           "external_changes",
-          "refused"
+          "refused",
+          "sender_check"
         ],
         "title": "Capability",
         "description": "What an account can do beyond reading its inbox, each guarding one\nthing (docs/UNIFORM.md section 3). Where one is missing, the operations\nthat need it answer `501 not_supported`. They follow from what the\naccount's server offers."
@@ -12603,6 +12604,10 @@
             "description": "Whether the message has a part a person sees as an attachment, not one the body shows in its place such as an image in the HTML. Counted the same way in a list and in a whole message, except in a list of a POP3 account, which reads the headers alone and guesses from them: whether the message is multipart/mixed.",
             "default": false
           },
+          "sender_check": {
+            "$ref": "#/components/schemas/SenderCheck",
+            "description": "What the account's receiving server stated about the domain in `from`, read from its Authentication-Results entry. A fact about the sender's domain, never about the content. See `capabilities` of the account for whether it can be other than `unknown`."
+          },
           "cc": {
             "items": {
               "$ref": "#/components/schemas/Address"
@@ -12936,6 +12941,10 @@
             "title": "Has Attachments",
             "description": "Whether the message has a part a person sees as an attachment, not one the body shows in its place such as an image in the HTML. Counted the same way in a list and in a whole message, except in a list of a POP3 account, which reads the headers alone and guesses from them: whether the message is multipart/mixed.",
             "default": false
+          },
+          "sender_check": {
+            "$ref": "#/components/schemas/SenderCheck",
+            "description": "What the account's receiving server stated about the domain in `from`, read from its Authentication-Results entry. A fact about the sender's domain, never about the content. See `capabilities` of the account for whether it can be other than `unknown`."
           }
         },
         "type": "object",
@@ -13779,6 +13788,89 @@
           "message_id_header"
         ],
         "title": "SendResult"
+      },
+      "SenderCheck": {
+        "properties": {
+          "result": {
+            "type": "string",
+            "enum": [
+              "pass",
+              "fail",
+              "unknown"
+            ],
+            "title": "Result",
+            "description": "`pass`: the server confirmed the domain in `from`. `fail`: its DMARC check of that domain failed. `unknown`: nothing can be told, `reason` says why. Unknown is no failure."
+          },
+          "domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Domain",
+            "description": "The domain the server stated something about, a host name in lower case. Null without one."
+          },
+          "matches_from": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matches From",
+            "description": "Whether `domain` is the domain in `from`. Null without `domain`."
+          },
+          "method": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "dmarc",
+                  "dkim",
+                  "spf"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Method",
+            "description": "The check the result comes from."
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "account",
+                  "no_entry",
+                  "several_entries",
+                  "unreadable",
+                  "from_differs",
+                  "other_domain",
+                  "error",
+                  "no_proof"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason",
+            "description": "Why the result is `unknown`. `account`: the account cannot tell, see its `capabilities`. `no_entry`: no entry of the receiving server. `several_entries`: more than one. `unreadable`: the entry or the sender cannot be read. `from_differs`: DMARC passed for another domain. `other_domain`: DKIM or SPF passed for another domain only. `error`: a check ended in an error. `no_proof`: nothing confirms the domain in `from`."
+          }
+        },
+        "type": "object",
+        "required": [
+          "result"
+        ],
+        "title": "SenderCheck",
+        "description": "What the account's receiving server stated about the domain in\n`from`, read from its one Authentication-Results entry. A fact about\nthe sender's domain, never about the content."
       },
       "ServerProtocol": {
         "type": "string",

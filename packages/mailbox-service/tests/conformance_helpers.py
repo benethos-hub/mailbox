@@ -9,7 +9,7 @@ provider keeps them, and IMAP and POP3 send through a fake SMTP server.
 from __future__ import annotations
 
 import itertools
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from email.message import EmailMessage
 from typing import Any
@@ -63,6 +63,8 @@ from .smtp_fake import FakeSmtpServer
 KINDS = ("memory", "imap", "pop3", "jmap", "gmail", "microsoft")
 ADDRESS = "me@example.org"
 SMTP = {"smtp_host": "smtp.example.com", "smtp_port": "587"}
+# The name the receiving server of an IMAP, POP3 or JMAP box writes.
+OWN_SERVER = "mx.example.org"
 
 
 @dataclass
@@ -77,11 +79,22 @@ class Box:
     put: Callable[[bytes], None]
     settings: dict[str, str] = field(default_factory=dict)
     smtp: FakeSmtpServer | None = None
+    # The name its receiving server writes in Authentication-Results,
+    # which the adapter trusts. None where the adapter reads none.
+    authserv_id: str | None = None
 
 
-def mail(subject: str, text: str = "Hello", file: bytes | None = None) -> bytes:
-    """A mail to the mailbox, with a file where ``file`` is given."""
+def mail(
+    subject: str,
+    text: str = "Hello",
+    file: bytes | None = None,
+    headers: Sequence[tuple[str, str]] = (),
+) -> bytes:
+    """A mail to the mailbox, with a file where ``file`` is given, and
+    ``headers`` on top, a name as often as it is given."""
     found = EmailMessage()
+    for name, value in headers:
+        found[name] = value
     found["From"] = "Alice <alice@example.com>"
     found["To"] = ADDRESS
     found["Subject"] = subject
@@ -118,13 +131,17 @@ def file_alone(subject: str) -> bytes:
     return found.as_bytes()
 
 
-def box(kind: str, smtp: bool = True) -> Box:
+def box(kind: str, smtp: bool = True, named: bool = True) -> Box:
     """A mailbox of ``kind``. Without ``smtp``, IMAP and POP3 name no SMTP
+    server. Without ``named``, IMAP, POP3 and JMAP name no receiving
     server."""
     found = _BOXES[kind]()
     if not smtp:
         for name in SMTP:
             found.settings.pop(name, None)
+    if not named and "authserv_id" in found.settings:
+        del found.settings["authserv_id"]
+        found.authserv_id = None
     return found
 
 
@@ -173,7 +190,12 @@ def _imap() -> Box:
         "Trash": FakeFolder(flags=("\\HasNoChildren", "\\Trash")),
     }
     smtp = FakeSmtpServer()
-    settings = {"host": "imap.example.com", "username": ADDRESS, **SMTP}
+    settings = {
+        "host": "imap.example.com",
+        "username": ADDRESS,
+        "authserv_id": OWN_SERVER,
+        **SMTP,
+    }
     uids = itertools.count(1)
 
     def make() -> Reads:
@@ -193,13 +215,19 @@ def _imap() -> Box:
         lambda raw: server.add("INBOX", next(uids), raw),
         settings,
         smtp,
+        OWN_SERVER,
     )
 
 
 def _pop3() -> Box:
     server = FakePop3Server()
     smtp = FakeSmtpServer()
-    settings = {"host": "pop.example.com", "username": ADDRESS, **SMTP}
+    settings = {
+        "host": "pop.example.com",
+        "username": ADDRESS,
+        "authserv_id": OWN_SERVER,
+        **SMTP,
+    }
     uids = itertools.count(1)
 
     def make() -> Reads:
@@ -219,12 +247,13 @@ def _pop3() -> Box:
         lambda raw: server.add(f"uid-{next(uids)}", raw),
         settings,
         smtp,
+        OWN_SERVER,
     )
 
 
 def _jmap() -> Box:
     server = FakeJmap()
-    settings = {"host": HOST, "username": USER}
+    settings = {"host": HOST, "username": USER, "authserv_id": OWN_SERVER}
 
     def make() -> Reads:
         return JmapProvider(
@@ -240,6 +269,7 @@ def _jmap() -> Box:
         make,
         lambda raw: server.add_email(raw) and None,
         settings,
+        authserv_id=OWN_SERVER,
     )
 
 
@@ -257,6 +287,7 @@ def _gmail() -> Box:
         server,
         make,
         lambda raw: server.add_message(raw=raw) and None,
+        authserv_id="mx.google.com",
     )
 
 
@@ -271,6 +302,10 @@ def _microsoft() -> Box:
             # Graph counts no inline part as an attachment.
             hasAttachments=any(a.attached for a in parsed.attachments),
             internetMessageId=parsed.message_id,
+            internetMessageHeaders=[
+                {"name": "Authentication-Results", "value": value}
+                for value in parsed.all_headers("Authentication-Results")
+            ],
         )
 
     def make() -> Reads:
@@ -278,7 +313,14 @@ def _microsoft() -> Box:
             Tokens(GRAPH_TOKEN), ApiClient(transport=httpx.MockTransport(server))
         )
 
-    return Box("microsoft", ProviderType.MICROSOFT, server, make, put)
+    return Box(
+        "microsoft",
+        ProviderType.MICROSOFT,
+        server,
+        make,
+        put,
+        authserv_id="mx.microsoft.com",
+    )
 
 
 _BOXES: dict[str, Callable[[], Box]] = {

@@ -28,7 +28,7 @@ from benethos_mailbox_service.errors import (
     NotSupportedError,
 )
 
-from ...gmail_fake import TOKEN, FakeGmail
+from ...gmail_fake import TOKEN, FakeGmail, source
 from ...oauth_fake import Tokens
 from .gmail_adapter import adapter
 
@@ -162,6 +162,27 @@ async def test_date_is_the_header_and_received_gmails_time(gmail: FakeGmail) -> 
     assert dated.received is not None and dated.received != dated.date
     assert undated.subject == "Undated"
     assert undated.date is None and undated.received is not None
+
+
+async def test_the_sender_check_reads_gmails_own_entry(gmail: FakeGmail) -> None:
+    own = (
+        "mx.google.com; dkim=pass header.i=@example.com;"
+        " dmarc=pass header.from=example.com"
+    )
+    foreign = "mx.example.org; dmarc=fail header.from=example.com"
+    head = f"Authentication-Results: {foreign}\r\nAuthentication-Results: {own}\r\n"
+    checked = gmail.add_message(raw=head.encode() + source())
+    twice = f"Authentication-Results: {own}\r\n" * 2
+    doubled = gmail.add_message(raw=twice.encode() + source())
+    provider = adapter(gmail)
+    page = await provider.list_messages("INBOX", limit=5, cursor=None)
+    found = {m.id: m.sender_check for m in page.items}
+    assert found[checked].result == "pass"
+    assert found[checked].domain == "example.com"
+    assert found[doubled].reason == "several_entries"
+    whole = await provider.get_message(checked)
+    assert whole.sender_check == found[checked]
+    assert Capability.SENDER_CHECK in (await provider.abilities()).capabilities
 
 
 async def test_all_mail_leaves_out_the_trash(gmail: FakeGmail) -> None:

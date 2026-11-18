@@ -12,6 +12,7 @@ import httpx
 import pytest
 from pydantic import SecretStr
 
+from benethos_mailbox_service.data.mail.authentication import Trust
 from benethos_mailbox_service.data.models import (
     CredentialKind,
     FolderRole,
@@ -28,7 +29,11 @@ from benethos_mailbox_service.data.providers import (
     settings_from_servers,
 )
 from benethos_mailbox_service.data.providers.jmap import JmapProvider, mappers
-from benethos_mailbox_service.data.providers.jmap.shapes import Email, Mailbox
+from benethos_mailbox_service.data.providers.jmap.shapes import (
+    AUTHENTICATION_RESULTS,
+    Email,
+    Mailbox,
+)
 from benethos_mailbox_service.errors import (
     BadRequestError,
     ConflictError,
@@ -385,11 +390,11 @@ def test_keyword_patch_escapes_a_pointer() -> None:
 
 def test_dates_the_server_writes_oddly() -> None:
     odd = Email.model_validate({"id": "e", "sentAt": "not a date", "receivedAt": None})
-    assert mappers.summary(odd).date is None
+    assert mappers.summary(odd, None).date is None
     email = Email.model_validate(
         {"id": "e", "sentAt": "soon", "receivedAt": "2026-10-06T10:00:00Z"}
     )
-    summary = mappers.summary(email)
+    summary = mappers.summary(email, None)
     assert summary.date is None
     assert summary.received == datetime(2026, 10, 6, 10, tzinfo=UTC)
 
@@ -398,8 +403,8 @@ def test_what_is_odd_in_an_email_is_left_out() -> None:
     email = Email.model_validate(
         {"id": "e", "from": [{"email": "a@example.org"}, "odd", {"name": "x"}]}
     )
-    assert [a.email for a in mappers.summary(email).to] == []
-    assert mappers.summary(email).sender is not None
+    assert [a.email for a in mappers.summary(email, None).to] == []
+    assert mappers.summary(email, None).sender is not None
 
 
 def test_a_folder_with_a_role_the_api_lacks() -> None:
@@ -411,3 +416,38 @@ async def test_timeouts_end_the_wait(jmap: JmapProvider, server: FakeJmap) -> No
     server.hold = True
     with anyio.fail_after(5):
         assert await jmap.wait_for_change(0.1) is False
+
+
+async def test_the_sender_check_reads_the_entry_of_the_own_server(
+    server: FakeJmap,
+) -> None:
+    entry = "mx.example.org; dmarc=pass header.from=example.com"
+    headers = {"Authentication-Results": entry}
+    server.add_email(make_message("Checked", extra_headers=headers))
+    jmap = adapter(server, authserv_id="mx.example.org")
+    page = await jmap.list_messages("inbox", limit=1, cursor=None)
+    listed = page.items[0]
+    assert listed.sender_check.result == "pass"
+    assert listed.sender_check.domain == "example.com"
+    whole = await jmap.get_message(listed.id)
+    assert whole.sender_check == listed.sender_check
+    # Without the name of its receiving server the account cannot tell.
+    plain = await adapter(server).list_messages("inbox", limit=1, cursor=None)
+    assert plain.items[0].sender_check.reason == "account"
+
+
+def test_an_odd_or_shared_sender_check_stays_unknown() -> None:
+    trust = Trust(("mx.example.org",))
+    entry = "mx.example.org; dmarc=pass header.from=example.org"
+    odd = Email.model_validate(
+        {"id": "e", "from": [{"email": "a@example.org"}], AUTHENTICATION_RESULTS: 7}
+    )
+    assert mappers.summary(odd, trust).sender_check.reason == "no_entry"
+    shared = Email.model_validate(
+        {
+            "id": "e",
+            "from": [{"email": "a@example.org"}, "odd"],
+            AUTHENTICATION_RESULTS: [entry],
+        }
+    )
+    assert mappers.summary(shared, trust).sender_check.reason == "unreadable"

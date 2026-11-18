@@ -27,7 +27,7 @@ from ....errors import (
     NotSupportedError,
     missing_message,
 )
-from ...mail import ThreadHeaders, convert, parse
+from ...mail import ThreadHeaders, authentication, convert, parse
 from ...models import (
     Abilities,
     AttachmentContent,
@@ -144,11 +144,15 @@ class Pop3Provider(MailServerAdapter):
         if search is not None and search.model_dump(exclude_defaults=True):
             raise NotSupportedError("a POP3 mailbox cannot be searched")
         start = mappers.parse_cursor(cursor) if cursor else None
-        return await self._run(lambda session: _list(session, limit, start))
+        return await self._run(
+            lambda session: _list(session, limit, start, self._trust)
+        )
 
     async def get_message(self, message_id: str) -> Message:
         raw = await self.get_raw(message_id)
-        return mappers.message(parse.ParsedMessage(raw), mappers.unique_id(message_id))
+        return mappers.message(
+            parse.ParsedMessage(raw), mappers.unique_id(message_id), self._trust
+        )
 
     async def get_attachment(
         self, message_id: str, attachment_id: str
@@ -215,12 +219,15 @@ class Pop3Provider(MailServerAdapter):
         return found
 
     async def abilities(self) -> Abilities:
-        """Deleting for good, and with an SMTP server sending, which names
-        the recipients it refused at once. Nothing else: POP3 keeps no
-        flags, folders or copies."""
+        """Deleting for good, with an SMTP server sending, which names the
+        recipients it refused at once, and with the name of the receiving
+        server the sender check. Nothing else: POP3 keeps no flags, folders
+        or copies."""
         found = {Capability.PURGE}
         if self._smtp is not None:
             found |= {Capability.SEND, Capability.REFUSED}
+        if self._trust is not None:
+            found.add(Capability.SENDER_CHECK)
         return Abilities.of(found)
 
     async def verify(self) -> None:
@@ -280,7 +287,10 @@ def _numbers(session: Pop3Session) -> dict[str, int]:
 
 
 def _list(
-    session: Pop3Session, limit: int, start: After | None
+    session: Pop3Session,
+    limit: int,
+    start: After | None,
+    trust: authentication.Trust | None,
 ) -> Page[MessageSummary]:
     """Newest first: the highest message numbers are the latest to arrive."""
     newest = list(reversed(session.unique_ids()))
@@ -293,7 +303,7 @@ def _list(
         position = last + 1 if last is not None else start.position
     page = newest[position : position + limit]
     items = [
-        mappers.summary(parse.ParsedMessage(session.headers(number)), uid)
+        mappers.summary(parse.ParsedMessage(session.headers(number)), uid, trust)
         for number, uid in page
     ]
     more = position + limit < len(newest)

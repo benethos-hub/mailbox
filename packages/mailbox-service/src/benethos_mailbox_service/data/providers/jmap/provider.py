@@ -43,6 +43,7 @@ from ..base import (
     ProviderSettings,
     ThreadMessages,
 )
+from ..settings import trust_of
 from . import drafts, folders, mappers, messages, sending
 from .api import JmapAccount
 from .changes import Changes
@@ -78,6 +79,7 @@ class JmapProvider:
             credentials,
             found.auth,
             found.username,
+            trust_of(settings),
         )
         self._changes = Changes(self._account, now)
 
@@ -151,6 +153,8 @@ class JmapProvider:
             Capability.THREADS,
             Capability.EXTERNAL_CHANGES,
         }
+        if self._account.trust is not None:
+            found.add(Capability.SENDER_CHECK)
         if has[FolderRole.TRASH]:
             found.add(Capability.TRASH)
         if has[FolderRole.DRAFTS]:

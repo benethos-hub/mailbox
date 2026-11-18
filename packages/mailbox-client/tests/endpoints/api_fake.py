@@ -80,6 +80,13 @@ SUMMARY = {
     "starred": False,
     "keywords": ["work"],
     "has_attachments": True,
+    "sender_check": {
+        "result": "pass",
+        "domain": "example.com",
+        "matches_from": True,
+        "method": "dmarc",
+        "reason": None,
+    },
 }
 
 MESSAGE = {

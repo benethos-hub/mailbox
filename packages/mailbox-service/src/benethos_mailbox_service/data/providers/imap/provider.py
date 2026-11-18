@@ -93,7 +93,7 @@ class ImapProvider(MailServerAdapter):
             pace=pace,
         )
         self._session = session_factory(self._server)
-        self._box = Mailbox(self._session)
+        self._box = Mailbox(self._session, self._trust)
         # IDLE blocks its connection, so it gets one of its own.
         self._idle = Idle(
             session_factory(self._server), self._guard, self._login, watchers

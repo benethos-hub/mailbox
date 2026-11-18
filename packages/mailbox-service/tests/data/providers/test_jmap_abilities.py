@@ -19,8 +19,14 @@ def server() -> FakeJmap:
 
 async def test_a_full_server(server: FakeJmap) -> None:
     found = await adapter(server).abilities()
-    assert set(found.capabilities) == set(Capability) - {Capability.REFUSED}
+    # Without the name of its receiving server it reads no sender check.
+    assert set(found.capabilities) == set(Capability) - {
+        Capability.REFUSED,
+        Capability.SENDER_CHECK,
+    }
     assert found.marks.written == sorted(Mark)
+    named = await adapter(server, authserv_id="mx.example.org").abilities()
+    assert Capability.SENDER_CHECK in named.capabilities
 
 
 async def test_without_submission_it_cannot_send(server: FakeJmap) -> None:

@@ -32,16 +32,25 @@ def abilities(box: Mailbox, sends: bool) -> Abilities:
         found.add(Capability.MOVE)
         if box.role_folder(FolderRole.TRASH) is not None:
             found.add(Capability.TRASH)
-    if "UIDPLUS" in announced:
-        found.add(Capability.PURGE)
     if box.role_folder(FolderRole.DRAFTS) is not None:
         found.add(Capability.DRAFTS)
     if sends:
         found |= {Capability.SEND, Capability.REFUSED}
         if box.role_folder(FolderRole.SENT) is not None:
             found.add(Capability.SENT_COPY)
+    found |= _announced(announced)
+    if box.trust is not None:
+        found.add(Capability.SENDER_CHECK)
+    return Abilities.of(found, written=mappers.marks_kept(permanent))
+
+
+def _announced(announced: frozenset[str] | set[str]) -> set[Capability]:
+    """What follows from what the server announces alone."""
+    found = set()
+    if "UIDPLUS" in announced:
+        found.add(Capability.PURGE)
     if "IDLE" in announced:
         found.add(Capability.PUSH)
     if "CONDSTORE" in announced:
         found.add(Capability.EXTERNAL_CHANGES)
-    return Abilities.of(found, written=mappers.marks_kept(permanent))
+    return found
