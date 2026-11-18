@@ -27,6 +27,8 @@ from ..models import (
     SenderCheckReason,
 )
 
+# The header of the entries.
+HEADER = "Authentication-Results"
 # A longer entry is not read.
 MAX_ENTRY = 8192
 # The part of an entry its authserv-id is read from.

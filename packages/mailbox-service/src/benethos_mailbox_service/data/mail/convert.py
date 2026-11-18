@@ -21,7 +21,7 @@ def summary_fields(
 ) -> dict[str, Any]:
     """Subject, sender, recipients and date, from the headers alone, and
     what the receiving server ``trust`` names stated about the sender."""
-    entries = msg.all_headers("Authentication-Results")
+    entries = msg.all_headers(authentication.HEADER)
     return {
         "subject": msg.subject,
         "from": msg.sender,
@@ -32,6 +32,13 @@ def summary_fields(
         "has_attachments": msg.content_type.startswith("multipart/mixed"),
         "sender_check": authentication.sender_check(entries, msg.sole_sender, trust),
     }
+
+
+def server_names(msg: ParsedMessage) -> list[str]:
+    """The authserv-id of each Authentication-Results entry of a message,
+    where it is a host name: for a person to choose the account's own
+    server from."""
+    return authentication.authserv_ids(msg.all_headers(authentication.HEADER))
 
 
 def thread_fields(msg: ParsedMessage) -> dict[str, Any]:
