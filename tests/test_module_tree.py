@@ -100,3 +100,21 @@ def test_a_folder_that_lists_modules_lists_all() -> None:
         and path not in parts
     ]
     assert unnamed == [], f"modules missing from their folder's lines: {unnamed}"
+
+
+SERVICE = ROOT / "packages" / "mailbox-service" / "src" / "benethos_mailbox_service"
+
+
+def test_every_seam_is_in_the_table_of_section_8() -> None:
+    """Each protocol of ``data/providers/base.py`` and each repository
+    ``data/storage`` exports is named in the table of the seams."""
+    text = ARCHITECTURE.read_text(encoding="utf-8")
+    table = text[text.index("\n## 8. ") : text.index("\n## 9. ")]
+    base = (SERVICE / "data" / "providers" / "base.py").read_text(encoding="utf-8")
+    protocols = re.findall(r"^class (\w+)\(.*Protocol.*\):", base, re.M)
+    storage = (SERVICE / "data" / "storage" / "__init__.py").read_text("utf-8")
+    exported = re.findall(r'^    "(\w+Repository)",', storage, re.M)
+    repositories = [n for n in exported if not n.startswith(("InMemory", "Sqlite"))]
+    assert protocols and repositories
+    missing = [n for n in protocols + repositories if f"`{n}`" not in table]
+    assert missing == [], "not in ARCHITECTURE 8"

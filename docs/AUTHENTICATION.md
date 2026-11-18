@@ -200,8 +200,8 @@ removed passkey stays there until the person deletes it.
 **A passkey in place of a code.** Wherever a step asks for the
 second factor, it offers the same methods as the code page, one at a
 time with **Try another way**: adding or removing a device, new
-recovery codes, the recovery key, and the code page after the
-password. Where the passkey shows, sending the form asks the browser
+recovery codes, the recovery key, changing the own password, and the
+code page after the password. Where the passkey shows, sending the form asks the browser
 for it.
 
 The QR code holds the `otpauth://` URI: issuer `Mailbox`, and the user
@@ -270,7 +270,8 @@ holds 75 bits and works once.
   `auth.recovery_code_used`, a warning: it means a device is gone or
   out of reach.
 - A recovery code also confirms adding or removing a device, making
-  new codes and showing the recovery key, and is used up by it. Whoever lost every device and every
+  new codes, showing the recovery key and changing the own password,
+  and is used up by it. Whoever lost every device and every
   recovery code needs an administrator (section 5).
 
 **Decided 2026-10-09:** recovery codes and the host command, both. The
@@ -295,8 +296,8 @@ factor makes new codes. No release held schema 18 then. Passkeys
 brought a table of their own in schema 23. A passkey holds no secret
 and is stored as it is. A TOTP secret is sealed with
 the data key as a webhook's secret is (CONCEPT 7.3), bound to its
-device. A backup holds both tables, the secrets as encrypted as the
-rest.
+device. A backup holds the three tables, the secrets as encrypted as
+the rest.
 
 **Sessions:** a session keeps which devices of which methods its user
 had at the sign-in, as it keeps when the password was set. A device

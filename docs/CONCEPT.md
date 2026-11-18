@@ -1578,9 +1578,9 @@ Terms, since "account" is taken:
   installation, rotated one at a time without an outage. Revoking one does
   not touch the others, and rights are changed in one place.
 - **Other ways to authenticate later** without touching the permission
-  model: password with TOTP or a passkey for a person in the configuration UI,
-  OAuth 2.0 client credentials for machines, mTLS behind a proxy. Each is a
-  new credential kind of the same user.
+  model: OAuth 2.0 client credentials for machines, mTLS behind a proxy.
+  Each is a new credential kind of the same user, as the second factor of
+  the configuration UI is, with TOTP or a passkey after the password.
 - **The audit log names someone.** "Claude Desktop, token laptop, called
   send_message on acc_info" rather than an anonymous token id.
 - **Several people** become possible without a second model. The open
@@ -1825,6 +1825,7 @@ included for a grant on every account. `user`, `outcome`, `recipient`
 | POST | `/v1/users/{user_id}/password` | `users.manage`. A password to change at the next sign-in, or a one-time password answered once |
 | GET / DELETE | `/v1/users/{user_id}/second-factor` | GET `users.read`: the devices of the user's second factor ([AUTHENTICATION.md](AUTHENTICATION.md)), never a secret. DELETE `users.manage`: every device, never the caller's own |
 | DELETE | `/v1/users/{user_id}/second-factor/totp/{device_id}` | `users.manage`. One TOTP device, never the caller's own |
+| DELETE | `/v1/users/{user_id}/second-factor/passkeys/{passkey_id}` | `users.manage`. One passkey, never the caller's own |
 | GET / POST | `/v1/roles` | GET `users.read`, POST `users.manage` |
 | GET / PUT / DELETE | `/v1/roles/{role_id}` | GET `users.read`, the others `users.manage` |
 | GET | `/v1/audit` | `audit` in `service`. The audit of administration, newest first ([AUDIT.md](AUDIT.md)) |
