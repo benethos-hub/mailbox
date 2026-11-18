@@ -17,18 +17,18 @@
   {% if ways.options %}
   <div data-way="passkey" data-passkey-options="{{ ways.options }}" hidden>
     <input type="hidden" name="passkey" value="" disabled />
-    <p class="factor-say">{{ icon("key") }} Your passkey confirms it. The browser asks for it when you go on.</p>
+    <div class="factor-pass">{{ icon("key") }}<div><strong>Passkey</strong> <span class="hint">Your browser asks for your PIN, fingerprint, face or security key.</span></div></div>
   </div>
   {% endif %}
   {% if ways.totp %}
   <div class="field" data-way="totp">
-    <label for="f-{{ id }}-totp">The code of your authenticator app</label>
+    <label for="f-{{ id }}-totp">6-digit code from your authenticator app</label>
     <input id="f-{{ id }}-totp" name="code" inputmode="numeric" autocomplete="one-time-code" spellcheck="false" maxlength="40" required />
     <span class="hint" data-ways-only>Or a recovery code, which then works no more.</span>
   </div>
   {% endif %}
   <div class="field" data-way="recovery"{% if ways.totp %} hidden{% endif %}>
-    <label for="f-{{ id }}-recovery">A recovery code</label>
+    <label for="f-{{ id }}-recovery">Recovery code</label>
     <input id="f-{{ id }}-recovery" name="code" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="40" required{% if ways.totp %} disabled{% endif %} />
     <span class="hint">It works once.</span>
   </div>

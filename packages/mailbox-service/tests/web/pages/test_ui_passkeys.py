@@ -116,6 +116,9 @@ def test_a_passkey_signs_in_after_the_password(
     assert 'data-way="passkey"' in page and 'data-way-pick="passkey"' in page
     assert 'data-way-pick="recovery"' in page and "A recovery code" in page
     assert 'data-way="totp"' not in page
+    # The passkey is a block of its own, as strong as a field.
+    assert 'class="factor-pass"' in page
+    assert "Your browser asks for your PIN, fingerprint, face or security key." in page
     answer = laptop.get(options(page))
     assert code_page(browser, page, passkey=answer) == "/ui/mail"
     assert browser.get("/ui").status_code == 200
