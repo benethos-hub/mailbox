@@ -14,7 +14,7 @@ from ....errors import (
     missing,
     missing_message,
 )
-from ...mail import convert, parse
+from ...mail import authentication, convert, parse
 from ...models import (
     AttachmentContent,
     FolderRole,
@@ -66,6 +66,18 @@ def list_messages(
         items=items,
         next_cursor=mappers.cursor(folder, validity, page[-1]) if more else None,
     )
+
+
+def authserv_ids(box: Mailbox, limit: int) -> list[list[str]]:
+    """The receiving servers' names in the newest ``limit`` mails of the
+    inbox, from their headers alone."""
+    box.session.select(mappers.INBOX)
+    uids = box.session.messages.search(SearchCriteria())
+    newest = list(reversed(uids[-limit:]))
+    return [
+        authentication.authserv_ids(m.all_headers("Authentication-Results"))
+        for m in box.session.messages.fetch_headers(newest)
+    ]
 
 
 def summaries(

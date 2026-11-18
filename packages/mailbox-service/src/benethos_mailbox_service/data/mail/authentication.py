@@ -204,6 +204,20 @@ def _domain_of(sender: str | None) -> str | None:
     return host(ascii_domain)
 
 
+def authserv_ids(entries: Sequence[str]) -> list[str]:
+    """The authserv-id of each entry, in lower case, where it is a host
+    name, alone or with a version: for a person to choose the account's
+    own server from."""
+    found = []
+    for entry in entries:
+        statements = _statements(entry[:_HEAD], head_only=True)
+        head = statements[0] if statements else []
+        versioned = len(head) == 2 and head[1][0].isdigit()
+        if (len(head) == 1 or versioned) and (name := host(head[0][0])):
+            found.append(name)
+    return found
+
+
 # --- the grammar of RFC 8601 section 2.2 --------------------------------------
 
 # A token of an entry: its text, and whether it was a quoted string.

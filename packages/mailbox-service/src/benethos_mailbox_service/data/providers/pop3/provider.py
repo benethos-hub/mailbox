@@ -148,6 +148,9 @@ class Pop3Provider(MailServerAdapter):
             lambda session: _list(session, limit, start, self._trust)
         )
 
+    async def authserv_ids(self, limit: int) -> list[list[str]]:
+        return await self._run(lambda session: _authserv_ids(session, limit))
+
     async def get_message(self, message_id: str) -> Message:
         raw = await self.get_raw(message_id)
         return mappers.message(
@@ -284,6 +287,20 @@ def _unique_ids(session: Pop3Session) -> list[str]:
 def _numbers(session: Pop3Session) -> dict[str, int]:
     """The message number of each unique id in this session."""
     return {uid: number for number, uid in session.unique_ids()}
+
+
+def _authserv_ids(session: Pop3Session, limit: int) -> list[list[str]]:
+    """The receiving servers' names in the newest ``limit`` mails, from
+    their headers alone."""
+    newest = list(reversed(session.unique_ids()))[:limit]
+    return [
+        authentication.authserv_ids(
+            parse.ParsedMessage(session.headers(number)).all_headers(
+                "Authentication-Results"
+            )
+        )
+        for number, _ in newest
+    ]
 
 
 def _list(
