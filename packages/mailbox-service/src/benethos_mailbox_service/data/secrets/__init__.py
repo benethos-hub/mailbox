@@ -18,16 +18,20 @@ from .keys import (
     decode_recovery,
     encode_recovery,
 )
+from .passkeys import Begun, Party, PasskeyError
 from .passwords import PasswordHasher, Scrypt
 from .vault import CredentialVault
 
 __all__ = [
+    "Begun",
     "CredentialVault",
     "EnvKeyProvider",
     "FileKeyProvider",
     "KeyProvider",
     "KeyProviderError",
     "KeyringKeyProvider",
+    "Party",
+    "PasskeyError",
     "PasswordHasher",
     "Scrypt",
     "cipher",

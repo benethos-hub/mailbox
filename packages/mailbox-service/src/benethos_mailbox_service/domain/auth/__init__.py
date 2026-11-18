@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from .devices import MAX_DEVICE_NAME, MAX_DEVICES
 from .factors import CODE_TRIES, PENDING, SecondFactors
+from .passkeys import Answer, Passkeys
 from .passwords import Passwords
 from .recovery import HASH_LABEL, RecoveryCodes
 from .service import MAX_NAME, AuthService
@@ -17,6 +18,7 @@ from .tokens import IssuedToken, TokenState
 from .totp import SETUP, Totp
 
 __all__ = [
+    "Answer",
     "CODE_TRIES",
     "MAX_DEVICE_NAME",
     "MAX_DEVICES",
@@ -24,6 +26,7 @@ __all__ = [
     "SETUP",
     "AuthService",
     "MAX_NAME",
+    "Passkeys",
     "Passwords",
     "HASH_LABEL",
     "IssuedToken",

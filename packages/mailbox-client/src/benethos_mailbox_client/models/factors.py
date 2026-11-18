@@ -18,9 +18,22 @@ class TotpDevice:
 
 
 @dataclass(frozen=True, slots=True)
+class Passkey:
+    """A passkey of a user, by the name it was given. Never its key."""
+
+    id: str
+    name: str
+    created_at: datetime
+    last_used_at: datetime | None
+
+
+@dataclass(frozen=True, slots=True)
 class SecondFactor:
-    """The devices of each method, TOTP so far, and how many recovery
-    codes are left. No device: the password alone signs in."""
+    """The devices of each method, authenticator apps (TOTP) and passkeys,
+    and how many recovery codes are left. No device: the password alone
+    signs in."""
 
     totp: tuple[TotpDevice, ...]
     recovery_codes_left: int
+    # Last, with a default: older services answer none.
+    passkeys: tuple[Passkey, ...] = ()

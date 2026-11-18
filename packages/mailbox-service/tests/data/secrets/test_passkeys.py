@@ -11,7 +11,7 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from benethos_mailbox_service.data.secrets import passkeys
 from benethos_mailbox_service.data.secrets.passkeys import Party, PasskeyError
 
-from .passkey_fake import Authenticator, challenge_of
+from ...passkey_fake import Authenticator, challenge_of
 
 PARTY = Party("mail.example.org", "https://mail.example.org")
 

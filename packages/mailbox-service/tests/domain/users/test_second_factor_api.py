@@ -61,7 +61,7 @@ def test_the_devices_of_a_user(client: TestClient, services: Services) -> None:
     none = client.get(
         f"/v1/users/{client.get('/v1/me').json()['user_id']}/second-factor"
     )
-    assert none.json() == {"totp": [], "recovery_codes_left": 0}
+    assert none.json() == {"totp": [], "passkeys": [], "recovery_codes_left": 0}
 
 
 def test_removing_one_device(client: TestClient, services: Services) -> None:

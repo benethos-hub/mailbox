@@ -100,6 +100,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
         "get_second_factor",
         "remove_second_factor",
         "remove_totp_device",
+        "remove_passkey",
         "list_roles",
         "create_role",
         "get_role",

@@ -100,6 +100,18 @@ class TotpDevice(BaseModel):
     )
 
 
+class Passkey(BaseModel):
+    """A passkey of a user's second factor: a key pair on a device or in a
+    password manager. Only the public key is stored, and never shown."""
+
+    id: str
+    name: str = Field(description="Unique among the user's passkeys, e.g. Laptop")
+    created_at: datetime
+    last_used_at: datetime | None = Field(
+        default=None, description="Its last signature taken, null for none yet"
+    )
+
+
 class SecondFactor(BaseModel):
     """The second factor of a user's UI sign-in: the devices of each
     method, and the recovery codes they share."""
@@ -109,6 +121,10 @@ class SecondFactor(BaseModel):
             "Authenticator apps (TOTP), oldest first. A code of any of them "
             "signs in. Empty: none."
         )
+    )
+    passkeys: list[Passkey] = Field(
+        default_factory=list,
+        description="Passkeys, oldest first. Any of them signs in. Empty: none.",
     )
     recovery_codes_left: int = Field(
         description="Recovery codes not used yet, one set for every method"

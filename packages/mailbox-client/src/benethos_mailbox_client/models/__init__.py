@@ -16,7 +16,7 @@ from .discovery import (
     MailServer,
     SourceReport,
 )
-from .factors import SecondFactor, TotpDevice
+from .factors import Passkey, SecondFactor, TotpDevice
 from .folders import Folder
 from .health import Health
 from .me import Me, MeAccount, Sending
@@ -55,6 +55,7 @@ __all__ = [
     "NewWebhook",
     "WebhookDetail",
     "WebhookPost",
+    "Passkey",
     "TotpDevice",
     "SecondFactor",
     "Role",

@@ -39,6 +39,9 @@ class Authenticator:
     def create(self, options: str) -> str:
         """The answer to the options of a registration."""
         found = json.loads(options)
+        # As a browser refuses it.
+        if len(websafe_decode(found["user"]["id"])) > 64:
+            raise ValueError("User handle exceeds 64 bytes.")
         cose = ES256.from_cryptography_key(self.key.public_key())
         attested = (
             bytes(16)

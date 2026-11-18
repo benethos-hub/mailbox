@@ -226,6 +226,67 @@ class TotpRemoved(Activity):
 
 
 @dataclass(frozen=True, kw_only=True)
+class PasskeyAdded(Activity):
+    """The actor added a passkey to its second factor. The first device of
+    any method turns it on. Nobody adds one for another user."""
+
+    name: ClassVar[str] = "passkey_added"
+    audited: ClassVar[bool] = True
+
+    passkey: str
+    first: bool
+
+    def says(self) -> str:
+        added = f"added the passkey {self.passkey} to its second factor"
+        return f"{added}, which turns it on" if self.first else added
+
+    def touched(self) -> str | None:
+        return self.by.user_id
+
+
+@dataclass(frozen=True, kw_only=True)
+class PasskeyRenamed(Activity):
+    name: ClassVar[str] = "passkey_renamed"
+    audited: ClassVar[bool] = True
+
+    before: str
+    after: str
+
+    def says(self) -> str:
+        return f"renamed its passkey {self.before} to {self.after}"
+
+    def touched(self) -> str | None:
+        return self.by.user_id
+
+
+@dataclass(frozen=True, kw_only=True)
+class PasskeyRemoved(Activity):
+    """One passkey taken away, by its user or by a user with
+    ``users.manage``. With the last device the second factor is off."""
+
+    name: ClassVar[str] = "passkey_removed"
+    audited: ClassVar[bool] = True
+
+    user: User
+    passkey: str
+    last: bool
+
+    def says(self) -> str:
+        if self.user.id == self.by.user_id:
+            removed = f"removed its passkey {self.passkey}"
+        else:
+            removed = f"removed the passkey {self.passkey} of {user(self.user)}"
+        return (
+            f"{removed}, the last device: the second factor is off"
+            if self.last
+            else removed
+        )
+
+    def touched(self) -> str | None:
+        return self.user.id
+
+
+@dataclass(frozen=True, kw_only=True)
 class SecondFactorRemoved(Activity):
     """The whole second factor taken away, every method and the recovery
     codes: by a user with ``users.manage``, or on the host."""

@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import UTC, datetime
 
-from benethos_mailbox_client import SecondFactor, TotpDevice
+from benethos_mailbox_client import Passkey, SecondFactor, TotpDevice
 
 from .api_fake import FakeApi
 
@@ -27,6 +27,40 @@ async def test_get_second_factor(make_client: Callable) -> None:
         ),
         recovery_codes_left=9,
     )
+
+
+async def test_the_passkeys_of_a_second_factor(make_client: Callable) -> None:
+    api = FakeApi(
+        {
+            "totp": [],
+            "passkeys": [
+                {
+                    "id": "psk_1",
+                    "name": "Laptop",
+                    "created_at": "2026-11-18T12:00:00Z",
+                    "last_used_at": "2026-11-18T13:00:00Z",
+                }
+            ],
+            "recovery_codes_left": 10,
+        }
+    )
+    found = await make_client(api).get_second_factor("usr_1")
+    assert found.passkeys == (
+        Passkey(
+            "psk_1",
+            "Laptop",
+            datetime(2026, 11, 18, 12, tzinfo=UTC),
+            datetime(2026, 11, 18, 13, tzinfo=UTC),
+        ),
+    )
+    assert found.totp == ()
+
+
+async def test_a_service_without_passkeys_answers_none(
+    make_client: Callable,
+) -> None:
+    api = FakeApi({"totp": [], "recovery_codes_left": 0})
+    assert (await make_client(api).get_second_factor("usr_1")).passkeys == ()
 
 
 async def test_remove_one_device_or_every_one(make_client: Callable) -> None:

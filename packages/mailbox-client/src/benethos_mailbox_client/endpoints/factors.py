@@ -1,12 +1,13 @@
 """A user's second factor: its devices read, one removed or every one,
-read into ``SecondFactor``. Only its owner adds a device, in the UI."""
+read into ``SecondFactor``. Only its owner adds a device, in the UI.
+Devices are authenticator apps (TOTP) and passkeys."""
 
 from __future__ import annotations
 
 from typing import Any
 
 from ..calls import Call, nothing, path
-from ..models import SecondFactor, TotpDevice
+from ..models import Passkey, SecondFactor, TotpDevice
 from .readings import maybe_time, time
 
 
@@ -39,4 +40,13 @@ def _factor(found: dict[str, Any]) -> SecondFactor:
             for d in found["totp"]
         ),
         recovery_codes_left=int(found["recovery_codes_left"]),
+        passkeys=tuple(
+            Passkey(
+                id=str(p["id"]),
+                name=str(p["name"]),
+                created_at=time(p["created_at"]),
+                last_used_at=maybe_time(p.get("last_used_at")),
+            )
+            for p in found.get("passkeys", [])
+        ),
     )

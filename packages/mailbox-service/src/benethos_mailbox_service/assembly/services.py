@@ -19,6 +19,7 @@ from ..domain.mailbox import AttachmentLinks, MailboxService
 from ..domain.sync import SyncService, SyncWorker
 from ..domain.system import RecoveryKey, ServiceLog, StatusService
 from ..domain.users import (
+    PasskeyService,
     PasswordService,
     RoleService,
     SecondFactorService,
@@ -40,6 +41,7 @@ class Services:
     passwords: PasswordService
     factors: SecondFactorService
     totp: TotpService
+    passkeys: PasskeyService
     mailbox: MailboxService
     links: AttachmentLinks
     discovery: DiscoveryService

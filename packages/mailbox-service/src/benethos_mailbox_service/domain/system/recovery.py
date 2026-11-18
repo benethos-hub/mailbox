@@ -12,7 +12,7 @@ from __future__ import annotations
 from ...data.secrets import CredentialVault, encode_recovery
 from ..activity import Actor
 from ..activity import system as said
-from ..auth import AuthService
+from ..auth import Answer, AuthService
 from ..rights import Access
 
 
@@ -22,15 +22,22 @@ class RecoveryKey:
         self._vault = vault
 
     def needs_code(self, access: Access) -> bool:
-        """Whether the caller confirms with a code of its second factor."""
+        """Whether the caller confirms with a code or a passkey of its
+        second factor."""
         factors = self._auth.factors
         return factors is not None and factors.has(access.user_id)
 
-    async def show(self, access: Access, password: str, code: str = "") -> str:
+    async def show(
+        self,
+        access: Access,
+        password: str,
+        code: str = "",
+        answer: Answer | None = None,
+    ) -> str:
         access.require("show_recovery_key")
         await self._auth.confirm(access, password)
         if self.needs_code(access):
-            self._auth.confirm_code(access, code)
+            self._auth.confirm_code(access, code, answer)
         recovery = encode_recovery(self._vault.master_key())
         self._auth.activity.record(said.RecoveryKeyShown(by=Actor.of(access)))
         return recovery

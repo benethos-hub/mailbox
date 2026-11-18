@@ -25,6 +25,7 @@ from ..activity import users as users_said
 from ..rights import Access
 from .factors import SecondFactors, Taken
 from .lockouts import Lockouts
+from .passkeys import Answer
 from .passwords import MAX_LENGTH, Passwords
 from .signin import SignedIn, SignInState
 from .throttle import SignInThrottle
@@ -36,7 +37,11 @@ MAX_NAME = 200
 # Longer than any code or recovery code, with room for spaces.
 MAX_CODE = 40
 # How the audit names a sign-in with a second factor.
-WITH_FACTOR = {"totp": "password+totp", "recovery": "password+recovery"}
+WITH_FACTOR = {
+    "totp": "password+totp",
+    "passkey": "password+passkey",
+    "recovery": "password+recovery",
+}
 
 
 class AuthService:
@@ -105,16 +110,19 @@ class AuthService:
             )
         return self._signed_in(user, key, source, PASSWORD)
 
-    def sign_in_with_code(self, user_id: str, code: str, *, source: str) -> SignedIn:
+    def sign_in_with_code(
+        self, user_id: str, code: str, *, source: str, answer: Answer | None = None
+    ) -> SignedIn:
         """The second step of a sign-in, after the password: a code of the
-        user's app, or one of its recovery codes. A wrong one counts as a
-        failed sign-in for the source and the name."""
+        user's app, one of its recovery codes, or the browser's ``answer``
+        signed with one of its passkeys. A wrong one counts as a failed
+        sign-in for the source and the name."""
         self.lockouts.check(source)
         user = self._live_user(user_id)
         key = _name_key(user.name)
         self.lockouts.check_name(key)
         taken = (
-            self.factors.check(user.id, code)
+            self.factors.check(user.id, code, answer)
             if self.factors is not None and len(code) <= MAX_CODE and user.ui_sign_in
             else None
         )
@@ -145,7 +153,8 @@ class AuthService:
         with self.activity.atomic():
             previous = self.passwords.signed_in(user.id)
             device = taken.device if taken is not None else None
-            self.activity.record(said.UiSignIn(by=by, device=device))
+            passkey = taken is not None and taken.kind == "passkey"
+            self.activity.record(said.UiSignIn(by=by, device=device, passkey=passkey))
             if taken is not None and taken.kind == "recovery" and self.factors:
                 left = self.factors.codes_left(user.id)
                 self.activity.record(said.RecoveryCodeUsed(by=by, left=left))
@@ -177,17 +186,20 @@ class AuthService:
             self.activity.record(said.ConfirmFailed(by=Actor.of(access)))
             raise BadRequestError("the password is not right")
 
-    def confirm_code(self, access: Access, code: str) -> None:
-        """A code of the signed-in user's second factor, before a step
-        that takes it away. A wrong one counts against the user's name and
-        the client address as a wrong password does."""
+    def confirm_code(
+        self, access: Access, code: str, answer: Answer | None = None
+    ) -> None:
+        """A code of the signed-in user's second factor, or the browser's
+        ``answer`` signed with one of its passkeys, before a step that
+        takes it away. A wrong one counts against the user's name and the
+        client address as a wrong password does."""
         user = self._users.get(access.user_id)
         key = _name_key(user.name)
         self.lockouts.check_caller(access, key)
         right = (
             self.factors is not None
             and len(code) <= MAX_CODE
-            and self.factors.check(user.id, code) is not None
+            and self.factors.check(user.id, code, answer) is not None
         )
         if not right:
             self.lockouts.failed_caller(access, key, user)

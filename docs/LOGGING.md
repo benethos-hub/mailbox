@@ -558,6 +558,9 @@ and that each is listed here.
 | `users.totp_added` | an authenticator app (TOTP) added to a second factor |
 | `users.totp_renamed` | an authenticator app (TOTP) renamed |
 | `users.totp_removed` | an authenticator app (TOTP) removed |
+| `users.passkey_added` | a passkey added to a second factor |
+| `users.passkey_renamed` | a passkey renamed |
+| `users.passkey_removed` | a passkey removed |
 | `users.factor_removed` | a whole second factor removed, every method |
 | `users.codes_renewed` | new recovery codes for a second factor |
 | `users.token_issued` | a token issued |

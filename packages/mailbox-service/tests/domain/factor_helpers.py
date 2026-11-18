@@ -12,13 +12,16 @@ import pytest
 from benethos_mailbox_service.assembly import Services, build_services
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import ActivityFilter, Grant, User
-from benethos_mailbox_service.data.secrets import totp
+from benethos_mailbox_service.data.secrets import Party, totp
+from benethos_mailbox_service.domain.auth import Answer
 from benethos_mailbox_service.domain.rights import Access
 
 from ..clocks import Clock
 from ..conftest import ADMIN, CHEAP
+from ..passkey_fake import Authenticator
 
 SECRET = "correct horse battery staple"
+PARTY = Party("mail.example.org", "https://mail.example.org")
 SOURCE = "10.0.0.1"
 READER = Grant(accounts=["*"], allow=["mail.read"])
 START = datetime(2026, 10, 9, 12, 0, 5, tzinfo=UTC)
@@ -57,12 +60,17 @@ def now_code(secret: bytes, clock: Clock) -> str:
 
 
 async def add_device(
-    services: Services, user: User, clock: Clock, name: str, code: str = ""
+    services: Services,
+    user: User,
+    clock: Clock,
+    name: str,
+    code: str = "",
+    answer: Answer | None = None,
 ) -> tuple[bytes, list[str]]:
     """A device added the way the page does it: its secret, and the
     recovery codes it brought."""
     access = access_of(services, user)
-    begun = await services.totp.begin(access, name, SECRET, code)
+    begun = await services.totp.begin(access, name, SECRET, code, answer)
     kept, secret = begun.name, begun.secret
     codes = (
         services.totp.confirm(access, kept, secret, now_code(secret, clock))
@@ -79,6 +87,31 @@ async def with_factor(
     # The code of setup is taken: the sign-in needs the next one.
     clock.tick(seconds=totp.STEP_SECONDS)
     return user, secret, codes
+
+
+async def add_passkey(
+    services: Services,
+    user: User,
+    device: Authenticator,
+    name: str,
+    code: str = "",
+    answer: Answer | None = None,
+) -> list[str]:
+    """A passkey added the way the page does it: the recovery codes it
+    brought."""
+    access = access_of(services, user)
+    begun = await services.passkeys.begin(access, name, SECRET, PARTY, code, answer)
+    created = Answer(PARTY, begun.begun.challenge, device.create(begun.begun.options))
+    return services.passkeys.confirm(access, begun.name, created).recovery_codes
+
+
+def signed(services: Services, user: User, device: Authenticator) -> Answer:
+    """The browser's answer to a challenge for the user's passkeys, signed
+    by ``device``."""
+    assert services.auth.factors is not None
+    begun = services.auth.factors.challenge(user.id, PARTY)
+    assert begun is not None
+    return Answer(PARTY, begun.challenge, device.get(begun.options))
 
 
 def device_id(services: Services, user: User, name: str) -> str:
