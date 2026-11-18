@@ -133,6 +133,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   up on: a call still waiting for its turn renders nothing. Each call on
   a slow PDF added a whole render before, and other PDFs ran out of time
   behind them.
+- A passkey whose answer is cut short is refused on the page Second
+  factor. It answered `500` before.
 
 ### Security
 

@@ -7,6 +7,7 @@ import json
 
 import pytest
 from cryptography.hazmat.primitives.asymmetric import ec
+from fido2.utils import websafe_encode
 
 from benethos_mailbox_service.data.secrets import passkeys
 from benethos_mailbox_service.data.secrets.passkeys import Party, PasskeyError
@@ -136,3 +137,12 @@ def test_a_broken_answer_is_refused(answer: str) -> None:
     begun = passkeys.registration(PARTY, "usr_1", "anna", [])
     with pytest.raises(PasskeyError):
         passkeys.registered(PARTY, begun.challenge, answer)
+
+
+def test_a_cut_off_attestation_is_refused() -> None:
+    """fido2's CBOR reader raises struct.error on data cut short."""
+    begun = passkeys.registration(PARTY, "usr_1", "anna", [])
+    answer = json.loads(Authenticator(origin=PARTY.origin).create(begun.options))
+    answer["response"]["attestationObject"] = websafe_encode(b"\x19")
+    with pytest.raises(PasskeyError):
+        passkeys.registered(PARTY, begun.challenge, json.dumps(answer))
