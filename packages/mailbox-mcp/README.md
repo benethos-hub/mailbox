@@ -477,3 +477,10 @@ saying the same of `from`, `subject` and `snippet`, a list of drafts of `to` and
 `subject`, which a reply takes from the mail it answers. HTML is turned
 into text without its hidden parts: text not shown, too small or faint
 to read, pushed off the page or in the colour of its own background.
+
+Each summary carries `sender_check`, and `get_message` and `get_thread`
+name it in a line before the markers, such as
+`sender_check: pass (example.com, dmarc)`. It is the receiving server's
+statement about the domain in `from`, not the sender's words, and says
+nothing about the content. `unknown` names its reason, such as
+`account` where the account does not name its receiving server.

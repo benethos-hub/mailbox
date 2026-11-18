@@ -95,6 +95,7 @@ each one guards exactly one thing:
 | `threads` | `thread_id`, `list_threads`, `get_thread` | yes, the service's own | no | yes | yes | yes |
 | `push` | changes arrive within seconds | with IDLE | no | no | no | with an event source |
 | `external_changes` | the change feed sees read state, stars and keywords changed by other clients | with CONDSTORE | no | yes | yes | yes |
+| `sender_check` | `sender_check` of a message can be other than `unknown` | with `authserv_id` | with `authserv_id` | yes | yes | with `authserv_id` |
 
 The marks are the keywords RFC 8621 names besides `$seen` and
 `$flagged`, which are `unread` and `starred`: `$answered`,
@@ -118,6 +119,14 @@ provider names the recipients it refuses while sending, as SMTP does.
 Gmail, Microsoft and JMAP report them later, as a bounce mail. It is
 named `refused`, like the field it guards. The two lists of marks are
 `marks.read` and `marks.written` on the account.
+
+`sender_check` reads the receiving server's `Authentication-Results`
+(CONCEPT 6.3). IMAP, POP3 and JMAP need the server's name at the
+account, `authserv_id`, since it is not the host the service reads
+from. Gmail and Microsoft name theirs the same for every account. JMAP
+reads the header with the summary, Gmail among the headers of a
+summary, and Microsoft asks Graph for `internetMessageHeaders` in a
+list too.
 
 `stable_ids`, `delta` and `server_search` describe how the service works
 inside, not what a client can do. They leave the API (decision
