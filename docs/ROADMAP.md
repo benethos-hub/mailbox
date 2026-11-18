@@ -250,6 +250,13 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
   per user, a further one and new recovery codes after a code, one set
   of recovery codes, the second factor a frame and TOTP its first
   method
+- **Passkeys, the second method of the second factor
+  ([AUTHENTICATION.md](AUTHENTICATION.md) 3.2)**, decided 2026-11-18,
+  done: schema 23, WebAuthn with `fido2` behind
+  `data/secrets/passkeys.py`, a passkey after the password and in place
+  of a code, the card Passkeys, `remove_passkey` in the API and both
+  clients. Checked in Chromium by the browser suite, with its virtual
+  authenticator
 - **The UI rework of 2026-10 ([UI.md](UI.md) 10)**, decided 2026-10-09,
   done in six steps:
   1. **foundations: Bootstrap Icons as an own sprite made by

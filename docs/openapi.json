@@ -1156,7 +1156,7 @@
           "users"
         ],
         "summary": "Get Second Factor",
-        "description": "A user's second factor: the devices of each method, TOTP so far, and\nhow many recovery codes are left. Never a secret. The user adds a\ndevice in the UI.",
+        "description": "A user's second factor: the devices of each method, authenticator\napps (TOTP) and passkeys, and how many recovery codes are left. Never\na secret or a key. The user adds a device in the UI.",
         "operationId": "get_second_factor",
         "security": [
           {
@@ -1449,6 +1449,147 @@
             "schema": {
               "type": "string",
               "title": "Device Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-permission": "users.manage"
+      }
+    },
+    "/v1/users/{user_id}/second-factor/passkeys/{passkey_id}": {
+      "delete": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Remove Passkey",
+        "description": "Remove one passkey of a user's second factor: it signs in no more,\nand the user's sessions end. With the last device of every method the\nsecond factor is off and the recovery codes go too. The caller must\nhold every right the user holds. `404` for a passkey the user does not\nhave, `409` for the caller itself.",
+        "operationId": "remove_passkey",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "passkey_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Passkey Id"
             }
           }
         ],
@@ -13217,6 +13358,45 @@
         ],
         "title": "Page[UserInfo]"
       },
+      "Passkey": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Unique among the user's passkeys, e.g. Laptop"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At",
+            "description": "Its last signature taken, null for none yet"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "created_at"
+        ],
+        "title": "Passkey",
+        "description": "A passkey of a user's second factor: a key pair on a device or in a\npassword manager. Only the public key is stored, and never shown."
+      },
       "PasswordSet": {
         "properties": {
           "password": {
@@ -13420,6 +13600,14 @@
             "type": "array",
             "title": "Totp",
             "description": "Authenticator apps (TOTP), oldest first. A code of any of them signs in. Empty: none."
+          },
+          "passkeys": {
+            "items": {
+              "$ref": "#/components/schemas/Passkey"
+            },
+            "type": "array",
+            "title": "Passkeys",
+            "description": "Passkeys, oldest first. Any of them signs in. Empty: none."
           },
           "recovery_codes_left": {
             "type": "integer",

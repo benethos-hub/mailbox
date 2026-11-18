@@ -178,6 +178,7 @@ class SyncMailboxClient:
     get_second_factor = blocking(endpoints.get_second_factor)
     remove_second_factor = blocking(endpoints.remove_second_factor)
     remove_totp_device = blocking(endpoints.remove_totp_device)
+    remove_passkey = blocking(endpoints.remove_passkey)
 
     # --- the audit --------------------------------------------------------------------
 

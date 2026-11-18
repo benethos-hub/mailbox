@@ -36,6 +36,7 @@ from .routes import (
     mail,
     messages,
     oauth,
+    passkeys,
     roles,
     sends,
     system,
@@ -70,6 +71,7 @@ AREAS = (
     tokens,
     factor,
     totp,
+    passkeys,
     roles,
     webhooks,
 )

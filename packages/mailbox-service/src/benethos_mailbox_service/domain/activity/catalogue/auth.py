@@ -13,14 +13,18 @@ from ..base import Activity, user
 
 @dataclass(frozen=True, kw_only=True)
 class UiSignIn(Activity):
-    """``device``: whose code of the second factor it came with."""
+    """``device``: whose code of the second factor it came with, or which
+    passkey signed."""
 
     name: ClassVar[str] = "signed_in"
     audited: ClassVar[bool] = True
 
     device: str | None = None
+    passkey: bool = False
 
     def says(self) -> str:
+        if self.device is not None and self.passkey:
+            return f"signed in to the UI with the passkey {self.device}"
         if self.device is not None:
             return f"signed in to the UI with a code of {self.device}"
         return "signed in to the UI"

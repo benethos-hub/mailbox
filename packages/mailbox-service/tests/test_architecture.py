@@ -43,6 +43,7 @@ WEB_LIBRARIES = {"fastapi", "starlette"}
 # package, allowed to import each.
 LIBRARY_HOMES = {
     "cryptography": f"{PACKAGE}.data.secrets.cipher",
+    "fido2": f"{PACKAGE}.data.secrets.passkeys",
     "keyring": f"{PACKAGE}.data.secrets.keys",
     "sqlite3": f"{PACKAGE}.data.storage.sqlite",
     "imapclient": f"{PACKAGE}.data.protocols.imap",

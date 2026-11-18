@@ -441,6 +441,9 @@ ul.codes {
 
 /* --- controls -------------------------------------------------------------- */
 
+/* An element the script shows when it can, e.g. a passkey's button. */
+[hidden] { display: none !important; }
+
 button, .btn {
   font: inherit;
   padding: 7px 13px;

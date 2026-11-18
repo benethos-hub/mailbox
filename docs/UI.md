@@ -432,6 +432,17 @@ the password and a code. Another user's page lists its devices to a user with
 the code page, outside the layout as the sign-in is, which takes a code
 of any device or a recovery code.
 
+The card **Passkeys** works as the one of the authenticator apps.
+**Add a passkey** asks for its name and the password, and with a
+factor on a code or a passkey, then shows **Make the passkey**, which
+asks the browser. Every field for a code has **Use a passkey instead**
+beside it for a user with a passkey, and the code page **Sign in with
+a passkey** above the field. `passkey.js` shows these buttons only
+where the browser makes passkeys, and the page says so where it makes
+none, at an address or over HTTP. Another user's page lists its
+passkeys beside its devices, with **Remove** to a user with
+`remove_passkey`.
+
 ### 6.4 Webhooks
 
 The list shows the URL, the events, the accounts, the last delivery and

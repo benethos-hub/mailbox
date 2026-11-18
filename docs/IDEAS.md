@@ -140,12 +140,13 @@ would do the same with less.
 
 ## More for the UI sign-in
 
-TOTP came on 2026-10-09 as a choice per user
-([AUTHENTICATION.md](AUTHENTICATION.md)). Left for later:
+TOTP came on 2026-10-09 as a choice per user, passkeys as its second
+method on 2026-11-18 ([AUTHENTICATION.md](AUTHENTICATION.md)). Left for
+later:
 
 - A switch for the operator that requires a second factor, for everyone
   or for users with `users.manage` (AUTHENTICATION.md 9).
-- A passkey (WebAuthn), which needs no shared secret.
+- A passkey in place of the password, a sign-in without one.
 
 ## Beyond the static API token
 

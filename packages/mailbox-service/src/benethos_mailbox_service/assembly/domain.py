@@ -21,6 +21,7 @@ from ..domain.activity import ActivityLog
 from ..domain.auth import (
     HASH_LABEL,
     AuthService,
+    Passkeys,
     Passwords,
     RecoveryCodes,
     SecondFactors,
@@ -39,6 +40,7 @@ from ..domain.sync import SyncService, SyncWorker
 from ..domain.system import RecoveryKey, ServiceLog, StatusService
 from ..domain.users import (
     Effective,
+    PasskeyService,
     PasswordService,
     RoleService,
     SecondFactorService,
@@ -111,6 +113,7 @@ def build_services(
             passwords=services.passwords,
             factors=services.factors,
             totp=services.totp,
+            passkeys=services.passkeys,
             mailbox=services.mailbox,
             links=services.links,
             discovery=discovery
@@ -199,6 +202,7 @@ class _Domain:
         )
         factors = SecondFactors(
             Totp(repositories.totp, vault, clock=clock),
+            Passkeys(repositories.passkeys, clock=clock),
             RecoveryCodes(
                 repositories.recovery_codes,
                 partial(vault.keyed_hash, HASH_LABEL),
@@ -215,6 +219,9 @@ class _Domain:
             repositories.users, self.auth, factors, rules, activity
         )
         self.totp = TotpService(repositories.users, self.auth, factors, rules, activity)
+        self.passkeys = PasskeyService(
+            repositories.users, self.auth, factors, rules, activity
+        )
         self.tokens = TokenService(repositories.tokens, self.auth, rules, activity)
         self.roles = RoleService(repositories.roles, rules, activity)
         self.users = UserService(

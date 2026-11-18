@@ -1,18 +1,29 @@
 {% extends "bare.html" %}
 {% from "components/ui.html" import icon %}
+{% block head %}<script src="/ui/static/js/passkey.js" defer></script>{% endblock %}
 {% block title %}Code · {{ APP_NAME }}{% endblock %}
-{% block heading %}Code{% endblock %}
+{% block heading %}Second factor{% endblock %}
 {% block content %}
 {% include "partials/flash.html" %}
 <form method="post" action="/ui/login/code">
   <input type="hidden" name="nonce" value="{{ nonce }}" />
+  {% if passkey_options %}
+  <input type="hidden" name="passkey" value="" />
+  <div class="form-actions">
+    <button class="primary" type="button" data-passkey-use="{{ passkey_options }}" hidden autofocus>{{ icon("key") }} Sign in with a passkey</button>
+    <span class="hint" data-passkey-status role="status"></span>
+  </div>
+  <p class="hint" data-passkey-missing hidden>This browser makes no passkeys. Use {% if has_totp %}a code of your authenticator app or {% endif %}a recovery code.</p>
+  {% elif has_passkeys %}
+  <p class="hint">Passkeys work at the public address of this service over HTTPS. Here, use {% if has_totp %}a code of your authenticator app or {% endif %}a recovery code.</p>
+  {% endif %}
   <div class="field">
-    <label for="f-code">The code of your authenticator app</label>
-    <input id="f-code" name="code" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" maxlength="40" required autofocus />
-    <span class="hint">Or one of your recovery codes, which then works no more.</span>
+    <label for="f-code">{% if has_totp %}The code of your authenticator app{% else %}A recovery code{% endif %}</label>
+    <input id="f-code" name="code" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" maxlength="40" required data-passkey-instead{% if not passkey_options %} autofocus{% endif %} />
+    <span class="hint">{% if has_totp %}Or one of your recovery codes, which then works no more.{% else %}It works once.{% endif %}</span>
   </div>
   <div class="form-actions">
-    <button class="primary" type="submit">{{ icon("check-lg") }} Sign in</button>
+    <button{% if not passkey_options %} class="primary"{% endif %} type="submit">{{ icon("check-lg") }} Sign in with the code</button>
     <a href="/ui/login">Cancel</a>
   </div>
 </form>

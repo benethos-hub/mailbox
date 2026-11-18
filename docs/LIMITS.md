@@ -26,9 +26,9 @@ Towards the callers of the service:
 | UI session | per session | ends after 8 hours without a request, and after 24 hours however used | sign in again | `MAILBOX_SERVICE_SESSION_IDLE_HOURS`, `MAILBOX_SERVICE_SESSION_MAX_HOURS` |
 | UI sessions | per user | 10 | a new sign-in ends the oldest | `MAILBOX_SERVICE_SESSIONS_PER_USER` |
 | A secret shown once | per session, e.g. a new token or recovery codes | 5 minutes until the page that shows it | gone, make a new one | `MAILBOX_SERVICE_SHOWN_ONCE_MINUTES` |
-| Code of a second factor | per pending sign-in, between the password and the code | 5 minutes, 5 wrong codes | sign in again with the password | fixed |
-| Second factor not confirmed | per session adding a device | 15 minutes from showing the QR code | start again | fixed |
-| Devices of a second factor | per user | 10 | the page offers no further device | fixed |
+| Code of a second factor | per pending sign-in, between the password and the code | 5 minutes, 5 wrong codes or passkeys | sign in again with the password | fixed |
+| Second factor not confirmed | per session adding a device | 15 minutes from showing the QR code or asking the browser for a passkey | start again | fixed |
+| Devices of a second factor | per user and method: TOTP devices, passkeys | 10 each | the page offers no further device | fixed |
 | Discoveries | per user | 10 in any minute, each domain's findings kept a day | `429 rate_limited` | `MAILBOX_SERVICE_DISCOVERY_PER_MINUTE`, the day is fixed |
 | Sends | per user and account, under a grant | `max_sends_per_day` in any 24 hours | `429 send_limit_reached` | the grant |
 | Recipients | per send, under a grant | the grant's `recipients` | `403 recipient_not_allowed` | the grant |

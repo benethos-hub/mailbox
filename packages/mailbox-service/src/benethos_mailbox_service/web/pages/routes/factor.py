@@ -1,7 +1,7 @@
 """The second factor as a whole: the person's own page with a card per
 method and the recovery codes, new recovery codes, and every method of
 another user removed from its page (docs/AUTHENTICATION.md 2, 6). What
-TOTP does on the page is in ``totp``."""
+TOTP does on the page is in ``totp``, what passkeys do in ``passkeys``."""
 
 from __future__ import annotations
 
@@ -15,9 +15,10 @@ from ....common.clock import utc_now
 from ....data.secrets import totp
 from ....domain.auth import MAX_DEVICE_NAME, MAX_DEVICES, SETUP
 from ...services import Factors
-from ...urls import public_host
+from ...urls import passkey_party, passkeys_work, public_host
 from ..deps import Actor, Viewer
 from ..forms import failing
+from ..passkeys import answered, offer
 from ..qr import data_uri
 from ..session import PendingTotp, session_of, show_once, take_once
 from ..templates import back, render
@@ -40,6 +41,9 @@ async def factor_page(
     setup = session.totp
     if setup is not None and setup.until <= utc_now():
         session.totp = setup = None
+    making = session.passkey
+    if making is not None and making.until <= utc_now():
+        session.passkey = making = None
     shown = take_once(request, CODES)
     codes = shown.split("\n") if shown else None
     return render(
@@ -55,6 +59,9 @@ async def factor_page(
         minutes=int(SETUP.total_seconds() // 60),
         max_devices=MAX_DEVICES,
         max_name=MAX_DEVICE_NAME,
+        making=making,
+        passkeys_work=passkeys_work(passkey_party(request)),
+        passkey_options=offer(request, caller.user_id),
     )
 
 
@@ -65,9 +72,11 @@ async def renew_codes(
     factors: Factors,
     password: Annotated[str, Form()] = "",
     code: Annotated[str, Form()] = "",
+    passkey: Annotated[str, Form()] = "",
 ) -> Response:
+    proof = answered(request, passkey)
     with failing(FACTOR_PAGE):
-        codes = await factors.renew_codes(caller, password, code)
+        codes = await factors.renew_codes(caller, password, code, proof)
     show_once(request, CODES, "\n".join(codes))
     return back(request, FACTOR_PAGE, "New recovery codes. The old ones work no more.")
 

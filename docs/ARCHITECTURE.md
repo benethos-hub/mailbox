@@ -231,6 +231,8 @@ packages/mailbox-service/
         session.py      # sign-in with a password, server-side sessions,
                         #   the pending sign-in before the code
         qr.py           # QR codes as SVG data URIs (segno)
+        passkeys.py     # a passkey's challenge where a code is asked,
+                        #   the browser's answer taken from a form
         templates.py    # Jinja2: filters, render, Post/Redirect/Get,
                         #   and what htmx sends and follows (is_htmx,
                         #   leave, redirect_to)
@@ -263,13 +265,15 @@ packages/mailbox-service/
                         #   SignInThrottle, Lockouts (lockouts.py: the
                         #   brakes on an address and a name, logged),
                         #   SecondFactors (the frame of
-                        #   the second factor), Totp and RecoveryCodes,
+                        #   the second factor), Totp, Passkeys and
+                        #   RecoveryCodes, the names of devices
+                        #   (devices.py),
                         #   ApiTokens (tokens.py: issued, revoked, the
                         #   one presented), what a sign-in to the UI
                         #   answers (signin.py)
       users/            # UserService, RoleService, TokenService,
                         #   PasswordService, SecondFactorService,
-                        #   TotpService, one
+                        #   TotpService, PasskeyService, one
                         #   module each, the
                         #   rules they share in rules.py, effective
                         #   rights in effective.py
@@ -422,7 +426,8 @@ packages/mailbox-service/
                         #   versions/ one class per schema version,
                         #   repositories.py opens one of them
       secrets/          # envelope encryption, key providers, password
-                        #   hashes, the vault of the credentials, TOTP
+                        #   hashes, the vault of the credentials, TOTP,
+                        #   passkeys (fido2)
       backup.py         # encrypted backups of the database, restore
       files.py          # files for the owner alone (0600): database, backup, key,
                         #   a copy removed with its journal
@@ -852,7 +857,8 @@ noticing. Every change is measured against that.
 | Settings | `FileSettings` and `load` in `settings/files.py` of `mailbox-common`, the base of the service's and the MCP server's `Settings` | pydantic-settings | another reader of the environment and a settings file |
 | Password hashing | `PasswordHasher` in `data/secrets/passwords.py` | scrypt from the standard library | Argon2 |
 | Authentication | credential kinds of a user (CONCEPT 7.5, [AUTHENTICATION.md](AUTHENTICATION.md)) | API token, password for the UI | OAuth client credentials |
-| Second factor | `SecondFactors` in `domain/auth/factors.py`, the frame over its methods and the recovery codes | TOTP (`domain/auth/totp.py`, `data/secrets/totp.py`) | a further method beside it, e.g. passkeys |
+| Second factor | `SecondFactors` in `domain/auth/factors.py`, the frame over its methods and the recovery codes | TOTP (`domain/auth/totp.py`, `data/secrets/totp.py`), passkeys (`domain/auth/passkeys.py`, `data/secrets/passkeys.py`) | a further method beside them |
+| Passkeys | `registration`, `registered`, `authentication` and `asserted` in `data/secrets/passkeys.py` | fido2 | another WebAuthn library |
 | QR code | `data_uri` in `web/pages/qr.py` | segno | another QR library |
 | Client ↔ service | the REST API, `docs/openapi.json` | the package `mailbox-client`: each endpoint in `endpoints/`, sent by an async and a sync client over httpx. The MCP server uses it | a generated client, another HTTP library in `client.py`, `sync.py`, `calls.py`, `environment.py` and the modules that read an answer |
 

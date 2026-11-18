@@ -18,6 +18,7 @@ from ..domain.discovery import DiscoveryService
 from ..domain.mailbox import AttachmentLinks, MailboxService
 from ..domain.system import RecoveryKey, ServiceLog, StatusService
 from ..domain.users import (
+    PasskeyService,
     PasswordService,
     RoleService,
     SecondFactorService,
@@ -40,6 +41,7 @@ class Services(Protocol):
     passwords: PasswordService
     factors: SecondFactorService
     totp: TotpService
+    passkeys: PasskeyService
     mailbox: MailboxService
     links: AttachmentLinks
     discovery: DiscoveryService
@@ -96,6 +98,10 @@ def get_totp(request: Request) -> TotpService:
     return services_of(request).totp
 
 
+def get_passkeys(request: Request) -> PasskeyService:
+    return services_of(request).passkeys
+
+
 def get_oauth(request: Request) -> OAuthService:
     return services_of(request).oauth
 
@@ -135,6 +141,7 @@ Tokens = Annotated[TokenService, Depends(get_tokens)]
 Passwords = Annotated[PasswordService, Depends(get_passwords)]
 Factors = Annotated[SecondFactorService, Depends(get_factors)]
 TotpDevices = Annotated[TotpService, Depends(get_totp)]
+PasskeyDevices = Annotated[PasskeyService, Depends(get_passkeys)]
 OAuth = Annotated[OAuthService, Depends(get_oauth)]
 Webhooks = Annotated[WebhookService, Depends(get_webhooks)]
 Status = Annotated[StatusService, Depends(get_status)]

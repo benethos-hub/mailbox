@@ -97,6 +97,9 @@ dependencies = [
     "benethos-mailbox-common[paths,settings]==0.7.5",
     # The QR code a person scans to set up a second factor (web/pages/qr.py).
     "segno>=1.6",
+    # Passkeys (WebAuthn), a method of the second factor
+    # (data/secrets/passkeys.py).
+    "fido2>=2.2.1",
 ]
 
 [project.urls]

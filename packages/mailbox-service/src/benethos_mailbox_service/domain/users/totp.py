@@ -16,8 +16,9 @@ from ...data.storage import UserRepository
 from ...errors import BadRequestError, ConflictError, NotFoundError
 from ..activity import ActivityLog, Actor
 from ..activity import users as said
-from ..auth import AuthService, SecondFactors
+from ..auth import Answer, AuthService, SecondFactors
 from ..rights import Access
+from .factors import DeviceAdded
 from .rules import UserRules
 
 
@@ -28,15 +29,6 @@ class TotpSetup:
 
     name: str
     secret: bytes
-
-
-@dataclass(frozen=True, slots=True)
-class TotpConfirmed:
-    """A device stored: the recovery codes the first device brings, shown
-    once, and the new stamp of the user's sessions."""
-
-    recovery_codes: list[str]
-    stamp: str
 
 
 class TotpService:
@@ -58,22 +50,27 @@ class TotpService:
     # --- one's own ------------------------------------------------------------
 
     async def begin(
-        self, access: Access, name: str, password: str, code: str = ""
+        self,
+        access: Access,
+        name: str,
+        password: str,
+        code: str = "",
+        answer: Answer | None = None,
     ) -> TotpSetup:
         """A new secret for the caller to scan into a device called
         ``name``, after its password once more, and with a second factor
-        on already, a code. Returns the name as it is kept and the secret.
-        Nothing is stored before ``confirm``."""
+        on already, a code or a passkey. Returns the name as it is kept and
+        the secret. Nothing is stored before ``confirm``."""
         user = self._users.get(access.user_id)
         name = self._totp.checked_name(user.id, name)
         await self._auth.confirm(access, password)
         if self._factors.has(user.id):
-            self._auth.confirm_code(access, code)
+            self._auth.confirm_code(access, code, answer)
         return TotpSetup(name, totp.new_secret())
 
     def confirm(
         self, access: Access, name: str, secret: bytes, code: str
-    ) -> TotpConfirmed:
+    ) -> DeviceAdded:
         """The device stored, once ``code`` is the secret's code now.
         Returns the recovery codes the first device of the second factor
         brings, to be shown once, and the new stamp, which keeps the
@@ -93,7 +90,7 @@ class TotpService:
         stamp = self._factors.stamp(user.id)
         if stamp is None:
             raise NotFoundError("the second factor is gone")
-        return TotpConfirmed(codes, stamp)
+        return DeviceAdded(codes, stamp)
 
     def rename(self, access: Access, device_id: str, name: str) -> None:
         before = self._own_device(access, device_id)
@@ -107,25 +104,37 @@ class TotpService:
             )
 
     async def remove_own(
-        self, access: Access, device_id: str, password: str, code: str
+        self,
+        access: Access,
+        device_id: str,
+        password: str,
+        code: str = "",
+        answer: Answer | None = None,
     ) -> str | None:
-        """One of the caller's devices, with its password and a code.
-        Returns the new stamp, which keeps the caller's session: None once
-        the second factor is off."""
-        return await self.remove_own_devices(access, [device_id], password, code)
+        """One of the caller's devices, with its password and a code or a
+        passkey. Returns the new stamp, which keeps the caller's session:
+        None once the second factor is off."""
+        return await self.remove_own_devices(
+            access, [device_id], password, code, answer
+        )
 
     async def remove_own_devices(
-        self, access: Access, device_ids: list[str], password: str, code: str
+        self,
+        access: Access,
+        device_ids: list[str],
+        password: str,
+        code: str = "",
+        answer: Answer | None = None,
     ) -> str | None:
-        """Several of the caller's devices after one password and one code,
-        since a code counts once. None is removed when one is not the
-        caller's. Returns the new stamp as ``remove_own``."""
+        """Several of the caller's devices after one password and one code
+        or passkey, since a code counts once. None is removed when one is
+        not the caller's. Returns the new stamp as ``remove_own``."""
         if not device_ids:
             raise BadRequestError("tick at least one device")
         for device_id in device_ids:
             self._own_device(access, device_id)
         await self._auth.confirm(access, password)
-        self._auth.confirm_code(access, code)
+        self._auth.confirm_code(access, code, answer)
         user = self._users.get(access.user_id)
         for device_id in dict.fromkeys(device_ids):
             self._remove(user, device_id, Actor.of(access))

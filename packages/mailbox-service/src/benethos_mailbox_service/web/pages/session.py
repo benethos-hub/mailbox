@@ -65,6 +65,17 @@ class PendingTotp:
 
 
 @dataclass(frozen=True)
+class PendingPasskey:
+    """A passkey being made, not stored yet: its name, the options for
+    the browser and the challenge they carry."""
+
+    name: str
+    options: str
+    challenge: str
+    until: datetime
+
+
+@dataclass(frozen=True)
 class Kept:
     """Something shown on the next page only, until a time."""
 
@@ -88,6 +99,11 @@ class UiSession:
     factor: str | None = None
     # A TOTP device being added in this session.
     totp: PendingTotp | None = None
+    # A passkey being added in this session.
+    passkey: PendingPasskey | None = None
+    # The challenge of the last page that offered a passkey in place of a
+    # code. Taken by the next form that answers it, once.
+    challenge: str | None = None
     # Shown on the next page only, e.g. a new token: kept here, never in a
     # URL, and gone once shown or once its time ran out.
     once: dict[str, Kept] = field(default_factory=dict)
@@ -103,6 +119,8 @@ class PendingSignIn:
     csrf: str
     until: datetime
     tries_left: int = CODE_TRIES
+    # The challenge the code page offered for a passkey, once.
+    challenge: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

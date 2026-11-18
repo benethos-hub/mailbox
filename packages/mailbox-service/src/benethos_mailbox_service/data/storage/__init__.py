@@ -31,6 +31,7 @@ from .index import (
     ThreadChain,
 )
 from .links import InMemoryLinkRepository, LinkRepository, StoredLink
+from .passkeys import InMemoryPasskeyRepository, PasskeyRepository, StoredPasskey
 from .passwords import InMemoryPasswordRepository, PasswordRepository, StoredPassword
 from .recovery_codes import InMemoryRecoveryCodeRepository, RecoveryCodeRepository
 from .repositories import Repositories, Store, open_repositories
@@ -44,6 +45,7 @@ from .sqlite import (
     SqliteIdempotencyRepository,
     SqliteLinkRepository,
     SqliteMessageIndexRepository,
+    SqlitePasskeyRepository,
     SqlitePasswordRepository,
     SqliteRecoveryCodeRepository,
     SqliteRoleRepository,
@@ -96,6 +98,7 @@ __all__ = [
     "InMemoryPasswordRepository",
     "InMemoryRoleRepository",
     "InMemoryRecoveryCodeRepository",
+    "InMemoryPasskeyRepository",
     "InMemoryTotpRepository",
     "InMemorySendLogRepository",
     "InMemoryTokenRepository",
@@ -123,17 +126,20 @@ __all__ = [
     "SqlitePasswordRepository",
     "SqliteRoleRepository",
     "SqliteRecoveryCodeRepository",
+    "SqlitePasskeyRepository",
     "SqliteTotpRepository",
     "SqliteSendLogRepository",
     "SqliteTokenRepository",
     "SqliteUserRepository",
     "SqliteWebhookRepository",
     "Store",
+    "StoredPasskey",
     "StoredTotpDevice",
     "StoredPassword",
     "StoredLink",
     "StoredResult",
     "TokenRepository",
+    "PasskeyRepository",
     "TotpRepository",
     "UserRepository",
     "WebhookRecord",

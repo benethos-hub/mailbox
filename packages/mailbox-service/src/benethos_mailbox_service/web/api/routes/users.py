@@ -13,6 +13,7 @@ from ..deps import (
     Caller,
     Factors,
     Limit,
+    PasskeyDevices,
     Passwords,
     Roles,
     Tokens,
@@ -153,9 +154,9 @@ async def set_password(
 async def get_second_factor(
     user_id: str, caller: Caller, factors: Factors
 ) -> SecondFactor:
-    """A user's second factor: the devices of each method, TOTP so far, and
-    how many recovery codes are left. Never a secret. The user adds a
-    device in the UI."""
+    """A user's second factor: the devices of each method, authenticator
+    apps (TOTP) and passkeys, and how many recovery codes are left. Never
+    a secret or a key. The user adds a device in the UI."""
     return factors.of(caller, user_id)
 
 
@@ -182,6 +183,21 @@ async def remove_totp_device(
     The caller must hold every right the user holds. `404` for a device
     the user does not have, `409` for the caller itself."""
     totp.remove_device(caller, user_id, device_id)
+
+
+@router.delete(
+    "/users/{user_id}/second-factor/passkeys/{passkey_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def remove_passkey(
+    user_id: str, passkey_id: str, caller: Caller, passkeys: PasskeyDevices
+) -> None:
+    """Remove one passkey of a user's second factor: it signs in no more,
+    and the user's sessions end. With the last device of every method the
+    second factor is off and the recovery codes go too. The caller must
+    hold every right the user holds. `404` for a passkey the user does not
+    have, `409` for the caller itself."""
+    passkeys.remove_passkey(caller, user_id, passkey_id)
 
 
 @router.get("/users/{user_id}/tokens")

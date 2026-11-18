@@ -18,6 +18,7 @@ from ...services import Passwords, get_auth
 from ...urls import client_address
 from ..deps import Actor, Viewer
 from ..forms import failing
+from ..passkeys import answer, challenge
 from ..session import (
     COOKIE,
     PASSWORD_PAGE,
@@ -52,8 +53,11 @@ NOTICES = {
     "code_expired": "The time for the code ran out. Sign in again.",
     "code_tries": "Too many wrong codes. Sign in again.",
 }
-# What the code page says after a wrong code.
-WRONG_CODE = "Wrong code. Try the newest one of the app, or a recovery code."
+# What the code page says after a wrong code or passkey.
+WRONG_CODE = (
+    "Wrong code or passkey. Try the newest code of the app, a passkey, "
+    "or a recovery code."
+)
 SIGNED_OUT = "signed_out"
 
 
@@ -152,12 +156,19 @@ async def code_page(request: Request, wrong: int = 0) -> Response:
     pending = store_of(request).pending(request.cookies.get(PENDING_COOKIE))
     if pending is None:
         return _to_login("code_expired")
+    begun = challenge(request, pending.user_id)
+    pending.challenge = begun.challenge if begun else None
+    factors = get_auth(request).factors
+    state = factors.state(pending.user_id) if factors is not None else None
     return render(
         request,
         "pages/login_code.html",
         page="login",
         nonce=pending.csrf,
         err=WRONG_CODE if wrong else None,
+        passkey_options=begun.options if begun else None,
+        has_totp=bool(state and state.totp),
+        has_passkeys=bool(state and state.passkeys),
     )
 
 
@@ -166,17 +177,22 @@ async def sign_in_with_code(
     request: Request,
     code: Annotated[str, Form()] = "",
     nonce: Annotated[str, Form()] = "",
+    passkey: Annotated[str, Form()] = "",
 ) -> Response:
-    """The code of the app, or a recovery code. A wrong one comes back to
-    this page, the last try back to the sign-in."""
+    """The code of the app, a passkey, or a recovery code. A wrong one
+    comes back to this page, the last try back to the sign-in."""
     store = store_of(request)
     pending_id = request.cookies.get(PENDING_COOKIE) or ""
     pending = store.pending(pending_id)
     if pending is None or not secret.same(nonce, pending.csrf):
         return _to_login("code_expired")
+    kept, pending.challenge = pending.challenge, None
     try:
         signed = get_auth(request).sign_in_with_code(
-            pending.user_id, code, source=client_address(request)
+            pending.user_id,
+            code,
+            source=client_address(request),
+            answer=answer(request, kept, passkey),
         )
     except RateLimitedError as exc:
         store.drop_pending(pending_id)

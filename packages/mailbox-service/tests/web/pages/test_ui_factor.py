@@ -194,7 +194,7 @@ def test_the_first_device_shows_a_qr_code_then_the_recovery_codes_once(
     page = app_client.get("/ui/second-factor").text
     assert "No device yet" in page and 'name="password"' in page
     # The first device needs no code.
-    assert 'id="f-code"' not in page
+    assert 'id="f-add-code"' not in page
 
     wrong = post(
         app_client,
@@ -261,7 +261,7 @@ def test_a_further_device_needs_a_code(
     try_sign_in(app_client, name, password)
     code_form(app_client, codes[0])
     page = app_client.get("/ui/second-factor").text
-    assert 'id="f-code"' in page
+    assert 'id="f-add-code"' in page
     refused = post(
         app_client,
         "/ui/second-factor/totp/begin",
@@ -446,7 +446,7 @@ def test_an_administrator_removes_a_device_then_every_one(
     try_sign_in(anna, name, password)
     code_form(anna, code_after(secret))
     page = ui.get(f"/ui/users/{user.id}?tab=access").text
-    assert "a code of an authenticator app after the password" in page
+    assert "a code or a passkey after the password" in page
     assert '<td class="name">Phone</td>' in page and "9 recovery codes left" in page
     phone = device_ids(services, name)["Phone"]
     removed = post(ui, f"/ui/users/{user.id}/second-factor/totp/{phone}/remove")

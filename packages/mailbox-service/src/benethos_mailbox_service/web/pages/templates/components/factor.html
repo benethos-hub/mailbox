@@ -1,0 +1,17 @@
+{# The second factor in a form: a code, or a passkey in its place
+   (docs/AUTHENTICATION.md 4, 5). The page hands passkey_options, the
+   challenge of the user's passkeys, or None. static/js/passkey.js shows
+   the button where the browser makes passkeys, signs the challenge,
+   puts the answer in the hidden field and sends the form. #}
+{% from "components/ui.html" import icon %}
+
+{% macro code_or_passkey(id, label="A code of any of your devices, or a recovery code", autofocus=False) %}
+<div class="field">
+  <label for="f-{{ id }}-code">{{ label }}</label>
+  <input id="f-{{ id }}-code" name="code" autocomplete="one-time-code" spellcheck="false" maxlength="40" required data-passkey-instead{% if autofocus %} autofocus{% endif %} />
+  {% if passkey_options %}
+  <input type="hidden" name="passkey" value="" />
+  <span class="hint"><button class="link" type="button" data-passkey-use="{{ passkey_options }}" hidden>{{ icon("key") }} Use a passkey instead</button> <span data-passkey-status role="status"></span></span>
+  {% endif %}
+</div>
+{% endmacro %}
