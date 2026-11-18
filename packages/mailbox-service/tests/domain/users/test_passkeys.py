@@ -38,8 +38,8 @@ from ..factor_helpers import (
     signed,
 )
 
-pytestmark = pytest.mark.usefixtures("master_key")
-# The fixtures come from factor_helpers.
+# The fixtures come from factor_helpers. Their services take the master
+# key.
 __all__ = ["clock", "services"]
 
 
