@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import card, csrf_field, icon, secret_card with context %}
-{% from "components/factor.html" import code_or_passkey with context %}
+{% from "components/ui.html" import card, csrf_field, dialog_button, dialog_buttons, form_dialog, icon, secret_card with context %}
+{% from "components/factor.html" import second_step with context %}
 {% block title %}Recovery key · {{ APP_NAME }}{% endblock %}
 {% block heading %}Recovery key{% endblock %}
 {% block subheading %}<div class="sub">The master key written out: it opens every stored secret</div>{% endblock %}
@@ -10,6 +10,9 @@
 {% else %}
 {% call card("Show the recovery key") %}
   <div class="notice warn">Show it only where nobody looks over your shoulder. The service log notes that it was shown, and to whom.</div>
+  <div class="form-actions">{{ dialog_button("show-key", "Show", icon="key", alone=False, danger=False) }}</div>
+{% endcall %}
+{% call form_dialog("show-key", "Show the recovery key?", "Confirm it is you.") %}
   <form method="post" action="/ui/recovery-key">
     {{ csrf_field() }}
     <input type="hidden" name="name" value="{{ me.name }}" autocomplete="username" />
@@ -18,9 +21,9 @@
         <label for="f-password">Your password</label>
         <input id="f-password" name="password" type="password" autocomplete="current-password" required autofocus />
       </div>
-      {% if needs_code %}{{ code_or_passkey("key") }}{% endif %}
+      {% if needs_code %}{{ second_step("key", ways) }}{% endif %}
     </div>
-    <div class="form-actions"><button class="primary" type="submit">{{ icon("check-lg") }} Show</button></div>
+    {{ dialog_buttons("Show", icon="check-lg", danger=False) }}
   </form>
 {% endcall %}
 {% endif %}

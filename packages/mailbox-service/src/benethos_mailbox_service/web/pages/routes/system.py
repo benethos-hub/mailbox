@@ -14,7 +14,7 @@ from ...services import Log, Recovery
 from ..deps import Actor, Viewer
 from ..filters import Field, filter_bar
 from ..forms import failing
-from ..passkeys import answered, offer
+from ..passkeys import answered, offered
 from ..session import show_once, take_once
 from ..templates import PAGE_SIZE, back, page_links, render
 
@@ -60,7 +60,7 @@ async def recovery_key(
         page="recovery",
         key=take_once(request, "recovery_key"),
         needs_code=recovery.needs_code(caller),
-        passkey_options=offer(request, caller.user_id),
+        ways=offered(request, caller.user_id),
     )
 
 

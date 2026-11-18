@@ -5,9 +5,14 @@ asks the browser, a page without it takes a code alone.
 
 A challenge counts once: the next form that answers it takes it, right
 or wrong, and the next page offers a new one.
+
+``Ways`` names the methods a page offers for the second factor, which
+the template ``components/factor.html`` shows one at a time.
 """
 
 from __future__ import annotations
+
+from dataclasses import dataclass
 
 from fastapi import Request
 
@@ -16,6 +21,37 @@ from ...domain.auth import Answer
 from ..services import get_auth
 from ..urls import passkey_party, passkeys_work
 from .session import session_of
+
+
+@dataclass(frozen=True)
+class Ways:
+    """The methods of the second factor a page offers: a passkey, a code
+    of an authenticator app, and a recovery code, which every user with
+    the second factor has. ``options``: the challenge for the user's
+    passkeys, None where browsers make none here. ``elsewhere``: the
+    user has passkeys, which work at another address."""
+
+    totp: bool
+    options: str | None
+    elsewhere: bool
+
+
+def ways(request: Request, user_id: str, options: str | None) -> Ways:
+    """The methods of the user's second factor, with ``options``, the
+    challenge the page offers for its passkeys."""
+    factors = get_auth(request).factors
+    state = factors.state(user_id) if factors is not None else None
+    return Ways(
+        totp=bool(state and state.totp),
+        options=options,
+        elsewhere=bool(state and state.passkeys) and options is None,
+    )
+
+
+def offered(request: Request, user_id: str) -> Ways:
+    """The methods of the signed-in user's second factor, with a new
+    challenge for its passkeys that the session keeps for the next form."""
+    return ways(request, user_id, offer(request, user_id))
 
 
 def challenge(request: Request, user_id: str) -> Begun | None:

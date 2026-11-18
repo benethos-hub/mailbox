@@ -118,8 +118,10 @@ A user may hold several passkeys, each with a name of its own,
    browser a cookie of its own for it. It reaches the code page and
    nothing else. It ends after **five minutes**.
 3. The code page takes a passkey, a code of any TOTP device, or a
-   recovery code (section 6). A user with a passkey sees **Sign in with
-   a passkey** first, the code field below it. A wrong code or passkey
+   recovery code (section 6). It shows one method at a time, the first
+   the user has and the browser can use, in this order: a passkey, a
+   code of an app, a recovery code. **Try another way** lists the
+   others. Nothing stores which one was used. A wrong code or passkey
    counts as a failed sign-in for the address and the name, as a wrong
    password does. After **five wrong tries** the pending sign-in ends,
    and the person starts again with the password.
@@ -186,10 +188,12 @@ passkeys**. Renaming and removing are as for a TOTP device. A passkey
 may confirm its own removal. The service cannot reach the device: a
 removed passkey stays there until the person deletes it.
 
-**A passkey in place of a code.** Wherever a step asks for a code,
-the field has **Use a passkey instead** beside it for a user with a
-passkey: adding or removing a device, new recovery codes, the recovery
-key, and the code page after the password.
+**A passkey in place of a code.** Wherever a step asks for the
+second factor, it offers the same methods as the code page, one at a
+time with **Try another way**: adding or removing a device, new
+recovery codes, the recovery key, and the code page after the
+password. Where the passkey shows, sending the form asks the browser
+for it.
 
 The QR code holds the `otpauth://` URI: issuer `Mailbox`, and the user
 name with the host of the service as the account, so two deployments

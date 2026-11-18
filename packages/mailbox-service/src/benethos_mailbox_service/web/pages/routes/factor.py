@@ -18,7 +18,7 @@ from ...services import Factors
 from ...urls import passkey_party, passkeys_work, public_host
 from ..deps import Actor, Viewer
 from ..forms import failing
-from ..passkeys import answered, offer
+from ..passkeys import answered, offered
 from ..qr import data_uri
 from ..session import PendingTotp, session_of, show_once, take_once
 from ..templates import back, render
@@ -61,7 +61,7 @@ async def factor_page(
         max_name=MAX_DEVICE_NAME,
         making=making,
         passkeys_work=passkeys_work(passkey_party(request)),
-        passkey_options=offer(request, caller.user_id),
+        ways=offered(request, caller.user_id),
     )
 
 

@@ -35,8 +35,9 @@ def at_https(master_key: None, services: Services) -> TestClient:
     )
 
 
-def options(page: httpx.Response | str, kind: str = "use") -> str:
-    """The options a button of the page hands the browser."""
+def options(page: httpx.Response | str, kind: str = "options") -> str:
+    """The options the page hands the browser: to sign with a passkey,
+    or with ``create`` to make one."""
     text = page if isinstance(page, str) else page.text
     found = re.search(rf'data-passkey-{kind}="([^"]+)"', text)
     assert found is not None, f"no data-passkey-{kind} on the page"
@@ -111,8 +112,10 @@ def test_a_passkey_signs_in_after_the_password(
     landed = try_sign_in(browser, name, UI_PASSWORD, next="/ui/mail")
     assert landed.headers["location"] == "/ui/login/code"
     page = browser.get("/ui/login/code").text
-    assert "Sign in with a passkey" in page
-    assert "A recovery code" in page
+    # The passkey first, the others listed after "Try another way".
+    assert 'data-way="passkey"' in page and 'data-way-pick="passkey"' in page
+    assert 'data-way-pick="recovery"' in page and "A recovery code" in page
+    assert 'data-way="totp"' not in page
     answer = laptop.get(options(page))
     assert code_page(browser, page, passkey=answer) == "/ui/mail"
     assert browser.get("/ui").status_code == 200

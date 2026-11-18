@@ -18,7 +18,7 @@ from ...services import Passwords, get_auth
 from ...urls import client_address
 from ..deps import Actor, Viewer
 from ..forms import failing
-from ..passkeys import answer, challenge
+from ..passkeys import answer, challenge, ways
 from ..session import (
     COOKIE,
     PASSWORD_PAGE,
@@ -158,17 +158,13 @@ async def code_page(request: Request, wrong: int = 0) -> Response:
         return _to_login("code_expired")
     begun = challenge(request, pending.user_id)
     pending.challenge = begun.challenge if begun else None
-    factors = get_auth(request).factors
-    state = factors.state(pending.user_id) if factors is not None else None
     return render(
         request,
         "pages/login_code.html",
         page="login",
         nonce=pending.csrf,
         err=WRONG_CODE if wrong else None,
-        passkey_options=begun.options if begun else None,
-        has_totp=bool(state and state.totp),
-        has_passkeys=bool(state and state.passkeys),
+        ways=ways(request, pending.user_id, begun.options if begun else None),
     )
 
 

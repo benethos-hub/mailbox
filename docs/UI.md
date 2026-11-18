@@ -416,28 +416,38 @@ its own, **Second factor**, reached from the foot of the sidebar and the
 person's own user page. It has a card per method of the second factor
 and one for the recovery codes. The card **Authenticator app (TOTP)**
 lists the devices with their name, when each
-was added and last used. **Add a device** asks for its name and the
-password, and with a device there already a code, then shows the QR
+was added and last used. **Add a device** asks in a dialog for its name
+and the password, and with a device there already the second factor,
+then shows the QR
 code with the key as text and a field for the first code. The first
 device brings the ten recovery codes, shown once, with a button that
 copies them all and offered as a text file to download. The pencil on
 a device's row takes the new name, its bin the password and a code in
 the dialog. With two devices or more they can be ticked and removed
 together after one password and one code. The
-Recovery codes card says how many are left and makes new ones after
-the password and a code. Another user's page lists its devices to a user with
+Recovery codes card says how many are left, and **Make new codes**
+makes new ones after the password and the second factor in a dialog. Another user's page lists its devices to a user with
 `get_second_factor`, with **Remove** for one to a user with
 `remove_totp_device`, as the bin on its row, and **Remove every device** to a user with
 `remove_second_factor`. After the password, a user with a factor sees
-the code page, outside the layout as the sign-in is, which takes a code
-of any device or a recovery code.
+the code page, **Confirm it is you**, outside the layout as the
+sign-in is.
+
+Every step that asks for the second factor shows one method at a time
+(`components/factor.html`): a passkey where the user has one and the
+browser makes them, else the code of an authenticator app, else a
+recovery code. **Try another way** lists the methods of the user, each
+a button, and a pick shows its field. A passkey picked there asks the
+browser at once when the form lacks nothing else. Where the passkey
+shows, the form's own button asks the browser for it, then sends the
+form. While the list shows, the form waits for a pick. Nothing stores
+the method used. Without `passkey.js` the field of the first code
+shows alone, and it takes a code of the app and a recovery code alike.
 
 The card **Passkeys** works as the one of the authenticator apps.
-**Add a passkey** asks for its name and the password, and with a
-factor on a code or a passkey, then shows **Make the passkey**, which
-asks the browser. Every field for a code has **Use a passkey instead**
-beside it for a user with a passkey, and the code page **Sign in with
-a passkey** above the field. `passkey.js` shows these buttons only
+**Add a passkey** asks in a dialog for its name and the password,
+and with a factor on the second factor, then shows **Make the
+passkey**, which asks the browser. `passkey.js` offers a passkey only
 where the browser makes passkeys, and the page says so where it makes
 none, at an address or over HTTP. Another user's page lists its
 passkeys beside its devices, with **Remove** to a user with
@@ -468,8 +478,8 @@ last error in memory, so they are empty after a restart until the
 first pass. `GET /v1/status` answers the same for the API.
 
 The recovery key page shows the key once after **Show**, with the
-warning of the CLI, and only to a user with `admin`. **Show** asks for the user's password again, and for a code when the
-user has a second factor ([AUTHENTICATION.md](AUTHENTICATION.md) 7). The key is never
+warning of the CLI, and only to a user with `admin`. **Show** asks in a dialog for the user's password again, and for the second factor when the
+user has one ([AUTHENTICATION.md](AUTHENTICATION.md) 7). The key is never
 stored or logged, the log only says that it was shown and to whom.
 
 The Audit page lists the audit of administration of
