@@ -134,3 +134,16 @@ def test_the_page_says_whether_the_factor_is_on(
     assert '<span class="tag ok">on</span> Signing in to this UI' in on
     assert "A code from any of them works." in on
     assert "1 devices" not in on and "devices:" not in on
+
+
+@pytest.mark.usefixtures("factor_on")
+def test_new_recovery_codes_start_in_the_head_of_their_card(
+    app_client: TestClient,
+) -> None:
+    page = app_client.get("/ui/second-factor").text
+    card = re.search(r"<h2>Recovery codes</h2>(.*?)</section>", page, re.DOTALL)
+    assert card is not None
+    head, rest = card.group(1).split("</header>")
+    assert 'data-dialog="new-codes"' in head
+    # Nine codes left: no warning, so no body.
+    assert rest.strip() == ""

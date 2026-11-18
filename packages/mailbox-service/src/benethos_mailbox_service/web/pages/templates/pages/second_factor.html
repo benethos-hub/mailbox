@@ -212,10 +212,8 @@
 {% endfor %}
 
 {% if on %}
-{% call card("Recovery codes", meta=factor.recovery_codes_left ~ " left. New ones replace them all.") %}
-  {% if factor.recovery_codes_left == 0 %}<div class="notice warn">No recovery codes are left. Make new ones.</div>
-  {% elif factor.recovery_codes_left <= 2 %}<div class="notice warn">Few recovery codes are left. Make new ones.</div>{% endif %}
-  <div class="form-actions">{{ dialog_button("new-codes", "Make new codes", icon="arrow-repeat", alone=False, danger=False) }}</div>
+{% call related("Recovery codes", meta=factor.recovery_codes_left ~ " left. New ones replace them all.", add="Make new codes", add_dialog="new-codes", add_icon="arrow-repeat") %}
+  {% if factor.recovery_codes_left <= 2 %}<div class="body">{% if factor.recovery_codes_left == 0 %}<div class="notice warn">No recovery codes are left. Make new ones.</div>{% else %}<div class="notice warn">Few recovery codes are left. Make new ones.</div>{% endif %}</div>{% endif %}
 {% endcall %}
 {% call form_dialog("new-codes", "Make new recovery codes?", "They replace the ones left, which work no more then.") %}
   <form method="post" action="/ui/second-factor/codes">
