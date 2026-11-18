@@ -90,7 +90,7 @@ async def _sent_copy(
         copy = await account.email(email_id, mappers.SUMMARY_PROPERTIES)
     except MailboxServiceError as exc:
         return SentMessage(copy_error=exc.message)
-    return SentMessage(sent_copy=mappers.summary(copy))
+    return SentMessage(sent_copy=mappers.summary(copy, account.trust))
 
 
 def _submission(

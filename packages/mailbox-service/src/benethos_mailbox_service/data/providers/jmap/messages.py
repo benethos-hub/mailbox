@@ -65,7 +65,7 @@ async def list_messages(
     )
     first = found.position or 0
     return Page[MessageSummary](
-        items=[mappers.summary(emails[i]) for i in page if i in emails],
+        items=[mappers.summary(emails[i], account.trust) for i in page if i in emails],
         next_cursor=mappers.cursor(scope, page[-1], first + len(page) - 1)
         if more and page
         else None,
@@ -102,14 +102,15 @@ async def thread_messages(
     wanted = ids[-limit:]
     found = await account.emails(wanted, mappers.SUMMARY_PROPERTIES)
     return ThreadMessages(
-        [mappers.summary(found[i]) for i in wanted if i in found],
+        [mappers.summary(found[i], account.trust) for i in wanted if i in found],
         truncated=len(ids) > limit,
     )
 
 
 async def get_message(account: JmapAccount, message_id: str) -> Message:
     email = await account.email(message_id, mappers.SUMMARY_PROPERTIES)
-    return mappers.message(email, await account.source(email, message_id))
+    source = await account.source(email, message_id)
+    return mappers.message(email, source, account.trust)
 
 
 async def folders_of(
@@ -209,7 +210,9 @@ async def _changed(
     for message_id in wanted:
         email = now.get(message_id)
         results[message_id] = (
-            mappers.summary(email) if email else missing_message(message_id)
+            mappers.summary(email, account.trust)
+            if email
+            else missing_message(message_id)
         )
     return {i: results[i] for i in message_ids}
 

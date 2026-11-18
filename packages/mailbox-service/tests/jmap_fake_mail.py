@@ -125,6 +125,9 @@ class MailMethods:
             "sentAt": parsedate_to_datetime(str(msg["date"])).isoformat()
             if msg["date"]
             else None,
+            "authentication": [
+                " " + str(v) for v in msg.get_all("Authentication-Results", [])
+            ],
             "preview": text[:50],
             "text": text,
             "attached": any(True for _ in msg.iter_attachments()),
@@ -155,6 +158,7 @@ class MailMethods:
             "preview": parsed["preview"],
             "hasAttachment": parsed["attached"],
             "attachments": parsed["attachments"],
+            "header:Authentication-Results:asRaw:all": parsed["authentication"],
         }
         return {p: full.get(p) for p in ["id", *properties]}
 

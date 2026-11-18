@@ -14,7 +14,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from ....common import opaque
-from ...mail import convert, parse
+from ...mail import authentication, convert, parse
 from ...models import (
     Folder,
     FolderRole,
@@ -25,7 +25,7 @@ from ...models import (
     as_keyword,
 )
 from .. import rules
-from .shapes import Addresses, Email, Mailbox
+from .shapes import AUTHENTICATION_RESULTS, Addresses, Email, Mailbox
 
 # An id as JMAP allows it (RFC 8620 1.2).
 _ID = re.compile(r"^[A-Za-z0-9_-]{1,255}$")
@@ -55,6 +55,7 @@ SUMMARY_PROPERTIES = [
     "preview",
     "hasAttachment",
     "attachments",
+    AUTHENTICATION_RESULTS,
 ]
 
 # Keywords with a field or an operation of their own in the API.
@@ -98,9 +99,11 @@ def emulates_all(folders: list[Folder]) -> bool:
 # --- emails -----------------------------------------------------------------------
 
 
-def summary(email: Email) -> MessageSummary:
+def summary(email: Email, trust: authentication.Trust | None) -> MessageSummary:
+    """``trust``: the account's receiving server, for the sender check."""
     flags = email.keywords
     sender = _addresses(email.sender)
+    sole = sender[0]["email"] if len(email.sender) == len(sender) == 1 else None
     return MessageSummary.model_validate(
         {
             "id": email.id,
@@ -116,6 +119,9 @@ def summary(email: Email) -> MessageSummary:
             "starred": FLAGGED in flags,
             "keywords": keywords(flags),
             "has_attachments": _attached(email),
+            "sender_check": authentication.sender_check(
+                email.authentication_results or [], sole, trust
+            ),
         }
     )
 
@@ -136,14 +142,17 @@ def _attached(email: Email) -> bool:
     )
 
 
-def message(email: Email, raw: bytes) -> Message:
+def message(email: Email, raw: bytes, trust: authentication.Trust | None) -> Message:
     """The whole message: what JMAP knows of it, and what its source says."""
     parsed = parse.ParsedMessage(raw)
-    fields = {**convert.summary_fields(parsed), **convert.message_fields(parsed)}
+    fields = {
+        **convert.summary_fields(parsed, trust),
+        **convert.message_fields(parsed),
+    }
     if fields.get("date") is None:
         fields.pop("date", None)  # no Date header: when it arrived stays
     return Message.model_validate(
-        {**summary(email).model_dump(by_alias=True), **fields}
+        {**summary(email, trust).model_dump(by_alias=True), **fields}
     )
 
 
