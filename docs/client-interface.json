@@ -50,6 +50,7 @@
       "SenderCheck",
       "Sending",
       "Sent",
+      "ServerName",
       "ServiceTimeoutError",
       "ServiceUnavailableError",
       "SourceReport",
@@ -365,6 +366,10 @@
           "sends": "benethos_mailbox_client.endpoints.sends.list_sends",
           "async": true
         },
+        "list_server_names": {
+          "sends": "benethos_mailbox_client.endpoints.accounts.list_server_names",
+          "async": true
+        },
         "list_threads": {
           "sends": "benethos_mailbox_client.endpoints.threads.list_threads",
           "async": true
@@ -518,6 +523,7 @@
       "list_permissions",
       "list_roles",
       "list_sends",
+      "list_server_names",
       "list_threads",
       "list_tokens",
       "list_users",
@@ -562,6 +568,9 @@
     },
     "list_accounts": {
       "signature": "(*, address: 'str | None' = None, provider: 'str | None' = None, status: 'str | None' = None, limit: 'int | None' = None, cursor: 'str | None' = None) -> 'Call[Paged[Account]]'"
+    },
+    "list_server_names": {
+      "signature": "(account_id: 'str') -> 'Call[list[ServerName]]'"
     },
     "marks": {
       "signature": "(item: 'dict[str, Any]') -> 'Marks'"
@@ -979,6 +988,7 @@
       "SenderCheck",
       "Sending",
       "Sent",
+      "ServerName",
       "SourceReport",
       "Status",
       "StoredCredential",
@@ -1048,6 +1058,23 @@
         "written": {
           "type": "frozenset[str]",
           "default": "frozenset()"
+        }
+      }
+    },
+    "ServerName": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "id": {
+          "type": "str"
+        },
+        "count": {
+          "type": "int"
+        },
+        "of": {
+          "type": "int"
         }
       }
     },
@@ -2541,6 +2568,9 @@
         },
         "list_sends": {
           "sends": "benethos_mailbox_client.endpoints.sends.list_sends"
+        },
+        "list_server_names": {
+          "sends": "benethos_mailbox_client.endpoints.accounts.list_server_names"
         },
         "list_threads": {
           "sends": "benethos_mailbox_client.endpoints.threads.list_threads"

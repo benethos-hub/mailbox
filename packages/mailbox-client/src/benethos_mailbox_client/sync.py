@@ -143,6 +143,7 @@ class SyncMailboxClient:
     update_account = blocking(endpoints.update_account)
     delete_account = blocking(endpoints.delete_account)
     verify_account = blocking(endpoints.verify_account)
+    list_server_names = blocking(endpoints.list_server_names)
 
     # --- discovery and the sign-in with a code ----------------------------------------
 

@@ -69,7 +69,13 @@ GROUPS: dict[str, tuple[str, ...]] = {
     # the service (docs/AUDIT.md).
     "audit": ("list_sends", "list_all_sends", "list_activity"),
     # Signing in again by OAuth is update_account: the domain checks it.
-    "accounts.manage": ("update_account", "delete_account", "verify_account"),
+    # So is list_server_names, which serves choosing a setting.
+    "accounts.manage": (
+        "update_account",
+        "delete_account",
+        "verify_account",
+        "list_server_names",
+    ),
     # Accounts that do not exist yet. Connecting by OAuth needs
     # create_account as well: the domain checks it.
     "accounts.connect": (

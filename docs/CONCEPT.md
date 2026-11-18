@@ -856,6 +856,7 @@ Base path `/v1`, JSON, bearer authentication on everything except
 | PATCH | `/v1/accounts/{account_id}` | display name, settings, new password |
 | DELETE | `/v1/accounts/{account_id}` | remove, credentials deleted |
 | POST | `/v1/accounts/{account_id}/verify` | test the connection now |
+| GET | `/v1/accounts/{account_id}/server-names` | the names receiving servers wrote into the newest ten mails of the inbox, for choosing `settings.authserv_id` (6.3). Empty for Gmail and Microsoft. Needs `update_account` |
 | POST | `/v1/oauth/{provider}/device` | sign in with a code (5.4): the code, the page to enter it at and a `sign_in_id`, to connect an account or, with `account_id`, sign it in again |
 | POST | `/v1/oauth/{provider}/device/{sign_in_id}` | poll the sign-in with a code: `connected` false until the person signed in, then the account, no sooner than its `interval` |
 | GET | `/ui/oauth/{provider}/callback` | where the provider sends the browser back after the UI's sign-in in a browser: a UI page, not part of the API. The person is signed in to the UI as the user who started. The account is created or signed in again |
@@ -1647,7 +1648,7 @@ with the role
   | `send` | `send_message`, `send_draft` |
   | `mail.share` | `share_attachment`: a link to an attachment for another service (6.3), in no role template |
   | `audit` | `list_sends`, `list_all_sends` on accounts, `list_activity` in `service` |
-  | `accounts.manage` | `update_account`, `delete_account`, `verify_account`, credentials of mail accounts |
+  | `accounts.manage` | `update_account`, `delete_account`, `verify_account`, `list_server_names`, credentials of mail accounts |
   | `accounts.connect` | `discover_account`, `start_device_oauth`, `poll_device_oauth`, `create_account`. Of the service |
   | `webhooks.manage` | `list_webhooks`, `get_webhook`, `create_webhook`, `update_webhook`, `renew_webhook_secret`, `delete_webhook`. Of the service |
   | `users.read` | users, their tokens, roles, to read. Of the service |

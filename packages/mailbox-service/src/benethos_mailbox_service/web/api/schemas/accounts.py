@@ -47,3 +47,21 @@ class AccountUpdate(BaseModel):
 
 class DiscoveryRequest(BaseModel):
     email: str = Field(max_length=254, description="The address to be connected.")
+
+
+class ServerName(BaseModel):
+    """A receiving server's name as the newest mails of the inbox carry it."""
+
+    id: str = Field(
+        description="The name, in lower case, as it starts an "
+        "Authentication-Results entry."
+    )
+    count: int = Field(description="How many of the mails read carry it.")
+    of: int = Field(description="How many mails were read, ten at most.")
+
+
+class ServerNameList(BaseModel):
+    """The names receiving servers wrote into the newest mails of the
+    inbox, the most frequent first."""
+
+    items: list[ServerName]

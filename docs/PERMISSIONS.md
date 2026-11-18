@@ -67,7 +67,7 @@ The groups as `domain/rights/permissions.py` holds them today:
 | `mail.share` | `share_attachment`: a link to an attachment for another service ([CONCEPT 6.3](CONCEPT.md#63-messages)), in no template of 8.7 | an account |
 | `audit` | `list_sends`, `list_all_sends` | an account |
 | `audit` | `list_activity`, the audit of administration (8.6) | the service |
-| `accounts.manage` | `update_account`, `delete_account`, `verify_account` | an account |
+| `accounts.manage` | `update_account`, `delete_account`, `verify_account`, `list_server_names` | an account |
 | `accounts.connect` | `discover_account`, `start_device_oauth`, `poll_device_oauth`, `create_account` | the service |
 | `webhooks.manage` | `list_webhooks`, `get_webhook`, `create_webhook`, `update_webhook`, `renew_webhook_secret`, `delete_webhook` | the service |
 | `users.read` | `list_users`, `get_user`, `list_tokens`, `get_second_factor`, `list_roles`, `get_role` | the service |

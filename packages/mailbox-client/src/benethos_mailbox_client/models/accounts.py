@@ -45,3 +45,14 @@ class Account:
     # The operations the caller can run on it: its rights there that the
     # account can do as well, e.g. "list_messages", "create_draft".
     operations: frozenset[str] = frozenset()
+
+
+@dataclass(frozen=True, slots=True)
+class ServerName:
+    """A receiving server's name as the newest mails of an inbox carry it:
+    in ``count`` of the ``of`` mails read. For choosing the setting
+    ``authserv_id``."""
+
+    id: str
+    count: int
+    of: int

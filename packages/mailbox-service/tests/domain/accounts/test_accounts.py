@@ -149,6 +149,7 @@ def test_the_connector_gets_accounts_manage_on_what_it_connected(
     assert account["id"] == account_id
     assert account["operations"] == [
         "delete_account",
+        "list_server_names",
         "update_account",
         "verify_account",
     ]

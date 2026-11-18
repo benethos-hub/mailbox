@@ -7,7 +7,7 @@ from types import EllipsisType
 from typing import Any
 
 from ..calls import Call, given, nothing, path
-from ..models import Account, Marks, Paged, StoredCredential
+from ..models import Account, Marks, Paged, ServerName, StoredCredential
 from .readings import paged, time
 
 
@@ -92,6 +92,20 @@ def delete_account(account_id: str) -> Call[None]:
 def verify_account(account_id: str) -> Call[Account]:
     """Log in to the account now: its status afterwards."""
     return Call("POST", path("accounts", account_id, "verify"), account)
+
+
+def list_server_names(account_id: str) -> Call[list[ServerName]]:
+    """The names receiving servers wrote into the newest ten mails of the
+    inbox, the most frequent first, for choosing ``authserv_id``. Empty
+    for an account that names its server itself."""
+    return Call(
+        "GET",
+        path("accounts", account_id, "server-names"),
+        lambda found: [
+            ServerName(str(i["id"]), int(i["count"]), int(i["of"]))
+            for i in found["items"]
+        ],
+    )
 
 
 def account(item: dict[str, Any]) -> Account:
