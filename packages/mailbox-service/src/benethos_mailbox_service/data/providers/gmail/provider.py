@@ -62,6 +62,7 @@ ABILITIES = Abilities.of(
         Capability.SENT_COPY,
         Capability.THREADS,
         Capability.EXTERNAL_CHANGES,
+        Capability.SENDER_CHECK,
     },
     read={Mark.DRAFT},
 )
@@ -124,8 +125,8 @@ class GmailProvider:
 
     async def abilities(self) -> Abilities:
         """The same for every Gmail account. Its labels are the folders,
-        and it keeps no keywords. A draft shows by its label, but no mark
-        can be set (UNIFORM 6.4)."""
+        it keeps no keywords, and its receiving server is known. A draft
+        shows by its label, but no mark can be set (UNIFORM 6.4)."""
         return ABILITIES
 
     async def verify(self) -> None:

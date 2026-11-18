@@ -14,7 +14,7 @@ import html
 from datetime import UTC, date, datetime
 from typing import Any
 
-from ...mail import convert, parse
+from ...mail import authentication, convert, parse
 from ...models import Folder, FolderRole, Message, MessageFilter, MessageSummary
 from .. import rules
 from .shapes import GmailMessage, Label, Part
@@ -47,7 +47,18 @@ NOT_TARGETS = frozenset({SENT, DRAFT})
 OUTSIDE_ALL = frozenset({TRASH, SPAM})
 
 # The headers a summary is made of.
-SUMMARY_HEADERS = ("From", "To", "Subject", "Date", "Content-Type", "Message-ID")
+SUMMARY_HEADERS = (
+    "From",
+    "To",
+    "Subject",
+    "Date",
+    "Content-Type",
+    "Message-ID",
+    "Authentication-Results",
+)
+# The name Gmail's receiving servers write at the start of their
+# Authentication-Results, the same for every Gmail account.
+TRUST = authentication.Trust(("mx.google.com",))
 
 
 def is_folder(label: Label) -> bool:
@@ -105,7 +116,7 @@ def summary(message: GmailMessage, known: set[str]) -> MessageSummary:
     parsed = parse.from_headers(
         (h.name, h.value) for h in headers if h.name.lower() in wanted
     )
-    fields = convert.summary_fields(parsed)
+    fields = convert.summary_fields(parsed, TRUST)
     if message.payload is not None:
         fields["has_attachments"] = parse.has_attachments(_shapes(message.payload))
     return MessageSummary.model_validate(
@@ -142,7 +153,10 @@ def _shapes(part: Part) -> list[parse.PartShape]:
 def message(meta: GmailMessage, raw: bytes, known: set[str]) -> Message:
     """The whole message: what Gmail knows of it, and what its source says."""
     parsed = parse.ParsedMessage(raw)
-    fields = {**convert.summary_fields(parsed), **convert.message_fields(parsed)}
+    fields = {
+        **convert.summary_fields(parsed, TRUST),
+        **convert.message_fields(parsed),
+    }
     return Message.model_validate(
         {
             "id": meta.id,

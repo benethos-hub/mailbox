@@ -20,6 +20,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   the receiving server as it stands at the start of its
   Authentication-Results entries, several with commas, a leading dot for
   every host below a domain. Without it the sender check stays unknown.
+  Gmail accounts need no setting: they read the entry of
+  `mx.google.com`.
 - Passkeys as a second method of the second factor of the UI sign-in,
   beside authenticator apps (TOTP). A person adds them on the page
   Second factor, and after the password a passkey signs in as a code
