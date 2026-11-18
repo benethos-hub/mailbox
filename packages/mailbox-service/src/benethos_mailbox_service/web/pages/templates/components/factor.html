@@ -31,8 +31,8 @@
   {% endif %}
   <div class="field" data-way="recovery"{% if ways.totp %} hidden{% endif %}>
     <label for="f-{{ id }}-recovery">Recovery code</label>
-    <input id="f-{{ id }}-recovery" class="code" name="code" placeholder="XXXXX-XXXXX-XXXXX" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="40" required{% if ways.totp %} disabled{% endif %} />
-    <span class="hint">It works once.</span>
+    <input id="f-{{ id }}-recovery" class="code" name="code" placeholder="XXXXX-XXXXX-XXXXX" aria-describedby="f-{{ id }}-recovery-hint" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="40" required{% if ways.totp %} disabled{% endif %} />
+    <span class="hint" id="f-{{ id }}-recovery-hint">It works once.</span>
   </div>
   {% if ways.elsewhere %}<p class="hint">Your passkeys work at the public address of this service over HTTPS, not here.</p>{% endif %}
   <p class="notice warn factor-status" data-passkey-status role="status" hidden></p>

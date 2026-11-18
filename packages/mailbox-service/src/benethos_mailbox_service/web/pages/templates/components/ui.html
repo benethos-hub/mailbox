@@ -114,8 +114,8 @@
    (``open_dialog``). #}
 {% macro form_dialog(id, title, text) %}
 {% set again = open_dialog is defined and open_dialog == id %}
-<dialog class="ask form-dialog" id="{{ id }}" aria-labelledby="{{ id }}-title"{% if again %} data-open{% endif %}>
-  <div class="body"><h2 id="{{ id }}-title">{{ title }}</h2><p>{{ text }}</p>{% if again and err %}<div class="notice err" role="alert">{{ err }}</div>{% endif %}</div>
+<dialog class="ask form-dialog" id="{{ id }}" aria-labelledby="{{ id }}-title" aria-describedby="{{ id }}-text"{% if again %} data-open{% endif %}>
+  <div class="body"><h2 id="{{ id }}-title">{{ title }}</h2><p id="{{ id }}-text">{{ text }}</p>{% if again and err %}<div class="notice err" role="alert">{{ err }}</div>{% endif %}</div>
   {{ caller() }}
 </dialog>
 {% endmacro %}

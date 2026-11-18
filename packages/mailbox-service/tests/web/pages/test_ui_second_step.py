@@ -87,7 +87,7 @@ def test_a_refused_dialog_opens_again_with_the_reason(app_client: TestClient) ->
         app_client, "/ui/second-factor/codes", {"password": "wrong", "code": "000000"}
     )
     page = refused.text
-    opened = page.index('id="new-codes" aria-labelledby="new-codes-title" data-open>')
+    opened = page.index('aria-describedby="new-codes-text" data-open>')
     reason = page.index('<div class="notice err" role="alert">')
     assert opened < reason
     assert page.count('class="notice err"') == 1
@@ -176,3 +176,14 @@ def test_the_setup_of_a_device_cancels_beside_its_button(
     assert '<button type="submit" form="totp-cancel">Cancel</button>' in page
     assert '<form id="totp-cancel" method="post"' in page
     assert "2. The 6-digit code Phone shows now" in page
+
+
+@pytest.mark.usefixtures("factor_on")
+def test_a_hint_belongs_to_its_field_and_a_text_to_its_dialog(
+    app_client: TestClient,
+) -> None:
+    page = app_client.get("/ui/second-factor").text
+    assert 'aria-describedby="f-codes-recovery-hint"' in page
+    assert '<span class="hint" id="f-codes-recovery-hint">' in page
+    assert 'aria-describedby="new-codes-text"' in page
+    assert '<p id="new-codes-text">' in page
