@@ -347,7 +347,9 @@ that adds a module, a package, a library or a seam.
   once, then `MAILBOX_BROWSER_TESTS=1 uv run --group browser pytest
   packages/mailbox-service/tests/browser`. The sign-in with a code must
   go on by itself through htmx, and no page reached from the overview
-  may break the content security policy or miss a file of its own. The
+  may break the content security policy or miss a file of its own. In
+  Chromium a passkey is made on the page Second factor and signs in,
+  through its virtual authenticator. The
   default run leaves the folder out, CI's browser job runs it. Run it
   after a change to a template, to `static/` or to htmx.
 

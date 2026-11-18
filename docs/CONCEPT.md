@@ -1687,11 +1687,12 @@ with the role
   - In the API: `ui_sign_in` on the user, in `POST /v1/users` (false
     when left out) and `PATCH /v1/users/{user_id}`.
 - **A second factor** for the UI sign-in, TOTP with recovery codes
-  (**decided 2026-10-09**): a choice per user, set up in the UI,
-  asked after the password. The factors of the UI sign-in and how each
-  is set up and removed: [AUTHENTICATION.md](AUTHENTICATION.md).
-- **Later:** a passkey (AUTHENTICATION.md 9), OAuth 2.0 client
-  credentials for machines. Rights come from grants alone. The
+  (**decided 2026-10-09**), passkeys as its second method (**decided
+  2026-11-18**): a choice per user, set up in the UI, asked after the
+  password. The factors of the UI sign-in and how each is set up and
+  removed: [AUTHENTICATION.md](AUTHENTICATION.md).
+- **Later:** a passkey in place of the password (AUTHENTICATION.md 9),
+  OAuth 2.0 client credentials for machines. Rights come from grants alone. The
   switch above says where a user may sign in, not what it may do.
 - A disabled user fails authentication with every credential at once.
   Rights changes take effect on the next request. Revoking a token is
