@@ -10,11 +10,15 @@ from fastapi.testclient import TestClient
 
 from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import (
+    Abilities,
+    Account,
+    Capability,
+    ProviderType,
     SenderCheck,
 )
 from benethos_mailbox_service.web.pages.sender import sender_tag
 
-from ...conftest import memory_of
+from ...conftest import memory_of, relearn
 
 PASSED = SenderCheck(
     result="pass", domain="example.com", matches_from=True, method="dmarc"
@@ -91,3 +95,24 @@ def test_a_list_names_a_failed_check_alone(
     page = html.unescape(ui.get(f"/ui/accounts/{account_id}/mail").text)
     assert page.count("check failed") == count
     assert "checked: example.com" not in page
+
+
+def test_the_account_page_names_the_capability_and_the_field(
+    ui: TestClient, services: Services, account_id: str
+) -> None:
+    memory = memory_of(services, account_id)
+    memory.given = Abilities.of({Capability.SENDER_CHECK})
+    relearn(services, account_id)
+    page = ui.get(f"/ui/accounts/{account_id}").text
+    assert '<span class="tag">sender check</span>' in page
+    assert 'id="f-authserv_id"' in page
+
+
+def test_a_gmail_account_takes_no_name_of_its_server(
+    ui: TestClient, services: Services
+) -> None:
+    services.repositories.accounts.add(
+        Account(id="acc_gmail", provider=ProviderType.GMAIL, email="g@example.com")
+    )
+    page = ui.get("/ui/accounts/acc_gmail").text
+    assert "authserv_id" not in page
