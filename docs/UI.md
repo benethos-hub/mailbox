@@ -396,7 +396,10 @@ The user page has three tabs, each an address of its own (`?tab=`),
 drawn by the service: **Rights** with the facts, the effective rights
 and the Change card, **Access** with the sign-in (to the UI, the second
 factor, the last sign-in, and for the person's own page the links to
-Password and Second factor), the Password card for another user, its
+Password and Second factor). The page Password asks for the current
+password and the new one twice, and with a second factor that factor
+too, but not at the forced change after the sign-in. The Access tab
+holds as well the Password card for another user, its
 devices and the tokens, and **Activity**. The Danger card stays below
 the tabs, the same on each. A form that comes back refused shows its
 tab. Activity is the user's newest ten activities of the audit, for

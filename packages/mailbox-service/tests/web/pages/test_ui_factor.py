@@ -180,6 +180,12 @@ def test_the_code_before_a_forced_password_change(
     landed = try_sign_in(app_client, name, one_time)
     assert landed.headers["location"] == "/ui/login/code"
     assert code_form(app_client, code_after(secret)) == "/ui/password"
+    # The code was asked a moment ago: the forced change asks for none.
+    assert "data-ways" not in app_client.get("/ui/password").text
+    mine = "a passphrase of my own"
+    fields = {"current_password": one_time, "new_password": mine}
+    changed = post(app_client, "/ui/password", {**fields, "repeat_password": mine})
+    assert "Password changed." in changed.text
 
 
 # --- the own page ---------------------------------------------------------------

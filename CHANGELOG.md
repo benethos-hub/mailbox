@@ -31,6 +31,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Changing the own password in the configuration UI asks for the
+  second factor as well, for a user with one. The forced change after
+  the sign-in asks for none: the sign-in asked for it a moment before.
 - The configuration UI asks for the second factor one method at a
   time: a passkey, else a code of an authenticator app, else a
   recovery code, with "Try another way" to the others. This holds for

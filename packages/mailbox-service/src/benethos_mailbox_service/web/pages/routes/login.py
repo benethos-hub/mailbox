@@ -18,7 +18,7 @@ from ...services import Passwords, get_auth
 from ...urls import client_address
 from ..deps import Actor, Viewer
 from ..forms import failing
-from ..passkeys import answer, challenge, ways
+from ..passkeys import answer, answered, challenge, offered, ways
 from ..session import (
     COOKIE,
     PASSWORD_PAGE,
@@ -232,10 +232,18 @@ async def logout(request: Request, caller: Actor) -> Response:
 
 
 @router.get("/password")
-async def password_page(request: Request, _: Viewer) -> HTMLResponse:
+async def password_page(
+    request: Request, caller: Viewer, passwords: Passwords
+) -> HTMLResponse:
     session = current(request).session
+    needs_code = passwords.needs_code(caller)
     return render(
-        request, "pages/password.html", page="password", must_change=session.must_change
+        request,
+        "pages/password.html",
+        page="password",
+        must_change=session.must_change,
+        needs_code=needs_code,
+        ways=offered(request, caller.user_id) if needs_code else None,
     )
 
 
@@ -247,11 +255,16 @@ async def change_password(
     current_password: Annotated[str, Form()] = "",
     new_password: Annotated[str, Form()] = "",
     repeat_password: Annotated[str, Form()] = "",
+    code: Annotated[str, Form()] = "",
+    passkey: Annotated[str, Form()] = "",
 ) -> Response:
     if new_password != repeat_password:
         return back(request, PASSWORD_PAGE, error="The two new passwords differ.")
+    proof = answered(request, passkey)
     with failing(PASSWORD_PAGE):
-        stamp = await passwords.change_password(caller, current_password, new_password)
+        stamp = await passwords.change_password(
+            caller, current_password, new_password, code, proof
+        )
     # This session carries on with the new password. Every other session
     # of the user ends at its next request. Taken from the request, since
     # checking it again with the old stamp would end it too.

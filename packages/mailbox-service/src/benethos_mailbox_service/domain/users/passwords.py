@@ -1,6 +1,6 @@
 """The passwords of users who sign in to the UI: one's own changed with
-the current one, another's set within the caller's rights, a one-time
-password made by the service."""
+the current one and the second factor, another's set within the
+caller's rights, a one-time password made by the service."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from ...data.storage import UserRepository
 from ...errors import BadRequestError, ConflictError, NotFoundError
 from ..activity import HOST, ActivityLog, Actor
 from ..activity import users as said
-from ..auth import AuthService, SignInState
+from ..auth import Answer, AuthService, SignInState
 from ..rights import Access
 from .rules import UserRules
 
@@ -49,10 +49,30 @@ class PasswordService:
         as ``token_state`` is for a token."""
         return self._auth.sign_in_state(user.id)
 
-    async def change_password(self, access: Access, current: str, new: str) -> datetime:
-        """The caller's own password, with the current one. Returns the new
-        stamp, which keeps the caller's session and ends its others. A
-        wrong current password counts as a failed confirmation."""
+    def needs_code(self, access: Access) -> bool:
+        """Whether changing the caller's own password asks for its second
+        factor: when it has one, unless the password is one to change at
+        this sign-in, whose step after the password asked for it."""
+        factors = self._auth.factors
+        if factors is None or not factors.has(access.user_id):
+            return False
+        return not self._auth.sign_in_state(access.user_id).must_change
+
+    async def change_password(
+        self,
+        access: Access,
+        current: str,
+        new: str,
+        code: str = "",
+        answer: Answer | None = None,
+    ) -> datetime:
+        """The caller's own password, with the current one, and with a
+        second factor a code of it or the browser's ``answer`` signed
+        with one of its passkeys (``needs_code``). Returns the new stamp,
+        which keeps the caller's session and ends its others. A wrong
+        current password or code counts as a failed confirmation. The
+        code is checked last, so a new password the rules refuse uses up
+        no recovery code."""
         user = self._users.get(access.user_id)
         try:
             await self._auth.confirm(access, current)
@@ -61,6 +81,8 @@ class PasswordService:
         if new == current:
             raise BadRequestError("the new password is the current one")
         hashed = await self._auth.passwords.hashed(new, user.name)
+        if self.needs_code(access):
+            self._auth.confirm_code(access, code, answer)
         with self._activity.atomic():
             stored = self._auth.passwords.keep(user.id, hashed, must_change=False)
             self._activity.record(said.PasswordChanged(by=Actor.of(access)))
