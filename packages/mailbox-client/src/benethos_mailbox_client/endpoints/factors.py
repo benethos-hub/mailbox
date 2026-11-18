@@ -28,6 +28,15 @@ def remove_totp_device(user_id: str, device_id: str) -> Call[None]:
     )
 
 
+def remove_passkey(user_id: str, passkey_id: str) -> Call[None]:
+    """One passkey of the user. Its sessions end."""
+    return Call(
+        "DELETE",
+        path("users", user_id, "second-factor", "passkeys", passkey_id),
+        nothing,
+    )
+
+
 def _factor(found: dict[str, Any]) -> SecondFactor:
     return SecondFactor(
         totp=tuple(

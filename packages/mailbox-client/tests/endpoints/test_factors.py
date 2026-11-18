@@ -63,6 +63,17 @@ async def test_a_service_without_passkeys_answers_none(
     assert (await make_client(api).get_second_factor("usr_1")).passkeys == ()
 
 
+async def test_remove_a_passkey(make_client: Callable) -> None:
+    api = FakeApi()
+    assert await make_client(api).remove_passkey("usr_1", "psk_1") is None
+    assert api.call() == (
+        "DELETE",
+        "/v1/users/usr_1/second-factor/passkeys/psk_1",
+        {},
+        None,
+    )
+
+
 async def test_remove_one_device_or_every_one(make_client: Callable) -> None:
     one = FakeApi()
     assert await make_client(one).remove_totp_device("usr_1", "tfa_1") is None

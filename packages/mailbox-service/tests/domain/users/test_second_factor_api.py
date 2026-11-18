@@ -12,8 +12,11 @@ from fastapi.testclient import TestClient
 from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import Grant, User
 from benethos_mailbox_service.data.secrets import totp
+from benethos_mailbox_service.domain.auth import Answer
 
 from ...conftest import ADMIN, UI_PASSWORD, bearer_for
+from ...passkey_fake import Authenticator
+from ..factor_helpers import PARTY
 
 pytestmark = pytest.mark.usefixtures("master_key")
 
@@ -37,6 +40,24 @@ def with_devices(services: Services, *names: str) -> User:
         now = totp.code(secret, totp.step_of(datetime.now(UTC)))
         codes = services.totp.confirm(access, kept, secret, now).recovery_codes
         code = codes[0] if codes else code
+    return user
+
+
+def with_passkey(services: Services, name: str) -> User:
+    """A user who added a passkey of this name to its second factor."""
+    if not services.vault.initialized():
+        services.vault.initialize()
+    user = services.users.create_user(ADMIN, "Ben", [], [READER], ui_sign_in=True)
+    asyncio.run(
+        services.auth.passwords.set(user.id, "Ben", UI_PASSWORD, must_change=False)
+    )
+    access = services.auth.access_of(user.id)
+    assert access is not None
+    begun = asyncio.run(services.passkeys.begin(access, name, UI_PASSWORD, PARTY))
+    created = Authenticator().create(begun.begun.options)
+    services.passkeys.confirm(
+        access, begun.name, Answer(PARTY, begun.begun.challenge, created)
+    )
     return user
 
 
@@ -74,6 +95,23 @@ def test_removing_one_device(client: TestClient, services: Services) -> None:
     assert client.delete(url).status_code == 404
 
 
+def test_the_passkeys_of_a_user_and_removing_one(
+    client: TestClient, services: Services
+) -> None:
+    user = with_passkey(services, "Laptop")
+    answer = client.get(f"/v1/users/{user.id}/second-factor").json()
+    assert answer["totp"] == []
+    [passkey] = answer["passkeys"]
+    assert passkey["name"] == "Laptop"
+    assert set(passkey) == {"id", "name", "created_at", "last_used_at"}
+    url = f"/v1/users/{user.id}/second-factor/passkeys/{passkey['id']}"
+    assert client.delete(url).status_code == 204
+    assert client.get(f"/v1/users/{user.id}").json()["second_factor"] is False
+    gone = client.delete(url)
+    assert gone.status_code == 404
+    assert gone.json()["error"]["code"] == "not_found"
+
+
 def test_removing_every_device(client: TestClient, services: Services) -> None:
     user = with_devices(services, "Phone", "Tablet")
     url = f"/v1/users/{user.id}/second-factor"
@@ -92,6 +130,8 @@ def test_nobody_removes_its_own_through_the_api(
     assert client.delete(f"/v1/users/{me}/second-factor").status_code == 409
     own = f"/v1/users/{me}/second-factor/totp/tfa_x"
     assert client.delete(own).status_code == 409
+    own = f"/v1/users/{me}/second-factor/passkeys/psk_x"
+    assert client.delete(own).status_code == 409
 
 
 def test_reading_and_removing_need_their_rights(
@@ -104,6 +144,8 @@ def test_reading_and_removing_need_their_rights(
     assert app_client.delete(url, headers=reader).status_code == 403
     device = services.factors.of(ADMIN, user.id).totp[0].id
     refused = app_client.delete(f"{url}/totp/{device}", headers=reader)
+    assert refused.status_code == 403
+    refused = app_client.delete(f"{url}/passkeys/psk_x", headers=reader)
     assert refused.status_code == 403
     nobody = bearer_for(services, READER)
     assert app_client.get(url, headers=nobody).status_code == 403

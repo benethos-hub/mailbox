@@ -23,7 +23,12 @@ from .changes import list_all_changes, list_changes
 from .compose import message_body
 from .discovery import discover_account, poll_device_oauth, start_device_oauth
 from .drafts import create_draft, delete_draft, list_drafts, update_draft
-from .factors import get_second_factor, remove_second_factor, remove_totp_device
+from .factors import (
+    get_second_factor,
+    remove_passkey,
+    remove_second_factor,
+    remove_totp_device,
+)
 from .folders import create_folder, delete_folder, list_folders, update_folder
 from .generic import request
 from .health import health
@@ -75,6 +80,7 @@ __all__ = [
     "list_webhooks",
     "get_second_factor",
     "remove_second_factor",
+    "remove_passkey",
     "remove_totp_device",
     "create_role",
     "delete_role",
