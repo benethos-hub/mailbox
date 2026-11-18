@@ -426,3 +426,40 @@ async def test_a_send_names_the_hidden_recipients(gmail: FakeGmail) -> None:
         "SENT",
         "ALL_MAIL",
     ]
+
+
+RAW_EAI = (
+    "Authentication-Results: mx.google.com; spf=pass (google.com: domain of"
+    " jörg@example.com designates 192.0.2.1 as permitted sender)"
+    " smtp.mailfrom=jörg@example.com\r\n"
+    "From: Jörg <jörg@example.com>\r\nTo: jörg@example.de, a@bücher.de\r\n"
+    "Subject: Grüße\r\nDate: Wed, 18 Nov 2026 10:00:00 +0000\r\n\r\nHi\r\n"
+).encode()
+
+
+async def test_a_list_reads_an_address_beyond_ascii(gmail: FakeGmail) -> None:
+    """SMTPUTF8 (RFC 6532): the addresses themselves beyond ASCII."""
+    gmail.add_message(raw=RAW_EAI)
+    [summary] = (
+        await adapter(gmail).list_messages("INBOX", limit=5, cursor=None)
+    ).items
+    assert summary.sender is not None
+    assert (summary.sender.email, summary.sender.name) == ("jörg@example.com", "Jörg")
+    assert [a.email for a in summary.to] == ["jörg@example.de", "a@bücher.de"]
+    assert summary.subject == "Grüße"
+
+
+async def test_a_list_and_the_message_check_the_sender_alike(
+    gmail: FakeGmail,
+) -> None:
+    """An entry beyond ASCII reads the same from the metadata as from the
+    message itself."""
+    message_id = gmail.add_message(raw=RAW_EAI)
+    provider = adapter(gmail)
+    [summary] = (await provider.list_messages("INBOX", limit=5, cursor=None)).items
+    message = await provider.get_message(message_id)
+    assert summary.sender_check == message.sender_check
+    assert (summary.sender_check.result, summary.sender_check.domain) == (
+        "pass",
+        "example.com",
+    )

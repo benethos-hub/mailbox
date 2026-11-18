@@ -147,6 +147,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   passkey". It showed it as a token before.
 - The `409` for removing one's own second factor through the API says
   it is done with a code or a passkey, not with a code alone.
+- A list, thread or search of a Gmail account with a message whose
+  addresses are beyond ASCII (SMTPUTF8, such as `jörg@example.com`)
+  answers. It answered `500` before. Its sender check is the same in
+  the list as in the message, also where the entry names such an
+  address.
 - A passkey whose answer is cut short is refused on the page Second
   factor. It answered `500` before.
 
