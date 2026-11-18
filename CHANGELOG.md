@@ -54,6 +54,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `text_body` and `html_body` of a message whose text part names a
+  Western single-byte charset (windows-1252, iso-8859-1, iso-8859-15,
+  us-ascii) but holds UTF-8 read as UTF-8. Such a mail showed "fÃ¼r"
+  for "für" before. Text really written in such a charset reads as
+  before.
 - A list of a Microsoft account's messages or drafts shows only what lies
   in the folder asked for. A cursor made up by the caller could name
   another folder's path, so a token that may reach drafts alone could

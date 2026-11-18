@@ -6,6 +6,8 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from email.message import EmailMessage
 
+import pytest
+
 from benethos_mailbox_service.data.mail.parse import (
     ParsedMessage,
     PartShape,
@@ -90,3 +92,72 @@ def test_what_counts_as_an_attachment() -> None:
         [shape("text/plain"), shape("text/html", None, "inline")]
     )
     assert not has_attachments([shape("application/pdf")])
+
+
+def _labelled(subtype: str, charset: str, body: bytes) -> bytes:
+    """A message of one text part, its bytes quoted-printable under the
+    label ``charset``, whatever they really are."""
+    head = (
+        "From: billing@example.com\r\nSubject: Ihre Rechnung\r\n"
+        "MIME-Version: 1.0\r\n"
+        f"Content-Type: text/{subtype}; charset={charset}\r\n"
+        "Content-Transfer-Encoding: quoted-printable\r\n\r\n"
+    )
+    return head.encode("ascii") + body + b"\r\n"
+
+
+def test_utf_8_under_a_western_label_reads_as_utf_8() -> None:
+    mail = EmailMessage()
+    mail["From"] = "billing@example.com"
+    mail.set_content("Ihre Rechnung für Oktober")
+    mail.add_alternative("<p>Ihre Rechnung für Oktober</p>", subtype="html")
+    plain = mail.get_payload()[0]
+    plain.set_param("charset", "windows-1252")
+    raw = mail.as_bytes()
+    assert "f\u00fcr".encode() in raw
+    parsed = ParsedMessage(raw)
+    assert (parsed.text or "").strip() == "Ihre Rechnung für Oktober"
+    assert (parsed.html or "").strip() == "<p>Ihre Rechnung für Oktober</p>"
+
+
+@pytest.mark.parametrize(
+    "charset", ["windows-1252", "iso-8859-1", "latin-1", "iso-8859-15", "us-ascii"]
+)
+@pytest.mark.parametrize("subtype", ["plain", "html"])
+def test_a_wrong_label_on_utf_8_is_set_right(charset: str, subtype: str) -> None:
+    parsed = ParsedMessage(_labelled(subtype, charset, b"Ihre Rechnung f=C3=BCr"))
+    body = parsed.text if subtype == "plain" else parsed.html
+    assert (body or "").strip() == "Ihre Rechnung für"
+
+
+@pytest.mark.parametrize("charset", ["windows-1252", "iso-8859-1", "iso-8859-15"])
+def test_text_in_its_western_charset_stays_as_it_is(charset: str) -> None:
+    # "ü" is the byte FC, which alone is no UTF-8.
+    parsed = ParsedMessage(_labelled("plain", charset, b"Ihre Rechnung f=FCr"))
+    assert (parsed.text or "").strip() == "Ihre Rechnung für"
+
+
+@pytest.mark.parametrize("charset", ["windows-1252", "utf-8", "gb2312", "x-unknown"])
+def test_ascii_stays_as_it_is_under_any_label(charset: str) -> None:
+    parsed = ParsedMessage(_labelled("plain", charset, b"Invoice for October"))
+    assert (parsed.text or "").strip() == "Invoice for October"
+
+
+def test_a_multi_byte_label_is_left_alone() -> None:
+    chinese = "中文".encode("gb2312")
+    quoted = "".join(f"={b:02X}" for b in chinese).encode("ascii")
+    assert (ParsedMessage(_labelled("plain", "gb2312", quoted)).text or "").strip() == (
+        "中文"
+    )
+    # UTF-8 under a multi-byte label is read by the label, as before.
+    utf8 = b"f=C3=BCr"
+    read = ParsedMessage(_labelled("plain", "gb2312", utf8)).text or ""
+    assert read.strip() == "für".encode().decode("gb2312", "ignore")
+    japanese = "日本語".encode("iso-2022-jp")
+    parsed = ParsedMessage(_labelled("plain", "iso-2022-jp", japanese))
+    assert (parsed.text or "").strip() == "日本語"
+
+
+def test_an_unknown_label_reads_as_utf_8() -> None:
+    parsed = ParsedMessage(_labelled("plain", "x-unknown", b"f=C3=BCr"))
+    assert (parsed.text or "").strip() == "für"
