@@ -347,7 +347,8 @@ class Gone:
         """Messages the provider did not find where the index says: one sync
         pass, and the new place of those that moved. One looked up in vain
         since the last pass gets no pass of its own: a caller that names a
-        stale id again and again does not sync the account each time."""
+        stale id again and again does not sync the account each time, nor
+        after a pass given up, which counts as none: until the next pass."""
         if self._known(account_id, self._passes(account_id), natives):
             return {}
         await self._sync.sync_account(account_id)

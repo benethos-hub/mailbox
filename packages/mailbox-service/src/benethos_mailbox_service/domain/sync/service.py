@@ -294,7 +294,8 @@ class SyncService:
 
     async def sync_account(self, account_id: str) -> None:
         """Bring the index of one account up to date. Reads only the folders
-        whose state changed. A failure changes nothing."""
+        whose state changed. A failure changes nothing, nor does a pass
+        given up."""
         if not self.watched(account_id):
             return
         lock = self._locks.get(account_id)
@@ -312,6 +313,8 @@ class SyncService:
                     last_error_at=self._clock(),
                 )
                 raise
+            if isinstance(counts, Overtaken):
+                return
             self._states[account_id] = SyncState(
                 last_sync_at=self._clock(), passes=state.passes + 1
             )
@@ -387,20 +390,21 @@ class SyncService:
         except MailboxServiceError:
             return  # asked again with the next change of folders
 
-    async def _sync(self, account_id: str) -> Counts:
+    async def _sync(self, account_id: str) -> Counts | Overtaken:
         """A pass, read again where a change of ours overtook it. After
         ``ATTEMPTS`` the index stays as it was and the folder states are
         not kept, so the next pass reads the folders again."""
         account = self._adapters.record(account_id)
-        for _ in range(ATTEMPTS):
+        for attempt in range(1, ATTEMPTS + 1):
             found = await self._attempt(account_id)
             if isinstance(found, Counts):
                 return found
-            self._activity.record(said.PassOvertaken(by=SERVICE, account=account))
+            if attempt < ATTEMPTS:
+                self._activity.record(said.PassOvertaken(by=SERVICE, account=account))
         self._activity.record(
             said.PassGivenUp(by=SERVICE, account=account, attempts=ATTEMPTS)
         )
-        return Counts(found.folders)
+        return found
 
     async def _attempt(self, account_id: str) -> Counts | Overtaken:
         """Compare the folders whose state changed with the index: what
