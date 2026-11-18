@@ -4,7 +4,8 @@
 turns a parsed message into the neutral model. IMAP, POP3 and any adapter
 that sees raw messages share them. The domain uses ``compose`` for replies.
 ``fields`` reads and writes one header field, and ``ThreadHeaders``
-holds those that tie a message to its conversation. The text of an HTML-only
+holds those that tie a message to its conversation. ``authentication``
+reads the receiving server's check of the sender. The text of an HTML-only
 mail comes from ``benethos_mailbox_common.mail.plaintext``. Callers
 import the modules from here, ``from ..mail import compose``, and call
 ``compose.message(...)``.
@@ -12,7 +13,14 @@ import the modules from here, ``from ..mail import compose``, and call
 
 from __future__ import annotations
 
-from . import compose, convert, fields, parse
+from . import authentication, compose, convert, fields, parse
 from .fields import ThreadHeaders
 
-__all__ = ["ThreadHeaders", "compose", "convert", "fields", "parse"]
+__all__ = [
+    "ThreadHeaders",
+    "authentication",
+    "compose",
+    "convert",
+    "fields",
+    "parse",
+]

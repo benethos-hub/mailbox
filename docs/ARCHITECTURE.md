@@ -343,6 +343,8 @@ packages/mailbox-service/
         convert.py      # a parsed message to Message / MessageSummary
         fields.py       # one header field: a Message-ID as one token,
                         #   an address in Unicode
+        authentication.py # the receiving server's check of the sender,
+                        #   read from its Authentication-Results entry
       protocols/        # the wire, one library each, in our types:
                         #   imap/ (IMAPClient: session.py, its parts
                         #   folders.py and messages.py, responses.py,

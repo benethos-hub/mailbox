@@ -145,6 +145,18 @@ class ParsedMessage:
     def header(self, name: str) -> str | None:
         return self.headers.get(name.lower())
 
+    def all_headers(self, name: str) -> list[str]:
+        """Every value of the header ``name``, in their order, as the
+        message writes them."""
+        return [str(value) for value in self._parsed.obj.get_all(name, [])]
+
+    @property
+    def sole_sender(self) -> str | None:
+        """The address in ``From`` when it names exactly one, else None."""
+        found = [address for _, address in getaddresses(self.all_headers("from"))]
+        found = [address for address in found if address]
+        return found[0] if len(found) == 1 else None
+
     @property
     def received(self) -> datetime | None:
         """The time of the topmost ``Received`` header: when the last server

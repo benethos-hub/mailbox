@@ -161,3 +161,25 @@ def test_a_multi_byte_label_is_left_alone() -> None:
 def test_an_unknown_label_reads_as_utf_8() -> None:
     parsed = ParsedMessage(_labelled("plain", "x-unknown", b"f=C3=BCr"))
     assert (parsed.text or "").strip() == "für"
+
+
+def test_every_value_of_a_header_and_the_one_sender() -> None:
+    raw = (
+        b"From: Ann <ann@example.com>\r\n"
+        b"Authentication-Results: mx.example.org; dmarc=pass\r\n"
+        b"Authentication-Results: mx.example.net; dmarc=fail\r\n"
+        b"Subject: Hi\r\n\r\nHello\r\n"
+    )
+    parsed = ParsedMessage(raw)
+    assert parsed.all_headers("authentication-results") == [
+        "mx.example.org; dmarc=pass",
+        "mx.example.net; dmarc=fail",
+    ]
+    assert parsed.all_headers("x-none") == []
+    assert parsed.sole_sender == "ann@example.com"
+
+
+@pytest.mark.parametrize("sender", [b"", b"From: a@example.com, b@example.com\r\n"])
+def test_no_sole_sender(sender: bytes) -> None:
+    raw = sender + b"Subject: Hi\r\n\r\nHello\r\n"
+    assert ParsedMessage(raw).sole_sender is None
