@@ -4,6 +4,7 @@ in a list and on the page of an account."""
 from __future__ import annotations
 
 import html
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -13,12 +14,15 @@ from benethos_mailbox_service.data.models import (
     Abilities,
     Account,
     Capability,
+    Grant,
     ProviderType,
     SenderCheck,
 )
+from benethos_mailbox_service.domain.accounts import SeenName
 from benethos_mailbox_service.web.pages.sender import sender_tag
 
-from ...conftest import memory_of, relearn
+from ...conftest import browser_user, memory_of, relearn
+from ...ui_helpers import sign_in
 
 PASSED = SenderCheck(
     result="pass", domain="example.com", matches_from=True, method="dmarc"
@@ -116,3 +120,76 @@ def test_a_gmail_account_takes_no_name_of_its_server(
     )
     page = ui.get("/ui/accounts/acc_gmail").text
     assert "authserv_id" not in page
+
+
+# --- the names in the newest mails ----------------------------------------------------
+
+
+def asked(
+    services: Services, monkeypatch: pytest.MonkeyPatch, *names: SeenName
+) -> list[str]:
+    """The account service answers ``names``, and notes each account asked."""
+    calls: list[str] = []
+
+    async def server_names(access: Any, account_id: str) -> list[SeenName]:
+        calls.append(account_id)
+        return list(names)
+
+    monkeypatch.setattr(services.accounts, "server_names", server_names)
+    return calls
+
+
+def test_the_page_reads_the_mailbox_only_when_asked(
+    ui: TestClient,
+    services: Services,
+    account_id: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls = asked(services, monkeypatch, SeenName("mx.example.org", 9, 10))
+    page = ui.get(f"/ui/accounts/{account_id}").text
+    assert calls == []
+    assert f'href="/ui/accounts/{account_id}?suggest=1"' in page
+    shown = ui.get(f"/ui/accounts/{account_id}", params={"suggest": "1"}).text
+    assert calls == [account_id]
+    assert "Seen in the newest 10 mails:" in shown
+    assert '<code id="seen-1">mx.example.org</code>' in shown
+    assert 'data-copy="seen-1"' in shown
+    assert "9 of 10" in shown
+    assert "A mail can carry any name." in shown
+
+
+def test_no_name_in_the_newest_mails(ui: TestClient, account_id: str) -> None:
+    """The memory adapter reads no names, as a server that writes none."""
+    page = ui.get(f"/ui/accounts/{account_id}", params={"suggest": "1"}).text
+    assert "No Authentication-Results in the newest mails" in page
+
+
+def test_a_gmail_account_is_not_offered_it(
+    ui: TestClient, services: Services, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls = asked(services, monkeypatch)
+    services.repositories.accounts.add(
+        Account(id="acc_gmail", provider=ProviderType.GMAIL, email="g@example.com")
+    )
+    page = ui.get("/ui/accounts/acc_gmail", params={"suggest": "1"}).text
+    assert "Look in the mailbox" not in page
+    assert calls == []
+
+
+def test_a_reader_is_not_offered_it(
+    app_client: TestClient,
+    services: Services,
+    account_id: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls = asked(services, monkeypatch)
+    sign_in(
+        app_client,
+        *browser_user(
+            services,
+            Grant(accounts=[account_id], allow=["list_accounts", "get_account"]),
+        ),
+    )
+    page = app_client.get(f"/ui/accounts/{account_id}", params={"suggest": "1"}).text
+    assert "Look in the mailbox" not in page and "Seen in the newest" not in page
+    assert calls == []

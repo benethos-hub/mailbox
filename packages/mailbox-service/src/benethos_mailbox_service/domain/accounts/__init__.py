@@ -26,13 +26,14 @@ from .adapters import Adapters
 from .connections import connection_of, connections
 from .device import DeviceSignIn
 from .oauth import OAuthService
-from .service import AccountHooks, AccountService, Rename
+from .service import AccountHooks, AccountService, Rename, SeenName
 
 __all__ = [
     "NEEDS",
     "AccountHooks",
     "AccountService",
     "Rename",
+    "SeenName",
     "Adapters",
     "DeviceSignIn",
     "Needs",

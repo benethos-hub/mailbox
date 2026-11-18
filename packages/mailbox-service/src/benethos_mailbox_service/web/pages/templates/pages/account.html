@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import action, breadcrumb, card, credentials, csrf_field, danger_card, fact, facts, icon, link_button with context %}
+{% from "components/ui.html" import action, breadcrumb, card, copy_button, credentials, csrf_field, danger_card, fact, facts, icon, link_button with context %}
 {% from "components/connection.html" import connection_fields %}
 {% block title %}{{ account.email }} · {{ APP_NAME }}{% endblock %}
 {% block heading %}{{ account.email }}{% endblock %}
@@ -58,6 +58,24 @@
   {% endif %}
   <div class="form-actions"><button class="primary" type="submit">{{ icon("check-lg") }} Save</button></div>
 </form>
+{% if takes_server_name %}
+{% if names is none %}
+<div class="fold toolbar">
+  <span class="muted grow">The receiving server's name, for the sender check, stands at the start of Authentication-Results in a mail it received.</span>
+  {{ link_button("/ui/accounts/" ~ account.id ~ "?suggest=1", "Look in the mailbox", "search", cls="") }}
+</div>
+{% elif names %}
+<div class="fold">
+  <p>Seen in the newest {{ names[0].of }} mails:</p>
+  <ul class="lines">
+    {% for name in names %}<li><span class="secret-line"><code id="seen-{{ loop.index }}">{{ name.id }}</code>{{ copy_button("seen-" ~ loop.index, "Copy " ~ name.id) }}<span class="muted">{{ name.count }} of {{ name.of }}</span></span></li>{% endfor %}
+  </ul>
+  <p class="muted">A mail can carry any name. Take the one your server writes on every mail.</p>
+</div>
+{% else %}
+<div class="fold"><p class="muted">No Authentication-Results in the newest mails of the inbox. This server may write none.</p></div>
+{% endif %}
+{% endif %}
 {% if signs_in_with_oauth %}
 <div class="fold toolbar">
   <span class="muted grow">Signed in with {{ account.provider.value | signs_in_at }}. Sign in again after a password change or when access was revoked.</span>

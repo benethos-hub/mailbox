@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import Any
 
 from ....errors import MailboxServiceError, missing, missing_message
-from ...mail import convert
+from ...mail import authentication, convert
 from ...models import (
     AttachmentContent,
     FolderRole,
@@ -70,6 +70,29 @@ async def list_messages(
         if more and page
         else None,
     )
+
+
+async def authserv_ids(account: JmapAccount, limit: int) -> list[list[str]]:
+    """The receiving servers' names in the newest ``limit`` mails of the
+    inbox, from the header the summaries carry."""
+    inbox = await account.role_id(FolderRole.INBOX)
+    if inbox is None:
+        return []
+    answers = await _page(
+        account,
+        {
+            "filter": mappers.query_filter(inbox, None, None),
+            "sort": mappers.SORT,
+            "limit": limit,
+        },
+    )
+    found = jmap.read(answers, "q", jmap.Queried)
+    emails = {e.id: e for e in jmap.read(answers, "g", jmap.Got[Email]).items}
+    return [
+        authentication.authserv_ids(emails[i].authentication_results or [])
+        for i in found.ids
+        if i in emails
+    ]
 
 
 async def _page(account: JmapAccount, query: dict[str, Any]) -> list[jmap.Invocation]:

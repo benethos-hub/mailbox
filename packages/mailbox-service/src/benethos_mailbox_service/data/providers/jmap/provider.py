@@ -106,6 +106,9 @@ class JmapProvider:
             self._account, folder_id, limit, cursor, search
         )
 
+    async def authserv_ids(self, limit: int) -> list[list[str]]:
+        return await messages.authserv_ids(self._account, limit)
+
     async def get_message(self, message_id: str) -> Message:
         return await messages.get_message(self._account, message_id)
 

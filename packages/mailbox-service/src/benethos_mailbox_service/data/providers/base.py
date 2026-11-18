@@ -302,6 +302,18 @@ class Summaries(Protocol):
 
 
 @runtime_checkable
+class ServerNames(Protocol):
+    """The names receiving servers wrote into the newest mails, for a
+    person to choose the account's own from (IMAP, POP3, JMAP)."""
+
+    async def authserv_ids(self, limit: int) -> list[list[str]]:
+        """For each of the newest ``limit`` mails of the inbox, the
+        authserv-id of each of its Authentication-Results headers, where
+        it is a host name."""
+        ...
+
+
+@runtime_checkable
 class Places(Protocol):
     """Reads the folders of messages named by id without their content.
     The domain needs it to judge a change under grants that name folders,
