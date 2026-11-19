@@ -7,15 +7,14 @@ resolved in [PERMISSIONS.md](PERMISSIONS.md). This file holds the
 factors of the UI sign-in: the password, and the second factor with
 its methods. TOTP is the first method, passkeys are the second.
 
-The second factor of the UI sign-in as built in 0.4.0, from the
-proposal of 2026-10-09 and its decisions, the answers of section 10.
-Passkeys joined it on 2026-11-18, decided that day (section 10).
+TOTP is built since 0.4.0, decided 2026-10-09. Passkeys joined it on
+2026-11-18, decided that day. The decisions are in section 10.
 
 ## 1. The factors
 
 | Factor | What it proves | Where |
 |---|---|---|
-| Password | something the person knows | CONCEPT 7.5, built in phase 4a |
+| Password | something the person knows | CONCEPT 7.5 |
 | Second factor | something the person holds, by one of its methods | section 2 |
 | ↳ TOTP, an authenticator app | a shared secret on a device | section 3 |
 | ↳ Passkey | a key pair on a device, a security key or in a password manager | section 3.2 |
@@ -111,8 +110,7 @@ A user may hold several passkeys, each with a name of its own,
 
 ## 4. Signing in
 
-1. Name and password, as today, with the same brakes per address and
-   per name (CONCEPT 7.5, [LIMITS.md](LIMITS.md)).
+1. Name and password, with the brakes per address and per name (CONCEPT 7.5, [LIMITS.md](LIMITS.md)).
 2. A user with a second factor gets no session yet. The service keeps
    a **pending sign-in** on the server, as it keeps a session, and the
    browser a cookie of its own for it. It reaches the code page and
@@ -289,10 +287,7 @@ factor is the third.
 | `recovery_codes` | `user_id` (references the user, deleted with it), `key_id` (the data key the hash came from), `hash`, `used_at` |
 | `passkeys` | `id` (`psk_` and 64 hex), `user_id` (references the user, deleted with it), `name`, `credential_id` (unique across all users), `credential` (the attested credential data with the public key), `sign_count`, `created_at`, `last_used_at` |
 
-Schema 19 made the hashes of the recovery codes keyed. The plain
-SHA-256 hashes of schema 18 cannot become keyed ones, since the codes
-are never kept, so the migration deletes them and a user with a second
-factor makes new codes. No release held schema 18 then. Passkeys
+The hashes of the recovery codes are keyed since schema 19. Passkeys
 brought a table of their own in schema 23. A passkey holds no secret
 and is stored as it is. A TOTP secret is sealed with
 the data key as a webhook's secret is (CONCEPT 7.3), bound to its
@@ -310,7 +305,7 @@ hours however used, and a user holds 10 at most
 stored secret. Its page asks an administrator with a second factor for
 the second factor as well as the password: a code, a passkey or a
 recovery code.
-Without a second factor the password alone does, as before.
+Without a second factor the password alone does.
 
 **API:**
 

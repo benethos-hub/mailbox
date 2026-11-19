@@ -72,7 +72,8 @@ AREAS = {
     "http",
 }
 NAME = re.compile(r"[a-z][a-z0-9]*(_[a-z0-9]+)*")
-LOGGING_MD = Path(__file__).resolve().parents[5] / "docs" / "LOGGING.md"
+# Section 7 of docs/LOGGING.md, which is a file of its own.
+LOGGING_MD = Path(__file__).resolve().parents[5] / "docs" / "logging" / "code.md"
 
 
 def test_the_areas_are_the_packages_of_the_domain() -> None:

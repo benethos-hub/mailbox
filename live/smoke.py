@@ -310,13 +310,14 @@ def main() -> int:
     if args.wrong_password and used:
         email, settings_used = next(iter(used.items()))
         print("\n== wrong password")
+        not_the_password = "definitely-wrong"  # pragma: allowlist secret
         wrong = client.post(
             "/v1/accounts",
             json={
                 "provider": "imap",
                 "email": email,
                 "settings": settings_used,
-                "credentials": {"password": "definitely-wrong"},
+                "credentials": {"password": not_the_password},
             },
         )
         run.check(

@@ -6,6 +6,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-19
+
 ### Added
 
 - Each message carries `sender_check`: what the account's receiving
@@ -95,11 +97,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 - **Breaking:** `benethos-mailbox-common`: `mail.marks.Mark` has no
   field `icon`. A mark is its keyword, its word and whether it shows.
   The configuration UI picks its icons itself.
-- A folder named in a message change, or as the parent of a folder,
-  must be one the account lists, by id or role. Any other name answers
-  `404`, as it did on Gmail and JMAP accounts. On Microsoft accounts
-  Graph's well-known folder names no longer pass: use the role, such as
-  `trash`.
+- **Breaking:** a folder named in a message change, or as the parent of
+  a folder, must be one the account lists, by id or role. Any other name
+  answers `404`, as it did on Gmail and JMAP accounts. On Microsoft
+  accounts Graph's well-known folder names no longer pass: use the role,
+  such as `trash`.
 - The images install platformdirs 4.14.7 and pydantic 2.14.4 from the
   lockfile, the service image fastapi 0.165.0, annotated-doc 0.0.7,
   imapclient 4.3.0 and publicsuffixlist 1.1.2.20261118. imapclient 4.3.0
@@ -181,6 +183,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   factor. It answered `500` before.
 - Renaming an IMAP folder keeps its subfolders subscribed under their
   new names.
+- In the configuration UI the question before a mail is sent and before
+  a draft is deleted names its button, Send and Delete draft. It said
+  OK.
 
 ### Security
 
@@ -2325,7 +2330,8 @@ the configuration may change without notice.
 - One error envelope `{"error": {"code", "message"}}`, authentication errors
   included.
 
-[Unreleased]: https://github.com/benethos-hub/mailbox/compare/v0.7.5...HEAD
+[Unreleased]: https://github.com/benethos-hub/mailbox/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/benethos-hub/mailbox/compare/v0.7.5...v0.8.0
 [0.7.5]: https://github.com/benethos-hub/mailbox/compare/v0.7.4...v0.7.5
 [0.7.4]: https://github.com/benethos-hub/mailbox/compare/v0.7.3...v0.7.4
 [0.7.3]: https://github.com/benethos-hub/mailbox/compare/v0.7.2...v0.7.3

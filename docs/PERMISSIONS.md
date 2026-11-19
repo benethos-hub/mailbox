@@ -1,14 +1,12 @@
 # Users, roles and rights
 
-Proposal of 2026-09-27, section 8 decided on 2026-10-05. One place for
-the whole model: who may do what, how that is written down, checked and
-shown, and what should change.
-[CONCEPT 7.5](CONCEPT.md#75-users-permissions-and-authentication) keeps
+One place for the whole model: who may do what, and how that is written
+down, checked and shown.
+[CONCEPT 7.5](concept/users.md#75-users-permissions-and-authentication) keeps
 the record of decisions and the details of credentials. [UI.md](UI.md)
-says how the pages look. This file says how the rights work, as they are
-today (sections 1 to 7), and the changes of section 8, which are built
-but `identities` of 8.5. What the user decides is marked as decided,
-everything else is the proposal.
+says how the pages look. Sections 1 to 7 say how the rights work.
+Section 8 holds what was decided on 2026-10-05 and how it is built. Of
+it, only `identities` of 8.5 is not built.
 
 ## 1. Principles
 
@@ -54,7 +52,7 @@ everything else is the proposal.
 
 ## 3. The catalogue
 
-The groups as `domain/rights/permissions.py` holds them today:
+The groups as `domain/rights/permissions.py` holds them:
 
 | Group | Rights | Bound to |
 |---|---|---|
@@ -64,7 +62,7 @@ The groups as `domain/rights/permissions.py` holds them today:
 | `mail.delete` | `delete_message_permanent`, `delete_folder` | an account |
 | `drafts` | `list_drafts`, `create_draft`, `update_draft`, `delete_draft` | an account |
 | `send` | `send_message`, `send_draft` | an account |
-| `mail.share` | `share_attachment`: a link to an attachment for another service ([CONCEPT 6.3](CONCEPT.md#63-messages)), in no template of 8.7 | an account |
+| `mail.share` | `share_attachment`: a link to an attachment for another service ([CONCEPT 6.3](concept/api-mail.md#63-messages)), in no template of 8.7 | an account |
 | `audit` | `list_sends`, `list_all_sends` | an account |
 | `audit` | `list_activity`, the audit of administration (8.6) | the service |
 | `accounts.manage` | `update_account`, `delete_account`, `verify_account`, `list_server_names` | an account |
@@ -201,21 +199,15 @@ from becoming a way up:
   (`/v1/audit`, UI Audit and the card Recent activity, 8.6), and in the
   service log.
 
-## 8. What should change
+## 8. The changes of 2026-10-05
 
-Eight changes. The first two change the model, the rest add to it.
-None removes a right anyone holds. **Decided 2026-10-05:** 8.1 to 8.5,
-8.7 and 8.8 as below, with the answers of section 10. 8.6 followed on
-its own, with the answers of AUDIT.md section 7. All of it is built but
-`identities` of 8.5. The sections below are the proposal as written:
-"today" in them means before 2026-10-05.
+**Decided 2026-10-05:** 8.1 to 8.5, 8.7 and 8.8, with the answers of
+section 10. 8.6 followed on its own, with the answers of AUDIT.md
+section 7. All of it is built but `identities` of 8.5.
 
 ### 8.1 Service rights leave the grant
 
-Today a service right sits in a grant whose accounts list means nothing,
-and connecting an account needs a grant with `*` although it is not
-about any existing account. The editor shows tick boxes for accounts
-that do not apply. The proposal: a user (and a role) has two lists.
+A user and a role have two lists.
 
 ```json
 {
@@ -232,30 +224,26 @@ that do not apply. The proposal: a user (and a role) has two lists.
 - `service` names service rights: `users.read` and `users.manage` (8.2),
   `webhooks.manage`, `accounts.connect`, `audit` (8.6) and `admin`. No
   accounts, no constraints.
-- `grants` names account-bound rights, as today. `accounts.manage` keeps
-  `update_account`, `delete_account`, `verify_account` and signing in
-  again, all about one account.
-- `accounts.connect` is a new group of `discover_account`,
-  `create_account` and `start_oauth`, and for sign-in with a code
-  `start_device_oauth` and `poll_device_oauth` (`start_oauth` went with
-  its route on 2026-10-07: the sign-in in a browser is the UI's, and a
-  sign-in needs `create_account` or `update_account`). Whoever connects an
-  account holds its password for a moment and needs a grant on it
-  afterwards: the creator gets `accounts.manage` on the new account, and
-  nothing else, so it can verify and remove what it connected. Mail
-  rights on it are given as on any account. **Decided 2026-10-05.**
-- `admin` in `service` means every right, as today. `admin` in a grant's
-  `allow` is no longer accepted. **Decided 2026-10-05:** a request that
-  names a service right or `admin` in a grant's `allow` answers `400`
-  and says it belongs in `service`. Nothing is rewritten silently.
-- Migration: a stored grant that names a service right or `admin` moves
-  those names to `service` and keeps the rest. A grant with `*` and
-  `accounts.manage` gets `accounts.connect` in `service`, since it could
-  connect before. Nobody loses a right.
+- `grants` names account-bound rights. `accounts.manage` holds
+  `update_account`, `delete_account`, `verify_account`,
+  `list_server_names` and signing in again, all about one account.
+- `accounts.connect` holds `discover_account`, `create_account`,
+  `start_device_oauth` and `poll_device_oauth`. The sign-in in a browser
+  is the UI's and needs `create_account` or `update_account`:
+  `start_oauth` went with its route on 2026-10-07. Whoever connects an
+  account gets `accounts.manage` on it, and nothing else, so it can
+  verify and remove what it connected. Mail rights on it are given as on
+  any account. **Decided 2026-10-05.**
+- `admin` in `service` means every right. **Decided 2026-10-05:** a
+  request that names a service right or `admin` in a grant's `allow`
+  answers `400` and says it belongs in `service`. Nothing is rewritten
+  silently.
+- Migration 15 moved the service rights of stored grants to `service`,
+  and gave `accounts.connect` to a grant with `*` and `accounts.manage`.
+  Nobody lost a right.
 - API: `service` on the user and the role, in `POST`, `PATCH` and `PUT`.
-  `/v1/me` lists them under `operations` as today. Regenerate the
-  OpenAPI document. UI: the editor gets a card **Service rights** with
-  one tick box per right, above the grant rows. MCP server: no change,
+  `/v1/me` lists them under `operations`. UI: the editor has **Service
+  rights** with one tick box per right, above the grants. MCP server:
   it reads `/v1/me`.
 
 ### 8.2 `users.manage` splits in two
@@ -269,18 +257,12 @@ tokens without being able to create any.
 | `users.read` | `list_users`, `get_user`, `list_tokens`, `get_second_factor`, `list_roles`, `get_role` |
 | `users.manage` | `users.read` and `create_user`, `update_user`, `delete_user`, `create_token`, `revoke_token`, `set_password`, `remove_second_factor`, `remove_totp_device`, `remove_passkey`, `create_role`, `replace_role`, `delete_role` |
 
-Migration: none, `users.manage` keeps every right it had.
-
 ### 8.3 The last administrator stays
 
-Today a user cannot delete or disable itself. It can still take its own
-`admin` away, and one administrator can disable the other, until nobody
-is left who may sign in to the UI and repair it. The way back is then
-the host: `users set-password`. The proposal: the service refuses a
-change that would leave no enabled user with `admin` and `ui_sign_in`,
-with `409` and a message that says so. The host command stays as the
-last resort. **Decided 2026-10-05:** refused, not allowed with a
-warning.
+The service refuses a change that would leave no enabled user with
+`admin` and `ui_sign_in`, with `409` and a message that says so. The
+host command `users set-password` stays as the last resort. **Decided
+2026-10-05:** refused, not allowed with a warning.
 
 ### 8.4 A grant can expire
 
@@ -300,7 +282,7 @@ Both narrow a grant and are checked in the domain, as `recipients` is:
 - **`folders`**: a list of folder roles or names the grant reaches, null
   for every folder. `mail.read` with `folders: ["inbox", "Invoices"]`
   lists and reads there and nowhere else. `mail.write` with folders
-  moves only between them. Planned in CONCEPT 7.5 already.
+  moves only between them.
   **Decided 2026-10-05:** a listed folder includes its subfolders, so
   `Invoices` covers `Invoices/2026`. The folder with the role `all`
   covers every folder but the trash and junk, as it lists them. A
@@ -312,20 +294,16 @@ Both narrow a grant and are checked in the domain, as `recipients` is:
   null for every one (IDEAS). Waits for identities in the account model.
   **Decided 2026-10-05:** not built now.
 
-A constraint applies per grant, as today: a call passes when one grant
+A constraint applies per grant: a call passes when one grant
 that allows it accepts everything about the call.
 
 ### 8.6 An audit of administration
 
-Sends have an audit in the database. Sign-ins and changes to users,
-roles, tokens, passwords, accounts and webhooks have only the service
-log, which a container may drop. The proposal: one table `activity` with
-time, user, credential, activity, the record touched, the client
-address and the outcome. Never a secret, never content. Written by the
-domain services where the log lines are written today. The design in
-full, which activities, which fields, storage, API and page, is
-[AUDIT.md](AUDIT.md). The activities themselves are those of
-[LOGGING.md](LOGGING.md) section 5.
+Sign-ins and changes to users, roles, tokens, passwords, accounts and
+webhooks are kept in the table `activity`: time, user, credential,
+activity, the record touched, the client address and the outcome. Never
+a secret, never content. The design in full is [AUDIT.md](AUDIT.md). The
+activities are those of [LOGGING.md](LOGGING.md) section 5.
 
 - `GET /v1/audit`, right `audit` on the service (a service right, so
   `audit` appears in both lists), paged newest first, filters by user,
@@ -362,27 +340,6 @@ shows the person what its own token may send.
 and the warning about reading and sending anywhere, so the model knows
 them before it sends.
 
-## 9. Order of work
-
-1. This file, one pull request of documentation. CONCEPT 7.5 and the
-   roadmap point here.
-2. 8.3, the last administrator: small, no schema change.
-3. 8.1 and 8.2 together: schema, migration, model, API, OpenAPI, editor,
-   tests, live check. The largest step, and the one the others build on.
-4. 8.8 and 8.4, both small once 8.1 is in.
-5. 8.6, the audit: schema, domain, API, two pages.
-6. 8.7, the templates: UI only.
-7. 8.5, the constraints, when identities exist and folders are asked for.
-
-Every step keeps the existing tests green, adds its own and, where a
-page changes, a walk in `live/ui.py`. **Decided 2026-10-05:** steps 2,
-3, 4, 6 and 7 on one branch, a commit per step, one pull request. Step 5
-follows on its own branch.
-
-Steps 2, 3, 4, 6 and 7 were one pull request and step 5 one of its own:
-all seven are done but `identities` of step 7, which waits for
-identities in the account model.
-
 ## 10. Questions answered
 
 - **Decided 2026-10-05:** the creator of an account gets
@@ -392,6 +349,8 @@ identities in the account model.
 - **Decided 2026-10-05:** four templates, Reader, Agent, Sender and
   Operator (8.7).
 - **Decided 2026-10-05:** grants per user stay beside roles.
+- **Decided 2026-10-05:** 8.1 to 8.5, 8.7 and 8.8 on one branch, 8.6 on
+  a branch of its own.
 - **Decided 2026-10-05:** the audit of 8.6 keeps its records 90 days
   by default, its page is under Service, and `audit` in `service` reads
   it. The rest of its answers are in [AUDIT.md](AUDIT.md) section 7.

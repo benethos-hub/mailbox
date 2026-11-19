@@ -1,6 +1,6 @@
 # <img src="../../assets/brand/icon.svg" alt="" height="36" align="absmiddle"> Mailbox in operation
 
-> **Beta, version 0.7.5.** Usable with real accounts. A breaking change
+> **Beta, version 0.8.0.** Usable with real accounts. A breaking change
 > of the API or the configuration is announced in the changelog. Stored
 > data is carried forward by migrations.
 
@@ -17,7 +17,6 @@ this folder is enough.
 - [HTTPS](#https)
 - [Settings](#settings)
 - [Operation](#operation)
-- [From the compose file before](#from-the-compose-file-before)
 
 | File | What it is |
 |---|---|
@@ -36,8 +35,8 @@ Needs Docker with compose 2.24 or newer (`docker compose version`).
 ## Get the folder
 
 Into an empty folder, from the repository. The files at a release tag
-fit that version, so put `v0.7.5` in place of `main` in the address
-below for 0.7.5. `main` holds the newest:
+fit that version, so put `v0.8.0` in place of `main` in the address
+below for 0.8.0. `main` holds the newest:
 
 ```sh
 mkdir -p mailbox/caddy.d && cd mailbox
@@ -63,7 +62,7 @@ The same by hand, from this folder:
 
 ```sh
 cp .env.example .env && chmod 600 .env          # then edit it
-IMAGE=ghcr.io/benethos-hub/benethos-mailbox-service:0.7.5
+IMAGE=ghcr.io/benethos-hub/benethos-mailbox-service:0.8.0
 
 mkdir -p caddy.d secrets/mcp secrets/tls && chmod 700 secrets secrets/mcp
 docker run --rm "$IMAGE" keys generate > secrets/master_key
@@ -296,12 +295,3 @@ docker compose up -d
 
 Docker keeps at most 5 log files of 10 MB per container, the oldest
 dropped first.
-
-## From the compose file before
-
-Before 0.3.0, `containers/compose.yaml` ran the service, with the
-image named in `MAILBOX_SERVICE_IMAGE`. This compose file has the same
-project name, `benethos-mailbox`, and the same volume, so the data
-stays. Copy the old `secrets/master_key` into `secrets/` here, keep its
-owner, and start with `docker compose up -d`. Without the master key the
-credentials in the database cannot be read.

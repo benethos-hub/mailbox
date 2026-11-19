@@ -106,7 +106,7 @@ def test_verify_after_the_password_changed(world: World, server: FakeMailBox) ->
     services, client = world
     account_id = client.post("/v1/accounts", json=NEW_ACCOUNT).json()["id"]
 
-    server.password = "changed-at-the-provider"
+    server.password = "changed-at-the-provider"  # pragma: allowlist secret
     assert client.get(f"/v1/accounts/{account_id}/folders").status_code == 502
     assert client.get(f"/v1/accounts/{account_id}").json()["status"] == "needs_reauth"
 

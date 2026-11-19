@@ -13,7 +13,7 @@ from starlette.testclient import TestClient
 from benethos_mailbox_client import MailboxClient
 from benethos_mailbox_mcp import cli, server, transport
 
-TOKEN = "s3cret-token"
+TOKEN = "s3cret-token"  # pragma: allowlist secret
 
 
 # Whether a request got past the guard to the app behind it.

@@ -1,4 +1,5 @@
-"""The trees of docs/ARCHITECTURE.md section 3 against the disk.
+"""The trees of docs/ARCHITECTURE.md section 3, which are in
+docs/architecture/, against the disk.
 
 Each package's tree names its modules: some as lines of their own, some
 in the comment of the folder that holds them. A module added or moved
@@ -17,7 +18,10 @@ from pathlib import Path
 
 from .repository_helpers import ROOT
 
-ARCHITECTURE = ROOT / "docs" / "ARCHITECTURE.md"
+ARCHITECTURE = ROOT / "docs" / "architecture"
+# Section 3, the trees, and sections 5 to 17, the rules.
+TREES = (ARCHITECTURE / "modules-service.md", ARCHITECTURE / "modules-packages.md")
+RULES = ARCHITECTURE / "rules.md"
 PACKAGES = ("mailbox-service", "mailbox-client", "mailbox-mcp", "mailbox-common")
 
 _TREE = re.compile(r"^```\n(packages/.*?)^```", re.M | re.S)
@@ -28,8 +32,7 @@ _ENTRY = re.compile(r"^( *)([\w.\-]+(?:/[\w.\-]+)*/?)(?:\s+#.*)?$")
 def _parts() -> dict[Path, str]:
     """Each path the trees name, with its part of the tree: its line and
     every line below it up to the next one at its indent or less."""
-    text = ARCHITECTURE.read_text(encoding="utf-8")
-    section = text[text.index("\n## 3. ") : text.index("\n## 4. ")]
+    section = "".join(path.read_text(encoding="utf-8") for path in TREES)
     parts: dict[Path, str] = {}
     for tree in _TREE.findall(section):
         lines = tree.splitlines()
@@ -108,7 +111,7 @@ SERVICE = ROOT / "packages" / "mailbox-service" / "src" / "benethos_mailbox_serv
 def test_every_seam_is_in_the_table_of_section_8() -> None:
     """Each protocol of ``data/providers/base.py`` and each repository
     ``data/storage`` exports is named in the table of the seams."""
-    text = ARCHITECTURE.read_text(encoding="utf-8")
+    text = RULES.read_text(encoding="utf-8")
     table = text[text.index("\n## 8. ") : text.index("\n## 9. ")]
     base = (SERVICE / "data" / "providers" / "base.py").read_text(encoding="utf-8")
     protocols = re.findall(r"^class (\w+)\(.*Protocol.*\):", base, re.M)

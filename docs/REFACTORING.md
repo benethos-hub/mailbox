@@ -1,105 +1,34 @@
 # Refactoring the service
 
-Concept of 2026-09-28, in three parts, built the same day. Sections 1
-to 7 are the domain: it had grown to 27 modules side by side in one folder, and got
-packages by area, and a shape for the change feed like the one
-[LOGGING.md](LOGGING.md) section 7 gives the activities. Section 8 is
-the data layer and `common`, the same rules applied there. Section 9 is
-the code written twice, merged into helpers once the modules are in
-place. Section 10 is the MCP server, added later the same day: its
-tools in a package, one module per kind. Section 11, a proposal of
-2026-10-05, is the migrations of the schema: one class per step.
-Section 12 is the work list of 2026-10: the client as a package, the
-adapters in parts, and limits on the size of the code. Section 13 is
-the client package in parts, of 2026-10-07. Section 17 is the review
-of 2026-10-15.
-Behaviour, the API and the
-OpenAPI document stay as they are
-throughout. The rules that came out of it, in short, are
-[ARCHITECTURE.md](ARCHITECTURE.md). What the user decided is marked as
-decided.
+Between 2026-09-28 and 2026-10-10 the code got the layout it has: the
+domain and the data layer in packages by area, the tools of the MCP
+server in a package, the migrations as classes, and the client and
+`mailbox-common` as packages of their own. All of it is built.
+Behaviour, the API and the OpenAPI document stayed as they were
+throughout.
 
-**Built 2026-09-28**, steps 2 to 5 of section 6. Sections 1 and 3.1
-describe the domain before. Sections 8 and 9 are built as well, in the
-order of 9.4, on one branch: sections 8.1 and 9.1 to 9.3 describe the
-code before. Where a finding of section 9 was built otherwise, 9.5 says
-so, and the commit that built it says why.
-
-## 1. Why
-
-- **Flat.** `domain/` holds 27 modules beside its `__init__.py`, from 17
-  to 500 lines. A reader
-  who looks for sending finds `outgoing.py`, `sending.py`,
-  `idempotency.py`, `replies.py` and `calls.py` between `auth.py` and
-  `worker.py`, with nothing that says they belong together.
-- **The layout does not show the seams.** CLAUDE.md lists every module
-  with one line. What a module is part of is left to the reader.
-- **The change feed is written with strings.** `"message.updated"` and
-  its kind are typed as literals where a change is recorded, in
-  `calls.py`, `outgoing.py`, `adapters.py` and `sync.py`. The data model
-  behind it is called `Event`, a word LOGGING.md 7.1 keeps free.
-- **One cycle between areas.** `accounts.py` imports `sync.py` to forget
-  an account's sync state on delete, and `sync.py` reaches the accounts
-  through `adapters.py`. Modules have no cycle, the areas they belong to
-  would.
+The rules that came out of it are [ARCHITECTURE.md](ARCHITECTURE.md),
+and the modules as they are now stand in its section 3. This file keeps
+what was decided on the way, and the reasons that stand nowhere else.
+The sections keep the numbers the code and the other documents name
+them by, so some numbers are missing.
 
 ## 2. Principles
 
-1. **Move, do not change.** Each step moves modules and fixes imports.
-   Behaviour, the API and the OpenAPI document stay the same. The tests
-   stay green at every commit and change only their imports.
-2. **One package per area**, named for what it is about, not for a
-   pattern. Its `__init__.py` exports what other packages and the web
-   layer use. The rest is the package's own.
-3. **Other packages import a package through its `__init__.py`**, never
-   a module inside it. So a package can split or merge its modules
-   without its callers noticing. A test checks it.
-4. **No cycle between packages.** A test checks it, as
-   `test_architecture.py` checks the layers today.
-5. **The same shape for what is alike.** Activities and changes are both
-   records of something that happened. Both get a catalogue of typed
-   classes and a recorder, so a reader who knows one knows the other.
+The principles became rules: [architecture/rules.md](architecture/rules.md),
+sections 5 and 16. One stands only here.
+
+**The same shape for what is alike.** Activities and changes are both
+records of something that happened. Both have a catalogue of typed
+classes and a recorder, so a reader who knows one knows the other.
 
 ## 3. The change feed, shaped like the activities
 
-### 3.1 Today
-
-- `domain/changes.py` holds `ChangeFeed`: record, page, the current
-  point, purge, forget an account.
-- `data/models/changes.py` holds `EventType`, a literal of five names,
-  `Event`, one record of the feed, and `ChangeType`, the three of the
-  five the change feed answers. `Change` and `ChangePage` are what the
-  API answers. A webhook's `events` is a list of `EventType`, so the
-  five values are in the OpenAPI document, under that field.
-- A change is recorded as `feed.record(account_id, "message.updated",
-  ids)` or through `sync.changed(...)` and `calls.changed(...)`, the
-  name a string at each call.
-- `domain/delivery.py` reads the feed for the webhooks.
-
-### 3.2 Proposed
-
-```
-domain/
-  changes/
-    __init__.py      ChangeFeed, MailboxChange and its classes: what
-                       others use
-    catalogue.py     one frozen class per kind of change
-    feed.py          ChangeFeed: record, page, the current point, purge
-```
-
-One module holds the catalogue, not a folder: there are five kinds, not
-sixty.
-
-```python
-@dataclass(frozen=True)
-class MessagesUpdated(MailboxChange):
-    kind: ClassVar[str] = "message.updated"  # the name in the API, unchanged
-    account_id: str
-    message_ids: list[str]
-```
-
-The base class is `MailboxChange`, not `Change`: `Change` is the API
-model in `data/models`, and `domain/changes.py` imports it today.
+One module holds the catalogue, `domain/changes/catalogue.py`, not a
+folder: there are five kinds. Each kind is a frozen dataclass with its
+`kind` as a class variable. The three kinds the feed answers extend
+`MessagesChanged`. The base class is `MailboxChange`, not `Change`:
+`Change` is the API model in `data/models`.
 
 | Class | `kind`, as the API names it |
 |---|---|
@@ -111,162 +40,49 @@ model in `data/models`, and `domain/changes.py` imports it today.
 
 - **Recorded as a class**: `feed.record(MessagesUpdated(account_id,
   ids))`. mypy finds a wrong kind, and no call site writes a name.
-  `SyncService.changed` and `Calls.changed`, which pass a name on
-  today, take the class as well.
 - **The names in the API stay**: `kind` is the string the change feed
-  and the webhooks answer today.
-- **The data model gets its own name. Decided 2026-09-28:** `Event` in
-  `data/models` becomes `ChangeRecord`, `EventType` becomes
-  `ChangeKind`. `ChangeType` and `CHANGE_TYPES`, the three of the five
-  the feed answers, become `FeedKind` and `FEED_KINDS`, so no two names
-  differ by Type and Kind alone. Python names are not in the OpenAPI
-  document, only the five values under a webhook's `events`, so the
-  contract does not move (LOGGING.md 7.1).
+  and the webhooks answer.
+- **The data model has its own names. Decided 2026-09-28:** `Event` in
+  `data/models` became `ChangeRecord`, `EventType` became `ChangeKind`.
+  `ChangeType` and `CHANGE_TYPES`, the three of the five the feed
+  answers, became `FeedKind` and `FEED_KINDS`, so no two names differ by
+  Type and Kind alone. Python names are not in the OpenAPI document,
+  only the five values under a webhook's `events`, so the contract did
+  not move (LOGGING.md 7.1).
 - **Activity and change stay apart.** An activity says what was done in
   the service and goes to the log and the audit. A change says what
   changed in a mailbox and goes to clients. Some moments are both: a
   sent mail is `MessageSent` for clients and a send activity for the
-  log. The code records both where it happens, each to its own place.
+  log. The code records both where it happens, each to its own place,
+  and they read apart: `said.MessageSent` and `changes.MessageSent`.
 
 ## 4. The domain in packages
 
-| Package | Modules today | What it is about |
-|---|---|---|
-| `rights/` | `access.py`, `permissions.py` | who may do what: the catalogue of rights, `Access` |
-| `auth/` | `auth.py`, `passwords.py`, `throttle.py` | proving who calls: tokens, passwords, the sign-in brake |
-| `users/` | `users.py` | users, roles, tokens as records |
-| `accounts/` | `accounts.py`, `adapters.py`, `oauth.py` | mail accounts: connect, change, the live adapter, OAuth |
-| `discovery/` | `discovery.py` | autodiscovery: trust, ranking, cache, limits |
-| `mailbox/` | `mailbox.py`, `calls.py`, `merge.py`, `replies.py`, `outgoing.py`, `sending.py`, `idempotency.py` | reading, changing and sending mail, drafts, lists across accounts, the grant limits and the audit of sends |
-| `sync/` | `sync.py`, `worker.py` | the id mapping, the sync pass, polling and IDLE |
-| `changes/` | `changes.py` | the change feed (section 3) |
-| `webhooks/` | `webhooks.py`, `delivery.py` | webhooks and their posts |
-| `activity/` | built, LOGGING.md steps 2 to 5 | the activities of LOGGING.md section 7. The areas of its catalogue are the packages of this table, and a move keeps every activity's name (LOGGING.md 7.2) |
-| `system/` | `status.py`, `recovery.py`, `servicelog.py` | the service at a glance: status, recovery key, log page |
-| (top level) | `locks.py`, `paging.py` | helpers several packages share |
-
-```
-domain/
-  __init__.py
-  locks.py, paging.py
-  rights/       access.py, permissions.py
-  auth/         service.py, passwords.py, throttle.py
-  users/        service.py
-  accounts/     service.py, adapters.py, oauth.py
-  discovery/    service.py
-  mailbox/      service.py, calls.py, merge.py, replies.py,
-                outgoing.py, sending.py, idempotency.py
-  sync/         service.py, worker.py
-  changes/      feed.py, catalogue.py
-  webhooks/     service.py, delivery.py
-  activity/     base.py, recorder.py, catalogue/
-  system/       status.py, recovery.py, servicelog.py
-```
+The packages and their lines are in ARCHITECTURE.md, section 2.
 
 **Decided 2026-09-28:** the package is `mailbox`, after its facade
-`MailboxService`. `discovery` is a package of its own: its module is the
-largest of the old `accounts` group and knows nothing of accounts. The
-module named like its package becomes `service.py`, so no path stutters
+`MailboxService`. `discovery` is a package of its own: its module was
+the largest of the old `accounts` group and knows nothing of accounts.
+The module named like its package is `service.py`, so no path stutters
 (`auth/auth.py`) and the service of a package is found in the same
-place each time. `changes.py` becomes `changes/feed.py`. The other
-modules keep their names.
-
-Sending stays in `mailbox/`, not in a package of its own:
-`MailboxService` holds the sending as `mailbox.outgoing`, and sending
-builds on the calls of `calls.py`. Two packages would import each other.
-
-### 4.1 The direction between packages
-
-What each package imports, besides `activity` and the helpers
-`locks.py` and `paging.py`:
-
-| Package | Imports |
-|---|---|
-| `rights` | nothing |
-| `activity` | `rights` |
-| `changes` | nothing but `activity` |
-| `auth` | `rights` |
-| `discovery` | `rights` |
-| `accounts` | `rights`, `changes` |
-| `users` | `rights`, `auth`, `accounts` |
-| `sync` | `accounts` (the adapters), `changes` |
-| `mailbox` | `rights`, `accounts`, `sync`, `changes` (the classes at the call sites) |
-| `webhooks` | `rights`, `changes` |
-| `system` | `rights`, `auth`, `accounts`, `sync`, `webhooks` |
-
-So the packages stand in lines, each importing only lines below
-([CONCEPT.md](CONCEPT.md) 1.1):
-
-```
- system
- mailbox · users · webhooks
- sync
- accounts
- auth · discovery · changes
- activity
- rights
-```
-
-`activity` is imported by every package that records. `rights`
-records none, since `activity` imports it: its one warning, a stored
-grant that names unknown rights, stayed a plain log line. Since 0.3.0
-it is the activity `users.unknown_rights`, recorded by `auth`.
+place each time. `changes.py` became `changes/feed.py`.
 
 **Decided 2026-09-28:** `Sleep` is the type of a sleep function, two
-lines in `worker.py`, and the only thing `delivery.py` takes from
-`sync`. `delivery.py` declares the alias itself, and `webhooks` stops
-importing `sync`.
+lines in `worker.py`, and the only thing `delivery.py` took from
+`sync`. `delivery.py` declares the alias itself, and `webhooks` does not
+import `sync`.
 
-**Decided 2026-09-28:** the cycle of section 1 goes: `accounts` no
-longer imports `sync`. `AccountService` takes `on_delete`, a callable
-with the account id, in place of the optional `SyncService` it holds
-today, and `build_services` passes `sync.forget_account`, as the other
-pieces are wired there. `sync` reaches accounts through `adapters`, as
-it does today.
+**Decided 2026-09-28:** `accounts` does not import `sync`, which ended a
+cycle between the two. `AccountService` takes `on_delete`, a callable
+with the account id, in place of the `SyncService` it held, and the
+assembly passes `sync.forget_account`. `sync` reaches accounts through
+`adapters`.
 
-## 5. What else changes
-
-- **CLAUDE.md** lists the packages with one line each, not every module.
-  The module docstrings say the rest.
-- **`test_architecture.py`** gets the rules of section 2: imports
-  between packages through `__init__.py`, of names in its `__all__`, no
-  cycle between packages. Without an exception: `activity` offers the
-  module of each area of its catalogue in its `__init__.py`, and a
-  package imports its area through it, `from ..activity import mailbox
-  as said`, then records `said.MessageSent(...)`. So the activity and
-  the change of a sent mail read apart, `said.MessageSent` and
-  `changes.MessageSent`.
-- **The web layer and `main.py`** import through the packages'
-  `__init__.py` as the packages do: `from ..domain.accounts import
-  AccountService`. So a package exports what the assembly wires as
-  well, `Adapters`, `SyncWorker`, `WebhookDispatcher`. `web/services.py`
-  stays the one place that names the services. Routes and pages import
-  `Access` and the types they use the same way, in a dozen places
-  today.
-- **The tests** may import a module inside a package, since they test
-  that module. They are in folders like the source since the move
-  (section 7): `tests/domain/<package>/`, `tests/data/`, `tests/web/`,
-  and `tests/integration/` for a test of several layers at once.
-
-## 6. Order of work
-
-1. This file, one pull request of documentation.
-2. The change feed of section 3: the catalogue, the classes at each call
-   site, `ChangeRecord`, `ChangeKind` and `FeedKind` in the data layer.
-   Small, and it shows the shape before the move. The package
-   `changes/` comes with it, as the catalogue needs a home.
-3. The packages of section 4, one commit per package, the leaves first:
-   `rights`, `changes`, `auth`, `discovery`, then `accounts` with the
-   cycle removed, `users`, `sync`, `mailbox`, `webhooks`, `system`.
-4. The architecture tests of section 5 and CLAUDE.md.
-5. The tests in folders like the packages (section 7), moved, not
-   changed.
-6. `activity/` is built already, in its place. A move of the other
-   packages leaves the areas and names of the activities as they are.
-
-Steps 2 to 5 are one branch, one commit per step, and in step 3 one
-commit per package. Each commit passes all checks. The live checks run
-once at the end, since nothing they see changes.
+`activity` is imported by every package that records. `rights` records
+none, since `activity` imports it. Its one warning, a stored grant that
+names unknown rights, is the activity `users.unknown_rights`, recorded
+by `auth`. `web/services.py` is the one place of the web layer that
+names the services.
 
 ## 7. Questions answered
 
@@ -274,988 +90,255 @@ once at the end, since nothing they see changes.
 
 - **The package of status, recovery key and log page is `system/`.**
   `service/` would stand beside the `service.py` of most packages. The
-  activities it records follow it, from `activity.service.*` to
-  `activity.system.*` (LOGGING.md 7.2). No release has the old names.
-  A name has at most 32 characters, so that the longest,
-  `activity.mailbox.result_not_kept`, fits the source column
-  (LOGGING.md 7.2).
-- **The tests mirror the packages,** in the same branch, after the
-  domain has moved (step 5 of section 6). They move and change their
-  imports, nothing else.
-- **`data/` gets a similar look,** from a concept of its own and in a
-  branch of its own, not in this one.
+  activities it records follow it, `activity.system.*` (LOGGING.md
+  7.2). A name has at most 32 characters, so that the longest fits the
+  source column of a log line.
+- **The tests mirror the packages.** When code moves, they move and
+  change their imports, nothing else.
+- **`data/` got a similar look,** from a concept of its own, section 8.
 
 ## 8. The data layer and `common`
 
-Concept of 2026-09-28, the second part. `data/` is in packages by kind
-already, so it does not move as a whole. This part applies the rules of
-section 2 to it, takes two modules of a global nature out of it into
-`common/`, and names what else is out of place. Nothing changes in
-behaviour.
+**The protocols left the providers. Decided 2026-09-28:**
+`providers/protocols/` and `http/` became one package `data/protocols/`,
+the wire, one library each, in our types.
 
-### 8.1 Today
+**8.3 Inside `data`.** The lines of its packages are in ARCHITECTURE.md,
+section 2. What is where, and why:
 
-```
-data/
-  files.py       files for the owner alone (0600), the lock file
-  logbook.py     the newest log lines in memory, for the log page
-  models/        provider-neutral types, one module per subject
-  mail/          messages in RFC 5322: compose, parse, convert, text, fields
-  http/          httpx: base, safe (the SSRF guard), api, post
-  storage/       the repository protocols, in memory, sqlite/ (migrations/)
-  secrets/       cipher, keys, passwords, vault, redact, backup
-  providers/     base, rules, guard, ratelimit, sender, protocols/,
-                 imap/, memory/, microsoft/
-  discovery/     base, presets, isp, ispdb, mx, autoconfig, dns, suffix,
-                 placeholders
-common/
-  clock.py, ids.py, opaque.py
-```
+- `backup` is `data/backup.py`, beside `files.py`. It imports `secrets`
+  for the cipher and `storage` for the file, and nothing imports
+  `backup` but the command line.
+- `sender.py` stays with the providers, since it uses `Guard` and
+  `rules`.
+- `oauth` is a flow over HTTP rather than a wire protocol. It knows no
+  provider, only the endpoints `microsoft/signin.py` hands it, and is
+  under `protocols`.
+- Considered for `common` and left in `data`: `logbook.py` is a store of
+  log lines the domain reads like a repository. `files.py` is I/O for
+  `data` alone. `protocols/http/safe.py` is the network.
 
-What each package of `data` imports of the others, from the modules'
-imports today:
+**8.4 The rules, as for the domain.** A package of `data` is imported
+through its `__init__.py`, from the names in its `__all__`, with no
+cycle between packages and in the lines of ARCHITECTURE.md, section 2.
+Like `activity`, `mail` exports modules. Tests may import a module
+inside a package, since they test it. `tests/test_packages.py` runs the
+same checks over both layers.
 
-| Package | Imports |
-|---|---|
-| `models`, `files`, `http` | nothing |
-| `mail` | `models` |
-| `storage` | `models`, `files` |
-| `secrets` | `models`, `files`, `storage` (the vault's repositories, the backup) |
-| `logbook` | `secrets` (`redact` alone) |
-| `providers` | `models`, `mail`, `http`, `secrets` (`redact` alone) |
-| `discovery` | `models`, `http` |
-
-No cycle. Three things stand out:
-
-- **`redact` is read by every layer.** `logs.py`, the web layer in three
-  places, the domain in two, and inside `data` the logbook, the vault
-  and the OAuth wrapper. It is a helper of the whole service that sits in
-  `data/secrets/` by its history. Worse, `from ...secrets import redact`
-  imports the package, and with it the vault, the storage protocols and
-  SQLite: the providers depend on the database for a masking function.
-- **`ratelimit` is read by the domain.** The worker takes `backoff`
-  through `data.providers`. A token bucket and a backoff are pacing
-  helpers on the standard library, not data access.
-- **`backup` sits in `secrets`.** It encrypts, but it is the one module
-  of `secrets` that reads the database file, and half of why `secrets`
-  imports `storage`.
-
-Seven imports reach inside a package instead of its `__init__.py`:
-`data.secrets.redact` four times, `data.models.messages` for
-`SEARCH_TEXT_PATTERN`, `data.models.webhooks` for `CHANGE_KINDS`,
-`data.mail.text` for `from_html`. Inside `data`, `storage` reaches
-`models.changes` and `models.webhooks`, `providers` reaches `mail.parse`
-and `mail.fields`. And three `__init__.py` do more than export:
-`storage/__init__.py` (217 lines) holds `Store`, `Repositories` and
-`open_repositories`, `providers/__init__.py` (193 lines) the registry
-with `build_provider`, `sign_in`, `probe_server` and the settings
-helpers, `discovery/__init__.py` `default_sources` and `preset_hosts`.
-
-### 8.2 To `common`
-
-| Module | From | Why |
-|---|---|---|
-| `common/redact.py` | `data/secrets/redact.py` | read by every layer, standard library only |
-| `common/ratelimit.py` | `data/providers/ratelimit.py` | read by `data` (the guard, IMAP) and the domain (the worker), standard library only |
-
-Considered and left where they are: `data/logbook.py` is a store of log
-lines the domain reads like a repository, and needs nothing but
-`redact`. `data/files.py` is I/O for `data` alone. `data/mail/text.py`
-is the text of a mail, and the web layer reads it through `data.mail`
-(moved after all, as `common/plaintext.py`, by 9.1 A1: the web reads
-it for a page too). `data/http/safe.py` is the network.
-
-The rule of `common` says "stateless helpers". `redact` keeps the noted
-secrets in the module, process-wide by design, and a `TokenBucket` has
-state per instance. Proposed wording, for CLAUDE.md and
-[ARCHITECTURE.md](ARCHITECTURE.md): `common` holds what more than one
-layer needs, on the standard library, with no I/O and no state beyond
-what a caller holds. `redact` is the one module with state of its own,
-and its docstring says why. No other package is needed: nothing found is
-of a third kind, neither data nor a helper.
-
-Not part of the move: `common/clock.py` could take the types `Clock`
-and `Sleep`. Today `ratelimit.py` declares them on `time.monotonic`, the
-domain's services take a clock of `datetime`, and `delivery.py` declares
-an async `Sleep` of its own. That waits for a third user (8.6).
-
-### 8.3 Inside `data`
-
-- **`backup` becomes `data/backup.py`**, beside `files.py`. `secrets`
-  then holds cipher, keys, passwords and vault: what makes and keeps
-  secrets. `backup` imports `secrets` for the cipher and `storage` for
-  the file, and nothing imports `backup` but the command line.
-- **An `__init__.py` exports, it does not implement.** `Store`,
-  `Repositories` and `open_repositories` go to
-  `storage/repositories.py`, the registry to `providers/registry.py`,
-  `default_sources` and `preset_hosts` to `discovery/sources.py`. Each
-  `__init__.py` then imports, and lists `__all__`, as the domain's do.
-- **`mail/__init__.py` offers its modules**, `compose`, `parse`,
-  `convert`, `text` (until A1) and `fields`, as `activity` offers its
-  areas, since
-  `compose.build(...)` reads better than a flat list of functions. So
-  `from ...mail import compose` goes through the `__init__.py`, and
-  `ParsedMessage`, `from_html` and the field helpers are reached that
-  way.
-- **`models/__init__.py` adds `SEARCH_TEXT_PATTERN` and
-  `CHANGE_KINDS`.** The seven imports of 8.1 are fixed.
-- **Docstrings**: `data/__init__.py` names every package, not three.
-- **The protocols leave the providers. Decided 2026-09-28:**
-  `providers/protocols/` and `http/` become one package
-  `data/protocols/`, the wire, one library each, in our types:
-
-      data/
-        protocols/
-          transport.py   TLS, timeouts, the failures below every library
-          imap.py        IMAPClient
-          smtp.py        smtplib
-          http/          httpx: base, safe (the SSRF guard), api, post
-          oauth.py       OAuth 2.0 over http: PKCE, refresh, the token source
-        providers/       the adapters: base, rules, guard, sender, registry,
-                         imap/, memory/, microsoft/
-
-  The protocol modules import nothing of `providers` today, and the
-  providers use them: `imap/provider.py`, `sender.py`,
-  `microsoft/signin.py` and, through `ApiClient`, `microsoft/provider.py`.
-  So the path says what the docstrings say: a protocol module wraps a
-  library and translates into our types, a provider composes an adapter
-  from them and keeps to `rules` and `guard`. A library is then swapped
-  in one module of one package, and a POP3 or JMAP wrapper has its place
-  before it is needed. `sender.py` stays with the providers, since it
-  uses `Guard` and `rules`. `oauth` is a flow over HTTP rather than a
-  wire protocol, but it knows no provider, only the endpoints
-  `microsoft/signin.py` hands it, and stays where it is. `discovery`
-  reads `protocols` for HTTP, the domain only the type `HostCheck`, and
-  `main.py` wires `SafeFetcher` and `WebhookPoster` as today. The three
-  homes in `LIBRARY_HOMES` of the architecture test follow.
-
-The direction after the moves, each package importing only lines
-below:
-
-```
- backup
- secrets
- storage · providers · discovery
- protocols
- mail · files
- models · logbook
-```
-
-`providers` no longer imports `secrets`, and `secrets` no longer holds
-what the providers need.
-
-### 8.4 The rules, as for the domain
-
-The rules of sections 2 and 5 apply to `data` as they do to the domain:
-a package is imported through its `__init__.py`, from the names in its
-`__all__`, no cycle between packages, and the lines of 8.3. Like
-`activity`, `mail` exports modules. Tests may import a module inside a
-package, since they test it. `test_architecture.py` gets the three
-checks for `data` by running the domain's checks over both layers.
-
-The tests follow their modules: `test_ratelimit.py` to `tests/common/`,
-and `integration/test_redact.py` too, if it tests the module alone.
-`tests/data/mail/` and `tests/data/secrets/` are empty today, while
-`test_html_mail.py`, `test_secrets.py`, `test_passwords.py` and
-`test_backup.py` sit in `integration/`: each is checked for whether it
-tests one layer, and moves if so. Built: `test_ratelimit.py` is in
-`tests/common/`, and `test_redact.py` was. Since the package
-`mailbox-common` it is in its `tests/log/` (15.2). The four in `integration/`
-reach the command line, the domain or a provider beside the module
-they are named for, and stay.
-
-### 8.5 Order of work
-
-1. This section and ARCHITECTURE.md, one pull request of documentation.
-2. `redact` and `ratelimit` to `common`, with their tests. The imports
-   fixed, `data.providers` stops exporting `backoff`, the docstrings of
-   `common/__init__.py` and CLAUDE.md say the new rule.
-3. `backup` to `data/backup.py`.
-4. `data/protocols/`: the four protocol modules and `http/` moved,
-   the imports in `providers`, `discovery`, the domain and `main.py`
-   fixed, `LIBRARY_HOMES` updated, the tests to `tests/data/protocols/`.
-5. The three `__init__.py` to modules, the exports of `mail` and
-   `models`, the seven imports fixed.
-6. The architecture checks for `data`, CLAUDE.md's layout and
-   CONCEPT.md 1.1 with the lines of 8.3.
-
-Steps 2 to 6 are one commit each, in the branch of 9.4, each passing all
-checks. The live checks run once at the end. A backup and its restore
-are covered by `test_backup.py` and `test_cli.py`, not by a live check,
-so step 3 is checked by hand once: `backup` to a file, `restore` into a
-fresh folder.
-
-### 8.6 Questions answered
-
-**Decided 2026-09-28:**
+**Decided 2026-09-28 (8.6):**
 
 - The pacing helper keeps its name: `common/ratelimit.py`.
 - `logbook` stays in `data`.
 - The `Clock` and `Sleep` types stay where they are. They are merged
-  into `common/clock.py` when a third user of them appears, not as part
-  of this refactoring.
-- CLAUDE.md points to [ARCHITECTURE.md](ARCHITECTURE.md) for the
-  architecture, and ARCHITECTURE.md takes over the whole content of
-  CLAUDE.md's sections "Layers of the service" and "Encapsulation and
-  replaceable parts", together with what section 8 adds. That is the
-  last step of the refactoring.
+  into `common/clock.py` when a third user of them appears.
+- CLAUDE.md points to ARCHITECTURE.md for the architecture, which took
+  over what CLAUDE.md said about the layers and the replaceable parts.
 
 ## 9. Code written twice
 
-Found 2026-09-28 by reading every layer, each finding checked in both
-places. Section 8 moves modules and changes nothing. This section
-changes code: a helper replaces its copies, behaviour stays, and the
-helper gets a test. It comes after section 8, so that no file is moved
-and edited in the same step (9.4). Paths are under
-`packages/mailbox-service/src/benethos_mailbox_service/`.
-
-### 9.1 More helpers for `common`
-
-Beyond `redact` and `ratelimit` (8.2). Each is standard library only
-and read by more than one layer.
-
-| # | What | Where today | Proposed |
-|---|---|---|---|
-| A1 | HTML to text, `from_html` | `data/mail/text.py`, read by `data` (compose) and `web` (the mail page) | `common/plaintext.py`. The one plain helper `web` takes from `data` besides `redact` |
-| A2 | The local time to the millisecond | the same f-string in `logs.py` and `web/pages/templates.py` (`moment`) | `local_moment` in `common/clock.py` |
-| A3 | A host name normalised: lower case, trailing dot off, IDNA, syntax | `data/discovery/autoconfig.py` (`_host`, `_HOST`), `domain/discovery/service.py` (its own, with `_LABEL`), lower and rstrip alone in `data/http/safe.py` and `data/discovery/suffix.py` | `common/hosts.py`: `ascii_host`, `unicode_host`, `is_host_name`. Side finding: `safe.py` compares configured internal hosts without IDNA, so a Unicode host never matches |
-| A4 | Megabytes as text, the byte constants | `// (1024 * 1024)` and "MB" in `web/limits.py` and `activity/catalogue/http.py`, `40 * 1024 * 1024` three times, "25 MB" as text beside `MAX_ATTACHMENT_BYTES` in `outgoing.py` | `common/sizes.py`: `MIB`, `megabytes(n)` |
-| A5 | `iso` and `parse_iso` | `data/storage/sqlite/database.py`, rebuilt by hand in `domain/mailbox/sending.py` and `domain/sync/service.py`, `datetime.now(UTC)` instead of `utc_now` in `data/secrets/backup.py` and `protocols/imap.py`, ISO parsing again in `microsoft/mappers.py` | `common/clock.py`. Borderline: the domain's times are UTC already, so this is consistency |
-| A6 | Chunking, `range(0, len(x), N)` | six times in `data` | `batched()` in `common`, until Python 3.12 is the minimum and `itertools.batched` exists |
-| A7 | Base64 without padding | `common/opaque.py`, `data/secrets/passwords.py`, `data/providers/protocols/oauth.py` | exported from `common/opaque.py`, with a flag for the alphabet |
+The code written twice in the domain, the web layer and the data layer
+was merged into helpers. **Decided 2026-09-28:** one branch for all of
+it, in a fixed order, since several findings touched the same files. A
+helper new to `common` or the domain gets its test in the same commit.
 
 Considered and left: the `rpartition("@")` one-liners, the
-case-insensitive substring filter (five places, an idiom), the address
-shown as "Name <email>" (three purposes), `quote(safe="")` (one call),
-`encode_recovery` (the key's own format, stays in `data.secrets`). The
-MCP package repeats `from_html`, the address format, the idempotency
-fingerprint and the path quoting: allowed, the two packages share no
-code.
+case-insensitive substring filter (five places, an idiom),
+`quote(safe="")` (one call), and `encode_recovery` (the key's own
+format, stays in `data.secrets`).
 
-### 9.2 Domain and web
+**9.5 Built otherwise.** Where the code differed from the plan, and
+what was accepted. **Decided 2026-09-28:** all of it stays as built.
 
-| # | What | Where | Proposed |
-|---|---|---|---|
-| B1 | Record an activity and re-raise: five equal `except MailboxServiceError` blocks. Record and swallow: `_after_sending` in `outgoing.py`, rebuilt by hand in `sending.py` and `idempotency.py` | `accounts/service.py`, `accounts/oauth.py`, `mailbox/sending.py` (three), `mailbox/idempotency.py` | two context managers on `ActivityLog` in `activity/recorder.py`, about 35 lines to 12 |
-| B2 | Load the user, check the caller covers it: six copies. Own user or `get_user`: two | `users/service.py` | `_managed(access, op, user_id)` and `_self_or_get_user` |
-| B3 | Bounded tables: drop the expired, then the oldest. Sliding window trimmed and capped | `auth/throttle.py`, `discovery/service.py` (twice) | one helper beside `locks.py`, domain only |
-| B4 | Cursors and pages: decode then "invalid cursor" in `sending.py` and `merge.py`, own decoding in `changes/feed.py` and `system/servicelog.py`, encoding straight with `opaque` in three, `limit + 1` and `more` in four | `domain/paging.py` gets `encode_cursor`, `decode_cursor(prefix, value, parse)`, `split_page(found, limit)` |
-| B5 | Pages: build a model, turn `ValidationError` into `FormError` | `mailform.py`, `routes/folders.py`, `routes/webhooks.py`, `routes/sends.py`, `grants.py` | `model_of(...)` in `web/pages/forms.py` |
-| B6 | The account ids the caller may do X on | `mailbox/service.py` (twice), `mailbox/sending.py`, `webhooks/delivery.py`, `accounts/service.py` | `Access.filter(operation, ids)` in `rights/access.py` |
-| B7 | Pages: call the domain if allowed, else a default: eight copies | `routes/sends.py`, `routes/users.py` (four), `routes/mail.py`, `routes/home.py`, and `system/status.py` | `if_allowed(...)` in `web/pages/deps.py` |
-| B8 | The web decides what the domain decides: `effective.py` rebuilds `ACCOUNT_FREE \| ALL_ACCOUNTS` (`access.py` builds it three times), `navigation.py` recomputes `StatusService.may_see`, `routes/mail.py` derives the batch rule that `mailbox/service.py` enforces | one constant and two predicates in `rights`, the web calls them |
-| B9 | AuthService: load a user, refuse if missing or disabled, three times. The name key twice | `auth/service.py` | `_live_user`, `_name_key` |
-| B10 | The background loop: repeat, record a failed round, sleep, in two places, wrapped once more by `main.py`. `Retries.pause` in `delivery.py` rebuilds `backoff` without jitter | `webhooks/delivery.py`, `sync/worker.py`, `main.py` | one `rounds(...)` helper in the domain, `backoff` from `common` (after 8.2) |
-| B11 | The fingerprint as sorted JSON under two names | `mailbox/merge.py`, `mailbox/idempotency.py` | one helper. Changing the idempotency hash invalidates stored keys, kept 24 h: a commit of its own, noted in the CHANGELOG |
-| B12 | Pages read the same form fields twice, once to show them again, once for the call | `routes/webhooks.py`, `routes/users.py`, `routes/accounts.py` | read once into the typed dict |
-| B13 | SyncWorker: look up the account, record only if it still exists, four times | `sync/worker.py` | `_record(account_id, make)` |
-| B14 | Small: the mail page URL built three times. `quote(safe="")` twice in `web`. `LOG_LEVELS` beside `servicelog.LEVELS`. The admin grant literal in `users/service.py` and `access.py` (`Access.admin` unused). The mail form's field keys listed three times. `str(form.get(x) or "")` 39 times. `why()` six times in the activity catalogue. `TokenInfo.of(...)` three times | | each a one-line helper or a constant |
-
-### 9.3 Data
-
-| # | What | Where | Proposed |
-|---|---|---|---|
-| C1 | Three SQLite repositories rewrite `SqliteRows`: list, get, delete with the same SQL | `sqlite/accounts.py`, `sqlite/webhooks.py`, `sqlite/users.py` (tokens) | `SqliteRows` gets `order` and a public `row(id)`, the three hold one |
-| C2 | In-memory repositories rewrite `Table`: webhooks in full, the conflict scan in `sends.py` and `credentials.py`, "drop keys where" three times | `storage/webhooks.py`, `storage/sends.py`, `storage/credentials.py`, `storage/idempotency.py` | `Table`, plus `drop_where` in `table.py` |
-| C3 | Chunked `IN` queries with the same limit of 500 and the same comment | `sqlite/changes.py`, `sqlite/index.py` | `Database.query_in(...)`, on A6 |
-| C4 | IMAP and SMTP wrappers are twins: `ImapServer` and `SmtpServer` the same dataclass, the same `UnicodeError` clause with its comment, the same connect lines | `protocols/imap.py`, `protocols/smtp.py` | a `Server` dataclass and the clause in `transport.py` |
-| C5 | Microsoft repeats itself: the move call four times, the parent-folder check twice, the `@odata.nextLink` loop twice, `retry-after` read twice | `microsoft/provider.py` | `_move`, `_parent`, one page generator, in the same file |
-| C6 | `port_of` and `rate_of` near copies | `providers/rules.py` | one private `_number(...)` |
-| C7 | The vault's `read` and `unseal` share the decrypt path | `secrets/vault.py` | one private `_open(...)` |
-| C8 | Folder with role X or `no_folder`, in each provider, though `rules.role_folder` exists | `memory/provider.py`, `imap/provider.py` (three places), `microsoft/provider.py` | `rules.require_role_folder(folders, role)` |
-| C9 | An address on the wire, punycode or fail: identical | `mail/compose.py` (`_wire`), `protocols/smtp.py` (`_on_the_wire`) | `wire_address` in `mail/fields.py` |
-| C10 | `missing(what, id)` exists in `table.py`, about twenty places build the same text by hand | `imap/mappers.py`, `memory/provider.py`, `imap/provider.py`, `microsoft/provider.py`, `mail/convert.py`, `protocols/imap.py` | `missing` to `errors.py`, used everywhere |
-| C11 | The flag filter (unread, starred, has_attachments) twice | `memory/provider.py`, `microsoft/mappers.py` | `MessageFilter.matches` in `models/messages.py`, as `SendFilter.matches` |
-| C12 | Small: host clean-up inline four times (A3), the deadline message in `guard.py` and `microsoft/provider.py`, two spellings of the schema-version query and of `SELECT 1 ... WHERE id` | | with A3, and one-liners |
-
-Checked and clean: the error translation per library, retry and backoff
-(one place), the mappers, the discovery sources, the migrations, the
-API routes (thin, no rights checks or cursor parsing of their own), the
-error mapping of the web layer (one place), `opaque` as the one cursor
-encoder, `config.py` and `errors.py`.
-
-About 150 lines fewer in `data`, about 200 in the domain and the web.
-For clarity, A1 to A5, B1, B4, B6 and B8 matter most. For lines, C1 to
-C3.
-
-### 9.4 Order, so that nothing overlaps
-
-The moves of section 8 and the merges of this section touch the same
-files: the SQLite repositories (A5, C1), the providers (8.3, C4, C5,
-C8), the vault (8.2, C7), `delivery.py` and `worker.py` (8.2, B10).
-So they run one after the other, never side by side. **Decided
-2026-09-28:** one branch for all of it, in this order:
-
-1. **Section 8**, moves only (8.5). Every later step finds the files
-   where they will stay.
-2. **`common` and the helpers other layers build on** (9.1, and C3 on
-   A6, C10). It touches `data`, the domain and the web at the call
-   sites, so it goes before the layers, which then start from the
-   helpers. The side finding of A3 is fixed in a commit of its own,
-   with its CHANGELOG entry.
-3. **`data`** (9.3), bottom up as the lines of 8.3: storage (C1, C2),
-   then `mail` and `protocols` (C4, C9), then the providers (C5, C6,
-   C8, C11), then the vault (C7).
-4. **Domain and web** (9.2): `rights` first (B6, B8), then the services
-   (B1, B2, B9, B13), `paging` (B4), the loops (B3, B10), then the
-   pages (B5, B7, B12, B14). B11 is a commit of its own with its
-   CHANGELOG entry. A stored idempotency key or cursor that no longer
-   matches is accepted: at worst a test database starts afresh.
-5. **ARCHITECTURE.md takes over** everything on the architecture from
-   CLAUDE.md (8.6), and CLAUDE.md points to it.
-
-One commit per finding or per row of the tables above. Each commit
-passes all checks. A helper new to `common` or the domain gets its test
-in the same commit. The live checks run once, at the end. A problem
-found on the way is noted, and its step waits until the end.
-
-### 9.5 Built otherwise
-
-Where the code differed from the tables, and what was accepted. **Decided
-2026-09-28:** all of it stays as built.
-
-- **B6**: the account list keeps a loop of its own, since it filters by
-  two rights and three fields more. `Access.filter` serves the rest.
-- **B7**: `if_allowed` is synchronous. The folder list of the mail
-  page is awaited and keeps its own check, and `system/status.py` is
-  the domain, where the helper does not belong.
-- **B10**: `main._loop` stays as the guard around a background loop
-  that ends for good. Since #72 it is `_loop` in
-  `assembly/lifecycle.py`.
-- **A2**: the helper is `log_time` in `common/clock.py`, as
-  LOGGING.md 6.9 names the time of a log line. Since the package
-  `mailbox-common` it is in its `log/lines.py` (15.2).
-- **B14**: the six `why()` of the activity catalogue stay, since their
-  reasons are of different types.
-- **C8**: the Microsoft adapter keeps its folder roles, which come from
-  Graph's well-known names, not from `rules`.
-- **C11**: the method is `MessageFilter.flags_match`, not `matches`,
-  since it checks unread, starred and attachments alone.
+- The account list keeps a loop of its own, since it filters by two
+  rights and three fields more. `Access.filter` serves the rest.
+- `if_allowed` is synchronous. The folder list of the mail page is
+  awaited and keeps its own check, and `system/status.py` is the domain,
+  where the helper does not belong.
+- `_loop` in `assembly/lifecycle.py` stays as the guard around a
+  background loop that ends for good.
+- The time of a log line is `log_time`, as LOGGING.md 6.9 names it, in
+  `log/lines.py` of `mailbox-common`.
+- The six `why()` of the activity catalogue stay, since their reasons
+  are of different types.
+- The Microsoft adapter keeps its folder roles, which come from Graph's
+  well-known names, not from `rules`.
+- The method is `MessageFilter.flags_match`, not `matches`, since it
+  checks unread, starred and attachments alone.
 
 Three small changes in behaviour came with the merges:
 
-- **B2**: a user's new name is checked after the right and the cover.
-  A caller who may not manage the user learns nothing about taken
-  names: `403` where it was `409`. In the CHANGELOG.
-- **B4**: the log page hands out an opaque cursor, as every other list.
-- **A3**: `is_host_name(..., dotted=False)` for the domain of an
-  address, so its error messages stay as they were.
+- A user's new name is checked after the right and the cover. A caller
+  who may not manage the user learns nothing about taken names: `403`
+  where it was `409`.
+- The log page hands out an opaque cursor, as every other list.
+- `is_host_name(..., dotted=False)` for the domain of an address, so
+  its error messages stayed as they were.
 
 ## 10. The MCP server
-
-Concept of 2026-09-28. The MCP package has one module that does four
-things, and a client that holds its answers' types beside the requests.
-
-### 10.1 Today
-
-```
-benethos_mailbox_mcp/
-  server.py      788 lines: the shared REST client, 14 tools and their
-                 helpers, the table of tools with their annotations and
-                 the choice by rights, the command line
-  client.py      594 lines: the requests, and the records it answers
-                 with (Me, Folder, Page, Changes, Outcome, Sent,
-                 Attachment)
-  render.py, pdf.py, transport.py, errors.py
-```
-
-A tool and its line in the table stand 400 lines apart: whether a tool
-is destructive or idempotent is read far from what it does.
-
-### 10.2 Proposed
 
 **Decided 2026-09-28:** one module per kind of tool, the kinds that
 `list_accounts` reports (`read`, `write`, `drafts`, `send`), not one
 file per tool. The records of the client go to `models.py`.
 
-```
-benethos_mailbox_mcp/
-  cli.py         the command line: options, environment, the log, main
-  server.py      build_server: the tools the token's rights allow, each
-                 logged when it fails, and what the token may do
-  tools/
-    __init__.py  TOOLS, the catalogue, from the modules below
-    base.py      Tool, reads() and changes(), the shared client,
-                 result() for text and images
-    compose.py   what drafts and sending share: addresses, the message
-                 a tool's arguments describe
-    accounts.py  list_accounts, which reports the kinds
-    reading.py   list_folders, search_messages, get_message, whats_new,
-                 get_attachment
-    writing.py   update_messages, create_folder
-    drafts.py    list_drafts, create_draft, update_draft, delete_draft
-    sending.py   send_message, send_draft
-  client.py      the requests to the REST API
-  models.py      the records the client answers with
-  render.py, pdf.py, transport.py, errors.py   as they are
-```
+**10.2 The modules.** Each module of a kind holds its tools and its part
+of the table, as `TOOLS`. `tools/__init__.py` joins them. `accounts.py`
+reads the modules of the kinds for what each needs, so it imports them
+and not the package. `tools/base.py` names the result of a tool
+`ToolResult`, so that the modules of the kinds need no import of the MCP
+library. The modules as they are: ARCHITECTURE.md 3.3.
 
-Each module of a kind holds its tools and its part of the table, as
-`TOOLS`. `tools/__init__.py` joins them. `accounts.py` reads the
-modules of the kinds for what each needs, so it imports them and not
-the package.
-
-The lines, each module importing only lines below:
-
-```
- cli
- server · transport
- tools
- client · render · pdf
- models · errors
-```
-
-Inside `tools`: `accounts`, then `reading · writing · drafts · sending`,
-then `compose`, then `base`.
-
-### 10.3 The rules
-
-The rules of ARCHITECTURE.md apply as in the service. The MCP package
-gets a `tests/test_architecture.py` of its own: the lines above, the
-tools package imported through its `__init__.py` from outside, and one
-home per library: `httpx` in `client`, `pypdfium2` in `pdf`, `starlette`
-and `uvicorn` in `transport`, the MCP library in `server`, `transport`,
-`errors` and `tools/base`. The tests of the tools go to `tests/tools/`.
-
-### 10.4 Order of work
-
-One branch, one commit per step, each passing all checks:
-
-1. This section.
-2. `models.py` out of `client.py`.
-3. `cli.py` out of `server.py`, the entry point with it.
-4. `tools/` out of `server.py`, the tests of the tools to
-   `tests/tools/`.
-5. The architecture test of the MCP package and ARCHITECTURE.md
-   section 3. CLAUDE.md points there already and stays as it is.
-
-The live checks `mcp_stdio.py` and `mcp_http.py` run once at the end.
-Nothing a client of the MCP server sees changes: the names of the
-tools, their arguments, their descriptions and their annotations stay.
-
-**Built 2026-09-28** on one branch, in this order. The tools a client
-sees were compared before and after, as the JSON the server lists, and
-are the same. `mcp_stdio.py` and `mcp_http.py` passed at the end.
-`tools/base.py` names the result of a tool `ToolResult`, so that the
-modules of the kinds need no import of the MCP library. The tests of
-every tool are in `tests/tools/`, one file per kind, `test_server.py`
-keeps what goes through the server: the choice by rights, the bounds
-of the arguments, the start and the log. ARCHITECTURE.md 3 says how a
-tool is added.
+**10.3 The rules.** The modules stand in lines, each importing only
+lines below (ARCHITECTURE.md 3.3). Inside `tools/` the lines are
+`accounts`, then `reading`, `writing`, `drafts`, `sending` and `status`,
+then `compose`, then `base`. Each library has its home: the client
+package in `client`, `models` and `errors`, `pypdfium2` in `pdf`,
+starlette and uvicorn in `transport`, the MCP library in `server`,
+`transport`, `listeners`, `errors` and `tools/base.py`. httpx has none:
+the server speaks no HTTP to the service itself.
+`tests/test_architecture.py` of the package holds all of it.
+`test_server.py` keeps what goes through the server: the choice by
+rights, the bounds of the arguments, the start and the log.
 
 ## 11. The migrations of the schema
 
-Proposal of 2026-10-05. Each step of the schema becomes a class of
-one base, so a step describes itself: its number, its statements and
-its Python, in one place. The database runs a step without knowing
-what is in it. Nothing a user of the service sees changes, and no
-migration that shipped changes either: the hashes in `RELEASED` are
-the proof.
+Of 2026-10-05. Each step of the schema is a class of one base. How a
+new one is written: CLAUDE.md, Conventions.
 
-### 11.1 Today
+- **`Migration`**, in `migration.py`, has a `version`, its `statements`
+  and `before` for a step in Python. `apply` is the template: the same
+  for every step, never overridden. There is no `abstractmethod`: a
+  class without `version` or `statements` fails the tests, which is soon
+  enough. The class is named as its module, `VNNNN<Subject>`.
+- **`MigrationRegistry`**, in `registry.py`, holds the steps in order,
+  checked as it is made to be numbered from 1 without a gap. It knows
+  `schema_version`, gives a `step` by its version and the steps
+  `pending` for a database at a version, and it owns the table `meta`:
+  `prepare`, `version_of`, and `apply`, which runs one step and records
+  its version. The steps are a package of their own,
+  `migrations/versions/`, so the base and the registry stand apart from
+  what is run once and never changes.
+- **The fingerprint, since 2026-10-07,** is a hash of the step's whole
+  module: statements, the Python of `before`, its helpers and comments
+  alike. Migration 15 has no statements, so a fingerprint of the
+  statements froze nothing. That a shipped step breaks on a comment is
+  the point: it is never changed.
 
-`migrations/step.py` holds `Migration`, a frozen dataclass of
-`statements`, a list of single SQL statements, and `before`, an
-optional function that runs first and returns what to log. Each
-module `vNNNN_<subject>.py` builds one as the constant `MIGRATION`.
-`migrations/__init__.py` imports every module and lists the constants
-in `MIGRATIONS` by hand, `SCHEMA_VERSION` is the length of the list.
-`Database._migrate` walks the list from the stored version on, a
-transaction per step: `before`, the statements, then `meta`.
+**11.3 A registry, not reflection.** The list in `__init__.py` is
+written by hand. A scan of the package (`pkgutil`, `__subclasses__`)
+would save two lines per migration and cost more: the order would hang
+on file names, a typo in a name would drop a step without a word, mypy
+and ruff would see the modules as unused, and the check that the
+numbers run from 1 to N without a gap would move from the tests into
+code that runs at every start. The test
+`test_each_migration_module_is_in_the_list_at_its_number` does that
+scan already, and the tests are where it belongs. The rule of
+ARCHITECTURE.md holds too: an `__init__.py` exports, it has no side
+effects.
 
-Three tests hold it together: every statement stands alone, every
-module is in the list at its number, found by a scan of the package,
-and `RELEASED` keeps a hash of the statements of every migration that
-shipped. Two of sixteen steps have Python, 9 and 15, both through
-`before`.
-
-What is wrong with it is small. A step's number is not in the step, it
-is its place in a list. `before` is a hook on a record, not a method of
-a step, so a step with logic reads as data with an attachment. The
-hash lives in the tests and not with the thing it hashes.
-
-### 11.2 Proposed
-
-One base class in `migration.py`, the module named as the class,
-`step.py` until now:
-
-```python
-class Migration(ABC):
-    """The step from schema version - 1 to version, in one transaction."""
-
-    version: ClassVar[int]
-    statements: ClassVar[tuple[str, ...]]
-
-    def before(self, db: sqlite3.Connection) -> list[str]:
-        """Runs first. What to log once the step is committed."""
-        return []
-
-    def apply(self, db: sqlite3.Connection) -> list[str]:
-        said = self.before(db)
-        for statement in self.statements:
-            db.execute(statement)
-        return said
-
-    @classmethod
-    def fingerprint(cls) -> str:
-        return hashlib.sha256("\n;\n".join(cls.statements).encode()).hexdigest()
-```
-
-`apply` is the template: the same for every step, never overridden.
-`before` is overridden by the steps with logic. No `abstractmethod`:
-a class without `version` or `statements` fails the tests, which is
-soon enough. The class is named as its module, `VNNNN<Subject>`, so the
-number stands in the registry too. A module then reads:
-
-```python
-class V0009PasswordsUniqueNames(Migration):
-    version = 9
-    statements = ...
-
-    def before(self, db: sqlite3.Connection) -> list[str]: ...
-```
-
-The statements stay byte for byte, so each fingerprint stays, and
-`RELEASED` is left as it is. `__init__.py` keeps the registry:
-
-```python
-MIGRATIONS: tuple[Migration, ...] = (V0001AccountsUsers(), V0002Credentials(), ...)
-SCHEMA_VERSION = MIGRATIONS[-1].version
-```
-
-`MigrationRegistry`, in `registry.py`, is what the tuple was: the steps in
-order, checked as it is made to be numbered from 1 without a gap. It
-knows `schema_version`, gives a `step` by its version and the steps
-`pending` for a database at a version, and it owns the table `meta`:
-`prepare`, `version_of`, and `apply`, which runs one step and records
-its version. `Database._migrate` opens a transaction per pending step
-and calls `apply`. The rest of it stays, and `__init__.py` holds the
-enumeration alone. The steps move to a package of their own,
-`migrations/versions/`, so the base and the registry stand apart from
-what is run once and never changes.
-
-The fingerprint covers the statements, not the Python of `before`,
-today as after. A hash over source breaks on a comment. That a shipped
-step's Python is not touched stays a rule for review, as it is now.
-
-**Superseded 2026-10-07:** the fingerprint is a hash of the step's
-whole module, statements, the Python of `before`, its helpers and
-comments alike. Migration 15 has no statements, so its fingerprint
-of the statements froze nothing. That a shipped step breaks on a
-comment is the point: it is never changed.
-
-### 11.3 A registry, not reflection
-
-The list in `__init__.py` stays, written by hand. A scan of the
-package (`pkgutil`, `__subclasses__`) would save two lines per
-migration and cost more: the order would hang on file names, a typo in
-a name would drop a step without a word, mypy and ruff would see the
-modules as unused, and the check that the numbers run from 1 to N
-without a gap would move from the tests into code that runs at every
-start. The test `test_each_migration_module_is_in_the_list_at_its_number`
-does that scan already, and the tests are where it belongs. The rule of
-[ARCHITECTURE.md](ARCHITECTURE.md) holds too: an `__init__.py` exports,
-it has no side effects.
-
-If the two places per migration, the import and the list, ever
-bother: `__init_subclass__` on the base, each class entering itself
-into a dict by `version` as it is imported, a second class with the
-same number refused at once. The imports in `__init__.py` are then the
-registry, the list goes. That is the one piece of reflection worth
-having here, and it is not part of this proposal.
-
-### 11.4 Order of work
-
-One branch from `main`, one pull request, each step passing all checks:
-
-1. This section.
-2. `migration.py`: the class above, `step.py` renamed.
-3. The sixteen modules, by script: `MIGRATION = Migration([...])`
-   becomes a class `VNNNN<Subject>` with `version` and `statements` as
-   a tuple, the statement texts untouched, 9 and 15 with `before` as a
-   method.
-   `__init__.py` lists the instances in a `MigrationRegistry`,
-   `registry.py`, which owns `meta` and runs a step. The sixteen modules
-   move to `versions/`.
-   `Database._migrate` asks it for the pending steps and calls `apply`.
-4. The tests: `fingerprint` from the class, one test more that
-   `version` is the number in the module's name, `RELEASED` as it is.
-5. CLAUDE.md's convention and ARCHITECTURE.md's two lines about
-   `migrations/` say "a class in a module".
-
-Then once a database file of 0.2.0, schema 13, opened by the service:
-the log says it migrated to the current schema, and `live/ui.py` runs
-against it. No CHANGELOG entry: the API does not change.
-
+If the two places per migration, the import and the list, ever bother:
+`__init_subclass__` on the base, each class entering itself into a dict
+by `version` as it is imported, a second class with the same number
+refused at once. That is the one piece of reflection worth having here.
+It is not built.
 
 ## 12. The work list of 2026-10
 
-A list of 2026-10-07, after a review of the code and the documents: the
-packages first (block 2), then the code inside them (block 3). One pull
-request per step, behaviour and the API unchanged unless a step says
-so. Built the same day.
+A list of 2026-10-07, after a review of the code and the documents,
+built the same day. Decided by the user then:
 
-### 12.1 Packages and folders
+- The client of the REST API is a package of its own,
+  `packages/mailbox-client`: one description per endpoint,
+  `MailboxClient` and `SyncMailboxClient` as thin transports over it.
+  The MCP server is built on it.
+- `MailProvider` was split by capability into protocols a provider
+  implements as far as it can. The domain answers `501` for the rest.
+- JSON from a server is read into a shape at the edge
+  (`data/protocols/wire.py`). A body of another shape is a
+  `ProviderError`.
 
-| Step | Pull request | What came of it |
-| --- | --- | --- |
-| 2.1 | #70 | `packages/mailbox-client`, the client of the REST API as a package of its own: one description per endpoint (`endpoints.py`), `MailboxClient` and `SyncMailboxClient` as thin transports over it. The MCP server is built on it. Decided by the user. |
-| 2.2 | #71 | `live/checks/`: what the live checks share, one module per subject. A check reaches mail through the client. |
-| 2.3 | #72 | `assembly/` builds the service out of `main.py`, `cli/` holds one module per command. |
-| 2.4 | #73 | The schemas of the API split by subject. `openapi.json` unchanged. |
-| 2.5 | #74 | Code the adapters wrote three times in one place each. |
-| 2.6 | #75 | The mappers of every adapter named alike (ARCHITECTURE 14). |
-| 2.7 | #76 | The trees of ARCHITECTURE 3 and CLAUDE.md, the architecture tests for the client, `assembly/` and `cli/`. |
-
-### 12.2 Code
-
-| Step | Pull request | What came of it |
-| --- | --- | --- |
-| 3.1 | #77 | `MailProvider` split by capability into protocols a provider implements as far as it can. The domain answers `501` for the rest. Decided by the user. |
-| 3.2 | #78 | `MailServerAdapter`, the base of IMAP and POP3. The IMAP and JMAP adapters in parts. |
-| 3.3 | #79 | JSON from a server read into a shape at the edge (`data/protocols/wire.py`), a body of another shape a `ProviderError`. Decided by the user. |
-| 3.4 | #80 | The users service as four: users, roles, tokens, passwords, and their rules. |
-| 3.5 | #81 | Long functions in steps. |
-| 3.6 | #82 | One translation of errors per protocol (`transport.translated`, `http.refused`). The IMAP session in parts. |
-| 3.7 | #83 | Ids, cursors and settings read back into frozen dataclasses with named fields. |
-| 3.8 | #84 | `app.state` and `request.state` read with their types in one place each. |
-| 3.9 | #85 | The limits below, checked. |
-
-### 12.3 The limits
-
-Decided by the user: hard limits, without exceptions and without
-`noqa`. What grows beyond one is split.
-
-- A module at most 500 lines, a class at most 30 methods.
-  `test_architecture.py` of the client and of the MCP server and
-  `test_code_rules.py` of the service check both.
-- A function at most a complexity of 10 (ruff `C901`), 12 branches
-  (`PLR0912`) and 50 statements (`PLR0915`).
-- Names as pep8-naming has them (ruff `N`): an exception ends in
-  `Error`. `formatTime` keeps its name, which `logging.Formatter`
-  gives it.
-
-When the limits came in, one module was beyond them:
-`domain/mailbox/outgoing.py`, 504 lines. Its checks of a message went
-to `checks.py`. On 2026-10-09 the modules near the limit were split
-before they reached it (#123): `data/protocols/oauth.py` became a
-package, and the services of `auth`, `mailbox` and `accounts` gave
-parts to modules of their own.
-
-### 12.4 After the list
-
-What a review of the code after the list found, built the same day,
-one pull request each:
-
-| Pull request | What came of it |
-| --- | --- |
-| #86 | The packaging tests check the three packages alike. |
-| #87 | `common/text.py`, `common/urls.py` and `common/retention.py`: text on one line, URLs read one way, one retention for the audits and the change log, purged at start as well. |
-| #88 | No `assert` in the code (ruff `S101`), a sign-in with a code that survives an unreachable provider, the MCP server's client made in its lifespan, `from_environment()` in the client, the day filters in local time. |
-| #89 | Shared helpers: cursors, the filters of the list pages, canonical JSON, `common/secret.py`. |
-| #90 | The MCP server's client reaches its tools on every transport. |
-| #91 | A helper of `common/` exists once, checked by the architecture test (ARCHITECTURE 2). |
-| #92 | `trim` and `KeyedLocks` in `common/`, which may import anyio since, the size limits for the tests and `live/` too, `test_code_rules.py` apart from `test_architecture.py`. |
-
-## 13. The client in parts
-
-Concept of 2026-10-07, built the same day on one branch, a commit per
-step. The package `mailbox-client` came out of step 2.1 with seven
-modules side by side. Its interface, the names its `__init__.py`
-exports, and what the MCP server and the live checks import stay as
-they are. Behaviour and the API stay as they are.
-
-### 13.1 Why
-
-- **`wire.py` held four subjects.** The address and the token with
-  their check, the shape of a request and its path, the reading of an
-  answer or a failure, and an attachment read in chunks: 288 lines, a
-  reader who looks for the URL check finds it beside the charset of
-  an attachment. ARCHITECTURE 15: a module holds one subject.
-- **`endpoints.py` held every resource.** The caller, folders,
-  messages, drafts and sending, and the readings of all their records,
-  in one module of 379 lines. The next endpoints the MCP server or a
-  script needs, threads, the status, users, take it past 500. The MCP
-  server's tools are one module per kind already (section 10), and
-  the client that serves them should be cut the same way.
-- **The tests followed the modules**, two files for seven modules.
-
-### 13.2 Target
-
-The tree of ARCHITECTURE 3. `endpoints/` becomes a package, one module
-per resource of the API as the MCP server's tools are: `accounts`,
-`folders`, `messages`, `drafts`, `sending`, `compose` for what drafts
-and sending share, `generic` for any route. Each module keeps the
-readings of its records, as an adapter keeps its mappers. The page of
-summaries is read in `messages` and used by `drafts`. `wire.py` becomes
-four modules: `environment` (the address and the token, read or given,
-checked), `calls` (the `Call`, its path, the timeouts, the readings
-every endpoint may use), `answers` (an answer or a failure read) and
-`attachments` (bytes in chunks, what the headers say).
-
-The lines, each importing only lines below, a package as one unit:
-
-```
- client · sync
- endpoints
- answers · attachments · environment
- calls
- models · errors
-```
-
-httpx stays where a request is made or read, where an attachment's
-headers are read, and where an address is parsed to be checked:
-`client`, `sync`, `calls`, `answers`, `attachments`, `environment`.
-The endpoints, the records and the errors know no HTTP library. A
-module of `endpoints/` is reached from outside through the package
-alone, so the package can split or merge its modules.
-
-The tests mirror the modules: `test_environment.py`, `test_calls.py`,
-`test_answers.py`, `test_attachments.py`, and `tests/endpoints/` with
-one file per module. `fake_api.py` at the top holds the fake API and
-the answers the endpoint tests share.
-
-### 13.3 Order of work
-
-1. The new modules, the clients pointed at them, the old two removed,
-   the architecture test taught what a package is and that the
-   endpoints are reached through theirs. Every test as before.
-2. The tests moved into files that mirror the modules, each test as
-   it was.
-3. The documents: ARCHITECTURE 3, this section, the client's README,
-   the roadmap.
-
-Built 2026-10-07, in that order.
+**12.3 The limits.** Decided by the user on 2026-10-07: hard limits,
+without exceptions and without `noqa`. What grows beyond one is split.
+The numbers are in [architecture/rules.md](architecture/rules.md),
+section 15. `formatTime` keeps its name, which `logging.Formatter` gives
+it.
 
 ## 14. The client's records in parts
 
-Decided by the user on 2026-10-09, as step 0 of the client covering the
-whole API.
-
-### 14.1 Why
-
-`models.py` held every record of the client in one file. The client is
-to cover the whole API, with records for accounts, users, tokens,
-roles, webhooks, the audit and more. One file would pass 500 lines, and
-a record would sit far from the endpoints that read it.
-
-### 14.2 Target
-
-`models/` is a package, one module per resource as `endpoints/` is:
-`me`, `folders`, `messages`, `sending`, `secrets` and `webhooks`, and a
-module of its own for each resource that gets records later. Its
-`__init__.py` offers every record, so `from benethos_mailbox_client.models
-import Folder` and `from benethos_mailbox_client import Folder` stay as
-they are. The package keeps its line, at the bottom beside `errors`.
-The tests mirror the modules in `tests/models/` where a record has
-behaviour of its own, as `Secret` has.
-
-### 14.3 Order of work
-
-1. The package, the code moved as it was, `models.py` removed, every
-   test as before.
-2. The documents: ARCHITECTURE 3, this section.
-
-Built 2026-10-09, in that order.
+Decided by the user on 2026-10-09: `models/` of the client is a package,
+one module per resource as `endpoints/` is, and its `__init__.py` offers
+every record.
 
 ## 15. A fourth package, `mailbox-common`
 
-Decided by the user on 2026-10-09, first as an idea, then to be built.
+Decided by the user on 2026-10-09: what the service and the MCP server
+both need is a package of its own, `benethos-mailbox-common` on PyPI,
+with the version of the others, pinned by the service and the MCP
+server. It has no image: the images of the service and the MCP server
+install it with them. It sees neither of them, nor the client.
 
-### 15.1 Why
+- It needs the standard library alone. platformdirs and
+  pydantic-settings are extras, `paths` and `settings`. The client does
+  not use platformdirs.
+- The log moved as a whole, as the user decided during the work: the
+  format, the levels, `log_time`, the plain and the coloured line and a
+  stderr handler. The service keeps its dictConfig for uvicorn, the log
+  page and its access line. The MCP server keeps stderr alone and the
+  quiet libraries. So the two logs look alike by construction.
+- `publish.yml` uploads the packages in the order of their
+  dependencies, as the user decided: common first, then the client and
+  the service, then the MCP server. `test_publish.py` holds the order
+  to the pyproject files.
+- Each program keeps its own search order for its folders, since the
+  service also looks for its data folder in the working directory.
 
-The MCP server cannot import the service, so what both need was kept
-twice: `plaintext.py` as the same file, held equal by a test, the
-folders of the operating system, the time and format of a log line,
-the canonical JSON of the idempotency key and the size in MiB. The
-MCP server's log had neither masking nor colours.
-
-### 15.2 Target
-
-A workspace member `packages/mailbox-common`, on PyPI as
-`benethos-mailbox-common` with the version of the others, pinned by the
-service and the MCP server. No image: the images of the service and the
-MCP server install it with them. It sees neither of them, nor the
-client, and imports the standard library and platformdirs alone.
-Since 15.4 and 16, platformdirs and pydantic-settings are extras,
-`paths` and `settings`, and the package needs the standard library
-alone.
-Decided with it: platformdirs lives there, and the client does not use
-it. Its modules are listed in ARCHITECTURE 3.
-
-The log moved as a whole, as the user decided during the work: the
-format, the levels, `log_time`, the plain and the coloured line and a
-stderr handler. The service keeps its dictConfig for uvicorn, the log
-page and its access line, which it hands the coloured line as
-`line_of`. The MCP server keeps stderr alone and the quiet libraries.
-So the two logs look alike by construction, and the MCP server notes
-its two tokens for masking.
-
-`publish.yml` uploads the packages in the order of their dependencies,
-as the user decided: common first, then the client and the service,
-then the MCP server. The client waits for common too, so it may come to
-need it. `test_publish.py` holds the order to the pyproject files.
-
-### 15.3 Order of work
-
-0. The package, its pins, CI and `publish.yml`.
-1. `plaintext`, the copy and the test of equality removed.
-2. `system_folders` and `named_file`. Each program keeps its own search
-   order, since the service also looks for its data folder in the
-   working directory.
-3. `redact`.
-4. The log.
-5. `canonical`, now also the idempotency key of the MCP server.
-6. `sizes`.
-7. The rule that a function of the package exists once, and the
-   documents.
-
-Built 2026-10-09, in that order.
-
-### 15.4 Groups, and three more moves
-
-Decided by the user on 2026-10-10, before the first push of the
-package.
+**15.4 Groups, and three more moves.** Decided by the user on
+2026-10-10, before the first push of the package.
 
 - **Groups.** While the package is small, it splits into `mail`, `log`,
   `paths` and `values`, so a group can be cut out as a package of its
-  own later. A module imports only inside its group. A group offers its
-  modules as namespaces, and a caller imports a module from its group.
-  `paths` rather than `system`, since the service has `domain/system/`
-  for the running service, and the group is about where files live.
-  Not chosen: a namespace package without `__init__.py`, which leaves
-  no `__version__` at the root.
+  own later. `settings` joined them with section 16. A module imports
+  only inside its group. A group offers its modules as namespaces, and a
+  caller imports a module from its group. `paths` rather than `system`,
+  since the service has `domain/system/` for the running service, and
+  the group is about where files live. Not chosen: a namespace package
+  without `__init__.py`, which leaves no `__version__` at the root.
 - **The rule of two packages.** Only what at least two packages need
-  goes in, as a guide (ARCHITECTURE 3).
-- **The extra `paths`, as a trial.** platformdirs became an extra named
-  after its group, and the package needs the standard library alone.
+  goes in, as a guide (ARCHITECTURE.md 3.4).
+- **The extra `paths`.** platformdirs is an extra named after its
+  group.
 - **Named records.** `system_folders` returns `SystemFolders`, and
-  ARCHITECTURE 9 names the rule for every package boundary.
+  [architecture/rules.md](architecture/rules.md) section 9 names the
+  rule for every package boundary.
 - **Three more moves.** `addresses.readable` for an address as people
-  read it, from four copies in the service and the MCP server. The
-  quoted form escapes a quote, which fixes a name read back by the mail
-  form. `values/secret.py` from the service, whose `digest` the MCP
-  server now uses for its idempotency key. Its bearer compare stays on
-  bytes, since a header is bytes a client chooses. `values/text.py`
-  from the service, whose `joined` keeps a sender's name, a subject and
-  a file name on one line in what the model reads.
+  read it, from four copies in the service and the MCP server.
+  `values/secret.py` from the service, whose `digest` the MCP server
+  uses for its idempotency key. Its bearer compare stays on bytes,
+  since a header is bytes a client chooses. `values/text.py` from the
+  service, whose `joined` keeps a sender's name, a subject and a file
+  name on one line in what the model reads.
 - **Left out.** `package_version` in `__init__.py`, which would put
   logic there for four lines per package. The uvicorn start of the
   service and the MCP server, about 15 lines each, until a third server
   appears. httpx, pydantic, anyio and starlette, which the packages use
   differently.
 
-Built 2026-10-10, in that order.
-
 ## 16. Records, one settings base, the boundaries
 
-Decided by the user on 2026-10-10, built as #132.
+Decided by the user on 2026-10-10.
 
 - **Records in the client.** A message is `Message`, a summary
   `MessageSummary`, which `Message` extends, with `Address`,
-  `AttachedFile` and `Reference`, where each was a dict. The API's
-  `from` is `sender`, a time a `datetime`, `Change.at` too. What a
-  call sends stays as it was.
+  `AttachedFile` and `Reference`. The API's `from` is `sender`, and a
+  time is a `datetime`.
 - **One settings base.** pydantic-settings has one home, the group
   `settings` of `mailbox-common` with the extra `settings`, as
   platformdirs has `paths`. `FileSettings` and `load` read the
-  environment and a settings file. The service's and the MCP
-  server's `Settings` extend it. The MCP server has typed settings
-  and no python-dotenv. A settings file no longer changes the
-  environment of the process.
+  environment and a settings file. The service's and the MCP server's
+  `Settings` extend it. A settings file does not change the environment
+  of the process.
 - **The boundaries.** `tests/test_boundaries.py`, at the root of the
-  repository since #215, checks all four packages: what a package hands on is a named
-  record, frozen and with slots, not a tuple or a dict. Each
-  exception stands in `ALLOWED` with its reason, and an entry that
-  no longer matches fails. The tuples of the domain became
-  `IssuedToken`, `OneTimePassword`, `TotpSetup` and `TotpConfirmed`.
-
-## 17. The review of 2026-10-15
-
-Built 2026-10-15 as #180 (17.1), #181 (17.2), #182 (17.3), #183 (17.4),
-#184 (17.5) and #186 (17.6).
-
-A review of `main` at e044c1d8 found code written more than once and
-tests that lean on each other. The user decided the order of the work
-and that a provider's 403 answers with one error class.
-
-### 17.1 Tests
-
-Built as #180.
-
-- **A home for what tests share.** A fixture that tests of several
-  modules take is in the `conftest.py` of their nearest common folder,
-  a helper in a module of its subject there: `<kind>_adapter.py` for
-  an adapter on its fake, `<subject>_fake.py`, `<subject>_helpers.py`.
-  `clocks.py` holds one `Clock` and one `Seconds`, where twelve copies
-  stood. No test module imports another.
-- **No hook for tests in the MCP server.** The tests enter
-  `tools.calling` with their client, as a server does.
-
-### 17.2 The adapters' duplicates
-
-- **Cursors.** JMAP's copy of `rules.cursor_scope` goes. The IMAP
-  folder `all` reads its cursor with `opaque.fields`, in the shape it
-  had.
-- **Requests.** `path_part` and `standard_refusals` beside `refused`
-  in `data/protocols/http`, for Gmail, Graph and JMAP. A 403 is a
-  `ProviderError` on every provider: the server took the credential
-  and refused the request.
-- **Days.** `rules.day_start` is where a filter's day begins, midnight
-  in UTC, for JMAP, Graph and Gmail alike.
-- **Files.** `convert.attachment_of` reads one file of a message's
-  source, for every adapter that has nothing else to read it from.
-- **Servers that take a login.** `mailserver.py` holds the probe
-  without a login and the settings from discovered servers, for IMAP
-  and POP3.
-- **SQLite.** `Database.one_as`, `query_as` and `scalar` read rows into
-  records and a number. The three activities of a purge have one base,
-  `Purged`.
-
-### 17.3 The adapters' layout
-
-- **One name for one part.** An adapter's HTTP API on the wire is in
-  `api.py`, as the user decided: Graph's `graph.py` and JMAP's
-  `account.py` are renamed. What the sync asks is in `changes.py` in
-  every adapter that has more than the provider's class for it. IMAP's
-  `sync.py` and `watch.py` are one `changes.py` with `ImapChanges`.
-- **Microsoft in parts.** `provider.py` hands each operation to
-  `folders`, `messages`, `drafts` or `changes`, as JMAP and Gmail do.
-- **The memory adapter in parts.** `messages`, `folders` and `drafts`
-  work on what it holds, `store.Store`, which the adapter keeps itself,
-  where tests look at it.
-
-### 17.4 The domain's sizes
-
-- **Outgoing in parts.** `outgoing.py` keeps the operations. Composing
-  a message is `composing.Composer`, which answers a `Composed` record
-  instead of four values, and handing it to the provider with what
-  follows is `delivering.Delivery`.
-- **The sync's report.** What a pass tells the change feed is
-  `passes.report`, a `Report` of the changes and the counts.
-- **Records, not tuples.** `by_folder` of IMAP answers `ByFolder`, a
-  sign-in `Connected`, a presented token `Presented`.
-- **Fewer parameters.** `AccountHooks` carries who hears of an
-  account. `Timing` carries the clock, the sleep and the jitter of an
-  adapter, and `Guard` takes a `Pace` and a `Timing`.
-- **No switches.** A new display name is a `Rename`, not a flag beside
-  it. IMAP deletes for good and into the trash in two functions.
-
-### 17.5 The UI's forms
-
-- **What a form held is a record.** `AccountForm`, `UserForm`,
-  `TokenForm` and `WebhookForm` replace dicts of `Any`, and a submitted
-  form is Starlette's `FormData` where it was `Any`.
-- **Keywords are added and taken off.** The keyword form sends
-  `add_keywords` or `remove_keywords`, where it read the message and
-  wrote the whole list again.
-- **Smaller things.** The action menu's batches are `BatchAction`
-  records, the page of a message is `message_url`, and the time a
-  browser sends is read by `clock.parse_local`.
-
-### 17.6 Flag changes
-
-- **A protocol of its own.** `flag_changes` left `Reads`, where five
-  adapters answered an empty list. `FlagChanges` has it, and only IMAP
-  implements it. The sync asks an adapter that has the protocol and
-  takes no change from one that has not.
+  repository, checks all four packages: what a package hands on is a
+  named record, frozen and with slots, not a tuple or a dict. Each
+  exception stands in `ALLOWED` with its reason, and an entry that no
+  longer matches fails. The tuples of the domain became `IssuedToken`,
+  `OneTimePassword`, `TotpSetup` and `DeviceAdded`.

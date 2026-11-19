@@ -70,107 +70,37 @@ done. Update the roadmap in the same commit that finishes an item.
   password), then `uv run benethos-mailbox-service serve`. Sign in at
   `http://127.0.0.1:8080/ui` as `admin`, choose a password, and make a
   token on the user's page for the API (`/docs`).
-- Live checks: `uv run python live/smoke.py [--show] [--wrong-password]`
-  (read-only, the folder `all` among it, and the `sender_check` of the
-  newest message, without `--show` its result and reason only) and
-  `uv run python live/changes.py [--keep]` (sends one test mail from the
-  second test account to the first, flags and moves it, replies,
-  forwards and sends a draft back to the second, checks that the mail
-  and the reply are one thread in each account, makes and removes a
-  folder, deletes it all for good, and checks the change feed and a
-  webhook on a receiver at 127.0.0.1), test accounts in `live/.env` (not
-  versioned, template `live/.env.example`).
-  `MAILBOX_SERVICE_TOKEN=... uv run python live/register.py` adds the test
-  accounts to a running service over its API and checks them, with
-  `--own-service` to a service and database of its own.
 - Run the MCP server: `MAILBOX_SERVICE_TOKEN=... uv run benethos-mailbox-mcp`
   (stdio, `--transport streamable-http` for HTTP).
   For Claude Code and Claude Desktop see `packages/mailbox-mcp/README.md`.
-  `uv run python live/mcp_stdio.py` checks it over stdio against the test
-  accounts, with a service and database of its own. The read tools read
-  the conversation of a search hit as well. A user that may share gets
-  a link to a PDF attachment, which a GET without a token fetches once,
-  the bytes `get_attachment` answers, and a second GET answers `404`.
-  `server_status` must name the service of its own version, both ways.
-  A user loses `mail.share` and gets it back while its server runs,
-  which must tell its client each time and list the tools left, then
-  the user is disabled and `server_status` alone is left.
-  The write tools create
-  a folder and star, move and trash a message of the first test account,
-  then put everything back. They also rename the folder and add and
-  take off a keyword. The draft tools write a reply draft there without
-  the quote, with a file, replace it with the file of the stored draft
-  and delete it. The send tools send three mails from the first test
-  account to the second, one of them twice with the same call and one
-  from a draft, and delete them for good. Grants with recipients
-  and a send limit stop mails, and the audit names each attempt.
-  `whats_new` must name the changes of the write tools.
-  `uv run python live/mcp_http.py` checks it over streamable HTTP behind
-  its bearer token, read-only.
 - The configuration UI: `http://127.0.0.1:8080/ui`, sign in with a user
-  name and a password. The live checks with a service of their own make
-  its first user with `users create-admin`, change the one-time password
-  in the UI and make a token there, as an operator would.
-  `uv run python live/ui.py` checks it against the test accounts. It
-  connects the second test account through the UI, reads the inbox by
-  conversations, writes a folder and
-  a draft on the first and removes them, and sends one mail from the
-  first to the second, deleted for good on both sides. It also makes a
-  user, a role and a token and uses the token on the API, reads the
-  state of the service on the overview and the Accounts list, adds and
-  removes a webhook, shows the recovery key of its own
-  service, reads its log, makes a user with a one-time password and
-  reads the audit of administration. A user of its own adds two devices
-  of the second factor's first method, TOTP, from the keys of their QR
-  codes, renames one, signs in with a code of each and a recovery code,
-  and has them removed by itself, the admin and the host.
-  How the pages look and behave, and the checklist for a new page:
-  `docs/UI.md`.
+  name and a password. How the pages look and behave, and the checklist
+  for a new page: `docs/UI.md`.
 - Microsoft accounts: the service comes with the project's app,
-  `docs/MICROSOFT.md` also sets up an app of your own.
-  `uv run python live/microsoft.py --connect` once (a person signs in in
-  the browser), then `uv run python live/microsoft.py` checks the adapter
-  against the Microsoft test account in `live/.env` with that app. With
-  `--project` both use the project's app: `--connect` prints a code a
-  person enters at Microsoft. It makes and removes a folder and a reply
-  draft there, sends one mail with a file from it to the first test
-  account and deletes it for good on both sides. The send names the
-  sent copy, whose text and file are as sent, and the mail arrives
-  under the Message-ID the send answered. A reply to the copy goes to
-  the first test account too and names what it answers. It gives the
-  sent copy a keyword and takes it off, reads its conversation, and
-  checks that the change feed learns of the sent copy through Graph
-  delta queries. With `--large` it reads, then sends one mail of about
-  7 MB alone, its files one by one, a large one through an upload
-  session, which must arrive whole. With `--marks` it reads, then puts
-  `$answered` and `$forwarded` on the newest mail of the inbox and takes
-  them off, and sends nothing. Where a
-  mail of the inbox has inline images, they must be listed and
-  download.
-- Gmail accounts: a Google client of your own, `docs/GOOGLE.md`.
-  `uv run python live/gmail.py --connect` once (a person signs in in
-  the browser), then `uv run python live/gmail.py` checks the adapter
-  against the Gmail test account in `live/.env` with that client. It
-  makes a label inside a label, renames the outer one and removes both,
-  writes, replaces and deletes a draft, sends one mail from it to the first
-  test account, deleted for good there, stars, labels, unlabels and
-  labels again, reads the thread of and archives the copy in Sent,
-  deletes it for good, and
-  checks that the change feed learns of it through Gmail's history. Then the first test account
-  sends one mail to it, which must arrive in the inbox, be found, open
-  and turn read. A reply draft to it and a reply sent back must be in
-  its thread. All is deleted for good on both sides.
+  `docs/MICROSOFT.md` also sets up an app of your own. Gmail accounts: a
+  Google client of your own, `docs/GOOGLE.md`.
 - A test mail server of our own: `sh containers/test-mail-server/setup.sh`
   makes Stalwart in a container anew, with IMAP, POP3, SMTP and JMAP on
   `127.0.0.1:30xxx`, two accounts and a local test CA
-  (`containers/test-mail-server/README.md`). `uv run python live/pop3.py`
-  checks the POP3 adapter against it: one mail from the first account to
-  the second, read, found by the sync and deleted for good.
-  `uv run python live/jmap.py` checks the JMAP adapter against it, with a
-  service of its own as a process: one mail from the first account to the
-  second, reported by push, found in the folder `all`, its thread read,
-  changed, put in a folder and back, a draft, left out of `all` in the
-  trash, then deleted for good on both sides.
+  (`containers/test-mail-server/README.md`).
+- Live checks: manual scripts in `live/`, against the test accounts of
+  `live/.env` (not versioned, template `live/.env.example`). What each
+  one reads, sends, changes and deletes: [docs/LIVE.md](docs/LIVE.md).
+  - `uv run python live/smoke.py [--show] [--wrong-password]`:
+    read-only.
+  - `uv run python live/changes.py [--keep]`: mail between the two test
+    accounts, the change feed and a webhook.
+  - `MAILBOX_SERVICE_TOKEN=... uv run python live/register.py
+    [--own-service]`: the test accounts in a running service.
+  - `uv run python live/mcp_stdio.py` and `live/mcp_http.py`: the MCP
+    server over stdio and over streamable HTTP.
+  - `uv run python live/ui.py`: the configuration UI.
+  - `uv run python live/microsoft.py [--connect] [--project] [--large]
+    [--marks]`: the Microsoft test account.
+  - `uv run python live/gmail.py [--connect]`: the Gmail test account.
+  - `uv run python live/pop3.py` and `live/jmap.py`: the test mail
+    server in a container.
+
 ## Project layout
 
 A uv workspace with four distributions and one lockfile.
@@ -212,6 +142,9 @@ containers/               # images/ (one folder per image), and one folder
                           #   development/ (built from the repository),
                           #   test-mail-server/ (Stalwart for tests).
                           #   Each keeps its secrets/ local
+.githooks/                # pre-commit: refuses staged settings, keys,
+                          #   state files and lines that look like a
+                          #   credential. Enabled once per clone
 .github/workflows/        # ci.yml: the organisation's workflows from
                           #   benethos-hub/.github (lint, tests, audit,
                           #   lowest versions per package, coverage
@@ -262,8 +195,13 @@ tests/                    # what the repository holds, across the four
                           #   two sections or more lists them in its
                           #   contents at the top, under the 3D icon
   test_module_tree.py     # the trees of docs/ARCHITECTURE.md section 3
-                          #   against the disk
+                          #   against the disk, the seams of its
+                          #   section 8 against the code
   test_layout.py          # this file's project layout against the disk
+  test_repo_content.py    # no tracked file holds a credential, a path
+                          #   of a machine or an id of a real record
+  test_pre_commit.py      # the hook of .githooks/, held to the same
+                          #   lines of credentials
   test_packaging.py       # the LICENSE copies, the Python versions, one
                           #   version and its examples in the
                           #   documentation
@@ -282,21 +220,38 @@ tests/                    # what the repository holds, across the four
   interface.py            # not a test: the public interface of a
                           #   package as JSON, for the records in docs/
 docs/
-  CONCEPT.md              # design
-  ARCHITECTURE.md         # layers, modules, seams, rules for new code
+  CONCEPT.md              # design: the overview and where each section is
+  concept/                #   one file per topic, the sections under
+                          #   their numbers
+  ARCHITECTURE.md         # the shape, the layers, where a piece of code
+                          #   goes, and where each section is
+  architecture/           #   the modules of the four packages (section
+                          #   3) and the rules (sections 5 to 17)
   LIMITS.md               # every rate limit and how they work together
   PERMISSIONS.md          # users, roles and rights
-  LOGGING.md              # what the service log holds, at which level
+  LOGGING.md              # what the service log holds, at which level,
+                          #   the rules for a line
+  logging/                #   every activity, and where they live in
+                          #   the code
   AUDIT.md                # the audit of administration
-  UI.md                   # how the pages look and behave, new page checklist
-  REFACTORING.md          # how the layout came to be
+  UI.md                   # the goals, the rules for a page, the new page
+                          #   checklist, and where each section is
+  ui/                     #   the pages, the workflows, the look
+  REFACTORING.md          # how the layout came to be: what was
+                          #   decided, and the reasons
   MICROSOFT.md            # connecting Microsoft accounts, an app of your own
   GOOGLE.md               # connecting Gmail accounts, the Google client
-  AUTHENTICATION.md       # the factors of the UI sign-in: password, TOTP
-  UNIFORM.md              # one way to operate every mailbox: what
-                          #   differs per provider, the decisions, the
-                          #   work in order
+  AUTHENTICATION.md       # the factors of the UI sign-in: password,
+                          #   TOTP, passkeys
+  UNIFORM.md              # one way to operate every mailbox: the
+                          #   principle, the rules, the capabilities
+  uniform/                #   what still differs per provider,
+                          #   the decisions, the UI and the MCP server
+  LIVE.md                 # the live checks: what each one reads,
+                          #   sends, changes and deletes
+  RELEASING.md            # the steps of a release, in order
   ROADMAP.md              # phases and their state
+  roadmap/                #   the items of each phase
   IDEAS.md                # collected, not yet decided
   openapi.json            # generated, checked in, guarded by a test
   mcp-tools.json          # the MCP server's tools as a client lists them,
@@ -375,13 +330,8 @@ that adds a module, a package, a library or a seam.
 
 Never write a test that reaches a real mail server, and never one that skips
 itself without credentials. Live checks are manual scripts in `live/`, outside
-`testpaths`.
-They run against test accounts: on an IMAP server of our own, the
-Microsoft test account, the Gmail test account, and the test mail
-server in a container. The
-server's address and the list of test accounts are local, unversioned
-configuration, and only the accounts listed there count as confirmed
-test accounts for golden rule 1.
+`testpaths` ([docs/LIVE.md](docs/LIVE.md)). Only the accounts listed in
+`live/.env` count as confirmed test accounts for golden rule 1.
 
 ## Conventions
 
@@ -397,7 +347,8 @@ test accounts for golden rule 1.
   `migrations/__init__.py`. The module's docstring says what it
   does and why. Each statement stands alone, and a step in Python is the
   method `before`. A migration that shipped in a release is never changed:
-  `RELEASED` in `tests/data/storage/test_sqlite.py` holds the fingerprint
+  `RELEASED` in
+  `packages/mailbox-service/tests/data/storage/test_sqlite.py` holds the fingerprint
   of each.
 
 ## Git and commits
@@ -416,6 +367,12 @@ test accounts for golden rule 1.
   The user merges it on GitHub as a squash merge. Afterwards pull `main`
   with `git pull --ff-only` and delete the local branch.
 - Dependabot opens its own pull requests. The user merges them as well.
+- The pre-commit hook in `.githooks/` refuses staged settings, keys and
+  state files, and staged lines that look like a credential. It is
+  enabled once per clone with `git config core.hooksPath .githooks`.
+  `tests/test_repo_content.py` holds every tracked file to the same
+  patterns, in CI as well, where the hook does not run. A line that must
+  show such a form ends with `pragma: allowlist secret`.
 - End commit messages with
   `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 
@@ -425,41 +382,5 @@ A release is its own `release/X.Y.Z` branch and pull request. The four
 packages carry the same version. The MCP server pins the client and the
 common package to it, the service the common package.
 
-1. `uv lock --upgrade --dry-run`. If it moves anything, run
-   `uv lock --upgrade` as a commit of its own, then all checks. Check
-   the other pins as well: the base images of both Dockerfiles, a newer
-   tag or a new digest under the same tag, the actions of the
-   workflows, and htmx and Bootstrap Icons in `assets/vendor`, with
-   their highest stable version on npm and not the tag `latest`. Each
-   update is a commit of its own. The issue "Pinned
-   versions have newer releases", which `freshness.yml` keeps daily, lists
-   the same, but only as of its last run.
-2. Set `version` in the four packages' `pyproject.toml`, the pins
-   `benethos-mailbox-client==X.Y.Z` and
-   `benethos-mailbox-common[paths,settings]==X.Y.Z` in the MCP server's
-   and `benethos-mailbox-common[paths,settings]==X.Y.Z` in the
-   service's, then `uv lock` and `uv sync`. Set it as well in
-   `.github/publish/mcp-registry/server.json`, there also in the
-   bundle's address, in `.github/publish/mcpb/manifest.json` and in
-   `containers/production/.env.example`, and regenerate
-   `docs/openapi.json`, which carries it. `test_packaging.py` names
-   every such place and every version example in the documentation
-   that still shows the old one.
-3. Close `[Unreleased]` in `CHANGELOG.md` as `[X.Y.Z] - <date>`, in the
-   same commit as step 2: `test_packaging.py` holds the version to the
-   newest release the changelog names. At its foot, move the link
-   `[Unreleased]` to `compare/vX.Y.Z...HEAD` and add the link
-   `[X.Y.Z]`.
-4. Freeze the migrations new in this release: add `fingerprint(N)` of
-   each to `RELEASED` in `tests/data/storage/test_sqlite.py`.
-5. After the squash merge: an annotated tag `vX.Y.Z` on `main`, pushed,
-   then `gh release create vX.Y.Z --verify-tag --title X.Y.Z` with the
-   changelog section as the notes. The published release starts `publish.yml`, which
-   uploads the four packages to PyPI and both images to GHCR, attaches
-   the Claude Desktop bundle to the release and sends the entry to the
-   MCP Registry.
-6. Check what shipped: the four packages on PyPI, each image's tags
-   `X.Y.Z`, `X.Y` and `latest` on the same revision, the bundle
-   `benethos-mailbox-mcp-X.Y.Z.mcpb` and `benethos-mailbox-mcp.mcpb` on
-   the GitHub release, and the version in the MCP Registry:
-   `https://registry.modelcontextprotocol.io/v0/servers?search=io.github.benethos-hub/benethos-mailbox-mcp`.
+The steps in order, from the pins to what is checked after the
+publish: [docs/RELEASING.md](docs/RELEASING.md).

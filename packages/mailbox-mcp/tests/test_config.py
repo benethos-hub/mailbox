@@ -24,7 +24,7 @@ def test_the_file_fills_what_the_environment_lacks(
     named = write(
         tmp_path / "mcp.env",
         "MAILBOX_SERVICE_URL=http://127.0.0.1:9090\n"
-        "MAILBOX_SERVICE_TOKEN=from-the-file\n"
+        "MAILBOX_SERVICE_TOKEN=from-the-file\n"  # pragma: allowlist secret
         "MAILBOX_MCP_PORT=9001\n"
         "MAILBOX_MCP_HOST=0.0.0.0\n"
         "PATH=nothing\n",

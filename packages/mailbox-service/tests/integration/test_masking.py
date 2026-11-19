@@ -55,14 +55,13 @@ async def test_the_vault_notes_what_it_decrypts(
 
 
 async def test_tokens_from_a_provider_are_noted() -> None:
+    access = "access-token-from-the-provider"
+    refresh = "refresh-token-from-the-provider"
+
     def endpoint(request: httpx.Request) -> httpx.Response:
         return httpx.Response(
             200,
-            json={
-                "access_token": "access-token-from-the-provider",
-                "refresh_token": "refresh-token-from-the-provider",
-                "expires_in": 3600,
-            },
+            json={"access_token": access, "refresh_token": refresh, "expires_in": 3600},
         )
 
     app = App(sign_in(ProviderType.MICROSOFT, "common"), "client", None)
@@ -72,8 +71,7 @@ async def test_tokens_from_a_provider_are_noted() -> None:
         lambda: datetime(2026, 9, 28, tzinfo=UTC),
     )
     await client.refresh(SecretStr("an-old-refresh-token"))
-    said = "access-token-from-the-provider refresh-token-from-the-provider"
-    assert redact.redact(said) == "*** ***"
+    assert redact.redact(f"{access} {refresh}") == "*** ***"
 
 
 def test_an_error_text_is_masked_in_the_api_and_the_ui() -> None:

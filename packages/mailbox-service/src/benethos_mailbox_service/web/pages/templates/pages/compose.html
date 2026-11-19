@@ -90,9 +90,9 @@
         <span class="hint">Up to 25 MB together.{% if error %} Files chosen before must be chosen again.{% endif %}</span>
       </div>
       <div class="form-actions">
-        {% if can_send %}<button class="primary" type="submit" name="do" value="send" data-confirm="Send this message now? It cannot be taken back.">{{ icon("send") }} Send</button>{% endif %}
+        {% if can_send %}<button class="primary" type="submit" name="do" value="send" data-confirm="Send this message now? It cannot be taken back." data-confirm-label="Send">{{ icon("send") }} Send</button>{% endif %}
         {% if can_save %}<button type="submit" name="do" value="save">{{ "Save" if draft_id else "Save as draft" }}</button>{% endif %}
-        {% if can_delete %}<button class="danger" type="submit" name="do" value="delete" formnovalidate data-confirm="Delete this draft for good?">Delete draft</button>{% endif %}
+        {% if can_delete %}<button class="danger" type="submit" name="do" value="delete" formnovalidate data-confirm="Delete this draft for good?" data-confirm-label="Delete draft" data-confirm-danger>Delete draft</button>{% endif %}
         <a class="btn" href="{{ trail[-1][1] }}">Cancel</a>
       </div>
     </div>

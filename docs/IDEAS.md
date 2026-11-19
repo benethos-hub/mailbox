@@ -222,8 +222,8 @@ on IMAP and Microsoft. Finding parts of words on every account needs
 the service to search itself.
 
 - **An index of the headers.** The message index also keeps subject,
-  sender and recipients. `sender`, `to` and `subject` then find parts of
-  words on every account, while `text` stays the provider's. For the
+  sender and recipients. `from`, `to` and `subject` then find parts of
+  words on every account, while `q` stays the provider's. For the
   first time the service would keep content of the mail, if only
   headers: the backup, the deletion of an account and the sync carry
   it along.
@@ -247,7 +247,9 @@ additions.
 `update_message` covers keywords, read and unread, the star and the
 move between folders. A user that should only mark mail gets the move
 with it, and a move into a remote folder can make a mail as good as
-gone for its owner.
+gone for its owner. Since 0.8.0 a move into the trash or a folder below
+it needs `delete_message` as well. Every other move still comes with
+`update_message`.
 
 - A right of its own for the move on the same route, as
   `delete_message_permanent` is one for `DELETE` with `permanent`.

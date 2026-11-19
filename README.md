@@ -24,7 +24,7 @@ One REST API for all your mailboxes, whichever provider they are at, a
 Python client for it and an MCP server on top. Scripts, tools and AI
 agents work with your mail through one door you control.
 
-> **Status: beta, version 0.7.5.** Usable with real accounts. A breaking
+> **Status: beta, version 0.8.0.** Usable with real accounts. A breaking
 > change of the API or the configuration is announced in the changelog.
 > Stored data is carried forward by migrations.
 
@@ -165,7 +165,7 @@ What comes next, and in which order, is in
 | legacy mailboxes without IMAP | POP3 + SMTP: the inbox only, no folders, no read state, no search | password | available |
 
 Not supportable: Tuta, which offers no IMAP and no API. Details per
-provider in [docs/CONCEPT.md](docs/CONCEPT.md), section 5.3.
+provider in [the concept, section 5.3](docs/concept/providers.md#53-what-each-provider-offers).
 
 ## The four packages
 
@@ -248,8 +248,13 @@ for clients: [packages/mailbox-mcp](packages/mailbox-mcp/README.md#tools).
   the service log and the audit of administration
 - [docs/UI.md](docs/UI.md): how the pages of the configuration UI look
   and behave
+- [docs/UNIFORM.md](docs/UNIFORM.md): one way to operate every mailbox,
+  whatever its provider
 - [docs/REFACTORING.md](docs/REFACTORING.md): how the layout of the code
   came to be
+- [docs/LIVE.md](docs/LIVE.md): the manual checks against the test
+  accounts
+- [docs/RELEASING.md](docs/RELEASING.md): the steps of a release
 - [docs/IDEAS.md](docs/IDEAS.md): collected, not decided
 - [docs/MICROSOFT.md](docs/MICROSOFT.md): connecting Microsoft accounts
 - [docs/GOOGLE.md](docs/GOOGLE.md): connecting Gmail accounts, the
@@ -298,8 +303,8 @@ release here. That check sees neither a real mailbox nor the MCP server in
 front of the real service.
 
 Manual checks against real test accounts live in `live/` and are
-described in [CLAUDE.md](CLAUDE.md), which also holds the working rules
-for this repository.
+described in [docs/LIVE.md](docs/LIVE.md). The working rules for this
+repository are in [CLAUDE.md](CLAUDE.md).
 
 ## Licence
 
