@@ -21,7 +21,14 @@ from ..deps import Actor, Viewer
 from ..forms import failing
 from ..passkeys import answered, first_way, offered, passkey_party, passkeys_work
 from ..qr import data_uri
-from ..session import PendingTotp, session_of, show_once, take_once
+from ..session import (
+    PendingTotp,
+    pending_passkey,
+    pending_totp,
+    session_of,
+    show_once,
+    take_once,
+)
 from ..templates import back, render
 from .users import access_tab
 
@@ -34,6 +41,7 @@ ISSUER = "Mailbox"
 CODES = "recovery_codes"
 # Said after a change of the second factor that ends the other sessions.
 SIGNED_OUT = "Other sessions are signed out."
+SETUP_RAN_OUT = "The setup ran out. Start again."
 
 
 def device_added(request: Request, added: DeviceAdded, done: str) -> Response:
@@ -62,12 +70,8 @@ async def factor_page(
     request: Request, caller: Viewer, factors: Factors
 ) -> HTMLResponse:
     session = session_of(request)
-    setup = session.totp
-    if setup is not None and setup.until <= utc_now():
-        session.totp = setup = None
-    making = session.passkey
-    if making is not None and making.until <= utc_now():
-        session.passkey = making = None
+    setup = pending_totp(session)
+    making = pending_passkey(session)
     shown = take_once(request, CODES)
     codes = shown.split("\n") if shown else None
     return render(

@@ -367,3 +367,19 @@ def session_of(request: Request) -> UiSession:
 
 def csrf_ok(session: UiSession, presented: str | None) -> bool:
     return presented is not None and secret_values.same(presented, session.csrf)
+
+
+def pending_totp(session: UiSession) -> PendingTotp | None:
+    """The TOTP device being added in the session. One whose time ran out
+    is dropped."""
+    if session.totp is not None and session.totp.until <= utc_now():
+        session.totp = None
+    return session.totp
+
+
+def pending_passkey(session: UiSession) -> PendingPasskey | None:
+    """The passkey being added in the session. One whose time ran out is
+    dropped."""
+    if session.passkey is not None and session.passkey.until <= utc_now():
+        session.passkey = None
+    return session.passkey

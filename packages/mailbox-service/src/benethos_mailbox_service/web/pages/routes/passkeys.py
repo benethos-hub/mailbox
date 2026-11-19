@@ -15,9 +15,9 @@ from ...services import PasskeyDevices
 from ..deps import Actor
 from ..forms import failing
 from ..passkeys import answered, first_way, passkey_party, passkeys_work
-from ..session import PendingPasskey, session_of
+from ..session import PendingPasskey, pending_passkey, session_of
 from ..templates import back
-from .factor import FACTOR_PAGE, device_added, devices_removed
+from .factor import FACTOR_PAGE, SETUP_RAN_OUT, device_added, devices_removed
 from .users import access_tab
 
 router = APIRouter()
@@ -58,9 +58,9 @@ async def confirm(
     answer: Annotated[str, Form()] = "",
 ) -> Response:
     session = session_of(request)
-    setup, session.passkey = session.passkey, None
-    if setup is None or setup.until <= utc_now():
-        return back(request, FACTOR_PAGE, error="The setup ran out. Start again.")
+    setup, session.passkey = pending_passkey(session), None
+    if setup is None:
+        return back(request, FACTOR_PAGE, error=SETUP_RAN_OUT)
     if not answer:
         return back(request, FACTOR_PAGE, error="No passkey was made. Start again.")
     made = Answer(passkey_party(request), setup.challenge, answer)
