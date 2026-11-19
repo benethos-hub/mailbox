@@ -20,18 +20,13 @@ from collections.abc import Callable, Iterable, Iterator
 from contextlib import contextmanager
 from dataclasses import replace
 from datetime import datetime
-from typing import TypeVar
 
 from benethos_mailbox_common.values import secret
 
 from ...common.clock import utc_now
-from ...data.providers import (
-    ThreadHeaders,
-)
+from ...data.providers import ThreadHeaders
 from ...data.storage import IndexEntry, MessageIndexRepository
-from ...errors import (
-    MailboxServiceError,
-)
+from ...errors import MailboxServiceError
 from ..accounts import Adapters
 from ..activity import ActivityLog
 from ..changes import (
@@ -42,8 +37,6 @@ from ..changes import (
 from .runner import SyncRunner, SyncState
 from .threads import REFERENCES, IndexThreads, new_thread_id
 from .writes import OwnWrites
-
-T = TypeVar("T")
 
 
 def new_message_id() -> str:
@@ -67,7 +60,6 @@ class SyncService:
         self._new_id = new_id
         self._threads = IndexThreads(adapters, index, references, new_thread)
         self._feed = feed
-        self._clock = clock
         self._activity = activity or ActivityLog(clock)
         self._writes = OwnWrites()
         self._runner = SyncRunner(
