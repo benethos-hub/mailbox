@@ -49,6 +49,7 @@ ALLOWED = {
     "client endpoints/compose.py message_body": "a request body",
     # Lookups by a key, not a record with fields.
     "service assembly/providers.py build_oauth": "a client per provider",
+    "service domain/sync/service.py SyncService.follow": "new place per message id",
     "service domain/sync/service.py SyncService.natives": "provider id per message id",
     "service domain/sync/service.py SyncService.thread_ids": "thread per message id",
     "service domain/system/status.py StatusService.healths": "health per account id",

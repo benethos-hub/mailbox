@@ -319,8 +319,9 @@ packages/mailbox-service/
                         #   and how the passes went (runner, SyncRunner),
                         #   what a pass finds (passes), the threads the
                         #   index keeps (threads), our own changes a pass
-                        #   must not overwrite (writes), SyncWorker
-                        #   (polling and IDLE)
+                        #   must not overwrite (writes), a message
+                        #   looked up in vain followed by one pass
+                        #   (follow), SyncWorker (polling and IDLE)
       changes/          # what changed in a mailbox, for clients:
                         #   MailboxChange, one class per kind, ChangeFeed
       webhooks/         # WebhookService, WebhookDispatcher (signed posts,

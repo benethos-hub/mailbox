@@ -34,6 +34,7 @@ from ..changes import (
     MailboxChange,
     MessagesCreated,
 )
+from .follow import Gone
 from .passes import message_id_of
 from .runner import SyncRunner, SyncState
 from .threads import REFERENCES, IndexThreads, new_thread_id
@@ -63,6 +64,7 @@ class SyncService:
         self._feed = feed
         self._activity = activity or ActivityLog(clock)
         self._writes = OwnWrites()
+        self._gone = Gone(self)
         self._runner = SyncRunner(
             adapters,
             index,
@@ -182,6 +184,11 @@ class SyncService:
             )
             self._writes.done(account_id)
 
+    async def follow(self, account_id: str, natives: dict[str, str]) -> dict[str, str]:
+        """Messages the provider did not find where the index says: one
+        pass, and the new place of those that moved (``follow``)."""
+        return await self._gone.after_a_pass(account_id, natives)
+
     @contextmanager
     def writing(self, account_id: str) -> Iterator[None]:
         """A change of ours to messages, from the provider's call to the
@@ -200,6 +207,7 @@ class SyncService:
         self._index.forget_account(account_id)
         self._runner.forget(account_id)
         self._writes.forget(account_id)
+        self._gone.forget(account_id)
 
     def folder_of(self, account_id: str, message_id: str) -> str | None:
         """The folder the index has for a message, None where it keeps no

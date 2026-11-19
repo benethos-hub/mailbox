@@ -78,10 +78,6 @@ class MailboxService:
             self._calls, idempotency, sends, self._cursors, clock, activity
         )
 
-    def forget_account(self, account_id: str) -> None:
-        """An account is deleted: what was noted of its messages goes."""
-        self._calls.forget_account(account_id)
-
     # --- folders ----------------------------------------------------------------------
 
     async def list_folders(self, access: Access, account_id: str) -> list[Folder]:
