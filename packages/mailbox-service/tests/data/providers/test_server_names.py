@@ -29,13 +29,31 @@ async def test_the_names_of_the_newest_mails(kind: str) -> None:
     found.put(mail("Odd", headers=[(ENTRY, "not a host; dkim=pass")]))
     adapter = found.make()
     assert isinstance(adapter, ServerNames)
-    # Newest first, one name per entry, none for a name with spaces.
+    # Newest first, one place per entry, None for a name with spaces.
     assert await adapter.authserv_ids(10) == [
-        [],
+        [None],
         ["mx.example.org", "mx.example.net"],
         [],
     ]
     assert len(await adapter.authserv_ids(2)) == 2
+
+
+@pytest.mark.parametrize("kind", ["imap", "pop3", "jmap"])
+async def test_an_unreadable_entry_on_top_keeps_its_place(kind: str) -> None:
+    """The name below it does not move up to the top."""
+    found = box(kind)
+    found.put(
+        mail(
+            "Odd on top",
+            headers=[
+                (ENTRY, "not a host; dkim=pass"),
+                (ENTRY, "mx.example.org; dmarc=pass header.from=example.com"),
+            ],
+        )
+    )
+    adapter = found.make()
+    assert isinstance(adapter, ServerNames)
+    assert await adapter.authserv_ids(10) == [[None, "mx.example.org"]]
 
 
 @pytest.mark.parametrize("kind", ["gmail", "microsoft"])

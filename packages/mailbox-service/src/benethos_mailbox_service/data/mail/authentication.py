@@ -199,17 +199,18 @@ def _domain_of(sender: str | None) -> str | None:
     return host(written) if written is not None else None
 
 
-def authserv_ids(entries: Sequence[str]) -> list[str]:
+def authserv_ids(entries: Sequence[str]) -> list[str | None]:
     """The authserv-id of each entry, in lower case, where it is a host
     name, alone or with a version: for a person to choose the account's
-    own server from."""
-    found = []
+    own server from. One place per entry, in the order of the mail, None
+    where the name is no host name."""
+    found: list[str | None] = []
     for entry in entries:
         statements = _statements(entry[:_HEAD], head_only=True)
         head = statements[0] if statements else []
         versioned = len(head) == 2 and head[1][0].isdigit()
-        if (len(head) == 1 or versioned) and (name := host(head[0][0])):
-            found.append(name)
+        name = host(head[0][0]) if len(head) == 1 or versioned else None
+        found.append(name or None)
     return found
 
 

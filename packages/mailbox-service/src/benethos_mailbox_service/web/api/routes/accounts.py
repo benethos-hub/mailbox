@@ -93,11 +93,15 @@ async def list_server_names(
     account_id: str, caller: Caller, accounts: Accounts
 ) -> ServerNameList:
     """The names receiving servers wrote into the newest ten mails of the
-    inbox, for choosing `settings.authserv_id`. A mail can carry any name:
-    take the one the server writes on every mail. The service never sets
-    it. Empty for an account that names its server itself, as Gmail and
-    Microsoft do. Needs `update_account`."""
+    inbox, for choosing `settings.authserv_id`. `mails` says how many were
+    read. A mail can carry any name, and the order is no verdict: never
+    take the first one unseen. A server adds its entry on top, so `top`
+    counts the mails whose topmost entry carries the name. Where the
+    server writes none, the topmost is one the mail brought along. The
+    service never sets the name. Empty for an account that names its
+    server itself, as Gmail and Microsoft do. Needs `update_account`."""
     found = await accounts.server_names(caller, account_id)
     return ServerNameList(
-        items=[ServerName(id=n.id, count=n.count, of=n.of) for n in found]
+        mails=found.mails,
+        items=[ServerName(id=n.id, count=n.count, top=n.top) for n in found.names],
     )

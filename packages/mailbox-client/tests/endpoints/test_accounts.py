@@ -11,6 +11,7 @@ from benethos_mailbox_client import (
     Marks,
     Paged,
     ServerName,
+    ServerNameList,
     StoredCredential,
 )
 
@@ -97,7 +98,11 @@ async def test_update_account_leaves_out_what_stays(make_client: Callable) -> No
 
 
 async def test_list_server_names(make_client: Callable) -> None:
-    api = FakeApi({"items": [{"id": "mx.example.org", "count": 9, "of": 10}]})
+    api = FakeApi(
+        {"mails": 10, "items": [{"id": "mx.example.org", "count": 9, "top": 9}]}
+    )
     found = await make_client(api).list_server_names("acc_1")
     assert api.call() == ("GET", "/v1/accounts/acc_1/server-names", {}, None)
-    assert found == [ServerName(id="mx.example.org", count=9, of=10)]
+    assert found == ServerNameList(
+        mails=10, items=[ServerName(id="mx.example.org", count=9, top=9)]
+    )

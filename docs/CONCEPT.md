@@ -856,7 +856,7 @@ Base path `/v1`, JSON, bearer authentication on everything except
 | PATCH | `/v1/accounts/{account_id}` | display name, settings, new password |
 | DELETE | `/v1/accounts/{account_id}` | remove, credentials deleted |
 | POST | `/v1/accounts/{account_id}/verify` | test the connection now |
-| GET | `/v1/accounts/{account_id}/server-names` | the names receiving servers wrote into the newest ten mails of the inbox, for choosing `settings.authserv_id` (6.3). Empty for Gmail and Microsoft. Needs `update_account` |
+| GET | `/v1/accounts/{account_id}/server-names` | the names receiving servers wrote into the newest ten mails of the inbox, each with how many mails carry it and in how many it is the topmost entry, for choosing `settings.authserv_id` (6.3). Empty for Gmail and Microsoft. Needs `update_account` |
 | POST | `/v1/oauth/{provider}/device` | sign in with a code (5.4): the code, the page to enter it at and a `sign_in_id`, to connect an account or, with `account_id`, sign it in again |
 | POST | `/v1/oauth/{provider}/device/{sign_in_id}` | poll the sign-in with a code: `connected` false until the person signed in, then the account, no sooner than its `interval` |
 | GET | `/ui/oauth/{provider}/callback` | where the provider sends the browser back after the UI's sign-in in a browser: a UI page, not part of the API. The person is signed in to the UI as the user who started. The account is created or signed in again |
@@ -1065,7 +1065,10 @@ Where the server's name comes from:
   domain. Without it the result is `unknown` with `account`, and the
   account lacks the capability `sender_check`. The account page shows,
   when asked, the names in the newest ten mails of the inbox with how
-  many carry each. A person takes one over. The service never sets it.
+  many carry each. A server adds its entry on top (RFC 8601 section
+  4.1), so the page and the route also count how often a name is the
+  topmost entry, and put those most often on top first. A person takes
+  one over. The service never sets it.
 - **Gmail:** `mx.google.com`, for every account.
 - **Microsoft:** `mx.microsoft.com`, for every account. Graph hands out
   the headers of a message only when asked, so a list asks for them as
@@ -1078,6 +1081,8 @@ What it cannot tell:
   name that a mail brings along (RFC 8601 section 5). Measured
   2026-11-18: the Stalwart of the test mail server keeps them in a mail
   a signed-in user submits.
+- Where the server writes no entry, the topmost one is one the mail
+  brought along.
 - A domain that only looks like another, and a display name that names
   someone else, pass as long as the domain itself is confirmed.
 

@@ -34,10 +34,11 @@ def summary_fields(
     }
 
 
-def server_names(msg: ParsedMessage) -> list[str]:
+def server_names(msg: ParsedMessage) -> list[str | None]:
     """The authserv-id of each Authentication-Results entry of a message,
-    where it is a host name: for a person to choose the account's own
-    server from."""
+    for a person to choose the account's own server from: one place per
+    entry, in the order of the mail, None where the name is no host
+    name."""
     return authentication.authserv_ids(msg.all_headers(authentication.HEADER))
 
 

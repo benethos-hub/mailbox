@@ -31,14 +31,18 @@ adheres to [Semantic Versioning](https://semver.org/).
 - The configuration UI shows the sender check beside the sender of a
   message, and `check failed` in lists. The account page of an IMAP,
   POP3 or JMAP account shows, when asked, the names receiving servers
-  wrote into its newest ten mails.
+  wrote into its newest ten mails, each with how many mails carry it
+  and in how many it is on top.
 - `GET /v1/accounts/{account_id}/server-names`, operation
   `list_server_names` in `accounts.manage`, lists the names receiving
   servers wrote into the newest ten mails of an IMAP, POP3 or JMAP
-  account's inbox, each with how many of them carry it, for choosing
-  `settings.authserv_id`. It needs `update_account`, and a Gmail or
-  Microsoft account answers none. `benethos-mailbox-client`: the record
-  `ServerName` and `list_server_names` in both clients.
+  account's inbox, for choosing `settings.authserv_id`. `mails` says
+  how many were read, and each name how many of them carry it
+  (`count`) and in how many it is the topmost entry (`top`), those most
+  often on top first. It needs `update_account`, and a Gmail or
+  Microsoft account answers none. `benethos-mailbox-client`: the
+  records `ServerName` and `ServerNameList` and `list_server_names` in
+  both clients.
 - Passkeys as a second method of the second factor of the UI sign-in,
   beside authenticator apps (TOTP). A person adds them on the page
   Second factor, and after the password a passkey signs in as a code

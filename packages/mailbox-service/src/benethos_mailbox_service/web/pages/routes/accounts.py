@@ -18,7 +18,7 @@ from ....data.models import Account, AccountStatus, Capability, ProviderType
 from ....domain.accounts import (
     AccountService,
     Rename,
-    SeenName,
+    SeenNames,
     connection_of,
     connections,
     takes_server_name,
@@ -307,7 +307,7 @@ def _account_page(
     status: StatusService,
     form: FormData | None = None,
     err: str | None = None,
-    names: list[SeenName] | None = None,
+    names: SeenNames | None = None,
 ) -> HTMLResponse:
     """An account's page. With ``form`` its editor shows what was typed,
     the password left out. ``names``: the receiving servers' names the

@@ -306,10 +306,11 @@ class ServerNames(Protocol):
     """The names receiving servers wrote into the newest mails, for a
     person to choose the account's own from (IMAP, POP3, JMAP)."""
 
-    async def authserv_ids(self, limit: int) -> list[list[str]]:
+    async def authserv_ids(self, limit: int) -> list[list[str | None]]:
         """For each of the newest ``limit`` mails of the inbox, the
-        authserv-id of each of its Authentication-Results headers, where
-        it is a host name."""
+        authserv-id of each of its Authentication-Results headers: one
+        place per entry, in the order of the mail, None where the name is
+        no host name."""
         ...
 
 

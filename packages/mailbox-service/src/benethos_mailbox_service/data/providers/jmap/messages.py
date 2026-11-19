@@ -72,7 +72,7 @@ async def list_messages(
     )
 
 
-async def authserv_ids(account: JmapAccount, limit: int) -> list[list[str]]:
+async def authserv_ids(account: JmapAccount, limit: int) -> list[list[str | None]]:
     """The receiving servers' names in the newest ``limit`` mails of the
     inbox, from the header the summaries carry."""
     inbox = await account.role_id(FolderRole.INBOX)

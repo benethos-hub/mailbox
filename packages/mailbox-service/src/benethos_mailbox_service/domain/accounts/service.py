@@ -70,11 +70,20 @@ NEWEST_MAILS = 10
 @dataclass(frozen=True, slots=True)
 class SeenName:
     """A receiving server's name as the newest mails carry it: in
-    ``count`` of the ``of`` mails read."""
+    ``count`` of the mails read, and in ``top`` of them as the topmost
+    entry."""
 
     id: str
     count: int
-    of: int
+    top: int
+
+
+@dataclass(frozen=True, slots=True)
+class SeenNames:
+    """The names of the newest mails, and how many ``mails`` were read."""
+
+    mails: int
+    names: tuple[SeenName, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -339,27 +348,27 @@ class AccountService:
                     )
                 )
 
-    async def server_names(
-        self, access: Access, account_id: str
-    ) -> builtins.list[SeenName]:
+    async def server_names(self, access: Access, account_id: str) -> SeenNames:
         """The names receiving servers wrote into the newest mails of the
-        inbox, the most frequent first, for whoever may change the
-        account to choose its own server from. Empty where the account
-        names its server itself, as Gmail and Microsoft do. The service
-        never sets one: a mail can carry any name."""
+        inbox, for whoever may change the account to choose its own server
+        from. Those most often on top come first: a server adds its entry
+        on top, one a mail brought along stands below. None where the
+        account names its server itself, as Gmail and Microsoft do. The
+        service never sets one: a mail can carry any name."""
         access.require("update_account", account_id)
 
-        async def read(adapter: Reads) -> builtins.list[builtins.list[str]]:
+        async def read(adapter: Reads) -> builtins.list[builtins.list[str | None]]:
             if not isinstance(adapter, ServerNames):
                 return []
             return await adapter.authserv_ids(NEWEST_MAILS)
 
         mails = await self._adapters.call(account_id, read)
-        counts = Counter(name for names in mails for name in set(names))
-        return [
-            SeenName(name, count, len(mails))
-            for name, count in sorted(counts.items(), key=lambda n: (-n[1], n[0]))
-        ]
+        counts = Counter(name for names in mails for name in {n for n in names if n})
+        tops = Counter(names[0] for names in mails if names and names[0])
+        order = sorted(counts, key=lambda n: (-tops[n], -counts[n], n))
+        return SeenNames(
+            len(mails), tuple(SeenName(n, counts[n], tops[n]) for n in order)
+        )
 
     async def verify(self, access: Access, account_id: str) -> Account:
         """Log in afresh, e.g. after the credential was changed at the

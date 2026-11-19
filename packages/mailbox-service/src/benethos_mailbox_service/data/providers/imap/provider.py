@@ -126,7 +126,7 @@ class ImapProvider(MailServerAdapter):
             lambda box: messages.list_messages(box, folder_id, limit, cursor, search)
         )
 
-    async def authserv_ids(self, limit: int) -> list[list[str]]:
+    async def authserv_ids(self, limit: int) -> list[list[str | None]]:
         return await self._run(lambda box: messages.authserv_ids(box, limit))
 
     async def get_message(self, message_id: str) -> Message:

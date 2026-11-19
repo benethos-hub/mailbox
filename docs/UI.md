@@ -359,8 +359,9 @@ next step appears under the last one:
 After connecting, the account page's **Change** card edits the servers,
 the display name and the password, for IMAP, POP3 and JMAP accounts.
 There **Look in the mailbox** reloads the page with the names receiving
-servers wrote into the newest ten mails, each with a copy button and
-how many mails carry it, for the field of the receiving server's name.
+servers wrote into the newest ten mails, each with a copy button, how
+many mails carry it and in how many it is on top, for the field of the
+receiving server's name.
 The page reads nothing from the mailbox without it.
 OAuth accounts have
 **Sign in again** and, where the provider offers codes, **Sign in again

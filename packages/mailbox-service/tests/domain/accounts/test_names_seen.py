@@ -3,6 +3,8 @@ counted for whoever may change the account."""
 
 from __future__ import annotations
 
+from email.message import EmailMessage
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -10,7 +12,11 @@ from benethos_mailbox_service.assembly import Services, create_app
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import Grant, ProviderType
 from benethos_mailbox_service.data.providers import ServerNames
-from benethos_mailbox_service.domain.accounts import SeenName, takes_server_name
+from benethos_mailbox_service.domain.accounts import (
+    SeenName,
+    SeenNames,
+    takes_server_name,
+)
 from benethos_mailbox_service.errors import ForbiddenError
 
 from ...conformance_helpers import KINDS, box
@@ -35,10 +41,50 @@ async def test_the_most_frequent_name_first(
         )
     found = await imap_services.accounts.server_names(ADMIN, imap_account_id)
     # Seven mails in the inbox, all of them read.
-    assert found == [
-        SeenName("mx.example.org", 2, 7),
-        SeenName("mx.example.net", 1, 7),
-    ]
+    assert found == SeenNames(
+        7,
+        (SeenName("mx.example.org", 2, 2), SeenName("mx.example.net", 1, 1)),
+    )
+
+
+def two_entries(subject: str, *entries: str) -> bytes:
+    msg = EmailMessage()
+    msg["Subject"] = subject
+    msg["From"] = "service@bank.example"
+    msg["To"] = "me@example.com"
+    for entry in entries:
+        msg["Authentication-Results"] = entry
+    msg.set_content("Hello")
+    return msg.as_bytes()
+
+
+OURS = "mx.example.org; dmarc=fail header.from=bank.example"
+BROUGHT = "a.evil.example; dmarc=pass header.from=bank.example"
+
+
+async def test_the_name_on_top_first(
+    imap_services: Services, imap_account_id: str, imap_server: FakeMailBox
+) -> None:
+    """A name a mail brought along stands below the server's own and
+    comes after it, however often it is there."""
+    for uid in range(5, 15):
+        imap_server.add("INBOX", uid, two_entries(f"Mail {uid}", OURS, BROUGHT))
+    found = await imap_services.accounts.server_names(ADMIN, imap_account_id)
+    assert found.mails == 10
+    assert found.names == (
+        SeenName("mx.example.org", 10, 10),
+        SeenName("a.evil.example", 10, 0),
+    )
+
+
+async def test_where_the_server_writes_none_the_mails_own_is_on_top(
+    imap_services: Services, imap_account_id: str, imap_server: FakeMailBox
+) -> None:
+    """Where the server writes none, the topmost entry is the mail's own."""
+    for uid in range(5, 15):
+        imap_server.add("INBOX", uid, two_entries(f"Mail {uid}", BROUGHT))
+    found = await imap_services.accounts.server_names(ADMIN, imap_account_id)
+    assert found.names == (SeenName("a.evil.example", 10, 10),)
 
 
 async def test_it_needs_the_right_to_change_the_account(
@@ -59,7 +105,9 @@ async def test_an_account_that_names_its_server_itself_reads_none(
     account = await imap_services.accounts.create(
         ADMIN, ProviderType.MEMORY, "m@example.com"
     )
-    assert await imap_services.accounts.server_names(ADMIN, account.id) == []
+    assert await imap_services.accounts.server_names(ADMIN, account.id) == SeenNames(
+        0, ()
+    )
 
 
 @pytest.mark.parametrize("kind", [k for k in KINDS if k != "memory"])
@@ -89,7 +137,10 @@ async def test_the_api_lists_the_names_counted(
     url = f"/v1/accounts/{imap_account_id}/server-names"
     answer = client.get(url, headers=admin_bearer(imap_services))
     assert answer.status_code == 200
-    assert answer.json() == {"items": [{"id": "mx.example.org", "count": 2, "of": 6}]}
+    assert answer.json() == {
+        "mails": 6,
+        "items": [{"id": "mx.example.org", "count": 2, "top": 2}],
+    }
     reader = bearer_for(
         imap_services, Grant(accounts=[imap_account_id], allow=["mail.read"])
     )
@@ -110,4 +161,15 @@ async def test_the_api_lists_none_for_an_account_that_names_its_server(
         f"/v1/accounts/{account.id}/server-names",
         headers=admin_bearer(imap_services),
     )
-    assert answer.json() == {"items": []}
+    assert answer.json() == {"mails": 0, "items": []}
+
+
+def test_the_api_tells_mails_without_a_name_from_none_read(
+    imap_services: Services, imap_account_id: str
+) -> None:
+    """The fake's four mails in the inbox carry no entry."""
+    answer = api(imap_services).get(
+        f"/v1/accounts/{imap_account_id}/server-names",
+        headers=admin_bearer(imap_services),
+    )
+    assert answer.json() == {"mails": 4, "items": []}

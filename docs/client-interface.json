@@ -51,6 +51,7 @@
       "Sending",
       "Sent",
       "ServerName",
+      "ServerNameList",
       "ServiceTimeoutError",
       "ServiceUnavailableError",
       "SourceReport",
@@ -570,7 +571,7 @@
       "signature": "(*, address: 'str | None' = None, provider: 'str | None' = None, status: 'str | None' = None, limit: 'int | None' = None, cursor: 'str | None' = None) -> 'Call[Paged[Account]]'"
     },
     "list_server_names": {
-      "signature": "(account_id: 'str') -> 'Call[list[ServerName]]'"
+      "signature": "(account_id: 'str') -> 'Call[ServerNameList]'"
     },
     "marks": {
       "signature": "(item: 'dict[str, Any]') -> 'Marks'"
@@ -989,6 +990,7 @@
       "Sending",
       "Sent",
       "ServerName",
+      "ServerNameList",
       "SourceReport",
       "Status",
       "StoredCredential",
@@ -1073,8 +1075,22 @@
         "count": {
           "type": "int"
         },
-        "of": {
+        "top": {
           "type": "int"
+        }
+      }
+    },
+    "ServerNameList": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "mails": {
+          "type": "int"
+        },
+        "items": {
+          "type": "list[ServerName]"
         }
       }
     },
