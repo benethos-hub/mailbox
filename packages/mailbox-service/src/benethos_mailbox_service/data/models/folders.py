@@ -19,6 +19,10 @@ class FolderRole(StrEnum):
     ALL = "all"
 
 
+# The folder with the role ``all`` holds every message but those in these.
+OUTSIDE_ALL = frozenset({FolderRole.TRASH, FolderRole.JUNK})
+
+
 class Folder(BaseModel):
     id: str
     name: str

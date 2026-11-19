@@ -231,6 +231,6 @@ async def test_a_message_we_stored_ourselves_waits_for_no_pass(
     )
     [item] = page.items
 
-    await services.sync.public_ids(account, [(item.id, ARCHIVE)])
+    await services.sync.public_ids(account, [(item.id, ARCHIVE)], listed=False)
 
     assert services.sync.state(account).passes == passes

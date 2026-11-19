@@ -397,8 +397,6 @@ class MailboxService:
         claim()
         return await self._calls.attachment(account_id, message_id, attachment_id)
 
-    # --- across accounts ---------------------------------------------------------
-
     # --- changes ----------------------------------------------------------------------
 
     async def list_changes(
@@ -429,6 +427,8 @@ class MailboxService:
             if any(h is not None for h in hearing.values()):
                 keep = partial(_heard, hearing)
         return self._changes.page(visible, since, limit=limit, keep=keep)
+
+    # --- across accounts -------------------------------------------------------------
 
     async def list_all_messages(
         self,

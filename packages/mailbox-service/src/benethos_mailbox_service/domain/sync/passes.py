@@ -21,6 +21,13 @@ from ..changes import (
 )
 
 
+def message_id_of(headers: dict[str, ThreadHeaders], native: str) -> str | None:
+    """The ``Message-ID`` among the headers read for a provider id, if
+    any."""
+    found = headers.get(native)
+    return found.message_id if found is not None else None
+
+
 @dataclass(frozen=True)
 class Seen:
     """What a pass found in the changed folders: the index entries there,
@@ -32,8 +39,7 @@ class Seen:
 
     def message_id(self, native: str) -> str | None:
         """The ``Message-ID`` read for a provider id, if any."""
-        found = self.headers.get(native)
-        return found.message_id if found is not None else None
+        return message_id_of(self.headers, native)
 
     @property
     def arrived(self) -> list[str]:

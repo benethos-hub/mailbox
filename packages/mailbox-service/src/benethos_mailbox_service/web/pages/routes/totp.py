@@ -15,9 +15,9 @@ from ...services import TotpDevices
 from ..deps import Actor
 from ..forms import failing
 from ..passkeys import answered, first_way
-from ..session import PendingTotp, session_of
+from ..session import PendingTotp, pending_totp, session_of
 from ..templates import back
-from .factor import FACTOR_PAGE, device_added, devices_removed
+from .factor import FACTOR_PAGE, SETUP_RAN_OUT, device_added, devices_removed
 from .users import access_tab
 
 router = APIRouter()
@@ -48,10 +48,9 @@ async def confirm(
     code: Annotated[str, Form()] = "",
 ) -> Response:
     session = session_of(request)
-    setup = session.totp
-    if setup is None or setup.until <= utc_now():
-        session.totp = None
-        return back(request, FACTOR_PAGE, error="The setup ran out. Start again.")
+    setup = pending_totp(session)
+    if setup is None:
+        return back(request, FACTOR_PAGE, error=SETUP_RAN_OUT)
     with failing(FACTOR_PAGE):
         confirmed = totp.confirm(caller, setup.name, setup.secret, code)
     session.totp = None

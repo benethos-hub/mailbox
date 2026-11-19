@@ -20,18 +20,13 @@ from collections.abc import Callable, Iterable, Iterator
 from contextlib import contextmanager
 from dataclasses import replace
 from datetime import datetime
-from typing import TypeVar
 
 from benethos_mailbox_common.values import secret
 
 from ...common.clock import utc_now
-from ...data.providers import (
-    ThreadHeaders,
-)
+from ...data.providers import ThreadHeaders
 from ...data.storage import IndexEntry, MessageIndexRepository
-from ...errors import (
-    MailboxServiceError,
-)
+from ...errors import MailboxServiceError
 from ..accounts import Adapters
 from ..activity import ActivityLog
 from ..changes import (
@@ -39,11 +34,10 @@ from ..changes import (
     MailboxChange,
     MessagesCreated,
 )
+from .passes import message_id_of
 from .runner import SyncRunner, SyncState
 from .threads import REFERENCES, IndexThreads, new_thread_id
 from .writes import OwnWrites
-
-T = TypeVar("T")
 
 
 def new_message_id() -> str:
@@ -67,7 +61,6 @@ class SyncService:
         self._new_id = new_id
         self._threads = IndexThreads(adapters, index, references, new_thread)
         self._feed = feed
-        self._clock = clock
         self._activity = activity or ActivityLog(clock)
         self._writes = OwnWrites()
         self._runner = SyncRunner(
@@ -102,7 +95,7 @@ class SyncService:
         account_id: str,
         places: Iterable[tuple[str, str]],
         *,
-        listed: bool = False,
+        listed: bool,
     ) -> list[str]:
         """Our ids for provider ids, each with its folder. Unknown ones get a
         new id, with their ``Message-ID`` read right away: a message moved
@@ -135,7 +128,7 @@ class SyncService:
             known = self._index.by_native(account_id, natives)
             missing = [(n, f) for n, f in missing if n not in known]
         added = [
-            IndexEntry(self._new_id(), n, f, _message_id(headers.get(n)))
+            IndexEntry(self._new_id(), n, f, message_id_of(headers, n))
             for n, f in missing
         ]
         ours = {e.id: e.folder_id for e in added}
@@ -166,7 +159,7 @@ class SyncService:
     ) -> bool:
         """Whether a place the index does not know holds a ``Message-ID``
         the index has at another place."""
-        named = {h for n, _ in missing if (h := _message_id(headers.get(n)))}
+        named = {h for n, _ in missing if (h := message_id_of(headers, n))}
         return bool(named) and bool(self._index.with_header(account_id, named))
 
     async def _settled(self, account_id: str) -> None:
@@ -271,7 +264,3 @@ class SyncService:
     def state(self, account_id: str) -> SyncState:
         """How the passes of the account went since the start."""
         return self._runner.state(account_id)
-
-
-def _message_id(headers: ThreadHeaders | None) -> str | None:
-    return headers.message_id if headers is not None else None

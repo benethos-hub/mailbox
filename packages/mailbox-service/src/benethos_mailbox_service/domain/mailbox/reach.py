@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from ...data.models import ChangeRecord, Folder, FolderRole
+from ...data.models import OUTSIDE_ALL, ChangeRecord, Folder, FolderRole
 from ...errors import ForbiddenError, missing
 from ..rights import Access
 from .calls import Calls
@@ -98,8 +98,7 @@ def _beside_all(reached: frozenset[str], folders: list[Folder]) -> frozenset[str
     and junk as well: the messages it lists lie there."""
     if not any(f.role is FolderRole.ALL and f.id in reached for f in folders):
         return reached
-    outside = (FolderRole.TRASH, FolderRole.JUNK)
-    return reached | {f.id for f in folders if f.role not in outside}
+    return reached | {f.id for f in folders if f.role not in OUTSIDE_ALL}
 
 
 def _within(folder: Folder, names: frozenset[str], by_id: dict[str, Folder]) -> bool:

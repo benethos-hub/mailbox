@@ -201,7 +201,7 @@ class Threads:
         found = await self._calls.call(
             account_id, lambda p: threads(p).thread_messages(thread_id, self._limit)
         )
-        published = await self._calls.published(account_id, found.messages)
+        published = await self._calls.published(account_id, found.messages, listed=True)
         return published, found.truncated
 
     async def _from_index(self, account_id: str, thread_ids: list[str]) -> Found:

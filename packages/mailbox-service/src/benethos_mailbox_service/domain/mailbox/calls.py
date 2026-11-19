@@ -10,7 +10,8 @@ use it do.
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from contextlib import nullcontext
+from contextlib import AbstractContextManager, nullcontext
+from functools import partial
 from typing import Any, TypeVar
 
 from ...data.models import (
@@ -80,15 +81,39 @@ class Calls:
         account_id: str,
         message_id: str,
         operation: Callable[[Reads, str], Awaitable[T]],
-        *,
-        pausing: bool = False,
     ) -> T:
         """Run an operation on the message behind one of our ids. Where
         the provider no longer finds it there, one sync and its new place.
-        Anything else it does not find is not ours to follow. ``pausing``:
-        called inside ``writing`` of the sync, which the pass it asks for
-        must not count."""
+        Anything else it does not find is not ours to follow."""
+        return await self._on_message(account_id, message_id, operation, nullcontext)
 
+    async def _written(
+        self,
+        account_id: str,
+        message_id: str,
+        operation: Callable[[Reads, str], Awaitable[T]],
+        then: Callable[[T], None],
+    ) -> T:
+        """``on_message`` as a change of ours, under ``writing`` of the
+        sync, with ``then`` following it in the index. The pass it may ask
+        for itself is paused, so that it does not count as overtaking."""
+        with self._sync.writing(account_id):
+            done = await self._on_message(
+                account_id,
+                message_id,
+                operation,
+                partial(self._sync.pausing, account_id),
+            )
+            then(done)
+        return done
+
+    async def _on_message(
+        self,
+        account_id: str,
+        message_id: str,
+        operation: Callable[[Reads, str], Awaitable[T]],
+        around_a_pass: Callable[[], AbstractContextManager[Any]],
+    ) -> T:
         def run(native: str) -> Awaitable[T]:
             return self.call(account_id, lambda p: operation(p, native))
 
@@ -100,7 +125,7 @@ class Calls:
         try:
             return await run(native)
         except MessageNotFoundError:
-            with self._sync.pausing(account_id) if pausing else nullcontext():
+            with around_a_pass():
                 moved = await self._gone.after_a_pass(account_id, {message_id: native})
             if message_id not in moved:
                 raise missing_message(message_id) from None
@@ -141,7 +166,7 @@ class Calls:
     # --- our ids ----------------------------------------------------------------------
 
     async def published(
-        self, account_id: str, items: list[MessageSummary], *, listed: bool = True
+        self, account_id: str, items: list[MessageSummary], *, listed: bool
     ) -> list[MessageSummary]:
         """The provider's summaries with our ids, the account and, where
         the index keeps them, the threads. ``listed``: they come from a
@@ -159,6 +184,8 @@ class Calls:
     async def published_one(
         self, account_id: str, item: MessageSummary
     ) -> MessageSummary:
+        """A message we stored ourselves just now: its id is given without a
+        sync first."""
         [published] = await self.published(account_id, [item], listed=False)
         return published
 
@@ -166,7 +193,7 @@ class Calls:
         self, account_id: str, page: Page[MessageSummary]
     ) -> Page[MessageSummary]:
         return Page[MessageSummary](
-            items=await self.published(account_id, page.items),
+            items=await self.published(account_id, page.items, listed=True),
             next_cursor=page.next_cursor,
         )
 
@@ -175,33 +202,21 @@ class Calls:
     ) -> MessageSummary:
         """Store ``raw`` in place of a draft. Its id follows the new place
         before a sync pass may read, as with every change of ours."""
-        with self._sync.writing(account_id):
-            saved = await self.on_message(
-                account_id,
-                draft_id,
-                lambda p, native: drafts(p).save_draft(raw, native),
-                pausing=True,
-            )
-            self.relocate(account_id, draft_id, saved)
-        return saved
+        return await self._written(
+            account_id,
+            draft_id,
+            lambda p, native: drafts(p).save_draft(raw, native),
+            lambda saved: _relocated(self._sync, account_id, draft_id, saved),
+        )
 
     async def delete_draft(self, account_id: str, draft_id: str) -> None:
         """A draft deleted for good, its id gone with it before a sync pass
         may read."""
-        with self._sync.writing(account_id):
-            await self.on_message(
-                account_id,
-                draft_id,
-                lambda p, native: drafts(p).delete_draft(native),
-                pausing=True,
-            )
-            self.forget(account_id, draft_id)
-
-    def relocate(self, account_id: str, message_id: str, now: MessageSummary) -> None:
-        """A message we stored anew: its id points to the new place."""
-        self._sync.relocate(account_id, message_id, now.id, folder_of(now))
-        self._sync.changed(
-            MessagesUpdated(account_id, [message_id], {message_id: folder_of(now)})
+        await self._written(
+            account_id,
+            draft_id,
+            lambda p, native: drafts(p).delete_draft(native),
+            lambda _: _forgotten(self._sync, account_id, draft_id),
         )
 
     def changed(self, change: MailboxChange) -> None:
@@ -220,14 +235,6 @@ class Calls:
         """The thread the index has for a message, None where it keeps no
         threads or has none for it yet."""
         return self._sync.thread_ids(account_id, [message_id]).get(message_id)
-
-    def forget(self, account_id: str, message_id: str) -> None:
-        """A message is gone for good: its id answers 404 from now on."""
-        was = self._sync.folder_of(account_id, message_id)
-        self._sync.forget(account_id, message_id)
-        self._sync.changed(
-            MessagesDeleted(account_id, [message_id], {message_id: was or ""})
-        )
 
     # --- changes, one or many ---------------------------------------------------------
 
@@ -344,9 +351,7 @@ class Calls:
             outcomes.update(second)
         for message_id, outcome in outcomes.items():
             if isinstance(outcome, MessageNotFoundError):
-                outcomes[message_id] = MessageNotFoundError(
-                    f"message {message_id} not found"
-                )
+                outcomes[message_id] = missing_message(message_id)
         return outcomes
 
     async def _run_on(
@@ -471,3 +476,20 @@ def public(
     if thread_id is not None:
         update["thread_id"] = thread_id
     return message.model_copy(update=update)
+
+
+def _relocated(
+    sync: SyncService, account_id: str, message_id: str, now: MessageSummary
+) -> None:
+    """A message we stored anew: its id points to the new place."""
+    sync.relocate(account_id, message_id, now.id, folder_of(now))
+    sync.changed(
+        MessagesUpdated(account_id, [message_id], {message_id: folder_of(now)})
+    )
+
+
+def _forgotten(sync: SyncService, account_id: str, message_id: str) -> None:
+    """A message is gone for good: its id answers 404 from now on."""
+    was = sync.folder_of(account_id, message_id)
+    sync.forget(account_id, message_id)
+    sync.changed(MessagesDeleted(account_id, [message_id], {message_id: was or ""}))
