@@ -100,10 +100,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   `404`, as it did on Gmail and JMAP accounts. On Microsoft accounts
   Graph's well-known folder names no longer pass: use the role, such as
   `trash`.
-- The images install platformdirs 4.14.7 from the lockfile, the service
-  image fastapi 0.165.0, annotated-doc 0.0.7, imapclient 4.3.0 and
-  publicsuffixlist 1.1.2.20261118. imapclient 4.3.0 refuses NUL, CR and LF in every IMAP
-  command, also in those it hands to imaplib. The service already
+- The images install platformdirs 4.14.7 and pydantic 2.14.4 from the
+  lockfile, the service image fastapi 0.165.0, annotated-doc 0.0.7,
+  imapclient 4.3.0 and publicsuffixlist 1.1.2.20261118. imapclient 4.3.0
+  refuses NUL, CR and LF in every IMAP command, also in those it hands
+  to imaplib. The service already
   refuses them in folder names, keywords and search text.
 - The UI ships htmx 4.0.2 instead of 4.0.1. It fixes swaps in Chrome 124
   to 145.
