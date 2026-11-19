@@ -43,7 +43,7 @@ from ..sync import SyncService
 from .across import AcrossAccounts, in_reach
 from .calls import Calls, public
 from .cursors import Cursors
-from .folders import Folders
+from .folders import Folders, in_trash
 from .outgoing import Idempotency, Outgoing, SendControl
 from .reach import of_the_account, outside, reach_of
 from .threads import THREAD_MESSAGES, Threads
@@ -99,7 +99,8 @@ class MailboxService:
         self, access: Access, account_id: str, folder_id: str, changes: FolderUpdate
     ) -> Folder:
         """Rename or move. Folders with a role stay where mail clients expect
-        them. The messages inside keep their ids: a sync follows them."""
+        them. The messages inside keep their ids: a sync follows them. A
+        move below the trash needs delete_message as well."""
         return await self._folders.update_folder(access, account_id, folder_id, changes)
 
     async def delete_folder(
@@ -151,11 +152,12 @@ class MailboxService:
     async def _trash_refused(
         self, access: Access, account_id: str, ids: list[str], changes: MessageUpdate
     ) -> dict[str, MailboxServiceError]:
-        """A move into the trash is a deletion: it needs delete_message as
-        well, and where the grants narrow it to folders, on the folder of
-        each message, as DELETE does. Raises without the right at all, and
-        answers the messages of ``ids`` it does not reach, each with its
-        error. Out of the trash and into junk need update_message alone."""
+        """A move into the trash, or a folder below it, is a deletion: it
+        needs delete_message as well, and where the grants narrow it to
+        folders, on the folder of each message, as DELETE does. Raises
+        without the right at all, and answers the messages of ``ids`` it
+        does not reach, each with its error. Out of the trash and into
+        junk need update_message alone."""
         into = [*(changes.folder_ids or []), *(changes.add_folder_ids or [])]
         if not into:
             return {}
@@ -163,7 +165,7 @@ class MailboxService:
         if scopes is None and access.allows("delete_message", account_id):
             return {}
         folders = await self._folders.all(account_id)
-        trash = {f.id for f in folders if f.role is FolderRole.TRASH}
+        trash = in_trash(folders)
         if not trash.intersection(into):
             return {}
         access.require("delete_message", account_id)

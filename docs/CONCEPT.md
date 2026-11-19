@@ -1681,10 +1681,12 @@ with the role
   that carry an action in the body (`batch_messages`) are checked per action:
   a batch needs `batch_messages` and the right of the single operation
   (`update_message`, `delete_message` or `delete_message_permanent`). A
-  move into the trash, by a single update or a batch, needs
-  `delete_message` as well, and where the grants narrow it to folders,
-  on the folder of the message, as `DELETE` does. Out of the trash and
-  into junk need `update_message` alone.
+  move into the trash or a folder below it, by a single update or a
+  batch, needs `delete_message` as well, and where the grants narrow it
+  to folders, on the folder of the message, as `DELETE` does. Moving a
+  folder below the trash with `update_folder` needs `delete_message` on
+  that folder in the same way. Out of the trash and into junk need
+  `update_message` alone.
 - **Cross-account operations filter instead of failing.** `list_accounts`
   and `GET /v1/changes` return only accounts the user has a grant for.
 - **No existence leak.** An account the user has no grant for answers `404`,

@@ -34,7 +34,8 @@ async def update_folder(
     mailbox: Mailbox,
 ) -> Folder:
     """Rename or move a folder. On IMAP its id follows its name and changes,
-    but the messages inside keep theirs. Folders with a role answer `409`."""
+    but the messages inside keep theirs. Folders with a role answer `409`.
+    A move below the trash needs `delete_message` as well."""
     return await mailbox.update_folder(caller, account_id, folder_id, changes)
 
 

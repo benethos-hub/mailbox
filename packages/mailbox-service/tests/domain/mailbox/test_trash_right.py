@@ -191,3 +191,74 @@ def test_a_folder_goes_only_into_a_folder_the_account_lists(
         json={"name": "New", "parent_id": "f_unlisted"},
     )
     assert made.status_code == 404, made.text
+
+
+KEPT = Folder(id="f_kept", name="Kept", parent_id="f_trash")
+
+
+@pytest.fixture
+def kept_box(services: Services, trash_box: str) -> str:
+    """The trash with a folder below it."""
+    memory_of(services, trash_box).folders.append(KEPT)
+    relearn(services, trash_box)
+    return trash_box
+
+
+def test_a_folder_below_the_trash_is_the_trash(
+    app_client: TestClient, services: Services, kept_box: str
+) -> None:
+    marker = holding(app_client, services, kept_box, MARKS_AND_MOVES)
+    base = f"/v1/accounts/{kept_box}/messages"
+    answer = marker.patch(f"{base}/m0", json={"folder_ids": ["f_kept"]})
+    assert answer.status_code == 403, answer.text
+    assert "delete_message" in answer.json()["error"]["message"]
+    batch = marker.post(
+        f"{base}/batch",
+        json={"action": "update", "ids": ["m0"], "changes": {"folder_ids": ["f_kept"]}},
+    )
+    assert batch.status_code == 403, batch.text
+    assert folders_of(services, kept_box, "m0") == ["inbox"]
+
+
+def test_a_folder_below_the_trash_needs_delete_message(
+    app_client: TestClient, services: Services, kept_box: str
+) -> None:
+    folder = f"/v1/accounts/{kept_box}/folders/f_inv"
+    mover = holding(app_client, services, kept_box, ["mail.read", "update_folder"])
+    refused = mover.patch(folder, json={"parent_id": "trash"})
+    assert refused.status_code == 403, refused.text
+    assert "delete_message" in refused.json()["error"]["message"]
+    assert mover.patch(folder, json={"parent_id": "f_kept"}).status_code == 403
+    deleter = holding(
+        app_client, services, kept_box, ["mail.read", "update_folder", "delete_message"]
+    )
+    moved = deleter.patch(folder, json={"parent_id": "trash"})
+    assert moved.status_code == 200, moved.text
+    assert moved.json()["parent_id"] == "f_trash"
+
+
+def test_a_folder_out_of_the_trash_needs_update_folder_alone(
+    app_client: TestClient, services: Services, kept_box: str
+) -> None:
+    mover = holding(app_client, services, kept_box, ["mail.read", "update_folder"])
+    answer = mover.patch(
+        f"/v1/accounts/{kept_box}/folders/f_kept", json={"parent_id": None}
+    )
+    assert answer.status_code == 200, answer.text
+    assert answer.json()["parent_id"] is None
+
+
+def test_a_folder_below_the_trash_goes_only_where_delete_message_reaches(
+    app_client: TestClient, services: Services, kept_box: str
+) -> None:
+    """As a message: the folder moved must be one delete_message reaches."""
+    grants = (
+        Grant(accounts=[kept_box], allow=["mail.read", "update_folder"]),
+        Grant(accounts=[kept_box], allow=["delete_message"], folders=["Kept"]),
+    )
+    narrowed = TestClient(app_client.app, headers=bearer_for(services, *grants))
+    answer = narrowed.patch(
+        f"/v1/accounts/{kept_box}/folders/f_inv", json={"parent_id": "trash"}
+    )
+    assert answer.status_code == 403, answer.text
+    assert "delete_message into the trash" in answer.json()["error"]["message"]

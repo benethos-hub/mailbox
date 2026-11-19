@@ -5686,7 +5686,7 @@
           "mailbox"
         ],
         "summary": "Update Folder",
-        "description": "Rename or move a folder. On IMAP its id follows its name and changes,\nbut the messages inside keep theirs. Folders with a role answer `409`.",
+        "description": "Rename or move a folder. On IMAP its id follows its name and changes,\nbut the messages inside keep theirs. Folders with a role answer `409`.\nA move below the trash needs `delete_message` as well.",
         "operationId": "update_folder",
         "security": [
           {
@@ -6557,7 +6557,7 @@
           "mailbox"
         ],
         "summary": "Update Message",
-        "description": "Mark read or unread, star, set keywords, move. Fields left out stay.\nA move into the trash needs `delete_message` as well.",
+        "description": "Mark read or unread, star, set keywords, move. Fields left out stay.\nA move into the trash or a folder below it needs `delete_message` as\nwell.",
         "operationId": "update_message",
         "security": [
           {
@@ -8821,7 +8821,7 @@
           "mailbox"
         ],
         "summary": "Batch Messages",
-        "description": "One action for up to 100 messages, with a result per id. Needs the\nright of the single operation too: `update_message`, `delete_message`\nor, with `permanent`, `delete_message_permanent`. An update that\nmoves into the trash needs `delete_message` as well.",
+        "description": "One action for up to 100 messages, with a result per id. Needs the\nright of the single operation too: `update_message`, `delete_message`\nor, with `permanent`, `delete_message_permanent`. An update that\nmoves into the trash or a folder below it needs `delete_message` as\nwell.",
         "operationId": "batch_messages",
         "security": [
           {

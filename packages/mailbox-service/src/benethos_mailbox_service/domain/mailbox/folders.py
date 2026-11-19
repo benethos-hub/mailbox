@@ -65,7 +65,8 @@ class Folders:
         self, access: Access, account_id: str, folder_id: str, changes: FolderUpdate
     ) -> Folder:
         """Rename or move. Folders with a role stay where mail clients expect
-        them. The messages inside keep their ids: a sync follows them."""
+        them. The messages inside keep their ids: a sync follows them. A
+        move below the trash needs delete_message as well."""
         access.require("update_folder", account_id)
         await self._calls.require(account_id, NEEDS["update_folder"])
         folder, folders, reach = await self._own_folder(
@@ -83,6 +84,9 @@ class Folders:
             require_folder(reach, parent)
             if not reach.holds(folder_id, parent):
                 raise outside("update_folder", "into the folders of another grant")
+        trash = in_trash(folders)
+        if changes.moves and parent in trash and folder_id not in trash:
+            await self._may_delete(access, account_id, folder_id, folders)
         updated = await self._calls.call(
             account_id, lambda p: writes(p).update_folder(folder_id, name, parent)
         )
@@ -170,6 +174,19 @@ class Folders:
         lists, or None for the top."""
         return None if folder is None else _listed(await self.all(account_id), folder)
 
+    async def _may_delete(
+        self, access: Access, account_id: str, folder_id: str, folders: list[Folder]
+    ) -> None:
+        """A folder moved below the trash takes its messages there, as a
+        deletion: it needs delete_message as well, and where the grants
+        narrow it to folders, on the folder moved."""
+        access.require("delete_message", account_id)
+        reach = await reach_of(
+            self._calls, access, "delete_message", account_id, folders
+        )
+        if reach is not None and folder_id not in reach.ids:
+            raise outside("delete_message", "into the trash")
+
     async def _own_folder(
         self, access: Access, operation: str, account_id: str, folder_id: str
     ) -> tuple[Folder, list[Folder], Reach | None]:
@@ -201,6 +218,23 @@ def holder(folders: list[Folder], folder_id: str) -> Callable[[Iterable[str]], b
         return lambda folder_ids: folder_id in folder_ids
     outside = {f.id for f in folders if f.role in (FolderRole.TRASH, FolderRole.JUNK)}
     return lambda folder_ids: not outside.intersection(folder_ids)
+
+
+def in_trash(folders: list[Folder]) -> frozenset[str]:
+    """The ids of the trash and of every folder below it."""
+    by_id = {f.id: f for f in folders}
+
+    def below_the_trash(folder: Folder) -> bool:
+        seen: set[str] = set()
+        current: Folder | None = folder
+        while current is not None and current.id not in seen:
+            if current.role is FolderRole.TRASH:
+                return True
+            seen.add(current.id)
+            current = by_id.get(current.parent_id) if current.parent_id else None
+        return False
+
+    return frozenset(f.id for f in folders if below_the_trash(f))
 
 
 def is_role(folder: str) -> bool:
