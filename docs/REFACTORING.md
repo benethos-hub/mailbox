@@ -11,10 +11,8 @@ tools in a package, one module per kind. Section 11, a proposal of
 2026-10-05, is the migrations of the schema: one class per step.
 Section 12 is the work list of 2026-10: the client as a package, the
 adapters in parts, and limits on the size of the code. Section 13 is
-the client package in parts, of 2026-10-07. Section 17 is the review
-of 2026-10-15.
-Behaviour, the API and the
-OpenAPI document stay as they are
+the client package in parts, of 2026-10-07.
+Behaviour, the API and the OpenAPI document stay as they are
 throughout. The rules that came out of it, in short, are
 [ARCHITECTURE.md](ARCHITECTURE.md). What the user decided is marked as
 decided.
@@ -37,7 +35,6 @@ This file is the overview. The sections are in
 | [Code written twice](refactoring/duplicates.md) | 9 | The duplicates merged into helpers, and what was built otherwise. |
 | [The MCP server and the migrations](refactoring/mcp-and-migrations.md) | 10, 11 | The tools of the MCP server in a package, and the migrations of the schema as one class per step. |
 | [The client, `mailbox-common` and the limits](refactoring/client-and-common.md) | 12 to 16 | The work list of 2026-10, the client and its records in parts, the fourth package, records and the boundaries. |
-| [The review of 2026-10-15](refactoring/review-2026-10-15.md) | 17 | Tests, the adapters, the sizes of the domain, the forms of the UI, flag changes. |
 
 ## Every section
 
@@ -57,5 +54,4 @@ This file is the overview. The sections are in
 - [14. The client's records in parts](refactoring/client-and-common.md#14-the-clients-records-in-parts): [14.1 Why](refactoring/client-and-common.md#141-why) · [14.2 Target](refactoring/client-and-common.md#142-target) · [14.3 Order of work](refactoring/client-and-common.md#143-order-of-work)
 - [15. A fourth package, `mailbox-common`](refactoring/client-and-common.md#15-a-fourth-package-mailbox-common): [15.1 Why](refactoring/client-and-common.md#151-why) · [15.2 Target](refactoring/client-and-common.md#152-target) · [15.3 Order of work](refactoring/client-and-common.md#153-order-of-work) · [15.4 Groups, and three more moves](refactoring/client-and-common.md#154-groups-and-three-more-moves)
 - [16. Records, one settings base, the boundaries](refactoring/client-and-common.md#16-records-one-settings-base-the-boundaries)
-- [17. The review of 2026-10-15](refactoring/review-2026-10-15.md#17-the-review-of-2026-10-15): [17.1 Tests](refactoring/review-2026-10-15.md#171-tests) · [17.2 The adapters' duplicates](refactoring/review-2026-10-15.md#172-the-adapters-duplicates) · [17.3 The adapters' layout](refactoring/review-2026-10-15.md#173-the-adapters-layout) · [17.4 The domain's sizes](refactoring/review-2026-10-15.md#174-the-domains-sizes) · [17.5 The UI's forms](refactoring/review-2026-10-15.md#175-the-uis-forms) · [17.6 Flag changes](refactoring/review-2026-10-15.md#176-flag-changes)
 

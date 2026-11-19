@@ -302,7 +302,7 @@ docs/
   REFACTORING.md          # how the layout came to be: the overview
   refactoring/            #   the domain, the data layer, duplicates,
                           #   the MCP server, the migrations, the
-                          #   client, mailbox-common, a review
+                          #   client, mailbox-common
   MICROSOFT.md            # connecting Microsoft accounts, an app of your own
   GOOGLE.md               # connecting Gmail accounts, the Google client
   AUTHENTICATION.md       # the factors of the UI sign-in: password, TOTP
