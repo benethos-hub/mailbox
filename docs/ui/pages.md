@@ -4,7 +4,7 @@ Part of [UI.md](../UI.md): sections 3 to 5.
 
 ## 3. Navigation and the click budget
 
-The sidebar keeps its three groups, renamed by what a person looks for:
+The sidebar has three groups, named by what a person looks for:
 
 | Group | Pages | Who sees it |
 |---|---|---|
@@ -49,7 +49,7 @@ The click budget, counted from the overview after signing in:
 |---|---|---|
 | Read a mail of one account | 2 | Mail on its row of the overview or of Accounts, the message |
 | Read the newest mail of every account | 2 | Mail search, the message |
-| Reply to a mail | 5 | Mail search, the message, Reply, Send, Send in the dialog |
+| Reply to a mail | 5 | Mail search, the message, Reply, Send, OK in the dialog |
 | Connect an account | 4 | Accounts, Connect, Look up, Connect (or Sign in with the provider) |
 | Change an account's password | 3 | Accounts, the account, Save |
 | Create a user with rights | 3 | Users, New user, Create |
@@ -59,7 +59,7 @@ The click budget, counted from the overview after signing in:
 | Change a webhook | 3 | Webhooks, the webhook, Save |
 | See why a webhook fails | 1 | Webhooks |
 | See which account is not syncing | 1 | Overview, or Accounts (its dot shows on every page) |
-| Show the recovery key | 2 | Recovery key, Show |
+| Show the recovery key | 3 | Recovery key, Show, Show in the dialog |
 | Read the service log | 1 | Log |
 | See who changed a user | 1 | Audit, or 4: Users, the user, Activity, What was done to it |
 
@@ -135,9 +135,8 @@ opens in Compose, its **Delete draft** among the form's buttons.
 
 The mail page of an account: folders on the left, the list beside
 them; a message opens on a page of its own, the breadcrumb the way back
-to its folder. Not a three-pane client. The
-rework keeps this layout and gives it the filter bar and the pager of
-every other list. The batch bar above the list asks for a folder only
+to its folder. Not a three-pane client. It has
+the filter bar and the pager of every other list. The batch bar above the list asks for a folder only
 while "move to" is chosen, and the head of the list ticks every row.
 
 The header of a message holds what can be done with it, each as far as

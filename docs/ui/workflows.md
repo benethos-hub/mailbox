@@ -49,8 +49,7 @@ receiving server's name.
 The page reads nothing from the mailbox without it.
 OAuth accounts have
 **Sign in again** and, where the provider offers codes, **Sign in again
-with a code** instead of a password. Signing in again needs no new
-domain call: `discover`, `create` and `update` exist. **Look in the
+with a code** instead of a password. **Look in the
 mailbox** reads through `server_names`, as
 `GET /v1/accounts/{account_id}/server-names` does.
 
@@ -65,14 +64,16 @@ place inside asks first. Folders with a role (inbox, sent, ...) have
 neither. The same words everywhere:
 **New**, **Create**, **Save**, **Cancel**, **Remove** for things that
 exist elsewhere (an account, a webhook), **Delete** for things that
-exist only here (a user, a role, a token, a folder).
+exist only here (a user, a role, a folder), **Revoke** for a token.
 
 ### 6.3 Users, roles, tokens
 
 New user: name, where it signs in, roles as tick boxes, grants in the
 grant editor. **Signs in to** is "the API only" by default, or "the UI
-and the API" (CONCEPT 7.5, the UI sign-in switch). With the UI, the
-service makes a one-time password and shows it once, as a token.
+and the API" (CONCEPT 7.5, the UI sign-in switch). With the UI, a
+tick box, set at first, has the service make a one-time password and
+show it once, as a token. The box shows for a caller with
+`set_password`.
 
 A user that signs in to the API only has the tag **API only** in the
 list and on its page, and the list filters by it. Its page has no
@@ -118,7 +119,7 @@ whether the second factor is on or off. It has a card per method of the
 second factor and one for the recovery codes. The card **Authenticator app (TOTP)**
 lists the devices with their name, when each
 was added and last used. **Add a device** asks in a dialog for its name
-and the password, and with a device there already the second factor,
+and the password, and with the second factor on already that factor,
 then shows the QR
 code with the key as text and a field for the first code, in two
 numbered steps, Cancel beside the button. The first
@@ -188,7 +189,7 @@ and shows the new one once, as after creating.
 
 ### 6.5 The state of the service and the recovery key
 
-No page of its own any more. The Accounts list shows each account's
+The state of the service has no page of its own. The Accounts list shows each account's
 status, last sync and last error, the overview's Service card the
 worker, the Webhooks list the webhooks with their last delivery, and
 the dots of the sidebar say where to look (3). Nothing is polled for

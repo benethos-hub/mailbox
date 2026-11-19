@@ -1,13 +1,12 @@
 # The audit of administration
 
-Proposal of 2026-09-28, the second of two steps. The first
-step, [LOGGING.md](LOGGING.md), names every activity the service logs. This
-step stores those a person caused, so "who changed what, when" can be
-answered after the log is gone. It is the design of
+The second of two steps. The first, [LOGGING.md](LOGGING.md), names every
+activity the service logs. This one stores those a person caused, so
+"who changed what, when" can be answered after the log is gone. It is
+the design of
 [PERMISSIONS.md 8.6](PERMISSIONS.md#86-an-audit-of-administration) in
 full. **Decided 2026-10-05:** it is built, with the answers of
-section 7. What the user decides is marked as decided, everything else
-is the proposal.
+section 7.
 
 ## 1. Log and audit
 
@@ -79,41 +78,26 @@ as the send audit does. `user_name` is written for that reason.
   `user`, `activity` (a name or its area), `record`, `after`,
   `before`. Right `audit` on
   the service, so the group `audit` appears in both lists of
-  PERMISSIONS.md 8.1. `x-permission` as on every route, the OpenAPI
-  document regenerated.
+  PERMISSIONS.md 8.1.
 - **UI**: a page **Audit** under Service for `audit` in `service`, a list page
   of UI.md 4.1 with the filter bar, and a card **Recent activity** on
   the user's page with that user's newest activities.
-- **The log page** stays as it is: the audit does not replace it.
+- **The log page** stays beside it: the audit does not replace it.
 
 ## 5. One place in the code
 
 `ActivityLog.record` of `domain/activity/` (LOGGING.md section 7)
 writes the log line of every activity and, for an activity class marked
 `audited`, the audit record from the same object. The fields of the
-record come from the activity's typed fields, not from its text. Nothing else writes an
+record but `detail` come from the activity's typed fields, not from its
+text. Nothing else writes an
 audit record, and no route does.
 
-The recorder needs `Access.source` and the credential id, which
-LOGGING.md step 2 put onto `Access`. The CLI commands that
+The recorder takes the client address and the credential from `Access`:
+`Access.source` and `Access.credential_id`. The CLI commands that
 change the database (`users`, `keys`, `restore`) record their activities
 with `host` as the credential. The audit keeps those of `users`, the
 ones marked `audited`.
-
-## 6. Order of work
-
-1. LOGGING.md steps 2 to 5 first: the lines exist, the actor and the
-   source reach the domain.
-2. The `activity` table, the repository protocol with an in-memory and a
-   SQLite implementation, and the recorder writing the audit record of
-   each activity marked `audited`.
-3. `GET /v1/audit` and the OpenAPI document.
-4. The Audit page and the Recent activity card, walked in `live/ui.py`.
-5. Retention and the purge.
-
-Each step a commit on one branch, a CHANGELOG entry for the API.
-
-Step 1 was LOGGING.md, steps 2 to 5 were one branch: all five are done.
 
 ## 7. Questions answered
 

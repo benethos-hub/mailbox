@@ -6,7 +6,7 @@ Part of [LOGGING.md](../LOGGING.md): section 7.
 
 **Decided 2026-09-28:** a package of its own in the domain, the activities
 as small classes, one module per area of section 5. Not one file per
-activity: sixty files would cost more than they say. The package is
+activity: a file each would cost more than it says. The package is
 `activity`, not `events`: an event is a change in a mailbox today, and
 the word stays free for an event-driven design later (section 7.1).
 

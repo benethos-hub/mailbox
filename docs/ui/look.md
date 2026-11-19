@@ -35,7 +35,7 @@ Part of [UI.md](../UI.md): section 7.
   | `--warn` | `#955204` | `#e0a458` |
   | `--warn-soft` | `#fdf5e8` | `#33291a` |
 
-- **Density**: a little more air than today. Row height 40 px, card
+- **Density**: row height 40 px, card
   padding 20 px, one type size for text and one for the small line under
   a name.
 - **Icon and logo**: the project's 3D icon from `assets/brand/` heads
@@ -45,16 +45,17 @@ Part of [UI.md](../UI.md): section 7.
   with a light word mark. `assets/build.py` makes the copies in
   `static/img/`.
 - **Sidebar**: light, not dark, with the accent on the active entry.
-  Collapses to a top bar under 860 px as today.
+  Collapses to a top bar under 860 px.
 - **Components**: the parts pages share are macros in
   `components/ui.html`, the grant editor in `components/grants.html`, the
   connection fields in `components/connection.html`, the rows of the
   audit in `components/audit.html`, the fields of a webhook in
-  `components/webhook.html`. The filter bar, the pager, the related
+  `components/webhook.html`, the step of the second factor in
+  `components/factor.html`. The filter bar, the pager, the related
   list, the Danger card, the secret card and every icon are macros. A
   tag, a field and a plain button may be written in the page with the
-  classes of `app.css`. The rework adds `filter_bar` with its chips,
-  `facts`, `related` and `breadcrumb` and makes the pages use them.
+  classes of `app.css`. `filter_bar` with its chips, `facts`, `related`
+  and `breadcrumb` are among them.
 - **Icons**: a hand-picked set of [Bootstrap Icons](https://icons.getbootstrap.com/)
   (MIT), one sprite `static/img/icons.svg` with the licence beside it.
   `assets/icons.py` names them and makes the sprite from the npm
@@ -79,8 +80,8 @@ Part of [UI.md](../UI.md): section 7.
   recovery codes one for all of them. Where the browser offers no
   clipboard, a page not on https or localhost, the button selects the
   text instead.
-- **Times in lists**: tokens, devices, sends, webhooks and deliveries
-  show a time under a day ago as "3 minutes ago", older ones as date
+- **Times in lists**: tokens, devices, sends, webhooks, deliveries
+  and the last sync of an account show a time under a day ago as "3 minutes ago", older ones as date
   and time, the full stamp always as the tooltip (macro `ago`). Audit,
   log, the facts of a record and the message keep the full stamp.
 - **Keys**: `/` puts the cursor in the page's search field, Escape

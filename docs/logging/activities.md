@@ -41,7 +41,7 @@ the sign-in throttle are in 5.9 with the other limits.
 | Level | Line | Fields | Note |
 |---|---|---|---|
 | INFO | X created user Y: roles, rights, where it signs in | actor, user, roles, counts, ui_sign_in | |
-| INFO | X changed user Y: name, roles, grants, disabled, ui_sign_in | actor, user, the fields that changed | |
+| INFO | X changed user Y: name, roles, service, grants, disabled, ui_sign_in | actor, user, the fields that changed | |
 | WARNING | X could not disable / enable / give role R to / take role R from user Y in a batch: reason | actor, user, action, role, reason | one per user a batch of the users list refused. Then it changes none |
 | INFO | X made Y an API user: its password is deleted | actor, user | when its UI sign-in is taken |
 | INFO | the host let Y sign in to the UI again | user | `users set-password` for an API user |
@@ -165,7 +165,7 @@ limits themselves, and how they work together, are in
 | WARNING | a request from S to P larger than N MB: refused | source, path, a link's masked, limit | `web/limits.py`, 413 |
 | WARNING | X sent too many requests, the last to P: limited to N a minute, refused for M seconds | token, session or source, path, a link's masked, rate, seconds | `web/limits.py`, 429, a link `404` |
 | DEBUG | paced requests to H: waited N ms | host, wait | no activity: a technical line of the token bucket in front of a provider, which knows the server but not the account |
-| DEBUG | microsoft asked to wait N seconds (Retry-After), gmail asked to wait N seconds, gmail answered STATUS on attempt N | seconds, the status and the attempt | no activity: a technical line of the Microsoft or the Gmail adapter |
+| DEBUG | microsoft asked to wait N seconds (Retry-After), microsoft answered a conflict on attempt N, gmail asked to wait N seconds, gmail answered STATUS on attempt N | seconds, the status and the attempt | no activity: a technical line of the Microsoft or the Gmail adapter |
 | WARNING | account A could not be reached: the provider's reason | account, reason | the status line of 5.4, no activity of its own: a pause or a refusal for rate reaches the domain as an error, and the account's status changes once |
 
 A limit that keeps being hit is logged once per lockout or pause, not
@@ -178,25 +178,10 @@ send it stops. Each refused request still answers `429` with
 token for requests with a credential, and one per client address for
 requests without, both as tokens per minute with a burst, in
 `web/limits.py` beside the body limit, refused with `429` and
-`Retry-After`. **Decided 2026-09-29:** the values and the details.
-
-- A signed-in caller counts per API token or per UI session, where its
-  credential is checked: `MAILBOX_SERVICE_RATE_LIMIT_PER_MINUTE`, 120
-  by default.
-- Any other request counts per client address, before the app sees it:
-  the sign-in page and its files, a wrong path, the API's documentation.
-  `MAILBOX_SERVICE_RATE_LIMIT_ANONYMOUS_PER_MINUTE`, 30 by default.
-- A burst of half as many passes at once. That covers a client that
-  starts with several calls at once. `0` switches a limit off.
-- `/health` is not limited.
-- The OpenAPI document names the `429` in its description and at every
-  operation that takes a token.
-
-A wrong credential is left to the sign-in throttle, which locks the
-address after ten failures by default. A valid token passes a locked
-address, since it cannot be guessed (LIMITS.md 3). The sign-in throttle
-stays where it is: it covers guessed credentials and knows the outcome,
-which a limit on requests cannot. Its log line is the row above, once per caller when
+`Retry-After`. **Decided 2026-09-29:** the values and the details, which
+are in [LIMITS.md](../LIMITS.md) sections 1 to 3. The OpenAPI document
+names the `429` in its description and at every operation that takes a
+token. The line of this limit is the row above, once per caller when
 the limit engages, not per refused request.
 
 ### 5.10 The MCP server

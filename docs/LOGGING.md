@@ -1,14 +1,12 @@
 # The service log
 
-Proposal of 2026-09-28, the first of two steps. What the service
-writes to its log, at which level, with which fields, and what never
-goes into a line. It builds on what exists since the log page: one
-stream on stderr with time, level and source, secrets masked, the newest
-lines on a page for the admin ([CONCEPT 7.4](concept/security.md#74-handling-rules),
-[UI.md 6.5](UI.md)). The second step, an audit of administration in the
-database, is [AUDIT.md](AUDIT.md): it takes the activities named here and
-stores those someone caused. Both steps are built. What the user decides
-is marked as decided, everything else is the proposal.
+What the service writes to its log, at which level, with which fields,
+and what never goes into a line. The log is one stream on stderr with
+time, level and source, secrets masked, and its newest lines are on a
+page for the admin ([CONCEPT 7.4](concept/security.md#74-handling-rules),
+[UI.md 6.5](UI.md)). The audit of administration in the database is
+[AUDIT.md](AUDIT.md): it stores the activities named here that someone
+caused.
 
 This file is the overview. It holds what the log is for, the levels,
 the shape of a line, what never goes into one and the rules for
@@ -31,7 +29,6 @@ section numbers.
 - [5. The activities](logging/activities.md#5-the-activities): [5.1 Lifecycle](logging/activities.md#51-lifecycle) · [5.2 Sign-in and sessions](logging/activities.md#52-sign-in-and-sessions) · [5.3 Users, passwords, tokens, roles](logging/activities.md#53-users-passwords-tokens-roles) · [5.4 Accounts and OAuth](logging/activities.md#54-accounts-and-oauth) · [5.5 Sync and the worker](logging/activities.md#55-sync-and-the-worker) · [5.6 Sending, drafts, idempotency, links](logging/activities.md#56-sending-drafts-idempotency-links) · [5.7 Webhooks](logging/activities.md#57-webhooks) · [5.8 Discovery and the rest](logging/activities.md#58-discovery-and-the-rest) · [5.9 Rate limits](logging/activities.md#59-rate-limits) · [5.10 The MCP server](logging/activities.md#510-the-mcp-server)
 - [6. Rules for writing a line](#6-rules-for-writing-a-line)
 - [7. Where the activities live](logging/code.md#7-where-the-activities-live): [7.1 Three words](logging/code.md#71-three-words) · [7.2 Names](logging/code.md#72-names)
-- [8. Order of work](#8-order-of-work)
 - [9. Questions answered](#9-questions-answered)
 
 ## 1. What the log is for
@@ -111,9 +108,9 @@ past tense, in this order:
   is one.
 
 Ids are written in full. A person searches the log page for an id
-copied from a page, and a prefix would not match. Nothing else about the
-format changes: no key-value pairs and no JSON, since the log page
-searches text and a person reads it.
+copied from a page, and a prefix would not match. The format has no
+key-value pairs and no JSON, since the log page searches text and a
+person reads it.
 
 ## 4. What never goes into a line
 
@@ -142,7 +139,7 @@ Allowed on purpose: user names, account addresses (an operator needs
 them), client addresses, our ids, folder names, counts, error messages
 of the service and of providers after masking.
 
-The masking of `log/redact.py` in `mailbox-common` stays the second line of
+The masking of `log/redact.py` in `mailbox-common` is the second line of
 defence, not the first: a line is written as if there were no masking.
 
 ## 6. Rules for writing a line
@@ -163,7 +160,7 @@ defence, not the first: a line is written as if there were no masking.
    above: it
    decides nothing, and it knows neither the actor nor the reason. What
    it notices goes up as a result or an error, and the domain logs it.
-   The two lines that were under `data/` moved that way: the IMAP adapter
+   So the IMAP adapter
    reports a missing sent copy in `SentMessage`, and `outgoing` logs it.
    The migrations return their notes, and `assembly` logs them at start.
    `DEBUG` stays allowed under `data/` for the technical steps the
@@ -209,28 +206,6 @@ defence, not the first: a line is written as if there were no masking.
     control character as its escape, such as `\n` or `\u2028`, so no
     value starts a line of its own. A traceback follows its line as
     before.
-
-## 8. Order of work
-
-1. This file and AUDIT.md, one pull request of documentation.
-   CONCEPT 7.4 and PERMISSIONS.md 8.6 point here.
-2. `domain/activity/` with `Activity`, `ActivityLog` and the catalogue
-   test. `Access.source`, the lifecycle activities of 5.1, the two lines under
-   `data/` moved up, and the architecture test of rule 6.2. The lines
-   of today move onto activity classes, each where it is written now. The
-   access log without the query of a request (section 4).
-3. The missing activities of 5.3 and 5.4: users, tokens, roles, accounts,
-   OAuth. Each with its test.
-4. The missing lines of 5.5 to 5.9: sync at `DEBUG` with counts, the
-   status flips, sending, webhooks, discovery, the log page read, the
-   rate limits and provider pauses.
-5. The MCP server's lines of 5.10.
-6. The HTTP request limit of 5.9, as a pull request of its own, with
-   its settings, tests, a CHANGELOG entry and its line.
-
-Steps 2 to 5 were one branch, one commit per step, and step 6 a pull
-request of its own: all six are done. The audit of AUDIT.md was built
-after them, in the order of work of its section 6.
 
 ## 9. Questions answered
 

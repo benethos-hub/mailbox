@@ -1,6 +1,7 @@
 # Limits
 
-Every limit the service enforces, and how the limits work together. The
+Every limit the service puts on its callers' requests and on its own
+requests to mail servers, and how the limits work together. The
 service limits callers to protect itself and to slow down guessing. It
 paces itself to protect the mail servers of its accounts, whose owners
 get locked out when a client asks too much (CONCEPT 5.9).

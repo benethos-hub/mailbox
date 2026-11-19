@@ -1,8 +1,8 @@
-# The configuration UI: rework and rules
+# The configuration UI
 
-Phase 4b of the [roadmap](ROADMAP.md), decided on 2026-09-27. It sets
-the scope of the rework and the rules every page follows, the existing
-ones after the rework and every page added later.
+How the configuration UI looks and behaves, and the rules every page
+follows. The rework it began with was decided on 2026-09-27 and is
+built ([roadmap](ROADMAP.md), phase 4b).
 
 The UI is the part of the service a person uses in the browser
 ([CONCEPT 1.1](concept/purpose-and-model.md#11-inside-the-service)). It runs in the same
@@ -10,9 +10,9 @@ process as the API, calls the same domain services and is not part of the
 OpenAPI document. This file says how it looks and behaves. CONCEPT says
 what it must do and how it is secured.
 
-This file is the overview. It holds the goals, the UI before the
-rework, the rules for building and extending with the checklist for a
-new page, and what was decided. The rest is in [ui/](ui/), under the
+This file is the overview. It holds the goals, the rules for
+building and extending with the checklist for a new page, and what was
+decided. The rest is in [ui/](ui/), under the
 same section numbers.
 
 ## The topics
@@ -26,14 +26,12 @@ same section numbers.
 ## Every section
 
 - [1. Goals](#1-goals)
-- [2. Before the rework](#2-before-the-rework)
 - [3. Navigation and the click budget](ui/pages.md#3-navigation-and-the-click-budget)
 - [4. Page types](ui/pages.md#4-page-types): [4.1 List](ui/pages.md#41-list) · [4.2 Detail](ui/pages.md#42-detail) · [4.3 Editor](ui/pages.md#43-editor) · [4.4 Reader](ui/pages.md#44-reader) · [4.5 The filter bar](ui/pages.md#45-the-filter-bar) · [4.6 Paging](ui/pages.md#46-paging) · [4.7 Messages and errors](ui/pages.md#47-messages-and-errors)
 - [5. The overview](ui/pages.md#5-the-overview)
 - [6. Workflows](ui/workflows.md#6-workflows): [6.1 Connecting an account](ui/workflows.md#61-connecting-an-account) · [6.2 Creating, changing, removing](ui/workflows.md#62-creating-changing-removing) · [6.3 Users, roles, tokens](ui/workflows.md#63-users-roles-tokens) · [6.4 Webhooks](ui/workflows.md#64-webhooks) · [6.5 The state of the service and the recovery key](ui/workflows.md#65-the-state-of-the-service-and-the-recovery-key) · [6.6 Writing mail](ui/workflows.md#66-writing-mail) · [6.7 Changes, optional](ui/workflows.md#67-changes-optional)
 - [7. Look](ui/look.md#7-look)
 - [8. Rules for building and extending](#8-rules-for-building-and-extending)
-- [9. Order of work](#9-order-of-work)
 - [10. Decided](#10-decided)
 
 ## 1. Goals
@@ -42,11 +40,11 @@ same section numbers.
    to five clicks from the overview, counting a page open, a button and a
    form submit as one click each, and the question of a dialog as one
    more. Section 3 has the budget.
-2. **A lighter look, blue instead of grey.** One palette in section 7,
-   the dark mode kept.
-3. **Reworked workflows.** Connecting an account starts with the address
-   and leads to OAuth or IMAP from there. Setting servers by hand stays
-   possible, before and after connecting. Section 6.
+2. **A light look.** One palette in section 7, with a dark mode.
+3. **Workflows from what the person knows.** Connecting an account
+   starts with the address and leads from there to a sign-in at the
+   provider or to a password. Setting servers by hand is possible
+   before and after connecting. Section 6.
 4. **Paging on every long list**, the same control everywhere.
 5. **Filters that look and work alike** on every list that has them.
 6. **Creating, changing and removing** look and sit alike on every
@@ -56,53 +54,16 @@ same section numbers.
 8. **Rules for growth.** A new page follows a page type, a checklist and a
    test. Section 8.
 
-## 2. Before the rework
-
-The UI as it was on 2026-09-27, before the rework. What the rework
-changed is in the roadmap's phase 4b.
-
-Eighteen pages, one stylesheet of 400 lines, htmx for the small
-interactions and 30 lines of JavaScript. The sidebar has Overview and
-Mail, then Service with Accounts and Sends, then Access with Users and
-Roles. What the pages do is done: accounts, users, roles, tokens, mail
-reading and writing, the audit of sends, the OAuth round trip.
-
-What differs from page to page, and what the rework aligns:
-
-- **Creating a record** is a separate page for accounts and users, a
-  form at the end of the list for roles, and a form on the detail page
-  for tokens and folders.
-- **Deleting** is the last card of a detail page for accounts, users and
-  roles, a button in a row for tokens and folders.
-- **Filters** exist only on mail. Sends narrow by account through
-  buttons, users and accounts have no filter at all.
-- **Paging** exists on mail, drafts and sends. Accounts, users and roles
-  list everything.
-- **The overview** lists the accounts and their rights, nothing about
-  the person signed in.
-
-What was missing then, all on existing domain services and API routes:
-
-- **Webhooks** (phase 4): create, list with the delivery state, remove.
-- **Status** (phase 5): accounts, sync, worker, webhooks in one view.
-- **Recovery key** (phase 5): show it once, as the CLI does.
-- **Changes**, optional: what the change feed recorded lately.
-
-The rework of 2026-10 changed the frame once more: the account menu,
-the folding sidebar and its dots (3), the overview's Service card (5),
-the Status page gone into the overview and the Accounts list (6.5),
-icons, dialogs and copy buttons (7).
-
 ## 8. Rules for building and extending
 
-These rules bind every page, the reworked ones and the ones to come.
+These rules bind every page.
 
 1. **One page, one type** of section 4. A page that fits none needs a
    new type in this file first.
 2. **Routes** live in one module per area under `web/pages/routes/`,
    templates under `templates/pages/`, one template per page, named as
-   the page. Partials are pieces of one page, components are macros used
-   by several.
+   the page. Partials are pieces of a page that pages include as they
+   are, components are macros.
 3. **The route decides nothing.** It reads the form, calls one domain
    method and renders or redirects. The mail form is the one route that
    saves and sends in two steps, and follows the id a replaced draft
@@ -142,31 +103,14 @@ These rules bind every page, the reworked ones and the ones to come.
    template of its type. The sidebar entry with its right and its icon.
    Icons only from the sprite, a new one added in `assets/icons.py`.
    Nothing loaded from elsewhere, no CDN. The tests of rule 7. A line
-   in this file's section 3 table and, if it changes a workflow, in
+   in the table of section 3 and, if it changes a workflow, in
    section 6. The roadmap item. A CHANGELOG entry only when a person
    using the API notices.
-
-## 9. Order of work
-
-All four steps are done, as the roadmap's phase 4b records.
-
-1. **This file**, one pull request of documentation. CONCEPT 1.1 and the
-   roadmap's phase 4b point here.
-2. **The frame**: palette, sidebar, top bar with breadcrumb, the
-   components of section 7, the four page types. The existing pages move
-   into the frame without changing what they do. Tests and `live/ui.py`
-   stay green throughout. Several pull requests, one per group of pages:
-   frame and overview, accounts and the connect workflow, users and
-   roles, mail and sends.
-3. **The missing pages** in the new frame: webhooks, then status and the
-   recovery key, then changes if wanted.
-4. **Paging and filters** on the lists that lack them, once the frame
-   has the components.
 
 ## 10. Decided
 
 - 2026-09-27: the rework as this file describes it.
-- 2026-09-27: the recovery key only for the `admin` grant, after the
+- 2026-09-27: the recovery key only for `admin`, after the
   password once more (6.5).
 - 2026-09-27: the sync state in the worker's memory, the last sign-in
   stored (5, 6.5).
@@ -189,8 +133,8 @@ All four steps are done, as the roadmap's phase 4b records.
   Status page gone into the overview and the Accounts list (3, 5, 6.5).
 - 2026-10-09: a related list creates at its head and acts on its rows,
   the form at a row unfolding under it. Removing on the row only for
-  entries without a detail page. A batch for devices and tokens, for
-  users later, none for accounts, roles and webhooks (4.1, 4.2, 6.2).
+  entries without a detail page. A batch for devices, tokens and
+  users, none for accounts, roles and webhooks (4.1, 4.2, 6.2).
 - 2026-10-09: the user page in tabs Rights, Access, Activity, the grant
   editor in lines, a batch of the Users list (6.3).
 - 2026-10-09: a batch of users, tokens or devices is all or nothing
