@@ -349,13 +349,13 @@ class AccountService:
         never sets one: a mail can carry any name."""
         access.require("update_account", account_id)
 
-        async def read(adapter: Reads) -> builtins.list[builtins.list[str]]:
+        async def read(adapter: Reads) -> builtins.list[builtins.list[str | None]]:
             if not isinstance(adapter, ServerNames):
                 return []
             return await adapter.authserv_ids(NEWEST_MAILS)
 
         mails = await self._adapters.call(account_id, read)
-        counts = Counter(name for names in mails for name in set(names))
+        counts = Counter(name for names in mails for name in {n for n in names if n})
         return [
             SeenName(name, count, len(mails))
             for name, count in sorted(counts.items(), key=lambda n: (-n[1], n[0]))

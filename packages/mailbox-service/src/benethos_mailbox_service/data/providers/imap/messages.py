@@ -68,7 +68,7 @@ def list_messages(
     )
 
 
-def authserv_ids(box: Mailbox, limit: int) -> list[list[str]]:
+def authserv_ids(box: Mailbox, limit: int) -> list[list[str | None]]:
     """The receiving servers' names in the newest ``limit`` mails of the
     inbox, from their headers alone."""
     box.session.select(mappers.INBOX)
