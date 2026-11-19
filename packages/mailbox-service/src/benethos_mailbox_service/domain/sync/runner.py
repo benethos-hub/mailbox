@@ -255,7 +255,7 @@ class SyncRunner:
             if self._writes.overtaken(account_id, mark):
                 return Overtaken(len(states))
             self._index.apply(account_id, changes)
-            changes.added = self._taken(account_id, changes.added)
+            changes = replace(changes, added=self._taken(account_id, changes.added))
             if before:
                 found = report(account_id, seen, moved, changes, flagged, len(states))
                 for change in found.changes:
