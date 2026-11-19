@@ -32,7 +32,7 @@ def test_a_deleted_account_leaves_nothing_noted(
 ) -> None:
     """What the adapters and the calls noted of it goes with it."""
     relearned = services.adapters._relearned
-    gone = services.mailbox._calls._gone._after
+    gone = services.sync._gone._after
     relearned[account_id] = 0.0
     gone[account_id] = (0, {("m0", "native")})
     assert client.delete(f"/v1/accounts/{account_id}").status_code == 204

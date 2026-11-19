@@ -1,7 +1,8 @@
 """Folders and messages: of one account, and across accounts.
 
 The service callers use for mail. Provider calls under our ids are
-``calls``. The folders are ``folders``, the threads ``threads``, sending
+``calls``. The folders are ``folders``, the checks of a message's
+folders against the grants ``guards``, the threads ``threads``, sending
 and drafts ``outgoing``, all reached through this service.
 """
 
@@ -43,9 +44,10 @@ from ..sync import SyncService
 from .across import AcrossAccounts, in_reach
 from .calls import Calls, public
 from .cursors import Cursors
-from .folders import Folders, in_trash
+from .folders import Folders
+from .guards import Guards
 from .outgoing import Idempotency, Outgoing, SendControl
-from .reach import of_the_account, outside, reach_of
+from .reach import of_the_account, reach_of
 from .threads import THREAD_MESSAGES, Threads
 
 # The keyword of a draft, \Draft on IMAP.
@@ -72,15 +74,12 @@ class MailboxService:
         self._changes = sync.feed
         self._across = AcrossAccounts(self._calls)
         self._folders = Folders(self._calls)
+        self._guards = Guards(self._calls, self._folders)
         self._threads = Threads(self._calls, self._folders, thread_messages)
         # Sending, drafts and the audit of sends: mailbox.outgoing.send_message.
         self.outgoing = Outgoing(
             self._calls, idempotency, sends, self._cursors, clock, activity
         )
-
-    def forget_account(self, account_id: str) -> None:
-        """An account is deleted: what was noted of its messages goes."""
-        self._calls.forget_account(account_id)
 
     # --- folders ----------------------------------------------------------------------
 
@@ -110,76 +109,7 @@ class MailboxService:
         its messages with it on many servers, and they cannot be taken back."""
         await self._folders.delete_folder(access, account_id, folder_id)
 
-    # --- the folders the grants reach -------------------------------------------------
-
-    async def _outside(
-        self,
-        access: Access,
-        operation: str,
-        account_id: str,
-        ids: list[str],
-        into: list[str] | None = None,
-    ) -> dict[str, MailboxServiceError]:
-        """The messages of ``ids`` the grants' folders keep ``operation``
-        from, each with its error: one in no folder they reach answers as
-        not found, a move ``into`` other folders as forbidden. Empty where
-        the grants reach every folder."""
-        reach = await reach_of(self._calls, access, operation, account_id)
-        if reach is None:
-            return {}
-        places = await self._calls.places(account_id, ids)
-        refused: dict[str, MailboxServiceError] = {}
-        for message_id in ids:
-            place = [f for f in places.get(message_id, []) if f in reach.ids]
-            if not place:
-                refused[message_id] = missing_message(message_id)
-            elif into and not any(reach.holds(f, *into) for f in place):
-                refused[message_id] = outside(operation, "into these folders")
-        return refused
-
-    async def _require_reached(
-        self,
-        access: Access,
-        operation: str,
-        account_id: str,
-        message_id: str,
-        into: list[str] | None = None,
-    ) -> None:
-        refused = await self._outside(access, operation, account_id, [message_id], into)
-        if refused:
-            raise refused[message_id]
-
-    async def _trash_refused(
-        self, access: Access, account_id: str, ids: list[str], changes: MessageUpdate
-    ) -> dict[str, MailboxServiceError]:
-        """A move into the trash, or a folder below it, is a deletion: it
-        needs delete_message as well, and where the grants narrow it to
-        folders, on the folder of each message, as DELETE does. Raises
-        without the right at all, and answers the messages of ``ids`` it
-        does not reach, each with its error. Out of the trash and into
-        junk need update_message alone."""
-        into = [*(changes.folder_ids or []), *(changes.add_folder_ids or [])]
-        if not into:
-            return {}
-        scopes = access.folder_scopes("delete_message", account_id)
-        if scopes is None and access.allows("delete_message", account_id):
-            return {}
-        folders = await self._folders.all(account_id)
-        trash = in_trash(folders)
-        if not trash.intersection(into):
-            return {}
-        access.require("delete_message", account_id)
-        reach = await reach_of(
-            self._calls, access, "delete_message", account_id, folders
-        )
-        if reach is None:
-            return {}
-        places = await self._calls.places(account_id, ids)
-        return {
-            message_id: outside("delete_message", "into the trash")
-            for message_id in ids
-            if not any(f in reach.ids for f in places.get(message_id, []))
-        }
+    # --- the changes the grants let a caller hear of --------------------------------
 
     async def hearing(
         self, access: Access, account_id: str
@@ -280,10 +210,18 @@ class MailboxService:
         access.require("update_message", account_id)
         await self._calls.require(account_id, for_update(changes))
         changes = await self._folders.with_folders_checked(account_id, changes)
-        await self._require_reached(
-            access, "update_message", account_id, message_id, changes.named_folders()
+        looked = self._guards.looking(account_id, [message_id])
+        await self._guards.require_reached(
+            access,
+            "update_message",
+            account_id,
+            message_id,
+            changes.named_folders(),
+            looked,
         )
-        refused = await self._trash_refused(access, account_id, [message_id], changes)
+        refused = await self._guards.trash_refused(
+            access, looked, [message_id], changes
+        )
         if refused:
             raise refused[message_id]
         return await self._calls.update_one(account_id, message_id, changes)
@@ -296,7 +234,7 @@ class MailboxService:
         the trash or not."""
         access.require(_delete_right(permanent), account_id)
         await self._calls.require(account_id, for_delete(permanent))
-        await self._require_reached(
+        await self._guards.require_reached(
             access, _delete_right(permanent), account_id, message_id
         )
         await self._calls.delete_one(account_id, message_id, permanent)
@@ -316,18 +254,19 @@ class MailboxService:
             changes = await self._folders.with_folders_checked(
                 account_id, batch.changes
             )
+            looked = self._guards.looking(account_id, batch.ids)
             outcomes = dict(
-                await self._outside(
+                await self._guards.outside(
                     access,
                     "update_message",
-                    account_id,
+                    looked,
                     batch.ids,
                     changes.named_folders(),
                 )
             )
             rest = [i for i in batch.ids if i not in outcomes]
             outcomes.update(
-                await self._trash_refused(access, account_id, rest, changes)
+                await self._guards.trash_refused(access, looked, rest, changes)
             )
             rest = [i for i in rest if i not in outcomes]
             if rest:
@@ -336,8 +275,9 @@ class MailboxService:
             operation = _delete_right(batch.permanent)
             access.require(operation, account_id)
             await self._calls.require(account_id, for_delete(batch.permanent))
+            looked = self._guards.looking(account_id, batch.ids)
             outcomes = dict(
-                await self._outside(access, operation, account_id, batch.ids)
+                await self._guards.outside(access, operation, looked, batch.ids)
             )
             rest = [i for i in batch.ids if i not in outcomes]
             if rest:
@@ -348,7 +288,9 @@ class MailboxService:
 
     async def get_raw(self, access: Access, account_id: str, message_id: str) -> bytes:
         access.require("get_message_raw", account_id)
-        await self._require_reached(access, "get_message_raw", account_id, message_id)
+        await self._guards.require_reached(
+            access, "get_message_raw", account_id, message_id
+        )
         return await self._calls.on_message(
             account_id, message_id, lambda p, native: p.get_raw(native)
         )
@@ -357,7 +299,9 @@ class MailboxService:
         self, access: Access, account_id: str, message_id: str, attachment_id: str
     ) -> AttachmentContent:
         access.require("get_attachment", account_id)
-        await self._require_reached(access, "get_attachment", account_id, message_id)
+        await self._guards.require_reached(
+            access, "get_attachment", account_id, message_id
+        )
         return await self._calls.attachment(account_id, message_id, attachment_id)
 
     # --- links to attachments ---------------------------------------------------------
@@ -393,7 +337,9 @@ class MailboxService:
         before the bytes are read: it marks the link used, or raises."""
         for operation in SHARING:
             access.require(operation, account_id)
-            await self._require_reached(access, operation, account_id, message_id)
+            await self._guards.require_reached(
+                access, operation, account_id, message_id
+            )
         claim()
         return await self._calls.attachment(account_id, message_id, attachment_id)
 

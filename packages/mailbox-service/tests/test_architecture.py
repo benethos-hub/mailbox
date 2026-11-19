@@ -4,9 +4,8 @@ web -> domain -> data, never the other way. A single reverse import is enough
 to undo the split, and it happens by accident: a data module needs one domain
 rule, imports it, and the data layer can no longer be used without the domain.
 This test reads every import of the package and fails on the first one that
-breaks a rule. Inside the domain and the data layer it checks the packages
-the same way: each is imported through its ``__init__.py``, and none
-imports another in a circle. The packages of both keep their lines.
+breaks a rule. The packages inside the domain and the data layer are
+test_packages.py's, the assembly and the command line test_assembly.py's.
 """
 
 from __future__ import annotations
@@ -16,9 +15,15 @@ import re
 import sys
 from pathlib import Path
 
-import pytest
-
-from .source_helpers import HELPERS, PACKAGE, ROOT, module_name, modules, own_part
+from .source_helpers import (
+    ASSEMBLY,
+    HELPERS,
+    PACKAGE,
+    ROOT,
+    imports,
+    modules,
+    own_part,
+)
 
 # Lower number = lower layer. A module may import its own layer and everything
 # below it, never above.
@@ -31,9 +36,6 @@ CROSS_CUTTING = {"config", "errors", "common"}
 # Shared helpers: the standard library, anyio, the common package, idna
 # (host names as IDNA 2008, hosts.py) and each other, nothing else.
 HELPER_LIBRARIES = {"anyio", "benethos_mailbox_common", "idna"}
-
-# Assemble the app from the layers and may therefore reach anywhere.
-ASSEMBLY = {"assembly", "cli", "__main__", "logs"}
 
 # Web frameworks live in the web layer. assembly/web.py builds the app, so it
 # may too.
@@ -74,44 +76,13 @@ LIBRARY_HOMES = {
 UNHOMED = {"pydantic", "anyio", "benethos_mailbox_common"} | WEB_LIBRARIES
 
 
-def _from_imports(path: Path) -> list[tuple[str, ast.ImportFrom]]:
-    """Every ``from ... import`` of this file, its module resolved."""
-    module = module_name(path)
-    package = module if path.name == "__init__.py" else module.rsplit(".", 1)[0]
-    found = []
-    for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
-        if isinstance(node, ast.ImportFrom):
-            if node.level:
-                base = package.split(".")
-                base = base[: len(base) - node.level + 1]
-                name = ".".join(base + ([node.module] if node.module else []))
-            else:
-                name = node.module or ""
-            found.append((name, node))
-    return found
-
-
-def _imports(path: Path) -> list[tuple[str, int]]:
-    """Every imported module of this file, relative imports resolved."""
-    found = []
-    for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
-        if isinstance(node, ast.Import):
-            found += [(alias.name, node.lineno) for alias in node.names]
-    for name, node in _from_imports(path):
-        found.append((name, node.lineno))
-        # `from . import x` imports a submodule by name, resolve it too.
-        if not node.module:
-            found += [(f"{name}.{alias.name}", node.lineno) for alias in node.names]
-    return found
-
-
 def test_no_module_imports_a_higher_layer() -> None:
     violations = []
     for name, path in modules():
         own = LAYERS.get(own_part(name) or "")
         if own is None:
             continue
-        for imported, line in _imports(path):
+        for imported, line in imports(path):
             other = LAYERS.get(own_part(imported) or "")
             if other is not None and other > own:
                 violations.append(f"{name}:{line} imports {imported}")
@@ -131,7 +102,7 @@ def test_cross_cutting_modules_import_no_layer() -> None:
         for path in _cross_cutting_files(part):
             inside = [
                 imported
-                for imported, _ in _imports(path)
+                for imported, _ in imports(path)
                 if own_part(imported) in LAYERS or own_part(imported) in ASSEMBLY
             ]
             assert not inside, f"{path.name} imports from the layers: {inside}"
@@ -143,7 +114,7 @@ def test_shared_helpers_use_the_standard_library_and_anyio() -> None:
     and idna, how it writes a host name."""
     violations = []
     for path in _cross_cutting_files(HELPERS):
-        for imported, line in _imports(path):
+        for imported, line in imports(path):
             top = imported.split(".")[0]
             own = imported.startswith(f"{PACKAGE}.{HELPERS}")
             if own or top in HELPER_LIBRARIES:
@@ -176,7 +147,7 @@ def test_the_database_stays_behind_the_storage_package() -> None:
         f"{name}:{line} imports {imported}"
         for name, path in modules()
         if not name.startswith(inside)
-        for imported, line in _imports(path)
+        for imported, line in imports(path)
         if imported.startswith(f"{inside}.sqlite")
     ]
     assert not violations, "SQLite reached directly:\n  " + "\n  ".join(violations)
@@ -189,7 +160,7 @@ def test_web_framework_stays_in_the_web_layer() -> None:
     for name, path in modules():
         if own_part(name) == "web" or name == f"{PACKAGE}.assembly.web":
             continue
-        for imported, line in _imports(path):
+        for imported, line in imports(path):
             if imported.split(".")[0] in WEB_LIBRARIES:
                 violations.append(f"{name}:{line} imports {imported}")
     assert not violations, "web framework outside web/:\n  " + "\n  ".join(violations)
@@ -214,7 +185,7 @@ def test_providers_are_reached_through_the_registry() -> None:
     for name, path in modules():
         if name.startswith(prefix):
             continue
-        for imported, line in _imports(path):
+        for imported, line in imports(path):
             if imported.startswith(prefix + "."):
                 violations.append(f"{name}:{line} imports {imported}")
     assert not violations, "provider module imported directly:\n  " + "\n  ".join(
@@ -228,7 +199,7 @@ def test_concurrency_is_written_with_anyio() -> None:
     offenders = [
         f"{name}:{line}"
         for name, path in modules()
-        for module, line in _imports(path)
+        for module, line in imports(path)
         if module == "asyncio" or module.startswith("asyncio.")
     ]
     assert offenders == []
@@ -254,7 +225,7 @@ def test_every_layer_exists_and_is_documented() -> None:
 def test_each_wrapped_library_has_one_home() -> None:
     violations = []
     for name, path in modules():
-        for imported, line in _imports(path):
+        for imported, line in imports(path):
             home = LIBRARY_HOMES.get(imported.split(".")[0])
             if home is not None and name != home and not name.startswith(home + "."):
                 violations.append(f"{name}:{line} imports {imported}, home is {home}")
@@ -268,7 +239,7 @@ def test_every_library_has_a_home_or_a_reason() -> None:
         {
             f"{top} ({name}:{line})"
             for name, path in modules()
-            for imported, line in _imports(path)
+            for imported, line in imports(path)
             for top in [imported.split(".")[0]]
             if top
             and top not in sys.stdlib_module_names
@@ -278,211 +249,6 @@ def test_every_library_has_a_home_or_a_reason() -> None:
         }
     )
     assert not loose, "a library without a home:\n  " + "\n  ".join(loose)
-
-
-# --- the packages of the domain and of data (docs/REFACTORING.md 2, 8.4) -------------
-
-# The layers in packages: each package is imported through its __init__.py.
-PACKAGED = ("domain", "data")
-
-
-def _package_part(module: str) -> tuple[str, str] | None:
-    """'...domain.sync.worker' -> ('domain', 'sync'), '...data.files' ->
-    ('data', 'files')."""
-    parts = module.split(".")
-    if parts[0] != PACKAGE or len(parts) < 3 or parts[1] not in PACKAGED:
-        return None
-    return parts[1], parts[2]
-
-
-def _is_package(part: tuple[str, str]) -> bool:
-    return (ROOT / part[0] / part[1] / "__init__.py").exists()
-
-
-def _dotted(part: tuple[str, str]) -> str:
-    return f"{PACKAGE}.{part[0]}.{part[1]}"
-
-
-def test_a_package_is_imported_through_its_init() -> None:
-    """So a package can split or merge its modules without its callers
-    noticing: the other packages, the layers above and the assembly."""
-    violations = [
-        f"{name}:{line} imports {imported}"
-        for name, path in modules()
-        for imported, line in _imports(path)
-        if (other := _package_part(imported)) is not None
-        and other != _package_part(name)
-        and _is_package(other)
-        and imported != _dotted(other)
-    ]
-    assert not violations, "a module inside a package:\n  " + "\n  ".join(violations)
-
-
-def _exported(part: tuple[str, str]) -> set[str]:
-    init = ast.parse((ROOT / part[0] / part[1] / "__init__.py").read_text("utf-8"))
-    for node in init.body:
-        if isinstance(node, ast.Assign) and any(
-            isinstance(t, ast.Name) and t.id == "__all__" for t in node.targets
-        ):
-            return set(ast.literal_eval(node.value))
-    return set()
-
-
-def test_a_package_exports_what_others_import() -> None:
-    """What another part imports from a package is in its ``__all__``."""
-    violations = [
-        f"{name}:{node.lineno} imports {alias.name} from {imported}"
-        for name, path in modules()
-        for imported, node in _from_imports(path)
-        if (other := _package_part(imported)) is not None
-        and imported == _dotted(other)
-        and other != _package_part(name)
-        and _is_package(other)
-        for alias in node.names
-        if alias.name not in _exported(other)
-    ]
-    assert not violations, "not exported:\n  " + "\n  ".join(violations)
-
-
-def _package_graph(layer: str) -> dict[str, set[str]]:
-    graph: dict[str, set[str]] = {}
-    for name, path in modules():
-        own = _package_part(name)
-        if own is None or own[0] != layer:
-            continue
-        for imported, _ in _imports(path):
-            other = _package_part(imported)
-            if other is not None and other[0] == layer and other != own:
-                graph.setdefault(own[1], set()).add(other[1])
-    return graph
-
-
-@pytest.mark.parametrize("layer", PACKAGED)
-def test_no_cycle_between_the_packages(layer: str) -> None:
-    graph = _package_graph(layer)
-    done: set[str] = set()
-
-    def walk(part: str, path: list[str]) -> list[str] | None:
-        if part in path:
-            return [*path[path.index(part) :], part]
-        if part in done:
-            return None
-        for other in sorted(graph.get(part, ())):
-            if cycle := walk(other, [*path, part]):
-                return cycle
-        done.add(part)
-        return None
-
-    for part in sorted(graph):
-        cycle = walk(part, [])
-        assert cycle is None, "a cycle: " + " -> ".join(cycle)
-
-
-# The packages of each layer in lines (docs/ARCHITECTURE.md 2): each
-# imports only the lines below its own.
-LINES = {
-    "domain": (
-        {"system"},
-        {"mailbox", "users", "webhooks"},
-        {"sync"},
-        {"accounts"},
-        {"auth", "discovery", "changes", "rounds"},
-        {"activity"},
-        {"rights"},
-        {"paging"},
-    ),
-    "data": (
-        {"backup"},
-        {"secrets"},
-        {"storage", "providers", "discovery"},
-        {"protocols"},
-        {"mail", "files"},
-        {"models", "logbook"},
-    ),
-}
-
-
-@pytest.mark.parametrize("layer", PACKAGED)
-def test_the_packages_import_only_lines_below(layer: str) -> None:
-    line_of = {part: n for n, line in enumerate(LINES[layer]) for part in line}
-    assert set(line_of) == {
-        p.stem
-        for p in (ROOT / layer).iterdir()
-        if p.stem != "__init__" and (p.suffix == ".py" or (p / "__init__.py").exists())
-    }, f"a package of {layer} outside the lines"
-    violations = [
-        f"{own} imports {other}"
-        for own, others in sorted(_package_graph(layer).items())
-        for other in sorted(others)
-        if line_of[other] <= line_of[own]
-    ]
-    assert not violations, "against the lines:\n  " + "\n  ".join(violations)
-
-
-# --- the assembly and the command line (docs/ARCHITECTURE.md 2) -----------------
-
-# The modules of assembly/ and cli/ in lines, the top first. A command of
-# cli/ reaches the assembly, and through it the layers, never another
-# command.
-PART_LINES = {
-    "assembly": (
-        {"web"},
-        {"lifecycle"},
-        {"domain"},
-        {"storage", "secrets", "providers"},
-        {"services"},
-    ),
-    "cli": (
-        {"serve", "openapi", "paths", "users", "keys", "backup", "restore"},
-        {"common"},
-    ),
-}
-
-
-def test_nothing_below_reaches_the_assembly_or_the_command_line() -> None:
-    """The layers and what they share are built by the assembly. Were one
-    of them to import it, the assembly could no longer pick its parts."""
-    above = {"assembly", "cli", "__main__"}
-    violations = [
-        f"{name}:{line} imports {imported}"
-        for name, path in modules()
-        if own_part(name) not in ASSEMBLY
-        for imported, line in _imports(path)
-        if own_part(imported) in above
-    ]
-    assert not violations, "assembly reached from below:\n  " + "\n  ".join(violations)
-
-
-def test_the_assembly_knows_no_command() -> None:
-    violations = [
-        f"{name}:{line} imports {imported}"
-        for name, path in modules()
-        if own_part(name) == "assembly"
-        for imported, line in _imports(path)
-        if own_part(imported) == "cli"
-    ]
-    assert not violations, "the assembly imports cli/:\n  " + "\n  ".join(violations)
-
-
-@pytest.mark.parametrize("part", sorted(PART_LINES))
-def test_the_modules_of_the_assembly_keep_their_lines(part: str) -> None:
-    line_of = {module: n for n, line in enumerate(PART_LINES[part]) for module in line}
-    folder = ROOT / part
-    assert set(line_of) == {
-        p.stem for p in folder.glob("*.py") if p.stem != "__init__"
-    }, f"a module of {part}/ outside the lines"
-    violations = []
-    for name, path in modules():
-        parts = name.split(".")
-        if len(parts) != 3 or parts[1] != part:
-            continue
-        for imported, line in _imports(path):
-            other = imported.split(".")
-            if len(other) < 3 or other[:2] != [PACKAGE, part]:
-                continue
-            if line_of[other[2]] <= line_of[parts[2]]:
-                violations.append(f"{name}:{line} imports {imported}")
-    assert not violations, "against the lines:\n  " + "\n  ".join(violations)
 
 
 def test_no_module_is_named_like_its_package() -> None:

@@ -313,6 +313,10 @@ packages/
                           #   fakes, conftest.py and what checks the whole
                           #   service
       test_architecture.py  # checks the layering on every run
+      test_packages.py      # the packages of the domain and of data:
+                            #   through __init__.py, no cycle, their lines
+      test_assembly.py      # the assembly and the command line keep
+                            #   their lines
       test_code_rules.py    # logging, handlers, sizes, helpers once,
                             #   htmx in one module, the tests of the
                             #   data layer
