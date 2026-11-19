@@ -311,6 +311,7 @@ docs/
   uniform/                #   what differed per provider before 0.5.0,
                           #   the decisions, the UI and the MCP server
   ROADMAP.md              # phases and their state
+  roadmap/                #   the items of each phase
   IDEAS.md                # collected, not yet decided
   openapi.json            # generated, checked in, guarded by a test
   mcp-tools.json          # the MCP server's tools as a client lists them,
