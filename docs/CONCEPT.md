@@ -1749,7 +1749,9 @@ with the role
     character classes (NIST SP 800-63B for a single factor).
   - A wrong name and a wrong password answer alike, in the same time: an
     unknown name is checked against a hash of its own.
-  - Users change their own password with the current one. A user with
+  - Users change their own password with the current one and, with a
+    second factor on, that factor as well (AUTHENTICATION.md). The
+    change forced after the sign-in asks for no factor. A user with
     `users.manage` sets the password of a user whose rights it covers, as
     for tokens: whoever sets a password can sign in as that user. A
     password set by someone else must be changed at the next sign-in.
