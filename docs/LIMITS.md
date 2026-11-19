@@ -20,6 +20,10 @@ Towards the callers of the service:
 | Requests with a credential | per API token, per UI session | 120 a minute, 60 at once | `429 rate_limited` | `MAILBOX_SERVICE_RATE_LIMIT_PER_MINUTE` |
 | Requests without a credential | per client address | 30 a minute, 15 at once | `429 rate_limited` | `MAILBOX_SERVICE_RATE_LIMIT_ANONYMOUS_PER_MINUTE` |
 | Request body | per request | 40 MiB | `413 payload_too_large` | fixed |
+| Items of a page | per list, `limit` | 200, and 50 for `list_threads` | `422` | fixed |
+| Recipients of a mail | per send and per draft, each address once | 100 | `400 bad_request` | fixed |
+| Attachments of a mail | per send and per draft, together | 25 MiB | `400 bad_request` | fixed |
+| Lifetime of an API token | per token, `expires_at` | 3650 days ahead | `400 bad_request` | fixed |
 | Failed sign-ins per address | wrong API tokens, wrong UI passwords, wrong codes of a second factor, the password or code asked again before a step such as the recovery key, and links to attachments that do not hold, alike | 10 in 15 minutes lock the address for 15 minutes | `429 rate_limited` for a wrong credential, the UI names the minutes. A valid token passes. A link answers `404`, a valid one too | `MAILBOX_SERVICE_SIGN_IN_FAILURES`, `MAILBOX_SERVICE_SIGN_IN_LOCKOUT_MINUTES` |
 | A link to an attachment | per link | once, for 120 seconds | `404`, the same for every refusal. `502` where the mail server failed: the link holds | `MAILBOX_SERVICE_LINK_SECONDS`, fewer with `expires_in` |
 | Failed sign-ins per name | UI password, the code of a second factor, the password or code asked again before a step such as the recovery key | 10 in 15 minutes, from any address, make the name wait 1 minute | `429 rate_limited` | the same failures, `MAILBOX_SERVICE_SIGN_IN_NAME_WAIT` |
@@ -30,6 +34,7 @@ Towards the callers of the service:
 | Code of a second factor | per pending sign-in, between the password and the code | 5 minutes, 5 wrong codes or passkeys | sign in again with the password | fixed |
 | Second factor not confirmed | per session adding a device | 15 minutes from showing the QR code or asking the browser for a passkey | start again | fixed |
 | Devices of a second factor | per user and method: TOTP devices, passkeys | 10 each | the page offers no further device | fixed |
+| Sign-ins of an account with its provider, left open | per user and way, in the browser or with a code | 5 | a further one drops the oldest | fixed |
 | Discoveries | per user | 10 in any minute, each domain's findings kept a day | `429 rate_limited` | `MAILBOX_SERVICE_DISCOVERY_PER_MINUTE`, the day is fixed |
 | Sends | per user and account, under a grant | `max_sends_per_day` in any 24 hours | `429 send_limit_reached` | the grant |
 | Recipients | per send, under a grant | the grant's `recipients` | `403 recipient_not_allowed` | the grant |
