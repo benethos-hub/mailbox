@@ -60,7 +60,7 @@ The groups as `domain/rights/permissions.py` holds them today:
 |---|---|---|
 | `accounts.read` | `list_accounts`, `get_account`, `get_status` | an account |
 | `mail.read` | `list_all_messages`, `list_folders`, `list_messages`, `get_message`, `get_message_raw`, `get_attachment`, `list_threads`, `get_thread`, `list_changes`, `list_all_changes` | an account |
-| `mail.write` | `update_message`, `delete_message` (to the trash), `batch_messages`, `create_folder`, `update_folder` | an account |
+| `mail.write` | `update_message`, `delete_message` (to the trash, also by a move), `batch_messages`, `create_folder`, `update_folder` | an account |
 | `mail.delete` | `delete_message_permanent`, `delete_folder` | an account |
 | `drafts` | `list_drafts`, `create_draft`, `update_draft`, `delete_draft` | an account |
 | `send` | `send_message`, `send_draft` | an account |
@@ -103,7 +103,10 @@ token either and names no right.
   written, grants nothing and is logged. It never locks anyone out.
 - **Per request**: credential, then user, then the route's right and the
   account from the path against the effective rights. A batch is checked
-  per action: `batch_messages` and the right of the single action.
+  per action: `batch_messages` and the right of the single action. A
+  move into the trash with `update_message` or a batch needs
+  `delete_message` as well. Out of the trash and into junk need
+  `update_message` alone.
 - **Cross-account operations filter.** `list_accounts`, `/v1/messages`,
   `/v1/changes` and the UI's mail page show the accounts the user has a
   right on, and leave the others out.

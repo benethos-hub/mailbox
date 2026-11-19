@@ -187,6 +187,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   with a dash or is longer than 63 characters, and the sender check
   reads no such domain. An account that stored such a name fails to
   connect until it is changed.
+- **Breaking:** a move into the trash needs `delete_message` as well, by
+  `update_message` and by a batch. A grant that names `update_message`
+  without `delete_message` could put mail into the trash. `mail.write`
+  holds both, so a grant with the group changes nothing. Moving out of
+  the trash and into junk need `update_message` alone.
 
 ## [0.7.5] - 2026-11-17
 

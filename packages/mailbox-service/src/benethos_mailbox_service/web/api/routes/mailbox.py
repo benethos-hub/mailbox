@@ -75,7 +75,8 @@ async def update_message(
     caller: Caller,
     mailbox: Mailbox,
 ) -> MessageSummary:
-    """Mark read or unread, star, set keywords. Fields left out stay."""
+    """Mark read or unread, star, set keywords, move. Fields left out stay.
+    A move into the trash needs `delete_message` as well."""
     return await mailbox.update_message(caller, account_id, message_id, changes)
 
 
@@ -117,7 +118,8 @@ async def batch_messages(
 ) -> BatchResult:
     """One action for up to 100 messages, with a result per id. Needs the
     right of the single operation too: `update_message`, `delete_message`
-    or, with `permanent`, `delete_message_permanent`."""
+    or, with `permanent`, `delete_message_permanent`. An update that
+    moves into the trash needs `delete_message` as well."""
     return await mailbox.batch_messages(caller, account_id, batch)
 
 
