@@ -150,6 +150,22 @@ def test_a_url_with_a_user_or_password_is_refused(kind: type, url: str) -> None:
 
 @pytest.mark.parametrize("kind", KINDS)
 @pytest.mark.parametrize(
+    "url",
+    [
+        "https://u:pw_SECRET@host.example.org:abc",
+        "https://u:pw_SECRET@host.example.org:443x/",
+        "https://u:pw_SECRET@[host.example.org]",
+    ],
+)
+def test_a_url_that_is_none_is_not_repeated(kind: type, url: str) -> None:
+    """It may carry a password, and the error reaches a model and its logs."""
+    with pytest.raises(ConfigurationError, match="not a URL") as caught:
+        kind(base_url=url, token="tok")
+    assert "pw_SECRET" not in str(caught.value)
+
+
+@pytest.mark.parametrize("kind", KINDS)
+@pytest.mark.parametrize(
     ("url", "proxied"),
     [("http://127.0.0.1:8080", False), ("https://mail.example.org", True)],
 )
