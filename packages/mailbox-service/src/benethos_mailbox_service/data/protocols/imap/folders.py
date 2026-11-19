@@ -85,12 +85,13 @@ class Folders:
             client.subscribe_folder(name)
 
     def rename_folder(self, old: str, new: str) -> None:
-        """Rename, and move the subscription along."""
+        """Rename, and move the subscription along where the server has not
+        done so itself."""
         old, new = command_folder(old), command_folder(new)
         with translated():
             client = self._session.client()
             client.rename_folder(old, new)
-            client.subscribe_folder(new)
+            quietly(lambda: client.subscribe_folder(new))
             quietly(lambda: client.unsubscribe_folder(old))
 
     def delete_folder(self, name: str) -> None:
