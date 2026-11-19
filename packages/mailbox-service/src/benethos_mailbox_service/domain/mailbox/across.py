@@ -205,7 +205,9 @@ class AcrossAccounts:
                 positions[account_id], window, len(mine)
             )
             # Only what is handed out gets our ids.
-            published[account_id] = await self._calls.published(account_id, mine)
+            published[account_id] = await self._calls.published(
+                account_id, mine, listed=True
+            )
         return [published[owner].pop(0) for _, owner in taken]
 
 

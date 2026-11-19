@@ -94,7 +94,7 @@ class SyncService:
         account_id: str,
         places: Iterable[tuple[str, str]],
         *,
-        listed: bool = False,
+        listed: bool,
     ) -> list[str]:
         """Our ids for provider ids, each with its folder. Unknown ones get a
         new id, with their ``Message-ID`` read right away: a message moved

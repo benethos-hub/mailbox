@@ -141,7 +141,7 @@ class Calls:
     # --- our ids ----------------------------------------------------------------------
 
     async def published(
-        self, account_id: str, items: list[MessageSummary], *, listed: bool = True
+        self, account_id: str, items: list[MessageSummary], *, listed: bool
     ) -> list[MessageSummary]:
         """The provider's summaries with our ids, the account and, where
         the index keeps them, the threads. ``listed``: they come from a
@@ -159,6 +159,8 @@ class Calls:
     async def published_one(
         self, account_id: str, item: MessageSummary
     ) -> MessageSummary:
+        """A message we stored ourselves just now: its id is given without a
+        sync first."""
         [published] = await self.published(account_id, [item], listed=False)
         return published
 
@@ -166,7 +168,7 @@ class Calls:
         self, account_id: str, page: Page[MessageSummary]
     ) -> Page[MessageSummary]:
         return Page[MessageSummary](
-            items=await self.published(account_id, page.items),
+            items=await self.published(account_id, page.items, listed=True),
             next_cursor=page.next_cursor,
         )
 
