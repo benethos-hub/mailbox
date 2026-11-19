@@ -104,6 +104,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- The change feed and the webhooks no longer report a new message
+  twice, once under an id that answered `404`. It happened on an IMAP
+  or POP3 account where a list named the message while a sync pass
+  read it.
 - `update_folder` on an IMAP account answered `502 provider_error`
   although the server had renamed the folder, where the server moves
   the subscription along itself, as Stalwart does.

@@ -19,7 +19,7 @@ from benethos_mailbox_common.log import redact
 
 from ...common.locks import KeyedLocks
 from ...data.providers import Deltas, FlagChanges, FolderChanges, Reads
-from ...data.storage import IndexChanges, MessageIndexRepository
+from ...data.storage import IndexChanges, IndexEntry, MessageIndexRepository
 from ...errors import ChangesExpiredError, MailboxServiceError
 from ..accounts import Adapters, deltas
 from ..activity import SERVICE, ActivityLog
@@ -249,6 +249,7 @@ class SyncRunner:
             if self._writes.overtaken(account_id, mark):
                 return Overtaken(len(states))
             self._index.apply(account_id, changes)
+            changes.added = self._taken(account_id, changes.added)
             if before:
                 found = report(account_id, seen, moved, changes, flagged, len(states))
                 for change in found.changes:
@@ -261,6 +262,17 @@ class SyncRunner:
             reported = self.report_merged(account_id, merged, created)
             counts = replace(counts, updated=counts.updated + reported)
         return counts
+
+    def _taken(self, account_id: str, added: list[IndexEntry]) -> list[IndexEntry]:
+        """The entries the index took. A list may have given a place its
+        id while the pass read: that id stays, and the pass tells none
+        of its own for it."""
+        stored = self._index.by_native(account_id, [e.native_id for e in added])
+        return [
+            e
+            for e in added
+            if (now := stored.get(e.native_id)) is not None and now.id == e.id
+        ]
 
     async def _seen(
         self, account_id: str, changed: list[str], vanished: list[str]
