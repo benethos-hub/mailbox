@@ -29,7 +29,8 @@ Inside a layer, packages by area (`domain/accounts/`) or by kind
 (`data/storage/`). Packages stand in lines, and a package imports only
 lines below it. The lines are drawn in section 2.
 
-A test, `tests/test_architecture.py`, checks all of this on every run.
+The tests `tests/test_architecture.py`, `tests/test_packages.py` and
+`tests/test_assembly.py` check all of this on every run.
 A rule that no test checks is a wish.
 
 ## 2. The layers
@@ -118,7 +119,9 @@ modules, that `common/` stays on the standard library, anyio, idna (host
 names as IDNA 2008) and `mailbox-common`, that FastAPI stays in
 `web/` (and `assembly/`), that providers are reached through the registry,
 that the domain picks no storage implementation, and that SQLite is
-reached through `data/storage/` alone. `tests/test_code_rules.py`
+reached through `data/storage/` alone. `tests/test_packages.py` checks
+the packages of the domain and of data, `tests/test_assembly.py` the
+assembly and the command line. `tests/test_code_rules.py`
 checks that the data layer logs nothing above `DEBUG` and the domain
 nothing but activities, that a broad `except` raises or records, the
 sizes of modules and classes, that a helper of `common/` exists
@@ -1024,7 +1027,8 @@ imapclient boundary), never by patching deep inside a library.
   it asks of the API itself, a status code or an error code, it asks
   with httpx, or with FastAPI's test client for a service it started in
   its own process.
-- A rule on the layout has a check in `test_architecture.py` or, for the
+- A rule on the layout has a check in `test_architecture.py`, in the
+  service also `test_packages.py` and `test_assembly.py`, or, for the
   code itself, `test_code_rules.py`, of a package for its own source and
   at the root for what spans the packages, or it is not a rule yet: the
   layers, the lines, the imports through `__init__.py`, the homes of the
