@@ -104,6 +104,7 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-service#readme"
+Documentation = "https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-service#readme"
 Repository = "https://github.com/benethos-hub/mailbox"
 Issues = "https://github.com/benethos-hub/mailbox/issues"
 Changelog = "https://github.com/benethos-hub/mailbox/blob/main/CHANGELOG.md"

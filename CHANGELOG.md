@@ -6,6 +6,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- The four packages name their README as `Documentation` on PyPI, beside
+  `Homepage`.
+
 ## [0.8.0] - 2026-11-19
 
 ### Added

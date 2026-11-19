@@ -55,6 +55,7 @@ all = ["benethos-mailbox-common[paths,settings]"]
 
 [project.urls]
 Homepage = "https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-common#readme"
+Documentation = "https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-common#readme"
 Repository = "https://github.com/benethos-hub/mailbox"
 Issues = "https://github.com/benethos-hub/mailbox/issues"
 Changelog = "https://github.com/benethos-hub/mailbox/blob/main/CHANGELOG.md"
