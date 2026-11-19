@@ -277,7 +277,7 @@ class MailboxService:
     ) -> MessageSummary:
         access.require("update_message", account_id)
         await self._calls.require(account_id, for_update(changes))
-        changes = await self._folders.with_roles_resolved(account_id, changes)
+        changes = await self._folders.with_folders_checked(account_id, changes)
         await self._require_reached(
             access, "update_message", account_id, message_id, changes.named_folders()
         )
@@ -311,7 +311,9 @@ class MailboxService:
             if batch.changes is None:
                 raise BadRequestError("an update needs changes")
             await self._calls.require(account_id, for_update(batch.changes))
-            changes = await self._folders.with_roles_resolved(account_id, batch.changes)
+            changes = await self._folders.with_folders_checked(
+                account_id, batch.changes
+            )
             outcomes = dict(
                 await self._outside(
                     access,

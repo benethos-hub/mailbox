@@ -165,3 +165,44 @@ def test_a_thread_row_shows_nothing_beyond_the_folders_of_a_grant(
         params={"folder": "inbox", "cursor": forged},
     )
     assert "Secret" not in answer.text
+
+
+def test_a_well_known_name_of_graph_passes_no_rule(
+    graph: FakeGraph, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Graph takes ``deleteditems`` for the trash. The service takes only
+    the folders it lists, by id or role, so the name cannot pass the rule
+    that a move into the trash needs delete_message."""
+    set_master_key(monkeypatch)
+    trash = graph.well_known["deleteditems"]
+    first = graph.add_message(subject="One")
+    project = graph.new_folder("Project", graph.root)
+    services, client, account_id = _connected(graph)
+    base = f"/v1/accounts/{account_id}"
+    [listed] = client.get(f"{base}/messages", params={"folder": "inbox"}).json()[
+        "items"
+    ]
+    grant = Grant(
+        accounts=[account_id],
+        allow=["mail.read", "update_message", "batch_messages", "update_folder"],
+    )
+    client.headers.update(bearer_for(services, grant))
+    moved = client.patch(
+        f"{base}/messages/{listed['id']}", json={"folder_ids": ["deleteditems"]}
+    )
+    assert moved.status_code == 404, moved.text
+    batch = client.post(
+        f"{base}/messages/batch",
+        json={
+            "action": "update",
+            "ids": [listed["id"]],
+            "changes": {"folder_ids": ["deleteditems"]},
+        },
+    )
+    assert batch.status_code == 404, batch.text
+    folder = client.patch(
+        f"{base}/folders/{project}", json={"parent_id": "deleteditems"}
+    )
+    assert folder.status_code == 404, folder.text
+    assert not [r for r in graph.requests if r.url.path.endswith("/move")]
+    assert graph.messages[first]["parentFolderId"] != trash

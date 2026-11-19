@@ -151,3 +151,43 @@ def test_a_batch_into_the_trash_refuses_each_message_out_of_reach(
     assert outcome["m1"]["ok"] is True
     assert folders_of(services, trash_box, "m0") == ["inbox"]
     assert folders_of(services, trash_box, "m1") == ["f_trash"]
+
+
+def test_a_folder_the_account_does_not_list_is_missing(
+    app_client: TestClient, services: Services, trash_box: str
+) -> None:
+    """Another name of the trash, such as another spelling of its id,
+    passes no rule: every folder a change names is one the account
+    lists."""
+    marker = holding(app_client, services, trash_box, MARKS_AND_MOVES)
+    base = f"/v1/accounts/{trash_box}/messages"
+    answer = marker.patch(f"{base}/m0", json={"folder_ids": ["f_unlisted"]})
+    assert answer.status_code == 404, answer.text
+    assert answer.json()["error"]["message"] == "folder f_unlisted not found"
+    batch = marker.post(
+        f"{base}/batch",
+        json={
+            "action": "update",
+            "ids": ["m0"],
+            "changes": {"folder_ids": ["f_unlisted"]},
+        },
+    )
+    assert batch.status_code == 404, batch.text
+    assert folders_of(services, trash_box, "m0") == ["inbox"]
+
+
+def test_a_folder_goes_only_into_a_folder_the_account_lists(
+    app_client: TestClient, services: Services, trash_box: str
+) -> None:
+    mover = holding(app_client, services, trash_box, ["mail.read", "update_folder"])
+    answer = mover.patch(
+        f"/v1/accounts/{trash_box}/folders/f_inv", json={"parent_id": "f_unlisted"}
+    )
+    assert answer.status_code == 404, answer.text
+    assert answer.json()["error"]["message"] == "folder f_unlisted not found"
+    maker = holding(app_client, services, trash_box, ["mail.read", "create_folder"])
+    made = maker.post(
+        f"/v1/accounts/{trash_box}/folders",
+        json={"name": "New", "parent_id": "f_unlisted"},
+    )
+    assert made.status_code == 404, made.text
