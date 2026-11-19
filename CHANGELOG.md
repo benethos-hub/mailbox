@@ -52,7 +52,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   browser makes passkeys for a service at a name over HTTPS or at
   localhost, not at an address alone. The audit names
   `users.passkey_added`, `users.passkey_renamed` and
-  `users.passkey_removed`, and a sign-in `password+passkey`.
+  `users.passkey_removed`, and a sign-in `password+passkey`. The
+  database moves to schema 23.
 - `benethos-mailbox-client`: `message_body` takes a recipient as an
   `Address` record too, beside the pair of email and name.
 - `get_second_factor` answers a user's `passkeys` beside `totp`, each
@@ -120,7 +121,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   reads its new folder before the service synced. Before, the list
   gave it a new id, the old one answered `404`, and the feed reported
   a `message.created` and a `message.deleted`. Such a list now syncs
-  the account once first.
+  the account once first. The database moves to schema 24.
 - `update_folder` on an IMAP account answered `502 provider_error`
   although the server had renamed the folder, where the server moves
   the subscription along itself, as Stalwart does.
