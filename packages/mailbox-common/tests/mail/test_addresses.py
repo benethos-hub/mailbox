@@ -25,7 +25,13 @@ def test_quoted_puts_the_name_in_quotes() -> None:
 
 @pytest.mark.parametrize(
     "name",
-    ["Smith, Ann", 'Ann "Bo" Smith', r"C:\Ann", 'a\\"b', "Zoë Ågren"],
+    [
+        "Smith, Ann",
+        'Ann "Bo" Smith',
+        r"C:\Ann",  # pragma: allowlist secret
+        'a\\"b',
+        "Zoë Ågren",
+    ],
 )
 def test_a_quoted_name_comes_back_as_it_was(name: str) -> None:
     """A form shows the addresses quoted and reads them back with

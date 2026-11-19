@@ -6,7 +6,7 @@ import pytest
 
 from benethos_mailbox_common.log import redact
 
-PASSWORD = "hunter2-but-longer"
+PASSWORD = "hunter2-but-longer"  # pragma: allowlist secret
 
 
 def test_a_noted_secret_is_masked() -> None:

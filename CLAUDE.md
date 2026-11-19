@@ -142,6 +142,9 @@ containers/               # images/ (one folder per image), and one folder
                           #   development/ (built from the repository),
                           #   test-mail-server/ (Stalwart for tests).
                           #   Each keeps its secrets/ local
+.githooks/                # pre-commit: refuses staged settings, keys,
+                          #   state files and lines that look like a
+                          #   credential. Enabled once per clone
 .github/workflows/        # ci.yml: the organisation's workflows from
                           #   benethos-hub/.github (lint, tests, audit,
                           #   lowest versions per package, coverage
@@ -195,6 +198,10 @@ tests/                    # what the repository holds, across the four
                           #   against the disk, the seams of its
                           #   section 8 against the code
   test_layout.py          # this file's project layout against the disk
+  test_repo_content.py    # no tracked file holds a credential, a path
+                          #   of a machine or an id of a real record
+  test_pre_commit.py      # the hook of .githooks/, held to the same
+                          #   lines of credentials
   test_packaging.py       # the LICENSE copies, the Python versions, one
                           #   version and its examples in the
                           #   documentation
@@ -360,6 +367,12 @@ itself without credentials. Live checks are manual scripts in `live/`, outside
   The user merges it on GitHub as a squash merge. Afterwards pull `main`
   with `git pull --ff-only` and delete the local branch.
 - Dependabot opens its own pull requests. The user merges them as well.
+- The pre-commit hook in `.githooks/` refuses staged settings, keys and
+  state files, and staged lines that look like a credential. It is
+  enabled once per clone with `git config core.hooksPath .githooks`.
+  `tests/test_repo_content.py` holds every tracked file to the same
+  patterns, in CI as well, where the hook does not run. A line that must
+  show such a form ends with `pragma: allowlist secret`.
 - End commit messages with
   `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 

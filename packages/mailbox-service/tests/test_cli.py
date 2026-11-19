@@ -265,15 +265,16 @@ def test_paths_names_the_folders_and_never_a_value(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     folder = settings_folder(tmp_path, monkeypatch)
+    value = "s3cret-value"
     with (folder / "service.env").open("a", encoding="utf-8") as file:
         file.write("MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_ID=client-1\n")
-        file.write("MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_SECRET=s3cret-value\n")
+        file.write(f"MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_SECRET={value}\n")
     assert main(["paths", "--env-file", str(folder / "service.env")]) == 0
     out = capsys.readouterr().out
     assert "the file named on purpose" in out
     assert str((folder / "data" / "mailbox.db").resolve()) in out
     assert f"the key file {(folder / 'secrets' / 'master.key').resolve()}" in out
-    assert "s3cret-value" not in out
+    assert value not in out
 
     monkeypatch.setenv("MAILBOX_SERVICE_KEY_PROVIDER", "file")
     assert main(["paths"]) == 0
