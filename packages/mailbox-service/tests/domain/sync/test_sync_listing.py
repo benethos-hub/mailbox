@@ -13,7 +13,7 @@ from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import MessageUpdate
 from benethos_mailbox_service.data.providers import ThreadHeaders
 from benethos_mailbox_service.data.providers.imap import mappers
-from benethos_mailbox_service.errors import NotFoundError
+from benethos_mailbox_service.errors import NotFoundError, ProviderUnavailableError
 
 from ...conftest import ADMIN
 from ...imap_fake import FakeMailBox, make_message
@@ -41,6 +41,13 @@ def before_the_first_headers(
         return await real(natives)
 
     monkeypatch.setattr(adapter, "message_headers", headers)
+
+
+async def archive_by_subject(services: Services, account: str) -> dict[str, str]:
+    page = await services.mailbox.list_messages(
+        ADMIN, account, folder_id=ARCHIVE, limit=50, cursor=None
+    )
+    return {m.subject or "": m.id for m in page.items}
 
 
 # --- a list and a pass at the same time ---------------------------------------------
@@ -150,3 +157,80 @@ async def test_a_list_answers_while_a_pass_follows_a_move_by_another_client(
     assert page["Mail 1"] == moved
     message = await services.mailbox.get_message(ADMIN, account, moved)
     assert message.folder_ids == [ARCHIVE]
+
+
+# --- a list before the pass ---------------------------------------------------------
+
+
+async def test_a_list_keeps_the_id_of_a_message_another_client_moved(
+    imap_services: Services, imap_account_id: str, imap_server: FakeMailBox
+) -> None:
+    services, account = imap_services, imap_account_id
+    await services.sync.sync_account(account)
+    moved = (await ids_by_subject(services, account))["Mail 1"]
+    told_before = len(recorded(services, account))
+    imap_server.other_client_moves("INBOX", 1, "Archive", 5)
+
+    # No pass saw the move yet. The list of the new folder asks for one.
+    assert await archive_by_subject(services, account) == {"Mail 1": moved}
+
+    told = recorded(services, account)[told_before:]
+    assert [(kind, i) for kind, i, _ in told] == [("message.updated", moved)]
+    message = await services.mailbox.get_message(ADMIN, account, moved)
+    assert message.folder_ids == [ARCHIVE]
+
+
+async def test_a_copy_in_another_folder_gets_an_id_of_its_own(
+    imap_services: Services, imap_account_id: str, imap_server: FakeMailBox
+) -> None:
+    services, account = imap_services, imap_account_id
+    await services.sync.sync_account(account)
+    first = (await ids_by_subject(services, account))["Mail 1"]
+    told_before = len(recorded(services, account))
+    # The same Message-ID a second time, and the first is still there.
+    imap_server.add("Archive", 5, make_message("Mail 1"))
+
+    copy = (await archive_by_subject(services, account))["Mail 1"]
+
+    assert copy != first
+    told = recorded(services, account)[told_before:]
+    assert [(kind, i) for kind, i, _ in told] == [("message.created", copy)]
+    assert (await ids_by_subject(services, account))["Mail 1"] == first
+
+
+async def test_a_list_answers_where_the_pass_it_asks_for_fails(
+    imap_services: Services,
+    imap_account_id: str,
+    imap_server: FakeMailBox,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    services, account = imap_services, imap_account_id
+    await services.sync.sync_account(account)
+    imap_server.other_client_moves("INBOX", 1, "Archive", 5)
+
+    async def down() -> dict[str, str]:
+        raise ProviderUnavailableError("the server did not answer")
+
+    # Only a pass asks for the states of the folders.
+    monkeypatch.setattr(services.adapters.get(account), "folder_states", down)
+
+    assert list(await archive_by_subject(services, account)) == ["Mail 1"]
+
+
+async def test_a_message_we_stored_ourselves_waits_for_no_pass(
+    imap_services: Services, imap_account_id: str, imap_server: FakeMailBox
+) -> None:
+    """``public_ids`` syncs first for a list only, not for the sent copy
+    or the draft the service stored a moment ago."""
+    services, account = imap_services, imap_account_id
+    await services.sync.sync_account(account)
+    passes = services.sync.state(account).passes
+    imap_server.other_client_moves("INBOX", 1, "Archive", 5)
+    page = await services.adapters.get(account).list_messages(
+        ARCHIVE, limit=50, cursor=None, search=None
+    )
+    [item] = page.items
+
+    await services.sync.public_ids(account, [(item.id, ARCHIVE)])
+
+    assert services.sync.state(account).passes == passes

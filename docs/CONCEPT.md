@@ -238,6 +238,12 @@ Ids are opaque strings to clients. Nothing may parse them.
 - **A change of ours during a pass.** A sync pass that a change made
   through the service overtook applies nothing and reads again, three
   times at most.
+- **A list before the sync.** A list that meets a message in a place
+  the index does not know, with a `Message-ID` the index has
+  elsewhere, syncs the account once before it gives the message an
+  id: another program may have moved it, and it keeps its id
+  (decided 2026-11-19). A message the service stored itself a moment
+  ago, a draft or a sent copy, gets its id without that.
 
 ## 5. Provider adapters and libraries
 
