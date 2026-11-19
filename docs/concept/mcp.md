@@ -8,7 +8,8 @@ Its own package, `mailbox-mcp` (`benethos-mailbox-mcp` on PyPI), in the same uv 
 as the service (**decided 2026-09-24**). It depends on `mcp` and the
 Python client `mailbox-client` (8.2), `mailbox-common`, which it shares
 with the service and through which it reads its settings, `pypdfium2`
-for PDF pages, and `uvicorn`, `starlette`, `anyio` and `pydantic`, which
+for PDF pages, `typing-extensions` for the types of its answers, and
+`uvicorn`, `starlette`, `anyio` and `pydantic`, which
 `mcp` brings too. It never depends on the service package or a mail library,
 so `uvx benethos-mailbox-mcp` stays small and the REST-only rule is
 enforced by the dependency list itself. A test checks that no module
@@ -67,9 +68,7 @@ blob for an image.
 
 **Decided 2026-09-24:** sending a new mail and sending a draft are two
 tools, `send_message` and `send_draft`. The model may create folders
-(`create_folder`). Text from PDF attachments comes later. The policy file
-stays as designed (superseded the next day, below). The first tools go
-by the token's rights alone.
+(`create_folder`). Text from PDF attachments comes later.
 
 **Decided 2026-09-25:** no policy file. The token's rights, its grants and
 their constraints decide which tools exist. The idea waits in IDEAS.md.
@@ -134,17 +133,16 @@ extension after the PyPI upload and publishes the entry last.
 
 **Decided 2026-09-24, container:** the image is built by GitHub Actions for
 `linux/amd64` and `linux/arm64` and pushed to the GitHub container
-registry. The master key reaches the container as a file secret. Image
-files and the compose file live in `containers/`, one folder per image.
-Decided 2026-10-06: `containers/images/` holds the image folders, and
+registry. The master key reaches the container as a file secret.
+**Decided 2026-10-06:** `containers/images/` holds the image folders, and
 each place they run in has a folder of its own beside it, with its own
-`secrets/`: `development/` builds from the repository,
-`test-mail-server/` is Stalwart for tests. Decided 2026-10-08: the
-folder for development is called `development/`, written out.
+`secrets/`: `production/`, `development/` (the name decided 2026-10-08),
+which builds from the repository, and `test-mail-server/`, Stalwart for
+tests.
 
 **Decided 2026-10-06, operation:** `containers/production/` runs the
 published images without a clone of the repository. `.env` names a fixed
-version, and an update changes it. The MCP server is not part of it:
+version, and an update changes it. Its `compose.yaml` holds no MCP server:
 it acts as one user with that user's token, so each client starts one
 of its own, an instance per client, against the service's address.
 With the profile `https`, Caddy stands in front, gets a
@@ -198,7 +196,8 @@ What the worker does and does not do: it keeps sync state, the id mapping
 
 **Decided 2026-09-24:** the worker watches the inbox of an IMAP account
 over IDLE and polls the other folders, every 5 minutes by default,
-configurable. A poll asks each folder for its state and reads only the
+configurable. A JMAP account is watched through the event source of its
+server instead. A poll asks each folder for its state and reads only the
 folders whose state changed. It does **not** mirror mailboxes. List, search
 and get still go to the provider live, unless the local cache of open
 question 5 is decided.
@@ -217,11 +216,13 @@ created: Graph dates each, Gmail and JMAP are asked for those received
 since then. The rest is known already. What was deleted in the gap is
 not reported.
 
-**Fallback without the service**, for development and tests only:
-a test harness can run the service app and the MCP client in one process
-via `httpx.ASGITransport`. The REST contract stays the same, there is just
-no network hop and no background fetching. It is not offered as a user
-mode, since it would put the service package into the MCP installation.
+**Without a network hop**, for live checks only: `live/checks/service.py`
+runs the service app in the script's own process and carries the
+requests of the Python client into it through Starlette's test client.
+The REST contract stays the same. The MCP server's tests mock the REST
+API instead, and its live checks start a service as a process. None of
+this is offered as a user mode, since it would put the service package
+into the MCP installation.
 
 ### 8.2 The Python client
 

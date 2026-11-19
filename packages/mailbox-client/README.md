@@ -104,8 +104,9 @@ A message comes as a `Message`, a message in a page, a changed one
 and a written draft as a `MessageSummary`, its sender and recipients
 as `Address` records.
 
-A secret the service shows once, a new token, a one-time password or a
-webhook's signing secret, comes as a `Secret`: `repr` and `str` show
+A secret the service shows once, a new token, a one-time password, a
+webhook's signing secret or the address of a link to an attachment,
+comes as a `Secret`: `repr` and `str` show
 stars, so it reaches no log by accident, and `get_secret_value()` reads
 it. A list of messages or drafts answers a `Page` of summaries, with
 `next_cursor` for the next page and, across accounts, `not_answering`

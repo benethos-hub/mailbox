@@ -71,9 +71,11 @@ a lower line, through their `__init__.py`:
  mailbox · users · webhooks  mail and sending, users, posts to webhooks
  sync                        stable message ids, the sync pass, IDLE
  accounts                    accounts, their live adapter, OAuth
- auth · discovery · changes  sign-in, autodiscovery, the change feed
+ auth · discovery · changes  sign-in, autodiscovery, the change feed,
+   · rounds                  the background loops of the services
  activity                    what was done, for the log
  rights                      who may do what
+ paging                      the cursors the service hands out itself
 ```
 
 The data layer the same way (REFACTORING.md section 8):
@@ -98,8 +100,9 @@ The data layer the same way (REFACTORING.md section 8):
   domain, for both front ends.
 - **The configuration UI** covers what a person has to do by hand:
   connecting accounts and entering app passwords, the OAuth round trip for
-  Microsoft and Gmail, users, roles and tokens, webhooks, the recovery
-  key, the service log, and a status view of accounts and sync.
+  Microsoft and Gmail, mail, folders, drafts and sending, users, roles
+  and tokens, the second factor, webhooks, the audits, the recovery key,
+  the service log, and a status view of accounts and sync.
   Server-rendered pages, not in the OpenAPI document, under `/ui`. Forms
   carry CSRF protection, since a session cookie authenticates them.
 
@@ -108,8 +111,7 @@ The data layer the same way (REFACTORING.md section 8):
   templates, htmx and one stylesheet, without a build step.
 
   **Decided 2026-09-27:** a person signs in to the UI with a user name and
-  a password (7.5), no longer with an API token. Tokens are for the API
-  and the MCP server alone.
+  a password (7.5). Tokens are for the API and the MCP server alone.
 
   How the pages look and behave, and the rules a new page follows, are
   in [UI.md](../UI.md).

@@ -49,9 +49,10 @@ and the open questions.
 | Python | 3.11–3.15 |
 | Packaging | uv workspace with four distributions (service, client, MCP server, and what the service and the MCP server share), hatchling, `src/` layout |
 | Web | FastAPI, uvicorn, pydantic v2, pydantic-settings |
+| UI | Jinja2, htmx and Bootstrap Icons (kept under `static/`), segno (QR codes), fido2 (passkeys) |
 | Storage | SQLite (stdlib `sqlite3`) |
 | Crypto | `cryptography` (AES-256-GCM), `keyring` |
-| Mail | IMAPClient, imap-tools (parser), smtplib, poplib, httpx (JMAP, Graph, Gmail) |
+| Mail | IMAPClient, imap-tools (parser), smtplib, poplib, httpx (JMAP, Graph, Gmail), dnspython, defusedxml and publicsuffixlist (autodiscovery), idna |
 | MCP | `mcp` 2.x |
 | Quality | pytest, pytest-asyncio, pytest-cov (≥ 80 %), ruff, mypy, GitHub Actions, CodeQL and hadolint under Code scanning |
 | Container | non-root image, compose file bound to the loopback address |
@@ -61,22 +62,17 @@ and the open questions.
 - **Offline suite is the gate.** No test reaches a mail server.
 - API tests run against the `memory` adapter through `TestClient`.
 - IMAP adapter tests use a fake `IMAPClient` object at the library boundary.
-  Additionally a Stalwart container, which speaks IMAP, SMTP and JMAP,
-  for an optional integration job (5.6). The container is
-  `containers/test-mail-server/`, since 2026-10-06: IMAP, POP3, SMTP and
-  JMAP, two accounts and a local test CA, made by `setup.sh` on a
-  machine with Docker and `openssl`. `live/pop3.py` and `live/jmap.py`
-  check those adapters against it. The integration job is not built yet.
+  A Stalwart container, `containers/test-mail-server/` (since
+  2026-10-06), serves the live checks of the POP3 and the JMAP adapter.
+  An integration job with it is not built yet (5.6).
 - The JMAP adapter's tests use `httpx.MockTransport` with a JMAP server in
   memory.
-- Gmail and Graph adapter tests use `httpx.MockTransport` with recorded,
-  anonymized response shapes.
-- `live/` holds manual checks, outside `testpaths`. They run against
-  **test accounts**: on an IMAP server of our own, a Microsoft and a
-  Gmail test account, and the test mail server in a container. The
-  server's address and the list of test accounts are local, unversioned
-  configuration, and only accounts listed there count as confirmed test
-  accounts (golden rule 1 in CLAUDE.md).
+- The Gmail and the Graph adapter's tests use `httpx.MockTransport` with
+  a Gmail and a Graph mailbox in memory, which answer as the
+  documentation of each API describes.
+- `live/` holds manual checks, outside `testpaths`, against confirmed
+  test accounts only (golden rule 1 in CLAUDE.md). What each one does:
+  [LIVE.md](LIVE.md).
 - The traps of 5.10 (folder names in modified UTF-7, localised special
   folders, broken charsets, IDN, SMTPUTF8) get fixtures of their own.
 - Contract tests: committed OpenAPI document, unique `operationId`s, bearer
@@ -102,23 +98,17 @@ Undecided ideas are collected in [IDEAS.md](IDEAS.md).
    separate callers. What would remain is an owner on each mail account,
    so that one person's administrator cannot grant rights on another's
    mail.
-2. **Name:** decided 2026-09-24: repository `mailbox-service`, distributions
-   `benethos-mailbox-service` and `benethos-mailbox-mcp`, environment prefix
-   `MAILBOX_SERVICE_`. A descriptive name rather than a brand: it says what the
-   service is, and cannot collide with anyone's trademark. "Mail gateway"
-   was ruled out because it already names a different kind of product,
-   the filtering gateway in front of a mail server. **Decided
-   2026-10-05:** the project is named Mailbox, the repository `mailbox`,
-   its packages `mailbox-service`, `mailbox-client` (since 2026-10-07)
-   and `mailbox-mcp`. On PyPI they keep the names
-   `benethos-mailbox-service`, `benethos-mailbox-client` and
-   `benethos-mailbox-mcp`, on ghcr.io the two images as well. A fourth
-   package, `mailbox-common`, came with 0.4.0, on PyPI as
-   `benethos-mailbox-common`.
-3. **Gmail priority:** is Gmail needed early, or are GMX / web.de /
-   T-Online over IMAP the main use? Microsoft accounts are supported
-   already (phase 5). **Answered 2026-10-08:** Gmail came after the
-   beta, built in phase 5 (5.5).
+2. **Name:** decided 2026-09-24 and 2026-10-05: a descriptive name rather
+   than a brand. The project is named Mailbox, the repository `mailbox`,
+   its packages `mailbox-service`, `mailbox-client` (since 2026-10-07),
+   `mailbox-mcp` and `mailbox-common` (since 0.4.0). On PyPI they are
+   `benethos-mailbox-service`, `benethos-mailbox-client`,
+   `benethos-mailbox-mcp` and `benethos-mailbox-common`, on ghcr.io the
+   two images as well. The environment prefix of the service is
+   `MAILBOX_SERVICE_`. "Mail gateway" was ruled out because it already
+   names the filtering gateway in front of a mail server.
+3. **Gmail priority:** answered 2026-10-08: Gmail came after the beta,
+   built in phase 5 (5.5).
 4. **Sending from the MCP server:** decided 2026-09-24, both stay open,
    governed by rights (7.7).
 5. **Local cache:** list and search go straight to the provider in the

@@ -345,7 +345,8 @@ test accounts for golden rule 1.
   `migrations/__init__.py`. The module's docstring says what it
   does and why. Each statement stands alone, and a step in Python is the
   method `before`. A migration that shipped in a release is never changed:
-  `RELEASED` in `tests/data/storage/test_sqlite.py` holds the fingerprint
+  `RELEASED` in
+  `packages/mailbox-service/tests/data/storage/test_sqlite.py` holds the fingerprint
   of each.
 
 ## Git and commits

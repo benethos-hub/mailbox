@@ -17,7 +17,6 @@ this folder is enough.
 - [HTTPS](#https)
 - [Settings](#settings)
 - [Operation](#operation)
-- [From the compose file before](#from-the-compose-file-before)
 
 | File | What it is |
 |---|---|
@@ -296,12 +295,3 @@ docker compose up -d
 
 Docker keeps at most 5 log files of 10 MB per container, the oldest
 dropped first.
-
-## From the compose file before
-
-Before 0.3.0, `containers/compose.yaml` ran the service, with the
-image named in `MAILBOX_SERVICE_IMAGE`. This compose file has the same
-project name, `benethos-mailbox`, and the same volume, so the data
-stays. Copy the old `secrets/master_key` into `secrets/` here, keep its
-owner, and start with `docker compose up -d`. Without the master key the
-credentials in the database cannot be read.

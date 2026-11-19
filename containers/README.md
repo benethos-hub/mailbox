@@ -17,24 +17,9 @@ containers/
   images/                        # what the CI builds and publishes
     mailbox-service/Dockerfile   # build context: the repository root
     mailbox-mcp/Dockerfile       # the MCP server over streamable HTTP
-  production/                    # in operation, the published images:
-    compose.yaml                 #   the service, Caddy for HTTPS (profile
-                                 #   https)
-    .env.example                 #   template of .env: the version, the
-                                 #   profiles, the port, the domain, the
-                                 #   certificate
-    service.env.example          #   template of service.env: further
-                                 #   settings of the service
-    Caddyfile                    #   HTTPS in front, for the profile https
-    mcp.yaml                     #   the template of an MCP server
-                                 #   instance, run from
-                                 #   compose.override.yaml (profile mcp)
-    compose.override.yaml.example
-                                 #   template of compose.override.yaml
-    caddy.d/mcp.caddy.example    #   template of a route of Caddy to an
-                                 #   instance
-    setup.sh                     #   the first start
-    README.md                    #   how to set it up and run it
+  production/                    # in operation, the published images
+    README.md                    #   how to set it up and run it, and
+                                 #   what each file is
   development/                   # for development, built from the repository
     compose.yaml                 # the service, the MCP server with the
                                  #   profile mcp, ports on 127.0.0.1 only

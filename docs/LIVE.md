@@ -17,23 +17,31 @@ test accounts for golden rule 1 of [CLAUDE.md](../CLAUDE.md).
 | [`changes.py`](#changespy) | the two test accounts | mail, a folder, all deleted for good |
 | [`register.py`](#registerpy) | a running service | the test accounts in that service |
 | [`mcp_stdio.py`](#mcp_stdiopy) | the test accounts, a service of its own | mail, a folder, drafts, all put back or deleted |
-| [`mcp_http.py`](#mcp_httppy) | the test accounts | nothing |
-| [`ui.py`](#uipy) | the test accounts, a service of its own | mail, a folder, a draft, all removed |
+| [`mcp_http.py`](#mcp_httppy) | the test accounts, a service of its own | nothing |
+| [`ui.py`](#uipy) | the test accounts, a service of its own | mail, a folder, drafts, all removed |
 | [`microsoft.py`](#microsoftpy) | the Microsoft test account | mail to the first test account, deleted for good |
 | [`gmail.py`](#gmailpy) | the Gmail test account | mail to and from the first test account, deleted for good |
 | [`pop3.py`](#pop3py) | the test mail server in a container | one mail, deleted for good |
 | [`jmap.py`](#jmappy) | the test mail server in a container | one mail and a draft, deleted for good |
 
-The live checks with a service of their own make its first user with
+The checks that start a service as a process make its first user with
 `users create-admin`, change the one-time password in the UI and make a
-token there, as an operator would.
+token there, as an operator would. `smoke.py`, `changes.py` and
+`pop3.py` run the service in their own process, in memory, and store
+nothing.
 
 ## `smoke.py`
 
 `uv run python live/smoke.py [--show] [--wrong-password]`
 
 Read-only, the folder `all` among it, and the `sender_check` of the
-newest message, without `--show` its result and reason only.
+newest message, without `--show` its result and reason only. It also
+lists across all accounts and syncs each account once.
+
+- `--show` prints the messages of the first page: sender, recipients,
+  subject, attachment names and the start of the text.
+- `--wrong-password` also tries one login with a wrong password, which
+  the server may count against the account.
 
 ## `changes.py`
 
@@ -45,12 +53,20 @@ checks that the mail and the reply are one thread in each account,
 makes and removes a folder, deletes it all for good, and checks the
 change feed and a webhook on a receiver at 127.0.0.1.
 
+With `--keep` the mail stays in the inbox and the copy in the sent
+folder, to look at in a mail client. Delete them by hand.
+
 ## `register.py`
 
-`MAILBOX_SERVICE_TOKEN=... uv run python live/register.py`
+`MAILBOX_SERVICE_TOKEN=... uv run python live/register.py [--url URL] [--count N]`
 
-Adds the test accounts to a running service over its API and checks
-them, with `--own-service` to a service and database of its own.
+`uv run python live/register.py --own-service [--count N]`
+
+Adds the first two test accounts, or the first `N`, to a running
+service over its API and checks them. An account the service has
+already is only checked. Nothing in the mailboxes is written. With
+`--own-service` it starts a service and database of its own and needs
+no token.
 
 ## `mcp_stdio.py`
 
@@ -60,6 +76,8 @@ Checks the MCP server over stdio against the test accounts, with a
 service and database of its own.
 
 - The read tools read the conversation of a search hit as well.
+- A user whose grant names the inbox alone sees that folder alone and
+  finds nothing in the archive.
 - A user that may share gets a link to a PDF attachment, which a GET
   without a token fetches once, the bytes `get_attachment` answers, and
   a second GET answers `404`.
@@ -69,14 +87,15 @@ service and database of its own.
   the user is disabled and `server_status` alone is left.
 - The write tools create a folder and star, move and trash a message of
   the first test account, then put everything back. They also rename
-  the folder and add and take off a keyword.
+  the folder and add and take off a keyword. A label is refused there.
 - The draft tools write a reply draft there without the quote, with a
   file, replace it with the file of the stored draft and delete it.
 - The send tools send three mails from the first test account to the
-  second, one of them twice with the same call and one from a draft,
-  and delete them for good.
-- Grants with recipients and a send limit stop mails, and the audit
-  names each attempt.
+  second, one of them twice with the same call, one from a draft and
+  one as HTML, and delete them for good.
+- Grants with recipients and a send limit stop mails. One more mail
+  passes the limit and goes to the second test account, deleted for
+  good as well. The audit names each attempt.
 - `whats_new` must name the changes of the write tools.
 
 ## `mcp_http.py`
@@ -84,7 +103,7 @@ service and database of its own.
 `uv run python live/mcp_http.py`
 
 Checks the MCP server over streamable HTTP behind its bearer token,
-read-only.
+read-only, with a service and database of its own.
 
 ## `ui.py`
 
@@ -93,9 +112,10 @@ read-only.
 Checks the configuration UI against the test accounts.
 
 - It connects the second test account through the UI, reads the inbox
-  by conversations, writes a folder and a draft on the first and removes
-  them, and sends one mail from the first to the second, deleted for
-  good on both sides.
+  by conversations, and writes a folder, a draft and a reply draft on
+  the first and removes them. It sends one mail from the first to the
+  second, which it stars, marks read and gives a keyword there, then
+  deletes for good on both sides.
 - It also makes a user, a role and a token and uses the token on the
   API, reads the state of the service on the overview and the Accounts
   list, adds and removes a webhook, shows the recovery key of its own
@@ -106,14 +126,23 @@ Checks the configuration UI against the test accounts.
   with a code of each and a recovery code, and has them removed by
   itself, the admin and the host.
 
+## `microsoft.py` and `gmail.py`: what they keep
+
+Both run a service of their own at `http://localhost:8080`, which the
+redirect address of the sign-in needs, so no other service may use that
+port. Its database stays between runs, in `data/live-microsoft/`,
+`data/live-microsoft-project/` with `--project`, and `data/live-gmail/`.
+It holds the encrypted refresh token, and beside it the master key and
+the password and a token of its user `admin`.
+
 ## `microsoft.py`
 
 `uv run python live/microsoft.py --connect` once (a person signs in in
 the browser), then `uv run python live/microsoft.py` checks the adapter
-against the Microsoft test account in `live/.env` with that app. With
-`--project` both use the project's app: `--connect` prints a code a
-person enters at Microsoft. How an app is set up:
-[MICROSOFT.md](MICROSOFT.md).
+against the Microsoft test account in `live/.env` with an app of your
+own, named there as well. With `--project` both use the project's app:
+`--connect` prints a code a person enters at Microsoft. How an app is
+set up: [MICROSOFT.md](MICROSOFT.md).
 
 - It makes and removes a folder and a reply draft there, sends one mail
   with a file from it to the first test account and deletes it for good
@@ -121,7 +150,8 @@ person enters at Microsoft. How an app is set up:
 - The send names the sent copy, whose text and file are as sent, and
   the mail arrives under the Message-ID the send answered.
 - A reply to the copy goes to the first test account too and names what
-  it answers.
+  it answers. The copy then carries `$answered`, which the check takes
+  off, and it puts `$forwarded` on.
 - It gives the sent copy a keyword and takes it off, reads its
   conversation, and checks that the change feed learns of the sent copy
   through Graph delta queries.
@@ -132,6 +162,9 @@ person enters at Microsoft. How an app is set up:
   newest mail of the inbox and takes them off, and sends nothing.
 - Where a mail of the inbox has inline images, they must be listed and
   download.
+- A report of non-delivery of an earlier run in the inbox of the
+  Microsoft test account is deleted for good, and so is every mail of
+  this check left in either account.
 
 ## `gmail.py`
 
@@ -141,11 +174,11 @@ the Gmail test account in `live/.env` with the Google client of your
 own. How the client is set up: [GOOGLE.md](GOOGLE.md).
 
 - It makes a label inside a label, renames the outer one and removes
-  both, writes, replaces and deletes a draft, sends one mail from it to
-  the first test account, deleted for good there, stars, labels,
-  unlabels and labels again, reads the thread of and archives the copy
-  in Sent, deletes it for good, and checks that the change feed learns
-  of it through Gmail's history.
+  both, writes, replaces and deletes a draft, sends one mail from the
+  Gmail test account to the first test account, deleted for good there,
+  stars, labels, unlabels and labels again, reads the thread of and
+  archives the copy in Sent, deletes it for good, and checks that the
+  change feed learns of it through Gmail's history.
 - Then the first test account sends one mail to it, which must arrive
   in the inbox, be found, open and turn read.
 - A reply draft to it and a reply sent back must be in its thread.

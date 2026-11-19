@@ -30,7 +30,8 @@ common package to it, the service the common package.
    `[Unreleased]` to `compare/vX.Y.Z...HEAD` and add the link
    `[X.Y.Z]`.
 4. Freeze the migrations new in this release: add `fingerprint(N)` of
-   each to `RELEASED` in `tests/data/storage/test_sqlite.py`.
+   each to `RELEASED` in
+   `packages/mailbox-service/tests/data/storage/test_sqlite.py`.
 5. After the squash merge: an annotated tag `vX.Y.Z` on `main`, pushed,
    then `gh release create vX.Y.Z --verify-tag --title X.Y.Z` with the
    changelog section as the notes. The published release starts `publish.yml`, which

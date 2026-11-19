@@ -17,8 +17,11 @@ Part of the [concept](../CONCEPT.md): sections 6.4 to 6.8.
 
 **Decided 2026-09-24, reply and forward:**
 
-- After a reply the original gets the flag `\Answered`, after a forward the
-  keyword `$Forwarded`, so other mail clients show it too.
+- After a reply the original gets the mark `$answered`, after a forward
+  `$forwarded`, so other mail clients show it too: on IMAP the flag
+  `\Answered` and the keyword `$Forwarded`. An account that does not
+  write the mark (`marks.written`) leaves the original as it is, and the
+  answer says so in `original_marked`.
 - `reference.forward_as` chooses how a forward carries the original:
   `inline` (the default, as in common mail clients: quoted with its
   headers, its attachments attached) or `attachment` (the unchanged
@@ -104,10 +107,6 @@ queries, all normalized into the change feed.
 
 **Decided 2026-09-25:**
 
-- Phase 4 covered IMAP and Microsoft accounts, Gmail, JMAP and POP3
-  followed in phase 5. IMAP changes come from the
-  sync pass, Microsoft changes from Graph delta queries per folder in the
-  worker.
 - IMAP uses CONDSTORE (RFC 7162) where the server offers it. A pass then
   also asks for the flags changed since the last one, so a message read
   or starred in another client shows as `message.updated`. Without
@@ -129,15 +128,13 @@ again through CONDSTORE. A client treats a repeated entry as harmless.
 
 **Webhooks, decided 2026-09-26:** a webhook may point into the local
 network, e.g. to an automation server, since it is registered on purpose.
-How often and how long a failed post is repeated has defaults and is
-configurable. Webhooks got their pages in the UI with the rework of
-phase 4b.
 
 A webhook belongs to the user who creates it, and each user sees and
 removes only their own. It hears of the accounts that user may read with
 `list_changes`, checked again at every post, so a right taken away also
 stops the webhook. `accounts` narrows that further. The signing secret
-starts with `whsec_`, is shown once, when the webhook is created, and is
+starts with `whsec_`, is shown once, when the webhook is created or its secret
+renewed, and is
 kept sealed with the data key. A new webhook hears of what happens from
 then on. The events come from the same log as the change feed, which also
 holds `message.sent` (the copy in the sent folder, or else the Message-ID

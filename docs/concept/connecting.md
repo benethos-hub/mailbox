@@ -56,9 +56,8 @@ The result tells the person what to do, not just where the server is:
 - **Google or Microsoft:** "Sign in with Google", "Sign in with Microsoft".
   The OAuth round trip, no password.
 - **Fastmail:** "Create an API token under Settings, Privacy & Security".
-- **GMX, web.de, freenet:** "Switch on IMAP in the web mailer first", link
-  to the provider's help page.
-- **Yahoo, iCloud, AOL:** "Create an app password", link.
+- **GMX, web.de, freenet:** "Switch on IMAP in the web mailer first".
+- **Yahoo, iCloud, AOL:** "Create an app password".
 - **Tuta:** "Tuta offers no access for other programs", nothing to connect.
 - **Proton:** "Requires Proton Mail Bridge on this machine, paid plans only".
 
@@ -125,7 +124,7 @@ Each source is a module under `data/discovery/`, behind one
 `DiscoverySource` protocol, so a source can be added, removed or switched off
 without touching the others. `domain/discovery/` runs them, applies the
 security rules, ranks and merges. The presets are data, one file, shared
-with the provider hints of 5.3. New dependencies, each wrapped in one
+with the provider hints of 5.3. Its dependencies, each wrapped in one
 module: `dnspython` for MX and SRV (the standard library cannot query them),
 `defusedxml` for the XML, `publicsuffixlist` for where a domain ends.
 
@@ -177,7 +176,7 @@ The service therefore behaves conservatively towards every provider:
 
 ## 5.10 Encodings and other traps
 
-To be kept in mind from the first IMAP line on, and covered by tests:
+What the adapters handle, covered by tests:
 
 - **Folder names** travel in modified UTF-7 (RFC 3501): "Entwürfe" arrives as
   `Entw&APw-rfe`. `UTF8=ACCEPT` (RFC 6855) is not used. The API only
@@ -222,7 +221,9 @@ the work in order. The rules:
    without UIDPLUS, an IMAP sign-in with `xoauth2`, a JMAP method or
    filter the server does not know.
 4. **Capabilities follow the server.** IMAP and JMAP servers are asked
-   what they offer when an account connects and when it is verified.
+   what they offer when an account connects, when it is verified, when
+   the sync sees a folder come or go, and when the server refuses what
+   was stored.
    The capabilities are stored with the account.
 5. **Unknown is not false.** A missing capability says that a field
    carries nothing. The value itself stays as it is.
@@ -240,10 +241,9 @@ The capabilities are finer, each guarding one thing: `read_state`,
 `search`, `drafts`, `send`, `sent_copy`, `threads`, `push`,
 `external_changes`, `refused` and `sender_check` (6.3). The marks are two lists on the
 account, `marks.read` and `marks.written`: the marks of RFC 8621 it
-reads and those it writes. `flags` is gone. `stable_ids`, `delta` and
-`server_search` left the API.
+reads and those it writes.
 
-Further decisions: `date` is the Date header everywhere, and a new
+Further decisions: `date` is the Date header everywhere, and the
 field `received` carries the received time, by which lists sort and
 filter. A list without a folder is the inbox on every account, and the
 role `all` searches everywhere but the trash and junk. Keywords keep the

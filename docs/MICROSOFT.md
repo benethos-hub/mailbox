@@ -31,7 +31,7 @@ account**:
   also on a server.
 
 Where the service is not at `localhost` or `127.0.0.1`, the UI offers
-the code only.
+the code only, as **Sign in with Microsoft and a code**.
 A browser that
 reaches the service through an SSH tunnel at `localhost` can still sign
 in in the browser, as long as `MAILBOX_SERVICE_PUBLIC_URL` does not name
@@ -215,8 +215,9 @@ project's.
 
 Open the UI under the address from step 2, e.g.
 `http://localhost:8080/ui`, and sign in. Then **Accounts → Connect an
-account → Sign in with Microsoft**, or look up an Outlook.com address and
-follow its sign-in. **Sign in with a code** works as with the project's
+account**, and look up the address. An address at Microsoft shows
+**Sign in with Microsoft** as the recommended way. Any other address
+shows it under **Sign in with your provider**. **Sign in with a code** works as with the project's
 app.
 
 Microsoft asks the person to sign in and to allow the app the permissions
@@ -293,7 +294,7 @@ to the app, not to the secret.
 
 | What you see | Cause | What to do |
 |---|---|---|
-| No "Sign in with Microsoft" in the UI | `MAILBOX_SERVICE_PROVIDERS` leaves Microsoft out | "Without Microsoft accounts" |
+| No "Sign in with Microsoft" in the UI | no address was looked up yet, the service is not at localhost with the project's app (then **Sign in with Microsoft and a code**), or `MAILBOX_SERVICE_PROVIDERS` leaves Microsoft out | look up the address, or "Without Microsoft accounts" |
 | "microsoft refuses a sign-in with a code for this service's app" (`AADSTS70002`) | an app of your own without *Allow public client flows* | step 2 |
 | "the code for microsoft has expired" | the code was not entered in time (about 15 minutes) | start again |
 | Microsoft: the redirect URI does not match (`AADSTS50011`) | the address differs from the one registered, e.g. `127.0.0.1` against `localhost`, another port, `http` against `https` | open the UI under the registered address, or register this one too (step 2), and check `MAILBOX_SERVICE_PUBLIC_URL` |

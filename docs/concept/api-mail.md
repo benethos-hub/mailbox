@@ -59,12 +59,12 @@ Rules of the implementation (phase 2):
 |---|---|---|
 | GET | `/v1/messages` | list and search **across accounts** (6.6) |
 | GET | `{acc}/messages` | list and search in one account (6.6) |
-| GET | `{acc}/messages/{id}` | full message, text and HTML body |
-| PATCH | `{acc}/messages/{id}` | `unread`, `starred`, `keywords`, `folder_ids` (a move is a change of `folder_ids`), `add_keywords`, `remove_keywords`, `add_folder_ids`, `remove_folder_ids` |
-| DELETE | `{acc}/messages/{id}` | to trash, `?permanent=true` expunges |
-| GET | `{acc}/messages/{id}/raw` | RFC 822 source (`message/rfc822`) |
-| GET | `{acc}/messages/{id}/attachments/{att_id}` | attachment content, with its type and file name |
-| POST | `{acc}/messages/{id}/attachments/{att_id}/links` | a link to the attachment for another service (`share_attachment`): its URL, when it ends, the type, size and file name |
+| GET | `{acc}/messages/{message_id}` | full message, text and HTML body |
+| PATCH | `{acc}/messages/{message_id}` | `unread`, `starred`, `keywords`, `folder_ids` (a move is a change of `folder_ids`), `add_keywords`, `remove_keywords`, `add_folder_ids`, `remove_folder_ids` |
+| DELETE | `{acc}/messages/{message_id}` | to trash, `?permanent=true` expunges |
+| GET | `{acc}/messages/{message_id}/raw` | RFC 822 source (`message/rfc822`) |
+| GET | `{acc}/messages/{message_id}/attachments/{attachment_id}` | attachment content, with its type and file name |
+| POST | `{acc}/messages/{message_id}/attachments/{attachment_id}/links` | a link to the attachment for another service (`share_attachment`): its URL, when it ends, the type, size and file name |
 | GET | `/v1/links/{secret}` | the attachment a link hands out, once, without a token (`get_linked_attachment`) |
 | POST | `{acc}/messages/batch` | bulk `update` / `delete` for up to 100 ids, per-id result. A move is an `update` of `folder_ids` |
 | GET | `{acc}/threads` | the threads of a folder (`folder`, required), each where its newest message in the folder is |
@@ -120,8 +120,8 @@ together, the younger one goes into the older one. Its id answers `404`
 from then on, and its messages show as updated in the change feed. POP3
 answers `501`. A thread lists at most 500 messages, and of the
 `References` of a message the last 20 count. Both are settings. The MCP
-server gets `get_thread` alone, which takes a message id or a thread id.
-The UI gets a card with the conversation on the message page and a list
+server has `get_thread` alone, which takes a message id or a thread id.
+The UI has a card with the conversation on the message page and a list
 of the messages by threads.
 
 **Decided 2026-10-16, a message without a thread:** where the index
@@ -134,8 +134,7 @@ once the index has threaded it, the thread it is in.
 an attachment without the file passing through the model and without a
 token of this service. The MCP server asks for a link, the model carries
 only its URL across, and the other service fetches the bytes from this
-service directly. In the order of golden rule 6: the service, the
-client, the MCP server.
+service directly.
 
 - The link is stored, not signed: a random secret of 128 characters,
   kept in the database as its digest only, as an API token is. No new

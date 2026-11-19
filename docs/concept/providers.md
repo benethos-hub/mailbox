@@ -9,7 +9,9 @@ protocols beyond it those it may be able to do: `Writes` (flags and
 folders), `Deletes`, `Drafts`, `Sends`, `Watches` (push), `Deltas`
 (changes since a token), `FlagChanges` (whose flags changed, IMAP
 with CONDSTORE), `Threads` (threads the server keeps), `Summaries`
-(messages read by id, for threads the index keeps) and `Places` (the
+(messages read by id, for threads the index keeps), `ServerNames` (the
+names receiving servers wrote into the newest mails, for choosing
+`authserv_id`) and `Places` (the
 folders of messages read by id without their content, for a change
 under grants that name folders where no index keeps them). One protocol per ability, checked with
 `isinstance`, was **decided 2026-10-07**. What an account can do follows
@@ -37,10 +39,9 @@ server's `list_accounts` names what an account lacks.
 
 **Decided 2026-09-24:** the protocol goes through **IMAPClient**, in
 `data/protocols/imap/`. It parses every server answer and returns
-any FETCH item as a dict, which the sync (4.1) and phase 2 (`COPYUID`,
-`MOVE`, `QRESYNC`) need. Phase 1b started on imap-tools. It offered
-nothing for fetching only the `Message-ID` header, so raw `imaplib`
-answers had to be parsed by hand.
+any FETCH item as a dict, which the sync (4.1) and the changes of
+phase 2 (`COPYUID`, `MOVE`, `CONDSTORE`) need. imap-tools offers
+nothing for fetching only the `Message-ID` header.
 
 Fetched messages are parsed by the mail parser of **imap-tools**, in
 `data/mail/parse.py`, shared by every adapter that sees raw messages:
@@ -55,8 +56,8 @@ stateful (selected folder) and per account anyway, so this costs little.
 
 The alternative is **aioimaplib** (async, but raw responses with no
 parsing). The adapter boundary keeps the choice reversible: if thread usage
-becomes a bottleneck with many accounts, only `data/providers/imap/`
-changes.
+becomes a bottleneck with many accounts, only `data/protocols/imap/`
+and the adapter in `data/providers/imap/` change.
 
 **Three auth modes:** password, app password, and SASL XOAUTH2
 with a token refresher. XOAUTH2 matters beyond Google and Microsoft: it
@@ -76,8 +77,7 @@ OAuth consent anyway. IMAP stays the fallback for everything else.
 POP3 knows one mailbox, no flags, no folders, no search and no push. The
 `pop3` adapter therefore offers: one folder with the inbox role, list and
 get via `UIDL`, attachment download, delete. Read state and search are not
-supported (`501`), sending goes through SMTP. Recommendation: only offer
-POP3 where a provider has no IMAP at all, which is rare today.
+supported (`501`), sending goes through SMTP.
 
 **Decided 2026-10-06, built:**
 
@@ -167,7 +167,6 @@ an app password is the credential to ask for.
   The other system keywords have no place: setting or taking one off
   answers `501`. A next-page
   cursor is a Graph path below `/me/` and never leaves the Graph host.
-  No push yet.
 - Exchange has no folder with the role `all`. The adapter shows one,
   "All Mail" with the id `all`: every folder but the trash and junk,
   which leave a page after Graph answers it, so a page can come back
@@ -283,7 +282,7 @@ live against a Gmail account (`live/gmail.py`):
   by its `Message-ID` (`rfc822msgid:`). Gmail threads a reply only when
   told the thread, besides `In-Reply-To`, `References` and the subject.
 - Changes come from `history.list` since a history id, polled by the
-  worker (`Deltas`). Push through Pub/Sub is not built (IDEAS.md).
+  worker (`Deltas`).
 
 ### 5.6 JMAP as a second generic protocol
 
@@ -335,7 +334,7 @@ an API token. POP3 is offered only where neither IMAP nor JMAP is.
 |---|---|---|
 | passed, 2024-09-16 | Outlook.com: basic auth off | Microsoft only via OAuth |
 | passed, 2025 | Google Workspace: password IMAP off | Google only via OAuth or app password |
-| **2026-10-01** | Exchange Online: EWS blocked by default | never build on EWS |
+| passed, 2026-10-01 | Exchange Online: EWS blocked by default | never build on EWS |
 | **end of 2026-12** | Exchange Online: SMTP AUTH basic auth off by default | send through Graph |
 | **2027-04-01** | Exchange Online: EWS removed | — |
 | recurring, 7 days | Gmail `users.watch` expires | not used: the worker polls `history.list` (5.5), Pub/Sub is an idea |
