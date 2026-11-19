@@ -244,7 +244,7 @@ class Outgoing:
         )
         # Sent: from here on nothing may fail, or a client would send again.
         with self._delivery.after_sending(access, account, "the draft is still there"):
-            await self._delete_draft(account_id, draft_id)
+            await self._calls.delete_draft(account_id, draft_id)
         if out.reference is not None:
             marked = False
             with self._delivery.after_sending(
@@ -262,9 +262,6 @@ class Outgoing:
         """For good: a draft is not kept in the trash."""
         access.require("delete_draft", account_id)
         await self._calls.require(account_id, NEEDS["delete_draft"])
-        await self._delete_draft(account_id, draft_id)
-
-    async def _delete_draft(self, account_id: str, draft_id: str) -> None:
         await self._calls.delete_draft(account_id, draft_id)
 
 
