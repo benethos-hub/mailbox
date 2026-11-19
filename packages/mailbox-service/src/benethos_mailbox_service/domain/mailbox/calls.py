@@ -344,9 +344,7 @@ class Calls:
             outcomes.update(second)
         for message_id, outcome in outcomes.items():
             if isinstance(outcome, MessageNotFoundError):
-                outcomes[message_id] = MessageNotFoundError(
-                    f"message {message_id} not found"
-                )
+                outcomes[message_id] = missing_message(message_id)
         return outcomes
 
     async def _run_on(
