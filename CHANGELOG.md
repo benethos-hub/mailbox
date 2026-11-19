@@ -31,7 +31,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 - The configuration UI shows the sender check beside the sender of a
   message, and `check failed` in lists. The account page of an IMAP,
   POP3 or JMAP account shows, when asked, the names receiving servers
-  wrote into its newest ten mails.
+  wrote into its newest ten mails, each with how many mails carry it
+  and in how many it is on top.
 - `GET /v1/accounts/{account_id}/server-names`, operation
   `list_server_names` in `accounts.manage`, lists the names receiving
   servers wrote into the newest ten mails of an IMAP, POP3 or JMAP

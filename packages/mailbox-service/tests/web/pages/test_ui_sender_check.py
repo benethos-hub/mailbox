@@ -161,14 +161,28 @@ def test_the_page_reads_the_mailbox_only_when_asked(
     assert "Seen in the newest 10 mails:" in shown
     assert '<code id="seen-1">mx.example.org</code>' in shown
     assert 'data-copy="seen-1"' in shown
-    assert "9 of 10" in shown
-    assert "A mail can carry any name." in shown
+    assert "9 of 10, on top in 9" in shown
+    assert "A mail can carry any name. A server writes its own on top." in shown
 
 
-def test_no_name_in_the_newest_mails(ui: TestClient, account_id: str) -> None:
-    """The memory adapter reads no names, as a server that writes none."""
+def test_no_mail_to_look_at(ui: TestClient, account_id: str) -> None:
+    """The memory adapter reads no names: no mail was read."""
+    page = ui.get(f"/ui/accounts/{account_id}", params={"suggest": "1"}).text
+    assert "No mail in the inbox to look at." in page
+    assert "No Authentication-Results" not in page
+
+
+def test_no_name_in_the_newest_mails(
+    ui: TestClient,
+    services: Services,
+    account_id: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Mails were read, none of them carries an entry."""
+    asked(services, monkeypatch, SeenNames(4, ()))
     page = ui.get(f"/ui/accounts/{account_id}", params={"suggest": "1"}).text
     assert "No Authentication-Results in the newest mails" in page
+    assert "No mail in the inbox" not in page
 
 
 def test_a_gmail_account_is_not_offered_it(

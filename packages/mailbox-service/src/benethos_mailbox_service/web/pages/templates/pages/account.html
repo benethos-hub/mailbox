@@ -68,12 +68,14 @@
 <div class="fold">
   <p>Seen in the newest {{ names.mails }} mails:</p>
   <ul class="lines">
-    {% for name in names.names %}<li><span class="secret-line"><code id="seen-{{ loop.index }}">{{ name.id }}</code>{{ copy_button("seen-" ~ loop.index, "Copy " ~ name.id) }}<span class="muted">{{ name.count }} of {{ names.mails }}</span></span></li>{% endfor %}
+    {% for name in names.names %}<li><span class="secret-line"><code id="seen-{{ loop.index }}">{{ name.id }}</code>{{ copy_button("seen-" ~ loop.index, "Copy " ~ name.id) }}<span class="muted">{{ name.count }} of {{ names.mails }}, on top in {{ name.top }}</span></span></li>{% endfor %}
   </ul>
-  <p class="muted">A mail can carry any name. Take the one your server writes on every mail.</p>
+  <p class="muted">A mail can carry any name. A server writes its own on top. Take the name that is on top of every mail, and only when you know it as your server's.</p>
 </div>
-{% else %}
+{% elif names.mails %}
 <div class="fold"><p class="muted">No Authentication-Results in the newest mails of the inbox. This server may write none.</p></div>
+{% else %}
+<div class="fold"><p class="muted">No mail in the inbox to look at.</p></div>
 {% endif %}
 {% endif %}
 {% if signs_in_with_oauth %}
