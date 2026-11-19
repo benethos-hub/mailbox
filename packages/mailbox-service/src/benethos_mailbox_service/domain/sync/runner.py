@@ -3,10 +3,16 @@
 
 A pass of an account whose ids go through the index compares the
 provider's folders with it: what arrived, left, moved, or changed its
-flags. A change of ours that overtakes it makes it read again, three
-times at most. A pass of an account with ``DELTA`` asks each folder what
-changed since its last token. What a pass finds goes into the change
-feed. ``SyncService`` keeps the ids and hands its passes to this one.
+flags. A change of ours that overtakes it makes it read again: it reads
+at most ``ATTEMPTS`` times. A pass of an account with ``DELTA`` (Graph
+delta queries) asks each folder what changed since its last token.
+
+What a pass finds goes into the change feed: new messages as created,
+moved ones, ones whose thread went into another and, where the provider
+can tell, ones whose flags changed as updated, vanished ones as deleted.
+The first pass of an account records nothing, since the messages
+already there are not new. ``SyncService`` keeps the ids and hands its
+passes to this one.
 """
 
 from __future__ import annotations

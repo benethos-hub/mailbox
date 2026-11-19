@@ -1,6 +1,6 @@
-"""Keeping up with the mailboxes: stable message ids, the sync pass
-(``SyncService``) and the worker that runs it in the background by
-polling and IDLE (``SyncWorker``).
+"""Keeping up with the mailboxes: stable message ids (``SyncService``),
+the sync pass (``SyncRunner``) and the worker that runs it in the
+background by polling and IDLE (``SyncWorker``).
 """
 
 from __future__ import annotations
