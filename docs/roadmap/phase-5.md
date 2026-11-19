@@ -6,25 +6,13 @@ Part of the [roadmap](../ROADMAP.md): phase 5, in progress, and phase 5a, done.
 
 **In progress.** What is done is listed first, what is open at the end.
 
-- **`microsoft` adapter over Graph with OAuth (5.4)**, done, in steps:
-  1. **OAuth core for every provider: authorization code with PKCE,
-     `state` bound to the user, refresh token in the vault, access token in
-     memory, rotation, `invalid_grant` to `needs_reauth`, client id, tenant
-     and secret per deployment**, done
-  2. **the OAuth round trip in the UI, the sign-in with a code in the API
-     and the UI: sign in with Microsoft when connecting, sign in again on
-     the account page**, done
-  3. **the `microsoft` adapter behind `MailProvider`: folders, list and
-     search, message, MIME source, attachments, flags, move, delete,
-     drafts, `sendMail`, immutable ids**, done
-  4. **a live check against a Microsoft test account**, done with a
-     personal Outlook.com account (`live/microsoft.py`, `docs/MICROSOFT.md`)
-  5. **the project's own app as the default, a public client without a
-     secret. Sign-in in the browser (UI) or with a code (device code
-     flow, UI and API). An app of the deployment's own stays the
-     option. `MAILBOX_SERVICE_PROVIDERS` names the kinds of account a
-     deployment offers**, done, checked live with the code
-     (`live/microsoft.py --project`)
+- **`microsoft` adapter over Graph with OAuth (5.4)**, done: folders,
+  list and search, messages, attachments, flags, move, delete, drafts
+  and sending, with immutable ids. The project's own app is the
+  default, a public client without a secret. An app of the deployment's
+  own stays the option. A person signs in in the browser (UI) or with a
+  code (UI and API). `MAILBOX_SERVICE_PROVIDERS` names the kinds of
+  account a deployment offers. Live-checked in `live/microsoft.py`
   - decided 2026-09-25: tenant `common` by default, the callback at
     `/ui/oauth/{provider}/callback` (CONCEPT 5.4)
   - decided 2026-10-06: one app per deployment, both ways to sign in
@@ -56,34 +44,19 @@ Part of the [roadmap](../ROADMAP.md): phase 5, in progress, and phase 5a, done.
   clients. Checked in Chromium by the browser suite, with its virtual
   authenticator
 - **The UI rework of 2026-10 ([UI.md](../UI.md) 10)**, decided 2026-10-09,
-  done in six steps:
-  1. **foundations: Bootstrap Icons as an own sprite made by
-     `assets/icons.py`, the page's own dialog before a form, copy
-     buttons beside every secret shown once, relative times in lists,
-     `/` for the search, nothing loaded from elsewhere**, done
-  2. **the sidebar and the overview: the account menu, the sidebar
-     folding to icons, dots for what needs a look, Mail search, the
-     Status page gone into the overview and the Accounts list**, done
-  3. **lists act in the row: the plus at the head, a pencil and a bin
-     per device, token and folder, ticked devices and tokens together**,
-     done
-  4. **users and roles: the user page in tabs, the grant editor in
-     lines, a batch of the Users list**, done
-  5. **accounts and mail: Mail and Sends per account row, the message's
-     actions in its header, its keywords as chips**, done
-  6. **webhooks changeable: `update_webhook` and `renew_webhook_secret`
-     in the API, the client and the UI**, done
-  Live-checked in `live/ui.py`, the MCP server after step 6 in
-  `live/mcp_stdio.py` and `live/mcp_http.py`
+  done: an icon sprite of its own, dialogs before a change, copy
+  buttons beside every secret shown once, the sidebar folding to icons,
+  the Status page gone into the overview and the Accounts list, actions
+  in the row of a list, the user page in tabs with the grant editor in
+  lines, and webhooks changeable (`update_webhook`,
+  `renew_webhook_secret`). Live-checked in `live/ui.py`
 - **`jmap` adapter for Fastmail and JMAP servers (5.6)**, decided
   2026-10-06, done: a password or an API token, sending through JMAP,
   changes since a state and push through the event source. Discovery
   asks `/.well-known/jmap` and SRV, JMAP before IMAP. Checked against
   Stalwart (`live/jmap.py`)
 - Configuration UI under `/ui` (1.1), brought forward on 2026-09-24:
-  - **frame: sign-in with an API token, server-side session, CSRF,
-    security headers, layout**, done. Phase 4a replaced the token with
-    a user name and a password
+  - **frame: server-side session, CSRF, security headers, layout**, done
   - **accounts: connect through autodiscovery or by hand, change, verify,
     remove**, done
   - **users, roles and their grants, tokens**, done
@@ -95,22 +68,15 @@ Part of the [roadmap](../ROADMAP.md): phase 5, in progress, and phase 5a, done.
   - **the service log: every line on stderr with time, level and source,
     each secret masked, the newest 1000 on a page for the admin (UI
     6.5, CONCEPT 7.4)**, done, live-checked in `live/ui.py`
-  - the service log activity by activity, as [LOGGING.md](../LOGGING.md)
-    proposes: the activities are classes in `domain/activity/`, one
-    module per area (LOGGING.md 7). Step 2 done: the package, `Access`
-    with the client address, the lifecycle, today's lines as
-    activities, the access log without the query. Step 3 done: users,
-    tokens, roles, accounts, OAuth. Step 4 done: sync, sending, webhooks,
-    discovery, the log page, the limits. Step 5 done: the MCP server's
-    lines. Step 6 done: the HTTP request limit, per token or UI session
-    and per client address, `429` with `Retry-After`, and every limit a
-    setting ([LIMITS.md](../LIMITS.md))
+  - **the service log activity by activity ([LOGGING.md](../LOGGING.md))**,
+    done: every line an activity of `domain/activity/catalogue/`, one
+    module per area, the MCP server's lines among them, and the HTTP
+    request limit with every limit a setting ([LIMITS.md](../LIMITS.md))
   - **the audit of administration of [AUDIT.md](../AUDIT.md)**, decided
     2026-10-05 (PERMISSIONS.md 8.6), done: the table `activity`,
     `GET /v1/audit` with `audit` in `service`, the Audit page and the
     Recent activity card
-  - recovery key, status: moved to phase 4b
-- **Threads (6.3)**, decided 2026-10-12, done in five steps: IMAP
+- **Threads (6.3)**, decided 2026-10-12, done: IMAP
   messages carry the `thread_id` the index keeps, built across folders
   from `Message-ID`, `In-Reply-To` and `References`. Gmail, JMAP and
   Microsoft read their own. `GET .../threads` (`list_threads`) and
@@ -142,17 +108,14 @@ Part of the [roadmap](../ROADMAP.md): phase 5, in progress, and phase 5a, done.
   and deleted for good, polled by the sync. Accounts and `/v1/me` name
   their capabilities, the UI and the MCP server go by them. Discovery
   offers POP3 only where no IMAP is
-- **The domain in packages by area, and the change feed as typed
-  classes like the activities ([REFACTORING.md](../REFACTORING.md))**,
-  done, the tests in folders like the source. `data/` and `common/`
-  in the same shape, section 8, done: `redact`, `ratelimit` and the
-  text of an HTML body in `common`, `backup` out of `secrets`, the wire
-  protocols and HTTP as `data/protocols/`, the `__init__.py` files
-  export only, the same checks as for the domain. The code written
-  twice, section 9, merged into helpers, done. The MCP server's tools
-  in a package, one module per kind, section 10, done. The
-  architecture, the layout of the code and the seams:
-  [ARCHITECTURE.md](../ARCHITECTURE.md)
+- **The layout of the code ([REFACTORING.md](../REFACTORING.md),
+  [ARCHITECTURE.md](../ARCHITECTURE.md))**, done: the domain and the data
+  layer in packages by area, the change feed as typed classes like the
+  activities, `assembly/` and `cli/`, the adapters in parts behind one
+  protocol per ability, the code written twice merged into helpers,
+  the MCP server's tools one module per kind, the client's endpoints
+  one module per resource, the limits on the size of the code, and the
+  tests in folders like the source
 - **Settings and data in the folders of the operating system, for a
   service installed without the repository (7.4)**, decided 2026-10-06,
   done: `%LOCALAPPDATA%` on Windows, `~/.config` and `~/.local/share`
@@ -179,27 +142,18 @@ Part of the [roadmap](../ROADMAP.md): phase 5, in progress, and phase 5a, done.
 - **The Python client as a package of its own (8.2)**, decided
   2026-10-07, done: `mailbox-client`, each endpoint described once, an
   async and a sync client over it. The MCP server is built on it
-- **The work list of 2026-10 ([REFACTORING.md](../REFACTORING.md) 12)**,
-  done 2026-10-07: `assembly/` and `cli/`, the adapters in parts behind
-  one protocol per ability, JSON from a server read into shapes, named
-  values for ids, cursors and settings, the limits on the size of the
-  code, and every helper of `common/` once
-- **The client package in parts ([REFACTORING.md](../REFACTORING.md)
-  13)**, done 2026-10-07: `endpoints/` one module per resource, what
-  both clients share in a module per subject, the tests in files like
-  the modules
 - **The client covers the whole API**, decided 2026-10-09, done: the
   records in `models/` one module per resource
   ([REFACTORING.md](../REFACTORING.md) 14), each method one line made from
   its endpoint, every operation of `docs/openapi.json` a method of both
-  clients named like its `operationId`, held by a test without
-  exceptions. A secret shown once comes as a `Secret`. The live checks
-  administer through it (`live/checks/admin.py`, `accounts.py`,
-  `live/register.py`)
+  clients named like its `operationId`, held by a test. Only
+  `get_linked_attachment` has none: its URL is the credential. A secret
+  shown once comes as a `Secret`. The live checks administer through it
+  (`live/checks/admin.py`, `accounts.py`, `live/register.py`)
 - **A fourth package, `mailbox-common` ([REFACTORING.md](../REFACTORING.md)
   15)**, decided 2026-10-09, done: what the service and the MCP server
   both need, held once. The MCP server's log is the service's, with
-  colours and masking. Since #132 it holds the settings base of both,
+  colours and masking. It holds the settings base of both,
   the client answers records for messages, and a test holds every
   package boundary to named records ([REFACTORING.md](../REFACTORING.md)
   16)
@@ -260,28 +214,14 @@ Open in this phase, each planned in CONCEPT.md:
 
 Decided 2026-10-12 (5.11). Every mailbox is operated the same way,
 and what an account cannot do answers `501`, announced by its
-capabilities. [UNIFORM.md](../UNIFORM.md) section 5 holds the work in
-order, each step one pull request or more:
+capabilities ([UNIFORM.md](../UNIFORM.md)). Delivered: the finer
+capabilities, read from the server and stored with the account. `date`
+and `received`. The inbox as the list without a folder, and the role
+`all`. Server notes out of `keywords`, and the two lists of marks. One
+test suite for all adapters. A UI and an MCP server that know no
+providers.
 
-1. **Bugs without a live check**, against the documentation of the time, done
-2. **Bugs with a live check**: Gmail threads a reply, Microsoft answers
-   the text body, `in_reply_to`, the sent copy and inline attachments,
-   done
-3. **Microsoft sends large mail through upload sessions**, and IMAP
-   orders the steps of a change of flags and folder, done
-4. **One test suite for all adapters**, done
-5. **The finer capabilities**, read from the server and stored with the
-   account, checked by the domain for every operation, done
-6. **The values**: `date` and `received`, the inbox as the list without a
-   folder and the role `all`, server notes out of `keywords`, the lists
-   of marks, the provider's spelling of keywords, `has_attachments`,
-   done
-7. **IMAP emulates `all`** where the server has no `\All`, done
-8. **The UI and the MCP server know no providers**: the operations of
-   an account from the API, the marks from `mailbox-common`, done
-9. **Setting up an account, described by the domain**, done
-
-All nine steps shipped in 0.5.0. Steps 5 and 6 changed the contract,
-marked as breaking in the changelog. One rule of step 6 changed once
-more: a replacement list `keywords` keeps the marks a message has
+All of it shipped in 0.5.0, the changes of the contract marked as
+breaking in the changelog. One rule changed
+later: a replacement list `keywords` keeps the marks a message has
 (UNIFORM 3, decided 2026-10-28), shipped in 0.6.0 as a breaking change.

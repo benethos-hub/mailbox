@@ -95,10 +95,9 @@ Everything real mail will depend on, before any real mailbox is connected.
 - **The MCP server over streamable HTTP, behind a bearer guard, with its
   own container image**, done
 - **Container image and compose file for the service, bound to the loopback
-  address (8.1)**, done: `containers/`. Both images are built and the
-  service smoke-tested by `ci.yml`, and published for amd64 and arm64 with
-  each release by `publish.yml`, beside the PyPI packages (decided
-  2026-09-25). `ci.yml` runs on every pull request.
+  address (8.1)**, done: `containers/`. Both images are built by the CI
+  and published for amd64 and arm64 with each release (decided
+  2026-09-25).
 
 ## Phase 4 – Change feed and webhooks
 
@@ -140,7 +139,7 @@ Everything real mail will depend on, before any real mailbox is connected.
 - **Sign-ins in the service log, a brake per user name (1, 7.5)**, done
 - decided 2026-09-27: the UI takes passwords only, tokens are for the API
   and MCP, every caller a user, a one-time password for the first admin, a
-  second factor later (IDEAS)
+  second factor later (built in phase 5, AUTHENTICATION.md)
 
 ## Phase 4b – UI rework
 
