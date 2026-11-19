@@ -34,6 +34,7 @@ from ..changes import (
     MailboxChange,
     MessagesCreated,
 )
+from .passes import message_id_of
 from .runner import SyncRunner, SyncState
 from .threads import REFERENCES, IndexThreads, new_thread_id
 from .writes import OwnWrites
@@ -127,7 +128,7 @@ class SyncService:
             known = self._index.by_native(account_id, natives)
             missing = [(n, f) for n, f in missing if n not in known]
         added = [
-            IndexEntry(self._new_id(), n, f, _message_id(headers.get(n)))
+            IndexEntry(self._new_id(), n, f, message_id_of(headers, n))
             for n, f in missing
         ]
         ours = {e.id: e.folder_id for e in added}
@@ -158,7 +159,7 @@ class SyncService:
     ) -> bool:
         """Whether a place the index does not know holds a ``Message-ID``
         the index has at another place."""
-        named = {h for n, _ in missing if (h := _message_id(headers.get(n)))}
+        named = {h for n, _ in missing if (h := message_id_of(headers, n))}
         return bool(named) and bool(self._index.with_header(account_id, named))
 
     async def _settled(self, account_id: str) -> None:
@@ -263,7 +264,3 @@ class SyncService:
     def state(self, account_id: str) -> SyncState:
         """How the passes of the account went since the start."""
         return self._runner.state(account_id)
-
-
-def _message_id(headers: ThreadHeaders | None) -> str | None:
-    return headers.message_id if headers is not None else None
