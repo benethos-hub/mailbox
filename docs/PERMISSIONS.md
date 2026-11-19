@@ -104,10 +104,12 @@ token either and names no right.
 - **Per request**: credential, then user, then the route's right and the
   account from the path against the effective rights. A batch is checked
   per action: `batch_messages` and the right of the single action. A
-  move into the trash with `update_message` or a batch needs
-  `delete_message` as well, and where the grants narrow it to folders,
-  on the folder of the message, as `DELETE` does. Out of the trash and
-  into junk need `update_message` alone.
+  move into the trash or a folder below it, with `update_message` or a
+  batch, needs `delete_message` as well, and where the grants narrow it
+  to folders, on the folder of the message, as `DELETE` does. Moving a
+  folder below the trash with `update_folder` needs `delete_message` on
+  that folder in the same way. Out of the trash and into junk need
+  `update_message` alone.
 - **Cross-account operations filter.** `list_accounts`, `/v1/messages`,
   `/v1/changes` and the UI's mail page show the accounts the user has a
   right on, and leave the others out.

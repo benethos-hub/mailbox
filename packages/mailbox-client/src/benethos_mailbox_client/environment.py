@@ -99,7 +99,8 @@ def _check_url(url: str, allow_http: bool) -> None:
     if parts.scheme == "https" and parts.host:
         return
     if parts.scheme != "http" or not parts.host:
-        raise ConfigurationError(f"{URL_ENV} must be an http or https URL: {url}")
+        # Not repeated: it may carry a password httpx did not read as one.
+        raise ConfigurationError(f"{URL_ENV} must be an http or https URL")
     if allow_http or _loopback(parts.host):
         return
     raise ConfigurationError(

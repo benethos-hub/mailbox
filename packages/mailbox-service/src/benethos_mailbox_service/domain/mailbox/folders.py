@@ -51,7 +51,7 @@ class Folders:
         """Where the grants name folders, only inside one of them."""
         access.require("create_folder", account_id)
         await self._calls.require(account_id, NEEDS["create_folder"])
-        parent = await self.by_role(account_id, new.parent_id)
+        parent = await self._parent(account_id, new.parent_id)
         reach = await reach_of(self._calls, access, "create_folder", account_id)
         if reach is not None:
             if parent is None:
@@ -65,7 +65,8 @@ class Folders:
         self, access: Access, account_id: str, folder_id: str, changes: FolderUpdate
     ) -> Folder:
         """Rename or move. Folders with a role stay where mail clients expect
-        them. The messages inside keep their ids: a sync follows them."""
+        them. The messages inside keep their ids: a sync follows them. A
+        move below the trash needs delete_message as well."""
         access.require("update_folder", account_id)
         await self._calls.require(account_id, NEEDS["update_folder"])
         folder, folders, reach = await self._own_folder(
@@ -73,7 +74,7 @@ class Folders:
         )
         name = changes.name or folder.name
         parent = (
-            await self.by_role(account_id, changes.parent_id)
+            await self._parent(account_id, changes.parent_id)
             if changes.moves
             else folder.parent_id
         )
@@ -83,6 +84,9 @@ class Folders:
             require_folder(reach, parent)
             if not reach.holds(folder_id, parent):
                 raise outside("update_folder", "into the folders of another grant")
+        trash = in_trash(folders)
+        if changes.moves and parent in trash and folder_id not in trash:
+            await self._may_delete(access, account_id, folder_id, folders)
         updated = await self._calls.call(
             account_id, lambda p: writes(p).update_folder(folder_id, name, parent)
         )
@@ -147,22 +151,41 @@ class Folders:
             require_folder(reach, folder)
         return folder, reach
 
-    async def with_roles_resolved(
+    async def with_folders_checked(
         self, account_id: str, changes: MessageUpdate
     ) -> MessageUpdate:
         """The changes with every role among the folders they name
-        resolved."""
-        if not any(is_role(f) for f in changes.named_folders()):
+        resolved. Each folder must be one the account lists: any other
+        name is missing, also another spelling of a listed folder's id."""
+        if not changes.named_folders():
             return changes
         folders = await self.all(account_id)
         fields = ("folder_ids", "add_folder_ids", "remove_folder_ids")
         return changes.model_copy(
             update={
-                field: [_resolved(folders, wanted) for wanted in named]
+                field: [_listed(folders, wanted) for wanted in named]
                 for field in fields
                 if (named := getattr(changes, field))
             }
         )
+
+    async def _parent(self, account_id: str, folder: str | None) -> str | None:
+        """The folder a folder goes into, a role resolved: one the account
+        lists, or None for the top."""
+        return None if folder is None else _listed(await self.all(account_id), folder)
+
+    async def _may_delete(
+        self, access: Access, account_id: str, folder_id: str, folders: list[Folder]
+    ) -> None:
+        """A folder moved below the trash takes its messages there, as a
+        deletion: it needs delete_message as well, and where the grants
+        narrow it to folders, on the folder moved."""
+        access.require("delete_message", account_id)
+        reach = await reach_of(
+            self._calls, access, "delete_message", account_id, folders
+        )
+        if reach is not None and folder_id not in reach.ids:
+            raise outside("delete_message", "into the trash")
 
     async def _own_folder(
         self, access: Access, operation: str, account_id: str, folder_id: str
@@ -197,6 +220,23 @@ def holder(folders: list[Folder], folder_id: str) -> Callable[[Iterable[str]], b
     return lambda folder_ids: not outside.intersection(folder_ids)
 
 
+def in_trash(folders: list[Folder]) -> frozenset[str]:
+    """The ids of the trash and of every folder below it."""
+    by_id = {f.id: f for f in folders}
+
+    def below_the_trash(folder: Folder) -> bool:
+        seen: set[str] = set()
+        current: Folder | None = folder
+        while current is not None and current.id not in seen:
+            if current.role is FolderRole.TRASH:
+                return True
+            seen.add(current.id)
+            current = by_id.get(current.parent_id) if current.parent_id else None
+        return False
+
+    return frozenset(f.id for f in folders if below_the_trash(f))
+
+
 def is_role(folder: str) -> bool:
     return folder in FolderRole.__members__.values()
 
@@ -213,6 +253,14 @@ def _is_all(folders: list[Folder], folder_id: str) -> bool:
     """Whether the folder is the one with the role ``all``."""
     found = find_folder(folders, folder_id)
     return found is not None and found.role is FolderRole.ALL
+
+
+def _listed(folders: list[Folder], folder: str) -> str:
+    """The id of a folder the account lists, by its id or its role."""
+    found = _resolved(folders, folder)
+    if not any(f.id == found for f in folders):
+        raise missing("folder", folder)
+    return found
 
 
 def _resolved(folders: list[Folder], folder: str) -> str:

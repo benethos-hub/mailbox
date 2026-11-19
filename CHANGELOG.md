@@ -94,6 +94,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 - **Breaking:** `benethos-mailbox-common`: `mail.marks.Mark` has no
   field `icon`. A mark is its keyword, its word and whether it shows.
   The configuration UI picks its icons itself.
+- A folder named in a message change, or as the parent of a folder,
+  must be one the account lists, by id or role. Any other name answers
+  `404`, as it did on Gmail and JMAP accounts. On Microsoft accounts
+  Graph's well-known folder names no longer pass: use the role, such as
+  `trash`.
 - The images install platformdirs 4.14.7 from the lockfile, the service
   image fastapi 0.165.0, annotated-doc 0.0.7, imapclient 4.3.0 and
   publicsuffixlist 1.1.2.20261118. imapclient 4.3.0 refuses NUL, CR and LF in every IMAP
@@ -184,9 +189,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   proxy named by `HTTP_PROXY`, or on Windows by the system. Over https a
   proxy of the environment still counts.
 - The Python client, and the MCP server with it, no longer repeats a
-  `MAILBOX_SERVICE_URL` it cannot read in its error. A password in such
-  an address stood in the error, and with it in a model's context and
-  logs.
+  `MAILBOX_SERVICE_URL` it cannot read, or one that is not http or
+  https, in its error. A password in such an address stood in the
+  error, and with it in a model's context and logs.
 - A grant's recipients compare without regard to case alone. `ß` matched
   `ss` before, so a grant for `weiß@example.org` allowed
   `weiss@example.org`, another mailbox, and `*@straße.de` another domain.
@@ -210,13 +215,16 @@ adheres to [Semantic Versioning](https://semver.org/).
   with a dash or is longer than 63 characters, and the sender check
   reads no such domain. An account that stored such a name fails to
   connect until it is changed.
-- **Breaking:** a move into the trash needs `delete_message` as well, by
-  `update_message` and by a batch. A grant that names `update_message`
-  without `delete_message` could put mail into the trash. `mail.write`
+- **Breaking:** a move into the trash or a folder below it needs
+  `delete_message` as well, by `update_message` and by a batch, and so
+  does moving a folder below the trash with `update_folder`. A grant
+  that names `update_message` without `delete_message` could put mail
+  into the trash. `mail.write`
   holds both, so a grant with the group changes nothing. Where the
   grants narrow `delete_message` to folders, the move takes only a
   message in one of them, as `DELETE` does. Moving out of the trash and
-  into junk need `update_message` alone.
+  into junk need `update_message` alone. Another spelling of the trash's
+  id no longer passes.
 
 ## [0.7.5] - 2026-11-17
 
