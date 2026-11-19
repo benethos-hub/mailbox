@@ -148,18 +148,36 @@ class MailboxService:
         if refused:
             raise refused[message_id]
 
-    async def _require_delete_into_the_trash(
-        self, access: Access, account_id: str, changes: MessageUpdate
-    ) -> None:
+    async def _trash_refused(
+        self, access: Access, account_id: str, ids: list[str], changes: MessageUpdate
+    ) -> dict[str, MailboxServiceError]:
         """A move into the trash is a deletion: it needs delete_message as
-        well. Out of the trash and into junk need update_message alone."""
+        well, and where the grants narrow it to folders, on the folder of
+        each message, as DELETE does. Raises without the right at all, and
+        answers the messages of ``ids`` it does not reach, each with its
+        error. Out of the trash and into junk need update_message alone."""
         into = [*(changes.folder_ids or []), *(changes.add_folder_ids or [])]
-        if not into or access.allows("delete_message", account_id):
-            return
+        if not into:
+            return {}
+        scopes = access.folder_scopes("delete_message", account_id)
+        if scopes is None and access.allows("delete_message", account_id):
+            return {}
         folders = await self._folders.all(account_id)
         trash = {f.id for f in folders if f.role is FolderRole.TRASH}
-        if trash.intersection(into):
-            access.require("delete_message", account_id)
+        if not trash.intersection(into):
+            return {}
+        access.require("delete_message", account_id)
+        reach = await reach_of(
+            self._calls, access, "delete_message", account_id, folders
+        )
+        if reach is None:
+            return {}
+        places = await self._calls.places(account_id, ids)
+        return {
+            message_id: outside("delete_message", "into the trash")
+            for message_id in ids
+            if not any(f in reach.ids for f in places.get(message_id, []))
+        }
 
     async def hearing(
         self, access: Access, account_id: str
@@ -260,10 +278,12 @@ class MailboxService:
         access.require("update_message", account_id)
         await self._calls.require(account_id, for_update(changes))
         changes = await self._folders.with_roles_resolved(account_id, changes)
-        await self._require_delete_into_the_trash(access, account_id, changes)
         await self._require_reached(
             access, "update_message", account_id, message_id, changes.named_folders()
         )
+        refused = await self._trash_refused(access, account_id, [message_id], changes)
+        if refused:
+            raise refused[message_id]
         return await self._calls.update_one(account_id, message_id, changes)
 
     async def delete_message(
@@ -292,7 +312,6 @@ class MailboxService:
                 raise BadRequestError("an update needs changes")
             await self._calls.require(account_id, for_update(batch.changes))
             changes = await self._folders.with_roles_resolved(account_id, batch.changes)
-            await self._require_delete_into_the_trash(access, account_id, changes)
             outcomes = dict(
                 await self._outside(
                     access,
@@ -303,6 +322,10 @@ class MailboxService:
                 )
             )
             rest = [i for i in batch.ids if i not in outcomes]
+            outcomes.update(
+                await self._trash_refused(access, account_id, rest, changes)
+            )
+            rest = [i for i in rest if i not in outcomes]
             if rest:
                 outcomes.update(await self._calls.update(account_id, rest, changes))
         else:
