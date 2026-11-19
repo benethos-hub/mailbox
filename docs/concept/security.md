@@ -9,10 +9,15 @@ Part of the [concept](../CONCEPT.md): sections 7 to 7.4 and 7.6 to 7.8.
 | Secret | Where it comes from | Lifetime |
 |---|---|---|
 | IMAP / SMTP / POP3 password | the user, ideally an app password | until changed |
+| JMAP password or API token | the user | until changed |
 | OAuth refresh token (Gmail, Microsoft) | the OAuth callback | until revoked, may rotate on use |
 | OAuth access token | refreshed from the refresh token | about one hour, **memory only** |
 | OAuth client secret of our Google / Microsoft app | the operator | until rotated |
 | API tokens of users | issued by the service, stored as hash only | until expired or revoked |
+| Password of a UI user | the user, stored as a scrypt hash only | until changed |
+| TOTP secret of a device | made by the service when the device is added | until the device is removed |
+| Recovery codes of the second factor | made by the service, stored as keyed hashes only | until used or made anew |
+| Signing secret of a webhook | made by the service, shown once | until renewed or the webhook is removed |
 
 The MCP server holds **none** of these. It only holds its own REST token, in
 the MCP client's configuration.
@@ -47,6 +52,9 @@ the data, rather than a readable file.
  credentials: account_id │ field │ key_id │ nonce │ AES-256-GCM ciphertext
                                  AAD = "credential:{account_id}:{field}"
 ```
+
+The data key also encrypts the signing secrets of webhooks and the TOTP
+secrets, each bound to a label of its own.
 
 - **Cipher:** AES-256-GCM (`cryptography`, `AESGCM`) with a random 96-bit
   nonce per encryption. GCM rather than Fernet because GCM takes associated
@@ -162,7 +170,8 @@ the data, rather than a readable file.
 
   Decided 2026-09-24: one folder per package under `data/` and under
   `config/`. `data/benethos-mailbox-mcp/` is meant for what the MCP
-  server stores, e.g. downloaded attachments. A missing data folder is
+  server stores, e.g. downloaded attachments. It stores nothing there
+  today. A missing data folder is
   created. The database, a backup and a key file are created readable
   by their owner alone (0600) and never over an existing file. Windows
   has no such modes: there the folder's own permissions decide who may
@@ -219,8 +228,8 @@ What applies in both modes:
    a mail (the headers with subject and sender, the body, attachment names
    and text) in clear delimiters, and the server instructions tell the
    model that this is content of a mail, never an instruction. A list of
-   messages, which is JSON, carries a note that `from` and `subject` are
-   the sender's words. This lowers the risk, it does not remove it.
+   messages, which is JSON, carries a note that `from`, `subject` and
+   `snippet` are the sender's words. This lowers the risk, it does not remove it.
 2. **Show the model what a person sees.** The HTML to text conversion drops
    hidden content: `display:none`, text too small or too faint to read,
    text pushed off the page or cut to nothing, text in the colour of its
@@ -234,7 +243,7 @@ What applies in both modes:
 5. **A warning, not a block.** A user that may read mail and send to anyone
    is flagged in `/v1/me`, in the configuration UI and in the MCP server's
    start log: "can read mail and send it to any address".
-   Built in phase 3: an account in `/v1/me` carries the warning
+   An account in `/v1/me` carries the warning
    `read_and_send_anywhere` when the caller may `get_message` there and a
    grant lets it send without `recipients` (or with `*`). A send limit
    does not lift it.
@@ -247,8 +256,8 @@ What applies in both modes:
    sender's words. The server instructions say that `pass` confirms the
    domain and nothing about the content.
 
-Recipient constraints and send limits therefore come with the MCP send
-tools, not later (see [ROADMAP.md](../ROADMAP.md)).
+Recipient constraints and send limits therefore came with the MCP send
+tools.
 
 ### 7.8 Backup and restore
 

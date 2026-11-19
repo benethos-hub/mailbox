@@ -9,7 +9,7 @@ service. Rights belong to the user. A bearer token is only one way for a
 user to prove who it is.
 
 The model as one piece, how a right is resolved and shown, and the
-changes proposed to it: [PERMISSIONS.md](../PERMISSIONS.md). This section
+changes made to it on 2026-10-05: [PERMISSIONS.md](../PERMISSIONS.md). This section
 keeps the decisions and the details.
 
 Terms, since "account" is taken:
@@ -106,8 +106,8 @@ with the role
   | `accounts.manage` | `update_account`, `delete_account`, `verify_account`, `list_server_names`, credentials of mail accounts |
   | `accounts.connect` | `discover_account`, `start_device_oauth`, `poll_device_oauth`, `create_account`. Of the service |
   | `webhooks.manage` | `list_webhooks`, `get_webhook`, `create_webhook`, `update_webhook`, `renew_webhook_secret`, `delete_webhook`. Of the service |
-  | `users.read` | users, their tokens, roles, to read. Of the service |
-  | `users.manage` | users, their tokens, roles. Of the service |
+  | `users.read` | `list_users`, `get_user`, `list_tokens`, `get_second_factor`, `list_roles`, `get_role`. Of the service |
+  | `users.manage` | those of `users.read`, and `create_user`, `update_user`, `delete_user`, `create_token`, `revoke_token`, `set_password`, `remove_second_factor`, `remove_totp_device`, `remove_passkey`, `create_role`, `replace_role`, `delete_role`. Of the service |
   | `admin` | everything, and `show_recovery_key` (the recovery key in the UI) and `read_service_log` (the log page), [UI.md](../UI.md) 6.5, which nothing else gives. Of the service |
 
   Permanent deletion and sending are their own groups on purpose: they are
@@ -143,9 +143,8 @@ with the role
   holds itself, so a delegated administrator cannot create anyone stronger
   than itself.
 - **Constraints.** A grant can narrow further without changing the model:
-  `recipients` (send only to `*@firma.de`) and `max_sends_per_day` come
-  with the MCP send tools, since they are the main guard against prompt
-  injection (7.7). `expires_at` ends a grant at a time. `folders` (read
+  `recipients` (send only to `*@firma.de`) and `max_sends_per_day` are
+  the main guard against prompt injection (7.7). `expires_at` ends a grant at a time. `folders` (read
   only `INBOX` and `Rechnungen`) keeps reading, writing and deleting to
   those folders and their subfolders ([PERMISSIONS.md](../PERMISSIONS.md)
   8.5).
@@ -209,9 +208,7 @@ with the role
   the user says whether it may sign in to the UI at all. Without it the
   user is an API user: tokens only.
   - A new user is an API user unless `ui_sign_in` is set. The first
-    admin from `users create-admin` has it. The migration sets it for
-    every user that has a password and leaves it off for the others,
-    so nothing changes for anyone.
+    admin from `users create-admin` has it.
   - Switched off: the stored password is deleted, running UI sessions
     end at the next request, and a sign-in answers as a wrong password
     does, so nobody learns that the name exists. The log names the
