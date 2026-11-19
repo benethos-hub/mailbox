@@ -3,6 +3,8 @@ their subscriptions, and their state without selecting them."""
 
 from __future__ import annotations
 
+import imaplib
+from functools import partial
 from typing import TYPE_CHECKING, Any
 
 from ..transport import text
@@ -85,14 +87,17 @@ class Folders:
             client.subscribe_folder(name)
 
     def rename_folder(self, old: str, new: str) -> None:
-        """Rename, and move the subscription along where the server has not
-        done so itself."""
+        """Rename, and move the subscriptions along where the server has
+        not done so itself: of the folder and of those below it, which
+        RENAME moves as well (RFC 3501)."""
         old, new = command_folder(old), command_folder(new)
         with translated():
             client = self._session.client()
+            subscribed = _subscribed_below(client, old)
             client.rename_folder(old, new)
-            quietly(lambda: client.subscribe_folder(new))
-            quietly(lambda: client.unsubscribe_folder(old))
+            for name in subscribed:
+                quietly(partial(client.subscribe_folder, new + name[len(old) :]))
+                quietly(partial(client.unsubscribe_folder, name))
 
     def delete_folder(self, name: str) -> None:
         """Delete, and drop the subscription, which would otherwise stay."""
@@ -101,3 +106,18 @@ class Folders:
             client = self._session.client()
             quietly(lambda: client.unsubscribe_folder(name))
             client.delete_folder(name)
+
+
+def _subscribed_below(client: Any, folder: str) -> list[str]:
+    """The folder and the subscribed folders below it. Where LSUB fails,
+    the folder alone."""
+    try:
+        listed = client.list_sub_folders("", folder + "*")
+    except imaplib.IMAP4.error:
+        return [folder]
+    below = [
+        str(name)
+        for _, delimiter, name in listed
+        if delimiter and str(name).startswith(folder + text(delimiter))
+    ]
+    return [folder, *below]

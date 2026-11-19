@@ -5,6 +5,7 @@ commands of ``imapclient.IMAPClient`` that ``imap_fake.FakeMailBox`` answers.
 from __future__ import annotations
 
 import imaplib
+import re
 from dataclasses import dataclass, field
 from types import SimpleNamespace
 from typing import Any
@@ -91,9 +92,24 @@ class FolderCommands:
             raise imaplib.IMAP4.error("unsubscribe failed: not subscribed")
         self.subscribed.discard(name)
 
-    def list_sub_folders(self) -> list[tuple[tuple[bytes, ...], bytes, str]]:
+    def list_sub_folders(
+        self, directory: str = "", pattern: str = "*"
+    ) -> list[tuple[tuple[bytes, ...], bytes, str]]:
+        """Every subscription that matches, like a server also of a folder
+        that is gone. ``*`` stands for any characters."""
         self.calls.append(("lsub",))
-        return [f for f in self.list_folders() if f[2] in self.subscribed]
+        matches = re.compile(
+            ".*".join(re.escape(part) for part in (directory + pattern).split("*"))
+        ).fullmatch
+        return [
+            (self._flags_of(name), self.delimiter.encode(), name)
+            for name in sorted(self.subscribed)
+            if matches(name)
+        ]
+
+    def _flags_of(self, name: str) -> tuple[bytes, ...]:
+        folder = self.folders.get(name)
+        return tuple(f.encode() for f in folder.flags) if folder else (b"\\Noselect",)
 
     def select_folder(self, name: str, readonly: bool = False) -> dict[bytes, Any]:
         self.calls.append(("select", name, readonly))
