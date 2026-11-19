@@ -148,6 +148,19 @@ class MailboxService:
         if refused:
             raise refused[message_id]
 
+    async def _require_delete_into_the_trash(
+        self, access: Access, account_id: str, changes: MessageUpdate
+    ) -> None:
+        """A move into the trash is a deletion: it needs delete_message as
+        well. Out of the trash and into junk need update_message alone."""
+        into = [*(changes.folder_ids or []), *(changes.add_folder_ids or [])]
+        if not into or access.allows("delete_message", account_id):
+            return
+        folders = await self._folders.all(account_id)
+        trash = {f.id for f in folders if f.role is FolderRole.TRASH}
+        if trash.intersection(into):
+            access.require("delete_message", account_id)
+
     async def hearing(
         self, access: Access, account_id: str
     ) -> Callable[[ChangeRecord], bool] | None:
@@ -247,6 +260,7 @@ class MailboxService:
         access.require("update_message", account_id)
         await self._calls.require(account_id, for_update(changes))
         changes = await self._folders.with_roles_resolved(account_id, changes)
+        await self._require_delete_into_the_trash(access, account_id, changes)
         await self._require_reached(
             access, "update_message", account_id, message_id, changes.named_folders()
         )
@@ -278,6 +292,7 @@ class MailboxService:
                 raise BadRequestError("an update needs changes")
             await self._calls.require(account_id, for_update(batch.changes))
             changes = await self._folders.with_roles_resolved(account_id, batch.changes)
+            await self._require_delete_into_the_trash(access, account_id, changes)
             outcomes = dict(
                 await self._outside(
                     access,

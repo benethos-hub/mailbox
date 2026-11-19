@@ -242,6 +242,22 @@ of the CI or of a release. It needs a development dependency and the
 history of the repository in the CI, and it names breaks only, not
 additions.
 
+## Moving mail as a right of its own
+
+`update_message` covers keywords, read and unread, the star and the
+move between folders. A user that should only mark mail gets the move
+with it, and a move into a remote folder can make a mail as good as
+gone for its owner.
+
+- A right of its own for the move on the same route, as
+  `delete_message_permanent` is one for `DELETE` with `permanent`.
+- Who would use it: a tool that only labels, an assistant over MCP
+  that may mark and not tidy.
+- Open: with Gmail a label is a folder as well, so marking and moving
+  are not apart there. And a new right changes every grant that names
+  single operations.
+- Asked for once so far.
+
 ## Further
 
 - **Outbox with scheduled sending** (`send_at`): sending is queued,

@@ -1642,7 +1642,7 @@ with the role
   |---|---|
   | `accounts.read` | `list_accounts`, `get_account`, `get_status` |
   | `mail.read` | `list_all_messages`, `list_folders`, `list_messages`, `get_message`, `get_message_raw`, `get_attachment`, `list_threads`, `get_thread`, `list_changes`, `list_all_changes` |
-  | `mail.write` | `update_message`, `delete_message` to trash, `batch_messages`, `create_folder`, `update_folder` |
+  | `mail.write` | `update_message`, `delete_message` to trash (also by a move), `batch_messages`, `create_folder`, `update_folder` |
   | `mail.delete` | `delete_message_permanent` (`delete_message` with `permanent=true`), `delete_folder` |
   | `drafts` | `list_drafts`, `create_draft`, `update_draft`, `delete_draft` |
   | `send` | `send_message`, `send_draft` |
@@ -1669,7 +1669,10 @@ with the role
   the `account_id` from the path against the effective rights. Operations
   that carry an action in the body (`batch_messages`) are checked per action:
   a batch needs `batch_messages` and the right of the single operation
-  (`update_message`, `delete_message` or `delete_message_permanent`).
+  (`update_message`, `delete_message` or `delete_message_permanent`). A
+  move into the trash, by a single update or a batch, needs
+  `delete_message` as well. Out of the trash and into junk need
+  `update_message` alone.
 - **Cross-account operations filter instead of failing.** `list_accounts`
   and `GET /v1/changes` return only accounts the user has a grant for.
 - **No existence leak.** An account the user has no grant for answers `404`,
