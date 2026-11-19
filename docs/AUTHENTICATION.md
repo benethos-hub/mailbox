@@ -155,8 +155,8 @@ when each was added and when it last signed in.
 **Adding a device:**
 
 1. **Add a device** asks for its name and the password again, as the
-   recovery key does. With a second factor already on, it asks for a
-   code as well: of any device or a recovery code. Whoever holds the
+   recovery key does. With a second factor already on, it asks for the
+   second factor as well: a code, a passkey or a recovery code. Whoever holds the
    password and an open session alone cannot slip a device of its own
    in.
 2. The service makes the secret and shows it as a **QR code** to scan
@@ -308,7 +308,8 @@ hours however used, and a user holds 10 at most
 
 **The recovery key** (CONCEPT 7.3, [UI.md](UI.md) 6.5) opens every
 stored secret. Its page asks an administrator with a second factor for
-a code as well as the password: of any device or a recovery code.
+the second factor as well as the password: a code, a passkey or a
+recovery code.
 Without a second factor the password alone does, as before.
 
 **API:**
@@ -347,7 +348,7 @@ Without a second factor the password alone does, as before.
 |---|---|---|
 | signed in with a code | `auth.signed_in`, credential `password+totp`, the line names the device | yes |
 | signed in with a recovery code | `auth.signed_in`, credential `password+recovery`, and `auth.recovery_code_used`, a warning | yes |
-| a wrong code at the sign-in | `auth.code_failed`, a warning | yes |
+| a wrong code or passkey at the sign-in | `auth.code_failed`, a warning | yes |
 | TOTP device added, the first one turns the second factor on | `users.totp_added` | yes |
 | TOTP device renamed | `users.totp_renamed` | yes |
 | TOTP device removed, by the person or a user | `users.totp_removed` | yes |
