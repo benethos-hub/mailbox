@@ -10,7 +10,8 @@ import httpx
 from .run import Run
 
 # Gmail: no keywords, no push, refused recipients come back later as a
-# bounce mail.
+# bounce mail. Gmail names its receiving server itself: the sender check
+# reads its entries.
 GMAIL = frozenset(
     {
         "read_state",
@@ -26,11 +27,14 @@ GMAIL = frozenset(
         "sent_copy",
         "threads",
         "external_changes",
+        "sender_check",
     }
 )
 # A JMAP server with submission, an event source and the special folders:
-# everything but naming refused recipients at once.
-JMAP = GMAIL | {"keywords", "push"}
+# everything but naming refused recipients at once. The sender check only
+# where the account names its receiving server, which the test accounts
+# do not.
+JMAP = (GMAIL - {"sender_check"}) | {"keywords", "push"}
 
 
 def named(run: Run, described: dict[str, Any], expected: frozenset[str]) -> None:
