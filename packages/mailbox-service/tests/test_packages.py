@@ -145,3 +145,36 @@ def test_the_packages_import_only_lines_below(layer: str) -> None:
         if line_of[other] <= line_of[own]
     ]
     assert not violations, "against the lines:\n  " + "\n  ".join(violations)
+
+
+# What holds a change of ours to messages under writing of the sync, so
+# that a pass it overtakes applies nothing (CONCEPT 4.1), and the one
+# module of domain/mailbox that calls it.
+OWN_WRITES = {"writing", "pausing", "relocate", "forget"}
+WRITES_HOME = f"{PACKAGE}.domain.mailbox.calls"
+
+
+def _of_the_sync(node: ast.Attribute) -> bool:
+    """Whether the attribute is one of ``sync`` or ``self._sync``."""
+    held = node.value
+    if isinstance(held, ast.Attribute):
+        return held.attr == "_sync"
+    return isinstance(held, ast.Name) and held.id == "sync"
+
+
+def test_our_changes_to_messages_are_made_in_calls() -> None:
+    """SyncService.writing, pausing, relocate and forget are called in
+    domain/mailbox/calls.py alone, which keeps every change of ours under
+    writing in one module."""
+    violations = [
+        f"{name}:{node.lineno} {node.attr}"
+        for name, path in modules()
+        if name != WRITES_HOME
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8")))
+        if isinstance(node, ast.Attribute)
+        and node.attr in OWN_WRITES
+        and _of_the_sync(node)
+    ]
+    assert not violations, "a change of ours outside calls.py:\n  " + "\n  ".join(
+        violations
+    )

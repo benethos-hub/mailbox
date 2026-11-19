@@ -1,9 +1,9 @@
 """Rules for the code across the four packages, held where they all are
 read (docs/ARCHITECTURE.md 13): the tests of every package, its helpers
 and fixtures, the live checks, the entries of the packages, the size of
-the tests here and of live/, and how the service and the MCP server use
-the common package. Each package's own tests hold the rules for its own
-source and run alone."""
+the tests here and of live/, how deep a test reads, and how the service
+and the MCP server use the common package. Each package's own tests
+hold the rules for its own source and run alone."""
 
 from __future__ import annotations
 
@@ -197,6 +197,55 @@ def test_two_test_modules_of_a_folder_share_no_fixture_name() -> None:
         if len(names) > 1
     ]
     assert not violations, "a fixture name twice:\n  " + "\n  ".join(violations)
+
+
+# Where a test reads two private attributes deep, each with its reason
+# (review 2026-11-19).
+DEEP = {
+    "packages/mailbox-client/tests/test_environment.py _http._mounts": (
+        "the proxies httpx took from the environment, which it shows nowhere"
+    ),
+    "packages/mailbox-service/tests/data/protocols/test_http_trust.py "
+    "_transport._pool": "the context httpx builds, which it shows nowhere",
+    "packages/mailbox-service/tests/data/protocols/test_http_trust.py "
+    "_pool._ssl_context": "the context httpx builds, which it shows nowhere",
+    "packages/mailbox-service/tests/domain/accounts/test_accounts.py "
+    "_gone._after": "what is noted of a deleted account, which nothing shows",
+    "packages/mailbox-service/tests/domain/mailbox/test_threads.py "
+    "_threads._limit": "the messages a thread lists, set for one test",
+    "packages/mailbox-service/tests/domain/sync/test_threads.py "
+    "_threads._references": "the references kept, set for one test",
+}
+
+
+def _private(name: str) -> bool:
+    return name.startswith("_") and not name.startswith("__")
+
+
+def _deep_reads() -> set[str]:
+    found = set()
+    for _, path in _test_modules():
+        name = path.relative_to(ROOT).as_posix()
+        for node in ast.walk(ast.parse(path.read_text("utf-8"))):
+            if (
+                isinstance(node, ast.Attribute)
+                and isinstance(node.value, ast.Attribute)
+                and _private(node.attr)
+                and _private(node.value.attr)
+            ):
+                found.add(f"{name} {node.value.attr}.{node.attr}")
+    return found
+
+
+def test_no_test_reads_two_private_attributes_deep() -> None:
+    """A test that reads ``x._a._b`` holds two modules to their insides
+    and breaks with a move that changes nothing. It checks the behaviour,
+    or sets what it needs through a parameter."""
+    found = _deep_reads()
+    violations = sorted(found - set(DEEP))
+    assert not violations, "two private attributes deep:\n  " + "\n  ".join(violations)
+    stale = sorted(set(DEEP) - found)
+    assert not stale, "remove from DEEP:\n  " + "\n  ".join(stale)
 
 
 def test_no_live_script_imports_another() -> None:
