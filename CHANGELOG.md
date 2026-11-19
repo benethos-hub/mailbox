@@ -171,6 +171,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   environment for a service over http. The token went in clear to a
   proxy named by `HTTP_PROXY`, or on Windows by the system. Over https a
   proxy of the environment still counts.
+- The Python client, and the MCP server with it, no longer repeats a
+  `MAILBOX_SERVICE_URL` it cannot read in its error. A password in such
+  an address stood in the error, and with it in a model's context and
+  logs.
 - A grant's recipients compare without regard to case alone. `ß` matched
   `ss` before, so a grant for `weiß@example.org` allowed
   `weiss@example.org`, another mailbox, and `*@straße.de` another domain.
