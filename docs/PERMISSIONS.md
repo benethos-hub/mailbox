@@ -87,6 +87,8 @@ Two kinds of right, kept in two lists of a user or a role (8.1):
   accounts, in `service` the audit of administration (8.6).
 - Whoever connects an account gets `accounts.manage` on it, unless it
   holds that there already.
+- `list_server_names` reads the newest mails of the inbox for choosing a
+  setting, and needs `update_account` as well.
 
 Two operations are open to every user: `get_me` and `list_permissions`.
 A third takes no token at all: `get_linked_attachment`, whose secret is
