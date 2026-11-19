@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from ....errors import MailboxServiceError, missing
 from ...models import (
+    OUTSIDE_ALL,
     AttachmentContent,
     Folder,
     FolderRole,
@@ -120,8 +121,7 @@ def _within(found: Message, folder_id: str, folders: list[Folder]) -> bool:
     roles = {f.id: f.role for f in folders}
     if roles.get(folder_id) is not FolderRole.ALL:
         return folder_id in found.folder_ids
-    outside = (FolderRole.TRASH, FolderRole.JUNK)
-    return not any(roles.get(f) in outside for f in found.folder_ids)
+    return not any(roles.get(f) in OUTSIDE_ALL for f in found.folder_ids)
 
 
 def _matches(found: Message, search: MessageFilter) -> bool:

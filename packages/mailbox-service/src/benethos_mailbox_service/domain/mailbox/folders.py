@@ -12,6 +12,7 @@ from collections.abc import Callable, Iterable
 from contextlib import suppress
 
 from ...data.models import (
+    OUTSIDE_ALL,
     Folder,
     FolderCreate,
     FolderRole,
@@ -216,8 +217,8 @@ def holder(folders: list[Folder], folder_id: str) -> Callable[[Iterable[str]], b
     found = find_folder(folders, folder_id)
     if found is None or found.role is not FolderRole.ALL:
         return lambda folder_ids: folder_id in folder_ids
-    outside = {f.id for f in folders if f.role in (FolderRole.TRASH, FolderRole.JUNK)}
-    return lambda folder_ids: not outside.intersection(folder_ids)
+    left_out = {f.id for f in folders if f.role in OUTSIDE_ALL}
+    return lambda folder_ids: not left_out.intersection(folder_ids)
 
 
 def in_trash(folders: list[Folder]) -> frozenset[str]:
