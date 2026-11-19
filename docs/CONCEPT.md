@@ -820,7 +820,7 @@ the work in order. The rules:
 The capabilities are finer, each guarding one thing: `read_state`,
 `stars`, `keywords`, `folders`, `move`, `trash`, `purge`, `labels`,
 `search`, `drafts`, `send`, `sent_copy`, `threads`, `push`,
-`external_changes` and `refused`. The marks are two lists on the
+`external_changes`, `refused` and `sender_check` (6.3). The marks are two lists on the
 account, `marks.read` and `marks.written`: the marks of RFC 8621 it
 reads and those it writes. `flags` is gone. `stable_ids`, `delta` and
 `server_search` left the API.
