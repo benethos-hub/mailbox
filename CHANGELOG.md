@@ -183,6 +183,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   factor. It answered `500` before.
 - Renaming an IMAP folder keeps its subfolders subscribed under their
   new names.
+- In the configuration UI the question before a mail is sent and before
+  a draft is deleted names its button, Send and Delete draft. It said
+  OK.
 
 ### Security
 

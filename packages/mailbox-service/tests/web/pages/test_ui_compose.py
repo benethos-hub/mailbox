@@ -171,6 +171,18 @@ def test_delete_a_draft(ui: TestClient, account_id: str) -> None:
     assert "Throwaway" not in deleted.text
 
 
+def test_the_dialogs_name_their_button(ui: TestClient, account_id: str) -> None:
+    """The question before a send and before a deletion carries the word
+    of its button, and the deletion is red (docs/ui/look.md)."""
+    saved = post(
+        ui,
+        f"/ui/accounts/{account_id}/compose",
+        {"subject": "Throwaway", "do": "save"},
+    )
+    assert 'data-confirm-label="Send"' in saved.text
+    assert 'data-confirm-label="Delete draft" data-confirm-danger' in saved.text
+
+
 def test_saving_a_draft_keeps_its_attachments(
     ui: TestClient, services: Services, account_id: str
 ) -> None:

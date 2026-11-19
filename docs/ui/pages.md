@@ -49,7 +49,7 @@ The click budget, counted from the overview after signing in:
 |---|---|---|
 | Read a mail of one account | 2 | Mail on its row of the overview or of Accounts, the message |
 | Read the newest mail of every account | 2 | Mail search, the message |
-| Reply to a mail | 5 | Mail search, the message, Reply, Send, OK in the dialog |
+| Reply to a mail | 5 | Mail search, the message, Reply, Send, Send in the dialog |
 | Connect an account | 4 | Accounts, Connect, Look up, Connect (or Sign in with the provider) |
 | Change an account's password | 3 | Accounts, the account, Save |
 | Create a user with rights | 3 | Users, New user, Create |
