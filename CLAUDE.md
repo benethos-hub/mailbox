@@ -291,7 +291,10 @@ docs/
                           #   3) and the rules (sections 5 to 17)
   LIMITS.md               # every rate limit and how they work together
   PERMISSIONS.md          # users, roles and rights
-  LOGGING.md              # what the service log holds, at which level
+  LOGGING.md              # what the service log holds, at which level,
+                          #   the rules for a line
+  logging/                #   every activity, and where they live in
+                          #   the code
   AUDIT.md                # the audit of administration
   UI.md                   # the goals, the rules for a page, the new page
                           #   checklist, and where each section is
