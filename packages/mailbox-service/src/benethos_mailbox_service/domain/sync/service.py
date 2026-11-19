@@ -5,21 +5,13 @@ folder, UIDVALIDITY and UID. Callers get our own id instead, kept in the
 index. A sync pass compares the provider's folders with the index: a message
 that left one folder and one with the same ``Message-ID`` that arrived in
 another is the same message and keeps its id. Anything ambiguous is not
-guessed: the old id is dropped and the new place gets a new one.
+guessed: the old id is dropped and the new place gets a new one. The
+passes, and what they report to the change feed, are ``runner``'s.
 
-A provider with stable ids needs no index. Where it reports changes per
-folder (``DELTA``, Graph delta queries), a pass asks each folder what
-changed since its last token and records that instead. The passes run
-in ``runner``.
+A provider with stable ids needs no index.
 
 Where the adapter has ``THREADS`` but no thread ids of its own (IMAP),
 the index keeps the threads too (``threads``).
-
-What a pass finds goes into the change feed: new messages as created,
-moved ones, ones whose thread went into another and, where the provider
-can tell, ones whose flags changed as updated, vanished ones as deleted.
-The first pass of an account records nothing, since the messages
-already there are not new.
 """
 
 from __future__ import annotations

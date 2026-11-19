@@ -820,7 +820,7 @@ the work in order. The rules:
 The capabilities are finer, each guarding one thing: `read_state`,
 `stars`, `keywords`, `folders`, `move`, `trash`, `purge`, `labels`,
 `search`, `drafts`, `send`, `sent_copy`, `threads`, `push`,
-`external_changes` and `refused`. The marks are two lists on the
+`external_changes`, `refused` and `sender_check` (6.3). The marks are two lists on the
 account, `marks.read` and `marks.written`: the marks of RFC 8621 it
 reads and those it writes. `flags` is gone. `stable_ids`, `delta` and
 `server_search` left the API.
@@ -1749,7 +1749,9 @@ with the role
     character classes (NIST SP 800-63B for a single factor).
   - A wrong name and a wrong password answer alike, in the same time: an
     unknown name is checked against a hash of its own.
-  - Users change their own password with the current one. A user with
+  - Users change their own password with the current one and, with a
+    second factor on, that factor as well (AUTHENTICATION.md). The
+    change forced after the sign-in asks for no factor. A user with
     `users.manage` sets the password of a user whose rights it covers, as
     for tokens: whoever sets a password can sign in as that user. A
     password set by someone else must be changed at the next sign-in.

@@ -352,8 +352,9 @@ class AccountService:
         """The names receiving servers wrote into the newest mails of the
         inbox, for whoever may change the account to choose its own server
         from. Those most often on top come first: a server adds its entry
-        on top, one a mail brought along stands below. None where the
-        account names its server itself, as Gmail and Microsoft do. The
+        on top, one a mail brought along stands below. Nothing read and
+        no names where the account names its server itself, as Gmail and
+        Microsoft do. The
         service never sets one: a mail can carry any name."""
         access.require("update_account", account_id)
 

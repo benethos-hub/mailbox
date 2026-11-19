@@ -543,7 +543,7 @@ and that each is listed here.
 | `system.not_audited` | an activity the audit could not keep |
 | `auth.signed_in` | a sign-in to the UI |
 | `auth.sign_in_failed` | a failed sign-in to the UI |
-| `auth.code_failed` | a wrong code of the second factor at the sign-in |
+| `auth.code_failed` | a wrong code or passkey of the second factor at the sign-in |
 | `auth.recovery_code_used` | a sign-in with a recovery code |
 | `auth.session_evicted` | a sign-in that ended the user's oldest session |
 | `auth.signed_out` | a sign-out of the UI |

@@ -121,7 +121,8 @@ some folders, such as the invoices, and end after a week.
   outside the database.
 - **Reading:** folders, lists and search, one account or all at once,
   conversations across folders, messages as text and HTML, attachments,
-  the raw source. Message ids stay
+  the raw source, and the receiving server's check of the sender's
+  domain (`sender_check`). Message ids stay
   the same when a message moves, kept by a background sync. A link to an
   attachment lets another service fetch the file once, without a token.
 - **Writing:** read state, stars and keywords, moving, deleting,
@@ -135,7 +136,8 @@ some folders, such as the invoices, and end after a week.
 - **Users and rights:** users, roles and grants per account and per
   operation, down to folders, grants that expire, API tokens, limits on
   sending (allowed recipients, sends per day), an audit of every send
-  and an audit of administration.
+  and an audit of administration, and a second factor for the UI
+  sign-in: an authenticator app or a passkey.
 - **MCP server:** reads, sorts, writes drafts, sends and tells what is
   new, over stdio or streamable HTTP, offering only the mail tools its
   token may use, `server_status` always, and following its rights while
