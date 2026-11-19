@@ -131,3 +131,10 @@ def test_deleting_an_account_drops_its_entries(tmp_path: Path) -> None:
     assert index.get(ACC, "msg_1") is None
     assert index.folder_states(ACC) == {}
     db.close()
+
+
+def test_entries_by_their_header(index: MessageIndexRepository) -> None:
+    index.add(ACC, [entry(1, header="<1@x>"), entry(2, "f_sent", "<2@x>"), entry(3)])
+    assert index.with_header(ACC, ["<2@x>", "<9@x>"]) == [entry(2, "f_sent", "<2@x>")]
+    assert index.with_header(ACC, []) == []
+    assert index.with_header("acc_2", ["<1@x>"]) == []
