@@ -14536,7 +14536,7 @@
           "name": {
             "type": "string",
             "title": "Name",
-            "description": "Unique among the user's devices, e.g. Phone"
+            "description": "Unique among the user's authenticator apps, e.g. Phone"
           },
           "created_at": {
             "type": "string",

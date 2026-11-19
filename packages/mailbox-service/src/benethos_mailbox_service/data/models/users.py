@@ -93,7 +93,9 @@ class TotpDevice(BaseModel):
     a secret of its own. Never the secret."""
 
     id: str
-    name: str = Field(description="Unique among the user's devices, e.g. Phone")
+    name: str = Field(
+        description="Unique among the user's authenticator apps, e.g. Phone"
+    )
     created_at: datetime
     last_used_at: datetime | None = Field(
         default=None, description="Its last code taken, null for none yet"
