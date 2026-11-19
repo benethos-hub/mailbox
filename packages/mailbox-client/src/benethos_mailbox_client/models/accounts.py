@@ -50,9 +50,18 @@ class Account:
 @dataclass(frozen=True, slots=True)
 class ServerName:
     """A receiving server's name as the newest mails of an inbox carry it:
-    in ``count`` of the ``of`` mails read. For choosing the setting
-    ``authserv_id``."""
+    in ``count`` of the mails read, and in ``top`` of them as the topmost
+    entry. For choosing the setting ``authserv_id``."""
 
     id: str
     count: int
-    of: int
+    top: int
+
+
+@dataclass(frozen=True, slots=True)
+class ServerNameList:
+    """The receiving servers' names of the newest mails of an inbox, those
+    most often on top first, and how many ``mails`` were read."""
+
+    mails: int
+    items: list[ServerName]

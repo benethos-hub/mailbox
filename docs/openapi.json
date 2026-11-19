@@ -3820,7 +3820,7 @@
           "accounts"
         ],
         "summary": "List Server Names",
-        "description": "The names receiving servers wrote into the newest ten mails of the\ninbox, for choosing `settings.authserv_id`. A mail can carry any name:\ntake the one the server writes on every mail. The service never sets\nit. Empty for an account that names its server itself, as Gmail and\nMicrosoft do. Needs `update_account`.",
+        "description": "The names receiving servers wrote into the newest ten mails of the\ninbox, for choosing `settings.authserv_id`. `mails` says how many were\nread. A mail can carry any name, and the order is no verdict: never\ntake the first one unseen. A server adds its entry on top, so `top`\ncounts the mails whose topmost entry carries the name. Where the\nserver writes none, the topmost is one the mail brought along. The\nservice never sets the name. Empty for an account that names its\nserver itself, as Gmail and Microsoft do. Needs `update_account`.",
         "operationId": "list_server_names",
         "security": [
           {
@@ -14043,23 +14043,28 @@
             "title": "Count",
             "description": "How many of the mails read carry it."
           },
-          "of": {
+          "top": {
             "type": "integer",
-            "title": "Of",
-            "description": "How many mails were read, ten at most."
+            "title": "Top",
+            "description": "How many of the mails read carry it as their topmost entry. A server adds its entry on top, one a mail brought along stands below."
           }
         },
         "type": "object",
         "required": [
           "id",
           "count",
-          "of"
+          "top"
         ],
         "title": "ServerName",
         "description": "A receiving server's name as the newest mails of the inbox carry it."
       },
       "ServerNameList": {
         "properties": {
+          "mails": {
+            "type": "integer",
+            "title": "Mails",
+            "description": "How many mails were read, ten at most. 0 for an empty inbox and for an account that names its server itself."
+          },
           "items": {
             "items": {
               "$ref": "#/components/schemas/ServerName"
@@ -14070,10 +14075,11 @@
         },
         "type": "object",
         "required": [
+          "mails",
           "items"
         ],
         "title": "ServerNameList",
-        "description": "The names receiving servers wrote into the newest mails of the\ninbox, the most frequent first."
+        "description": "The names receiving servers wrote into the newest mails of the\ninbox, those most often on top first."
       },
       "ServerProtocol": {
         "type": "string",

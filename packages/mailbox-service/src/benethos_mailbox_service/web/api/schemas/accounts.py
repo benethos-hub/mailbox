@@ -57,11 +57,19 @@ class ServerName(BaseModel):
         "Authentication-Results entry."
     )
     count: int = Field(description="How many of the mails read carry it.")
-    of: int = Field(description="How many mails were read, ten at most.")
+    top: int = Field(
+        description="How many of the mails read carry it as their topmost "
+        "entry. A server adds its entry on top, one a mail brought along "
+        "stands below."
+    )
 
 
 class ServerNameList(BaseModel):
     """The names receiving servers wrote into the newest mails of the
-    inbox, the most frequent first."""
+    inbox, those most often on top first."""
 
+    mails: int = Field(
+        description="How many mails were read, ten at most. 0 for an empty "
+        "inbox and for an account that names its server itself."
+    )
     items: list[ServerName]

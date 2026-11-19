@@ -18,7 +18,7 @@ from benethos_mailbox_service.data.models import (
     ProviderType,
     SenderCheck,
 )
-from benethos_mailbox_service.domain.accounts import SeenName
+from benethos_mailbox_service.domain.accounts import SeenName, SeenNames
 from benethos_mailbox_service.web.pages.sender import sender_tag
 
 from ...conftest import browser_user, memory_of, relearn
@@ -125,15 +125,20 @@ def test_a_gmail_account_takes_no_name_of_its_server(
 # --- the names in the newest mails ----------------------------------------------------
 
 
+NONE_READ = SeenNames(0, ())
+
+
 def asked(
-    services: Services, monkeypatch: pytest.MonkeyPatch, *names: SeenName
+    services: Services,
+    monkeypatch: pytest.MonkeyPatch,
+    found: SeenNames = NONE_READ,
 ) -> list[str]:
-    """The account service answers ``names``, and notes each account asked."""
+    """The account service answers ``found``, and notes each account asked."""
     calls: list[str] = []
 
-    async def server_names(access: Any, account_id: str) -> list[SeenName]:
+    async def server_names(access: Any, account_id: str) -> SeenNames:
         calls.append(account_id)
-        return list(names)
+        return found
 
     monkeypatch.setattr(services.accounts, "server_names", server_names)
     return calls
@@ -145,7 +150,9 @@ def test_the_page_reads_the_mailbox_only_when_asked(
     account_id: str,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    calls = asked(services, monkeypatch, SeenName("mx.example.org", 9, 10))
+    calls = asked(
+        services, monkeypatch, SeenNames(10, (SeenName("mx.example.org", 9, 9),))
+    )
     page = ui.get(f"/ui/accounts/{account_id}").text
     assert calls == []
     assert f'href="/ui/accounts/{account_id}?suggest=1"' in page

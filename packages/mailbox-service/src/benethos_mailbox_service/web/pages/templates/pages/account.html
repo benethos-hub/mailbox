@@ -64,11 +64,11 @@
   <span class="muted grow">The receiving server's name, for the sender check, stands at the start of Authentication-Results in a mail it received.</span>
   {{ link_button("/ui/accounts/" ~ account.id ~ "?suggest=1", "Look in the mailbox", "search", cls="") }}
 </div>
-{% elif names %}
+{% elif names.names %}
 <div class="fold">
-  <p>Seen in the newest {{ names[0].of }} mails:</p>
+  <p>Seen in the newest {{ names.mails }} mails:</p>
   <ul class="lines">
-    {% for name in names %}<li><span class="secret-line"><code id="seen-{{ loop.index }}">{{ name.id }}</code>{{ copy_button("seen-" ~ loop.index, "Copy " ~ name.id) }}<span class="muted">{{ name.count }} of {{ name.of }}</span></span></li>{% endfor %}
+    {% for name in names.names %}<li><span class="secret-line"><code id="seen-{{ loop.index }}">{{ name.id }}</code>{{ copy_button("seen-" ~ loop.index, "Copy " ~ name.id) }}<span class="muted">{{ name.count }} of {{ names.mails }}</span></span></li>{% endfor %}
   </ul>
   <p class="muted">A mail can carry any name. Take the one your server writes on every mail.</p>
 </div>
