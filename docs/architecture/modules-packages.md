@@ -27,7 +27,8 @@ packages/mailbox-client/
       me.py             # get_me(): the caller and its accounts, the
                         #   catalogue of rights
       health.py         # whether the service answers
-      accounts.py       # list, connect, read, change, verify, remove
+      accounts.py       # list, connect, read, change, verify, remove,
+                        #   the names receiving servers wrote
       discovery.py      # discovery, the sign-in with a code
       folders.py        # the folders of an account
       messages.py       # lists and search in one account or across,
@@ -67,11 +68,12 @@ packages/mailbox-client/
                         #   one offered by its __init__.py
       me.py             # the caller, its accounts, its sending limits
       health.py         # the service's health and version
-      accounts.py       # an account, its stored credentials
+      accounts.py       # an account, its stored credentials and marks,
+                        #   the names receiving servers wrote
       discovery.py      # what discovery found, a sign-in with a code
       folders.py        # a folder
-      messages.py       # a message and its summary, a page, a
-                        #   batch's outcome
+      messages.py       # a message and its summary with its sender
+                        #   check, a page, a batch's outcome
       changes.py        # the changes since a state
       attachments.py    # an attachment's bytes, a link to an attachment
       threads.py        # a thread and its summary
@@ -286,6 +288,7 @@ packages/mailbox-common/
   the same folder under `tests/`. It returns a record and takes plain
   values (section 9).
 
-`tests/test_architecture.py` of the package checks the libraries, the
-groups and the imports of its callers, and that no module of the
-service or the MCP server defines one of its functions again.
+`tests/test_architecture.py` of the package checks the libraries and the
+groups. `tests/test_code_rules.py` at the root of the repository checks
+the imports of its callers, and that no module of the service or the
+MCP server defines one of its functions again.

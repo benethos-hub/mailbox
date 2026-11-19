@@ -115,9 +115,7 @@ new library gets a wrapper before it gets a caller. If a change needs edits
 in several layers to swap one technology, the seam is in the wrong place:
 fix that first, and say so.
 
-**Tests use the seams too.** Fakes are plugged in at an interface (the
-memory provider, `httpx.MockTransport`, a fake `IMAPClient` at the
-imapclient boundary), never by patching deep inside a library.
+**Tests use the seams too** (section 13).
 
 ## 9. Types and values
 
@@ -174,6 +172,9 @@ imapclient boundary), never by patching deep inside a library.
   envelope, `web/pages/errors.py` as a page.
 - Raise where the decision is made, catch where something can be done
   about it. A `try` that only re-raises is noise.
+- No `assert` in the code of a package: it is gone under `python -O`,
+  so it is never a check of the code. ruff holds it (`S101`), for all
+  but the tests and the live checks.
 - An error's message is for the caller: plain, without a secret,
   without the words of a mail. The data layer's wrappers translate a
   library's message before it goes up.
@@ -318,7 +319,7 @@ imapclient boundary), never by patching deep inside a library.
    expose it.
 4. **Every rule gets its check** in `test_architecture.py` in the same
    branch, so the layout cannot drift back.
-5. **The documents move with the code:** section 3 of this file,
+5. **The documents move with the code:** the trees of section 3,
    CONCEPT.md 1.1, the concept's "built" note, the roadmap, in the same commit.
 6. **Tests move, they do not change.** Their imports change, their
    assertions do not. A test that has to change to pass says the move

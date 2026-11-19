@@ -192,7 +192,8 @@ tests/                    # what the repository holds, across the four
                           #   two sections or more lists them in its
                           #   contents at the top, under the 3D icon
   test_module_tree.py     # the trees of docs/ARCHITECTURE.md section 3
-                          #   against the disk
+                          #   against the disk, the seams of its
+                          #   section 8 against the code
   test_layout.py          # this file's project layout against the disk
   test_packaging.py       # the LICENSE copies, the Python versions, one
                           #   version and its examples in the
@@ -229,13 +230,12 @@ docs/
   UI.md                   # the goals, the rules for a page, the new page
                           #   checklist, and where each section is
   ui/                     #   the pages, the workflows, the look
-  REFACTORING.md          # how the layout came to be: the overview
-  refactoring/            #   the domain, the data layer, duplicates,
-                          #   the MCP server, the migrations, the
-                          #   client, mailbox-common
+  REFACTORING.md          # how the layout came to be: what was
+                          #   decided, and the reasons
   MICROSOFT.md            # connecting Microsoft accounts, an app of your own
   GOOGLE.md               # connecting Gmail accounts, the Google client
-  AUTHENTICATION.md       # the factors of the UI sign-in: password, TOTP
+  AUTHENTICATION.md       # the factors of the UI sign-in: password,
+                          #   TOTP, passkeys
   UNIFORM.md              # one way to operate every mailbox: the
                           #   principle, the rules, the capabilities
   uniform/                #   what differed per provider before 0.5.0,
@@ -323,13 +323,8 @@ that adds a module, a package, a library or a seam.
 
 Never write a test that reaches a real mail server, and never one that skips
 itself without credentials. Live checks are manual scripts in `live/`, outside
-`testpaths`.
-They run against test accounts: on an IMAP server of our own, the
-Microsoft test account, the Gmail test account, and the test mail
-server in a container. The
-server's address and the list of test accounts are local, unversioned
-configuration, and only the accounts listed there count as confirmed
-test accounts for golden rule 1.
+`testpaths` ([docs/LIVE.md](docs/LIVE.md)). Only the accounts listed in
+`live/.env` count as confirmed test accounts for golden rule 1.
 
 ## Conventions
 

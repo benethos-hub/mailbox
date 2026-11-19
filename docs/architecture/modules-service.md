@@ -124,7 +124,8 @@ packages/mailbox-service/
         routes/         # one module per area
         templates/      # base and bare, partials, components (macros), pages
         static/         # app.css, app.js, early.js (read before the page
-                        #   is drawn), vendored htmx, img/ (the icon
+                        #   is drawn), passkey.js (asks the browser for
+                        #   a passkey), vendored htmx, img/ (the icon
                         #   and the logo, made by assets/build.py, the
                         #   sprite of Bootstrap Icons with its licence,
                         #   made by assets/icons.py)

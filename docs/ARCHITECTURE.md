@@ -149,11 +149,9 @@ The three layers and what each may import:
 `tests/test_architecture.py` checks the direction, the cross-cutting
 modules, that `common/` stays on the standard library, anyio, idna (host
 names as IDNA 2008) and `mailbox-common`, that FastAPI stays in
-`web/` (and `assembly/`), that providers are reached through the registry,
+`web/` (and `assembly/web.py`), that providers are reached through the registry,
 that the domain picks no storage implementation, and that SQLite is
-reached through `data/storage/` alone. `tests/test_packages.py` checks
-the packages of the domain and of data, `tests/test_assembly.py` the
-assembly and the command line. `tests/test_code_rules.py`
+reached through `data/storage/` alone. `tests/test_code_rules.py`
 checks that the data layer logs nothing above `DEBUG` and the domain
 nothing but activities, that a broad `except` raises or records, the
 sizes of modules and classes, that a helper of `common/` exists
@@ -162,11 +160,12 @@ of an account, and that the headers of htmx stand in
 `web/pages/templates.py` alone. The `tests/test_code_rules.py` at the
 root of the repository checks that no `__init__.py` of the four
 packages defines a class, and holds the rules of section 13 for the
-tests and the live checks. The architecture test also checks that the
+tests and the live checks. `tests/test_packages.py` checks that the
 packages of the domain and of data are imported through
 their `__init__.py`, export what others import, have no cycle, and keep
-their lines. Nothing below reaches `assembly/` or `cli/`, the assembly
-knows no command, and the modules of both keep their lines: in
+their lines. `tests/test_assembly.py` checks that nothing below reaches
+`assembly/` or `cli/`, that the assembly knows no command, and that the
+modules of both keep their lines: in
 `assembly/` `web`, `lifecycle`, `domain`, then `storage`, `secrets` and
 `providers`, then `services`. In `cli/` each command reaches `common`,
 never another command. The client and the MCP server have an
