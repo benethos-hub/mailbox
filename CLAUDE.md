@@ -299,7 +299,10 @@ docs/
   UI.md                   # the goals, the rules for a page, the new page
                           #   checklist, and where each section is
   ui/                     #   the pages, the workflows, the look
-  REFACTORING.md          # how the layout came to be
+  REFACTORING.md          # how the layout came to be: the overview
+  refactoring/            #   the domain, the data layer, duplicates,
+                          #   the MCP server, the migrations, the
+                          #   client, mailbox-common, a review
   MICROSOFT.md            # connecting Microsoft accounts, an app of your own
   GOOGLE.md               # connecting Gmail accounts, the Google client
   AUTHENTICATION.md       # the factors of the UI sign-in: password, TOTP
