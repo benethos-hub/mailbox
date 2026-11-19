@@ -93,6 +93,16 @@ def test_only_http_and_https(kind: type, url: str) -> None:
         kind(base_url=url, token="tok", allow_http=True)
 
 
+@pytest.mark.parametrize(
+    "url", ["http//user:s3cret@host", "https:user:s3cret@host", "user:s3cret@host"]
+)
+def test_a_url_of_another_kind_is_not_repeated(url: str) -> None:
+    """httpx reads them, but not their password as one."""
+    with pytest.raises(ConfigurationError, match="http or https") as refused:
+        SyncMailboxClient(base_url=url, token="tok", allow_http=True)
+    assert "s3cret" not in str(refused.value)
+
+
 def test_a_url_that_is_not_one() -> None:
     with pytest.raises(ConfigurationError, match="not a URL"):
         SyncMailboxClient(base_url="http://[::1", token="tok")
