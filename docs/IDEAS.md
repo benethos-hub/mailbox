@@ -258,6 +258,24 @@ gone for its owner.
   single operations.
 - Asked for once so far.
 
+## A list and a move of ours at the same time
+
+A list across several accounts reads every account first and gives
+the messages our ids afterwards. A move made through the service that
+ends in between leaves the list with the old place of the message.
+The index no longer knows that place, so it gets a new id. That id
+answers `404`. The feed reports it as `message.created` and, with the
+next sync pass, as `message.deleted`. The message keeps its own id
+all along.
+
+- Seen on 2026-11-19 in a test that forces the timing, on one IMAP
+  account. Not seen at a mail server: 60 moves beside 63 lists showed
+  none.
+- A list of one folder of one IMAP account leaves no room for it
+  between the read and the ids.
+- A fix would let a list notice a change of ours as a sync pass does,
+  and read again.
+
 ## Further
 
 - **Outbox with scheduled sending** (`send_at`): sending is queued,

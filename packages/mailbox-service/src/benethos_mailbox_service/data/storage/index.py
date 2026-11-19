@@ -60,6 +60,10 @@ class MessageIndexRepository(Protocol):
         self, account_id: str, folder_ids: Iterable[str]
     ) -> list[IndexEntry]: ...
 
+    def with_header(self, account_id: str, headers: Iterable[str]) -> list[IndexEntry]:
+        """The entries whose ``Message-ID`` is one of these."""
+        ...
+
     def add(self, account_id: str, entries: Iterable[IndexEntry]) -> None:
         """Adds entries. A provider id that already has one keeps it, and
         so does an id that exists already."""
@@ -142,6 +146,12 @@ class InMemoryMessageIndexRepository:
             e
             for e in self._entries.get(account_id, {}).values()
             if e.folder_id in wanted
+        ]
+
+    def with_header(self, account_id: str, headers: Iterable[str]) -> list[IndexEntry]:
+        wanted = set(headers)
+        return [
+            e for e in self._entries.get(account_id, {}).values() if e.header in wanted
         ]
 
     def add(self, account_id: str, entries: Iterable[IndexEntry]) -> None:

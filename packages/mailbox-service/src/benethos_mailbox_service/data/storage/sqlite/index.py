@@ -43,6 +43,14 @@ class SqliteMessageIndexRepository:
         # In the order the entries came, across the chunks of the query.
         return [_entry(row) for row in sorted(rows, key=lambda row: row["rowid"])]
 
+    def with_header(self, account_id: str, headers: Iterable[str]) -> list[IndexEntry]:
+        rows = self._db.query_in(
+            "SELECT * FROM message_index WHERE account_id = ? AND header {in}",
+            headers,
+            before=(account_id,),
+        )
+        return [_entry(row) for row in rows]
+
     def add(self, account_id: str, entries: Iterable[IndexEntry]) -> None:
         with self._db.transaction() as db:
             _insert(db, account_id, entries)

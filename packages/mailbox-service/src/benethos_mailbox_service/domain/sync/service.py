@@ -106,18 +106,26 @@ class SyncService:
     # --- ids ------------------------------------------------------------------------
 
     async def public_ids(
-        self, account_id: str, places: Iterable[tuple[str, str]]
+        self,
+        account_id: str,
+        places: Iterable[tuple[str, str]],
+        *,
+        listed: bool = False,
     ) -> list[str]:
         """Our ids for provider ids, each with its folder. Unknown ones get a
         new id, with their ``Message-ID`` read right away: a message moved
         before the next sync can only be followed by it. Where the index
         keeps threads, they join theirs at once, and so do known ones the
-        sync has not threaded yet."""
+        sync has not threaded yet. ``listed``: the places come from a
+        list. An unknown one whose ``Message-ID`` the index has elsewhere
+        may be a message another program moved: the account is synced
+        once first, and the message keeps its id."""
         places = list(places)
         if not self.mapped(account_id):
             return [native for native, _ in places]
         natives = [native for native, _ in places]
         known = self._index.by_native(account_id, natives)
+        before = known
         missing = [(n, f) for n, f in dict(places).items() if n not in known]
         waiting = (
             [e for e in known.values() if e.thread_id is None]
@@ -128,12 +136,16 @@ class SyncService:
             return [known[native].id for native in natives]
         wanted = [n for n, _ in missing] + [e.native_id for e in waiting]
         headers = await self._headers(account_id, wanted)
+        # Before the first sync, every message is still unknown.
+        synced = bool(self._index.folder_states(account_id))
+        if listed and synced and self._known_elsewhere(account_id, missing, headers):
+            await self._settled(account_id)
+            known = self._index.by_native(account_id, natives)
+            missing = [(n, f) for n, f in missing if n not in known]
         added = [
             IndexEntry(self._new_id(), n, f, _message_id(headers.get(n)))
             for n, f in missing
         ]
-        # Before the first sync, every message is still unknown.
-        synced = bool(self._index.folder_states(account_id))
         ours = {e.id: e.folder_id for e in added}
         if added:
             self._index.add(account_id, added)
@@ -150,7 +162,27 @@ class SyncService:
         merged = self._threads.join(account_id, [*added, *waiting], headers)
         if synced:
             self._runner.report_merged(account_id, merged, set(ours))
-        return [known[native].id for native in natives]
+        # A place known before the headers were read may have moved or
+        # gone meanwhile: its message keeps the id it had.
+        return [(known.get(native) or before[native]).id for native in natives]
+
+    def _known_elsewhere(
+        self,
+        account_id: str,
+        missing: list[tuple[str, str]],
+        headers: dict[str, ThreadHeaders],
+    ) -> bool:
+        """Whether a place the index does not know holds a ``Message-ID``
+        the index has at another place."""
+        named = {h for n, _ in missing if (h := _message_id(headers.get(n)))}
+        return bool(named) and bool(self._index.with_header(account_id, named))
+
+    async def _settled(self, account_id: str) -> None:
+        """One pass, best effort: without it the list answers as before."""
+        try:
+            await self._runner.sync_account(account_id)
+        except MailboxServiceError:
+            return
 
     def relocate(
         self, account_id: str, message_id: str, native: str, folder_id: str

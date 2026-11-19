@@ -104,6 +104,18 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- The change feed and the webhooks no longer report a new message
+  twice, once under an id that answered `404`. It happened on an IMAP
+  or POP3 account where a list named the message while a sync pass
+  read it.
+- A list of messages no longer answers `500` where a message on its
+  page was moved or deleted while the list read the header of a new
+  one.
+- A message another mail program moved keeps its id also where a list
+  reads its new folder before the service synced. Before, the list
+  gave it a new id, the old one answered `404`, and the feed reported
+  a `message.created` and a `message.deleted`. Such a list now syncs
+  the account once first.
 - `update_folder` on an IMAP account answered `502 provider_error`
   although the server had renamed the folder, where the server moves
   the subscription along itself, as Stalwart does.

@@ -141,12 +141,14 @@ class Calls:
     # --- our ids ----------------------------------------------------------------------
 
     async def published(
-        self, account_id: str, items: list[MessageSummary]
+        self, account_id: str, items: list[MessageSummary], *, listed: bool = True
     ) -> list[MessageSummary]:
         """The provider's summaries with our ids, the account and, where
-        the index keeps them, the threads."""
+        the index keeps them, the threads. ``listed``: they come from a
+        list, which follows a message another program moved. False for
+        a message we stored ourselves just now."""
         ids = await self._sync.public_ids(
-            account_id, [(i.id, folder_of(i)) for i in items]
+            account_id, [(i.id, folder_of(i)) for i in items], listed=listed
         )
         threads = self._sync.thread_ids(account_id, ids)
         return [
@@ -157,7 +159,7 @@ class Calls:
     async def published_one(
         self, account_id: str, item: MessageSummary
     ) -> MessageSummary:
-        [published] = await self.published(account_id, [item])
+        [published] = await self.published(account_id, [item], listed=False)
         return published
 
     async def published_page(

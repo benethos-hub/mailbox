@@ -36,6 +36,7 @@ from .versions.v0020_threads import V0020Threads
 from .versions.v0021_abilities import V0021Abilities
 from .versions.v0022_attachment_links import V0022AttachmentLinks
 from .versions.v0023_passkeys import V0023Passkeys
+from .versions.v0024_index_by_header import V0024IndexByHeader
 
 MIGRATIONS = MigrationRegistry(
     V0001AccountsUsers(),
@@ -61,6 +62,7 @@ MIGRATIONS = MigrationRegistry(
     V0021Abilities(),
     V0022AttachmentLinks(),
     V0023Passkeys(),
+    V0024IndexByHeader(),
 )
 
 SCHEMA_VERSION = MIGRATIONS.schema_version
