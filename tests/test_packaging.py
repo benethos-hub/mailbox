@@ -114,7 +114,8 @@ SHARED_CLASSIFIERS = (
 
 def test_the_packages_describe_themselves_alike() -> None:
     """The same Python versions, author, status and links, so that PyPI
-    shows the four as one release. Each points to its own README."""
+    shows the four as one release. Each points to its own README, as its
+    homepage and as its documentation."""
     projects = [project_of(package) for package in PACKAGES]
     for key in ("requires-python", "authors"):
         values = {json.dumps(project[key]) for project in projects}
@@ -130,7 +131,9 @@ def test_the_packages_describe_themselves_alike() -> None:
         urls = project["urls"]
         assert isinstance(urls, dict)
         home = f"/tree/main/packages/{package.name}#readme"
-        assert str(urls.pop("Homepage")).endswith(home)
+        homepage = str(urls.pop("Homepage"))
+        assert homepage.endswith(home)
+        assert urls.pop("Documentation") == homepage
         links.add(json.dumps(urls, sort_keys=True))
         assert (package / str(project["readme"])).is_file()
     assert len(links) == 1, f"the links differ: {sorted(links)}"
