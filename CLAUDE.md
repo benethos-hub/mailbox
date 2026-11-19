@@ -285,7 +285,10 @@ docs/
   CONCEPT.md              # design: the overview and where each section is
   concept/                #   one file per topic, the sections under
                           #   their numbers
-  ARCHITECTURE.md         # layers, modules, seams, rules for new code
+  ARCHITECTURE.md         # the shape, the layers, where a piece of code
+                          #   goes, and where each section is
+  architecture/           #   the modules of the four packages (section
+                          #   3) and the rules (sections 5 to 17)
   LIMITS.md               # every rate limit and how they work together
   PERMISSIONS.md          # users, roles and rights
   LOGGING.md              # what the service log holds, at which level
