@@ -5,7 +5,7 @@ the scope of the rework and the rules every page follows, the existing
 ones after the rework and every page added later.
 
 The UI is the part of the service a person uses in the browser
-([CONCEPT 1.1](CONCEPT.md#11-inside-the-service)). It runs in the same
+([CONCEPT 1.1](concept/purpose-and-model.md#11-inside-the-service)). It runs in the same
 process as the API, calls the same domain services and is not part of the
 OpenAPI document. This file says how it looks and behaves. CONCEPT says
 what it must do and how it is secured.

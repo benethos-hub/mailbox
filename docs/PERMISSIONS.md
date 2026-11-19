@@ -3,7 +3,7 @@
 Proposal of 2026-09-27, section 8 decided on 2026-10-05. One place for
 the whole model: who may do what, how that is written down, checked and
 shown, and what should change.
-[CONCEPT 7.5](CONCEPT.md#75-users-permissions-and-authentication) keeps
+[CONCEPT 7.5](concept/users.md#75-users-permissions-and-authentication) keeps
 the record of decisions and the details of credentials. [UI.md](UI.md)
 says how the pages look. This file says how the rights work, as they are
 today (sections 1 to 7), and the changes of section 8, which are built
@@ -64,7 +64,7 @@ The groups as `domain/rights/permissions.py` holds them today:
 | `mail.delete` | `delete_message_permanent`, `delete_folder` | an account |
 | `drafts` | `list_drafts`, `create_draft`, `update_draft`, `delete_draft` | an account |
 | `send` | `send_message`, `send_draft` | an account |
-| `mail.share` | `share_attachment`: a link to an attachment for another service ([CONCEPT 6.3](CONCEPT.md#63-messages)), in no template of 8.7 | an account |
+| `mail.share` | `share_attachment`: a link to an attachment for another service ([CONCEPT 6.3](concept/api-mail.md#63-messages)), in no template of 8.7 | an account |
 | `audit` | `list_sends`, `list_all_sends` | an account |
 | `audit` | `list_activity`, the audit of administration (8.6) | the service |
 | `accounts.manage` | `update_account`, `delete_account`, `verify_account`, `list_server_names` | an account |

@@ -282,7 +282,9 @@ tests/                    # what the repository holds, across the four
   interface.py            # not a test: the public interface of a
                           #   package as JSON, for the records in docs/
 docs/
-  CONCEPT.md              # design
+  CONCEPT.md              # design: the overview and where each section is
+  concept/                #   one file per topic, the sections under
+                          #   their numbers
   ARCHITECTURE.md         # layers, modules, seams, rules for new code
   LIMITS.md               # every rate limit and how they work together
   PERMISSIONS.md          # users, roles and rights

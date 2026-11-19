@@ -314,7 +314,7 @@ The service posts the events there as JSON, signed in
 `MAILBOX_SERVICE_WEBHOOK_*` settings say. The signing secret is in the
 answer to `POST`, the only time it is shown. A host in the local network
 is allowed. The format of a post is in
-[CONCEPT.md, section 6.5](https://github.com/benethos-hub/mailbox/blob/main/docs/CONCEPT.md#65-changes-and-webhooks).
+[CONCEPT.md, section 6.5](https://github.com/benethos-hub/mailbox/blob/main/docs/concept/api-sending-and-changes.md#65-changes-and-webhooks).
 
 ## Container
 

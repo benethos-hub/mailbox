@@ -4,7 +4,7 @@ Proposal of 2026-09-28, the first of two steps. What the service
 writes to its log, at which level, with which fields, and what never
 goes into a line. It builds on what exists since the log page: one
 stream on stderr with time, level and source, secrets masked, the newest
-lines on a page for the admin ([CONCEPT 7.4](CONCEPT.md#74-handling-rules),
+lines on a page for the admin ([CONCEPT 7.4](concept/security.md#74-handling-rules),
 [UI.md 6.5](UI.md)). The second step, an audit of administration in the
 database, is [AUDIT.md](AUDIT.md): it takes the activities named here and
 stores those someone caused. Both steps are built. What the user decides

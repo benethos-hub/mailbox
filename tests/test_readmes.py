@@ -50,9 +50,9 @@ def _readmes() -> list[Path]:
 
 
 def _documents() -> list[Path]:
-    """The READMEs, the documents in docs/ and CLAUDE.md: the files whose
-    links are checked."""
-    return [*_readmes(), *sorted((ROOT / "docs").glob("*.md")), ROOT / "CLAUDE.md"]
+    """The READMEs, the documents in docs/ and its folders, and CLAUDE.md:
+    the files whose links are checked."""
+    return [*_readmes(), *sorted((ROOT / "docs").rglob("*.md")), ROOT / "CLAUDE.md"]
 
 
 def _on_pypi(readme: Path) -> bool:
@@ -162,7 +162,12 @@ def test_the_readmes_are_found() -> None:
 
 def test_the_documents_are_found() -> None:
     names = {p.relative_to(ROOT).as_posix() for p in _documents()}
-    assert {"CLAUDE.md", "docs/CONCEPT.md", "README.md"} <= names
+    assert {
+        "CLAUDE.md",
+        "docs/CONCEPT.md",
+        "docs/concept/security.md",
+        "README.md",
+    } <= names
 
 
 def test_the_anchor_follows_githubs_rules() -> None:

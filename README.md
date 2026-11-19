@@ -165,7 +165,7 @@ What comes next, and in which order, is in
 | legacy mailboxes without IMAP | POP3 + SMTP: the inbox only, no folders, no read state, no search | password | available |
 
 Not supportable: Tuta, which offers no IMAP and no API. Details per
-provider in [docs/CONCEPT.md](docs/CONCEPT.md), section 5.3.
+provider in [the concept, section 5.3](docs/concept/providers.md#53-what-each-provider-offers).
 
 ## The four packages
 
