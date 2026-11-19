@@ -238,7 +238,7 @@ docs/
                           #   TOTP, passkeys
   UNIFORM.md              # one way to operate every mailbox: the
                           #   principle, the rules, the capabilities
-  uniform/                #   what differed per provider before 0.5.0,
+  uniform/                #   what still differs per provider,
                           #   the decisions, the UI and the MCP server
   LIVE.md                 # the live checks: what each one reads,
                           #   sends, changes and deletes

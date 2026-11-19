@@ -205,9 +205,9 @@ account. Whatever an account cannot do answers an error, and the
 account says so in advance. Nothing is silently ignored, and no value
 silently means something else.
 
-An inventory of every adapter found where the API broke this.
-[UNIFORM.md](../UNIFORM.md) holds it, with the decisions, the reasons and
-the work in order. The rules:
+An inventory of every adapter found where the API broke this, and
+0.5.0 ended it. [UNIFORM.md](../UNIFORM.md) holds the decisions, the
+reasons and what still differs per provider. The rules:
 
 1. **One meaning.** Every field, filter and operation means the same on
    every account. Where a provider cannot deliver it, the adapter does
@@ -216,10 +216,10 @@ the work in order. The rules:
    `404` or `409` for "the provider cannot".
 3. **Announced in advance.** Every `501` follows from a missing
    capability. The domain checks it once for every operation, from one
-   table of what each operation needs. Only what a server refuses on
-   the call itself answers `501` without one: an IMAP `update_draft`
-   without UIDPLUS, an IMAP sign-in with `xoauth2`, a JMAP method or
-   filter the server does not know.
+   table of what each operation needs. Only what the call itself shows
+   answers `501` without one, such as a role the account has no folder
+   for, an IMAP `update_draft` without UIDPLUS or a JMAP method the
+   server does not know (UNIFORM.md R3 names them all).
 4. **Capabilities follow the server.** IMAP and JMAP servers are asked
    what they offer when an account connects, when it is verified, when
    the sync sees a folder come or go, and when the server refuses what

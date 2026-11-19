@@ -26,35 +26,25 @@ Decided 2026-10-12, each with the options weighed and why.
    missing.
 4. **Marks where the provider has no place for them.** Gmail stores no
    `$answered`. Exchange keeps "answered" and "forwarded" in a property
-   of its own (`PidTagLastVerbExecuted`), readable through Graph's
-   extended properties and very likely writable, which is not checked.
+   of its own (`PidTagLastVerbExecuted`).
    (a) Microsoft reads and writes it, Gmail writes no marks. (b) Neither
    writes marks.
-   *Decided: (a), subject to a live check* against the Microsoft
-   test account. If it fails, (b) holds for Microsoft. Either way, the
-   send answers whether the original was marked, and the account's
-   lists of marks (section 3) say so in advance. Checked live on
-   2026-10-15: Microsoft reads and writes both, so (a) holds.
+   *Decided: (a).* Checked live on 2026-10-15: Microsoft reads and
+   writes both. The send answers whether the original was marked, and
+   the account's lists of marks (section 3) say so in advance.
 5. **A list without a folder.** (a) The inbox, on every account. (b)
    Every folder, on every account, which IMAP would have to emulate
    folder by folder. (c) The folder becomes required.
-   *Decided: (a), with the role `all`* as the explicit "search
-   everywhere", where the account has such a folder (Gmail's All Mail, a
-   JMAP server's, an IMAP server's `\All`), and `501` elsewhere.
-   Otherwise the MCP server loses the search across all folders on
-   Gmail. An account without the folder of a role answers `501` (R2),
-   and across accounts it is named in `incomplete`.
-   **Microsoft emulates `all`:** every folder but the trash and junk, as
-   Gmail's All Mail, so Microsoft keeps the search across folders it has
-   today. The adapter leaves those two folders out after each page, as
-   it does for `unread`, so a page can come back short.
-   **IMAP emulates `all` too**, where the server has no `\All`: one
-   `SEARCH` in every folder but the trash and junk, the hits merged by
-   date, as the list across accounts merges its accounts. The result is
-   the same as with `\All`, only slower: one `SEARCH` per folder and
-   page. **JMAP emulates `all` too**, where the server has no mailbox
-   of that role: one `Email/query` with `inMailboxOtherThan` the trash
-   and junk. So every account but POP3 searches everywhere.
+   *Decided: (a), with the role `all`* as the explicit search
+   everywhere: Gmail's All Mail, a server's own folder or mailbox of
+   that role, and otherwise an emulation. Without it the MCP server
+   would lose the search across all folders on Gmail. Microsoft lists
+   every folder and leaves the trash and junk out after each page, so a
+   page can come back short. IMAP runs one `SEARCH` in every folder but
+   the trash and junk and merges the hits by date. JMAP asks one
+   `Email/query` with `inMailboxOtherThan` the trash and junk. POP3
+   answers `501` (R2). An account without the folder of a role answers
+   `501` as well, and across accounts it is named in `incomplete`.
 6. **Dates.** (a) `date` is the Date header everywhere, Microsoft
    included, and a new field `received` carries the received time, by
    which lists sort and filter. (b) `date` is the received time
@@ -102,11 +92,12 @@ Decided 2026-10-12, each with the options weighed and why.
    *Decided: (a).* People see exactly this grouping in Gmail and
    Outlook. Threads of the service's own for every account would be
    double work and would differ from it.
-10. **`has_attachments`.** Today the list, the filter and `get_message`
-    can each answer differently (4.4). (a) One rule, "real attachments,
-    not inline images", computed the same way everywhere, for the field
-    in a list and in `get_message`. The filter stays the provider's own
-    and is documented as an approximation. (b) As today.
+10. **`has_attachments`.** Before 0.5.0 the list, the filter and
+    `get_message` could each answer differently. (a) One rule, "real
+    attachments, not inline images", computed the same way everywhere,
+    for the field in a list and in `get_message`. The filter stays the
+    provider's own and is documented as an approximation. (b) As it
+    was.
     *Decided: (a).* It has a cost on IMAP: a list then fetches
     `BODYSTRUCTURE` beside the headers, a little more per page. POP3
     reads the headers with `TOP` only, so its list keeps the header
