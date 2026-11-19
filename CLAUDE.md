@@ -293,7 +293,9 @@ docs/
   PERMISSIONS.md          # users, roles and rights
   LOGGING.md              # what the service log holds, at which level
   AUDIT.md                # the audit of administration
-  UI.md                   # how the pages look and behave, new page checklist
+  UI.md                   # the goals, the rules for a page, the new page
+                          #   checklist, and where each section is
+  ui/                     #   the pages, the workflows, the look
   REFACTORING.md          # how the layout came to be
   MICROSOFT.md            # connecting Microsoft accounts, an app of your own
   GOOGLE.md               # connecting Gmail accounts, the Google client
