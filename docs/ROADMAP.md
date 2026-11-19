@@ -439,7 +439,11 @@ Scope, page types and the rules for every page in [UI.md](UI.md).
 - **The sender check of a message (6.3)**, decided 2026-11-18, done:
   `sender_check` from the receiving server's `Authentication-Results`,
   in the API, the client, the MCP server and the UI, for every kind of
-  account. Live-checked in `live/smoke.py`
+  account. For IMAP, POP3 and JMAP a person names the receiving server
+  in `settings.authserv_id`. `GET /v1/accounts/{account_id}/server-names`
+  and **Look in the mailbox** on the account page list the names of the
+  newest ten mails, with how often each is on top. Live-checked in
+  `live/smoke.py`
 
 Open in this phase, each planned in CONCEPT.md:
 
