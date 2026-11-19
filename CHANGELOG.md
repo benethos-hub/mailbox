@@ -108,6 +108,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   twice, once under an id that answered `404`. It happened on an IMAP
   or POP3 account where a list named the message while a sync pass
   read it.
+- A list of messages no longer answers `500` where a message on its
+  page was moved or deleted while the list read the header of a new
+  one.
 - `update_folder` on an IMAP account answered `502 provider_error`
   although the server had renamed the folder, where the server moves
   the subscription along itself, as Stalwart does.

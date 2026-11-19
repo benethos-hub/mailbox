@@ -118,6 +118,7 @@ class SyncService:
             return [native for native, _ in places]
         natives = [native for native, _ in places]
         known = self._index.by_native(account_id, natives)
+        before = known
         missing = [(n, f) for n, f in dict(places).items() if n not in known]
         waiting = (
             [e for e in known.values() if e.thread_id is None]
@@ -150,7 +151,9 @@ class SyncService:
         merged = self._threads.join(account_id, [*added, *waiting], headers)
         if synced:
             self._runner.report_merged(account_id, merged, set(ours))
-        return [known[native].id for native in natives]
+        # A place known before the headers were read may have moved or
+        # gone meanwhile: its message keeps the id it had.
+        return [(known.get(native) or before[native]).id for native in natives]
 
     def relocate(
         self, account_id: str, message_id: str, native: str, folder_id: str
