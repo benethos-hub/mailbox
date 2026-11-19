@@ -95,11 +95,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 - **Breaking:** `benethos-mailbox-common`: `mail.marks.Mark` has no
   field `icon`. A mark is its keyword, its word and whether it shows.
   The configuration UI picks its icons itself.
-- A folder named in a message change, or as the parent of a folder,
-  must be one the account lists, by id or role. Any other name answers
-  `404`, as it did on Gmail and JMAP accounts. On Microsoft accounts
-  Graph's well-known folder names no longer pass: use the role, such as
-  `trash`.
+- **Breaking:** a folder named in a message change, or as the parent of
+  a folder, must be one the account lists, by id or role. Any other name
+  answers `404`, as it did on Gmail and JMAP accounts. On Microsoft
+  accounts Graph's well-known folder names no longer pass: use the role,
+  such as `trash`.
 - The images install platformdirs 4.14.7 and pydantic 2.14.4 from the
   lockfile, the service image fastapi 0.165.0, annotated-doc 0.0.7,
   imapclient 4.3.0 and publicsuffixlist 1.1.2.20261118. imapclient 4.3.0
