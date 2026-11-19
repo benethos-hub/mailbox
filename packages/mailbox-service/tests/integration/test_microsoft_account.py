@@ -206,3 +206,38 @@ def test_a_well_known_name_of_graph_passes_no_rule(
     assert folder.status_code == 404, folder.text
     assert not [r for r in graph.requests if r.url.path.endswith("/move")]
     assert graph.messages[first]["parentFolderId"] != trash
+
+
+def test_a_narrowed_batch_into_the_trash_asks_each_place_once(
+    graph: FakeGraph, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Graph keeps no index here: the folder of each message is asked for,
+    once for the checks of update_message and of the trash together."""
+    set_master_key(monkeypatch)
+    graph.add_message(subject="One")
+    graph.add_message(subject="Two")
+    services, client, account_id = _connected(graph)
+    base = f"/v1/accounts/{account_id}"
+    listed = client.get(f"{base}/messages", params={"folder": "inbox"}).json()
+    ids = [m["id"] for m in listed["items"]]
+    grants = (
+        Grant(
+            accounts=[account_id],
+            allow=["mail.read", "update_message", "batch_messages", "delete_message"],
+            folders=["inbox", "trash"],
+        ),
+    )
+    client.headers.update(bearer_for(services, *grants))
+    graph.requests.clear()
+    answer = client.post(
+        f"{base}/messages/batch",
+        json={"action": "update", "ids": ids, "changes": {"folder_ids": ["trash"]}},
+    )
+    assert answer.status_code == 200, answer.text
+    assert all(r["ok"] for r in answer.json()["results"])
+    asked = [
+        r
+        for r in graph.requests
+        if r.method == "GET" and r.url.params.get("$select") == "parentFolderId,isDraft"
+    ]
+    assert len(asked) == len(ids)

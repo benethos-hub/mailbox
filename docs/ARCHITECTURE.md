@@ -301,7 +301,8 @@ packages/mailbox-service/
       mailbox/          # MailboxService, the facade for mail: calls under
                         #   our ids, an account's folders and their
                         #   roles (folders), the folders a grant
-                        #   reaches (reach),
+                        #   reaches (reach), the checks of a message's
+                        #   folders against them (guards),
                         #   lists across accounts (across, merge),
                         #   the threads of one account and a folder
                         #   by threads (threads),
