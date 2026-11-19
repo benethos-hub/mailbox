@@ -74,6 +74,9 @@ class FakeMailBox(FolderCommands):
         # Folder names a mail client would show. Servers often leave the
         # inbox out: clients show it anyway.
         self.subscribed: set[str] = set()
+        # Whether RENAME moves the subscription along and SUBSCRIBE refuses
+        # a name already subscribed, as Stalwart does.
+        self.moves_subscriptions = False
         # The personal namespace (NAMESPACE), e.g. "INBOX." on some servers.
         self.namespace_prefix = ""
         # What SELECT reports as PERMANENTFLAGS. "\*": any keyword.

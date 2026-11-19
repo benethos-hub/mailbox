@@ -100,6 +100,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `update_folder` on an IMAP account answered `502 provider_error`
+  although the server had renamed the folder, where the server moves
+  the subscription along itself, as Stalwart does.
 - A message moved or deleted through the API while the service syncs the
   account keeps its id. Before, a sync pass that read the folders around
   the move could drop the id, which then answered `404` and came back as

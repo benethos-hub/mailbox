@@ -37,6 +37,7 @@ class FolderCommands:
     delimiter: str
     selected: str
     subscribed: set[str]
+    moves_subscriptions: bool
     namespace_prefix: str
     permanent_flags: list[str]
     writable: bool
@@ -68,6 +69,9 @@ class FolderCommands:
             n for n in self.folders if n == old or n.startswith(old + self.delimiter)
         ]:
             self.folders[new + name[len(old) :]] = self.folders.pop(name)
+            if self.moves_subscriptions and name in self.subscribed:
+                self.subscribed.discard(name)
+                self.subscribed.add(new + name[len(old) :])
         return b"Rename completed"
 
     def delete_folder(self, name: str) -> bytes:
@@ -76,6 +80,10 @@ class FolderCommands:
         return b"Delete completed"
 
     def subscribe_folder(self, name: str) -> None:
+        if self.moves_subscriptions and name in self.subscribed:
+            raise imaplib.IMAP4.error(
+                "subscribe failed: Mailbox is already subscribed."
+            )
         self.subscribed.add(name)
 
     def unsubscribe_folder(self, name: str) -> None:
