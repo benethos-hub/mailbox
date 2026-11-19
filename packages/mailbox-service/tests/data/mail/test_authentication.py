@@ -9,6 +9,7 @@ import pytest
 from benethos_mailbox_service.data.mail.authentication import (
     MAX_ENTRY,
     Trust,
+    authserv_ids,
     host,
     sender_check,
 )
@@ -310,3 +311,14 @@ def test_a_sharp_s_compares_as_idna_2008(entry: str) -> None:
     found = check(entry, sender="a@straße.de")
     assert found.result == "pass"
     assert found.domain == "xn--strae-oqa.de"
+
+
+def test_a_quoted_version_is_no_head_the_names_offer() -> None:
+    """The names offer only what the check reads: a version must be digits
+    without quotes, in both."""
+    quoted = 'mx.example.org "1"; dmarc=pass header.from=example.com'
+    assert authserv_ids([quoted]) == [None]
+    assert check(quoted) == unknown("unreadable")
+    plain = "mx.example.org 1; dmarc=pass header.from=example.com"
+    assert authserv_ids([plain]) == ["mx.example.org"]
+    assert check(plain) == PASSED

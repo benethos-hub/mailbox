@@ -177,6 +177,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   names the first alone, and the check passed for it.
 - A passkey whose answer is cut short is refused on the page Second
   factor. It answered `500` before.
+- Renaming an IMAP folder keeps its subfolders subscribed under their
+  new names.
 
 ### Security
 

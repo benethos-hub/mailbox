@@ -208,8 +208,7 @@ def authserv_ids(entries: Sequence[str]) -> list[str | None]:
     for entry in entries:
         statements = _statements(entry[:_HEAD], head_only=True)
         head = statements[0] if statements else []
-        versioned = len(head) == 2 and head[1][0].isdigit()
-        name = host(head[0][0]) if len(head) == 1 or versioned else None
+        name = host(head[0][0]) if _head_ok(head) else None
         found.append(name or None)
     return found
 
@@ -229,17 +228,21 @@ def _authserv_id(entry: str) -> str | None:
     return statements[0][0][0]
 
 
+def _head_ok(head: list[_Token]) -> bool:
+    """Whether the head of an entry is an authserv-id, alone or with a
+    version of digits not in quotes: "mx.example.org 1"."""
+    return len(head) == 1 or (
+        len(head) == 2 and not head[1][1] and head[1][0].isdigit()
+    )
+
+
 def _results(entry: str) -> list[_Result] | None:
     """The statements of an entry after its authserv-id, None where it
     cannot be read."""
     if len(entry) > MAX_ENTRY:
         return None
     statements = _statements(entry)
-    if not statements or not statements[0] or len(statements[0]) > 2:
-        return None
-    head = statements[0]
-    # A version may follow the authserv-id: "mx.example.org 1".
-    if len(head) == 2 and (head[1][1] or not head[1][0].isdigit()):
+    if not statements or not _head_ok(statements[0]):
         return None
     found = []
     for statement in statements[1:]:
