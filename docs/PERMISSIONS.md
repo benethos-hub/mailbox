@@ -105,8 +105,9 @@ token either and names no right.
   account from the path against the effective rights. A batch is checked
   per action: `batch_messages` and the right of the single action. A
   move into the trash with `update_message` or a batch needs
-  `delete_message` as well. Out of the trash and into junk need
-  `update_message` alone.
+  `delete_message` as well, and where the grants narrow it to folders,
+  on the folder of the message, as `DELETE` does. Out of the trash and
+  into junk need `update_message` alone.
 - **Cross-account operations filter.** `list_accounts`, `/v1/messages`,
   `/v1/changes` and the UI's mail page show the accounts the user has a
   right on, and leave the others out.

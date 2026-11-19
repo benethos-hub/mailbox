@@ -197,8 +197,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 - **Breaking:** a move into the trash needs `delete_message` as well, by
   `update_message` and by a batch. A grant that names `update_message`
   without `delete_message` could put mail into the trash. `mail.write`
-  holds both, so a grant with the group changes nothing. Moving out of
-  the trash and into junk need `update_message` alone.
+  holds both, so a grant with the group changes nothing. Where the
+  grants narrow `delete_message` to folders, the move takes only a
+  message in one of them, as `DELETE` does. Moving out of the trash and
+  into junk need `update_message` alone.
 
 ## [0.7.5] - 2026-11-17
 
