@@ -6,6 +6,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-19
+
 ### Added
 
 - Each message carries `sender_check`: what the account's receiving
@@ -2325,7 +2327,8 @@ the configuration may change without notice.
 - One error envelope `{"error": {"code", "message"}}`, authentication errors
   included.
 
-[Unreleased]: https://github.com/benethos-hub/mailbox/compare/v0.7.5...HEAD
+[Unreleased]: https://github.com/benethos-hub/mailbox/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/benethos-hub/mailbox/compare/v0.7.5...v0.8.0
 [0.7.5]: https://github.com/benethos-hub/mailbox/compare/v0.7.4...v0.7.5
 [0.7.4]: https://github.com/benethos-hub/mailbox/compare/v0.7.3...v0.7.4
 [0.7.3]: https://github.com/benethos-hub/mailbox/compare/v0.7.2...v0.7.3
