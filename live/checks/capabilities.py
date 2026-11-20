@@ -38,6 +38,8 @@ JMAP = (GMAIL - {"sender_check"}) | {"keywords", "push"}
 # An IMAP server with SMTP, IDLE, CONDSTORE and the special folders: a
 # message in one folder alone, and SMTP names a refused recipient at once.
 IMAP = (JMAP - {"labels"}) | {"refused"}
+# A POP3 server with SMTP: the inbox alone, deleting for good and sending.
+POP3 = frozenset({"purge", "refused", "send"})
 
 
 def named(run: Run, described: dict[str, Any], expected: frozenset[str]) -> None:
