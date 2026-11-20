@@ -18,7 +18,7 @@ from benethos_mailbox_service.errors import (
 
 from ...imap_adapter import provider
 from ...imap_fake import FakeMailBox
-from ...provider_helpers import update
+from .provider_helpers import update
 
 SENT = mappers.folder_id("Sent")
 MESSAGE = mappers.message_id("INBOX", 7, 3)
