@@ -156,6 +156,7 @@ def test_shows_only_the_start_of_a_credential(repo: Path) -> None:
 
     assert answer.returncode == 1
     assert "0123456789" * 3 not in answer.stderr
+    assert line.split(" = ")[1] not in answer.stderr
 
 
 @pytest.mark.parametrize("line", REFERENCES)

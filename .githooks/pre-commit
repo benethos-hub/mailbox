@@ -110,7 +110,7 @@ hits=$(
 if [ -n "$hits" ]; then
     # Only the start of each: the terminal is no place for the rest.
     note "staged lines look like a credential, each begins with:"
-    printf '%s\n' "$hits" | cut -c 1-32 | sed 's/^/  /' >&2
+    printf '%s\n' "$hits" | cut -c 1-12 | sed 's/^/  /' >&2
 fi
 
 # 3. Addresses on a domain of someone, as a person's or a supplier's
