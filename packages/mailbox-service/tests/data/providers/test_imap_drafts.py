@@ -20,8 +20,8 @@ from benethos_mailbox_service.errors import (
     NotSupportedError,
 )
 
-from ...imap_adapter import provider
 from ...imap_fake import FakeFolder, FakeMailBox, make_message
+from .imap_adapter import provider
 
 SENDER = Recipient(email="me@example.com", name="Me")
 WHEN = datetime(2026, 9, 24, 12, 0, tzinfo=UTC)

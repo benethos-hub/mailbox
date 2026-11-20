@@ -14,8 +14,8 @@ from benethos_mailbox_service.errors import (
     NotFoundError,
 )
 
-from ...imap_adapter import provider
 from ...imap_fake import FakeMailBox
+from .imap_adapter import provider
 from .provider_helpers import update
 
 # --- the IMAP adapter -----------------------------------------------------

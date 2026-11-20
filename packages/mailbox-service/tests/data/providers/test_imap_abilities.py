@@ -6,9 +6,9 @@ from __future__ import annotations
 
 from benethos_mailbox_service.data.models import Capability, Mark
 
-from ...imap_adapter import provider, sending
 from ...imap_fake import FakeFolder, FakeMailBox
 from ...smtp_fake import FakeSmtpServer
+from .imap_adapter import provider, sending
 
 EVERY_SERVER = {
     Capability.READ_STATE,

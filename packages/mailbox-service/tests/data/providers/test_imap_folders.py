@@ -27,8 +27,8 @@ from benethos_mailbox_service.errors import (
     NotFoundError,
 )
 
-from ...imap_adapter import INBOX, provider
 from ...imap_fake import FakeFolder, FakeMailBox, make_message
+from .imap_adapter import INBOX, provider
 
 
 async def test_folders_with_roles_and_parents(server: FakeMailBox) -> None:

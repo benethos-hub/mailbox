@@ -16,8 +16,8 @@ from benethos_mailbox_service.errors import (
     ProviderError,
 )
 
-from ...imap_adapter import provider
 from ...imap_fake import FakeMailBox
+from .imap_adapter import provider
 from .provider_helpers import update
 
 SENT = mappers.folder_id("Sent")

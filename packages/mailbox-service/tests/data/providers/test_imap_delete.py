@@ -14,8 +14,8 @@ from benethos_mailbox_service.errors import (
     ProviderUnavailableError,
 )
 
-from ...imap_adapter import provider
 from ...imap_fake import FakeFolder, FakeMailBox, make_message
+from .imap_adapter import provider
 from .provider_helpers import delete
 
 MESSAGE = mappers.message_id("INBOX", 7, 3)

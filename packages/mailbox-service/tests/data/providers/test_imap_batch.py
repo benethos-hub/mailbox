@@ -9,8 +9,8 @@ from benethos_mailbox_service.data.providers.imap import mappers
 from benethos_mailbox_service.errors import MailboxServiceError, NotFoundError
 
 from ...clocks import Seconds
-from ...imap_adapter import provider
 from ...imap_fake import FakeMailBox, make_message
+from .imap_adapter import provider
 
 SENT = mappers.folder_id("Sent")
 ARCHIVE = mappers.folder_id("Archive/2026")

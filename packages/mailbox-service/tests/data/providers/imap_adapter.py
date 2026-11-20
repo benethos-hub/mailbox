@@ -16,9 +16,9 @@ from benethos_mailbox_service.data.providers import Timing
 from benethos_mailbox_service.data.providers.guard import Pace
 from benethos_mailbox_service.data.providers.imap import ImapProvider, mappers
 
-from .clocks import Seconds
-from .imap_fake import FakeMailBox
-from .smtp_fake import FakeSmtpServer
+from ...clocks import Seconds
+from ...imap_fake import FakeMailBox
+from ...smtp_fake import FakeSmtpServer
 
 SETTINGS = {"host": "imap.example.com", "username": "me@example.com"}
 

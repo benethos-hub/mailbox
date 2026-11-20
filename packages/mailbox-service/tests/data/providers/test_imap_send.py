@@ -20,9 +20,9 @@ from benethos_mailbox_service.errors import (
     ProviderAuthError,
 )
 
-from ...imap_adapter import sending
 from ...imap_fake import FakeFolder, FakeMailBox
 from ...smtp_fake import FakeSmtpServer
+from .imap_adapter import sending
 
 MESSAGE = OutgoingMessage(
     to=[Recipient(email="you@example.com", name="Jürgen Müller")],
