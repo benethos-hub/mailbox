@@ -221,7 +221,7 @@ class MailboxService:
         )
         refused = await self._guards.trash_refused(
             access, looked, [message_id], changes
-        )
+        ) or await self._guards.drafts_refused(looked, [message_id], changes)
         if refused:
             raise refused[message_id]
         return await self._calls.update_one(account_id, message_id, changes)
@@ -268,6 +268,8 @@ class MailboxService:
             outcomes.update(
                 await self._guards.trash_refused(access, looked, rest, changes)
             )
+            rest = [i for i in rest if i not in outcomes]
+            outcomes.update(await self._guards.drafts_refused(looked, rest, changes))
             rest = [i for i in rest if i not in outcomes]
             if rest:
                 outcomes.update(await self._calls.update(account_id, rest, changes))

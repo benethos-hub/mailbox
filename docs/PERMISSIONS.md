@@ -109,7 +109,8 @@ token either and names no right.
   to folders, on the folder of the message, as `DELETE` does. Moving a
   folder below the trash with `update_folder` needs `delete_message` on
   that folder in the same way. Out of the trash and into junk need
-  `update_message` alone.
+  `update_message` alone. No change puts a message into the drafts
+  folder, so the draft operations reach drafts alone.
 - **Cross-account operations filter.** `list_accounts`, `/v1/messages`,
   `/v1/changes` and the UI's mail page show the accounts the user has a
   right on, and leave the others out.

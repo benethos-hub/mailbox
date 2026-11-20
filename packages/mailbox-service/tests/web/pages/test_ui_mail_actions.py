@@ -84,3 +84,17 @@ def test_a_reader_sees_no_actions_on_a_message(
     header = page[page.index('<header class="topbar">') : page.index("</header>")]
     assert 'title="Star"' not in header and "Reply" not in header
     assert 'id="move-message"' not in page
+
+
+def test_no_move_offers_the_drafts_folder(ui: TestClient, account_id: str) -> None:
+    """No change puts a message into the drafts folder, so neither the
+    dialog of a message nor the batch bar names it."""
+    message = ui.get(f"/ui/accounts/{account_id}/mail/m1").text
+    dialog = message[message.index('id="move-message"') :]
+    dialog = dialog[: dialog.index("</dialog>")]
+    listed = ui.get(f"/ui/accounts/{account_id}/mail").text
+    bar = listed[listed.index('name="folder" aria-label="Folder to move to"') :]
+    bar = bar[: bar.index("</select>")]
+    for select in (dialog, bar):
+        assert '<option value="sent">' in select
+        assert '<option value="drafts">' not in select

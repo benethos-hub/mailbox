@@ -216,9 +216,10 @@
 {% endmacro %}
 
 {# The options of a folder select: the tree indented by depth, without the
-   folders in ``exclude``. #}
-{% macro folder_options(tree, exclude, selected=None) %}
-{% for folder, depth in tree %}{% if folder.id not in exclude %}<option value="{{ folder.id }}"{% if folder.id == selected %} selected{% endif %}>{{ "· " * depth }}{{ folder.name }}</option>{% endif %}{% endfor %}
+   folders in ``exclude``. A select of where ``moves`` a message leaves out
+   the drafts folder, which no change puts a message into. #}
+{% macro folder_options(tree, exclude, selected=None, moves=False) %}
+{% for folder, depth in tree %}{% if folder.id not in exclude and not (moves and folder.role == "drafts") %}<option value="{{ folder.id }}"{% if folder.id == selected %} selected{% endif %}>{{ "· " * depth }}{{ folder.name }}</option>{% endif %}{% endfor %}
 {% endmacro %}
 
 {# The tag beside an account whose user may read mail there and send it

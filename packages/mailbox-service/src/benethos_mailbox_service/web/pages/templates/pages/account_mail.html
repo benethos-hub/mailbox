@@ -102,7 +102,7 @@
       {% if can.move %}
       <select name="folder" aria-label="Folder to move to" data-show-for="f-batch-action:move">
         <option value="">choose a folder</option>
-        {{ folder_options(tree, [current.id]) }}
+        {{ folder_options(tree, [current.id], moves=True) }}
       </select>
       {% endif %}
       <button type="submit">{{ icon("check-lg") }} Apply</button>

@@ -75,7 +75,7 @@
       <div class="field">
         <label for="f-move-folder">To the folder</label>
         <select id="f-move-folder" name="folder">
-          {{ folder_options(tree, message.folder_ids) }}
+          {{ folder_options(tree, message.folder_ids, moves=True) }}
         </select>
       </div>
     </div>

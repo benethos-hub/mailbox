@@ -28,6 +28,13 @@ adheres to [Semantic Versioning](https://semver.org/).
   is gone when messages are still known in it, and the message keeps its
   id.
 
+### Security
+
+- **Breaking:** a change no longer puts a message into the drafts
+  folder: it answers `400`, as it did on Gmail accounts. Before, a
+  message moved there could be deleted for good with `delete_draft`, or
+  sent with `send_draft`, without `delete_message_permanent`.
+
 ## [0.8.0] - 2026-11-19
 
 ### Added
