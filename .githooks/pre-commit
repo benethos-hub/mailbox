@@ -66,6 +66,12 @@ patterns="$patterns|Bearer [A-Za-z0-9._-]{16,}"
 patterns="$patterns|gh[pousr]_[A-Za-z0-9]{16,}"
 patterns="$patterns|github_pat_[A-Za-z0-9_]{20,}"
 patterns="$patterns|BEGIN (RSA |OPENSSH |EC |DSA |PGP )?PRIVATE KEY"
+# The recovery key keys init prints, a basic authorization, the secret
+# of a second factor as an otpauth link, and a URL with a password.
+patterns="$patterns|([A-Z2-7]{4}-){12}[A-Z2-7]{4}"
+patterns="$patterns|Basic [A-Za-z0-9+/=]{16,}"
+patterns="$patterns|otpauth://[a-z]+/[^[:space:]\"']*secret=[A-Z2-7]{16,}"
+patterns="$patterns|[a-z][a-z0-9+.-]*://[^[:space:]/:@\"']+:[^[:space:]/@\"']{8,}@"
 # A name that ends in TOKEN, SECRET, PASSWORD or _KEY, maybe with more
 # parts such as _ENV, then = or :, maybe a quote, then the value.
 # _KEYWORD is no such name. A value that starts with / is a path.
