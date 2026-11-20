@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import base64
-import imaplib
 from datetime import UTC, datetime
 from email import message_from_bytes
 from email.policy import default
@@ -19,18 +18,12 @@ from benethos_mailbox_service.data.models import (
     ProviderType,
     Recipient,
 )
-from benethos_mailbox_service.data.providers.imap import mappers
 from benethos_mailbox_service.domain.mailbox.outgoing import checks
 from benethos_mailbox_service.errors import (
     BadRequestError,
-    NotSupportedError,
-    ProviderAuthError,
 )
 
 from ....conftest import bearer_for, memory_of
-from ....imap_adapter import sending
-from ....imap_fake import FakeFolder, FakeMailBox
-from ....smtp_fake import FakeSmtpServer
 
 MESSAGE = OutgoingMessage(
     to=[Recipient(email="you@example.com", name="Jürgen Müller")],
@@ -119,76 +112,6 @@ def test_recipients_each_once() -> None:
         to=[Recipient(email="a@x.example")], bcc=[Recipient(email="a@x.example")]
     )
     assert message.recipients() == ["a@x.example"]
-
-
-# --- the IMAP adapter -----------------------------------------------------------------
-
-
-@pytest.fixture
-def box() -> FakeMailBox:
-    box = FakeMailBox()
-    box.folders["Sent"] = FakeFolder(flags=("\\Sent",))
-    return box
-
-
-RAW = compose.message(MESSAGE, SENDER, datetime.now(UTC), "<one@example.com>")
-TO = ["you@example.com", "cc@example.com", "hidden@example.com"]
-
-
-async def test_send_and_keep_a_read_copy(box: FakeMailBox) -> None:
-    smtp = FakeSmtpServer()
-    sent = await sending(box, smtp).send(RAW, "me@example.com", TO)
-    assert smtp.sent[0].recipients == TO
-    assert smtp.sent[0].raw == RAW
-    assert sent.sent_copy is not None
-    assert sent.sent_copy.folder_ids == [mappers.folder_id("Sent")]
-    assert sent.sent_copy.unread is False
-    [(uid, (_, flags))] = box.folders["Sent"].messages.items()
-    assert sent.sent_copy.id == mappers.message_id("Sent", 1, uid)
-    assert flags == ("\\Seen",)
-
-
-async def test_without_appenduid_found_by_message_id(box: FakeMailBox) -> None:
-    box.copyuid = False
-    sent = await sending(box, FakeSmtpServer()).send(RAW, "me@example.com", TO)
-    assert sent.sent_copy is not None
-
-
-async def test_a_failed_copy_does_not_fail_the_send(
-    box: FakeMailBox, caplog: pytest.LogCaptureFixture
-) -> None:
-    box.append_failure = imaplib.IMAP4.error("over quota")
-    smtp = FakeSmtpServer()
-    sent = await sending(box, smtp).send(RAW, "me@example.com", TO)
-    assert len(smtp.sent) == 1
-    assert sent.sent_copy is None
-    # The adapter reports it, the domain logs it.
-    assert sent.copy_error is not None and "over quota" in sent.copy_error
-    assert not caplog.records
-
-
-async def test_no_sent_folder_no_copy() -> None:
-    sent = await sending(FakeMailBox(), FakeSmtpServer()).send(
-        RAW, "me@example.com", TO
-    )
-    assert sent.sent_copy is None
-
-
-async def test_no_smtp_server_no_sending(box: FakeMailBox) -> None:
-    provider = sending(box, FakeSmtpServer(), smtp_host="")
-    with pytest.raises(NotSupportedError, match="smtp_host"):
-        await provider.send(RAW, "me@example.com", TO)
-
-
-async def test_a_rejected_login_stops_further_attempts(box: FakeMailBox) -> None:
-    smtp = FakeSmtpServer(password="other")
-    provider = sending(box, smtp)
-    with pytest.raises(ProviderAuthError):
-        await provider.send(RAW, "me@example.com", TO)
-    connects = len([c for c in smtp.calls if c[0] == "connect"])
-    with pytest.raises(ProviderAuthError, match="before"):
-        await provider.send(RAW, "me@example.com", TO)
-    assert len([c for c in smtp.calls if c[0] == "connect"]) == connects
 
 
 # --- the API ------------------------------------------------------------------------

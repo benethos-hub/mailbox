@@ -37,6 +37,13 @@ def note(secret: str) -> None:
             _known.popitem(last=False)
 
 
+def forget() -> None:
+    """No secret is noted any more. For tests, which each start with
+    none."""
+    with _lock:
+        _known.clear()
+
+
 def redact(text: str) -> str:
     """``text`` with every noted secret masked, the longest first, so one
     secret inside another leaves nothing of the longer behind."""

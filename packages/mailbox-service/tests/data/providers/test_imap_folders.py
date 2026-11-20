@@ -1,12 +1,14 @@
 """Folders over IMAP: listed with their roles, parents and
 subscriptions, the folder all, and renaming, which moves the
 subscriptions of the folder and of those below it along, whether the
-server does so itself or not."""
+server does so itself or not. Then creating, renaming and deleting, in
+the personal namespace of the server."""
 
 from __future__ import annotations
 
 import imaplib
 from datetime import UTC, datetime
+from typing import Any
 
 import pytest
 
@@ -16,12 +18,17 @@ from benethos_mailbox_service.data.models import (
     MessageFilter,
     MessageUpdate,
 )
+from benethos_mailbox_service.data.protocols.imap import ImapSession, Server
 from benethos_mailbox_service.data.providers import rules
 from benethos_mailbox_service.data.providers.imap import mappers
-from benethos_mailbox_service.errors import BadRequestError
+from benethos_mailbox_service.errors import (
+    BadRequestError,
+    ConflictError,
+    NotFoundError,
+)
 
-from ...imap_adapter import INBOX, provider
 from ...imap_fake import FakeFolder, FakeMailBox, make_message
+from .imap_adapter import INBOX, provider
 
 
 async def test_folders_with_roles_and_parents(server: FakeMailBox) -> None:
@@ -223,3 +230,146 @@ async def test_a_rename_without_lsub_moves_the_folder_s_own_subscription(
         mappers.folder_id("Archive/2026"), "2025", None
     )
     assert server.subscribed == {"Archive/2025"}
+
+
+# --- creating, renaming and deleting --------------------------------------------
+
+
+@pytest.fixture
+def below_inbox() -> FakeMailBox:
+    """A server that keeps every folder below the inbox, with "." between."""
+    box = FakeMailBox()
+    box.delimiter = "."
+    box.namespace_prefix = "INBOX."
+    box.announced = [*box.announced, "NAMESPACE"]
+    box.folders = {"INBOX": FakeFolder(), "INBOX.Sent": FakeFolder(flags=("\\Sent",))}
+    return box
+
+
+async def test_a_new_folder_goes_into_the_personal_namespace(
+    below_inbox: FakeMailBox,
+) -> None:
+    folder = await provider(below_inbox).create_folder("Projekte", None)
+    assert "INBOX.Projekte" in below_inbox.folders
+    assert folder.id == mappers.folder_id("INBOX.Projekte")
+    assert (folder.name, folder.subscribed) == ("Projekte", True)
+
+
+async def test_a_retried_step_counts_its_own_work_as_done(
+    below_inbox: FakeMailBox,
+) -> None:
+    imap = provider(below_inbox)
+    below_inbox.lose_the_reply("create_folder")
+    made = await imap.create_folder("Projekte", None)
+    assert made.name == "Projekte"
+    below_inbox.lose_the_reply("rename_folder")
+    renamed = await imap.update_folder(made.id, "Archiv", None)
+    assert renamed.name == "Archiv"
+    below_inbox.lose_the_reply("delete_folder")
+    await imap.delete_folder(renamed.id)
+    assert "INBOX.Archiv" not in below_inbox.folders
+    # Without a retry, the same finding is a conflict.
+    await imap.create_folder("Kunden", None)
+    with pytest.raises(ConflictError):
+        await imap.create_folder("Kunden", None)
+
+
+async def test_the_folders_below_the_namespace_are_at_the_top(
+    below_inbox: FakeMailBox,
+) -> None:
+    """As mail clients show them: INBOX.Sent is no subfolder of the inbox.
+    A folder below one of them stays its subfolder."""
+    imap = provider(below_inbox)
+    kunden = await imap.create_folder("Kunden", None)
+    await imap.create_folder("2026", kunden.id)
+    folders = {f.name: f for f in await imap.list_folders()}
+    assert folders["INBOX"].parent_id is None
+    assert folders["Sent"].parent_id is None
+    assert folders["Kunden"].parent_id is None
+    assert folders["2026"].parent_id == kunden.id
+
+
+async def test_without_a_namespace_a_folder_below_the_inbox_stays_there() -> None:
+    box = FakeMailBox()
+    box.delimiter = "."
+    box.folders = {"INBOX": FakeFolder(), "INBOX.Bills": FakeFolder()}
+    folders = {f.name: f for f in await provider(box).list_folders()}
+    assert folders["Bills"].parent_id == mappers.folder_id("INBOX")
+
+
+async def test_the_namespace_is_asked_once_per_connection(
+    below_inbox: FakeMailBox,
+) -> None:
+    imap = provider(below_inbox)
+    asked = []
+    original = below_inbox.namespace
+
+    def counted() -> Any:
+        asked.append(1)
+        return original()
+
+    below_inbox.namespace = counted  # type: ignore[method-assign]
+    await imap.list_folders()
+    await imap.list_folders()
+    assert len(asked) == 1
+
+
+async def test_a_subfolder(below_inbox: FakeMailBox) -> None:
+    imap = provider(below_inbox)
+    parent = await imap.create_folder("Kunden", None)
+    child = await imap.create_folder("Müller GmbH", parent.id)
+    assert "INBOX.Kunden.Müller GmbH" in below_inbox.folders
+    assert child.parent_id == parent.id
+
+
+@pytest.mark.parametrize(
+    ("name", "parent", "error"),
+    [
+        ("a.b", None, BadRequestError),
+        ("Sent", mappers.folder_id("INBOX"), ConflictError),
+        ("New", mappers.folder_id("INBOX.Nowhere"), NotFoundError),
+    ],
+)
+async def test_folders_that_cannot_be_made(
+    below_inbox: FakeMailBox, name: str, parent: str | None, error: type[Exception]
+) -> None:
+    with pytest.raises(error):
+        await provider(below_inbox).create_folder(name, parent)
+
+
+async def test_rename_moves_the_subscription(below_inbox: FakeMailBox) -> None:
+    imap = provider(below_inbox)
+    folder = await imap.create_folder("Alt", None)
+    renamed = await imap.update_folder(folder.id, "Neu", None)
+    assert renamed.id == mappers.folder_id("INBOX.Neu")
+    assert renamed.subscribed is True
+    assert "INBOX.Alt" not in below_inbox.subscribed
+
+
+async def test_a_folder_cannot_move_into_itself(below_inbox: FakeMailBox) -> None:
+    imap = provider(below_inbox)
+    outer = await imap.create_folder("Outer", None)
+    inner = await imap.create_folder("Inner", outer.id)
+    with pytest.raises(BadRequestError, match="into itself"):
+        await imap.update_folder(outer.id, "Outer", inner.id)
+
+
+async def test_delete_drops_the_subscription(below_inbox: FakeMailBox) -> None:
+    imap = provider(below_inbox)
+    folder = await imap.create_folder("Weg", None)
+    await imap.delete_folder(folder.id)
+    assert "INBOX.Weg" not in below_inbox.folders
+    assert "INBOX.Weg" not in below_inbox.subscribed
+
+
+async def test_without_namespace_at_the_top(server: FakeMailBox) -> None:
+    await provider(server).create_folder("Projekte", None)
+    assert "Projekte" in server.folders
+
+
+def test_a_folder_that_is_gone_is_not_found() -> None:
+    box = FakeMailBox()
+    session = ImapSession(Server("imap.example.com", 993, "tls"), client_factory=box)
+    session.login("me@example.com", "secret")
+    with pytest.raises(NotFoundError):
+        session.select("Renamed by someone else")

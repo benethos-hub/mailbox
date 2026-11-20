@@ -78,9 +78,8 @@ ADMIN = admin_access("usr_test_admin", "test admin")
 
 
 def forget_secrets() -> None:
-    """No secret is noted to be masked: the test reaches inside redact."""
-    with redact._lock:
-        redact._known.clear()
+    """No secret is noted to be masked."""
+    redact.forget()
 
 
 @pytest.fixture(autouse=True)

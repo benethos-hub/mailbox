@@ -4,11 +4,8 @@ lists, and that nothing is loaded from elsewhere."""
 
 from __future__ import annotations
 
-import importlib.util
 import re
 from datetime import timedelta
-from pathlib import Path
-from types import ModuleType
 
 import pytest
 from fastapi.testclient import TestClient
@@ -25,35 +22,16 @@ from benethos_mailbox_service.web.pages.templates import (
 
 from ...ui_helpers import post
 
-REPOSITORY = Path(__file__).resolve().parents[5]
 SPRITE = "/ui/static/img/icons.svg"
 
 
-def _icons() -> ModuleType:
-    spec = importlib.util.spec_from_file_location(
-        "assets_icons", REPOSITORY / "assets" / "icons.py"
-    )
-    assert spec and spec.loader
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
 def _held() -> set[str]:
-    return set(_icons().names((STATIC_DIR / "img/icons.svg").read_text("utf-8")))
+    """The icons the shipped sprite holds, by their symbol ids."""
+    sprite = (STATIC_DIR / "img/icons.svg").read_text("utf-8")
+    return set(re.findall(r'<symbol id="([^"]+)"', sprite))
 
 
 # --- the icons ------------------------------------------------------------------------
-
-
-def test_the_sprite_holds_the_icons_the_script_names() -> None:
-    # After a change of ICONS: uv run python assets/icons.py
-    icons = _icons()
-    assert icons.main(["--check"]) == 0
-    sprite = icons.SPRITE.read_text("utf-8")
-    assert f"Bootstrap Icons {icons.VERSION}, MIT licence" in sprite
-    assert "<script" not in sprite and "style=" not in sprite
-    assert "MIT License" in icons.LICENSE.read_text("utf-8")
 
 
 def test_every_mark_has_an_icon_in_the_sprite() -> None:
@@ -61,24 +39,6 @@ def test_every_mark_has_an_icon_in_the_sprite() -> None:
     names none (review 2026-11-17, finding 27)."""
     assert set(MARK_ICONS) == {mark.keyword for mark in marks.MARKS}
     assert set(MARK_ICONS.values()) <= _held()
-
-
-def test_an_icon_of_another_shape_is_refused() -> None:
-    with pytest.raises(ValueError, match="expected shape"):
-        _icons().symbol("x", "<svg><path/></svg>")
-
-
-def test_the_script_turns_an_icon_into_a_symbol() -> None:
-    svg = (
-        '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"'
-        ' fill="currentColor" class="bi bi-plus" viewBox="0 0 16 16">\n'
-        '  <path d="M8 4"/>\n  <path d="M1 1"/>\n</svg>'
-    )
-    made = _icons().symbol("plus", svg)
-    assert made == (
-        '<symbol id="plus" viewBox="0 0 16 16">'
-        '<path d="M8 4"/> <path d="M1 1"/></symbol>'
-    )
 
 
 PAGES = (

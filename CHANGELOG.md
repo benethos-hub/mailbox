@@ -6,6 +6,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `benethos-mailbox-common`: `benethos_mailbox_common.log.redact.forget()`
+  forgets every noted secret, for tests.
+
 ### Changed
 
 - The four packages name their README as `Documentation` on PyPI, beside

@@ -13,6 +13,8 @@ from .database import (
     Migrated,
     inspect_file,
     migrate_file,
+    move_sidecars,
+    remove_database_file,
     service_lock,
 )
 from .idempotency import SqliteIdempotencyRepository
@@ -49,5 +51,7 @@ __all__ = [
     "SqliteWebhookRepository",
     "inspect_file",
     "migrate_file",
+    "move_sidecars",
+    "remove_database_file",
     "service_lock",
 ]

@@ -11,13 +11,14 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
+from datetime import UTC, datetime
 from typing import Any
 
 import pytest
 
 from benethos_mailbox_service.data.models import MessageFilter
 from benethos_mailbox_service.data.protocols import Server
-from benethos_mailbox_service.data.protocols.imap import ImapSession
+from benethos_mailbox_service.data.protocols.imap import ImapSession, SearchCriteria
 from benethos_mailbox_service.data.protocols.pop3 import Pop3Session
 from benethos_mailbox_service.data.protocols.smtp import SmtpLogin, SmtpSession
 from benethos_mailbox_service.data.protocols.transport import refuse_line_ends
@@ -25,7 +26,7 @@ from benethos_mailbox_service.data.providers.jmap import mappers as jmap
 from benethos_mailbox_service.data.providers.microsoft import mappers as graph
 from benethos_mailbox_service.errors import BadRequestError, MailboxServiceError
 
-from ...imap_fake import FakeMailBox
+from ...imap_fake import FakeFolder, FakeMailBox, make_message
 from ...smtp_fake import FakeSmtpServer
 
 # What ends a line or a command, and what does not.
@@ -165,3 +166,50 @@ def test_a_jmap_filter_carries_any_value_as_data(value: str) -> None:
         json.dumps(jmap.query_filter("m1", MessageFilter.model_construct(text=text)))
     )
     assert sent["conditions"] == [{"inMailbox": "m1"}, {"text": text}]
+
+
+# --- a search
+
+
+@pytest.fixture
+def box() -> FakeMailBox:
+    box = FakeMailBox()
+    box.folders = {"INBOX": FakeFolder()}
+    box.add(
+        "INBOX",
+        1,
+        make_message(
+            "Rechnung September",
+            sender="Steuerbüro Berg <kanzlei@example.com>",
+            date=datetime(2026, 9, 3, 9, 0, tzinfo=UTC),
+            attachments=[("rechnung.pdf", "application/pdf", b"%PDF")],
+        ),
+        flags=("\\Seen", "\\Flagged"),
+    )
+    box.add(
+        "INBOX",
+        2,
+        make_message(
+            "Termin",
+            to="team@example.com",
+            date=datetime(2026, 9, 10, 9, 0, tzinfo=UTC),
+        ),
+    )
+    box.add(
+        "INBOX",
+        3,
+        make_message("Rechnung Oktober", date=datetime(2026, 10, 1, 9, 0, tzinfo=UTC)),
+    )
+    return box
+
+
+def test_the_session_refuses_a_line_break_in_a_search(box: FakeMailBox) -> None:
+    """IMAPClient quotes search text but keeps CR and LF, which would end the
+    command and start one of the caller's choosing."""
+    session = ImapSession(Server("imap.example.com", 993, "tls"), client_factory=box)
+    session.login("me@example.com", "secret")
+    session.select("INBOX")
+    for field in ("text", "sender", "to", "subject"):
+        with pytest.raises(BadRequestError, match="control characters"):
+            session.messages.search(SearchCriteria(**{field: "a\r\nX1 DELETE INBOX"}))
+    assert not [c for c in box.calls if c[0] == "search"]

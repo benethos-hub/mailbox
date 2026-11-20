@@ -49,6 +49,8 @@ LIBRARY_HOMES = {
     "keyring": f"{PACKAGE}.data.secrets.keys",
     "sqlite3": f"{PACKAGE}.data.storage.sqlite",
     "imapclient": f"{PACKAGE}.data.protocols.imap",
+    # The errors and the quoting of the standard library beside IMAPClient.
+    "imaplib": f"{PACKAGE}.data.protocols.imap",
     "imap_tools": f"{PACKAGE}.data.mail.parse",
     # Messages in RFC 5322, whatever protocol carries them.
     "email": f"{PACKAGE}.data.mail",
@@ -151,6 +153,20 @@ def test_the_database_stays_behind_the_storage_package() -> None:
         if imported.startswith(f"{inside}.sqlite")
     ]
     assert not violations, "SQLite reached directly:\n  " + "\n  ".join(violations)
+
+
+def test_the_files_beside_a_database_are_named_in_sqlite_alone() -> None:
+    """What SQLite keeps beside a database, its journals and its shared
+    memory, is named under ``data/storage/sqlite`` alone, so another
+    database replaces ``sqlite/`` and nothing else (ARCHITECTURE 8)."""
+    inside = f"{PACKAGE}.data.storage.sqlite"
+    sidecar = re.compile(r"""["'](-journal|-wal|-shm)["']""")
+    found = [
+        name
+        for name, path in modules()
+        if not name.startswith(inside) and sidecar.search(path.read_text("utf-8"))
+    ]
+    assert found == [], "the files of SQLite named outside sqlite/: " + ", ".join(found)
 
 
 def test_web_framework_stays_in_the_web_layer() -> None:

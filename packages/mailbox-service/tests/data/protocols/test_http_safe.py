@@ -1,4 +1,5 @@
-"""The guarded HTTPS fetch of autodiscovery, offline."""
+"""SafeFetcher of data/protocols/http, the guarded HTTPS fetch of
+autodiscovery, offline."""
 
 from __future__ import annotations
 

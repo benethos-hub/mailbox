@@ -20,8 +20,8 @@ from benethos_mailbox_service.errors import (
 )
 
 from ...clocks import Seconds
-from ...imap_adapter import INBOX, provider
 from ...imap_fake import FakeMailBox
+from .imap_adapter import INBOX, provider
 
 
 async def test_one_login_for_many_calls(server: FakeMailBox) -> None:

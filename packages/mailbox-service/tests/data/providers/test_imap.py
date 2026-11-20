@@ -25,8 +25,8 @@ from benethos_mailbox_service.errors import (
     ProviderError,
 )
 
-from ...imap_adapter import INBOX, SETTINGS, provider
 from ...imap_fake import FakeMailBox, make_message
+from .imap_adapter import INBOX, SETTINGS, provider
 
 # --- settings -----------------------------------------------------------------
 

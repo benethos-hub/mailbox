@@ -1,4 +1,5 @@
-"""Moving a message with PATCH folder_ids: the id stays (CONCEPT 4.1, 6.3)."""
+"""The IMAP adapter moves a message to the folder of folder_ids and gives
+its new id (CONCEPT 4.1, 6.3)."""
 
 from __future__ import annotations
 
@@ -15,9 +16,9 @@ from benethos_mailbox_service.errors import (
     ProviderError,
 )
 
-from ...imap_adapter import provider
 from ...imap_fake import FakeMailBox
-from ...provider_helpers import update
+from .imap_adapter import provider
+from .provider_helpers import update
 
 SENT = mappers.folder_id("Sent")
 MESSAGE = mappers.message_id("INBOX", 7, 3)

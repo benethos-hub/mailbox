@@ -31,3 +31,9 @@ def test_only_the_newest_are_kept(monkeypatch: pytest.MonkeyPatch) -> None:
     for secret in ("first-secret", "second-secret", "third-secret"):
         redact.note(secret)
     assert redact.redact("first-secret third-secret") == "first-secret ***"
+
+
+def test_a_forgotten_secret_is_no_longer_masked() -> None:
+    redact.note("forget-me-please")
+    redact.forget()
+    assert redact.redact("forget-me-please") == "forget-me-please"
