@@ -22,12 +22,10 @@ from pathlib import Path
 
 import pytest
 
-from .repository_helpers import ROOT
+from .repository_helpers import ROOT, repository_files
 
 PACKAGES = ROOT / "packages"
 # Folders with READMEs that are not the project's own.
-SKIPPED = {".git", ".venv", "node_modules", "vendor", "__pycache__", "data"}
-
 # Only the ``](target)`` tail of a link: a badge is a link around an image,
 # and its outer target is the one that counts.
 _LINK = re.compile(r"\]\(([^)\s]+)\)")
@@ -42,11 +40,13 @@ CONTENTS = "**Contents**"
 
 
 def _readmes() -> list[Path]:
-    return sorted(
+    """The READMEs of the repository, but those of vendored packages."""
+    return [
         path
-        for path in ROOT.rglob("README.md")
-        if not SKIPPED & set(path.relative_to(ROOT).parts[:-1])
-    )
+        for path in repository_files()
+        if path.name == "README.md"
+        and "vendor" not in path.relative_to(ROOT).parts[:-1]
+    ]
 
 
 def _documents() -> list[Path]:
@@ -158,6 +158,8 @@ def test_the_readmes_are_found() -> None:
     names = {p.relative_to(ROOT).as_posix() for p in _readmes()}
     assert {"README.md", "packages/mailbox-mcp/README.md"} <= names
     assert not any("vendor" in name for name in names)
+    # No cache of a tool, such as .pytest_cache, brings one of its own.
+    assert not any(part.startswith(".") for n in names for part in n.split("/"))
 
 
 def test_the_documents_are_found() -> None:
