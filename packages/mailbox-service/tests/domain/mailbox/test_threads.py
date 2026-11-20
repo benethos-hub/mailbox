@@ -12,7 +12,12 @@ from fastapi.testclient import TestClient
 
 from benethos_mailbox_service.assembly import Services, create_app
 from benethos_mailbox_service.config import Settings
-from benethos_mailbox_service.data.models import Address, Grant, MessageSummary
+from benethos_mailbox_service.data.models import (
+    Address,
+    Folder,
+    Grant,
+    MessageSummary,
+)
 from benethos_mailbox_service.data.providers import ThreadMessages
 from benethos_mailbox_service.data.providers.jmap import JmapProvider
 from benethos_mailbox_service.data.storage import InMemoryMessageIndexRepository
@@ -351,3 +356,32 @@ async def test_a_thread_shows_in_each_folder_by_its_mail_there(
     )
     assert sent.message_count == inbox.message_count == 3
     assert sent.folder_ids == inbox.folder_ids == [INBOX, SENT]
+
+
+@pytest.mark.parametrize("folders", [(), ("inbox",)])
+async def test_a_list_of_threads_asks_for_the_folders_once(
+    imap_services: Services,
+    imap_account_id: str,
+    conversation: FakeMailBox,
+    monkeypatch: pytest.MonkeyPatch,
+    folders: tuple[str, ...],
+) -> None:
+    await synced(imap_services, imap_account_id)
+    adapter = imap_services.adapters.get(imap_account_id)
+    real = adapter.list_folders
+    asked: list[None] = []
+
+    async def counted() -> list[Folder]:
+        asked.append(None)
+        return await real()
+
+    monkeypatch.setattr(adapter, "list_folders", counted)
+    page = await imap_services.mailbox.list_threads(
+        reading(imap_account_id, *folders) if folders else ADMIN,
+        imap_account_id,
+        folder_id="inbox",
+        limit=10,
+        cursor=None,
+    )
+    assert page.items
+    assert len(asked) == 1

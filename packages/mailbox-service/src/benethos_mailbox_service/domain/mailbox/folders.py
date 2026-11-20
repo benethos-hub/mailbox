@@ -52,8 +52,11 @@ class Folders:
         """Where the grants name folders, only inside one of them."""
         access.require("create_folder", account_id)
         await self._calls.require(account_id, NEEDS["create_folder"])
-        parent = await self._parent(account_id, new.parent_id)
-        reach = await reach_of(self._calls, access, "create_folder", account_id)
+        folders = None if new.parent_id is None else await self.all(account_id)
+        parent = None if folders is None else _parent(folders, new.parent_id)
+        reach = await reach_of(
+            self._calls, access, "create_folder", account_id, folders
+        )
         if reach is not None:
             if parent is None:
                 raise outside("create_folder", "at the top")
@@ -75,9 +78,7 @@ class Folders:
         )
         name = changes.name or folder.name
         parent = (
-            await self._parent(account_id, changes.parent_id)
-            if changes.moves
-            else folder.parent_id
+            _parent(folders, changes.parent_id) if changes.moves else folder.parent_id
         )
         if reach is not None and changes.moves:
             if parent is None:
@@ -123,17 +124,6 @@ class Folders:
         """Every folder of the account, whatever the caller reaches."""
         return await self._calls.call(account_id, lambda p: p.list_folders())
 
-    async def by_role(self, account_id: str, folder: str | None) -> str | None:
-        """A folder id, or the id of the folder with that role."""
-        return None if folder is None else await self.resolved(account_id, folder)
-
-    async def resolved(self, account_id: str, folder: str) -> str:
-        """A folder id, or the id of the folder with that role: ``501``
-        where the account has none."""
-        if not is_role(folder):
-            return folder
-        return _resolved(await self.all(account_id), folder)
-
     async def listed(
         self, access: Access, account_id: str, folder: str
     ) -> tuple[str, Reach | None]:
@@ -142,20 +132,13 @@ class Folders:
         missing, but the folder ``all``, which lists what they reach of
         every folder. The account's folders are asked for once."""
         folders = await self.all(account_id)
-        folder = _resolved(folders, folder)
-        if not any(f.id == folder for f in folders):
-            raise missing("folder", folder)
+        folder = _listed(folders, folder)
         reach = await reach_of(
             self._calls, access, "list_messages", account_id, folders
         )
         if reach is not None and not _is_all(folders, folder):
             require_folder(reach, folder)
         return folder, reach
-
-    async def _parent(self, account_id: str, folder: str | None) -> str | None:
-        """The folder a folder goes into, a role resolved: one the account
-        lists, or None for the top."""
-        return None if folder is None else _listed(await self.all(account_id), folder)
 
     async def _may_delete(
         self, access: Access, account_id: str, folder_id: str, folders: list[Folder]
@@ -209,7 +192,7 @@ def with_roles_resolved(folders: list[Folder], changes: MessageUpdate) -> Messag
     fields = ("folder_ids", "add_folder_ids", "remove_folder_ids")
     return changes.model_copy(
         update={
-            field: [_resolved(folders, wanted) for wanted in named]
+            field: [resolved(folders, wanted) for wanted in named]
             for field in fields
             if (named := getattr(changes, field))
         }
@@ -260,16 +243,23 @@ def _is_all(folders: list[Folder], folder_id: str) -> bool:
     return found is not None and found.role is FolderRole.ALL
 
 
+def _parent(folders: list[Folder], folder: str | None) -> str | None:
+    """The folder a folder goes into, a role resolved: one the account
+    lists, or None for the top."""
+    return None if folder is None else _listed(folders, folder)
+
+
 def _listed(folders: list[Folder], folder: str) -> str:
     """The id of a folder the account lists, by its id or its role."""
-    found = _resolved(folders, folder)
+    found = resolved(folders, folder)
     if not any(f.id == found for f in folders):
         raise missing("folder", folder)
     return found
 
 
-def _resolved(folders: list[Folder], folder: str) -> str:
-    """A folder id as it is, or the id of the folder with that role."""
+def resolved(folders: list[Folder], folder: str) -> str:
+    """A folder id as it is, or the id of the folder with that role:
+    ``501`` where the account has none."""
     if not is_role(folder):
         return folder
     match = find_folder(folders, folder)

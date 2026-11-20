@@ -35,7 +35,7 @@ from .. import paging
 from ..accounts import NEEDS, summaries, threads
 from ..rights import Access
 from .calls import Calls, public
-from .folders import Folders, holder
+from .folders import Folders, holder, resolved
 from .reach import Reach, reach_of, require_folder
 
 # The messages a thread lists at most, the newest.
@@ -86,8 +86,9 @@ class Threads:
         may also be a role such as ``inbox``."""
         access.require("list_threads", account_id)
         await self._calls.require(account_id, NEEDS["list_threads"])
-        folder = await self._folders.by_role(account_id, folder_id) or folder_id
-        reach = await reach_of(self._calls, access, "list_threads", account_id)
+        folders = await self._folders.all(account_id)
+        folder = resolved(folders, folder_id)
+        reach = await reach_of(self._calls, access, "list_threads", account_id, folders)
         if reach is not None:
             require_folder(reach, folder)
         keeps = self._calls.keeps_threads(account_id)
@@ -109,7 +110,7 @@ class Threads:
         own = self._calls.record(account_id).email
         read = await self._read(account_id, [i for i in ids if i not in loose])
         read.update({i: ([m], False) for i, m in loose.items()})
-        holds = holder(await self._folders.all(account_id), folder)
+        holds = holder(folders, folder)
         found: list[ThreadSummary] = []
         for thread_id in ids:
             thread = _visible(account_id, thread_id, read, reach, own)
