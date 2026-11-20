@@ -105,12 +105,10 @@ class Guards:
         operation: str,
         account_id: str,
         message_id: str,
-        into: list[str] | None = None,
-        looked: Lookups | None = None,
     ) -> None:
         """``outside`` for one message, raised."""
-        looked = looked or self.looking(account_id, [message_id])
-        refused = await self.outside(access, operation, looked, [message_id], into)
+        looked = self.looking(account_id, [message_id])
+        refused = await self.outside(access, operation, looked, [message_id])
         if refused:
             raise refused[message_id]
 
