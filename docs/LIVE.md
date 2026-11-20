@@ -22,7 +22,7 @@ test accounts for golden rule 1 of [CLAUDE.md](../CLAUDE.md).
 | [`microsoft.py`](#microsoftpy) | the Microsoft test account | mail to the first test account, deleted for good |
 | [`gmail.py`](#gmailpy) | the Gmail test account | mail to and from the first test account, deleted for good |
 | [`pop3.py`](#pop3py) | the test mail server in a container | one mail, deleted for good |
-| [`jmap.py`](#jmappy) | the test mail server in a container | one mail and a draft, deleted for good |
+| [`jmap.py`](#jmappy) | the test mail server in a container | one mail, a folder and a draft, deleted for good |
 | [`imap.py`](#imappy) | the test mail server in a container | one mail, a folder and a draft, deleted for good |
 
 The checks that start a service as a process make its first user with
