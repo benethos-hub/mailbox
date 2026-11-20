@@ -73,12 +73,16 @@ class SyncService:
             clock,
             activity or ActivityLog(clock),
         )
-        # Looked up at each call, as on the service itself.
-        self._gone = Gone(
-            lambda a: self.sync_account(a),
-            lambda a, ids: self.natives(a, ids),
-            lambda a: self.state(a).passes,
-        )
+
+        # Each looks the method up at its call, as a caller of the service
+        # does: one replaced on the service is the one Gone uses.
+        async def sync_account(account_id: str) -> None:
+            await self.sync_account(account_id)
+
+        def natives(account_id: str, ids: list[str]) -> dict[str, str | None]:
+            return self.natives(account_id, ids)
+
+        self._gone = Gone(sync_account, natives, lambda a: self.state(a).passes)
 
     @property
     def feed(self) -> ChangeFeed:
