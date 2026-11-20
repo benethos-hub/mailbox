@@ -171,7 +171,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   a slow PDF added a whole render before, and other PDFs ran out of time
   behind them.
 - The sender check reads a `From` written raw in UTF-8 (RFC 6532), such
-  as `a@bücher.de`. It was `unreadable` for IMAP, POP3 and a single
+  as `a@bücher.example`. It was `unreadable` for IMAP, POP3 and a single
   message of Gmail and JMAP before.
 - A code of an authenticator app typed with a space, `123 456` as many
   apps show it, signs in and confirms a step of the UI. It was taken
@@ -212,20 +212,22 @@ adheres to [Semantic Versioning](https://semver.org/).
   error, and with it in a model's context and logs.
 - A grant's recipients compare without regard to case alone. `ß` matched
   `ss` before, so a grant for `weiß@example.org` allowed
-  `weiss@example.org`, another mailbox, and `*@straße.de` another domain.
+  `weiss@example.org`, another mailbox, and `*@straße.example` another
+  domain.
 - A domain beyond ASCII is written as IDNA 2008, as registries and mail
-  programs do. Python's own codec made `strasse.de` of `straße.de`, so a
-  mail to `info@straße.de` went to `info@strasse.de`, and the discovery
-  of `straße.de` asked the servers of `strasse.de`.
+  programs do. Python's own codec made `strasse.example` of
+  `straße.example`, so a mail to `info@straße.example` went to
+  `info@strasse.example`, and the discovery of `straße.example` asked
+  the servers of `strasse.example`.
 - Every connection of the service trusts the certificate authorities of
   the system, `SSL_CERT_FILE` included. Microsoft Graph, Gmail, the
   discovery of servers and webhooks took a bundle of their own before,
   so a private authority named there counted for IMAP, POP3, SMTP and
   JMAP alone.
 - The sender check compares a domain beyond ASCII as IDNA 2008, as the
-  servers write it. It took the domain of `a@straße.de` for
-  `strasse.de` before, so a signature of `strasse.de` passed for it,
-  and the real `xn--strae-oqa.de` did not.
+  servers write it. It took the domain of `a@straße.example` for
+  `strasse.example` before, so a signature of `strasse.example` passed
+  for it, and the real `xn--strae-oqa.example` did not.
 - The sender check judges the address in `From` only when it is the one
   the message shows as its sender. A broken, folded `From` could show
   one address and have the check pass for another.

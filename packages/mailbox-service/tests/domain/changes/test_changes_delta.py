@@ -52,7 +52,9 @@ class OneAdapter:
 
     def record(self, account_id: str) -> Account:
         """What the log line of a pass names."""
-        return Account(id=account_id, provider=ProviderType.MICROSOFT, email="me@x.org")
+        return Account(
+            id=account_id, provider=ProviderType.MICROSOFT, email="me@x.example"
+        )
 
 
 def move_on(clock: Clock, graph: FakeGraph, minutes: int = 5) -> None:

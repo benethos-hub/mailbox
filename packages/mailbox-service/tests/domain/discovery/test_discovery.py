@@ -229,6 +229,6 @@ async def test_a_failed_lookup_is_not_cached() -> None:
 
 
 def test_a_domain_with_sharp_s_is_asked_as_idna_2008() -> None:
-    """Not as strasse.de, a domain of someone else (review 2026-11-17,
+    """Not as strasse.example, a domain of someone else (review 2026-11-17,
     finding 5)."""
-    assert query_of("u@straße.de").domain == "xn--strae-oqa.de"
+    assert query_of("u@straße.example").domain == "xn--strae-oqa.example"

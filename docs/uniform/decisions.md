@@ -78,7 +78,7 @@ Decided 2026-10-12, each with the options weighed and why.
    | Rechnungsnummer | yes | yes, a word beginning | no | as it indexes |
    | Stromrechnung | yes | no | no | as it indexes |
 
-   And `from=mail`: IMAP finds `max@gmail.com` and `mail@example.org`,
+   And `from=mail`: IMAP finds `max@gmail.example` and `mail@example.org`,
    Gmail and Microsoft only the second, where `mail` is a word of the
    address.
 8. **Inner capabilities.** `stable_ids`, `delta` and `server_search` (a)

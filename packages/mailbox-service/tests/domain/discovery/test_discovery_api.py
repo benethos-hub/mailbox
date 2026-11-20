@@ -58,7 +58,7 @@ from ..discovery_fake import (
         ("me@-firma.example", "not a valid email domain"),
         ("me@firma_x.example", "not a valid email domain"),
         ("me@x:8443", "not a valid email domain"),
-        ("me@co.uk", "public suffix"),
+        ("me@co.uk", "public suffix"),  # pragma: allowlist secret
         ("me@de", "public suffix"),
     ],
 )
@@ -180,7 +180,12 @@ def test_post_discovery_errors(api: tuple[Any, TestClient]) -> None:
 
 @pytest.mark.parametrize(
     "email",
-    ["a@x:8443", "me@firma\t.example", "me@xn--zz.example", "me@firma.exa\u2028mple"],
+    [
+        "a@x:8443",
+        "me@firma\t.example",
+        "me@xn--zz.example",
+        "me@firma.exa\u2028mple",  # pragma: allowlist secret
+    ],
 )
 def test_a_broken_domain_is_a_bad_request(
     api: tuple[Any, TestClient], email: str

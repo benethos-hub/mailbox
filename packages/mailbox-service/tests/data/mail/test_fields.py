@@ -9,7 +9,7 @@ from benethos_mailbox_service.errors import BadRequestError
 
 
 def test_an_address_on_the_wire_has_its_domain_in_punycode() -> None:
-    assert fields.wire_address("mü@bücher.de") == "mü@xn--bcher-kva.de"
+    assert fields.wire_address("mü@bücher.example") == "mü@xn--bcher-kva.example"
     assert fields.wire_address("me@example.com") == "me@example.com"
 
 
@@ -18,8 +18,8 @@ def test_an_address_on_the_wire_has_its_domain_in_punycode() -> None:
     [
         # IDNA 2008: ß and a final ς are letters of their own
         # (review 2026-11-17, finding 5).
-        ("a@straße.de", "a@xn--strae-oqa.de"),
-        ("a@ς.com", "a@xn--3xa.com"),
+        ("a@straße.example", "a@xn--strae-oqa.example"),
+        ("a@ς.example", "a@xn--3xa.example"),
     ],
 )
 def test_a_domain_is_written_as_idna_2008(address: str, wire: str) -> None:
@@ -50,11 +50,14 @@ def test_one_message_id(header: str, found: str | None) -> None:
 @pytest.mark.parametrize(
     ("header", "found"),
     [
-        ("<a@x.org> <b@x.org>", ["<a@x.org>", "<b@x.org>"]),
-        ("<a@x.org>\r\n <b@x.org>", ["<a@x.org>", "<b@x.org>"]),
-        ("<a@x.org><b@x.org>", ["<a@x.org>", "<b@x.org>"]),
-        ("<a@x.org> (comment) <b@x\r\n .org>", ["<a@x.org>", "<b@x.org>"]),
-        ("a@x.org b@x.org", ["a@x.org", "b@x.org"]),
+        ("<a@x.example> <b@x.example>", ["<a@x.example>", "<b@x.example>"]),
+        ("<a@x.example>\r\n <b@x.example>", ["<a@x.example>", "<b@x.example>"]),
+        ("<a@x.example><b@x.example>", ["<a@x.example>", "<b@x.example>"]),
+        (
+            "<a@x.example> (comment) <b@x\r\n .example>",
+            ["<a@x.example>", "<b@x.example>"],
+        ),
+        ("a@x.example b@x.example", ["a@x.example", "b@x.example"]),
         (None, []),
     ],
 )

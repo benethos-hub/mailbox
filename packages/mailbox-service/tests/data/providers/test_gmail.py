@@ -400,25 +400,25 @@ async def test_a_reply_joins_the_thread_it_answers(gmail: FakeGmail) -> None:
     thread = gmail.messages[original]["threadId"]
     provider = adapter(gmail)
     reply = (
-        b"From: me@gmail.com\r\nTo: alice@example.com\r\nSubject: Re: Plan\r\n"
+        b"From: me@gmail.example\r\nTo: alice@example.com\r\nSubject: Re: Plan\r\n"
         b"In-Reply-To: <plan@example.com>\r\n"
         b"References: <plan@example.com>\r\n\r\nYes"
     )
-    sent = await provider.send(reply, "me@gmail.com", ["alice@example.com"])
+    sent = await provider.send(reply, "me@gmail.example", ["alice@example.com"])
     assert sent.sent_copy is not None and sent.sent_copy.thread_id == thread
     draft = await provider.save_draft(reply, None)
     assert draft.thread_id == thread
     replaced = await provider.save_draft(reply.replace(b"Yes", b"Sure"), draft.id)
     assert replaced.thread_id == thread
     elsewhere = reply.replace(b"<plan@example.com>", b"<other@example.com>")
-    alone = await provider.send(elsewhere, "me@gmail.com", ["alice@example.com"])
+    alone = await provider.send(elsewhere, "me@gmail.example", ["alice@example.com"])
     assert alone.sent_copy is not None and alone.sent_copy.thread_id != thread
 
 
 async def test_a_send_names_the_hidden_recipients(gmail: FakeGmail) -> None:
-    raw = b"From: me@gmail.com\r\nTo: a@example.com\r\nSubject: Hi\r\n\r\nHello"
+    raw = b"From: me@gmail.example\r\nTo: a@example.com\r\nSubject: Hi\r\n\r\nHello"
     sent = await adapter(gmail).send(
-        raw, "me@gmail.com", ["a@example.com", "b@example.com"]
+        raw, "me@gmail.example", ["a@example.com", "b@example.com"]
     )
     [out] = gmail.sent
     assert message_from_bytes(out, policy=default)["Bcc"] == "b@example.com"
@@ -432,7 +432,7 @@ RAW_EAI = (
     "Authentication-Results: mx.google.com; spf=pass (google.com: domain of"
     " jörg@example.com designates 192.0.2.1 as permitted sender)"
     " smtp.mailfrom=jörg@example.com\r\n"
-    "From: Jörg <jörg@example.com>\r\nTo: jörg@example.de, a@bücher.de\r\n"
+    "From: Jörg <jörg@example.com>\r\nTo: jörg@example.org, a@bücher.example\r\n"
     "Subject: Grüße\r\nDate: Wed, 18 Nov 2026 10:00:00 +0000\r\n\r\nHi\r\n"
 ).encode()
 
@@ -445,7 +445,7 @@ async def test_a_list_reads_an_address_beyond_ascii(gmail: FakeGmail) -> None:
     ).items
     assert summary.sender is not None
     assert (summary.sender.email, summary.sender.name) == ("jörg@example.com", "Jörg")
-    assert [a.email for a in summary.to] == ["jörg@example.de", "a@bücher.de"]
+    assert [a.email for a in summary.to] == ["jörg@example.org", "a@bücher.example"]
     assert summary.subject == "Grüße"
 
 

@@ -8,7 +8,9 @@ suite and so in CI, and fails on:
   write it,
 - an id as the service gives it to a real account, user or token,
 - a credential in the forms the pre-commit hook knows: a token by its
-  prefix, and a value given to a name such as ``*_TOKEN`` or ``password``.
+  prefix, and a value given to a name such as ``*_TOKEN`` or ``password``,
+- an address or a sender pattern on a domain that is not reserved for
+  examples (RFC 2606, RFC 6761), as a person's or a supplier's would be.
 
 A line that must show such a form ends with ``pragma: allowlist secret``,
 as for the hook. See CLAUDE.md, golden rules 5 and 8.
@@ -23,7 +25,14 @@ from pathlib import Path
 
 import pytest
 
-from .content_helpers import ALLOW, CREDENTIALS, REFERENCES, problems
+from .content_helpers import (
+    ADDRESSES,
+    ALLOW,
+    CREDENTIALS,
+    EXAMPLE_ADDRESSES,
+    REFERENCES,
+    problems,
+)
 from .repository_helpers import ROOT
 
 
@@ -109,6 +118,16 @@ def test_a_credential_is_found(line: str) -> None:
 
 @pytest.mark.parametrize("line", REFERENCES)
 def test_a_name_that_is_given_no_value_passes(line: str) -> None:
+    assert problems(line) == []
+
+
+@pytest.mark.parametrize("line", ADDRESSES.values(), ids=ADDRESSES.keys())
+def test_an_address_on_a_domain_of_someone_is_found(line: str) -> None:
+    assert [p for p in problems(line) if p.startswith("address ")]
+
+
+@pytest.mark.parametrize("line", EXAMPLE_ADDRESSES)
+def test_an_address_for_examples_passes(line: str) -> None:
     assert problems(line) == []
 
 

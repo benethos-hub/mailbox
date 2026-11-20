@@ -114,7 +114,7 @@ def test_only_the_first_folder_with_a_name_gets_the_role() -> None:
 
 BROKEN = (
     b"Subject: =?iso-8859-1?Q?Gr=FC=DFe_aus_K=F6ln?=\r\n"
-    b"From: =?utf-8?Q?B=C3=BCcherei?= <info@xn--bcher-kva.de>\r\n"
+    b"From: =?utf-8?Q?B=C3=BCcherei?= <info@xn--bcher-kva.example>\r\n"
     b"To: me@example.com\r\n"
     b"Date: Tue, 01 Sep 2026 10:00:00\r\n"
     b"Content-Type: text/plain; charset=x-unknown-charset\r\n"
@@ -138,7 +138,7 @@ async def test_broken_charsets_idn_and_zoneless_dates() -> None:
     assert message.subject == "Grüße aus Köln"
     assert message.sender is not None
     assert message.sender.name == "Bücherei"
-    assert message.sender.email == "info@bücher.de"
+    assert message.sender.email == "info@bücher.example"
     assert message.date == datetime(2026, 9, 1, 10, 0, tzinfo=UTC)
     assert message.text_body is not None
     assert "Stra" in message.text_body
@@ -147,7 +147,7 @@ async def test_broken_charsets_idn_and_zoneless_dates() -> None:
 def test_unicode_address_leaves_plain_and_broken_domains_alone() -> None:
     assert fields.unicode_address("me@example.com") == "me@example.com"
     assert fields.unicode_address("no-at-sign") == "no-at-sign"
-    assert fields.unicode_address("x@xn--.de") == "x@xn--.de"
+    assert fields.unicode_address("x@xn--.example") == "x@xn--.example"
 
 
 # --- thread headers, folded by the sender ---------------------------------------------

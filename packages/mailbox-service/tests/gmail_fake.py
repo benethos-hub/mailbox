@@ -18,7 +18,7 @@ import httpx
 
 TOKEN = "good-token"
 PREFIX = "/gmail/v1/users/me"
-ADDRESS = "me@gmail.com"
+ADDRESS = "me@gmail.example"
 SYSTEM = (
     "INBOX",
     "SENT",

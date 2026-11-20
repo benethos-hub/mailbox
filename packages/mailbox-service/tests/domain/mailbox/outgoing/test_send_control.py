@@ -48,7 +48,7 @@ def test_a_limited_sender_hands_out_no_wider_send() -> None:
         Grant(
             accounts=["acc_1"],
             allow=["send"],
-            recipients=["*@a.org"],
+            recipients=["*@a.example"],
             max_sends_per_day=5,
         )
     )
@@ -57,7 +57,7 @@ def test_a_limited_sender_hands_out_no_wider_send() -> None:
             Grant(
                 accounts=["acc_1"],
                 allow=["send"],
-                recipients=["bob@a.org"],
+                recipients=["bob@a.example"],
                 max_sends_per_day=3,
             )
         ]
@@ -68,20 +68,20 @@ def test_a_limited_sender_hands_out_no_wider_send() -> None:
             Grant(
                 accounts=["acc_1"],
                 allow=["send"],
-                recipients=["*@b.org"],
+                recipients=["*@b.example"],
                 max_sends_per_day=1,
             )
         ]
     )
     assert not limited.covers(
-        [Grant(accounts=["acc_1"], allow=["send"], recipients=["*@a.org"])]
+        [Grant(accounts=["acc_1"], allow=["send"], recipients=["*@a.example"])]
     )
     assert not limited.covers(
         [
             Grant(
                 accounts=["acc_1"],
                 allow=["send"],
-                recipients=["*@a.org"],
+                recipients=["*@a.example"],
                 max_sends_per_day=6,
             )
         ]
@@ -91,13 +91,15 @@ def test_a_limited_sender_hands_out_no_wider_send() -> None:
 def test_an_unlimited_sender_hands_out_any_send() -> None:
     free = manager(Grant(accounts=["*"], allow=["send"]))
     assert free.covers([Grant(accounts=["*"], allow=["send"])])
-    assert free.covers([Grant(accounts=["*"], allow=["send"], recipients=["*@a.org"])])
+    assert free.covers(
+        [Grant(accounts=["*"], allow=["send"], recipients=["*@a.example"])]
+    )
 
 
 def test_limits_on_every_account() -> None:
-    limited = manager(Grant(accounts=["*"], allow=["send"], recipients=["*@a.org"]))
+    limited = manager(Grant(accounts=["*"], allow=["send"], recipients=["*@a.example"]))
     assert limited.covers(
-        [Grant(accounts=["*"], allow=["send"], recipients=["*@a.org"])]
+        [Grant(accounts=["*"], allow=["send"], recipients=["*@a.example"])]
     )
     assert not limited.covers([Grant(accounts=["*"], allow=["send"])])
 
@@ -118,7 +120,7 @@ def test_the_limit_frees_up_after_24_hours() -> None:
 
     def send() -> SentMessage:
         return asyncio.run(
-            control.send(access, "send_message", "acc_1", ["a@x.org"], sent, "<m>")
+            control.send(access, "send_message", "acc_1", ["a@x.example"], sent, "<m>")
         )
 
     send()
@@ -142,11 +144,15 @@ def test_a_failed_send_is_recorded_and_not_counted() -> None:
 
     with pytest.raises(ProviderError):
         asyncio.run(
-            control.send(access, "send_message", "acc_1", ["a@x.org"], failing, "<m>")
+            control.send(
+                access, "send_message", "acc_1", ["a@x.example"], failing, "<m>"
+            )
         )
     [record] = store.list("acc_1", limit=10, before=None)
     assert (record.outcome, record.error) == ("failed", "provider_error")
-    asyncio.run(control.send(access, "send_message", "acc_1", ["a@x.org"], sent, "<m>"))
+    asyncio.run(
+        control.send(access, "send_message", "acc_1", ["a@x.example"], sent, "<m>")
+    )
 
 
 def test_a_send_the_audit_cannot_record_is_still_sent(
@@ -159,7 +165,7 @@ def test_a_send_the_audit_cannot_record_is_still_sent(
     access = Access("usr_1", "u", [Grant(accounts=["acc_1"], allow=["send"])])
     result = asyncio.run(
         SendControl(Full()).send(
-            access, "send_message", "acc_1", ["a@x.org"], sent, "<m>"
+            access, "send_message", "acc_1", ["a@x.example"], sent, "<m>"
         )
     )
     assert result == asyncio.run(sent())
@@ -194,15 +200,15 @@ def test_sqlite_send_log(tmp_path: object) -> None:
             clock.now += timedelta(minutes=1)
             asyncio.run(
                 control.send(
-                    access, "send_draft", "acc_1", [f"{n}@x.org"], sent, f"<{n}>"
+                    access, "send_draft", "acc_1", [f"{n}@x.example"], sent, f"<{n}>"
                 )
             )
         records = store.list("acc_1", limit=2, before=None)
-        assert [r.recipients for r in records] == [["2@x.org"], ["1@x.org"]]
+        assert [r.recipients for r in records] == [["2@x.example"], ["1@x.example"]]
         older = store.list(
             "acc_1", limit=5, before=Before(records[-1].created_at, records[-1].id)
         )
-        assert [r.recipients for r in older] == [["0@x.org"]]
+        assert [r.recipients for r in older] == [["0@x.example"]]
         assert records[0].credential_id == "tok_1"
         assert records[0].operation == "send_draft"
         since = clock.now - timedelta(minutes=1, seconds=30)
@@ -278,7 +284,7 @@ def test_old_records_are_purged_once_an_hour(
 
     def send() -> int:
         asyncio.run(
-            control.send(access, "send_message", "acc_1", ["a@x.org"], sent, "<m>")
+            control.send(access, "send_message", "acc_1", ["a@x.example"], sent, "<m>")
         )
         return len(store.list("acc_1", limit=10, before=None))
 
@@ -306,7 +312,7 @@ def test_zero_keeps_every_record() -> None:
     access = Access("usr_1", "u", [Grant(accounts=["acc_1"], allow=["send"])])
     for _ in range(3):
         asyncio.run(
-            control.send(access, "send_message", "acc_1", ["a@x.org"], sent, "<m>")
+            control.send(access, "send_message", "acc_1", ["a@x.example"], sent, "<m>")
         )
         clock.now += timedelta(days=400)
     assert len(store.list("acc_1", limit=10, before=None)) == 3

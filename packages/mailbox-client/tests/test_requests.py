@@ -41,14 +41,14 @@ SAMPLES: dict[str, Any] = {
 }
 # A body of a message, built as a caller builds it, with every field.
 MESSAGE = message_body(
-    to=[("a@x.org", "A")],
-    cc=[("c@x.org", None)],
-    bcc=[("b@x.org", None)],
+    to=[("a@x.example", "A")],
+    cc=[("c@x.example", None)],
+    bcc=[("b@x.example", None)],
     subject="Hi",
     text="Hello",
     html="<p>Hello</p>",
     reference=Reference("msg_1", "forward", forward_as="attachment", quote=False),
-    reply_to=[("r@x.org", "R")],
+    reply_to=[("r@x.example", "R")],
     attachments=[],
     attachments_from=[],
 )

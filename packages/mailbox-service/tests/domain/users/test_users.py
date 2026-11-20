@@ -146,7 +146,7 @@ def test_no_warning_when_sending_is_narrowed_or_blind(
     app_client: TestClient, services: Services, account_id: str
 ) -> None:
     narrowed = Grant(
-        accounts=[account_id], allow=["mail.read", "send"], recipients=["*@a.org"]
+        accounts=[account_id], allow=["mail.read", "send"], recipients=["*@a.example"]
     )
     assert warnings_of(app_client, services, narrowed) == []
     blind = Grant(accounts=[account_id], allow=["send", "drafts"])
@@ -160,14 +160,16 @@ def test_me_lists_the_limits_of_every_sending_grant(
         "usr_x",
         "x",
         [
-            Grant(accounts=[account_id], allow=["send_draft"], recipients=["*@a.org"]),
+            Grant(
+                accounts=[account_id], allow=["send_draft"], recipients=["*@a.example"]
+            ),
             Grant(accounts=[account_id], allow=["send"], max_sends_per_day=2),
         ],
     )
     [account] = services.users.me(access).accounts
     assert [
         (s.recipients, s.max_sends_per_day, s.sends_left) for s in account.sending
-    ] == [(["*@a.org"], None, None), (None, 2, 2)]
+    ] == [(["*@a.example"], None, None), (None, 2, 2)]
 
 
 def test_an_admin_is_warned(client: TestClient, account_id: str) -> None:

@@ -296,21 +296,21 @@ def test_a_label_no_host_name_has_is_none(value: str) -> None:
 
 # IDNA 2008, as servers write it: ß stays, it is no "ss".
 def test_a_sharp_s_is_not_the_domain_with_ss() -> None:
-    entry = "mx.example.org; dkim=pass header.d=strasse.de"
-    assert check(entry, sender="a@straße.de").result != "pass"
+    entry = "mx.example.org; dkim=pass header.d=strasse.example"
+    assert check(entry, sender="a@straße.example").result != "pass"
 
 
 @pytest.mark.parametrize(
     "entry",
     [
-        "mx.example.org; dkim=pass header.d=xn--strae-oqa.de",
-        "mx.example.org; dmarc=pass header.from=xn--strae-oqa.de",
+        "mx.example.org; dkim=pass header.d=xn--strae-oqa.example",
+        "mx.example.org; dmarc=pass header.from=xn--strae-oqa.example",
     ],
 )
 def test_a_sharp_s_compares_as_idna_2008(entry: str) -> None:
-    found = check(entry, sender="a@straße.de")
+    found = check(entry, sender="a@straße.example")
     assert found.result == "pass"
-    assert found.domain == "xn--strae-oqa.de"
+    assert found.domain == "xn--strae-oqa.example"
 
 
 def test_a_quoted_version_is_no_head_the_names_offer() -> None:

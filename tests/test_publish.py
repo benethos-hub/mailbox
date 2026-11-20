@@ -78,6 +78,13 @@ def test_a_manual_run_tries_every_package() -> None:
     assert "environment:" not in trial and "id-token" not in trial
 
 
+def test_the_trial_keeps_its_name_when_a_release_skips_it() -> None:
+    """GitHub does not expand the matrix in the name of a skipped job, so
+    the name of pypi-trial names no value of the matrix."""
+    name = re.search(r"^    name: (.+)$", workflow_job("pypi-trial"), re.M)
+    assert name and name.group(1) == "PyPI (trial)"
+
+
 def test_a_job_with_rights_of_its_own_still_reads_the_repository() -> None:
     """The permissions of a job replace the workflow's. Each job that
     names its own keeps ``contents: read``, which its checkout needs once

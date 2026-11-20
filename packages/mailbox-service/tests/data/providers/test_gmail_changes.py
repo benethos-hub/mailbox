@@ -195,9 +195,9 @@ async def test_an_error_of_gmails_side_is_tried_again(gmail: FakeGmail) -> None:
 
 async def test_a_send_is_not_tried_again(gmail: FakeGmail) -> None:
     gmail.failing = [backend_error()]
-    raw = b"From: me@gmail.com\r\nTo: a@example.com\r\nSubject: Hi\r\n\r\nHello"
+    raw = b"From: me@gmail.example\r\nTo: a@example.com\r\nSubject: Hi\r\n\r\nHello"
     with pytest.raises(ProviderError, match="backendError"):
-        await adapter(gmail).send(raw, "me@gmail.com", ["a@example.com"])
+        await adapter(gmail).send(raw, "me@gmail.example", ["a@example.com"])
     assert gmail.sent == [] and len(gmail.requests) == 1
 
 
@@ -256,7 +256,7 @@ async def test_a_google_refresh_names_no_scope() -> None:
 async def test_the_address_comes_from_gmails_profile() -> None:
     def endpoint(request: httpx.Request) -> httpx.Response:
         if request.url.host == "gmail.googleapis.com":
-            body = {"emailAddress": "Me@Gmail.com", "historyId": "1"}
+            body = {"emailAddress": "Me@Gmail.example", "historyId": "1"}
             return httpx.Response(200, content=json.dumps(body))
         return httpx.Response(
             200, json={"access_token": "at", "refresh_token": "rt", "expires_in": 60}
@@ -265,7 +265,7 @@ async def test_the_address_comes_from_gmails_profile() -> None:
     app = App(sign_in(ProviderType.GMAIL), "client-1", SecretStr("s"))
     client = OAuthClient(app, ApiClient(transport=httpx.MockTransport(endpoint)))
     tokens = await client.exchange("code", "https://x/cb", "verifier")
-    assert tokens.identity is not None and tokens.identity.email == "me@gmail.com"
+    assert tokens.identity is not None and tokens.identity.email == "me@gmail.example"
 
 
 # --- the client in the settings -------------------------------------------------------

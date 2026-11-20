@@ -59,7 +59,7 @@ async def test_send_picks_the_identity(jmap: JmapProvider, server: FakeJmap) -> 
     ]
     await jmap.send(make_message("A"), "BOSS@example.org", ["x@example.net"])
     await jmap.send(make_message("B"), "me@example.org", ["x@example.net"])
-    await jmap.send(make_message("C"), "me@elsewhere.net", ["x@example.net"])
+    await jmap.send(make_message("C"), "me@elsewhere.example", ["x@example.net"])
     assert [s["identityId"] for s in server.submissions] == ["i3", "i2", "i1"]
     server.identities = []
     with pytest.raises(ConflictError, match="no identity"):

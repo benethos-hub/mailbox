@@ -293,13 +293,13 @@ async def test_every_tool_carries_its_title_and_hints() -> None:
     ("error", "said"),
     [
         (
-            ApiError(403, "recipient_not_allowed", "no grant allows a@x.org"),
+            ApiError(403, "recipient_not_allowed", "no grant allows a@x.example"),
             "recipient_not_allowed (HTTP 403)",
         ),
         (ServiceUnavailableError("gone"), "mailbox-service is not reachable"),
         (ServiceTimeoutError("slow"), "mailbox-service did not answer in time"),
         (ConfigurationError("no token"), "the REST client is not configured"),
-        (ToolError("not an address: a@x.org"), "the arguments were refused"),
+        (ToolError("not an address: a@x.example"), "the arguments were refused"),
     ],
 )
 async def test_a_failed_tool_is_a_warning_without_its_arguments(
@@ -312,12 +312,12 @@ async def test_a_failed_tool_is_a_warning_without_its_arguments(
 
     logged = server._logged(send_message, server._Held())
     with pytest.raises(ToolError) as caught:
-        await logged("acc_1", to=["a@x.org"])
+        await logged("acc_1", to=["a@x.example"])
     assert str(caught.value) == str(error)
     [record] = caplog.records
     assert record.levelno == logging.WARNING
     assert record.getMessage() == f"tool send_message failed: {said}"
-    assert "a@x.org" not in caplog.text
+    assert "a@x.example" not in caplog.text
 
 
 async def test_a_tool_error_logs_its_kind(caplog: pytest.LogCaptureFixture) -> None:

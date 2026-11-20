@@ -56,18 +56,18 @@ def test_gmail_signs_in_at_google_in_the_browser(endpoint: TokenEndpoint) -> Non
                 source="preset",
                 confirmed=True,
             )
-            return Discovery(email=email, domain="gmail.com", candidates=[gmail])
+            return Discovery(email=email, domain="gmail.example", candidates=[gmail])
 
     client.app.state.services = replace(  # type: ignore[attr-defined]
         client.app.state.services, discovery=Found()
     )
-    page = post(client, "/ui/accounts/discover", {"email": "me@gmail.com"}).text
+    page = post(client, "/ui/accounts/discover", {"email": "me@gmail.example"}).text
     assert "Sign in with Google" in page and "Google asks you" in page
     assert "/ui/oauth/gmail/device" not in page and "with a code" not in page
     answer = post(
         client,
         "/ui/oauth/gmail/start",
-        {"login_hint": "me@gmail.com"},
+        {"login_hint": "me@gmail.example"},
         follow_redirects=False,
     )
     query = parse_qs(urlsplit(answer.headers["location"]).query)

@@ -24,7 +24,7 @@ async def test_me(make_client: Callable) -> None:
                 display_name="Me",
                 operations=frozenset({"list_messages"}),
                 warnings=frozenset({"reads_and_sends"}),
-                sending=(Sending(("a@x.org",), 5, 4),),
+                sending=(Sending(("a@x.example",), 5, 4),),
                 capabilities=frozenset({"read_state"}),
                 marks=Marks(read=frozenset({"$draft"})),
                 status="needs_reauth",

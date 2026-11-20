@@ -43,10 +43,10 @@ def sender(services: Services, account_id: str, **limits: object) -> dict[str, s
 @pytest.mark.parametrize(
     ("pattern", "address", "matches"),
     [
-        ("*", "anyone@anywhere.org", True),
+        ("*", "anyone@anywhere.example", True),
         ("*@example.org", "Bob@Example.ORG", True),
         ("*@example.org", "bob@sub.example.org", False),
-        ("*@example.org", "bob@example.org.evil", False),
+        ("*@example.org", "bob@example.org.evil.test", False),
         ("bob@example.org", "BOB@example.org", True),
         ("bob@example.org", "bobby@example.org", False),
         # Local parts some servers route on to another host.
@@ -60,8 +60,8 @@ def sender(services: Services, account_id: str, **limits: object) -> dict[str, s
         # Case alone: ß is no ss, a domain with ß is another domain
         # (review 2026-11-17, finding 4).
         ("weiß@example.org", "weiss@example.org", False),
-        ("*@straße.de", "x@strasse.de", False),
-        ("*@Straße.de", "x@STRAßE.de", True),
+        ("*@straße.example", "x@strasse.example", False),
+        ("*@Straße.example", "x@STRAßE.example", True),
     ],
 )
 def test_recipient_matches(pattern: str, address: str, matches: bool) -> None:
@@ -72,13 +72,13 @@ def test_recipient_matches(pattern: str, address: str, matches: bool) -> None:
     ("outer", "inner", "covers"),
     [
         ("*", "*", True),
-        ("*", "*@a.org", True),
-        ("*@a.org", "*", False),
-        ("*@a.org", "*@A.org", True),
-        ("*@a.org", "bob@a.org", True),
-        ("bob@a.org", "*@a.org", False),
-        ("bob@a.org", "bob@a.org", True),
-        ("*@straße.de", "*@strasse.de", False),
+        ("*", "*@a.example", True),
+        ("*@a.example", "*", False),
+        ("*@a.example", "*@A.example", True),
+        ("*@a.example", "bob@a.example", True),
+        ("bob@a.example", "*@a.example", False),
+        ("bob@a.example", "bob@a.example", True),
+        ("*@straße.example", "*@strasse.example", False),
     ],
 )
 def test_pattern_covers(outer: str, inner: str, covers: bool) -> None:
@@ -96,7 +96,7 @@ def test_grant_patterns_are_checked() -> None:
     with pytest.raises(ValueError):
         Grant(accounts=["a"], allow=["send"], recipients=["bob"])
     with pytest.raises(ValueError):
-        Grant(accounts=["a"], allow=["send"], recipients=["*@*.a.org"])
+        Grant(accounts=["a"], allow=["send"], recipients=["*@*.a.example"])
     with pytest.raises(ValueError):
         Grant(accounts=["a"], allow=["send"], max_sends_per_day=0)
 
@@ -161,10 +161,12 @@ def test_send_limit(
     url = f"/v1/accounts/{account_id}/send"
     for n in range(2):
         answer = app_client.post(
-            url, json=mail("a@x.org", subject=str(n)), headers=headers
+            url, json=mail("a@x.example", subject=str(n)), headers=headers
         )
         assert answer.status_code == 200
-    stopped = app_client.post(url, json=mail("a@x.org", subject="3"), headers=headers)
+    stopped = app_client.post(
+        url, json=mail("a@x.example", subject="3"), headers=headers
+    )
     assert stopped.status_code == 429
     assert stopped.json()["error"]["code"] == "send_limit_reached"
     assert 0 < int(stopped.headers["Retry-After"]) <= 24 * 3600
@@ -179,8 +181,8 @@ def test_a_retry_with_its_key_is_not_counted(
         "Idempotency-Key": "k",
     }
     url = f"/v1/accounts/{account_id}/send"
-    first = app_client.post(url, json=mail("a@x.org"), headers=headers)
-    again = app_client.post(url, json=mail("a@x.org"), headers=headers)
+    first = app_client.post(url, json=mail("a@x.example"), headers=headers)
+    again = app_client.post(url, json=mail("a@x.example"), headers=headers)
     assert (first.status_code, again.status_code) == (200, 200)
     assert again.json() == first.json()
     assert len(outbox(services, account_id)) == 1
@@ -229,7 +231,7 @@ def test_the_admin_has_no_limits(
 ) -> None:
     for n in range(3):
         answer = client.post(
-            f"/v1/accounts/{account_id}/send", json=mail("a@x.org", subject=str(n))
+            f"/v1/accounts/{account_id}/send", json=mail("a@x.example", subject=str(n))
         )
         assert answer.status_code == 200
 
@@ -256,7 +258,7 @@ def test_every_attempt_is_in_the_audit(
 
 
 def test_the_audit_names_the_token(client: TestClient, account_id: str) -> None:
-    client.post(f"/v1/accounts/{account_id}/send", json=mail("a@x.org"))
+    client.post(f"/v1/accounts/{account_id}/send", json=mail("a@x.example"))
     [record] = client.get(f"/v1/accounts/{account_id}/sends").json()["items"]
     assert record["credential_id"].startswith("tok_")
 
@@ -264,7 +266,7 @@ def test_the_audit_names_the_token(client: TestClient, account_id: str) -> None:
 def test_the_audit_is_paged(client: TestClient, account_id: str) -> None:
     for n in range(3):
         client.post(
-            f"/v1/accounts/{account_id}/send", json=mail("a@x.org", subject=str(n))
+            f"/v1/accounts/{account_id}/send", json=mail("a@x.example", subject=str(n))
         )
     url = f"/v1/accounts/{account_id}/sends"
     first = client.get(url, params={"limit": 2}).json()
@@ -278,7 +280,7 @@ def test_the_audit_is_paged(client: TestClient, account_id: str) -> None:
 def test_the_audit_across_accounts_keeps_a_deleted_one(
     client: TestClient, services: Services, account_id: str
 ) -> None:
-    client.post(f"/v1/accounts/{account_id}/send", json=mail("a@x.org"))
+    client.post(f"/v1/accounts/{account_id}/send", json=mail("a@x.example"))
     assert client.delete(f"/v1/accounts/{account_id}").status_code == 204
     page = services.mailbox.outgoing.list_all_sends(ADMIN, limit=10)
     assert [r.account_id for r in page.items] == [account_id]
@@ -294,7 +296,7 @@ def test_the_audit_of_every_account(
         "/v1/accounts", json={"provider": "memory", "email": "o@example.com"}
     ).json()["id"]
     for account in (account_id, other):
-        client.post(f"/v1/accounts/{account}/send", json=mail("a@x.org"))
+        client.post(f"/v1/accounts/{account}/send", json=mail("a@x.example"))
     first = client.get("/v1/sends", params={"limit": 1}).json()
     second = client.get(
         "/v1/sends", params={"limit": 1, "cursor": first["next_cursor"]}

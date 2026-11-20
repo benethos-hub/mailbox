@@ -209,11 +209,11 @@ def test_a_raw_utf_8_from_is_judged() -> None:
     """RFC 6532: an address beyond ASCII written raw in UTF-8."""
     raw = (
         "Authentication-Results: mx.example.org; dmarc=pass"
-        " header.from=xn--bcher-kva.de\r\n"
-        "From: Jörg <a@bücher.de>\r\nSubject: Hi\r\n\r\nHello\r\n"
+        " header.from=xn--bcher-kva.example\r\n"
+        "From: Jörg <a@bücher.example>\r\nSubject: Hi\r\n\r\nHello\r\n"
     ).encode()
     parsed = ParsedMessage(raw)
-    assert parsed.all_headers("from") == ["Jörg <a@bücher.de>"]
+    assert parsed.all_headers("from") == ["Jörg <a@bücher.example>"]
     trust = authentication.Trust(("mx.example.org",))
     found = convert.summary_fields(parsed, trust)["sender_check"]
-    assert (found.result, found.domain) == ("pass", "xn--bcher-kva.de")
+    assert (found.result, found.domain) == ("pass", "xn--bcher-kva.example")
