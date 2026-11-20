@@ -17,10 +17,19 @@ from pathlib import Path
 
 import pytest
 
-from .publish_helpers import PACKAGES, ROOT, module_of, name_of, needs_of, project_of
-from .repository_helpers import read
-
-SERVICE, CLIENT, MCP, COMMON = PACKAGES
+from .publish_helpers import (
+    CLIENT,
+    COMMON,
+    MCP,
+    PACKAGES,
+    ROOT,
+    SERVICE,
+    module_of,
+    name_of,
+    needs_of,
+    project_of,
+)
+from .repository_helpers import REPOSITORY, read, repository_files
 
 
 def _version() -> str:
@@ -292,32 +301,16 @@ def test_minor_line_examples_are_current(relative: str, kind: str) -> None:
 # Text files are searched whole for the patterns above. The changelog keeps
 # the old versions on purpose, the lockfile is checked on its own.
 SEARCHED = {".md", ".toml", ".yaml", ".yml", ".json", ".example", ".html", ".txt"}
-SKIPPED_DIRS = {
-    ".git",
-    ".venv",
-    ".mypy_cache",
-    ".pytest_cache",
-    ".ruff_cache",
-    "__pycache__",
-    "build",
-    "data",
-    "dist",
-    "node_modules",
-}
 SKIPPED_FILES = {"CHANGELOG.md", "uv.lock", "package-lock.json"}
 
 
 def _text_files() -> list[Path]:
-    found = []
-    for path in ROOT.rglob("*"):
-        relative = path.relative_to(ROOT)
-        if any(part in SKIPPED_DIRS for part in relative.parts[:-1]):
-            continue
-        if not path.is_file() or path.name in SKIPPED_FILES:
-            continue
-        if path.suffix in SEARCHED or path.name == "Dockerfile":
-            found.append(path)
-    return found
+    return [
+        path
+        for path in repository_files()
+        if path.name not in SKIPPED_FILES
+        and (path.suffix in SEARCHED or path.name == "Dockerfile")
+    ]
 
 
 def test_no_file_names_another_version() -> None:
@@ -353,7 +346,7 @@ def test_the_changelog_names_the_version_as_its_newest_release() -> None:
     released = re.findall(r"^## \[(\d+\.\d+\.\d+)\] - \d{4}-\d\d-\d\d$", text, re.M)
     assert released, "CHANGELOG.md names no release"
     assert released[0] == current
-    base = "https://github.com/benethos-hub/mailbox"
+    base = REPOSITORY
     assert f"[Unreleased]: {base}/compare/v{current}...HEAD" in text
     assert re.search(rf"^\[{re.escape(current)}\]: {base}/", text, re.M)
 

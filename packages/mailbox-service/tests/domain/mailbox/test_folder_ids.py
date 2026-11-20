@@ -13,10 +13,16 @@ from fastapi.testclient import TestClient
 from benethos_mailbox_service.assembly import Services, create_app
 from benethos_mailbox_service.common import opaque
 from benethos_mailbox_service.config import Settings
-from benethos_mailbox_service.data.models import Folder, Grant, MessageUpdate
+from benethos_mailbox_service.data.models import (
+    Folder,
+    FolderCreate,
+    FolderUpdate,
+    Grant,
+    MessageUpdate,
+)
 from benethos_mailbox_service.domain.rights.access import Access
 
-from ...conftest import bearer_for, memory_of
+from ...conftest import bearer_for, memory_of, relearn
 from ...imap_fake import FakeMailBox
 
 # A name that would end SELECT and start a command of the caller's choosing.
@@ -125,3 +131,50 @@ def test_a_move_asks_for_the_folders_once(
 
     assert anyio.run(moved) == [INVOICES.id]
     assert len(asked) == 1
+
+
+def counting(
+    services: Services, account_id: str, monkeypatch: pytest.MonkeyPatch
+) -> list[None]:
+    """Each time the account's adapter lists its folders, one more entry."""
+    memory = memory_of(services, account_id)
+    real = memory.list_folders
+    asked: list[None] = []
+
+    async def counted() -> list[Folder]:
+        asked.append(None)
+        return await real()
+
+    monkeypatch.setattr(memory, "list_folders", counted)
+    return asked
+
+
+@pytest.mark.parametrize("folders", [None, ["inbox", "Invoices"]])
+def test_a_folder_made_and_moved_asks_for_the_folders_once(
+    services: Services,
+    account_id: str,
+    monkeypatch: pytest.MonkeyPatch,
+    folders: list[str] | None,
+) -> None:
+    memory_of(services, account_id).folders.append(INVOICES)
+    relearn(services, account_id)
+    asked = counting(services, account_id, monkeypatch)
+    grant = Grant(
+        accounts=[account_id],
+        allow=["create_folder", "update_folder"],
+        folders=folders,
+    )
+    access = Access("u", "u", [grant])
+    mailbox = services.mailbox
+
+    async def made_and_moved() -> None:
+        made = await mailbox.create_folder(
+            access, account_id, FolderCreate(name="Paid", parent_id=INVOICES.id)
+        )
+        asked_by_create = len(asked)
+        await mailbox.update_folder(
+            access, account_id, made.id, FolderUpdate(parent_id="inbox")
+        )
+        assert (asked_by_create, len(asked) - asked_by_create) == (1, 1)
+
+    anyio.run(made_and_moved)

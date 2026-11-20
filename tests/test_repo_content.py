@@ -18,11 +18,6 @@ as for the hook. See CLAUDE.md, golden rules 5 and 8.
 
 from __future__ import annotations
 
-import shutil
-import subprocess
-from functools import cache
-from pathlib import Path
-
 import pytest
 
 from .content_helpers import (
@@ -33,26 +28,7 @@ from .content_helpers import (
     REFERENCES,
     problems,
 )
-from .repository_helpers import ROOT
-
-
-@cache
-def tracked() -> tuple[Path, ...]:
-    """The files git tracks, as text. A binary file is left out."""
-    git = shutil.which("git")
-    if git is None:
-        pytest.fail("the repository content is read through git, which is missing")
-    done = subprocess.run(
-        [git, "ls-files", "-z"], cwd=ROOT, capture_output=True, check=False
-    )
-    if done.returncode != 0:
-        pytest.fail("the repository content is read through git: not a git checkout")
-    found = []
-    for name in filter(None, done.stdout.decode().split("\0")):
-        path = ROOT / name
-        if path.is_file() and b"\0" not in path.read_bytes():
-            found.append(path)
-    return tuple(found)
+from .repository_helpers import ROOT, tracked
 
 
 def test_the_repository_holds_none_of_it() -> None:

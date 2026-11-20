@@ -62,9 +62,7 @@ class SyncService:
         self._new_id = new_id
         self._threads = IndexThreads(adapters, index, references, new_thread)
         self._feed = feed
-        self._activity = activity or ActivityLog(clock)
         self._writes = OwnWrites()
-        self._gone = Gone(self)
         self._runner = SyncRunner(
             adapters,
             index,
@@ -73,8 +71,18 @@ class SyncService:
             self._writes,
             new_id,
             clock,
-            self._activity,
+            activity or ActivityLog(clock),
         )
+
+        # Each looks the method up at its call, as a caller of the service
+        # does: one replaced on the service is the one Gone uses.
+        async def sync_account(account_id: str) -> None:
+            await self.sync_account(account_id)
+
+        def natives(account_id: str, ids: list[str]) -> dict[str, str | None]:
+            return self.natives(account_id, ids)
+
+        self._gone = Gone(sync_account, natives, lambda a: self.state(a).passes)
 
     @property
     def feed(self) -> ChangeFeed:

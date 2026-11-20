@@ -4,18 +4,24 @@ of this kind, one pass before a list, is ``SyncService``'s own."""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from .service import SyncService
+from collections.abc import Awaitable, Callable
 
 
 class Gone:
     """Per account, the messages looked up in vain after a pass: our id
-    and the provider's. Forgotten with the next pass."""
+    and the provider's. Forgotten with the next pass. ``sync_account``
+    runs a pass, ``natives`` names the provider's ids of our ids now, and
+    ``passes`` counts the passes of an account."""
 
-    def __init__(self, sync: SyncService) -> None:
-        self._sync = sync
+    def __init__(
+        self,
+        sync_account: Callable[[str], Awaitable[None]],
+        natives: Callable[[str, list[str]], dict[str, str | None]],
+        passes: Callable[[str], int],
+    ) -> None:
+        self._sync_account = sync_account
+        self._natives = natives
+        self._count = passes
         self._after: dict[str, tuple[int, set[tuple[str, str]]]] = {}
 
     def forget(self, account_id: str) -> None:
@@ -32,8 +38,8 @@ class Gone:
         after a pass given up, which counts as none: until the next pass."""
         if self._known(account_id, self._passes(account_id), natives):
             return {}
-        await self._sync.sync_account(account_id)
-        now = self._sync.natives(account_id, list(natives))
+        await self._sync_account(account_id)
+        now = self._natives(account_id, list(natives))
         moved = {i: n for i, n in now.items() if n and n != natives[i]}
         self._note(
             account_id,
@@ -43,7 +49,7 @@ class Gone:
         return moved
 
     def _passes(self, account_id: str) -> int:
-        return self._sync.state(account_id).passes
+        return self._count(account_id)
 
     def _known(self, account_id: str, passes: int, natives: dict[str, str]) -> bool:
         """Whether every one of them was looked up in vain since pass

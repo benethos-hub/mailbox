@@ -14,12 +14,11 @@ from typing import Any
 
 from benethos_mailbox_client import environment
 
-from .publish_helpers import PACKAGES, ROOT, project_of, workflow_job
+from .publish_helpers import MCP, ROOT, project_of, workflow_job
+from .repository_helpers import RAW, REPOSITORY
 
 ENTRY = ROOT / ".github" / "publish" / "mcp-registry" / "server.json"
-MCP = PACKAGES[2]
 OWNER = "benethos-hub"
-RAW = f"https://raw.githubusercontent.com/{OWNER}/mailbox/main/"
 
 
 def _entry() -> dict[str, Any]:
@@ -53,7 +52,7 @@ def test_the_bundle_is_the_one_the_release_carries() -> None:
     version = project_of(MCP)["version"]
     (bundle,) = _packages("mcpb")
     assert bundle["identifier"] == (
-        f"https://github.com/{OWNER}/mailbox/releases/download/v{version}/"
+        f"{REPOSITORY}/releases/download/v{version}/"
         f"{project_of(MCP)['name']}-{version}.mcpb"
     )
     assert bundle["fileSha256"] == "0" * 64
@@ -70,7 +69,7 @@ def test_the_name_lies_in_the_owners_namespace() -> None:
     entry = _entry()
     assert entry["name"] == f"io.github.{OWNER}/{project_of(MCP)['name']}"
     assert entry["repository"] == {
-        "url": f"https://github.com/{OWNER}/mailbox",
+        "url": REPOSITORY,
         "source": "github",
     }
 

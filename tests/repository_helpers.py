@@ -1,15 +1,49 @@
-"""What the tests of the repository share: its root, its workflows and
-the organisation's workflows and actions they call."""
+"""What the tests of the repository share: its root, its files, its
+workflows and the organisation's workflows and actions they call."""
 
 from __future__ import annotations
 
 import re
+import shutil
+import subprocess
+from functools import cache
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
+# The repository on GitHub, and its files as served raw from main.
+REPOSITORY = "https://github.com/benethos-hub/mailbox"
+RAW = "https://raw.githubusercontent.com/benethos-hub/mailbox/main/"
 WORKFLOWS = ROOT / ".github" / "workflows"
 # Where the organisation's reusable workflows and actions live.
 ORG = "benethos-hub/.github/"
+
+
+@cache
+def repository_files() -> tuple[Path, ...]:
+    """Every file of the repository as git lists it: the tracked ones and
+    new ones .gitignore does not leave out. So a cache, a virtual
+    environment or a database never counts."""
+    git = shutil.which("git")
+    if git is None:
+        pytest.fail("the repository is read through git, which is missing")
+    done = subprocess.run(
+        [git, "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+        cwd=ROOT,
+        capture_output=True,
+        check=False,
+    )
+    if done.returncode != 0:
+        pytest.fail("the repository is read through git: not a git checkout")
+    names = sorted(set(filter(None, done.stdout.decode().split("\0"))))
+    return tuple(path for name in names if (path := ROOT / name).is_file())
+
+
+@cache
+def tracked() -> tuple[Path, ...]:
+    """The files of the repository, as text. A binary file is left out."""
+    return tuple(p for p in repository_files() if b"\0" not in p.read_bytes())
 
 
 def read(name: str) -> str:

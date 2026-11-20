@@ -86,7 +86,7 @@ async def test_a_refused_token_removes_every_tool_and_asks_no_more(
     assert "refused the token (HTTP 401)" in caplog.text
 
 
-async def test_a_user_that_may_do_nothing_gets_its_tools_back() -> None:
+async def test_a_403_to_me_takes_the_tools_until_it_passes() -> None:
     service = Service(ME)
     async with connected(following(service, READ)) as client:
         service.status = 403

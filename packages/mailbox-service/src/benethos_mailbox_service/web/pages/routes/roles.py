@@ -27,7 +27,7 @@ async def list_roles(request: Request, caller: Viewer, roles: Roles) -> HTMLResp
         "pages/roles.html",
         page="roles",
         roles=found,
-        used=_used_by(request, caller, roles, found),
+        used=_used_by(caller, roles, found),
         names=account_names(request, caller),
         can_create=caller.allows("create_role"),
     )
@@ -79,9 +79,7 @@ def _new_role_page(
     )
 
 
-def _used_by(
-    request: Request, caller: Access, roles: RoleService, found: list[Role]
-) -> dict[str, int]:
+def _used_by(caller: Access, roles: RoleService, found: list[Role]) -> dict[str, int]:
     """How many users hold each role, if the caller may list users."""
     return if_allowed(
         caller,
