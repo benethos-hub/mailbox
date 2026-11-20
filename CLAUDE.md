@@ -176,7 +176,9 @@ containers/               # images/ (one folder per image), and one folder
 .github/dependabot.yml    # weekly, minor and patch grouped: uv.lock, with
                           #   the ranges kept while they allow the release,
                           #   the actions by commit, the base images of
-                          #   both Dockerfiles
+                          #   both Dockerfiles, the images of the
+                          #   production and test mail server compose
+                          #   files by their tags
 .github/publish/          # one folder per place a release is listed:
                           #   mcp-registry/server.json, the MCP server's
                           #   entry (test_mcp_registry.py), mcpb/, its
