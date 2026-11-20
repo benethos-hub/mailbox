@@ -28,6 +28,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   is gone when messages are still known in it, and the message keeps its
   id.
 
+- A message listed while a sync pass ran keeps its id. Before, the pass
+  could drop it, and the change feed told a creation and a deletion for
+  it.
+
 ### Security
 
 - **Breaking:** a change no longer puts a message into the drafts
