@@ -1,8 +1,9 @@
 <!doctype html>
 <!--
-  The architecture diagram of the README. `uv run python assets/build.py
-  --diagram` renders it to architecture.png, and with #dark in the
-  address to architecture-dark.png, the image GitHub shows in dark mode.
+  The architecture diagram of the README, in the look of the social
+  preview. `uv run python assets/build.py --diagram` renders it to
+  architecture.png, and with #dark in the address to
+  architecture-dark.png, the image GitHub shows in dark mode.
 -->
 <html lang="en">
 <head>
@@ -10,73 +11,175 @@
 <title>Mailbox architecture</title>
 <style>
   :root {
-    --page: #F9FBFE; --card: #FFFFFF; --line: #CBD5E1; --text: #0F172A;
-    --muted: #475569; --faint: #64748B; --navy: #0F2A76; --blue: #1D4ED8;
-    --package: #EFF6FF; --package-line: #93C5FD; --chip: #F1F5FD;
-    --shadow: rgba(15, 42, 118, .07); --arrow: #64748B;
+    --page:
+      radial-gradient(circle at 88% 18%, rgba(51,95,219,.16) 0, rgba(51,95,219,0) 38%),
+      radial-gradient(circle at 78% 92%, rgba(22,60,168,.12) 0, rgba(22,60,168,0) 42%),
+      linear-gradient(135deg, #FBFCFF 0%, #EEF3FD 55%, #E3ECFB 100%);
+    --dot: rgba(22,60,168,.13); --flow: #335FDB; --mark: .08;
+    --text: #0F172A; --muted: #5B6B8C; --ink: #163CA8; --accent: #335FDB;
+    --card: rgba(255,255,255,.74); --card-line: #DCE6F8;
+    --card-shadow: 0 10px 30px rgba(22,60,168,.08);
+    --tile: #EEF3FD;
+    --package: rgba(232,239,253,.92); --package-line: #B9CBF2; --name: #0F2A76;
+    --service: rgba(255,255,255,.96); --service-top: #EEF3FD;
+    --service-shadow: 0 24px 60px rgba(15,42,118,.22), 0 4px 12px rgba(15,42,118,.10);
+    --door: #2A50D2; --door-small: rgba(255,255,255,.82);
+    --chip: rgba(255,255,255,.85); --chip-line: #C9D8F5;
+    --arrow: #8493B4; --label: #F4F7FE;
   }
   :root.dark {
-    --page: #0D1117; --card: #161B22; --line: #30363D; --text: #E6EDF3;
-    --muted: #9DA7B3; --faint: #8B949E; --navy: #BFDBFE; --blue: #60A5FA;
-    --package: #0F1E3D; --package-line: #1E40AF; --chip: #1C2433;
-    --shadow: rgba(0, 0, 0, .3); --arrow: #8B949E;
+    --page:
+      radial-gradient(circle at 88% 18%, rgba(74,120,240,.22) 0, rgba(74,120,240,0) 38%),
+      radial-gradient(circle at 78% 92%, rgba(42,80,210,.18) 0, rgba(42,80,210,0) 42%),
+      linear-gradient(135deg, #0A0F1E 0%, #0C1429 55%, #0F1B3A 100%);
+    --dot: rgba(122,162,255,.14); --flow: #7AA2FF; --mark: .10;
+    --text: #E8EEFA; --muted: #9AA9C7; --ink: #C3D4FF; --accent: #7AA2FF;
+    --card: rgba(255,255,255,.055); --card-line: #24345C;
+    --card-shadow: 0 10px 30px rgba(0,0,0,.30);
+    --tile: #17264F;
+    --package: rgba(42,80,210,.20); --package-line: #33498A; --name: #DBE6FF;
+    --service: rgba(16,25,51,.96); --service-top: #17264F;
+    --service-shadow: 0 24px 60px rgba(0,0,0,.50), 0 4px 12px rgba(0,0,0,.30);
+    --door: #2A50D2; --door-small: rgba(255,255,255,.82);
+    --chip: rgba(255,255,255,.06); --chip-line: #2E4070;
+    --arrow: #7686A8; --label: #101A35;
   }
-  html, body { margin: 0; width: 1430px; height: 700px; overflow: hidden; }
+  html, body { margin: 0; width: 1430px; height: 722px; overflow: hidden; }
   body { background: var(--page); color: var(--text); position: relative;
-         font-family: "Segoe UI", system-ui, sans-serif; }
+         font-family: "Segoe UI", "Inter", "Helvetica Neue", Arial, sans-serif; }
   code { font-family: "Cascadia Code", Consolas, monospace; }
-  .head { position: absolute; top: 28px; font-size: 15px; font-weight: 600;
-          letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
-  .card { position: absolute; box-sizing: border-box; height: 86px; padding: 0 18px;
-          display: flex; flex-direction: column; justify-content: center;
-          background: var(--card); border: 2px solid var(--line); border-radius: 14px;
-          box-shadow: 0 3px 10px var(--shadow); }
-  .card b { font-size: 21px; font-weight: 600; }
-  .card small { font-size: 16px; color: var(--muted); margin-top: 2px; }
-  .who { left: 30px; width: 200px; }
-  .package { left: 290px; width: 270px; background: var(--package);
-             border-color: var(--package-line); }
-  .package code, .service code { font-size: 22px; font-weight: 700; color: var(--navy); }
-  .package small + small { color: var(--faint); font-size: 14px; }
-  .provider { left: 1160px; width: 240px; }
-  .service { position: absolute; left: 620px; top: 70px; width: 480px; height: 520px;
-             box-sizing: border-box; background: var(--card); border: 3px solid var(--blue);
-             border-radius: 22px; box-shadow: 0 12px 34px var(--shadow); }
-  .service .top { position: absolute; left: 24px; top: 22px; display: flex;
-                  align-items: center; gap: 14px; }
-  .service .top img { width: 54px; height: auto; }
-  .service .top small { display: block; font-size: 15px; color: var(--muted); }
-  .service .top small + small { color: var(--faint); font-size: 14px; }
-  .door { position: absolute; left: 18px; width: 140px; height: 70px; box-sizing: border-box;
-          padding: 0 14px; display: flex; flex-direction: column; justify-content: center;
-          background: var(--package); border: 2px solid var(--package-line);
-          border-radius: 12px; }
-  .door b { font-size: 18px; font-weight: 600; }
-  .door small { font-size: 14px; color: var(--muted); }
-  .service ul { position: absolute; left: 182px; top: 132px; margin: 0; padding: 0;
-                list-style: none; display: flex; flex-direction: column; gap: 10px; }
-  .service li { font-size: 16px; background: var(--chip); border-radius: 9px;
-                padding: 10px 14px; white-space: nowrap; }
-  .foot { position: absolute; left: 30px; top: 636px; font-size: 18px; color: var(--muted); }
-  .foot strong { color: var(--navy); }
+
+  /* The ground of the social preview: dots that come in from the right,
+     flowing lines from the left edge, the 3D icon large and faint. */
+  .grid { position: absolute; inset: 0;
+          background-image: radial-gradient(var(--dot) 1.2px, transparent 1.2px);
+          background-size: 26px 26px;
+          -webkit-mask-image: linear-gradient(90deg, transparent 35%, #000 100%); }
+  .mark { position: absolute; right: -130px; top: 160px; width: 560px;
+          opacity: var(--mark); transform: rotate(-8deg); }
   svg { position: absolute; left: 0; top: 0; }
-  svg text { font: 600 14px "Segoe UI", system-ui, sans-serif; fill: var(--faint); }
+  .flow path { stroke: url(#fade); }
+  .flow .start { fill: var(--flow); fill-opacity: .28; stroke: none; }
+  #fade stop { stop-color: var(--flow); }
+
+  .head { position: absolute; top: 26px; font-size: 14px; font-weight: 600;
+          letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+
+  /* A frosted card with a sign in a tile, as the panel of the preview. */
+  .card { position: absolute; box-sizing: border-box; height: 86px; padding: 0 14px;
+          display: flex; align-items: center; gap: 12px;
+          background: var(--card); border: 1.5px solid var(--card-line);
+          border-radius: 18px; box-shadow: var(--card-shadow);
+          backdrop-filter: blur(6px); }
+  .card .sign { flex: none; width: 38px; height: 38px; border-radius: 11px;
+                background: var(--tile); color: var(--accent);
+                display: flex; align-items: center; justify-content: center; }
+  .card .sign svg { position: static; }
+  .card div { display: flex; flex-direction: column; min-width: 0; }
+  .card b { font-size: 19px; font-weight: 600; white-space: nowrap; }
+  .card small { font-size: 14.5px; color: var(--muted); margin-top: 2px;
+                white-space: nowrap; }
+  .who { left: 24px; width: 222px; }
+  .provider { left: 1160px; width: 246px; }
+
+  /* A package: its name as its README has it, and as PyPI has it. */
+  .package { left: 300px; width: 262px; padding: 0 18px;
+             background: var(--package); border-color: var(--package-line); }
+  .package b, .service .top b { font-size: 21px; font-weight: 700; color: var(--name);
+                                white-space: nowrap; }
+  .package code, .service .top code { font-size: 13.5px; font-weight: 600;
+                                      color: var(--accent); white-space: nowrap; }
+  .package small { font-size: 15px; margin-top: 5px; }
+  .package small + small { font-size: 13.5px; opacity: .85; margin-top: 2px; }
+
+  /* The service, in front like the card of the preview. */
+  .service { position: absolute; left: 620px; top: 72px; width: 480px; height: 568px;
+             box-sizing: border-box; overflow: hidden; background: var(--service);
+             border: 2px solid var(--accent); border-radius: 24px;
+             box-shadow: var(--service-shadow); }
+  .service .top { position: absolute; left: 0; right: 0; top: 0; height: 140px;
+                  box-sizing: border-box; padding: 0 20px; display: flex;
+                  align-items: center; gap: 16px; background: var(--service-top);
+                  border-bottom: 1.5px solid var(--chip-line); }
+  .service .top img { width: 62px; height: auto; }
+  .service .top div { display: flex; flex-direction: column; }
+  .service .top b { font-size: 24px; }
+  .service .top code { font-size: 14.5px; }
+  .service .top small { font-size: 15px; color: var(--muted); margin-top: 5px; }
+  .service .top small + small { font-size: 13.5px; opacity: .85; margin-top: 2px; }
+  .door { position: absolute; left: 20px; width: 142px; height: 70px; box-sizing: border-box;
+          padding: 0 16px; display: flex; flex-direction: column; justify-content: center;
+          background: var(--door); color: #fff; border-radius: 16px 16px 16px 4px;
+          box-shadow: 0 6px 16px rgba(22,60,168,.22); }
+  .door b { font-size: 18px; font-weight: 600; }
+  .door small { font-size: 14px; color: var(--door-small); }
+  .service ul { position: absolute; left: 186px; right: 20px; top: 176px; height: 354px;
+                margin: 0; padding: 0; list-style: none; display: flex;
+                flex-direction: column; justify-content: space-between; }
+  .service li { font-size: 15.5px; font-weight: 600; color: var(--ink);
+                background: var(--chip); border: 1.5px solid var(--chip-line);
+                border-radius: 999px; box-sizing: border-box; height: 36px;
+                padding: 0 16px; display: flex; align-items: center; white-space: nowrap; }
+
+  .foot { position: absolute; left: 24px; top: 668px; font-size: 18px; color: var(--muted);
+          display: flex; align-items: center; gap: 10px; }
+  .foot svg { position: static; color: var(--accent); }
+  .foot strong { color: var(--ink); }
+  /* Where the project lives, as on the social preview. */
+  .address { position: absolute; right: 24px; top: 668px; font-size: 18px;
+             color: var(--muted); letter-spacing: .2px; display: flex;
+             align-items: center; gap: 8px; }
+  .address svg { position: static; color: var(--accent); }
+
+  .arrows text { font: 600 13.5px "Segoe UI", system-ui, sans-serif; fill: var(--muted);
+                 text-anchor: middle; }
   .plain { stroke: var(--arrow); }
-  .blue { stroke: var(--blue); }
+  .blue { stroke: var(--accent); }
   .tip-plain { fill: var(--arrow); }
-  .tip-blue { fill: var(--blue); }
+  .tip-blue { fill: var(--accent); }
+  /* The name of a long way, on its line. */
+  .way { position: absolute; transform: translate(-50%, -50%); font-size: 13.5px;
+         font-weight: 600; color: var(--muted); background: var(--label);
+         border: 1.5px solid var(--chip-line); border-radius: 999px;
+         padding: 3px 12px; white-space: nowrap; }
 </style>
 <script>
   if (location.hash === "#dark") document.documentElement.classList.add("dark");
 </script>
 </head>
 <body>
-  <div class="head" style="left:30px">Who works with it</div>
-  <div class="head" style="left:290px">The packages</div>
+  <div class="grid"></div>
+  <svg class="flow" width="1430" height="722" viewBox="0 0 1430 722">
+    <defs>
+      <linearGradient id="fade" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="1000" y2="0">
+        <stop offset="0" stop-opacity=".30"/>
+        <stop offset=".55" stop-opacity=".10"/>
+        <stop offset="1" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    <g fill="none" stroke-linecap="round">
+      <path d="M 5 12 C 220 12, 380 7, 620 7 S 860 10, 1000 12" stroke-width="1.6"/>
+      <path d="M 9 205 C 220 205, 380 213, 620 213 S 860 208, 1000 205" stroke-width="2.4"/>
+      <path d="M 7 496 C 220 496, 380 480, 620 480 S 860 490, 1000 496" stroke-width="2"/>
+      <path d="M 4.5 650 C 220 650, 380 654, 620 654 S 860 651, 1000 650" stroke-width="1.4"/>
+      <path d="M 11 706 C 220 706, 380 714, 620 714 S 860 709, 1000 706" stroke-width="2.2"/>
+    </g>
+    <g>
+      <path class="start" d="M 0 7 A 5 5 0 0 1 0 17 Z"/>
+      <path class="start" d="M 0 196 A 9 9 0 0 1 0 214 Z"/>
+      <path class="start" d="M 0 489 A 7 7 0 0 1 0 503 Z"/>
+      <path class="start" d="M 0 645.5 A 4.5 4.5 0 0 1 0 654.5 Z"/>
+      <path class="start" d="M 0 695 A 11 11 0 0 1 0 717 Z"/>
+    </g>
+  </svg>
+  <img class="mark" src="../brand/icon.svg" alt="">
+
+  <div class="head" style="left:24px">Who works with it</div>
+  <div class="head" style="left:300px">The packages</div>
   <div class="head" style="left:620px">On your own server</div>
   <div class="head" style="left:1160px">Mail accounts</div>
 
-  <svg width="1430" height="700" viewBox="0 0 1430 700">
+  <svg class="arrows" width="1430" height="722" viewBox="0 0 1430 722">
     <defs>
       <marker id="p" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
         <path class="tip-plain" d="M0,0 L10,5 L0,10 z"/>
@@ -85,51 +188,67 @@
         <path class="tip-blue" d="M0,0 L10,5 L0,10 z"/>
       </marker>
     </defs>
-    <g stroke-width="2.5" fill="none">
-      <!-- AI agent to mailbox-mcp, scripts to mailbox-client -->
-      <line class="plain" x1="234" y1="113" x2="286" y2="113" marker-start="url(#p)" marker-end="url(#p)"/>
-      <line class="plain" x1="234" y1="243" x2="286" y2="243" marker-start="url(#p)" marker-end="url(#p)"/>
-      <!-- mailbox-mcp uses mailbox-client -->
-      <line class="blue" x1="425" y1="160" x2="425" y2="196" marker-end="url(#b)"/>
-      <!-- mailbox-client to the REST API -->
-      <line class="blue" x1="564" y1="243" x2="616" y2="243" marker-start="url(#b)" marker-end="url(#b)"/>
+    <g stroke-width="2.5" fill="none" stroke-linecap="round">
+      <!-- AI agent to the MCP server, scripts to the client -->
+      <line class="plain" x1="251" y1="127" x2="295" y2="127" marker-start="url(#p)" marker-end="url(#p)"/>
+      <line class="plain" x1="251" y1="283" x2="295" y2="283" marker-start="url(#p)" marker-end="url(#p)"/>
+      <!-- the MCP server uses the client -->
+      <line class="blue" x1="431" y1="201" x2="431" y2="225" marker-end="url(#b)"/>
+      <!-- the client to the REST API -->
+      <line class="blue" x1="567" y1="283" x2="615" y2="283" marker-start="url(#b)" marker-end="url(#b)"/>
+      <!-- scripts and apps to the REST API without the client -->
+      <path class="plain" stroke-dasharray="7 6" d="M 135 331 V 348 Q 135 358 145 358 H 580 Q 590 358 590 348 V 316 Q 590 306 600 306 H 615" marker-start="url(#p)" marker-end="url(#p)"/>
       <!-- people to /ui, webhooks out to your systems -->
-      <line class="plain" x1="234" y1="373" x2="616" y2="373" marker-start="url(#p)" marker-end="url(#p)"/>
-      <line class="plain" x1="618" y1="503" x2="236" y2="503" marker-end="url(#p)"/>
+      <line class="plain" x1="251" y1="425" x2="615" y2="425" marker-start="url(#p)" marker-end="url(#p)"/>
+      <line class="plain" x1="618" y1="567" x2="251" y2="567" marker-end="url(#p)"/>
       <!-- the service to each provider -->
-      <line class="blue" x1="1104" y1="113" x2="1156" y2="113" marker-start="url(#b)" marker-end="url(#b)"/>
-      <line class="blue" x1="1104" y1="218" x2="1156" y2="218" marker-start="url(#b)" marker-end="url(#b)"/>
-      <line class="blue" x1="1104" y1="323" x2="1156" y2="323" marker-start="url(#b)" marker-end="url(#b)"/>
-      <line class="blue" x1="1104" y1="428" x2="1156" y2="428" marker-start="url(#b)" marker-end="url(#b)"/>
-      <line class="blue" x1="1104" y1="533" x2="1156" y2="533" marker-start="url(#b)" marker-end="url(#b)"/>
+      <line class="blue" x1="1105" y1="115" x2="1155" y2="115" marker-start="url(#b)" marker-end="url(#b)"/>
+      <line class="blue" x1="1105" y1="235" x2="1155" y2="235" marker-start="url(#b)" marker-end="url(#b)"/>
+      <line class="blue" x1="1105" y1="356" x2="1155" y2="356" marker-start="url(#b)" marker-end="url(#b)"/>
+      <line class="blue" x1="1105" y1="476" x2="1155" y2="476" marker-start="url(#b)" marker-end="url(#b)"/>
+      <line class="blue" x1="1105" y1="597" x2="1155" y2="597" marker-start="url(#b)" marker-end="url(#b)"/>
     </g>
-    <text x="246" y="102">MCP</text>
-    <text x="436" y="183">uses</text>
-    <text x="572" y="232">REST</text>
-    <text x="398" y="362">browser</text>
-    <text x="370" y="492">signed webhooks</text>
+    <text x="273" y="116">MCP</text>
+    <text x="456" y="218">uses</text>
+    <text x="591" y="272">REST</text>
   </svg>
+  <div class="way" style="left:360px; top:358px">REST without the client</div>
+  <div class="way" style="left:433px; top:425px">browser</div>
+  <div class="way" style="left:433px; top:567px">signed webhooks</div>
 
-  <div class="card who" style="top:70px"><b>AI agents</b><small>Claude and others</small></div>
-  <div class="card who" style="top:200px"><b>Scripts and apps</b><small>your own code</small></div>
-  <div class="card who" style="top:330px"><b>People</b><small>admins and users</small></div>
-  <div class="card who" style="top:460px"><b>Your systems</b><small>ticket tool, dashboard</small></div>
+  <div class="card who" style="top:84px">
+    <span class="sign"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="12" rx="3"/><path d="M12 3v4M9 12h.01M15 12h.01"/></svg></span>
+    <div><b>AI agents</b><small>Claude and others</small></div>
+  </div>
+  <div class="card who" style="top:240px">
+    <span class="sign"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5"/></svg></span>
+    <div><b>Scripts and apps</b><small>your own code</small></div>
+  </div>
+  <div class="card who" style="top:382px">
+    <span class="sign"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg></span>
+    <div><b>People</b><small>admins and users</small></div>
+  </div>
+  <div class="card who" style="top:524px">
+    <span class="sign"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span>
+    <div><b>Your systems</b><small>ticket tool, dashboard</small></div>
+  </div>
 
-  <div class="card package" style="top:70px"><code>mailbox-mcp</code><small>MCP server, stdio or HTTP</small><small>PyPI and container image</small></div>
-  <div class="card package" style="top:200px"><code>mailbox-client</code><small>Python client, async and sync</small><small>PyPI</small></div>
+  <div class="card package" style="top:72px; height:124px"><div><b>Mailbox MCP</b><code>benethos-mailbox-mcp</code><small>MCP server, stdio or HTTP</small><small>PyPI, container image, MCP Registry</small><small>Claude Desktop extension</small></div></div>
+  <div class="card package" style="top:230px; height:106px"><div><b>Mailbox Client</b><code>benethos-mailbox-client</code><small>Python client, async and sync</small><small>PyPI</small></div></div>
 
   <div class="service">
     <div class="top">
       <img src="../brand/icon.svg" alt="">
-      <div><code>mailbox-service</code><small>one API for every provider</small><small>PyPI and container image</small></div>
+      <div><b>Mailbox Service</b><code>benethos-mailbox-service</code><small>one API for every provider</small><small>PyPI and container image</small></div>
     </div>
-    <div class="door" style="top:138px"><b>REST API</b><small>/v1, OpenAPI</small></div>
-    <div class="door" style="top:268px"><b>Config UI</b><small>/ui</small></div>
-    <div class="door" style="top:398px"><b>Webhooks</b><small>on every change</small></div>
+    <div class="door" style="top:176px"><b>REST API</b><small>/v1, OpenAPI</small></div>
+    <div class="door" style="top:318px"><b>Config UI</b><small>/ui</small></div>
+    <div class="door" style="top:460px"><b>Webhooks</b><small>on every change</small></div>
     <ul>
       <li>A token for every tool</li>
       <li>Rights down to the folder</li>
       <li>Recipient lists, daily limits</li>
+      <li>Sign-in with a second factor</li>
       <li>Sync and change feed</li>
       <li>Audit of sends and admin</li>
       <li>Credentials encrypted</li>
@@ -137,12 +256,34 @@
     </ul>
   </div>
 
-  <div class="card provider" style="top:70px"><b>IMAP + SMTP</b><small>GMX, web.de, own servers</small></div>
-  <div class="card provider" style="top:175px"><b>Microsoft Graph</b><small>Microsoft 365, Outlook</small></div>
-  <div class="card provider" style="top:280px"><b>JMAP</b><small>Fastmail, Stalwart</small></div>
-  <div class="card provider" style="top:385px"><b>POP3</b><small>mailboxes without IMAP</small></div>
-  <div class="card provider" style="top:490px"><b>Gmail API</b><small>Gmail, Google Workspace</small></div>
+  <div class="card provider" style="top:72px">
+    <span class="sign"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></span>
+    <div><b>IMAP + SMTP</b><small>GMX, web.de, own servers</small></div>
+  </div>
+  <div class="card provider" style="top:192px">
+    <span class="sign"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></span>
+    <div><b>Microsoft Graph</b><small>Microsoft 365, Outlook</small></div>
+  </div>
+  <div class="card provider" style="top:313px">
+    <span class="sign"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></span>
+    <div><b>JMAP</b><small>Fastmail, Stalwart</small></div>
+  </div>
+  <div class="card provider" style="top:433px">
+    <span class="sign"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></span>
+    <div><b>POP3</b><small>mailboxes without IMAP</small></div>
+  </div>
+  <div class="card provider" style="top:554px">
+    <span class="sign"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></span>
+    <div><b>Gmail API</b><small>Gmail, Google Workspace</small></div>
+  </div>
 
-  <div class="foot"><strong>Self-hosted.</strong> Mail goes straight from the provider to your server. No tool ever sees a mail password.</div>
+  <div class="foot">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg>
+    <span><strong>Self-hosted.</strong> Mail goes straight from the provider to your server. No tool ever sees a mail password.</span>
+  </div>
+  <div class="address">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>
+    github.com/benethos-hub/mailbox
+  </div>
 </body>
 </html>

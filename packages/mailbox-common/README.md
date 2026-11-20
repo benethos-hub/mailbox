@@ -1,14 +1,24 @@
-# <img src="https://raw.githubusercontent.com/benethos-hub/mailbox/main/assets/brand/icon.svg" alt="" height="36" align="absmiddle"> mailbox-common
+# <img src="https://raw.githubusercontent.com/benethos-hub/mailbox/main/assets/brand/icon.svg" alt="" height="36" align="absmiddle"> Mailbox Common
 
 [![CI](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml/badge.svg)](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml)
 [![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/benethos-hub/mailbox/badges/coverage.json&logo=githubactions&logoColor=white)](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml)
 [![License](https://img.shields.io/github/license/benethos-hub/mailbox?logo=opensourceinitiative&logoColor=white)](https://github.com/benethos-hub/mailbox/blob/main/LICENSE)
 [![Python](https://img.shields.io/pypi/pyversions/benethos-mailbox-common?logo=python&logoColor=white)](https://pypi.org/project/benethos-mailbox-common/)
 
+[![PyPI benethos-mailbox-service](https://img.shields.io/pypi/v/benethos-mailbox-service?label=PyPI%20benethos-mailbox-service&logo=pypi&logoColor=white)](https://pypi.org/project/benethos-mailbox-service/)
+[![Container benethos-mailbox-service](https://img.shields.io/badge/ghcr.io-benethos--mailbox--service-2496ED?logo=docker&logoColor=white)](https://github.com/benethos-hub/mailbox/pkgs/container/benethos-mailbox-service)
+
+[![PyPI benethos-mailbox-mcp](https://img.shields.io/pypi/v/benethos-mailbox-mcp?label=PyPI%20benethos-mailbox-mcp&logo=pypi&logoColor=white)](https://pypi.org/project/benethos-mailbox-mcp/)
+[![Container benethos-mailbox-mcp](https://img.shields.io/badge/ghcr.io-benethos--mailbox--mcp-2496ED?logo=docker&logoColor=white)](https://github.com/benethos-hub/mailbox/pkgs/container/benethos-mailbox-mcp)
+
+[![PyPI benethos-mailbox-client](https://img.shields.io/pypi/v/benethos-mailbox-client?label=PyPI%20benethos-mailbox-client&logo=pypi&logoColor=white)](https://pypi.org/project/benethos-mailbox-client/)
+
 [![PyPI benethos-mailbox-common](https://img.shields.io/pypi/v/benethos-mailbox-common?label=PyPI%20benethos-mailbox-common&logo=pypi&logoColor=white)](https://pypi.org/project/benethos-mailbox-common/)
 
 [![Sponsor](https://raw.githubusercontent.com/benethos-hub/.github/main/profile/badges/sponsor.svg)](https://github.com/sponsors/BeneODev)
 [![PayPal](https://raw.githubusercontent.com/benethos-hub/.github/main/profile/badges/paypal.svg)](https://paypal.me/BeneODev)
+
+[![benethos-mailbox-mcp on Glama](https://glama.ai/mcp/servers/benethos-hub/mailbox/badges/card.svg)](https://glama.ai/mcp/servers/benethos-hub/mailbox)
 
 > **Beta, version 0.8.0.** Usable with real accounts. A breaking change
 > of the API or the configuration is announced in the changelog. Stored
@@ -22,22 +32,63 @@ of [Mailbox](https://github.com/benethos-hub/mailbox) both need, held
 once, on PyPI as `benethos-mailbox-common`. The MCP server cannot see
 the service, so what both use lives here.
 
-It is installed with them and is not meant to be used on its own. It
-is built for the packages of this repository, and its modules, groups
-and extras may change between versions without notice. It carries the
-version of the other packages, and the service and the MCP server pin
-it to their own.
+Mailbox is self-hosted and has four packages. This one is installed
+with the service and with the MCP server and is not meant to be used on
+its own. To use Mailbox, start with the service:
+[Install](https://github.com/benethos-hub/mailbox/blob/main/packages/mailbox-service/README.md#install).
 
-Its modules are in five groups, one per concern: `mail` (addresses,
-the plain text of an HTML body and the marks a person sees on a
-message), `log` (the log line and the
-masking of secrets), `paths` (the folders of the operating system),
-`settings` (a program's settings from the environment and a file)
-and `values` (secrets, sizes, text and canonical JSON).
+| Package | Its part | How you get it |
+|---|---|---|
+| [`mailbox-service`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-service) | It holds the connections to your mail accounts and their credentials, encrypted. It offers one REST API for every provider and decides what a token may do. | [Getting started](https://github.com/benethos-hub/mailbox/blob/main/packages/mailbox-service/README.md#getting-started) |
+| [`mailbox-client`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-client) | The Python client of the REST API. It does not use this package. | from PyPI: [Install](https://github.com/benethos-hub/mailbox/blob/main/packages/mailbox-client/README.md#install) |
+| [`mailbox-mcp`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-mcp) | The MCP server. It turns the REST API into tools for an AI assistant, on top of the client. | after the service: [Getting started](https://github.com/benethos-hub/mailbox/blob/main/packages/mailbox-mcp/README.md#getting-started) |
+| **`mailbox-common`** | This package. What the service and the MCP server share. | installed with both |
 
-It needs the standard library alone. The extra `paths` brings
-platformdirs for the folders of the operating system, `settings`
-pydantic-settings for a program's settings, and `all` brings every
-extra.
+What the project is for: [the repository's README](https://github.com/benethos-hub/mailbox#readme).
+
+**Contents**
+
+- [What it holds](#what-it-holds)
+- [Install](#install)
+- [Versions](#versions)
+
+## What it holds
+
+Five groups, one per concern. A group stands alone: a module imports
+only inside its group.
+
+| Group | What it holds | Needs |
+|---|---|---|
+| `mail` | Mail itself, nothing of Mailbox. The visible text of an HTML body, as the mail page of the service shows it and the model of the MCP server reads it. Addresses in a readable form. The marks a person sees on a message, and their words. | the standard library |
+| `log` | The line of a log: its format, its levels and its time, plain or in colour on a terminal. Secrets are noted once and masked in every text. | the standard library |
+| `paths` | Where a program keeps its files: the folders of the operating system for settings and data. | the extra `paths`, which brings platformdirs |
+| `settings` | A program's settings, from the command line, the environment, a settings file and the defaults. | the extra `settings`, which brings pydantic-settings |
+| `values` | Values written one way: JSON compact to send and canonical to hash, sizes, ids, tokens and digests, and text on one line. | the standard library |
+
+So the service and the MCP server turn an HTML mail into the same
+text, write the same log line and mask the same secrets.
 
 It sees neither the service, nor the MCP server, nor the client.
+
+## Install
+
+There is nothing to install. The service and the MCP server bring it,
+with the extras they need.
+
+On its own it needs the standard library alone. An extra is named
+after its group, and `all` brings every extra:
+
+```sh
+uv add "benethos-mailbox-common[all]"      # or: pip install "benethos-mailbox-common[all]"
+```
+
+A module of a group that misses its extra says which one.
+
+## Versions
+
+It is built for the packages of this repository. Its modules, groups
+and extras may change between versions without notice. It carries the
+version of the other packages, and the service and the MCP server pin
+it to their own. Its public interface is recorded in
+[`docs/common-interface.json`](https://github.com/benethos-hub/mailbox/blob/main/docs/common-interface.json),
+which a test holds to the code.

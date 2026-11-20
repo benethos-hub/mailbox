@@ -420,7 +420,7 @@ def render_icon() -> None:
 
 DIAGRAM_SOURCE = ASSETS / "architecture/architecture.html"
 # The page's size in CSS pixels, drawn at twice that.
-DIAGRAM_SIZE = (1430, 700)
+DIAGRAM_SIZE = (1430, 722)
 DIAGRAM_SCALE = 2
 # Each image and the fragment that picks its colours on the page.
 DIAGRAMS = {

@@ -119,7 +119,10 @@ assets/                   # brand/: the organisation's brand assets,
                           #   3D logo) as the sources, icon.png and
                           #   social-preview.png made from them, checked
                           #   by the brand job of the CI. logo/: the
-                          #   files as they came first. architecture/:
+                          #   first files the published releases 0.3.1
+                          #   to 0.4.1 still link to, icon-3d.svg from
+                          #   the PyPI pages, icon.png from the MCP
+                          #   Registry entry of 0.4.1. architecture/:
                           #   the README's diagram as HTML and PNG,
                           #   light and dark. build.py makes the
                           #   shipped copies in the service's

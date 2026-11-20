@@ -1,12 +1,19 @@
-# <img src="https://raw.githubusercontent.com/benethos-hub/mailbox/main/assets/brand/icon.svg" alt="" height="36" align="absmiddle"> mailbox-mcp
+# <img src="https://raw.githubusercontent.com/benethos-hub/mailbox/main/assets/brand/icon.svg" alt="" height="36" align="absmiddle"> Mailbox MCP
 
 [![CI](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml/badge.svg)](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml)
 [![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/benethos-hub/mailbox/badges/coverage.json&logo=githubactions&logoColor=white)](https://github.com/benethos-hub/mailbox/actions/workflows/ci.yml)
 [![License](https://img.shields.io/github/license/benethos-hub/mailbox?logo=opensourceinitiative&logoColor=white)](https://github.com/benethos-hub/mailbox/blob/main/LICENSE)
 [![Python](https://img.shields.io/pypi/pyversions/benethos-mailbox-mcp?logo=python&logoColor=white)](https://pypi.org/project/benethos-mailbox-mcp/)
 
+[![PyPI benethos-mailbox-service](https://img.shields.io/pypi/v/benethos-mailbox-service?label=PyPI%20benethos-mailbox-service&logo=pypi&logoColor=white)](https://pypi.org/project/benethos-mailbox-service/)
+[![Container benethos-mailbox-service](https://img.shields.io/badge/ghcr.io-benethos--mailbox--service-2496ED?logo=docker&logoColor=white)](https://github.com/benethos-hub/mailbox/pkgs/container/benethos-mailbox-service)
+
 [![PyPI benethos-mailbox-mcp](https://img.shields.io/pypi/v/benethos-mailbox-mcp?label=PyPI%20benethos-mailbox-mcp&logo=pypi&logoColor=white)](https://pypi.org/project/benethos-mailbox-mcp/)
 [![Container benethos-mailbox-mcp](https://img.shields.io/badge/ghcr.io-benethos--mailbox--mcp-2496ED?logo=docker&logoColor=white)](https://github.com/benethos-hub/mailbox/pkgs/container/benethos-mailbox-mcp)
+
+[![PyPI benethos-mailbox-client](https://img.shields.io/pypi/v/benethos-mailbox-client?label=PyPI%20benethos-mailbox-client&logo=pypi&logoColor=white)](https://pypi.org/project/benethos-mailbox-client/)
+
+[![PyPI benethos-mailbox-common](https://img.shields.io/pypi/v/benethos-mailbox-common?label=PyPI%20benethos-mailbox-common&logo=pypi&logoColor=white)](https://pypi.org/project/benethos-mailbox-common/)
 
 [![Sponsor](https://raw.githubusercontent.com/benethos-hub/.github/main/profile/badges/sponsor.svg)](https://github.com/sponsors/BeneODev)
 [![PayPal](https://raw.githubusercontent.com/benethos-hub/.github/main/profile/badges/paypal.svg)](https://paypal.me/BeneODev)
@@ -20,31 +27,46 @@
 <!-- mcp-name: io.github.benethos-hub/benethos-mailbox-mcp -->
 
 The MCP server of Mailbox, on PyPI as `benethos-mailbox-mcp`. It gives
-Claude and other AI
-assistants your mailboxes, as far as its token allows. It searches and
-reads mail, tells what is new since it last looked, looks at attachments
-(PDF pages as images), sorts messages, writes drafts and, if you let it,
-sends.
+Claude and other AI assistants your mailboxes, whichever provider they
+are at, as far as its token allows. It searches and reads mail, tells
+what is new since it last looked, looks at attachments (PDF pages as
+images), sorts messages, writes drafts and, if you let it, sends.
 
-It reaches mail only through the REST API of
-[`mailbox-service`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-service),
-which has to be running, with the Python client
-[`mailbox-client`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-client).
-It holds no mail password and no mail library.
+Mailbox is self-hosted and has four packages. This server is one of
+them and does not work alone. It needs the service, which runs on your
+own machine or server and holds the connections to your mail accounts.
+**Install the service first:** [Install](https://github.com/benethos-hub/mailbox/blob/main/packages/mailbox-service/README.md#install)
+and [First start](https://github.com/benethos-hub/mailbox/blob/main/packages/mailbox-service/README.md#first-start)
+in its README, or as a [container](https://github.com/benethos-hub/mailbox/blob/main/packages/mailbox-service/README.md#container).
+
+<picture>
+  <source srcset="https://raw.githubusercontent.com/benethos-hub/mailbox/main/assets/architecture/architecture-dark.png" media="(prefers-color-scheme: dark)">
+  <img src="https://raw.githubusercontent.com/benethos-hub/mailbox/main/assets/architecture/architecture.png" alt="AI agents reach mailbox-mcp over MCP, scripts and apps use mailbox-client or call the REST API themselves, and mailbox-mcp builds on mailbox-client. mailbox-client calls the REST API of mailbox-service, people use its configuration UI in the browser, and its signed webhooks report changes to your systems. mailbox-service, on your own server, connects to the mail accounts over IMAP and SMTP, Microsoft Graph, JMAP, POP3 and the Gmail API.">
+</picture>
+
+A request goes from the assistant over MCP to this server. From there
+it goes with the client over REST to the service, and from the service
+to the provider of the account.
+
+| Package | Its part | How you get it |
+|---|---|---|
+| **`mailbox-mcp`** | This package. It turns the REST API of the service into tools for an AI assistant. It holds no mail password and no mail library. | [Getting started](#getting-started) |
+| [`mailbox-client`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-client) | The Python client of the REST API. This server makes every request with it. | installed with this server |
+| [`mailbox-service`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-service) | It holds the connections to your accounts and their credentials, encrypted. It offers one REST API for every provider and decides what a token may do. It has to be running. | [Install](https://github.com/benethos-hub/mailbox/blob/main/packages/mailbox-service/README.md#install), before this server |
+| [`mailbox-common`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-common) | What the service and this server share. | installed with both |
 
 > **The MCP server and the service must have the same version** to work
 > together. Update both at once. The tool `server_status` with
 > `details` names the service's version and whether it matches this
 > server's (`versions_match`).
 
-The rights of the user whose token it carries decide what it may do. It
-runs in one of two ways. Over stdio, the MCP client starts it, and it ends
-with the client. Over streamable HTTP, it runs as a server of its own.
-
-What the project is for: [the repository's README](https://github.com/benethos-hub/mailbox#readme).
+More on the project: [the repository's README](https://github.com/benethos-hub/mailbox#readme).
 
 **Contents**
 
+- [What you can ask](#what-you-can-ask)
+- [What it offers](#what-it-offers)
+- [Getting started](#getting-started)
 - [Claude Desktop extension](#claude-desktop-extension)
 - [Install](#install)
 - [A token for it](#a-token-for-it)
@@ -58,6 +80,73 @@ What the project is for: [the repository's README](https://github.com/benethos-h
   - [With docker run](#with-docker-run)
   - [Beside a service in operation](#beside-a-service-in-operation)
 - [Tools](#tools)
+
+## What you can ask
+
+A few requests it handles today, across every account it was given:
+
+- "What came in since last night?"
+- "Show me all mail from Company XY between the 1st and the 15th of
+  September."
+- "Which mails with attachments came this week? Read the PDF and tell me
+  what it is about."
+- "Sum up the mails about the offer and write a draft reply."
+- "Mark last week's newsletters as read and move them to the archive."
+
+## What it offers
+
+- **Every mail account, one set of tools.** IMAP with SMTP (GMX,
+  web.de, T-Online, iCloud, your own mail server and many more),
+  Microsoft 365 and Outlook.com, Gmail, JMAP servers such as Fastmail,
+  and POP3. The service connects them, see its
+  [providers](https://github.com/benethos-hub/mailbox/blob/main/README.md#providers).
+- **It reads, sorts, writes and sends.** It searches in one account,
+  several or all. It reads a mail or a whole conversation, asks what is
+  new, looks at attachments, sorts and files, makes folders, writes
+  drafts and sends. Each one is in [Tools](#tools).
+- **The service decides what it may do.** The server acts as one user of
+  the service, with that user's token. It offers only the tools the
+  token allows. A right granted or taken away in the service shows
+  without a restart.
+- **Guard rails for sending.** The rights decide whether it may send on
+  its own or only leave drafts for a person to send. A grant can name
+  the recipients it may write to and how many mails it may send a day.
+  A mail to anyone else is refused. A send repeated within 24 hours is
+  not sent twice.
+- **Limits in place and time.** A grant can keep it to some accounts
+  and some folders, and end after a week.
+- **Traceable.** Every send is recorded in the service's audit: by
+  whom, with which token, to whom and when.
+- **Mail is data, not instructions.** Strangers wrote it, so its
+  content reaches the model inside markers. The hidden parts of an HTML
+  mail are left out. Each mail carries the receiving server's check of
+  the sender's domain (`sender_check`).
+- **No mail password.** The credentials stay in the service, encrypted.
+  The server holds one token of the service and nothing else.
+- **Two ways to run.** Over stdio, the MCP client starts it, and it ends
+  with the client. Over streamable HTTP, it runs as a server of its own,
+  behind a bearer token and a check of the host.
+- **Several ways to install.** As an extension in
+  [Claude Desktop](#claude-desktop-extension), with `uvx` from
+  [PyPI](#install), as a [container image](#container), or from the
+  official MCP Registry.
+- **A status tool.** `server_status` tells what runs, whether the
+  service answers and whether the two versions match. It is offered
+  always.
+
+## Getting started
+
+1. Install and start the service, and connect your accounts:
+   [Install](https://github.com/benethos-hub/mailbox/blob/main/packages/mailbox-service/README.md#install)
+   and
+   [First start](https://github.com/benethos-hub/mailbox/blob/main/packages/mailbox-service/README.md#first-start)
+   in the service's README.
+2. Give the MCP server a user of its own with the rights it needs, and
+   a token: [A token for it](#a-token-for-it).
+3. Add it to your client: as an extension in
+   [Claude Desktop](#claude-desktop-extension), with `uvx` in
+   [Claude Code](#claude-code) or another client, or as a
+   [server over HTTP](#over-http).
 
 ## Claude Desktop extension
 
