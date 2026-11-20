@@ -35,6 +35,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   message moved there could be deleted for good with `delete_draft`, or
   sent with `send_draft`, without `delete_message_permanent`.
 
+- A token narrowed to folders no longer learns from a message change
+  whether a folder outside its reach exists.
+
 ## [0.8.0] - 2026-11-19
 
 ### Added

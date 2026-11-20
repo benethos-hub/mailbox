@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 from benethos_mailbox_service.assembly import Services, create_app
 from benethos_mailbox_service.common import opaque
 from benethos_mailbox_service.config import Settings
-from benethos_mailbox_service.data.models import Folder, Grant
+from benethos_mailbox_service.data.models import Folder, Grant, MessageUpdate
 from benethos_mailbox_service.domain.rights.access import Access
 
 from ...conftest import bearer_for, memory_of
@@ -92,4 +92,36 @@ def test_a_list_of_a_folder_asks_for_the_folders_once(
         return len(page.items)
 
     assert anyio.run(listed) == 0
+    assert len(asked) == 1
+
+
+@pytest.mark.parametrize("folders", [None, ["inbox", "Invoices"]])
+def test_a_move_asks_for_the_folders_once(
+    services: Services,
+    account_id: str,
+    monkeypatch: pytest.MonkeyPatch,
+    folders: list[str] | None,
+) -> None:
+    memory = memory_of(services, account_id)
+    memory.folders.append(INVOICES)
+    real = memory.list_folders
+    asked: list[None] = []
+
+    async def counted() -> list[Folder]:
+        asked.append(None)
+        return await real()
+
+    monkeypatch.setattr(memory, "list_folders", counted)
+    grant = Grant(accounts=[account_id], allow=["update_message"], folders=folders)
+
+    async def moved() -> list[str]:
+        summary = await services.mailbox.update_message(
+            Access("u", "u", [grant]),
+            account_id,
+            "m0",
+            MessageUpdate(folder_ids=[INVOICES.id]),
+        )
+        return summary.folder_ids
+
+    assert anyio.run(moved) == [INVOICES.id]
     assert len(asked) == 1

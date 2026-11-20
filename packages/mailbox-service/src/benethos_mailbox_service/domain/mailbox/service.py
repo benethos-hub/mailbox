@@ -44,8 +44,8 @@ from ..sync import SyncService
 from .across import AcrossAccounts, in_reach
 from .calls import Calls, public
 from .cursors import Cursors
-from .folders import Folders
-from .guards import Guards
+from .folders import Folders, require_listed, with_roles_resolved
+from .guards import Guards, Lookups
 from .outgoing import Idempotency, Outgoing, SendControl
 from .reach import of_the_account, reach_of
 from .threads import THREAD_MESSAGES, Threads
@@ -209,19 +209,18 @@ class MailboxService:
     ) -> MessageSummary:
         access.require("update_message", account_id)
         await self._calls.require(account_id, for_update(changes))
-        changes = await self._folders.with_folders_checked(account_id, changes)
         looked = self._guards.looking(account_id, [message_id])
-        await self._guards.require_reached(
-            access,
-            "update_message",
-            account_id,
-            message_id,
-            changes.named_folders(),
-            looked,
+        changes = await _resolved(looked, changes)
+        refused = await self._guards.outside(
+            access, "update_message", looked, [message_id], changes.named_folders()
         )
-        refused = await self._guards.trash_refused(
-            access, looked, [message_id], changes
-        ) or await self._guards.drafts_refused(looked, [message_id], changes)
+        if not refused:
+            await _listed(looked, changes)
+        refused = (
+            refused
+            or await self._guards.trash_refused(access, looked, [message_id], changes)
+            or await self._guards.drafts_refused(looked, [message_id], changes)
+        )
         if refused:
             raise refused[message_id]
         return await self._calls.update_one(account_id, message_id, changes)
@@ -251,10 +250,8 @@ class MailboxService:
             if batch.changes is None:
                 raise BadRequestError("an update needs changes")
             await self._calls.require(account_id, for_update(batch.changes))
-            changes = await self._folders.with_folders_checked(
-                account_id, batch.changes
-            )
             looked = self._guards.looking(account_id, batch.ids)
+            changes = await _resolved(looked, batch.changes)
             outcomes = dict(
                 await self._guards.outside(
                     access,
@@ -265,6 +262,8 @@ class MailboxService:
                 )
             )
             rest = [i for i in batch.ids if i not in outcomes]
+            if rest:
+                await _listed(looked, changes)
             outcomes.update(
                 await self._guards.trash_refused(access, looked, rest, changes)
             )
@@ -421,3 +420,16 @@ def _item(message_id: str, outcome: Any) -> BatchItemResult:
         )
     summary = outcome if isinstance(outcome, MessageSummary) else None
     return BatchItemResult(id=message_id, ok=True, message=summary)
+
+
+async def _resolved(looked: Lookups, changes: MessageUpdate) -> MessageUpdate:
+    """The changes with the roles among their folders resolved."""
+    if not changes.named_folders():
+        return changes
+    return with_roles_resolved(await looked.folders(), changes)
+
+
+async def _listed(looked: Lookups, changes: MessageUpdate) -> None:
+    """``404`` for a folder of the changes the account does not list."""
+    if changes.named_folders():
+        require_listed(await looked.folders(), changes)
