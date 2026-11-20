@@ -16,7 +16,8 @@ note() {
     fail=1
 }
 
-staged=$(git diff --cached --name-only --diff-filter=ACMR)
+# Every name as it is: git would quote one with a letter beyond ASCII.
+staged=$(git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMR)
 [ -n "$staged" ] || exit 0
 
 # 1. Files that never belong in the repository, as .gitignore names

@@ -105,6 +105,8 @@ def test_the_hook_is_executable_in_the_repository() -> None:
         "containers/production/caddy.d/mcp.caddy",
         "account.token.json",
         "somewhere/server.pem",
+        "config/x/schlüssel.key",
+        "sicherung/März.db",
     ],
 )
 def test_refuses_files_that_never_belong(repo: Path, name: str) -> None:
