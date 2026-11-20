@@ -280,8 +280,7 @@ class _Rights:
                 await self._change(_always())
                 if self._trouble != reason(exc):
                     logger.warning(
-                        "the token's user may do nothing (HTTP 403): no tools "
-                        "but server_status"
+                        "the service answered 403 to /v1/me: no tools but server_status"
                     )
                 self._trouble = reason(exc)
             else:
