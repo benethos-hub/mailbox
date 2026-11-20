@@ -219,3 +219,19 @@ def test_a_removed_line_is_not_looked_at(repo: Path) -> None:
 
 def test_nothing_staged_passes(repo: Path) -> None:
     assert _hook(repo).returncode == 0
+
+
+@pytest.mark.parametrize("setting", ["color.ui=always", "diff.external=echo"])
+@pytest.mark.parametrize(
+    "line",
+    [CREDENTIALS["env-bare"], ADDRESSES["address"]],
+    ids=["credential", "address"],
+)
+def test_the_settings_of_git_change_nothing(
+    repo: Path, setting: str, line: str
+) -> None:
+    name, value = setting.split("=")
+    _git(repo, "config", name, value)
+    _stage(repo, "notes.txt", line + "\n")
+
+    assert _hook(repo).returncode == 1

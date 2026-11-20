@@ -89,7 +89,7 @@ references="$references|[:=][[:space:]]*[a-z_]+(\\.[a-z_]+)+\$"
 # The added lines without the + of the diff and without its headers, so
 # a line that begins with @, such as a decorator, stays what it is.
 added=$(
-    git diff --cached -U0 \
+    git diff --cached --no-color --no-ext-diff --no-textconv -U0 \
         | grep '^+' \
         | grep -vE '^\+\+\+ (b/|/dev/null)' \
         | sed 's/^+//' \
