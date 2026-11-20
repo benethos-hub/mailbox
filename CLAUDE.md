@@ -98,8 +98,8 @@ done. Update the roadmap in the same commit that finishes an item.
   - `uv run python live/microsoft.py [--connect] [--project] [--large]
     [--marks]`: the Microsoft test account.
   - `uv run python live/gmail.py [--connect]`: the Gmail test account.
-  - `uv run python live/pop3.py` and `live/jmap.py`: the test mail
-    server in a container.
+  - `uv run python live/pop3.py`, `live/jmap.py` and `live/imap.py`:
+    the test mail server in a container.
 
 ## Project layout
 

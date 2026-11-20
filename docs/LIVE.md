@@ -23,6 +23,7 @@ test accounts for golden rule 1 of [CLAUDE.md](../CLAUDE.md).
 | [`gmail.py`](#gmailpy) | the Gmail test account | mail to and from the first test account, deleted for good |
 | [`pop3.py`](#pop3py) | the test mail server in a container | one mail, deleted for good |
 | [`jmap.py`](#jmappy) | the test mail server in a container | one mail and a draft, deleted for good |
+| [`imap.py`](#imappy) | the test mail server in a container | one mail, a folder and a draft, deleted for good |
 
 The checks that start a service as a process make its first user with
 `users create-admin`, change the one-time password in the UI and make a
@@ -203,3 +204,16 @@ own as a process: one mail from the first account to the second,
 reported by push, found in the folder `all`, its thread read, changed,
 put in a folder and back, a draft, left out of `all` in the trash, then
 deleted for good on both sides.
+
+## `imap.py`
+
+`uv run python live/imap.py`
+
+Checks the IMAP adapter, with SMTP for sending, against the same server,
+with a service of its own as a process: one mail from the first account
+to the second and to an address the server does not know, which the send
+names as refused, reported through IDLE, found in the folder `all`, its
+thread read, changed, moved into a new folder that is renamed with the
+mail in it, moved back, a draft replaced under its id, left out of `all`
+in the trash, then deleted for good on both sides. The folder is deleted
+as well.
