@@ -92,6 +92,10 @@ tenant can let in personal accounts and accounts of other organisations.
   - The sign-up asks for a phone number and a credit card to confirm who
     you are. App registrations cost nothing. The free account does not
     turn into a paid one on its own.
+  - When its free credit ends, Microsoft deactivates the subscription.
+    The app registration lives in the directory, not in the
+    subscription, and keeps working. Only deleting the directory or the
+    account removes it.
   - For private use, pick the personal / individual option where it asks.
 
   The sign-up creates a directory named **Default Directory**, with your
