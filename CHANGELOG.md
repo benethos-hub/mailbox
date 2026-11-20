@@ -42,6 +42,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   folder it does not reach by replacing its folders: that answers
   `403`. `add_folder_ids` and `remove_folder_ids` work as before.
 
+- A message marked as a draft whose reference header holds free text in
+  place of a message id names no `reference`. Before, a foreign mail
+  could put a line of its own there, which the MCP server showed outside
+  the mail's content.
+
 ## [0.8.0] - 2026-11-19
 
 ### Added

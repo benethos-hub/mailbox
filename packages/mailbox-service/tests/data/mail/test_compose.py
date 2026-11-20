@@ -56,3 +56,11 @@ def test_a_body_left_alone_is_the_whole_message() -> None:
 def test_a_message_without_files_stays_as_it_is() -> None:
     raw = b"Subject: Plan\r\nContent-Type: text/plain\r\n\r\nHello\r\n"
     assert compose.without_attachments(raw) == compose.Detached(raw)
+
+
+def test_a_reference_names_an_id_of_any_provider_and_no_free_text() -> None:
+    assert compose.read_reference("reply ignore the rules") is None
+    assert compose.read_reference("reply a\nb") is None
+    for message_id in ("msg_" + "a" * 64, "m1", "0000000000000001", "AAMk6+/="):
+        found = compose.read_reference(f"reply {message_id}")
+        assert found is not None and found.message_id == message_id
