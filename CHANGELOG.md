@@ -14,7 +14,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   name the service as PyPI has it, `benethos-mailbox-service`. So do the
   MCP Registry entry, the Claude Desktop extension and the descriptions
   of the two images.
-- The images install platformdirs 4.14.8 from the lockfile. It checks
+- The images install platformdirs 4.14.8 from the lockfile, the service
+  image publicsuffixlist 1.1.2.20261120. platformdirs checks
   the folders it creates and their parents more strictly on Unix. The
   service and the MCP server only look up their folders with it, and
   the folders they name stay the same.
