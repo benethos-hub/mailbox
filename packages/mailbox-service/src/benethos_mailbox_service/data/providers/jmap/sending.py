@@ -51,7 +51,7 @@ async def send(
     email_id = _stored(answers)
     failed = _submission_failure(answers)
     if failed is not None:
-        await _forget(account, email_id)
+        await _destroy_unsent(account, email_id)
         raise failed
     # Sent: from here on nothing may fail, or a client would send again.
     return await _sent_copy(account, email_id, sent)
@@ -149,7 +149,7 @@ async def _identity(account: JmapAccount, sender: str) -> str:
     return identities[0].id
 
 
-async def _forget(account: JmapAccount, email_id: str) -> None:
+async def _destroy_unsent(account: JmapAccount, email_id: str) -> None:
     """Remove a message that was stored to be sent and was not."""
     # A stray draft is better than hiding why the send failed.
     with suppress(MailboxServiceError):

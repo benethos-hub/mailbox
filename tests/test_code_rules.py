@@ -336,6 +336,53 @@ def test_a_caller_imports_a_module_from_its_group() -> None:
     assert not violations, "deeper than a group:\n  " + "\n  ".join(violations)
 
 
+def _private_common_reads(path: Path) -> list[str]:
+    """Where ``path`` reads a name with an underscore of a module of
+    ``benethos_mailbox_common``, as ``line name``."""
+    tree = ast.parse(path.read_text("utf-8"))
+    bound: set[str] = set()
+    found = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and (node.module or "").startswith(
+            "benethos_mailbox_common"
+        ):
+            for alias in node.names:
+                if _private(alias.name):
+                    found.append(f"{node.lineno} {alias.name}")
+                bound.add(alias.asname or alias.name)
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name.startswith("benethos_mailbox_common"):
+                    bound.add(alias.asname or alias.name.split(".")[0])
+    for node in ast.walk(tree):
+        if (
+            isinstance(node, ast.Attribute)
+            and isinstance(node.value, ast.Name)
+            and node.value.id in bound
+            and _private(node.attr)
+        ):
+            found.append(f"{node.lineno} {node.value.id}.{node.attr}")
+    return found
+
+
+def test_no_other_package_reads_a_private_name_of_the_common_one() -> None:
+    """What the common package keeps to itself stays there: the others,
+    their tests, the tests here and the live checks use its public names
+    (ARCHITECTURE 13)."""
+    common = ROOT / "packages" / "mailbox-common"
+    places = [ROOT / "packages", ROOT / "tests", ROOT / "live"]
+    violations = [
+        f"{path.relative_to(ROOT).as_posix()}:{read}"
+        for place in places
+        for path in sorted(place.rglob("*.py"))
+        if common not in path.parents and ".venv" not in path.parts
+        for read in _private_common_reads(path)
+    ]
+    assert not violations, "a private name of mailbox-common:\n  " + "\n  ".join(
+        violations
+    )
+
+
 def test_a_function_of_the_package_exists_once() -> None:
     """No module of the service or the MCP server defines a function of
     the common package again, under its name or with a leading underscore."""
