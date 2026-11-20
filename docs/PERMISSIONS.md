@@ -109,7 +109,8 @@ token either and names no right.
   to folders, on the folder of the message, as `DELETE` does. Moving a
   folder below the trash with `update_folder` needs `delete_message` on
   that folder in the same way. Out of the trash and into junk need
-  `update_message` alone.
+  `update_message` alone. No change puts a message into the drafts
+  folder, so the draft operations reach drafts alone.
 - **Cross-account operations filter.** `list_accounts`, `/v1/messages`,
   `/v1/changes` and the UI's mail page show the accounts the user has a
   right on, and leave the others out.
@@ -282,7 +283,8 @@ Both narrow a grant and are checked in the domain, as `recipients` is:
 - **`folders`**: a list of folder roles or names the grant reaches, null
   for every folder. `mail.read` with `folders: ["inbox", "Invoices"]`
   lists and reads there and nowhere else. `mail.write` with folders
-  moves only between them.
+  moves only between them. A change that replaces a message's folders is
+  refused where the message also lies in a folder outside them.
   **Decided 2026-10-05:** a listed folder includes its subfolders, so
   `Invoices` covers `Invoices/2026`. The folder with the role `all`
   covers every folder but the trash and junk, as it lists them. A

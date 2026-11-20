@@ -5,6 +5,7 @@ Message-ID comes from the caller.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from datetime import datetime
 from email import message_from_bytes
@@ -35,6 +36,9 @@ from .parse import ParsedMessage
 
 # Where a draft keeps what it answers, e.g. ``reply msg_...``, until it is sent.
 REFERENCE_HEADER = "X-Mailbox-Service-Reference"
+# A message id of any provider as the API gives it: ours on IMAP and POP3,
+# the provider's own on JMAP, Gmail and Microsoft. No space, no free text.
+_MESSAGE_ID = re.compile(r"[A-Za-z0-9_+/=-]{1,255}")
 
 
 def write_reference(reference: MessageReference) -> str:
@@ -45,10 +49,13 @@ def write_reference(reference: MessageReference) -> str:
 
 def read_reference(value: str | None) -> MessageReference | None:
     """The reference a draft kept. None for anything else, such as a header
-    another mail client changed."""
+    another mail client changed, or a foreign mail's text in place of an
+    id."""
     if not value:
         return None
     action, _, message_id = value.strip().partition(" ")
+    if not _MESSAGE_ID.fullmatch(message_id.strip()):
+        return None
     try:
         return MessageReference(action=action, message_id=message_id.strip())
     except ValidationError:

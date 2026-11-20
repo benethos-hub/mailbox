@@ -152,24 +152,6 @@ class Folders:
             require_folder(reach, folder)
         return folder, reach
 
-    async def with_folders_checked(
-        self, account_id: str, changes: MessageUpdate
-    ) -> MessageUpdate:
-        """The changes with every role among the folders they name
-        resolved. Each folder must be one the account lists: any other
-        name is missing, also another spelling of a listed folder's id."""
-        if not changes.named_folders():
-            return changes
-        folders = await self.all(account_id)
-        fields = ("folder_ids", "add_folder_ids", "remove_folder_ids")
-        return changes.model_copy(
-            update={
-                field: [_listed(folders, wanted) for wanted in named]
-                for field in fields
-                if (named := getattr(changes, field))
-            }
-        )
-
     async def _parent(self, account_id: str, folder: str | None) -> str | None:
         """The folder a folder goes into, a role resolved: one the account
         lists, or None for the top."""
@@ -219,6 +201,28 @@ def holder(folders: list[Folder], folder_id: str) -> Callable[[Iterable[str]], b
         return lambda folder_ids: folder_id in folder_ids
     left_out = {f.id for f in folders if f.role in OUTSIDE_ALL}
     return lambda folder_ids: not left_out.intersection(folder_ids)
+
+
+def with_roles_resolved(folders: list[Folder], changes: MessageUpdate) -> MessageUpdate:
+    """The changes with every role among the folders they name resolved:
+    ``501`` for a role the account has no folder for."""
+    fields = ("folder_ids", "add_folder_ids", "remove_folder_ids")
+    return changes.model_copy(
+        update={
+            field: [_resolved(folders, wanted) for wanted in named]
+            for field in fields
+            if (named := getattr(changes, field))
+        }
+    )
+
+
+def require_listed(folders: list[Folder], changes: MessageUpdate) -> None:
+    """Each folder the changes name must be one the account lists: any
+    other is missing, also another spelling of a listed folder's id.
+    Checked after the grants, so that a caller they narrow to folders
+    learns nothing of those out of its reach."""
+    for wanted in changes.named_folders():
+        _listed(folders, wanted)
 
 
 def in_trash(folders: list[Folder]) -> frozenset[str]:

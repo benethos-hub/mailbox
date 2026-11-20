@@ -1017,7 +1017,7 @@
             }
           ],
           "default": null,
-          "description": "Folder id, or a role such as archive, inbox, junk",
+          "description": "Folder id, or a role such as archive, inbox, junk. Not drafts",
           "title": "Move To"
         },
         "add_folders": {

@@ -216,8 +216,10 @@
 {% endmacro %}
 
 {# The options of a folder select: the tree indented by depth, without the
-   folders in ``exclude``. #}
-{% macro folder_options(tree, exclude, selected=None) %}
+   folders in ``exclude``. A select of where ``moves`` a message leaves out
+   the drafts folder, which no change puts a message into. #}
+{% macro folder_options(tree, exclude, selected=None, moves=False) %}
+{% if moves %}{% set exclude = exclude + (tree | map("first") | selectattr("role", "equalto", "drafts") | map(attribute="id") | list) %}{% endif %}
 {% for folder, depth in tree %}{% if folder.id not in exclude %}<option value="{{ folder.id }}"{% if folder.id == selected %} selected{% endif %}>{{ "· " * depth }}{{ folder.name }}</option>{% endif %}{% endfor %}
 {% endmacro %}
 

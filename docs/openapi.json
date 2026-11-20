@@ -6557,7 +6557,7 @@
           "mailbox"
         ],
         "summary": "Update Message",
-        "description": "Mark read or unread, star, set keywords, move. Fields left out stay.\nA move into the trash or a folder below it needs `delete_message` as\nwell.",
+        "description": "Mark read or unread, star, set keywords, move. Fields left out stay.\nA move into the trash or a folder below it needs `delete_message` as\nwell. No change puts a message into the drafts folder: that answers\n`400`.",
         "operationId": "update_message",
         "security": [
           {
@@ -8821,7 +8821,7 @@
           "mailbox"
         ],
         "summary": "Batch Messages",
-        "description": "One action for up to 100 messages, with a result per id. Needs the\nright of the single operation too: `update_message`, `delete_message`\nor, with `permanent`, `delete_message_permanent`. An update that\nmoves into the trash or a folder below it needs `delete_message` as\nwell.",
+        "description": "One action for up to 100 messages, with a result per id. Needs the\nright of the single operation too: `update_message`, `delete_message`\nor, with `permanent`, `delete_message_permanent`. An update that\nmoves into the trash or a folder below it needs `delete_message` as\nwell. No update puts a message into the drafts folder.",
         "operationId": "batch_messages",
         "security": [
           {

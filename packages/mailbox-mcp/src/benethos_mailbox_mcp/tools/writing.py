@@ -52,7 +52,9 @@ async def update_messages(
     ] = None,
     move_to: Annotated[
         str | None,
-        Field(description="Folder id, or a role such as archive, inbox, junk"),
+        Field(
+            description="Folder id, or a role such as archive, inbox, junk. Not drafts"
+        ),
     ] = None,
     add_folders: Folders = None,
     remove_folders: Folders = None,

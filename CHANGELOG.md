@@ -28,6 +28,25 @@ adheres to [Semantic Versioning](https://semver.org/).
   is gone when messages are still known in it, and the message keeps its
   id.
 
+### Security
+
+- **Breaking:** a change no longer puts a message into the drafts
+  folder: it answers `400`, as it did on Gmail accounts. Before, a
+  message moved there could be deleted for good with `delete_draft`, or
+  sent with `send_draft`, without `delete_message_permanent`.
+
+- A token narrowed to folders no longer learns from a message change
+  whether a folder outside its reach exists.
+
+- A token narrowed to folders can no longer take a message out of a
+  folder it does not reach by replacing its folders: that answers
+  `403`. `add_folder_ids` and `remove_folder_ids` work as before.
+
+- A message marked as a draft whose reference header holds free text in
+  place of a message id names no `reference`. Before, a foreign mail
+  could put a line of its own there, which the MCP server showed outside
+  the mail's content.
+
 ## [0.8.0] - 2026-11-19
 
 ### Added
