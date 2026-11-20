@@ -71,8 +71,8 @@ dependencies = [
     "jinja2>=3.1.6",
     "python-multipart>=0.0.31",
     "pydantic>=2.12",
-    # Outbound HTTP: autodiscovery, later the Gmail and Microsoft Graph
-    # adapters.
+    # Outbound HTTP: autodiscovery, the JMAP, Gmail and Microsoft Graph
+    # adapters, webhooks.
     "httpx>=0.28",
     # AES-256-GCM for stored credentials.
     "cryptography>=50",

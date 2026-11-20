@@ -63,7 +63,8 @@ and the open questions.
 - API tests run against the `memory` adapter through `TestClient`.
 - IMAP adapter tests use a fake `IMAPClient` object at the library boundary.
   A Stalwart container, `containers/test-mail-server/` (since
-  2026-10-06), serves the live checks of the POP3 and the JMAP adapter.
+  2026-10-06), serves the live checks of the POP3, the JMAP and the IMAP
+  adapter.
   An integration job with it is not built yet (5.6).
 - The JMAP adapter's tests use `httpx.MockTransport` with a JMAP server in
   memory.

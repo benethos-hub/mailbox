@@ -1,5 +1,5 @@
 """The packages of the domain and of the data layer (docs/REFACTORING.md
-2, 8.4): each is imported through its ``__init__.py``, none imports
+4, 8.4): each is imported through its ``__init__.py``, none imports
 another in a circle, and they keep their lines."""
 
 from __future__ import annotations
