@@ -1,4 +1,4 @@
-"""Time-based one-time passwords (docs/AUTHENTICATION.md 2)."""
+"""Time-based one-time passwords (docs/AUTHENTICATION.md 3.1)."""
 
 from __future__ import annotations
 
