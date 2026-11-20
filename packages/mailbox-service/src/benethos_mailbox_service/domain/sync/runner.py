@@ -238,13 +238,16 @@ class SyncRunner:
         arrived, and a portion of the entries without a thread. Nothing
         is applied where a change of ours runs or ended since it began."""
         mark = self._writes.mark(account_id)
+        # The index before the server: an entry a list makes meanwhile is
+        # not taken for a message that went.
+        indexed = self._index.folders(account_id)
         states = await self._adapters.call(account_id, lambda p: p.folder_states())
         before = self._index.folder_states(account_id)
         await self._other_folders(account_id, states, before)
         changed = [f for f, state in states.items() if before.get(f) != state]
         # A folder with a state, or with entries: a folder made, given a
         # message of ours and renamed between two passes has no state.
-        known = [*before, *sorted(self._index.folders(account_id) - set(before))]
+        known = [*before, *sorted(indexed - set(before))]
         vanished = [f for f in known if f not in states]
         counts = Counts(len(states))
         merged: dict[str, str] = {}
@@ -288,12 +291,14 @@ class SyncRunner:
     ) -> Seen:
         """What is in the changed folders now, against the index entries of
         those and of the folders that vanished, with the Message-IDs of
-        what arrived and of what the index has none for."""
+        what arrived and of what the index has none for. The index is read
+        first: an entry a list makes while the server is read is one the
+        pass does not know, not one whose message went."""
+        entries = self._index.in_folders(account_id, changed + vanished)
         present: dict[str, str] = {}  # provider id -> folder
         for folder_id in changed:
             for native in await self._contents(account_id, folder_id):
                 present[native] = folder_id
-        entries = self._index.in_folders(account_id, changed + vanished)
         seen = Seen(entries, present, {})
         wanted = seen.arrived + [
             e.native_id for e in entries if e.header is None and e.native_id in present

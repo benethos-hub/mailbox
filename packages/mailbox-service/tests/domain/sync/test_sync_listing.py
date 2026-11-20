@@ -10,16 +10,18 @@ from collections.abc import Awaitable, Callable
 import pytest
 
 from benethos_mailbox_service.assembly import Services
-from benethos_mailbox_service.data.models import MessageUpdate
+from benethos_mailbox_service.data.models import Abilities, MessageUpdate
 from benethos_mailbox_service.data.providers import ThreadHeaders
 from benethos_mailbox_service.data.providers.imap import mappers
 from benethos_mailbox_service.errors import NotFoundError, ProviderUnavailableError
 
 from ...conftest import ADMIN
-from ...imap_fake import FakeMailBox, make_message
+from ...imap_fake import FakeFolder, FakeMailBox, make_message
 from ..sync_helpers import ids_by_subject, recorded
 
 ARCHIVE = mappers.folder_id("Archive")
+INBOX = mappers.folder_id("INBOX")
+PROJEKTE = mappers.folder_id("Projekte")
 
 
 def before_the_first_headers(
@@ -234,3 +236,87 @@ async def test_a_message_we_stored_ourselves_waits_for_no_pass(
     await services.sync.public_ids(account, [(item.id, ARCHIVE)], listed=False)
 
     assert services.sync.state(account).passes == passes
+
+
+# --- a list while a pass reads the server -------------------------------------------
+
+
+async def listed_in(services: Services, account: str, folder_id: str) -> dict[str, str]:
+    page = await services.mailbox.list_messages(
+        ADMIN, account, folder_id=folder_id, limit=50, cursor=None
+    )
+    return {m.subject or "": m.id for m in page.items}
+
+
+async def kept_by_the_pass(
+    services: Services, account: str, told_before: int, message_id: str
+) -> None:
+    """The id a list gave answers, the feed told one creation for it and
+    no deletion, and the next pass keeps it."""
+    message = await services.mailbox.get_message(ADMIN, account, message_id)
+    told = [
+        kind
+        for kind, i, _ in recorded(services, account)[told_before:]
+        if i == message_id
+    ]
+    assert told == ["message.created"]
+    await services.sync.sync_account(account)
+    again = await services.mailbox.get_message(ADMIN, account, message_id)
+    assert again.id == message.id
+
+
+async def test_a_pass_keeps_a_mail_listed_while_it_read_another_folder(
+    imap_services: Services,
+    imap_account_id: str,
+    imap_server: FakeMailBox,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    services, account = imap_services, imap_account_id
+    await services.sync.sync_account(account)
+    told_before = len(recorded(services, account))
+    imap_server.add("INBOX", 5, make_message("Changed the inbox"))
+    imap_server.add("Archive", 1, make_message("Changed the archive"))
+    adapter = services.adapters.get(account)
+    real = adapter.folder_contents
+    listed: dict[str, str] = {}
+
+    async def contents(folder_id: str) -> list[str]:
+        # The inbox was read. A mail arrives there and a caller lists it.
+        if folder_id != INBOX and not listed:
+            imap_server.add("INBOX", 51, make_message("Arrived meanwhile"))
+            listed.update(await listed_in(services, account, INBOX))
+        return await real(folder_id)
+
+    monkeypatch.setattr(adapter, "folder_contents", contents)
+    await services.sync.sync_account(account)
+    monkeypatch.setattr(adapter, "folder_contents", real)
+    await kept_by_the_pass(services, account, told_before, listed["Arrived meanwhile"])
+
+
+async def test_a_pass_keeps_a_mail_listed_in_a_folder_made_while_it_ran(
+    imap_services: Services,
+    imap_account_id: str,
+    imap_server: FakeMailBox,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    services, account = imap_services, imap_account_id
+    await services.sync.sync_account(account)
+    told_before = len(recorded(services, account))
+    # A folder came: the pass asks the server again what it can do.
+    imap_server.folders["Other"] = FakeFolder()
+    real = services.adapters.learn
+    listed: dict[str, str] = {}
+
+    async def learn(account_id: str) -> Abilities:
+        # After the pass's LIST another program makes a folder with a
+        # mail, and a caller lists it.
+        if not listed:
+            imap_server.folders["Projekte"] = FakeFolder()
+            imap_server.add("Projekte", 1, make_message("In a new folder"))
+            listed.update(await listed_in(services, account, PROJEKTE))
+        return await real(account_id)
+
+    monkeypatch.setattr(services.adapters, "learn", learn)
+    await services.sync.sync_account(account)
+    monkeypatch.setattr(services.adapters, "learn", real)
+    await kept_by_the_pass(services, account, told_before, listed["In a new folder"])
