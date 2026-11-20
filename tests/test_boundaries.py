@@ -288,6 +288,7 @@ def test_a_package_offers_no_name_of_another() -> None:
     ``__init__.py`` that names in ``__all__`` what it imports from a
     package above it passes that package's name on."""
     violations = []
+    excused = set()
     for package, root in SRC.items():
         for init in sorted(root.rglob("__init__.py")):
             tree = _tree(init)
@@ -303,8 +304,14 @@ def test_a_package_offers_no_name_of_another() -> None:
                     continue
                 for alias in node.names:
                     name = alias.asname or alias.name
-                    if name in names and (package, where, name) not in PASSED_ON:
+                    if name not in names:
+                        continue
+                    if (package, where, name) in PASSED_ON:
+                        excused.add((package, where, name))
+                    else:
                         violations.append(f"{package}: {where} {name}")
     assert not violations, "passes on a name of another package:\n  " + "\n  ".join(
         violations
     )
+    stale = sorted(PASSED_ON - excused)
+    assert not stale, f"remove from PASSED_ON: {stale}"

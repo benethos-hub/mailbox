@@ -166,6 +166,7 @@ def test_no_test_module_hides_a_fixture_of_a_conftest() -> None:
     """A module that defines a fixture of a conftest.py above it under the
     same name leaves a reader to guess which one holds (ARCHITECTURE 13)."""
     violations = []
+    excused = set()
     for tests, path in _test_modules():
         name = path.relative_to(tests).as_posix()
         mine = _fixtures(path) - {OWN_SERVER}
@@ -173,23 +174,30 @@ def test_no_test_module_hides_a_fixture_of_a_conftest() -> None:
             conftest = folder / "conftest.py"
             if conftest.exists():
                 for fixture in sorted(mine & _fixtures(conftest)):
-                    if (name, fixture) not in SHADOWING:
+                    if (name, fixture) in SHADOWING:
+                        excused.add((name, fixture))
+                    else:
                         violations.append(f"{name}: {fixture}")
             if folder == tests:
                 break
     assert not violations, "hides a fixture of a conftest:\n  " + "\n  ".join(
         violations
     )
+    stale = sorted(SHADOWING - excused)
+    assert not stale, f"remove from SHADOWING: {stale}"
 
 
 def test_two_test_modules_of_a_folder_share_no_fixture_name() -> None:
     """A fixture two modules of a folder need goes to its conftest.py, or
     each names its own (ARCHITECTURE 13)."""
     seen: dict[tuple[Path, str], list[str]] = {}
+    excused: dict[tuple[str, str], int] = {}
     for tests, path in _test_modules():
         folder = path.parent.relative_to(tests).as_posix()
         for fixture in _fixtures(path) - {OWN_SERVER}:
-            if (folder, fixture) not in REPEATED:
+            if (folder, fixture) in REPEATED:
+                excused[folder, fixture] = excused.get((folder, fixture), 0) + 1
+            else:
                 seen.setdefault((path.parent, fixture), []).append(path.name)
     violations = [
         f"{folder.relative_to(ROOT).as_posix()}: {fixture} in {', '.join(names)}"
@@ -197,6 +205,8 @@ def test_two_test_modules_of_a_folder_share_no_fixture_name() -> None:
         if len(names) > 1
     ]
     assert not violations, "a fixture name twice:\n  " + "\n  ".join(violations)
+    stale = sorted(e for e in REPEATED if excused.get(e, 0) < 2)
+    assert not stale, f"remove from REPEATED: {stale}"
 
 
 # Where a test reads two private attributes deep, each with its reason

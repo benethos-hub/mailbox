@@ -240,6 +240,7 @@ def test_tests_of_the_data_layer_go_through_no_api() -> None:
     domain or several layers, not the data layer."""
     tests = Path(__file__).resolve().parent
     violations = []
+    excused = set()
     for path in sorted((tests / "data").rglob("test_*.py")):
         name = path.relative_to(tests).as_posix()
         for node in ast.walk(ast.parse(path.read_text("utf-8"))):
@@ -253,6 +254,10 @@ def test_tests_of_the_data_layer_go_through_no_api() -> None:
                 outside = module.split(".")[0] == "fastapi" or module.startswith(
                     "benethos_mailbox_service.assembly"
                 )
-                if outside and name not in WHOLE_SERVICE:
+                if outside and name in WHOLE_SERVICE:
+                    excused.add(name)
+                elif outside:
                     violations.append(f"{name}:{node.lineno} {module}")
     assert not violations, "a data test beyond its layer:\n  " + "\n  ".join(violations)
+    stale = sorted(WHOLE_SERVICE - excused)
+    assert not stale, f"remove from WHOLE_SERVICE: {stale}"
