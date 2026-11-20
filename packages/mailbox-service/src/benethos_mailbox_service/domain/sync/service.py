@@ -63,7 +63,6 @@ class SyncService:
         self._threads = IndexThreads(adapters, index, references, new_thread)
         self._feed = feed
         self._writes = OwnWrites()
-        self._gone = Gone(self)
         self._runner = SyncRunner(
             adapters,
             index,
@@ -73,6 +72,12 @@ class SyncService:
             new_id,
             clock,
             activity or ActivityLog(clock),
+        )
+        # Looked up at each call, as on the service itself.
+        self._gone = Gone(
+            lambda a: self.sync_account(a),
+            lambda a, ids: self.natives(a, ids),
+            lambda a: self.state(a).passes,
         )
 
     @property
