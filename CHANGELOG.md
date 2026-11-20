@@ -10,6 +10,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 - The four packages name their README as `Documentation` on PyPI, beside
   `Homepage`.
+- The images install platformdirs 4.14.8 from the lockfile. It checks
+  the folders it creates and their parents more strictly on Unix. The
+  service and the MCP server only look up their folders with it, and
+  the folders they name stay the same.
 
 ## [0.8.0] - 2026-11-19
 
