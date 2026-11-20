@@ -97,7 +97,8 @@ def test_bundled_presets_are_consistent() -> None:
 
 async def test_preset_source_by_domain() -> None:
     source = PresetSource()
-    found = await source.lookup(Query("a@gmail.com", "gmail.com"))
+    address = "a@gmail.com"  # pragma: allowlist secret
+    found = await source.lookup(Query(address, "gmail.com"))
     google, candidate = found.candidates
     assert google.provider is ProviderType.GMAIL
     assert google.credential is CredentialKind.OAUTH
@@ -111,7 +112,8 @@ async def test_preset_source_by_domain() -> None:
 
 
 async def test_preset_without_access_gives_only_a_hint() -> None:
-    found = await PresetSource().lookup(Query("a@tuta.com", "tuta.com"))
+    address = "a@tuta.com"  # pragma: allowlist secret
+    found = await PresetSource().lookup(Query(address, "tuta.com"))
     assert found.candidates == ()
     assert "no access" in found.hints[0].text
 

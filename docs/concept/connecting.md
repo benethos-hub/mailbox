@@ -10,7 +10,7 @@ ports, encryption and the kind of credential to ask for. Only what cannot
 be discovered is asked for.
 
 ```
- user@example.de
+ user@example.org
       │
       ▼
  discovery  ──►  candidates, ranked, each with its source

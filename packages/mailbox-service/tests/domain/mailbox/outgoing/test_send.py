@@ -116,9 +116,9 @@ def test_an_address_whose_domain_cannot_be_encoded() -> None:
 
 def test_recipients_each_once() -> None:
     message = OutgoingMessage(
-        to=[Recipient(email="a@x.de")], bcc=[Recipient(email="a@x.de")]
+        to=[Recipient(email="a@x.example")], bcc=[Recipient(email="a@x.example")]
     )
-    assert message.recipients() == ["a@x.de"]
+    assert message.recipients() == ["a@x.example"]
 
 
 # --- the IMAP adapter -----------------------------------------------------------------

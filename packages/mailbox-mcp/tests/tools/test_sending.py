@@ -109,7 +109,7 @@ async def test_an_attachment_that_is_not_base64(api: Callable) -> None:
 
 async def test_refused_recipients_are_named(api: Callable) -> None:
     api({**SENT, "refused": ["gone@example.com"]})
-    result = await sending.send_message("acc_1", to=["gone@example.com", "b@x.org"])
+    result = await sending.send_message("acc_1", to=["gone@example.com", "b@x.example"])
     assert result["refused"] == ["gone@example.com"]
 
 

@@ -199,7 +199,9 @@ def test_a_role_names_a_folder(messages: list[Message]) -> None:
     )
     settings = Settings(storage="memory")
     services = build_services(settings, provider_factory=lambda *_: adapter)
-    account_id = create_account(services.accounts, ProviderType.MEMORY, "a@x.org").id
+    account_id = create_account(
+        services.accounts, ProviderType.MEMORY, "a@x.example"
+    ).id
     client = TestClient(create_app(settings, services), headers=admin_bearer(services))
     url = f"/v1/accounts/{account_id}"
     created = client.post(

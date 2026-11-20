@@ -61,7 +61,7 @@ READ_MESSAGE = Message(
 async def test_list_messages(make_client: Callable) -> None:
     api = FakeApi(PAGE)
     found = await make_client(api).list_messages(
-        "acc_1", folder="inbox", text="hi", sender="a@x.org", unread=True, limit=5
+        "acc_1", folder="inbox", text="hi", sender="a@x.example", unread=True, limit=5
     )
     assert api.call() == (
         "GET",
@@ -69,7 +69,7 @@ async def test_list_messages(make_client: Callable) -> None:
         {
             "folder": "inbox",
             "q": "hi",
-            "from": "a@x.org",
+            "from": "a@x.example",
             "unread": "true",
             "limit": "5",
         },

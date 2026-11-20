@@ -15,7 +15,7 @@ async def test_send_message(make_client: Callable) -> None:
     found = await make_client(api).send_message("acc_1", BODY, "key-1")
     assert api.call() == ("POST", "/v1/accounts/acc_1/send", {}, BODY)
     assert api.seen[0].headers["idempotency-key"] == "key-1"
-    assert found == Sent("<m@x>", ["b@x.org"], original_marked=True)
+    assert found == Sent("<m@x>", ["b@x.example"], original_marked=True)
 
 
 async def test_send_draft(make_client: Callable) -> None:
@@ -24,4 +24,4 @@ async def test_send_draft(make_client: Callable) -> None:
     path = "/v1/accounts/acc_1/drafts/drf_1/send"
     assert api.call() == ("POST", path, {}, None)
     assert api.seen[0].headers["idempotency-key"] == "key-2"
-    assert found == Sent("<m@x>", ["b@x.org"], sent_copy_id="msg_9")
+    assert found == Sent("<m@x>", ["b@x.example"], sent_copy_id="msg_9")

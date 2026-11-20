@@ -43,7 +43,7 @@ ME = {
             "operations": ["list_messages"],
             "warnings": ["reads_and_sends"],
             "sending": [
-                {"recipients": ["a@x.org"], "max_sends_per_day": 5, "sends_left": 4}
+                {"recipients": ["a@x.example"], "max_sends_per_day": 5, "sends_left": 4}
             ],
             "capabilities": ["read_state"],
             "marks": {"read": ["$draft"], "written": []},
@@ -118,11 +118,15 @@ PAGE = {
     ],
 }
 
-SENT = {"message_id_header": "<m@x>", "refused": ["b@x.org"], "original_marked": True}
+SENT = {
+    "message_id_header": "<m@x>",
+    "refused": ["b@x.example"],
+    "original_marked": True,
+}
 
 BODY = message_body(
-    to=[("a@x.org", "A")],
-    cc=[("c@x.org", None)],
+    to=[("a@x.example", "A")],
+    cc=[("c@x.example", None)],
     bcc=[],
     subject="Hi",
     text="Hello",

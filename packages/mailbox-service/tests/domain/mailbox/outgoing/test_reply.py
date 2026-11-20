@@ -449,7 +449,7 @@ async def test_a_forward_folds_a_line_break_in_an_attachment_name(
 
 @pytest.mark.parametrize("bad", ["a b", "a\x85b", "a\x0bb", "a\x0cb", "a\rb"])
 def test_a_caller_may_not_write_a_line_break_into_a_header(bad: str) -> None:
-    for field in ({"subject": bad}, {"to": [{"email": "a@x.org", "name": bad}]}):
+    for field in ({"subject": bad}, {"to": [{"email": "a@x.example", "name": bad}]}):
         with pytest.raises(ValidationError):
             OutgoingMessage.model_validate(field)
     with pytest.raises(ValidationError):
