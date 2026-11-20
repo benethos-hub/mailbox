@@ -12,7 +12,7 @@ every ten minutes: what it reports in between came through IDLE. Then:
    does not know, which the send names as refused, and keeps a read copy
    in its sent folder,
 2. IDLE wakes the worker, and the change feed of the second names the
-   mail as created,
+   mail as created before anything lists it,
 3. the second finds it in the folder ``all``, reads it and its thread,
    marks it read and starred with a keyword, moves it into a new folder
    under the same id, renames that folder with the mail in it, moves it
@@ -181,6 +181,18 @@ def checks(
         len(copies) == 1 and not copies[0].unread,
         str(len(copies)),
     )
+    # The feed first: a list of the inbox would name the mail as created
+    # itself, with IDLE dead.
+    created: list[str] = []
+
+    def fed() -> bool:
+        changes = client.get(f"{base}/changes", params={"since": since}).json()
+        created[:] = [
+            c["id"] for c in changes["changes"] if c["type"] == "message.created"
+        ]
+        return bool(created)
+
+    polled(fed, tries=30, pause=1.0)
 
     arrived = messages_with_subject(mailbox, receiver_id, title, folder="inbox")
     if not run.check("the mail arrives in the second account", bool(arrived)):
@@ -195,8 +207,7 @@ def checks(
         return (kind, message_id) in [(c["type"], c["id"]) for c in changes["changes"]]
 
     run.check(
-        "IDLE brings it into the change feed",
-        bool(polled(lambda: named("message.created", since), tries=30, pause=1.0)),
+        "IDLE brings it into the change feed", message_id in created, str(len(created))
     )
     check_read(run, client, base, message_id)
 
