@@ -347,8 +347,10 @@ def _screenshot(
     transparent: bool = False,
 ) -> None:
     """Render a page as a PNG with a headless browser. A transparent page
-    keeps its alpha channel instead of the browser's white."""
+    keeps its alpha channel instead of the browser's white. A browser that
+    ends well and writes nothing ends the script."""
     width, height = size
+    before = target.stat().st_mtime_ns if target.exists() else 0
     background = ["--default-background-color=00000000"] if transparent else []
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as folder:
         subprocess.run(
@@ -368,6 +370,8 @@ def _screenshot(
             capture_output=True,
             timeout=120,
         )
+    if not target.exists() or target.stat().st_mtime_ns == before:
+        raise SystemExit(f"the browser wrote no image: {target}")
 
 
 def render_social() -> None:
@@ -431,6 +435,8 @@ DIAGRAMS = {
 
 def render_diagram() -> None:
     """Render the architecture diagram as a PNG, light and dark."""
+    if not DIAGRAM_SOURCE.is_file():
+        raise SystemExit(f"no page of the diagram: {DIAGRAM_SOURCE}")
     for target, fragment in DIAGRAMS.items():
         address = DIAGRAM_SOURCE.as_uri() + fragment
         _screenshot(address, target, DIAGRAM_SIZE, DIAGRAM_SCALE)

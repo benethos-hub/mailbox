@@ -126,6 +126,28 @@ def test_the_architecture_diagram_has_the_size_of_its_page() -> None:
         assert size == (width * build.DIAGRAM_SCALE, height * build.DIAGRAM_SCALE)
 
 
+def test_the_diagram_without_its_page_is_not_rendered(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    build = _build()
+    shot: list[str] = []
+    monkeypatch.setattr(build, "DIAGRAM_SOURCE", tmp_path / "gone.html")
+    monkeypatch.setattr(build, "_screenshot", lambda *args, **kw: shot.append("x"))
+    with pytest.raises(SystemExit, match="no page of the diagram"):
+        build.render_diagram()
+    assert shot == []
+
+
+def test_a_browser_that_writes_nothing_ends_the_script(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    build = _build()
+    monkeypatch.setattr(build, "_browser", lambda: "browser")
+    monkeypatch.setattr(build.subprocess, "run", lambda *args, **kw: None)
+    with pytest.raises(SystemExit, match="wrote no image"):
+        build._screenshot("about:blank", tmp_path / "shot.png", (10, 10))
+
+
 def test_a_source_without_its_manifest_is_refused() -> None:
     with pytest.raises(ValueError, match="manifest"):
         _build().plain('<svg xmlns="http://www.w3.org/2000/svg"></svg>')
