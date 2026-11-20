@@ -135,7 +135,10 @@ jobs:
   # The PyPI half of a manual run, for all four packages, without the
   # environments and without an OIDC token, since nothing is uploaded.
   pypi-trial:
-    name: PyPI ${{ matrix.package }} (trial)
+    # A fixed name: a release skips this job, and GitHub does not expand
+    # the matrix in the name of a skipped job. On a run it adds the
+    # values of the matrix to the name itself.
+    name: PyPI (trial)
     if: github.event_name == 'workflow_dispatch'
     needs: [ci-passed]
     runs-on: ubuntu-latest
