@@ -19,7 +19,7 @@ without it:
   the MCP Registry and the Claude Desktop bundle. ``--icon`` renders it
   the same way.
 - ``architecture/architecture.png`` and ``architecture-dark.png``, the
-  diagram of the README, from ``architecture/architecture.html``.
+  diagram of the READMEs, from ``architecture/architecture.html``.
   ``--diagram`` renders both the same way, at twice the size for sharp
   text.
 """

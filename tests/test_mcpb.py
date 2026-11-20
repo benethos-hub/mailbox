@@ -48,6 +48,7 @@ def test_the_bundle_has_the_packages_version_and_metadata() -> None:
     assert manifest["name"] == project["name"]
     assert manifest["version"] == project["version"]
     assert manifest["description"] == project["description"]
+    assert manifest["keywords"] == project["keywords"]
     assert manifest["author"] == {"name": project["authors"][0]["name"]}
     assert manifest["license"] == project["license"]
     assert manifest["compatibility"]["runtimes"] == {

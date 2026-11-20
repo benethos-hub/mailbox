@@ -134,7 +134,7 @@ opens in Compose, its **Delete draft** among the form's buttons.
 ### 4.4 Reader
 
 The mail page of an account: folders on the left, the list beside
-them; a message opens on a page of its own, the breadcrumb the way back
+them. A message opens on a page of its own, the breadcrumb the way back
 to its folder. Not a three-pane client. It has
 the filter bar and the pager of every other list. The batch bar above the list asks for a folder only
 while "move to" is chosen, and the head of the list ticks every row.

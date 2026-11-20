@@ -123,7 +123,7 @@ assets/                   # brand/: the organisation's brand assets,
                           #   to 0.4.1 still link to, icon-3d.svg from
                           #   the PyPI pages, icon.png from the MCP
                           #   Registry entry of 0.4.1. architecture/:
-                          #   the README's diagram as HTML and PNG,
+                          #   the READMEs' diagram as HTML and PNG,
                           #   light and dark. build.py makes the
                           #   shipped copies in the service's
                           #   static/img/, with --social the social
@@ -251,7 +251,10 @@ docs/
   MICROSOFT.md            # connecting Microsoft accounts, an app of your own
   GOOGLE.md               # connecting Gmail accounts, the Google client
   AUTHENTICATION.md       # the factors of the UI sign-in: password,
-                          #   TOTP, passkeys
+                          #   TOTP, passkeys, and where each section is
+  authentication/         #   the methods and the sign-in, devices and
+                          #   recovery codes, where it lives in the
+                          #   service
   UNIFORM.md              # one way to operate every mailbox: the
                           #   principle, the rules, the capabilities
   uniform/                #   what still differs per provider,

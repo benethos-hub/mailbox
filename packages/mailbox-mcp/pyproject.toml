@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "benethos-mailbox-mcp"
 version = "0.8.0"
-description = "MCP server that gives AI agents your mailboxes through mailbox-service, within its token's rights."
+description = "MCP server giving AI agents your mailboxes via benethos-mailbox-service, within its token's rights."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
@@ -16,8 +16,10 @@ keywords = [
     "mcp-server",
     "model-context-protocol",
     "ai-agents",
+    "claude",
     "llm",
     "email",
+    "mail",
     "imap",
     "jmap",
     "pop3",

@@ -72,6 +72,7 @@ What the project is for: [the repository's README](https://github.com/benethos-h
 - [Container](#container)
   - [With docker run](#with-docker-run)
   - [With compose](#with-compose)
+- [Licence](#licence)
 
 ## What it offers
 
@@ -460,3 +461,6 @@ The version runs as named in its `.env`, `MAILBOX_VERSION=0.8.0`. Its
 has the same steps by hand, the update, backup and restore, HTTPS
 with Caddy or a proxy of your own, and the MCP server instances.
 
+## Licence
+
+MIT, see [LICENSE](https://github.com/benethos-hub/mailbox/blob/main/LICENSE).

@@ -3,8 +3,8 @@
   "name": "benethos-mailbox-mcp",
   "display_name": "Mailbox",
   "version": "0.8.0",
-  "description": "MCP server that gives AI agents your mailboxes through mailbox-service, within its token's rights.",
-  "long_description": "Gives Claude your mailboxes through mailbox-service, a service you run yourself: search and read mail, see what is new, look at attachments, sort, write drafts and send. The service decides what the token may do. It holds no mail password, and the mail stays between Claude and your service.",
+  "description": "MCP server giving AI agents your mailboxes via benethos-mailbox-service, within its token's rights.",
+  "long_description": "Gives Claude your mailboxes through benethos-mailbox-service, a service you run yourself: search and read mail, see what is new, look at attachments, sort, write drafts and send. The service decides what the token may do. It holds no mail password, and the mail stays between Claude and your service.",
   "author": {
     "name": "Benedikt Oswald"
   },
@@ -113,14 +113,14 @@
     "service_token": {
       "type": "string",
       "title": "Token",
-      "description": "An API token of mailbox-service, made on a user's page in its UI. The server acts with that user's rights.",
+      "description": "An API token of benethos-mailbox-service, made on a user's page in its UI. The server acts with that user's rights.",
       "sensitive": true,
       "required": true
     },
     "service_url": {
       "type": "string",
       "title": "Address of the service",
-      "description": "Where mailbox-service runs.",
+      "description": "Where benethos-mailbox-service runs.",
       "default": "http://127.0.0.1:8080",
       "required": false
     },
@@ -133,16 +133,23 @@
     }
   },
   "keywords": [
+    "mcp",
+    "mcp-server",
     "model-context-protocol",
     "ai-agents",
+    "claude",
     "llm",
     "email",
+    "mail",
     "imap",
     "jmap",
     "pop3",
     "gmail",
     "outlook",
-    "microsoft-365"
+    "microsoft-365",
+    "multi-account",
+    "email-automation",
+    "self-hosted"
   ],
   "license": "MIT",
   "compatibility": {

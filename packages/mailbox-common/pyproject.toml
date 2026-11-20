@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "benethos-mailbox-common"
 version = "0.8.0"
-description = "What mailbox-service and mailbox-mcp of Mailbox share: mail as plain text, the folders of the operating system, settings from a file, the time of a log line, secrets masked in text, JSON for a hash."
+description = "What benethos-mailbox-service and benethos-mailbox-mcp share, not meant to be used on its own: mail as plain text, the folders of the operating system, settings from a file, the time of a log line, secrets masked in text, JSON for a hash."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
@@ -16,7 +16,6 @@ keywords = [
     "html-to-text",
     "logging",
     "redaction",
-    "self-hosted",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
