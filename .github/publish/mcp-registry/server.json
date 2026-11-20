@@ -37,14 +37,14 @@
       "environmentVariables": [
         {
           "name": "MAILBOX_SERVICE_TOKEN",
-          "description": "An API token of mailbox-service, made on a user's page in its UI. The server acts with that user's rights.",
+          "description": "An API token of benethos-mailbox-service, made on a user's page in its UI. The server acts with that user's rights.",
           "isRequired": true,
           "isSecret": true,
           "format": "string"
         },
         {
           "name": "MAILBOX_SERVICE_URL",
-          "description": "The address of mailbox-service.",
+          "description": "The address of benethos-mailbox-service.",
           "isRequired": false,
           "format": "string",
           "default": "http://127.0.0.1:8080"

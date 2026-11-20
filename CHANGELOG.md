@@ -12,7 +12,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   `Homepage`.
 - The descriptions of the client, the MCP server and the common package
   name the service as PyPI has it, `benethos-mailbox-service`. So do the
-  MCP Registry entry and the Claude Desktop extension.
+  MCP Registry entry, the Claude Desktop extension and the descriptions
+  of the two images.
 - The images install platformdirs 4.14.8 from the lockfile. It checks
   the folders it creates and their parents more strictly on Unix. The
   service and the MCP server only look up their folders with it, and

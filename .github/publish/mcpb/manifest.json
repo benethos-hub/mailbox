@@ -113,14 +113,14 @@
     "service_token": {
       "type": "string",
       "title": "Token",
-      "description": "An API token of mailbox-service, made on a user's page in its UI. The server acts with that user's rights.",
+      "description": "An API token of benethos-mailbox-service, made on a user's page in its UI. The server acts with that user's rights.",
       "sensitive": true,
       "required": true
     },
     "service_url": {
       "type": "string",
       "title": "Address of the service",
-      "description": "Where mailbox-service runs.",
+      "description": "Where benethos-mailbox-service runs.",
       "default": "http://127.0.0.1:8080",
       "required": false
     },
@@ -133,16 +133,23 @@
     }
   },
   "keywords": [
+    "mcp",
+    "mcp-server",
     "model-context-protocol",
     "ai-agents",
+    "claude",
     "llm",
     "email",
+    "mail",
     "imap",
     "jmap",
     "pop3",
     "gmail",
     "outlook",
-    "microsoft-365"
+    "microsoft-365",
+    "multi-account",
+    "email-automation",
+    "self-hosted"
   ],
   "license": "MIT",
   "compatibility": {
