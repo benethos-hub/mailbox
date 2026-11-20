@@ -12,6 +12,9 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
+# The repository on GitHub, and its files as served raw from main.
+REPOSITORY = "https://github.com/benethos-hub/mailbox"
+RAW = "https://raw.githubusercontent.com/benethos-hub/mailbox/main/"
 WORKFLOWS = ROOT / ".github" / "workflows"
 # Where the organisation's reusable workflows and actions live.
 ORG = "benethos-hub/.github/"

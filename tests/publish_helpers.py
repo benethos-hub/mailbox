@@ -12,12 +12,11 @@ from typing import Any
 from .repository_helpers import ROOT, WORKFLOWS, job_of
 
 WORKFLOW = WORKFLOWS / "publish.yml"
-PACKAGES = [
-    ROOT / "packages" / "mailbox-service",
-    ROOT / "packages" / "mailbox-client",
-    ROOT / "packages" / "mailbox-mcp",
-    ROOT / "packages" / "mailbox-common",
-]
+SERVICE = ROOT / "packages" / "mailbox-service"
+CLIENT = ROOT / "packages" / "mailbox-client"
+MCP = ROOT / "packages" / "mailbox-mcp"
+COMMON = ROOT / "packages" / "mailbox-common"
+PACKAGES = [SERVICE, CLIENT, MCP, COMMON]
 
 
 def project_of(package: Path) -> dict[str, Any]:

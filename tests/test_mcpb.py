@@ -20,11 +20,10 @@ from typing import Any
 from benethos_mailbox_client import environment
 from benethos_mailbox_mcp.tools import TOOLS
 
-from .publish_helpers import PACKAGES, ROOT, project_of, workflow_job
+from .publish_helpers import MCP, ROOT, project_of, workflow_job
 from .scripts_helpers import script_module
 
 BUNDLE = ROOT / ".github" / "publish" / "mcpb"
-MCP = PACKAGES[2]
 
 
 def _manifest() -> dict[str, Any]:

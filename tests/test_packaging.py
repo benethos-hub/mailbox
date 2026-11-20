@@ -17,10 +17,19 @@ from pathlib import Path
 
 import pytest
 
-from .publish_helpers import PACKAGES, ROOT, module_of, name_of, needs_of, project_of
-from .repository_helpers import read, repository_files
-
-SERVICE, CLIENT, MCP, COMMON = PACKAGES
+from .publish_helpers import (
+    CLIENT,
+    COMMON,
+    MCP,
+    PACKAGES,
+    ROOT,
+    SERVICE,
+    module_of,
+    name_of,
+    needs_of,
+    project_of,
+)
+from .repository_helpers import REPOSITORY, read, repository_files
 
 
 def _version() -> str:
@@ -337,7 +346,7 @@ def test_the_changelog_names_the_version_as_its_newest_release() -> None:
     released = re.findall(r"^## \[(\d+\.\d+\.\d+)\] - \d{4}-\d\d-\d\d$", text, re.M)
     assert released, "CHANGELOG.md names no release"
     assert released[0] == current
-    base = "https://github.com/benethos-hub/mailbox"
+    base = REPOSITORY
     assert f"[Unreleased]: {base}/compare/v{current}...HEAD" in text
     assert re.search(rf"^\[{re.escape(current)}\]: {base}/", text, re.M)
 

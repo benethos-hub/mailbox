@@ -22,7 +22,7 @@ from pathlib import Path
 
 import pytest
 
-from .repository_helpers import ROOT, repository_files
+from .repository_helpers import RAW, REPOSITORY, ROOT, repository_files
 
 PACKAGES = ROOT / "packages"
 # Folders with READMEs that are not the project's own.
@@ -202,23 +202,17 @@ def test_the_check_sees_what_is_broken(tmp_path: Path) -> None:
         None,
         "no such file",
     ]
-    assert _broken(readme, "https://github.com/benethos-hub/mailbox/blob/main/nope.md")
-    assert not _broken(
-        readme, "https://github.com/benethos-hub/mailbox/blob/main/LICENSE"
-    )
-
-
-# PyPI shows no relative image: a package's README names it in full.
-_RAW = "https://raw.githubusercontent.com/benethos-hub/mailbox/main/"
+    assert _broken(readme, f"{REPOSITORY}/blob/main/nope.md")
+    assert not _broken(readme, f"{REPOSITORY}/blob/main/LICENSE")
 
 
 @pytest.mark.parametrize(
     ("readme", "prefix"),
     [
         ("README.md", ""),
-        ("packages/mailbox-service/README.md", _RAW),
-        ("packages/mailbox-client/README.md", _RAW),
-        ("packages/mailbox-mcp/README.md", _RAW),
+        ("packages/mailbox-service/README.md", RAW),
+        ("packages/mailbox-client/README.md", RAW),
+        ("packages/mailbox-mcp/README.md", RAW),
     ],
 )
 def test_the_readme_shows_the_diagram_light_and_dark(readme: str, prefix: str) -> None:
@@ -237,10 +231,10 @@ READMES = {
     "containers/README.md": "../",
     "containers/production/README.md": "../../",
     "containers/test-mail-server/README.md": "../../",
-    "packages/mailbox-service/README.md": _RAW,
-    "packages/mailbox-client/README.md": _RAW,
-    "packages/mailbox-mcp/README.md": _RAW,
-    "packages/mailbox-common/README.md": _RAW,
+    "packages/mailbox-service/README.md": RAW,
+    "packages/mailbox-client/README.md": RAW,
+    "packages/mailbox-mcp/README.md": RAW,
+    "packages/mailbox-common/README.md": RAW,
 }
 
 

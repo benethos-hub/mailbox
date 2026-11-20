@@ -10,6 +10,8 @@ from __future__ import annotations
 import re
 
 from .publish_helpers import (
+    CLIENT,
+    COMMON,
     PACKAGES,
     WORKFLOW,
     module_of,
@@ -18,8 +20,6 @@ from .publish_helpers import (
     workspace_needs,
 )
 from .repository_helpers import WORKFLOWS
-
-_, CLIENT, _, COMMON = PACKAGES
 
 
 def _wheel_contains(module: str) -> str:
