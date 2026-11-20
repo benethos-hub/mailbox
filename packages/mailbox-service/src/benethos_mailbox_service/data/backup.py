@@ -32,10 +32,17 @@ from .files import (
     LockedError,
     create_private,
     exclusive_lock,
-    remove_with_journal,
 )
 from .secrets import cipher
-from .storage import SCHEMA_VERSION, Store, inspect_file, migrate_file, service_lock
+from .storage import (
+    SCHEMA_VERSION,
+    Store,
+    inspect_file,
+    migrate_file,
+    move_sidecars,
+    remove_database_file,
+    service_lock,
+)
 
 MAGIC = b"MAILBOX-SERVICE-BACKUP 2\n"
 MAGIC_1 = b"MAILBOX-SERVICE-BACKUP 1\n"
@@ -153,10 +160,10 @@ def restore_backup(source: Path, master_key: bytes, target: Path) -> Manifest:
     staged = target.with_name(target.name + ".restoring")
     try:
         with exclusive_lock(service_lock(target)):
-            remove_with_journal(staged)  # from a restore that crashed
+            remove_database_file(staged)  # from a restore that crashed
             manifest = read_backup(source, master_key, staged)
             if manifest.schema_version > SCHEMA_VERSION:
-                remove_with_journal(staged)
+                remove_database_file(staged)
                 raise BackupError(
                     f"the backup has schema {manifest.schema_version}, this "
                     f"version supports up to {SCHEMA_VERSION}: update the "
@@ -272,7 +279,7 @@ def _replace(target: Path, staged: Path) -> None:
     try:
         migrate_file(staged)
     except BaseException:
-        remove_with_journal(staged)
+        remove_database_file(staged)
         raise
     if target.exists():
         stamp = utc_now().strftime("%Y%m%dT%H%M%SZ")
@@ -285,12 +292,7 @@ def _replace(target: Path, staged: Path) -> None:
             raise  # taken since _free looked: never replace a kept copy
         except OSError:
             target.replace(kept)  # a file system without hard links
-        # A journal left by a crash belongs to the old file. Beside the
-        # restored one, SQLite would roll it into that.
-        for suffix in ("-journal", "-wal", "-shm"):
-            journal = target.with_name(target.name + suffix)
-            if journal.exists():
-                journal.replace(kept.with_name(kept.name + suffix))
+        move_sidecars(target, kept)
     staged.replace(target)
 
 

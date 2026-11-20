@@ -28,11 +28,30 @@ from ...files import (
     LockedError,
     create_private,
     exclusive_lock,
-    remove_with_journal,
 )
 from .migrations import MIGRATIONS, SCHEMA_VERSION
 
 T = TypeVar("T")
+# What SQLite keeps beside a database: its rollback journal, its write
+# ahead log and the index of the shared memory.
+SIDECARS = ("-journal", "-wal", "-shm")
+
+
+def remove_database_file(path: Path) -> None:
+    """Remove a database file and its ``-journal``, where they exist."""
+    for leftover in (path, path.with_name(path.name + SIDECARS[0])):
+        leftover.unlink(missing_ok=True)
+
+
+def move_sidecars(target: Path, kept: Path) -> None:
+    """Move what SQLite left beside the database at ``target`` to beside
+    ``kept``, a copy of it: a journal left by a crash belongs to the old
+    file, and beside a new one SQLite would roll it into that."""
+    for suffix in SIDECARS:
+        sidecar = target.with_name(target.name + suffix)
+        if sidecar.exists():
+            sidecar.replace(kept.with_name(kept.name + suffix))
+
 
 # Stays below SQLite's limit of host parameters in one statement.
 IN_CHUNK = 500
@@ -279,7 +298,7 @@ class Database:
             path = self._path.with_name(self._path.name + ".snapshot")
         try:
             with exclusive_lock(path.with_name(path.name + ".lock")):
-                remove_with_journal(path)
+                remove_database_file(path)
                 create_private(path)
                 try:
                     with self._lock, translated():
@@ -290,7 +309,7 @@ class Database:
                             copy.close()
                     yield path
                 finally:
-                    remove_with_journal(path)
+                    remove_database_file(path)
         except LockedError:
             raise StorageError("another backup of this database is running") from None
         finally:

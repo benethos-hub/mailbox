@@ -56,6 +56,8 @@ from .sqlite import (
     SqliteWebhookRepository,
     inspect_file,
     migrate_file,
+    move_sidecars,
+    remove_database_file,
     service_lock,
 )
 from .totp import InMemoryTotpRepository, StoredTotpDevice, TotpRepository
@@ -147,6 +149,8 @@ __all__ = [
     "WrappedKey",
     "inspect_file",
     "migrate_file",
+    "move_sidecars",
     "open_repositories",
+    "remove_database_file",
     "service_lock",
 ]
