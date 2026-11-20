@@ -221,6 +221,9 @@ tests/                    # what the repository holds, across the four
   test_freshness.py       # the call of freshness.yml
   test_vendored.py        # the lockfile of assets/vendor held to the
                           #   JavaScript the UI ships
+  test_assets.py          # the scripts of assets/: the images made
+                          #   from their sources, the diagram, the icon
+                          #   sprite
   test_codeql.py          # the calls of CodeQL, every other action by commit
   test_dockerfile_lint.py # the call of hadolint, against every Dockerfile
   installed_check.py      # not a test: the packages as installed, as real

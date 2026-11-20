@@ -261,3 +261,17 @@ def test_tests_of_the_data_layer_go_through_no_api() -> None:
     assert not violations, "a data test beyond its layer:\n  " + "\n  ".join(violations)
     stale = sorted(WHOLE_SERVICE - excused)
     assert not stale, f"remove from WHOLE_SERVICE: {stale}"
+
+
+def test_no_test_of_the_service_reads_the_assets() -> None:
+    """The scripts of ``assets/`` belong to the repository, and so do their
+    tests (``tests/test_assets.py``): a test here reads what the service
+    ships, not the repository around it."""
+    tests = Path(__file__).resolve().parent
+    reading = re.compile(r"""["']assets["']|["']assets/""")
+    found = [
+        path.relative_to(tests).as_posix()
+        for path in sorted(tests.rglob("*.py"))
+        if reading.search(path.read_text("utf-8"))
+    ]
+    assert found == [], "a test of the service reads assets/: " + ", ".join(found)

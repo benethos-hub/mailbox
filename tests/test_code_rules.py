@@ -96,9 +96,6 @@ def _helpers_imported(path: Path) -> Iterator[Path]:
 
 # A helper every folder of a suite reads, kept at the top of it.
 EVERYWHERE = {"clocks", "conftest", "__init__"}
-# Left at the top by review 2026-11-17: the tests at the repository's
-# root keep a module of the same name and kind at the top of theirs.
-AT_THE_TOP = {"packages/mailbox-service/tests/scripts_helpers.py"}
 
 
 def test_a_helper_sits_in_the_nearest_folder_of_its_importers() -> None:
@@ -115,7 +112,7 @@ def test_a_helper_sits_in_the_nearest_folder_of_its_importers() -> None:
             continue
         name = helper.relative_to(ROOT).as_posix()
         nearest = Path(os.path.commonpath(sorted(folders)))
-        if helper.parent != nearest and name not in AT_THE_TOP:
+        if helper.parent != nearest:
             violations.append(f"{name} -> {nearest.relative_to(ROOT).as_posix()}")
     assert not violations, "a helper away from its importers:\n  " + "\n  ".join(
         violations
