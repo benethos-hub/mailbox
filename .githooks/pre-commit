@@ -119,9 +119,10 @@ fi
 #
 # Something before the @, so a decorator is no address, and * for a
 # sender pattern. A domain may hold letters beyond ASCII, and its last
-# label is letters alone, so actions/checkout@v7.0.1 is no address.
-label='[^][[:space:]@<>(){}"'"'"'`,;:/\\!?=|.]'
-last='[^][[:space:][:digit:]@<>(){}"'"'"'`,;:/\\!?=|._*+%-]'
+# label is letters alone, so actions/checkout@v7.0.1 is no address. A
+# label ends at & and #, so an escaped &gt; is not part of it.
+label='[^][[:space:]@<>(){}"'"'"'`,;:/\\!?=|.&#]'
+last='[^][[:space:][:digit:]@<>(){}"'"'"'`,;:/\\!?=|._*+%&#-]'
 address="[A-Za-z0-9._%+*-]+@($label+\\.)+$last$last+"
 # What passes: a domain reserved for examples and tests (RFC 2606, RFC
 # 6761) with its subdomains, a placeholder such as *@*.de, the address

@@ -78,10 +78,13 @@ NOREPLY_DOMAIN = "users.noreply.github.com"
 # Something before the @, so a decorator such as @pytest.fixture is no
 # address, and * for a sender pattern such as *@*.example. A domain may
 # hold letters beyond ASCII, and its last label is letters alone, so
-# actions/checkout@v7.0.1 is no address.
+# actions/checkout@v7.0.1 is no address. A label ends at & and #, so an
+# escaped &gt; is not part of it. LABEL and LAST hold the characters of
+# label and last in the hook.
+LABEL = r"[^][\s@<>(){}\"'`,;:/\\!?=|.&#]"
+LAST = r"[^][\s\d@<>(){}\"'`,;:/\\!?=|._*+%&#-]"
 ADDRESS = re.compile(
-    r"(?<![A-Za-z0-9._%+*-])([A-Za-z0-9._%+*-]+)@"
-    r"((?:(?:[^\W_]|[*-])+\.)+[^\W\d_]{2,})\b"
+    rf"(?<![A-Za-z0-9._%+*-])([A-Za-z0-9._%+*-]+)@((?:{LABEL}+\.)+{LAST}{LAST}+)"
 )
 
 
@@ -187,6 +190,8 @@ ADDRESSES = {
     "beyond-ascii": "info" + AT + "bücher.de",
     "punycode": "info" + AT + "xn--bcher-kva.de",
     "near-example": "bob" + AT + "example.org.evil",
+    "underscore": "admin" + AT + "my_server.local",
+    "then-a-digit": "mail to max" + AT + "gmail.com2",
 }
 
 # An address on a domain reserved for examples, and what only looks like
@@ -198,6 +203,7 @@ EXAMPLE_ADDRESSES = [
     "me" + AT + "localhost and *" + AT + "*.de",
     "Co-Authored-By: Claude <noreply" + AT + "anthropic.com>",
     "1+someone" + AT + "users.noreply.github.com",
+    "Alice &lt;alice" + AT + "example.com&gt;",
     "uses: actions/checkout" + AT + "v7.0.1",
     "    " + AT + "pytest.fixture",
     AT + 'pytest.mark.parametrize("line", LINES)',
