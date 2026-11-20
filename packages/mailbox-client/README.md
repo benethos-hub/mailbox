@@ -39,6 +39,18 @@ It knows the service through its REST API alone, and needs nothing but
 [httpx](https://www.python-httpx.org/). The REST API follows the status
 above. This package's Python interface has no stability promise yet.
 
+Mailbox is self-hosted and has four packages. The client needs a
+running service: [Install](https://github.com/benethos-hub/mailbox/blob/main/packages/mailbox-service/README.md#install)
+and [First start](https://github.com/benethos-hub/mailbox/blob/main/packages/mailbox-service/README.md#first-start)
+in its README.
+
+| Package | Its part | How you get it |
+|---|---|---|
+| [`mailbox-service`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-service) | It holds the connections to your mail accounts and their credentials, encrypted. It offers one REST API for every provider and decides what a token may do. It has to be running. | [Getting started](https://github.com/benethos-hub/mailbox/blob/main/packages/mailbox-service/README.md#getting-started), before this package |
+| **`mailbox-client`** | This package. The Python client of that REST API, async and sync, for your own scripts and apps. | [Install](#install) |
+| [`mailbox-mcp`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-mcp) | The MCP server. It turns the REST API into tools for an AI assistant, on top of this client. | [Getting started](https://github.com/benethos-hub/mailbox/blob/main/packages/mailbox-mcp/README.md#getting-started) |
+| [`mailbox-common`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-common) | What the service and the MCP server share. The client does not use it. | not needed here |
+
 What the project is for: [the repository's README](https://github.com/benethos-hub/mailbox#readme).
 
 **Contents**

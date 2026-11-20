@@ -25,21 +25,42 @@
 > data is carried forward by migrations.
 
 The service of Mailbox, on PyPI as `benethos-mailbox-service`: one REST
-API (OpenAPI 3.1) for several mail
-providers and accounts, with a configuration UI in the browser. It runs
-permanently, holds the connections to the accounts, keeps their
+API (OpenAPI 3.1) for several mail providers and accounts, with a
+configuration UI in the browser. It runs permanently on your own machine
+or server, holds the connections to the accounts, keeps their
 credentials encrypted and syncs in the background. It keeps a feed of
-what changed in the mailboxes and posts it to webhooks. Scripts and
-apps, through the Python client
-[`mailbox-client`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-client),
-and the MCP server
-[`mailbox-mcp`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-mcp)
-reach mail only through it, each with a token of its own.
+what changed in the mailboxes and posts it to webhooks.
+
+Mailbox is self-hosted and has four packages. The service is the one
+that works alone, and the others build on it. Scripts and apps reach
+mail through the Python client, AI assistants through the MCP server,
+each with a token of its own. None of them holds a mail password.
+
+<picture>
+  <source srcset="https://raw.githubusercontent.com/benethos-hub/mailbox/main/assets/architecture/architecture-dark.png" media="(prefers-color-scheme: dark)">
+  <img src="https://raw.githubusercontent.com/benethos-hub/mailbox/main/assets/architecture/architecture.png" alt="AI agents reach mailbox-mcp over MCP, scripts and apps use mailbox-client, and mailbox-mcp builds on mailbox-client. mailbox-client calls the REST API of mailbox-service, people use its configuration UI in the browser, and its signed webhooks report changes to your systems. mailbox-service, on your own server, connects to the mail accounts over IMAP and SMTP, Microsoft Graph, JMAP, POP3 and the Gmail API.">
+</picture>
+
+A request comes in over REST, from the client, from the MCP server on
+top of it, or from any program that speaks HTTP. The service checks the
+token and its rights, and goes to the provider of the account.
+
+| Package | Its part | How you get it |
+|---|---|---|
+| **`mailbox-service`** | This package. It holds the connections to your accounts and their credentials, encrypted. It offers one REST API for every provider and a configuration UI, and decides what a token may do. | [Getting started](#getting-started) |
+| [`mailbox-client`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-client) | The Python client of the REST API, async and sync, for your own scripts and apps. | from PyPI, where your code runs: [Install](https://github.com/benethos-hub/mailbox/blob/main/packages/mailbox-client/README.md#install) |
+| [`mailbox-mcp`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-mcp) | The MCP server. It turns the REST API into tools for an AI assistant, on top of the client. | after the service: [Getting started](https://github.com/benethos-hub/mailbox/blob/main/packages/mailbox-mcp/README.md#getting-started) |
+| [`mailbox-common`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-common) | What the service and the MCP server share. | installed with this package |
+
+> **The MCP server and the service must have the same version** to work
+> together. Update both at once.
 
 What the project is for: [the repository's README](https://github.com/benethos-hub/mailbox#readme).
 
 **Contents**
 
+- [What it offers](#what-it-offers)
+- [Getting started](#getting-started)
 - [Install](#install)
 - [First start](#first-start)
 - [Where things live](#where-things-live)
@@ -51,6 +72,65 @@ What the project is for: [the repository's README](https://github.com/benethos-h
 - [Container](#container)
   - [With docker run](#with-docker-run)
   - [With compose](#with-compose)
+
+## What it offers
+
+- **Every provider behind one API.** IMAP with SMTP, set up from the
+  address alone, JMAP servers such as Fastmail and Stalwart, POP3 for
+  mailboxes without IMAP, Microsoft 365 and Outlook.com over Microsoft
+  Graph, and Gmail over the Gmail API. The routes under `/v1` look the
+  same for each. What each provider offers:
+  [providers](https://github.com/benethos-hub/mailbox/blob/main/README.md#providers).
+- **Reading.** Folders, lists and search, in one account or all at
+  once. Conversations across folders. Messages as text and HTML, their
+  attachments and the raw source. The receiving server's check of the
+  sender's domain (`sender_check`). A message keeps its id when it
+  moves.
+- **Writing.** Read state, stars and keywords, moving, deleting,
+  folders, drafts, and sending with reply, reply to all and forward. A
+  retried send is not sent twice (`Idempotency-Key`).
+- **Changes.** A change feed names each message created, changed or
+  deleted since a point you keep. Signed webhooks post the same events
+  to a URL of your choice:
+  [Changes and webhooks](#changes-and-webhooks).
+- **Users and rights.** Users, roles and grants per account and per
+  operation, down to folders, and grants that expire. Each script and
+  each assistant gets a token of its own:
+  [Users, rights and tokens](#users-rights-and-tokens).
+- **Guard rails for sending.** A grant can name the recipients a token
+  may write to and how many mails it may send a day.
+- **Traceable.** An audit records every send: by whom, with which
+  token, to whom and when. A second one records every sign-in and
+  every change to users, tokens, roles, accounts and webhooks.
+- **Credentials encrypted.** AES-256-GCM under a master key kept
+  outside the database. Mail goes straight from the provider to your
+  server, never through a third party's cloud.
+- **A configuration UI.** In the browser under `/ui`: accounts, users,
+  rights and tokens, reading and writing mail, the audits, webhooks,
+  the status of accounts and sync, and the service log. Its sign-in
+  takes a second factor, an authenticator app or a passkey.
+- **Limits.** Rate limits per token, per session and per client
+  address, towards each mail server, and a lockout after failed
+  sign-ins: [Settings](#settings).
+- **Operation.** An encrypted backup and restore, a container image,
+  and compose files with HTTPS through Caddy: [Container](#container).
+
+## Getting started
+
+1. Install it, from PyPI or as a container: [Install](#install) or
+   [Container](#container).
+2. Make the keys and the first user, and start it:
+   [First start](#first-start).
+3. Open `http://127.0.0.1:8080/ui`, sign in as `admin` with the
+   one-time password, choose a password of your own and connect your
+   accounts.
+4. Give each script and each assistant a user of its own with the
+   rights it needs, and a token:
+   [Users, rights and tokens](#users-rights-and-tokens).
+5. Work with it: over the REST API, which `/docs` shows, with the
+   [Python client](https://github.com/benethos-hub/mailbox/blob/main/packages/mailbox-client/README.md),
+   or from an AI assistant through the
+   [MCP server](https://github.com/benethos-hub/mailbox/blob/main/packages/mailbox-mcp/README.md#getting-started).
 
 ## Install
 
