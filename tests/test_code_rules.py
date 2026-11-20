@@ -271,6 +271,19 @@ def test_no_live_script_imports_another() -> None:
     )
 
 
+def test_the_package_of_the_live_checks_names_each_module() -> None:
+    """The docstring of live/checks/__init__.py says what each module
+    holds, so a new one is named there."""
+    checks = ROOT / "live" / "checks"
+    told = ast.get_docstring(ast.parse((checks / "__init__.py").read_text("utf-8")))
+    missing = [
+        path.stem
+        for path in sorted(checks.glob("*.py"))
+        if path.stem != "__init__" and f"``{path.stem}``" not in (told or "")
+    ]
+    assert not missing, "name in live/checks/__init__.py: " + ", ".join(missing)
+
+
 def test_no_package_entry_defines_a_class() -> None:
     """The entry of a package offers, it does not implement
     (ARCHITECTURE 5.2): no __init__.py of the four packages defines a

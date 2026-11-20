@@ -9,6 +9,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 import httpx
 from fastapi.testclient import TestClient
@@ -46,13 +47,16 @@ class Service:
 
 
 @contextmanager
-def throwaway_service(prefix: str) -> Iterator[Service]:
+def throwaway_service(
+    prefix: str, extra: dict[str, str] | None = None
+) -> Iterator[Service]:
     """A service of the script's own on a free port, with a database and a
-    master key that are gone at the end."""
+    master key that are gone at the end, and ``extra`` in its
+    environment."""
     port = free_port()
     url = f"http://127.0.0.1:{port}"
     data_dir = tempfile.mkdtemp(prefix=prefix)
-    env = service_env(data_dir, port)
+    env = {**service_env(data_dir, port), **(extra or {})}
     process = start_service(env, url)
     try:
         yield Service(url, bootstrap(env, url), env)
@@ -61,14 +65,16 @@ def throwaway_service(prefix: str) -> Iterator[Service]:
         shutil.rmtree(Path(data_dir), ignore_errors=True)
 
 
-def in_process_service() -> tuple[Services, TestClient]:
-    """The service in this process: in memory, under a new master key, and
-    a client that calls its API with a token of a user with every right."""
+def in_process_service(**changed: Any) -> tuple[Services, TestClient]:
+    """The service in this process: in memory, under a new master key, with
+    the settings ``changed`` names, and a client that calls its API with a
+    token of a user with every right."""
     settings = Settings(
         storage="memory",
         key_provider="env",
         master_key=SecretStr(new_master_key()),
         sync_interval=0,
+        **changed,
     )
     services = build_services(settings)
     services.vault.initialize()

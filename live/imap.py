@@ -12,7 +12,7 @@ every ten minutes: what it reports in between came through IDLE. Then:
    does not know, which the send names as refused, and keeps a read copy
    in its sent folder,
 2. IDLE wakes the worker, and the change feed of the second names the
-   mail as created,
+   mail as created before anything lists it,
 3. the second finds it in the folder ``all``, reads it and its thread,
    marks it read and starred with a keyword, moves it into a new folder
    under the same id, renames that folder with the mail in it, moves it
@@ -31,28 +31,32 @@ accounts come from the file ``LIVE_TEST_SERVER_ACCOUNTS`` in
 
 from __future__ import annotations
 
-import json
 import secrets
-import shutil
 import sys
-import tempfile
 from typing import Any
 
 import httpx
 from checks import capabilities
-from checks.accounts import read_env, test_server_accounts
-from checks.admin import bootstrap
+from checks.accounts import read_env
 from checks.mail import delete_for_good, messages_with_subject, thread_holds
-from checks.processes import free_port, service_env, start_service, stop
 from checks.run import Run, polled
+from checks.service import throwaway_service
+from checks.test_server import (
+    HOST,
+    IMAP_TLS,
+    SMTP_TLS,
+    connect,
+    feed_names,
+    in_all,
+    test_server_accounts,
+    trashed_then_gone,
+    watching_service,
+    worker_ready,
+)
 
 from benethos_mailbox_client import SyncMailboxClient
 
-HOST = "127.0.0.1"
-IMAP_TLS, SMTP_TLS = 30993, 30465
 TITLE = "imap live check"
-# Long enough that only IDLE brings a change in time.
-INTERVAL = 600
 
 
 def settings(account: dict[str, str]) -> dict[str, Any]:
@@ -72,63 +76,22 @@ def main() -> int:
     folder, test_accounts = test_server_accounts(env)
     sender, receiver = test_accounts[:2]
     run = Run()
-
-    data_dir = tempfile.mkdtemp(prefix="mailbox-imap-")
-    port = free_port()
-    url = f"http://127.0.0.1:{port}"
-    service = {
-        **service_env(data_dir, port),
-        "SSL_CERT_FILE": str(folder / "tls" / "ca.pem"),
-        "MAILBOX_SERVICE_DISCOVERY_INTERNAL_HOSTS": json.dumps([HOST]),
-        "MAILBOX_SERVICE_SYNC_INTERVAL": str(INTERVAL),
-        "MAILBOX_SERVICE_SYNC_IDLE": "true",
-    }
-    process = start_service(service, url)
-    try:
-        admin = bootstrap(service, url)
-        headers = {"Authorization": f"Bearer {admin.token}"}
-        with (
-            httpx.Client(base_url=url, headers=headers, timeout=60) as client,
-            SyncMailboxClient(url, admin.token) as mailbox,
-        ):
-            ids = connect(run, client, sender, receiver)
-            if ids is not None:
-                checks(run, client, mailbox, ids, receiver)
-    finally:
-        stop(process)
-        shutil.rmtree(data_dir, ignore_errors=True)
-    return run.finish()
-
-
-def connect(
-    run: Run, client: httpx.Client, sender: dict[str, str], receiver: dict[str, str]
-) -> tuple[str, str] | None:
-    """Both accounts in the service, their ids, None if one did not connect."""
-    ids = []
-    for account in (sender, receiver):
-        created = client.post(
-            "/v1/accounts",
-            json={
-                "provider": "imap",
-                "email": account["email"],
-                "settings": settings(account),
-                "credentials": {"password": account["password"]},
-            },
-        )
-        if not run.check(
+    with (
+        throwaway_service("mailbox-imap-", watching_service(folder)) as service,
+        service.admin() as client,
+        service.mailbox() as mailbox,
+    ):
+        ids = connect(
+            run,
+            client,
+            "imap",
             "an IMAP account connects over TLS, with SMTP",
-            created.status_code == 201,
-            str(created.status_code),
-        ):
-            return None
-        ids.append(created.json()["id"])
-    return ids[0], ids[1]
-
-
-def in_all(mailbox: SyncMailboxClient, account_id: str, subject: str) -> list[str]:
-    """The ids of the messages with ``subject`` in the folder ``all``."""
-    page = mailbox.list_messages(account_id, subject=subject, folder="all", limit=10)
-    return [m.id for m in page.items]
+            (sender, receiver),
+            settings,
+        )
+        if ids is not None:
+            checks(run, client, mailbox, ids, receiver)
+    return run.finish()
 
 
 def checks(
@@ -147,14 +110,9 @@ def checks(
     for account_id in ids:
         clean_up(mailbox, account_id)
 
-    def ready() -> bool:
-        accounts = {a["id"]: a for a in client.get("/v1/status").json()["accounts"]}
-        found = accounts.get(receiver_id) or {}
-        return bool(found.get("last_sync_at") and found.get("watching"))
-
     if not run.check(
         "the worker took it up at once: synced, waiting in IDLE",
-        bool(polled(ready, tries=30, pause=1.0)),
+        bool(polled(lambda: worker_ready(client, receiver_id), tries=30, pause=1.0)),
     ):
         return
     since = client.get(f"{base}/changes").json()["state"]
@@ -181,6 +139,16 @@ def checks(
         len(copies) == 1 and not copies[0].unread,
         str(len(copies)),
     )
+    # The feed first: a list of the inbox would name the mail as created
+    # itself, with IDLE dead.
+    created: list[str] = []
+
+    def fed() -> bool:
+        changes = feed_names(client, base, since)
+        created[:] = [i for kind, i in changes if kind == "message.created"]
+        return bool(created)
+
+    polled(fed, tries=30, pause=1.0)
 
     arrived = messages_with_subject(mailbox, receiver_id, title, folder="inbox")
     if not run.check("the mail arrives in the second account", bool(arrived)):
@@ -191,12 +159,10 @@ def checks(
     )
 
     def named(kind: str, after: str) -> bool:
-        changes = client.get(f"{base}/changes", params={"since": after}).json()
-        return (kind, message_id) in [(c["type"], c["id"]) for c in changes["changes"]]
+        return (kind, message_id) in feed_names(client, base, after)
 
     run.check(
-        "IDLE brings it into the change feed",
-        bool(polled(lambda: named("message.created", since), tries=30, pause=1.0)),
+        "IDLE brings it into the change feed", message_id in created, str(len(created))
     )
     check_read(run, client, base, message_id)
 
@@ -209,27 +175,7 @@ def checks(
 
     check_draft(run, client, base, message_id)
 
-    url = f"{base}/messages/{message_id}"
-    mark = client.get(f"{base}/changes").json()["state"]
-    trashed = client.delete(url)
-    run.check(
-        "the folder all leaves out the trash",
-        message_id not in in_all(mailbox, receiver_id, title),
-    )
-    again = client.delete(url)
-    gone = client.delete(url, params={"permanent": True})
-    run.check(
-        "into the trash, once, then for good",
-        trashed.status_code in (200, 204)
-        and again.status_code == 409
-        and gone.status_code == 204
-        and client.get(url).status_code == 404,
-        f"{trashed.status_code} {again.status_code} {gone.status_code}",
-    )
-    run.check(
-        "the change feed names it deleted",
-        bool(polled(lambda: named("message.deleted", mark), tries=30, pause=1.0)),
-    )
+    trashed_then_gone(run, client, mailbox, receiver_id, message_id, title)
     for copy in copies:
         mailbox.delete_message(sender_id, copy.id, permanent=True)
 
@@ -337,7 +283,7 @@ def clean_up(mailbox: SyncMailboxClient, account_id: str) -> None:
     places += [(account_id, f.id) for f in folders]
     old = delete_for_good(mailbox, places, TITLE, matches=lambda found: TITLE in found)
     for folder in folders:
-        mailbox.request("DELETE", f"/v1/accounts/{account_id}/folders/{folder.id}")
+        mailbox.delete_folder(account_id, folder.id)
     if old or folders:
         print(
             f"      deleted {old} mail(s) and {len(folders)} folder(s) "

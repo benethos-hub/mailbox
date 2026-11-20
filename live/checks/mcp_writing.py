@@ -202,7 +202,7 @@ def put_back(
         admin.update_message(account_id, message.id, remove_keywords=[KEYWORD])
     if folder_id:
         try:
-            admin.request("DELETE", f"/v1/accounts/{account_id}/folders/{folder_id}")
+            admin.delete_folder(account_id, folder_id)
             removed = ""
         except ApiError as exc:
             removed = str(exc)

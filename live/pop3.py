@@ -23,22 +23,26 @@ from collections.abc import Callable
 from typing import Any
 
 import anyio
-from checks.accounts import read_env, test_server_accounts
-from checks.admin import admin_token
-from checks.processes import new_master_key
+from checks import capabilities
+from checks.accounts import read_env
 from checks.run import Run, polled
-from checks.service import mailbox_of
+from checks.service import in_process_service, mailbox_of
+from checks.test_server import (
+    HOST,
+    POP3_STARTTLS,
+    POP3_TLS,
+    SMTP_TLS,
+    ca_file,
+    connect,
+    test_server_accounts,
+)
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
 from benethos_mailbox_client import MessageSummary, SyncMailboxClient
-from benethos_mailbox_service.assembly import build_services, create_app
-from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import ProviderType
 from benethos_mailbox_service.data.providers import build_provider
 
-HOST = "127.0.0.1"
-POP3_TLS, POP3_STARTTLS, SMTP_TLS = 30995, 30110, 30465
 TITLE = "pop3 live check"
 
 
@@ -52,50 +56,6 @@ def settings(account: dict[str, str]) -> dict[str, Any]:
         "smtp_port": SMTP_TLS,
         "smtp_security": "tls",
     }
-
-
-def start_service() -> tuple[Any, TestClient]:
-    """A service of its own in memory, and a client with an admin's token."""
-    service_settings = Settings(
-        storage="memory",
-        key_provider="env",
-        master_key=SecretStr(new_master_key()),
-        sync_interval=0,
-        discovery_internal_hosts=[HOST],
-    )
-    services = build_services(service_settings)
-    services.vault.initialize()
-    client = TestClient(
-        create_app(service_settings, services),
-        headers={"Authorization": f"Bearer {admin_token(services)}"},
-    )
-    return services, client
-
-
-def connect(
-    run: Run, client: TestClient, accounts: tuple[dict[str, str], ...]
-) -> list[str] | None:
-    """Each account connected over POP3 with TLS, its id. None when one
-    does not connect."""
-    ids = []
-    for account in accounts:
-        created = client.post(
-            "/v1/accounts",
-            json={
-                "provider": "pop3",
-                "email": account["email"],
-                "settings": settings(account),
-                "credentials": {"password": account["password"]},
-            },
-        )
-        if not run.check(
-            "a POP3 account connects over TLS",
-            created.status_code == 201,
-            str(created.status_code),
-        ):
-            return None
-        ids.append(created.json()["id"])
-    return ids
 
 
 def mine(mailbox: SyncMailboxClient, account_id: str) -> list[MessageSummary]:
@@ -113,12 +73,7 @@ def check_inbox(run: Run, client: TestClient, receiver_id: str) -> None:
     if leftovers:
         print(f"      deleted {len(leftovers)} mail(s) of an earlier run")
     base = f"/v1/accounts/{receiver_id}"
-    account = client.get(base).json()
-    run.check(
-        "the account names what it can do",
-        account["capabilities"] == ["purge", "refused", "send"],
-        str(account["capabilities"]),
-    )
+    capabilities.named(run, client.get(base).json(), capabilities.POP3)
     renamed = client.patch(f"{base}/folders/inbox", json={"name": "Elsewhere"})
     run.check("what it lacks answers 501", renamed.status_code == 501, str(renamed))
     run.check(
@@ -128,7 +83,7 @@ def check_inbox(run: Run, client: TestClient, receiver_id: str) -> None:
 
 
 def send_one(
-    run: Run, client: TestClient, ids: list[str], receiver: dict[str, str]
+    run: Run, client: TestClient, ids: tuple[str, str], receiver: dict[str, str]
 ) -> str | None:
     """One mail from the first account to the second, its id there once
     it arrived."""
@@ -227,7 +182,7 @@ def check(
     run: Run,
     services: Any,
     client: TestClient,
-    ids: list[str],
+    ids: tuple[str, str],
     receiver: dict[str, str],
 ) -> bool:
     """The test mail through the receiver's account. False when it did not
@@ -252,10 +207,17 @@ def main() -> int:
     env = read_env()
     folder, test_accounts = test_server_accounts(env)
     sender, receiver = test_accounts[:2]
-    os.environ["SSL_CERT_FILE"] = str(folder / "tls" / "ca.pem")
+    os.environ["SSL_CERT_FILE"] = str(ca_file(folder))
     run = Run()
-    services, client = start_service()
-    ids = connect(run, client, (sender, receiver))
+    services, client = in_process_service(discovery_internal_hosts=[HOST])
+    ids = connect(
+        run,
+        client,
+        "pop3",
+        "a POP3 account connects over TLS",
+        (sender, receiver),
+        settings,
+    )
     if ids is not None and check(run, services, client, ids, receiver):
         check_starttls(run, receiver)
     services.close()
