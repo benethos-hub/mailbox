@@ -7,6 +7,7 @@ import pytest
 
 from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.models import (
+    FolderCreate,
     FolderUpdate,
     MessageBatch,
     MessageUpdate,
@@ -375,3 +376,28 @@ async def test_renaming_a_folder_keeps_the_ids_inside(
         ADMIN, imap_account_id, ids["Mail 2"]
     )
     assert message.folder_ids == [renamed.id]
+
+
+async def test_a_folder_renamed_before_a_pass_read_it_keeps_the_ids_inside(
+    imap_services: Services, imap_account_id: str
+) -> None:
+    """A folder made, given a message of ours and renamed between two
+    passes: no pass kept its state, and the message keeps its id."""
+    services, account = imap_services, imap_account_id
+    ids = await ids_by_subject(services, account)
+    await services.sync.sync_account(account)
+    made = await services.mailbox.create_folder(
+        ADMIN, account, FolderCreate(name="Projekte")
+    )
+    await services.mailbox.update_message(
+        ADMIN, account, ids["Mail 2"], MessageUpdate(folder_ids=[made.id])
+    )
+    renamed = await services.mailbox.update_folder(
+        ADMIN, account, made.id, FolderUpdate(name="Ablage")
+    )
+    message = await services.mailbox.get_message(ADMIN, account, ids["Mail 2"])
+    assert message.folder_ids == [renamed.id]
+    inside = await services.mailbox.list_messages(
+        ADMIN, account, folder_id=renamed.id, limit=10, cursor=None
+    )
+    assert [m.id for m in inside.items] == [ids["Mail 2"]]

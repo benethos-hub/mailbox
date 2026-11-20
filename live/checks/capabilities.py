@@ -35,6 +35,9 @@ GMAIL = frozenset(
 # where the account names its receiving server, which the test accounts
 # do not.
 JMAP = (GMAIL - {"sender_check"}) | {"keywords", "push"}
+# An IMAP server with SMTP, IDLE, CONDSTORE and the special folders: a
+# message in one folder alone, and SMTP names a refused recipient at once.
+IMAP = (JMAP - {"labels"}) | {"refused"}
 
 
 def named(run: Run, described: dict[str, Any], expected: frozenset[str]) -> None:

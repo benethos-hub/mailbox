@@ -77,10 +77,9 @@ def delete_for_good(
     subject: str,
     matches: Callable[[str], bool] | None = None,
 ) -> int:
-    """The messages of each ``(account id, folder)``, every folder for
-    None, whose subject is
-    ``subject``, or for which ``matches`` holds, deleted for good. Answers
-    how many."""
+    """The messages of each ``(account id, folder)``, the inbox for None,
+    whose subject is ``subject``, or for which ``matches`` holds, deleted
+    for good. Answers how many."""
     fits = matches or (lambda found: found == subject)
     removed = 0
     for account_id, folder in places:
