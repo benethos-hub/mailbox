@@ -87,13 +87,13 @@ references="$references|[:=][[:space:]]*[\"'][a-z]+(_[a-z]+)+\$"
 references="$references|[:=][[:space:]]*[A-Z][a-z]+([A-Z][a-z]+)+\$"
 references="$references|[:=][[:space:]]*[a-z_]+(\\.[a-z_]+)+\$"
 
-# The added lines without the + of the diff and without its headers, so
-# a line that begins with @, such as a decorator, stays what it is.
+# The added lines of each hunk without the + of the diff, so a line
+# that begins with @, such as a decorator, stays what it is. The headers
+# of a file, from diff --git to the first @@, are left out, and an added
+# line whose text begins with ++ b/ is no header.
 added=$(
     git diff --cached --no-color --no-ext-diff --no-textconv -U0 \
-        | grep '^+' \
-        | grep -vE '^\+\+\+ (b/|/dev/null)' \
-        | sed 's/^+//' \
+        | awk '/^diff --git /{h=1;next} /^@@/{h=0;next} !h && /^\+/{print substr($0,2)}' \
         | grep -v 'pragma: allowlist secret' \
         || true
 )

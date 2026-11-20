@@ -185,6 +185,15 @@ def test_refuses_an_address_on_a_domain_of_someone(repo: Path, line: str) -> Non
     assert "address" in answer.stderr
 
 
+def test_an_added_line_that_looks_like_a_header_is_read(repo: Path) -> None:
+    _stage(repo, "notes.txt", "++ b/notes: " + ADDRESSES["address"] + "\n")
+
+    answer = _hook(repo)
+
+    assert answer.returncode == 1
+    assert "address" in answer.stderr
+
+
 def test_an_address_for_examples_passes(repo: Path) -> None:
     _stage(repo, "notes.txt", "\n".join(EXAMPLE_ADDRESSES) + "\n")
 
