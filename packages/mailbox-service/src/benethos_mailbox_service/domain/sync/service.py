@@ -62,7 +62,6 @@ class SyncService:
         self._new_id = new_id
         self._threads = IndexThreads(adapters, index, references, new_thread)
         self._feed = feed
-        self._activity = activity or ActivityLog(clock)
         self._writes = OwnWrites()
         self._gone = Gone(self)
         self._runner = SyncRunner(
@@ -73,7 +72,7 @@ class SyncService:
             self._writes,
             new_id,
             clock,
-            self._activity,
+            activity or ActivityLog(clock),
         )
 
     @property
