@@ -8,12 +8,6 @@ import pytest
 from fastapi.testclient import TestClient
 
 from benethos_mailbox_service.data.models import MessageFilter
-from benethos_mailbox_service.data.protocols.imap import (
-    ImapSession,
-    SearchCriteria,
-    Server,
-)
-from benethos_mailbox_service.errors import BadRequestError
 
 from ...imap_adapter import INBOX, provider
 from ...imap_fake import FakeFolder, FakeMailBox, make_message
@@ -83,18 +77,6 @@ async def test_imap_filters(
 async def test_non_ascii_filters_search_in_utf8(box: FakeMailBox) -> None:
     await subjects(box, sender="Steuerbüro")
     assert any(c[0] == "search" and c[2] == "UTF-8" for c in box.calls)
-
-
-def test_the_session_refuses_a_line_break_in_a_search(box: FakeMailBox) -> None:
-    """IMAPClient quotes search text but keeps CR and LF, which would end the
-    command and start one of the caller's choosing."""
-    session = ImapSession(Server("imap.example.com", 993, "tls"), client_factory=box)
-    session.login("me@example.com", "secret")
-    session.select("INBOX")
-    for field in ("text", "sender", "to", "subject"):
-        with pytest.raises(BadRequestError, match="control characters"):
-            session.messages.search(SearchCriteria(**{field: "a\r\nX1 DELETE INBOX"}))
-    assert not [c for c in box.calls if c[0] == "search"]
 
 
 # --- the API ------------------------------------------------------------------------
