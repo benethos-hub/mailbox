@@ -10,6 +10,32 @@ its methods. TOTP is the first method, passkeys are the second.
 TOTP is built since 0.4.0, decided 2026-10-09. Passkeys joined it on
 2026-11-18, decided that day. The decisions are in section 10.
 
+This file is the overview. It holds the factors, the frame of the
+second factor, the troubleshooting, what may come later and what was
+decided. The rest is in [authentication/](authentication/), under the
+same section numbers.
+
+## The topics
+
+| Topic | Sections | In short |
+|---|---|---|
+| [The methods and the sign-in](authentication/sign-in.md) | 3 and 4 | TOTP and passkeys, what each checks, the step after the password, the code page, and changing the own password. |
+| [Devices and recovery codes](authentication/devices.md) | 5 and 6 | Adding, renaming and removing a device or a passkey, removing for another user, and the recovery codes: how they are made, stored and used. |
+| [Where it lives in the service](authentication/service.md) | 7 | The tables, the sessions, the recovery key, the API, the UI, the audit and the limits. |
+
+## Every section
+
+- [1. The factors](#1-the-factors)
+- [2. The second factor: a frame for its methods](#2-the-second-factor-a-frame-for-its-methods)
+- [3. The methods](authentication/sign-in.md#3-the-methods): [3.1 TOTP, an authenticator app](authentication/sign-in.md#31-totp-an-authenticator-app) · [3.2 Passkeys](authentication/sign-in.md#32-passkeys)
+- [4. Signing in](authentication/sign-in.md#4-signing-in)
+- [5. Devices: adding, renaming, removing](authentication/devices.md#5-devices-adding-renaming-removing)
+- [6. Recovery codes](authentication/devices.md#6-recovery-codes)
+- [7. Where it lives in the service](authentication/service.md#7-where-it-lives-in-the-service)
+- [8. Troubleshooting](#8-troubleshooting)
+- [9. Later](#9-later)
+- [10. The decisions](#10-the-decisions)
+
 ## 1. The factors
 
 | Factor | What it proves | Where |
@@ -51,317 +77,6 @@ In the code the frame is `domain/auth/factors.py` and
 `domain/users/passkeys.py`, the recovery codes
 `domain/auth/recovery.py`. The rules for a device's name are
 `domain/auth/devices.py`. Each has a repository of its own.
-
-## 3. The methods
-
-### 3.1 TOTP, an authenticator app
-
-The time-based one-time password of RFC 6238, as every authenticator
-app reads it: HMAC-SHA1, six digits, a step of 30 seconds. The secret
-is 20 random bytes, written in base32 for the app.
-
-A user may hold TOTP on several **devices**, each with a name of its
-own, "Phone" or "Tablet 2", and a secret of its own: the codes differ
-from device to device. A code of any of them signs in.
-
-- **Each code once.** The step of the last code taken is stored per
-  device. A code of that step or an earlier one is refused, so a code
-  read over a shoulder does not work a second time.
-- **Clock drift.** One step before and one after the current step are
-  taken as well: 30 seconds either way. The server's clock must be
-  right, the troubleshooting of section 8 says so.
-- **The algorithm** is in `data/secrets/totp.py`, beside the password
-  hashes, with the standard library alone (`hmac`, `hashlib`,
-  `base64`).
-
-### 3.2 Passkeys
-
-A passkey is a key pair of WebAuthn. The private key stays with the
-person: on a laptop or a phone, on a security key, or in a password
-manager that syncs it. The service keeps the public key alone, so its
-database signs nobody in. A passkey is bound to the service's origin,
-so a page of another site cannot use it.
-
-A user may hold several passkeys, each with a name of its own,
-"Laptop" or "Security key". Any of them signs in.
-
-- **The ceremonies** are in `data/secrets/passkeys.py`, with `fido2`
-  by Yubico, imported there alone. The browser's part is
-  `static/js/passkey.js` of the UI.
-- **The user verified.** Making and using a passkey both ask the
-  authenticator to verify its user, by a PIN, a fingerprint or a face.
-  An answer without that is refused.
-- **The origin exactly.** An answer counts only from the service's own
-  origin: the one of `MAILBOX_SERVICE_PUBLIC_URL`, else the one the
-  request came to. A host below it does not count.
-- **Each signature once.** A challenge is random, kept on the server
-  and taken by the next form that answers it, right or wrong. The
-  counter of a passkey must grow with each signature. A passkey that
-  keeps no counter, as most synced ones, stays at zero. Once it
-  counted, a lower or equal one is refused: it shows a copy of the key.
-- **The user's handle** that the browser keeps with a passkey is the
-  SHA-256 of the user's id, nothing a person typed.
-- **No attestation.** The service does not ask which make of
-  authenticator holds a passkey.
-- **Where browsers make passkeys:** at a name over HTTPS, or at
-  localhost. Not at an address alone, such as `192.168.1.10`, and not
-  at a name over HTTP. There the page says so and offers none, and
-  TOTP and the recovery codes still work.
-
-## 4. Signing in
-
-1. Name and password, with the brakes per address and per name (CONCEPT 7.5, [LIMITS.md](LIMITS.md)).
-2. A user with a second factor gets no session yet. The service keeps
-   a **pending sign-in** on the server, as it keeps a session, and the
-   browser a cookie of its own for it. It reaches the code page and
-   nothing else. It ends after **five minutes**.
-3. The code page takes a passkey, a code of any TOTP device, or a
-   recovery code (section 6). It shows one method at a time, the first
-   the user has and the browser can use, in this order: a passkey, a
-   code of an app, a recovery code. **Try another way** lists the
-   others. Nothing stores which one was used. After a wrong code the
-   page shows the field of that code first again. A wrong code or passkey
-   counts as a failed sign-in for the address and the name, as a wrong
-   password does. After **five wrong tries** the pending sign-in ends,
-   and the person starts again with the password.
-4. A right code makes the session. Only then the sign-in counts:
-   the last sign-in is stored, the brakes are cleared, and the audit
-   writes `auth.signed_in`.
-5. Then the forced password change, if one is due.
-
-**Decided 2026-10-09:** the code comes before the forced password
-change. Whoever holds a one-time password, the administrator who
-made it among them, cannot change the user's password without the
-user's device. Setting a password for a user leaves its second factor
-as it is.
-
-**Changing the own password** on the page Password asks for the
-current password and, for a user with a second factor, the second
-factor as well, as adding a device does: whoever holds an open session
-and the password alone cannot lock the person out. The forced change
-after the sign-in asks for none, as the step after the password asked
-for it a moment before. The second factor is checked after the new
-password passed its rules, so a refused one uses up no recovery code.
-
-## 5. Devices: adding, renaming, removing
-
-Everything is on the person's own page **Second factor**, reached from
-the sidebar beside **Password** and from the person's user page. Its
-card **Authenticator app (TOTP)** lists the devices with their name,
-when each was added and when it last signed in.
-
-**Adding a device:**
-
-1. **Add a device** asks for its name and the password again, as the
-   recovery key does. With a second factor already on, it asks for the
-   second factor as well: a code, a passkey or a recovery code. Whoever holds the
-   password and an open session alone cannot slip a device of its own
-   in.
-2. The service makes the secret and shows it as a **QR code** to scan
-   with the app, and as text to type in where the camera cannot reach.
-   The secret is not active yet. It is held in the session, for
-   **15 minutes**, and never stored before it is confirmed.
-3. The first code from the new device confirms it. Now it is stored
-   encrypted, and its codes sign in.
-4. The first device of the first method turns the second factor on
-   and brings ten **recovery codes**, shown once (section 6). A
-   further device brings none.
-5. Adding a device ends the user's other sessions, as a password
-   change does. The session that added it carries on.
-
-A name has 1 to 60 characters and is unique among the user's TOTP
-devices, regardless of case. A user holds at most **10 TOTP devices**.
-
-**Renaming** takes the new name alone: a name hands out nothing.
-
-**Removing a device** asks for the password and a code: of any device,
-the one removed among them, or a recovery code. So a device the person
-does not know is removed with the code of its own. The last device of
-the last method turns the second factor off, and the recovery codes go
-with it.
-
-**Passkeys** have the card **Passkeys** on the same page, with the
-same columns. **Add a passkey** asks for its name and the password,
-and with a second factor on already a code or a passkey. Then the
-browser makes it: it asks where to keep it and for the PIN, the
-fingerprint or the face. The service keeps the challenge for 15
-minutes. The first device of any method turns the second factor on and
-brings the recovery codes, and adding one ends the user's other
-sessions, as for TOTP. A browser refuses a second passkey of the user
-on the same authenticator, and the service stores a credential once
-across all users. Names and the limit are those of a TOTP device:
-1 to 60 characters, unique among the user's passkeys, at most **10
-passkeys**. Renaming and removing are as for a TOTP device. A passkey
-may confirm its own removal. The service cannot reach the device: a
-removed passkey stays there until the person deletes it.
-
-**A passkey in place of a code.** Wherever a step asks for the
-second factor, it offers the same methods as the code page, one at a
-time with **Try another way**: adding or removing a device, new
-recovery codes, the recovery key, changing the own password, and the
-code page after the password. Where the passkey shows, sending the form asks the browser
-for it.
-
-The QR code holds the `otpauth://` URI: issuer `Mailbox`, and the user
-name with the host of the service as the account, so two deployments
-show apart in the app. It is drawn by `segno`, pure Python without
-dependencies under the BSD licence, behind `web/pages/qr.py`. The page
-shows it as an image, an SVG in a data URI, which the content security
-policy admits as an image (`img-src data:`). No inline markup reaches
-the page.
-
-**Removing for another user:**
-
-- A user with `users.manage`, for a user whose rights it covers, as for
-  a password: one TOTP device, one passkey, or the whole second factor,
-  every method and the recovery codes. It sees the list of devices, never a
-  secret. It never adds one: the secret belongs to the person who
-  scans it. Not for itself.
-- On the host, `users reset-second-factor <name>` removes the whole
-  second factor, for the last administrator who lost every device and
-  the recovery codes.
-
-A device removed, or the whole second factor, ends the user's
-sessions, all but the one of a person removing its own. A user
-deleted, or one whose UI sign-in is switched off, loses its second
-factor with its password. A disabled user keeps both, as it keeps its
-password.
-
-**Decided 2026-10-09:** setting up is done in the UI only. A QR code
-and its confirmation are for a person. The API reads the state and
-removes.
-
-**Decided 2026-10-09**, the devices: a list per user, named, each with
-a secret of its own. A further device needs the password and a code.
-One set of recovery codes per user. An administrator removes one
-device or all, never adds one. Devices can be renamed, at most 10.
-
-## 6. Recovery codes
-
-Ten codes, each fifteen characters from a base32 alphabet without the
-letters easily mistaken, shown as `ABCDE-FGHJK-MNPQR`. They belong to the
-second factor, not to a method or a device: they help whichever is
-lost. They are made with the first device and shown once, with a link
-to download them as a text file. The page holds the file as a data
-URI, so the service keeps nothing of them after showing them. Each
-holds 75 bits and works once.
-
-- Stored as HMAC-SHA256 under a key derived from the data key, with
-  the user's id in what is hashed, and with the id of that data key.
-  Whoever steals the database without the master key cannot try a
-  single guess, and a guess made with it fits one user only. The check
-  is as fast as a plain hash. Case, spaces and dashes do not count.
-- The key is derived with HKDF from the data key, for this purpose
-  alone, and comes from the vault, never from the database. The
-  domain only gets a hash function handed in. Each row keeps the id of
-  the data key, so a rotation of the data key, should one come, can
-  still check old codes or void them.
-- After a restore on another machine the codes count only with the
-  same master key, as every other secret of the backup does.
-- A code of digits alone is tried as a code of the app first, then as a
-  recovery code.
-- The page shows how many are left. **Make new codes** asks for the
-  password and a code, of any device or an old recovery code, as adding
-  a device does, and replaces the whole set. Whoever holds the password
-  and an open session alone cannot make a set of its own.
-- A recovery code used at the sign-in is written to the audit as
-  `auth.recovery_code_used`, a warning: it means a device is gone or
-  out of reach.
-- A recovery code also confirms adding or removing a device, making
-  new codes, showing the recovery key and changing the own password,
-  and is used up by it. Whoever lost every device and every
-  recovery code needs an administrator (section 5).
-
-**Decided 2026-10-09:** recovery codes and the host command, both. The
-codes let a person back in alone. The command is the last way for the
-last administrator. A user with `users.manage` removing the second
-factor is the third.
-
-## 7. Where it lives in the service
-
-**Data**, schemas 18, 19 and 23:
-
-| Table | Columns |
-|---|---|
-| `totp_devices` | `id` (`tfa_` and 64 hex), `user_id` (references the user, deleted with it), `name`, the secret sealed with the data key (`key_id`, `nonce`, `ciphertext`), `created_at`, `last_step`, `last_used_at` |
-| `recovery_codes` | `user_id` (references the user, deleted with it), `key_id` (the data key the hash came from), `hash`, `used_at` |
-| `passkeys` | `id` (`psk_` and 64 hex), `user_id` (references the user, deleted with it), `name`, `credential_id` (unique across all users), `credential` (the attested credential data with the public key), `sign_count`, `created_at`, `last_used_at` |
-
-The hashes of the recovery codes are keyed since schema 19. Passkeys
-brought a table of their own in schema 23. A passkey holds no secret
-and is stored as it is. A TOTP secret is sealed with
-the data key as a webhook's secret is (CONCEPT 7.3), bound to its
-device. A backup holds the three tables, the secrets as encrypted as
-the rest.
-
-**Sessions:** a session keeps which devices of which methods its user
-had at the sign-in, as it keeps when the password was set. A device
-added or removed ends the sessions that started before. A rename does
-not. A session ends after 8 hours without a request and after 24
-hours however used, and a user holds 10 at most
-([LIMITS.md](LIMITS.md)).
-
-**The recovery key** (CONCEPT 7.3, [UI.md](UI.md) 6.5) opens every
-stored secret. Its page asks an administrator with a second factor for
-the second factor as well as the password: a code, a passkey or a
-recovery code.
-Without a second factor the password alone does.
-
-**API:**
-
-- `GET /v1/users` and `GET /v1/users/{user_id}` answer `second_factor`,
-  true or false, beside `has_password`.
-- `GET /v1/users/{user_id}/second-factor`, operation
-  `get_second_factor` in `users.read`: the devices of each method,
-  `totp` and `passkeys`, each with id, name, `created_at` and
-  `last_used_at`, and how many recovery codes are left. Never a secret
-  or a key.
-- `DELETE /v1/users/{user_id}/second-factor`, operation
-  `remove_second_factor` in `users.manage`: every method and the
-  recovery codes. `404` when the user has none, `409` for the caller
-  itself.
-- `DELETE /v1/users/{user_id}/second-factor/totp/{device_id}`,
-  operation `remove_totp_device` in `users.manage`: one TOTP device,
-  the second factor off with the last device. `404`, `409` as above.
-- `DELETE /v1/users/{user_id}/second-factor/passkeys/{passkey_id}`,
-  operation `remove_passkey` in `users.manage`: one passkey, the same
-  way.
-
-**UI**, with the checklist of [UI.md](UI.md) section 8:
-
-- The code page after the password, a page outside the layout as the
-  sign-in is.
-- The page **Second factor** of the person: the cards **Authenticator
-  app (TOTP)** and **Passkeys** with their devices, to add, rename and
-  remove one, and the card **Recovery codes**.
-- On another user's page a card **Second factor**: its devices of both
-  methods, and **Remove** for one and for all, for whoever may.
-
-**Audit and log** ([AUDIT.md](AUDIT.md), [LOGGING.md](LOGGING.md)):
-
-| Activity | Name | Audited |
-|---|---|---|
-| signed in with a code | `auth.signed_in`, credential `password+totp`, the line names the device | yes |
-| signed in with a recovery code | `auth.signed_in`, credential `password+recovery`, and `auth.recovery_code_used`, a warning | yes |
-| a wrong code or passkey at the sign-in | `auth.code_failed`, a warning | yes |
-| TOTP device added, the first one turns the second factor on | `users.totp_added` | yes |
-| TOTP device renamed | `users.totp_renamed` | yes |
-| TOTP device removed, by the person or a user | `users.totp_removed` | yes |
-| signed in with a passkey | `auth.signed_in`, credential `password+passkey`, the line names the passkey | yes |
-| passkey added, the first device turns the second factor on | `users.passkey_added` | yes |
-| passkey renamed | `users.passkey_renamed` | yes |
-| passkey removed, by the person or a user | `users.passkey_removed` | yes |
-| the whole second factor removed, by a user or the host | `users.factor_removed` | yes |
-| new recovery codes | `users.codes_renewed` | yes |
-
-Never a secret, a code, a recovery code or a passkey's answer in a
-line.
-
-**Limits** ([LIMITS.md](LIMITS.md)): five codes per pending sign-in,
-five minutes for it, 15 for a secret not yet confirmed or a passkey
-not yet made, 10 TOTP devices and 10 passkeys per user. The brakes per address and per name count wrong
-codes as they count wrong passwords, at the sign-in and when a step
-asks for the password or a code once more.
 
 ## 8. Troubleshooting
 

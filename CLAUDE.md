@@ -251,7 +251,10 @@ docs/
   MICROSOFT.md            # connecting Microsoft accounts, an app of your own
   GOOGLE.md               # connecting Gmail accounts, the Google client
   AUTHENTICATION.md       # the factors of the UI sign-in: password,
-                          #   TOTP, passkeys
+                          #   TOTP, passkeys, and where each section is
+  authentication/         #   the methods and the sign-in, devices and
+                          #   recovery codes, where it lives in the
+                          #   service
   UNIFORM.md              # one way to operate every mailbox: the
                           #   principle, the rules, the capabilities
   uniform/                #   what still differs per provider,
