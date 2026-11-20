@@ -275,3 +275,20 @@ def test_no_test_of_the_service_reads_the_assets() -> None:
         if reading.search(path.read_text("utf-8"))
     ]
     assert found == [], "a test of the service reads assets/: " + ", ".join(found)
+
+
+def test_no_test_of_the_domain_calls_an_adapter_itself() -> None:
+    """A test sits in the folder of the code it tests (ARCHITECTURE 13):
+    one that builds an adapter on a fake, through a ``*_adapter`` helper
+    or ``provider_helpers``, tests the data layer and goes under
+    ``tests/data/``."""
+    tests = Path(__file__).resolve().parent
+    found = []
+    for path in sorted((tests / "domain").rglob("*.py")):
+        for node in ast.walk(ast.parse(path.read_text("utf-8"))):
+            if isinstance(node, ast.ImportFrom) and node.level:
+                module = (node.module or "").rsplit(".", 1)[-1]
+                if module.endswith("_adapter") or module == "provider_helpers":
+                    name = path.relative_to(tests).as_posix()
+                    found.append(f"{name}:{node.lineno} {module}")
+    assert not found, "a domain test calls an adapter:\n  " + "\n  ".join(found)
