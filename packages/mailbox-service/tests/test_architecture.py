@@ -49,6 +49,8 @@ LIBRARY_HOMES = {
     "keyring": f"{PACKAGE}.data.secrets.keys",
     "sqlite3": f"{PACKAGE}.data.storage.sqlite",
     "imapclient": f"{PACKAGE}.data.protocols.imap",
+    # The errors and the quoting of the standard library beside IMAPClient.
+    "imaplib": f"{PACKAGE}.data.protocols.imap",
     "imap_tools": f"{PACKAGE}.data.mail.parse",
     # Messages in RFC 5322, whatever protocol carries them.
     "email": f"{PACKAGE}.data.mail",
