@@ -39,6 +39,12 @@ CREDENTIAL = re.compile(
     r"|Bearer [A-Za-z0-9._-]{16,}|gh[pousr]_[A-Za-z0-9]{16,}"
     r"|github_pat_[A-Za-z0-9_]{20,}"
     r"|BEGIN (?:RSA |OPENSSH |EC |DSA |PGP )?PRIVATE KEY"
+    # The recovery key keys init prints, a basic authorization, the secret
+    # of a second factor as an otpauth link, and a URL with a password.
+    r"|(?:[A-Z2-7]{4}-){12}[A-Z2-7]{4}"
+    r"|Basic [A-Za-z0-9+/=]{16,}"
+    r"|otpauth://[a-z]+/[^\s\"']*secret=[A-Z2-7]{16,}"
+    r"|[a-z][a-z0-9+.-]*://[^\s/:@\"']+:[^\s/@\"']{8,}@"
     # A name that ends in TOKEN, SECRET, PASSWORD or _KEY, maybe with more
     # parts such as _ENV, then the value. _KEYWORD is no such name. A
     # value that starts with / is a path.
@@ -78,10 +84,13 @@ NOREPLY_DOMAIN = "users.noreply.github.com"
 # Something before the @, so a decorator such as @pytest.fixture is no
 # address, and * for a sender pattern such as *@*.example. A domain may
 # hold letters beyond ASCII, and its last label is letters alone, so
-# actions/checkout@v7.0.1 is no address.
+# actions/checkout@v7.0.1 is no address. A label ends at & and #, so an
+# escaped &gt; is not part of it. LABEL and LAST hold the characters of
+# label and last in the hook.
+LABEL = r"[^][\s@<>(){}\"'`,;:/\\!?=|.&#]"
+LAST = r"[^][\s\d@<>(){}\"'`,;:/\\!?=|._*+%&#-]"
 ADDRESS = re.compile(
-    r"(?<![A-Za-z0-9._%+*-])([A-Za-z0-9._%+*-]+)@"
-    r"((?:(?:[^\W_]|[*-])+\.)+[^\W\d_]{2,})\b"
+    rf"(?<![A-Za-z0-9._%+*-])([A-Za-z0-9._%+*-]+)@((?:{LABEL}+\.)+{LAST}{LAST}+)"
 )
 
 
@@ -155,6 +164,13 @@ CREDENTIALS = {
     "yaml-lower-case": "token: " + "abcdefghijklmnopq",
     "mixed-case": "Master_Key = " + "abcdefghijklmnopq",
     "python-literal": "password = " + '"' + "hunter2-but-longer" + '"',
+    "recovery-key": "-".join(["AB2C"] * 13),
+    "basic": "Authorization: " + "Basic " + "YWRtaW46c2VjcmV0cGFzcw==",
+    "otpauth": "otpauth://totp/Mailbox:admin?"
+    + "secret="
+    + "JBSWY3DPEHPK3PXP"
+    + "&issuer=x",
+    "url-password": "https://" + "admin:" + "Tr0ub4dor3x" + "@" + "host.example/",
 }
 
 # A name that is given something else than a value.
@@ -187,6 +203,8 @@ ADDRESSES = {
     "beyond-ascii": "info" + AT + "bücher.de",
     "punycode": "info" + AT + "xn--bcher-kva.de",
     "near-example": "bob" + AT + "example.org.evil",
+    "underscore": "admin" + AT + "my_server.local",
+    "then-a-digit": "mail to max" + AT + "gmail.com2",
 }
 
 # An address on a domain reserved for examples, and what only looks like
@@ -198,6 +216,7 @@ EXAMPLE_ADDRESSES = [
     "me" + AT + "localhost and *" + AT + "*.de",
     "Co-Authored-By: Claude <noreply" + AT + "anthropic.com>",
     "1+someone" + AT + "users.noreply.github.com",
+    "Alice &lt;alice" + AT + "example.com&gt;",
     "uses: actions/checkout" + AT + "v7.0.1",
     "    " + AT + "pytest.fixture",
     AT + 'pytest.mark.parametrize("line", LINES)',

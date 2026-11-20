@@ -151,7 +151,7 @@ def test_the_headers_of_a_connection_stay_out_of_its_repr() -> None:
 
 
 @pytest.mark.parametrize("kind", KINDS)
-@pytest.mark.parametrize("url", ["https://u:pw_SECRET@host", "http://u@127.0.0.1"])
+@pytest.mark.parametrize("url", ["https://u:" + "pw_SECRET@host", "http://u@127.0.0.1"])
 def test_a_url_with_a_user_or_password_is_refused(kind: type, url: str) -> None:
     with pytest.raises(ConfigurationError, match="user or password") as caught:
         kind(base_url=url, token="tok")
@@ -162,9 +162,9 @@ def test_a_url_with_a_user_or_password_is_refused(kind: type, url: str) -> None:
 @pytest.mark.parametrize(
     "url",
     [
-        "https://u:pw_SECRET@host.example.org:abc",
-        "https://u:pw_SECRET@host.example.org:443x/",
-        "https://u:pw_SECRET@[host.example.org]",
+        "https://u:" + "pw_SECRET@host.example.org:abc",
+        "https://u:" + "pw_SECRET@host.example.org:443x/",
+        "https://u:" + "pw_SECRET@[host.example.org]",
     ],
 )
 def test_a_url_that_is_none_is_not_repeated(kind: type, url: str) -> None:

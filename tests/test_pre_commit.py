@@ -105,6 +105,8 @@ def test_the_hook_is_executable_in_the_repository() -> None:
         "containers/production/caddy.d/mcp.caddy",
         "account.token.json",
         "somewhere/server.pem",
+        "config/x/schlüssel.key",
+        "sicherung/März.db",
     ],
 )
 def test_refuses_files_that_never_belong(repo: Path, name: str) -> None:
@@ -154,6 +156,7 @@ def test_shows_only_the_start_of_a_credential(repo: Path) -> None:
 
     assert answer.returncode == 1
     assert "0123456789" * 3 not in answer.stderr
+    assert line.split(" = ")[1] not in answer.stderr
 
 
 @pytest.mark.parametrize("line", REFERENCES)
@@ -176,6 +179,15 @@ def test_all_the_references_together_pass(repo: Path) -> None:
 @pytest.mark.parametrize("line", ADDRESSES.values(), ids=ADDRESSES.keys())
 def test_refuses_an_address_on_a_domain_of_someone(repo: Path, line: str) -> None:
     _stage(repo, "notes.txt", line + "\n")
+
+    answer = _hook(repo)
+
+    assert answer.returncode == 1
+    assert "address" in answer.stderr
+
+
+def test_an_added_line_that_looks_like_a_header_is_read(repo: Path) -> None:
+    _stage(repo, "notes.txt", "++ b/notes: " + ADDRESSES["address"] + "\n")
 
     answer = _hook(repo)
 
@@ -219,3 +231,19 @@ def test_a_removed_line_is_not_looked_at(repo: Path) -> None:
 
 def test_nothing_staged_passes(repo: Path) -> None:
     assert _hook(repo).returncode == 0
+
+
+@pytest.mark.parametrize("setting", ["color.ui=always", "diff.external=echo"])
+@pytest.mark.parametrize(
+    "line",
+    [CREDENTIALS["env-bare"], ADDRESSES["address"]],
+    ids=["credential", "address"],
+)
+def test_the_settings_of_git_change_nothing(
+    repo: Path, setting: str, line: str
+) -> None:
+    name, value = setting.split("=")
+    _git(repo, "config", name, value)
+    _stage(repo, "notes.txt", line + "\n")
+
+    assert _hook(repo).returncode == 1

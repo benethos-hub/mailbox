@@ -1,6 +1,7 @@
 #!/bin/sh
 # Refuse commits that would put credentials, keys, settings or state
-# files into the history.
+# files, or an address on a domain not reserved for examples, into the
+# history.
 #
 # Enable once per clone:  git config core.hooksPath .githooks
 # Deliberate bypass:      git commit --no-verify
@@ -16,7 +17,8 @@ note() {
     fail=1
 }
 
-staged=$(git diff --cached --name-only --diff-filter=ACMR)
+# Every name as it is: git would quote one with a letter beyond ASCII.
+staged=$(git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMR)
 [ -n "$staged" ] || exit 0
 
 # 1. Files that never belong in the repository, as .gitignore names
@@ -55,20 +57,26 @@ fi
 # prefix. Then what the providers hand out: a Google client secret,
 # access token and refresh token, a Microsoft client secret. Then what a
 # developer's machine holds besides.
-patterns='mbx_[A-Za-z0-9]{16,}'
-patterns="$patterns|whsec_[A-Za-z0-9_-]{16,}"
-patterns="$patterns|GOCSPX-[A-Za-z0-9_-]{16,}"
-patterns="$patterns|ya29\\.[A-Za-z0-9_-]{20,}"
-patterns="$patterns|1//0[A-Za-z0-9_-]{30,}"
-patterns="$patterns|[A-Za-z0-9_~.-]{3}[0-9]Q~[A-Za-z0-9_~.-]{30,}"
-patterns="$patterns|Bearer [A-Za-z0-9._-]{16,}"
-patterns="$patterns|gh[pousr]_[A-Za-z0-9]{16,}"
-patterns="$patterns|github_pat_[A-Za-z0-9_]{20,}"
-patterns="$patterns|BEGIN (RSA |OPENSSH |EC |DSA |PGP )?PRIVATE KEY"
+credential='mbx_[A-Za-z0-9]{16,}'
+credential="$credential|whsec_[A-Za-z0-9_-]{16,}"
+credential="$credential|GOCSPX-[A-Za-z0-9_-]{16,}"
+credential="$credential|ya29\\.[A-Za-z0-9_-]{20,}"
+credential="$credential|1//0[A-Za-z0-9_-]{30,}"
+credential="$credential|[A-Za-z0-9_~.-]{3}[0-9]Q~[A-Za-z0-9_~.-]{30,}"
+credential="$credential|Bearer [A-Za-z0-9._-]{16,}"
+credential="$credential|gh[pousr]_[A-Za-z0-9]{16,}"
+credential="$credential|github_pat_[A-Za-z0-9_]{20,}"
+credential="$credential|BEGIN (RSA |OPENSSH |EC |DSA |PGP )?PRIVATE KEY"
+# The recovery key keys init prints, a basic authorization, the secret
+# of a second factor as an otpauth link, and a URL with a password.
+credential="$credential|([A-Z2-7]{4}-){12}[A-Z2-7]{4}"
+credential="$credential|Basic [A-Za-z0-9+/=]{16,}"
+credential="$credential|otpauth://[a-z]+/[^[:space:]\"']*secret=[A-Z2-7]{16,}"
+credential="$credential|[a-z][a-z0-9+.-]*://[^[:space:]/:@\"']+:[^[:space:]/@\"']{8,}@"
 # A name that ends in TOKEN, SECRET, PASSWORD or _KEY, maybe with more
 # parts such as _ENV, then = or :, maybe a quote, then the value.
 # _KEYWORD is no such name. A value that starts with / is a path.
-patterns="$patterns|(TOKEN|SECRET|PASSWORD|_KEY)(_[A-Z]+)*[[:space:]]*[:=][[:space:]]*[\"']?[A-Za-z0-9+_-][A-Za-z0-9+/_.-]{11,}"
+credential="$credential|(TOKEN|SECRET|PASSWORD|_KEY)(_[A-Z]+)*[[:space:]]*[:=][[:space:]]*[\"']?[A-Za-z0-9+_-][A-Za-z0-9+/_.-]{11,}"
 # The same in any case, as JSON and YAML write it: a name that ends in
 # token, secret, password or _key, then = or :, then a quoted value, or a
 # bare one that ends the line or a word. A bare value with a dot or a
@@ -80,36 +88,36 @@ named="$named([\"'][A-Za-z0-9+_-][A-Za-z0-9+/_.-]{11,}|[A-Za-z0-9+_-][A-Za-z0-9+
 # a *_FILE setting, a constant or the name of an environment variable
 # (SECRET_PREFIX), the name of a field in quotes ("refresh_token"), a
 # type (IdempotencyKey) and an attribute (tokens.refresh_token).
-references="_FILE[\"']?[[:space:]]*[:=]"
-references="$references|[:=][[:space:]]*[\"']?[A-Z][A-Z0-9]*(_[A-Z0-9]+)+\$"
-references="$references|[:=][[:space:]]*[\"'][a-z]+(_[a-z]+)+\$"
-references="$references|[:=][[:space:]]*[A-Z][a-z]+([A-Z][a-z]+)+\$"
-references="$references|[:=][[:space:]]*[a-z_]+(\\.[a-z_]+)+\$"
+reference="_FILE[\"']?[[:space:]]*[:=]"
+reference="$reference|[:=][[:space:]]*[\"']?[A-Z][A-Z0-9]*(_[A-Z0-9]+)+\$"
+reference="$reference|[:=][[:space:]]*[\"'][a-z]+(_[a-z]+)+\$"
+reference="$reference|[:=][[:space:]]*[A-Z][a-z]+([A-Z][a-z]+)+\$"
+reference="$reference|[:=][[:space:]]*[a-z_]+(\\.[a-z_]+)+\$"
 
-# The added lines without the + of the diff and without its headers, so
-# a line that begins with @, such as a decorator, stays what it is.
+# The added lines of each hunk without the + of the diff, so a line
+# that begins with @, such as a decorator, stays what it is. The headers
+# of a file, from diff --git to the first @@, are left out, and an added
+# line whose text begins with ++ b/ is no header.
 added=$(
-    git diff --cached -U0 \
-        | grep '^+' \
-        | grep -vE '^\+\+\+ (b/|/dev/null)' \
-        | sed 's/^+//' \
+    git diff --cached --no-color --no-ext-diff --no-textconv -U0 \
+        | awk '/^diff --git /{h=1;next} /^@@/{h=0;next} !h && /^\+/{print substr($0,2)}' \
         | grep -v 'pragma: allowlist secret' \
         || true
 )
 hits=$(
     {
-        printf '%s\n' "$added" | grep -oE "$patterns" || true
+        printf '%s\n' "$added" | grep -oE "$credential" || true
         printf '%s\n' "$added" | grep -oiE "$named" || true
     } \
         | sed 's/[[:space:]]*$//' \
-        | grep -vE "$references" \
+        | grep -vE "$reference" \
         | awk '!seen[$0]++' \
         || true
 )
 if [ -n "$hits" ]; then
     # Only the start of each: the terminal is no place for the rest.
     note "staged lines look like a credential, each begins with:"
-    printf '%s\n' "$hits" | cut -c 1-32 | sed 's/^/  /' >&2
+    printf '%s\n' "$hits" | cut -c 1-12 | sed 's/^/  /' >&2
 fi
 
 # 3. Addresses on a domain of someone, as a person's or a supplier's
@@ -118,9 +126,10 @@ fi
 #
 # Something before the @, so a decorator is no address, and * for a
 # sender pattern. A domain may hold letters beyond ASCII, and its last
-# label is letters alone, so actions/checkout@v7.0.1 is no address.
-label='[^][[:space:]@<>(){}"'"'"'`,;:/\\!?=|.]'
-last='[^][[:space:][:digit:]@<>(){}"'"'"'`,;:/\\!?=|._*+%-]'
+# label is letters alone, so actions/checkout@v7.0.1 is no address. A
+# label ends at & and #, so an escaped &gt; is not part of it.
+label='[^][[:space:]@<>(){}"'"'"'`,;:/\\!?=|.&#]'
+last='[^][[:space:][:digit:]@<>(){}"'"'"'`,;:/\\!?=|._*+%&#-]'
 address="[A-Za-z0-9._%+*-]+@($label+\\.)+$last$last+"
 # What passes: a domain reserved for examples and tests (RFC 2606, RFC
 # 6761) with its subdomains, a placeholder such as *@*.de, the address

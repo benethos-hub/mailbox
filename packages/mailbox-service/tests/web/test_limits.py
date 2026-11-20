@@ -180,7 +180,7 @@ def test_a_wrong_token_is_left_to_the_sign_in_throttle(
 
 @pytest.mark.parametrize(
     "authorization",
-    ["Basic YWRtaW46c2VjcmV0", "Bearer", "Bearer ", "Token nope", "Bearer nope"],
+    ["Basic " + "YWRtaW46c2VjcmV0", "Bearer", "Bearer ", "Token nope", "Bearer nope"],
 )
 def test_any_other_authorization_counts_by_the_address(
     settings: Settings, services: Services, authorization: str
@@ -212,7 +212,7 @@ def test_another_scheme_counts_a_failure_of_the_address(
 ) -> None:
     client, _ = limited(settings, services, signed_in=0, anonymous=0)
     bearer_for(services)
-    basic = {"Authorization": "Basic YWRtaW46c2VjcmV0"}
+    basic = {"Authorization": "Basic " + "YWRtaW46c2VjcmV0"}
     answers = [client.get("/v1/me", headers=basic).status_code for _ in range(11)]
     assert answers == [401] * 10 + [429]
 
