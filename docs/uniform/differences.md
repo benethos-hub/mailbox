@@ -177,4 +177,7 @@ it is.
   account's capabilities as well.
 - **The live checks** of Gmail, JMAP and POP3 hold the account to the
   capabilities it names: what it announces works, what it lacks answers
-  `501`. The checks of IMAP and Microsoft do not compare them.
+  `501`. The check of IMAP at the test mail server (`live/imap.py`)
+  compares the names it gives with those the server offers. The checks
+  against the IMAP server of our own (`smoke.py`, `changes.py`) and of
+  Microsoft do not compare them.
