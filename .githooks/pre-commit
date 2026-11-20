@@ -1,6 +1,7 @@
 #!/bin/sh
 # Refuse commits that would put credentials, keys, settings or state
-# files into the history.
+# files, or an address on a domain not reserved for examples, into the
+# history.
 #
 # Enable once per clone:  git config core.hooksPath .githooks
 # Deliberate bypass:      git commit --no-verify
@@ -56,26 +57,26 @@ fi
 # prefix. Then what the providers hand out: a Google client secret,
 # access token and refresh token, a Microsoft client secret. Then what a
 # developer's machine holds besides.
-patterns='mbx_[A-Za-z0-9]{16,}'
-patterns="$patterns|whsec_[A-Za-z0-9_-]{16,}"
-patterns="$patterns|GOCSPX-[A-Za-z0-9_-]{16,}"
-patterns="$patterns|ya29\\.[A-Za-z0-9_-]{20,}"
-patterns="$patterns|1//0[A-Za-z0-9_-]{30,}"
-patterns="$patterns|[A-Za-z0-9_~.-]{3}[0-9]Q~[A-Za-z0-9_~.-]{30,}"
-patterns="$patterns|Bearer [A-Za-z0-9._-]{16,}"
-patterns="$patterns|gh[pousr]_[A-Za-z0-9]{16,}"
-patterns="$patterns|github_pat_[A-Za-z0-9_]{20,}"
-patterns="$patterns|BEGIN (RSA |OPENSSH |EC |DSA |PGP )?PRIVATE KEY"
+credential='mbx_[A-Za-z0-9]{16,}'
+credential="$credential|whsec_[A-Za-z0-9_-]{16,}"
+credential="$credential|GOCSPX-[A-Za-z0-9_-]{16,}"
+credential="$credential|ya29\\.[A-Za-z0-9_-]{20,}"
+credential="$credential|1//0[A-Za-z0-9_-]{30,}"
+credential="$credential|[A-Za-z0-9_~.-]{3}[0-9]Q~[A-Za-z0-9_~.-]{30,}"
+credential="$credential|Bearer [A-Za-z0-9._-]{16,}"
+credential="$credential|gh[pousr]_[A-Za-z0-9]{16,}"
+credential="$credential|github_pat_[A-Za-z0-9_]{20,}"
+credential="$credential|BEGIN (RSA |OPENSSH |EC |DSA |PGP )?PRIVATE KEY"
 # The recovery key keys init prints, a basic authorization, the secret
 # of a second factor as an otpauth link, and a URL with a password.
-patterns="$patterns|([A-Z2-7]{4}-){12}[A-Z2-7]{4}"
-patterns="$patterns|Basic [A-Za-z0-9+/=]{16,}"
-patterns="$patterns|otpauth://[a-z]+/[^[:space:]\"']*secret=[A-Z2-7]{16,}"
-patterns="$patterns|[a-z][a-z0-9+.-]*://[^[:space:]/:@\"']+:[^[:space:]/@\"']{8,}@"
+credential="$credential|([A-Z2-7]{4}-){12}[A-Z2-7]{4}"
+credential="$credential|Basic [A-Za-z0-9+/=]{16,}"
+credential="$credential|otpauth://[a-z]+/[^[:space:]\"']*secret=[A-Z2-7]{16,}"
+credential="$credential|[a-z][a-z0-9+.-]*://[^[:space:]/:@\"']+:[^[:space:]/@\"']{8,}@"
 # A name that ends in TOKEN, SECRET, PASSWORD or _KEY, maybe with more
 # parts such as _ENV, then = or :, maybe a quote, then the value.
 # _KEYWORD is no such name. A value that starts with / is a path.
-patterns="$patterns|(TOKEN|SECRET|PASSWORD|_KEY)(_[A-Z]+)*[[:space:]]*[:=][[:space:]]*[\"']?[A-Za-z0-9+_-][A-Za-z0-9+/_.-]{11,}"
+credential="$credential|(TOKEN|SECRET|PASSWORD|_KEY)(_[A-Z]+)*[[:space:]]*[:=][[:space:]]*[\"']?[A-Za-z0-9+_-][A-Za-z0-9+/_.-]{11,}"
 # The same in any case, as JSON and YAML write it: a name that ends in
 # token, secret, password or _key, then = or :, then a quoted value, or a
 # bare one that ends the line or a word. A bare value with a dot or a
@@ -87,11 +88,11 @@ named="$named([\"'][A-Za-z0-9+_-][A-Za-z0-9+/_.-]{11,}|[A-Za-z0-9+_-][A-Za-z0-9+
 # a *_FILE setting, a constant or the name of an environment variable
 # (SECRET_PREFIX), the name of a field in quotes ("refresh_token"), a
 # type (IdempotencyKey) and an attribute (tokens.refresh_token).
-references="_FILE[\"']?[[:space:]]*[:=]"
-references="$references|[:=][[:space:]]*[\"']?[A-Z][A-Z0-9]*(_[A-Z0-9]+)+\$"
-references="$references|[:=][[:space:]]*[\"'][a-z]+(_[a-z]+)+\$"
-references="$references|[:=][[:space:]]*[A-Z][a-z]+([A-Z][a-z]+)+\$"
-references="$references|[:=][[:space:]]*[a-z_]+(\\.[a-z_]+)+\$"
+reference="_FILE[\"']?[[:space:]]*[:=]"
+reference="$reference|[:=][[:space:]]*[\"']?[A-Z][A-Z0-9]*(_[A-Z0-9]+)+\$"
+reference="$reference|[:=][[:space:]]*[\"'][a-z]+(_[a-z]+)+\$"
+reference="$reference|[:=][[:space:]]*[A-Z][a-z]+([A-Z][a-z]+)+\$"
+reference="$reference|[:=][[:space:]]*[a-z_]+(\\.[a-z_]+)+\$"
 
 # The added lines of each hunk without the + of the diff, so a line
 # that begins with @, such as a decorator, stays what it is. The headers
@@ -105,11 +106,11 @@ added=$(
 )
 hits=$(
     {
-        printf '%s\n' "$added" | grep -oE "$patterns" || true
+        printf '%s\n' "$added" | grep -oE "$credential" || true
         printf '%s\n' "$added" | grep -oiE "$named" || true
     } \
         | sed 's/[[:space:]]*$//' \
-        | grep -vE "$references" \
+        | grep -vE "$reference" \
         | awk '!seen[$0]++' \
         || true
 )
