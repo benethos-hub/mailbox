@@ -86,8 +86,15 @@ references="$references|[:=][[:space:]]*[\"'][a-z]+(_[a-z]+)+\$"
 references="$references|[:=][[:space:]]*[A-Z][a-z]+([A-Z][a-z]+)+\$"
 references="$references|[:=][[:space:]]*[a-z_]+(\\.[a-z_]+)+\$"
 
+# The added lines without the + of the diff and without its headers, so
+# a line that begins with @, such as a decorator, stays what it is.
 added=$(
-    git diff --cached -U0 | grep '^+' | grep -v 'pragma: allowlist secret' || true
+    git diff --cached -U0 \
+        | grep '^+' \
+        | grep -vE '^\+\+\+ (b/|/dev/null)' \
+        | sed 's/^+//' \
+        | grep -v 'pragma: allowlist secret' \
+        || true
 )
 hits=$(
     {
@@ -103,6 +110,40 @@ if [ -n "$hits" ]; then
     # Only the start of each: the terminal is no place for the rest.
     note "staged lines look like a credential, each begins with:"
     printf '%s\n' "$hits" | cut -c 1-32 | sed 's/^/  /' >&2
+fi
+
+# 3. Addresses on a domain of someone, as a person's or a supplier's
+# would be. tests/content_helpers.py holds the same rule for every
+# tracked file. A change to one changes the other.
+#
+# Something before the @, so a decorator is no address, and * for a
+# sender pattern. A domain may hold letters beyond ASCII, and its last
+# label is letters alone, so actions/checkout@v7.0.1 is no address.
+label='[^][[:space:]@<>(){}"'"'"'`,;:/\\!?=|.]'
+last='[^][[:space:][:digit:]@<>(){}"'"'"'`,;:/\\!?=|._*+%-]'
+address="[A-Za-z0-9._%+*-]+@($label+\\.)+$last$last+"
+# What passes: a domain reserved for examples and tests (RFC 2606, RFC
+# 6761) with its subdomains, a placeholder such as *@*.de, the address
+# of a commit trailer and GitHub's private commit addresses.
+found=$(
+    printf '%s\n' "$added" | grep -oE "$address" | awk '
+        {
+            a = tolower($0)
+            d = substr(a, index(a, "@") + 1)
+            if (a == "noreply@anthropic.com") next
+            if (d == "users.noreply.github.com") next
+            if (d ~ /\.(example|test|invalid|localhost)$/) next
+            if (d ~ /(^|\.)example\.(com|org|net)$/) next
+            n = split(d, parts, ".")
+            k = 0
+            for (i = 1; i <= n; i++) if (parts[i] != "*") k++
+            if (k < 2) next
+            if (!seen[$0]++) print
+        }' || true
+)
+if [ -n "$found" ]; then
+    note "staged lines name an address on a domain that is not reserved for examples:"
+    printf '%s\n' "$found" | sed 's/^/  /' >&2
 fi
 
 if [ "$fail" -ne 0 ]; then

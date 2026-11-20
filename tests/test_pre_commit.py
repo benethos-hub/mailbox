@@ -1,6 +1,6 @@
 """The pre-commit hook, run in a repository of its own in a temporary
-folder. It is held to the same lines of credentials as the rules of
-``content_helpers.py``, which check every tracked file."""
+folder. It is held to the same lines of credentials and addresses as
+the rules of ``content_helpers.py``, which check every tracked file."""
 
 from __future__ import annotations
 
@@ -10,7 +10,13 @@ from pathlib import Path
 
 import pytest
 
-from .content_helpers import ALLOW, CREDENTIALS, REFERENCES
+from .content_helpers import (
+    ADDRESSES,
+    ALLOW,
+    CREDENTIALS,
+    EXAMPLE_ADDRESSES,
+    REFERENCES,
+)
 from .repository_helpers import ROOT
 
 HOOK = ROOT / ".githooks" / "pre-commit"
@@ -161,6 +167,24 @@ def test_a_reference_to_a_secret_passes(repo: Path, line: str) -> None:
 
 def test_all_the_references_together_pass(repo: Path) -> None:
     _stage(repo, "notes.txt", "\n".join(REFERENCES) + "\n")
+
+    answer = _hook(repo)
+
+    assert answer.returncode == 0, answer.stderr
+
+
+@pytest.mark.parametrize("line", ADDRESSES.values(), ids=ADDRESSES.keys())
+def test_refuses_an_address_on_a_domain_of_someone(repo: Path, line: str) -> None:
+    _stage(repo, "notes.txt", line + "\n")
+
+    answer = _hook(repo)
+
+    assert answer.returncode == 1
+    assert "address" in answer.stderr
+
+
+def test_an_address_for_examples_passes(repo: Path) -> None:
+    _stage(repo, "notes.txt", "\n".join(EXAMPLE_ADDRESSES) + "\n")
 
     answer = _hook(repo)
 

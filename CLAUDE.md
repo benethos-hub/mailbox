@@ -146,8 +146,10 @@ containers/               # images/ (one folder per image), and one folder
                           #   test-mail-server/ (Stalwart for tests).
                           #   Each keeps its secrets/ local
 .githooks/                # pre-commit: refuses staged settings, keys,
-                          #   state files and lines that look like a
-                          #   credential. Enabled once per clone
+                          #   state files, lines that look like a
+                          #   credential and addresses on a domain not
+                          #   reserved for examples. Enabled once per
+                          #   clone
 .github/workflows/        # ci.yml: the organisation's workflows from
                           #   benethos-hub/.github (lint, tests, audit,
                           #   lowest versions per package, coverage
@@ -204,9 +206,11 @@ tests/                    # what the repository holds, across the four
                           #   section 8 against the code
   test_layout.py          # this file's project layout against the disk
   test_repo_content.py    # no tracked file holds a credential, a path
-                          #   of a machine or an id of a real record
+                          #   of a machine, an id of a real record or an
+                          #   address on a domain not reserved for
+                          #   examples
   test_pre_commit.py      # the hook of .githooks/, held to the same
-                          #   lines of credentials
+                          #   lines of credentials and addresses
   test_packaging.py       # the LICENSE copies, the Python versions, one
                           #   version and its examples in the
                           #   documentation
@@ -373,8 +377,9 @@ itself without credentials. Live checks are manual scripts in `live/`, outside
   with `git pull --ff-only` and delete the local branch.
 - Dependabot opens its own pull requests. The user merges them as well.
 - The pre-commit hook in `.githooks/` refuses staged settings, keys and
-  state files, and staged lines that look like a credential. It is
-  enabled once per clone with `git config core.hooksPath .githooks`.
+  state files, staged lines that look like a credential, and
+  addresses on a domain not reserved for examples, such as
+  `example.org` or `.example`. It is enabled once per clone with `git config core.hooksPath .githooks`.
   `tests/test_repo_content.py` holds every tracked file to the same
   patterns, in CI as well, where the hook does not run. A line that must
   show such a form ends with `pragma: allowlist secret`.

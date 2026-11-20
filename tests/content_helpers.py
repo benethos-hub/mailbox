@@ -3,9 +3,10 @@ lines that show each rule.
 
 ``test_repo_content.py`` holds every tracked file to the rules, and
 ``test_pre_commit.py`` holds the hook in ``.githooks/`` to the same
-lines of credentials, so the two cannot drift apart. CREDENTIAL, NAMED
-and REFERENCE follow the patterns of ``.githooks/pre-commit``. A change
-to one changes the other.
+lines of credentials and addresses, so the two cannot drift apart.
+CREDENTIAL, NAMED, REFERENCE and the rule for addresses follow the
+patterns of ``.githooks/pre-commit``. A change to one changes the
+other.
 
 The lines are put together here, so this file holds none of them."""
 
@@ -66,6 +67,49 @@ REFERENCE = re.compile(
 )
 
 
+# Domains reserved for examples and tests (RFC 2606, RFC 6761), each
+# with its subdomains, and the addresses a commit trailer names on
+# purpose.
+RESERVED_SUFFIXES = (".example", ".test", ".invalid", ".localhost")
+RESERVED_DOMAINS = ("example.com", "example.org", "example.net")
+ALLOWED_ADDRESSES = frozenset({"noreply@anthropic.com"})
+# The domain of GitHub's private commit addresses, as a whole.
+NOREPLY_DOMAIN = "users.noreply.github.com"
+# Something before the @, so a decorator such as @pytest.fixture is no
+# address, and * for a sender pattern such as *@*.example. A domain may
+# hold letters beyond ASCII, and its last label is letters alone, so
+# actions/checkout@v7.0.1 is no address.
+ADDRESS = re.compile(
+    r"(?<![A-Za-z0-9._%+*-])([A-Za-z0-9._%+*-]+)@"
+    r"((?:(?:[^\W_]|[*-])+\.)+[^\W\d_]{2,})\b"
+)
+
+
+def _reserved(domain: str) -> bool:
+    """Whether ``domain`` is reserved for examples, or names no domain of
+    anyone: a placeholder such as ``*.domain`` or a whole top-level
+    domain such as ``*.de``, one label after the wildcards."""
+    domain = domain.lower()
+    labels = [label for label in domain.split(".") if label != "*"]
+    return (
+        len(labels) < 2
+        or domain.endswith(RESERVED_SUFFIXES)
+        or any(domain == d or domain.endswith("." + d) for d in RESERVED_DOMAINS)
+    )
+
+
+def addresses(line: str) -> list[str]:
+    """The addresses and sender patterns of ``line`` on a domain that is
+    not reserved for examples."""
+    return [
+        found.group(0)
+        for found in ADDRESS.finditer(line)
+        if not _reserved(found.group(2))
+        and found.group(0).lower() not in ALLOWED_ADDRESSES
+        and found.group(2).lower() != NOREPLY_DOMAIN
+    ]
+
+
 def credentials(line: str) -> list[str]:
     """What in ``line`` looks like a credential, each cut to its start."""
     found = [m.group(0).rstrip() for m in CREDENTIAL.finditer(line)]
@@ -81,6 +125,7 @@ def problems(line: str) -> list[str]:
     found = [f"path {m.group(0)}" for m in PATH.finditer(line)]
     found += [f"service id {m.group(0)[:8]}..." for m in SERVICE_ID.finditer(line)]
     found += [f"credential {start}..." for start in credentials(line)]
+    found += [f"address {address}" for address in addresses(line)]
     return found
 
 
@@ -131,4 +176,30 @@ REFERENCES = [
     "password: str | None = None",
     'token = os.environ.get("MAILBOX_SERVICE_TOKEN")',
     "a token mbx_…a1 and a secret whsec_new",
+]
+
+AT = "@"
+
+# An address or a sender pattern on a domain of someone.
+ADDRESSES = {
+    "address": "mail to max" + AT + "gmail.com",
+    "sender-pattern": 'recipients=["*' + AT + 'firma.de"]',
+    "beyond-ascii": "info" + AT + "bücher.de",
+    "punycode": "info" + AT + "xn--bcher-kva.de",
+    "near-example": "bob" + AT + "example.org.evil",
+}
+
+# An address on a domain reserved for examples, and what only looks like
+# one.
+EXAMPLE_ADDRESSES = [
+    "a" + AT + "example.com and b" + AT + "mail.example.org",
+    'recipients=["*' + AT + '*.firma.example"]',
+    "info" + AT + "bücher.example and x" + AT + "host.test",
+    "me" + AT + "localhost and *" + AT + "*.de",
+    "Co-Authored-By: Claude <noreply" + AT + "anthropic.com>",
+    "1+someone" + AT + "users.noreply.github.com",
+    "uses: actions/checkout" + AT + "v7.0.1",
+    "    " + AT + "pytest.fixture",
+    AT + 'pytest.mark.parametrize("line", LINES)',
+    "uvx uv" + AT + "0.13.9 lock --check",
 ]
