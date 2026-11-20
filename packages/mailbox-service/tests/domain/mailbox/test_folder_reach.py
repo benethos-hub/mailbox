@@ -1,6 +1,7 @@
 """A change of a message's folders under grants narrowed to folders
 (PERMISSIONS.md 8.5): a folder out of reach answers as one the account
-lacks, so that a caller learns nothing of those it does not reach."""
+lacks, so that a caller learns nothing of those it does not reach, and
+a change that replaces a message's folders keeps it in those."""
 
 from __future__ import annotations
 
@@ -72,3 +73,56 @@ def test_without_folders_in_the_grant_a_made_up_folder_is_missing(
     )
     assert answer.status_code == 404
     assert answer.json()["error"]["message"] == f"folder {MADE_UP} not found"
+
+
+def place(
+    services: Services, account_id: str, message_id: str, folders: list[str]
+) -> None:
+    memory = memory_of(services, account_id)
+    memory.messages = [
+        m.model_copy(update={"folder_ids": folders}) if m.id == message_id else m
+        for m in memory.messages
+    ]
+
+
+def folders_of(services: Services, account_id: str, message_id: str) -> list[str]:
+    [found] = [
+        m for m in memory_of(services, account_id).messages if m.id == message_id
+    ]
+    return list(found.folder_ids)
+
+
+def test_a_change_that_replaces_folders_keeps_those_out_of_reach(
+    app_client: TestClient, services: Services, mailbox: str
+) -> None:
+    place(services, mailbox, "m0", ["inbox", SECRET.id])
+    client = narrowed(app_client, services, mailbox)
+    base = f"/v1/accounts/{mailbox}/messages"
+    replaced = client.patch(f"{base}/m0", json={"folder_ids": ["inbox"]})
+    assert replaced.status_code == 403, replaced.text
+    assert "out of these folders" in replaced.json()["error"]["message"]
+    batched = client.post(
+        f"{base}/batch",
+        json={"action": "update", "ids": ["m0"], "changes": {"folder_ids": ["inbox"]}},
+    )
+    assert batched.json()["results"][0]["error"]["code"] == "forbidden"
+    assert folders_of(services, mailbox, "m0") == ["inbox", SECRET.id]
+
+
+def test_a_message_in_reached_folders_alone_moves_as_before(
+    app_client: TestClient, services: Services, mailbox: str
+) -> None:
+    memory = memory_of(services, mailbox)
+    memory.folders.append(Folder(id="f_inv", name="Invoices"))
+    relearn(services, mailbox)
+    grant = Grant(
+        accounts=[mailbox],
+        allow=["mail.read", "mail.write"],
+        folders=["inbox", "Invoices"],
+    )
+    client = TestClient(app_client.app, headers=bearer_for(services, grant))
+    moved = client.patch(
+        f"/v1/accounts/{mailbox}/messages/m1", json={"folder_ids": ["f_inv"]}
+    )
+    assert moved.status_code == 200, moved.text
+    assert folders_of(services, mailbox, "m1") == ["f_inv"]

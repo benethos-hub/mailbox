@@ -70,26 +70,33 @@ class Guards:
         looked: Lookups,
         ids: list[str],
         into: list[str] | None = None,
+        replaced: list[str] | None = None,
     ) -> dict[str, MailboxServiceError]:
         """The messages of ``ids`` the grants' folders keep ``operation``
         from, each with its error: one in no folder they reach answers as
-        not found, a move ``into`` other folders as forbidden. Empty where
-        the grants reach every folder."""
+        not found, a move ``into`` other folders as forbidden, and so does
+        a change that ``replaced`` a message's folders and would take it
+        out of one they do not reach. Empty where the grants reach every
+        folder."""
         reach = await looked.reach(access, operation)
         if reach is None:
             return {}
         places = await looked.places()
         unreached = set(_unreached(reach, places, ids))
+        kept = await _kept(looked, replaced)
         refused: dict[str, MailboxServiceError] = {}
         for message_id in ids:
+            found = places.get(message_id, [])
             if message_id in unreached:
                 refused[message_id] = missing_message(message_id)
             elif into and not any(
-                reach.holds(f, *into)
-                for f in places.get(message_id, [])
-                if f in reach.ids
+                reach.holds(f, *into) for f in found if f in reach.ids
             ):
                 refused[message_id] = outside(operation, "into these folders")
+            elif kept is not None and any(
+                f not in reach.ids and f not in kept for f in found
+            ):
+                refused[message_id] = outside(operation, "out of these folders")
         return refused
 
     async def require_reached(
@@ -160,6 +167,17 @@ class Guards:
             for message_id in ids
             if (found := places.get(message_id)) and drafts not in found
         }
+
+
+async def _kept(looked: Lookups, replaced: list[str] | None) -> set[str] | None:
+    """The folders a change that ``replaced`` a message's folders leaves
+    it in: those named, and the folder with the role ``all``, which a
+    change never takes a message out of. None for a change that replaces
+    nothing."""
+    if replaced is None:
+        return None
+    everything = {f.id for f in await looked.folders() if f.role is FolderRole.ALL}
+    return {*replaced, *everything}
 
 
 def _unreached(reach: Reach, places: dict[str, list[str]], ids: list[str]) -> list[str]:

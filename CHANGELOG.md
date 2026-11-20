@@ -38,6 +38,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 - A token narrowed to folders no longer learns from a message change
   whether a folder outside its reach exists.
 
+- A token narrowed to folders can no longer take a message out of a
+  folder it does not reach by replacing its folders: that answers
+  `403`. `add_folder_ids` and `remove_folder_ids` work as before.
+
 ## [0.8.0] - 2026-11-19
 
 ### Added

@@ -212,7 +212,12 @@ class MailboxService:
         looked = self._guards.looking(account_id, [message_id])
         changes = await _resolved(looked, changes)
         refused = await self._guards.outside(
-            access, "update_message", looked, [message_id], changes.named_folders()
+            access,
+            "update_message",
+            looked,
+            [message_id],
+            changes.named_folders(),
+            changes.folder_ids,
         )
         if not refused:
             await _listed(looked, changes)
@@ -259,6 +264,7 @@ class MailboxService:
                     looked,
                     batch.ids,
                     changes.named_folders(),
+                    changes.folder_ids,
                 )
             )
             rest = [i for i in batch.ids if i not in outcomes]

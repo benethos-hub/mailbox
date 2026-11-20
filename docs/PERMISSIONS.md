@@ -283,7 +283,8 @@ Both narrow a grant and are checked in the domain, as `recipients` is:
 - **`folders`**: a list of folder roles or names the grant reaches, null
   for every folder. `mail.read` with `folders: ["inbox", "Invoices"]`
   lists and reads there and nowhere else. `mail.write` with folders
-  moves only between them.
+  moves only between them. A change that replaces a message's folders is
+  refused where the message also lies in a folder outside them.
   **Decided 2026-10-05:** a listed folder includes its subfolders, so
   `Invoices` covers `Invoices/2026`. The folder with the role `all`
   covers every folder but the trash and junk, as it lists them. A
