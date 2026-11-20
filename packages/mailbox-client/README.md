@@ -67,7 +67,7 @@ What the project is for: [the repository's README](https://github.com/benethos-h
 - [Use](#use)
 - [Errors](#errors)
 - [Inside](#inside)
-- [License](#license)
+- [Licence](#licence)
 
 ## Install
 
@@ -200,6 +200,6 @@ beside them: the address and the token (`environment.py`), the shape
 of a request (`calls.py`), how an answer or a failure is read
 (`answers.py`) and an attachment read in chunks (`attachments.py`).
 
-## License
+## Licence
 
 MIT, see [LICENSE](https://github.com/benethos-hub/mailbox/blob/main/LICENSE).

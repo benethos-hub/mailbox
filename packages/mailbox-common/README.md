@@ -51,6 +51,7 @@ What the project is for: [the repository's README](https://github.com/benethos-h
 - [What it holds](#what-it-holds)
 - [Install](#install)
 - [Versions](#versions)
+- [Licence](#licence)
 
 ## What it holds
 
@@ -92,3 +93,7 @@ version of the other packages, and the service and the MCP server pin
 it to their own. Its public interface is recorded in
 [`docs/common-interface.json`](https://github.com/benethos-hub/mailbox/blob/main/docs/common-interface.json),
 which a test holds to the code.
+
+## Licence
+
+MIT, see [LICENSE](https://github.com/benethos-hub/mailbox/blob/main/LICENSE).

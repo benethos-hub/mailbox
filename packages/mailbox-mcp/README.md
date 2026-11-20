@@ -80,6 +80,7 @@ More on the project: [the repository's README](https://github.com/benethos-hub/m
   - [With docker run](#with-docker-run)
   - [Beside a service in operation](#beside-a-service-in-operation)
 - [Tools](#tools)
+- [Licence](#licence)
 
 ## What you can ask
 
@@ -573,3 +574,7 @@ name it in a line before the markers, such as
 statement about the domain in `from`, not the sender's words, and says
 nothing about the content. `unknown` names its reason, such as
 `account` where the account does not name its receiving server.
+
+## Licence
+
+MIT, see [LICENSE](https://github.com/benethos-hub/mailbox/blob/main/LICENSE).
