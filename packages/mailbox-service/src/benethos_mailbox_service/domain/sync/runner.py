@@ -242,7 +242,10 @@ class SyncRunner:
         before = self._index.folder_states(account_id)
         await self._other_folders(account_id, states, before)
         changed = [f for f, state in states.items() if before.get(f) != state]
-        vanished = [f for f in before if f not in states]
+        # A folder with a state, or with entries: a folder made, given a
+        # message of ours and renamed between two passes has no state.
+        known = [*before, *sorted(self._index.folders(account_id) - set(before))]
+        vanished = [f for f in known if f not in states]
         counts = Counts(len(states))
         merged: dict[str, str] = {}
         created: set[str] = set()

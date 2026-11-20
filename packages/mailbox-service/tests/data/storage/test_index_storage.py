@@ -138,3 +138,13 @@ def test_entries_by_their_header(index: MessageIndexRepository) -> None:
     assert index.with_header(ACC, ["<2@x>", "<9@x>"]) == [entry(2, "f_sent", "<2@x>")]
     assert index.with_header(ACC, []) == []
     assert index.with_header("acc_2", ["<1@x>"]) == []
+
+
+def test_the_folders_that_hold_an_entry(index: MessageIndexRepository) -> None:
+    assert index.folders(ACC) == set()
+    index.add(ACC, [entry(1), entry(2, "f_sent"), entry(3, "f_sent")])
+    assert index.folders(ACC) == {entry(1).folder_id, "f_sent"}
+    index.drop(ACC, "msg_2")
+    index.drop(ACC, "msg_3")
+    assert index.folders(ACC) == {entry(1).folder_id}
+    assert index.folders("acc_2") == set()

@@ -19,6 +19,14 @@ adheres to [Semantic Versioning](https://semver.org/).
   service and the MCP server only look up their folders with it, and
   the folders they name stay the same.
 
+### Fixed
+
+- On IMAP accounts, a folder made, given a message and renamed before
+  the next sync left the message's id answering `404` for good, and the
+  sync gave the message a new id. The sync now also reads a folder that
+  is gone when messages are still known in it, and the message keeps its
+  id.
+
 ## [0.8.0] - 2026-11-19
 
 ### Added

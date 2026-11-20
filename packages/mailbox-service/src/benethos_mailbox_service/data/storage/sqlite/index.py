@@ -83,6 +83,13 @@ class SqliteMessageIndexRepository:
         )
         return {row["folder_id"]: row["state"] for row in rows}
 
+    def folders(self, account_id: str) -> set[str]:
+        rows = self._db.query(
+            "SELECT DISTINCT folder_id FROM message_index WHERE account_id = ?",
+            (account_id,),
+        )
+        return {row["folder_id"] for row in rows}
+
     def forget_account(self, account_id: str) -> None:
         with self._db.transaction() as db:
             db.execute("DELETE FROM message_index WHERE account_id = ?", (account_id,))

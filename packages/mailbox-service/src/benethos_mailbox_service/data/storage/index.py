@@ -86,6 +86,10 @@ class MessageIndexRepository(Protocol):
 
     def folder_states(self, account_id: str) -> dict[str, str]: ...
 
+    def folders(self, account_id: str) -> set[str]:
+        """The folders that hold an entry."""
+        ...
+
     def forget_account(self, account_id: str) -> None: ...
 
     # --- threads ----------------------------------------------------------------------
@@ -188,6 +192,9 @@ class InMemoryMessageIndexRepository:
 
     def folder_states(self, account_id: str) -> dict[str, str]:
         return dict(self._states.get(account_id, {}))
+
+    def folders(self, account_id: str) -> set[str]:
+        return {e.folder_id for e in self._entries.get(account_id, {}).values()}
 
     def forget_account(self, account_id: str) -> None:
         self._entries.pop(account_id, None)
