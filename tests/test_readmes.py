@@ -206,17 +206,25 @@ def test_the_check_sees_what_is_broken(tmp_path: Path) -> None:
     )
 
 
-def test_the_readme_shows_the_diagram_light_and_dark() -> None:
-    readme = (ROOT / "README.md").read_text("utf-8")
-    assert (
-        '<source srcset="assets/architecture/architecture-dark.png"'
-        ' media="(prefers-color-scheme: dark)">' in readme
-    )
-    assert '<img src="assets/architecture/architecture.png" alt="' in readme
-
-
 # PyPI shows no relative image: a package's README names it in full.
 _RAW = "https://raw.githubusercontent.com/benethos-hub/mailbox/main/"
+
+
+@pytest.mark.parametrize(
+    ("readme", "prefix"),
+    [("README.md", ""), ("packages/mailbox-mcp/README.md", _RAW)],
+)
+def test_the_readme_shows_the_diagram_light_and_dark(readme: str, prefix: str) -> None:
+    """The repository README, and the MCP server's, where a directory of
+    MCP servers sends its visitors."""
+    text = (ROOT / readme).read_text("utf-8")
+    assert (
+        f'<source srcset="{prefix}assets/architecture/architecture-dark.png"'
+        ' media="(prefers-color-scheme: dark)">' in text
+    )
+    assert f'<img src="{prefix}assets/architecture/architecture.png" alt="' in text
+
+
 READMES = {
     "README.md": "",
     "containers/README.md": "../",
