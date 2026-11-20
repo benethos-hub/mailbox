@@ -398,10 +398,9 @@ def _badges(relative: str) -> set[str]:
 
 
 def test_the_badges_name_the_packages() -> None:
-    """The repository README shows a PyPI badge per package, each
-    package README the badge of its own, labelled with the package name."""
+    """The repository README and each package README show a PyPI badge
+    per package, labelled with the package name."""
     names = {str(project_of(package)["name"]) for package in PACKAGES}
     assert _badges("README.md") == names
     for package in PACKAGES:
-        name = str(project_of(package)["name"])
-        assert _badges(f"packages/{package.name}/README.md") == {name}
+        assert _badges(f"packages/{package.name}/README.md") == names
