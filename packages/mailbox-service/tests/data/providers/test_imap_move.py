@@ -1,4 +1,5 @@
-"""Moving a message with PATCH folder_ids: the id stays (CONCEPT 4.1, 6.3)."""
+"""The IMAP adapter moves a message to the folder of folder_ids and gives
+its new id (CONCEPT 4.1, 6.3)."""
 
 from __future__ import annotations
 
