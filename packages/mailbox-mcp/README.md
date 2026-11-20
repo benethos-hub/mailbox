@@ -126,7 +126,8 @@ A few requests it handles today, across every account it was given:
   The server holds one token of the service and nothing else.
 - **Two ways to run.** Over stdio, the MCP client starts it, and it ends
   with the client. Over streamable HTTP, it runs as a server of its own,
-  behind a bearer token and a check of the host.
+  with a check of the host and a bearer token, which a bind beyond this
+  machine requires.
 - **Several ways to install.** As an extension in
   [Claude Desktop](#claude-desktop-extension), with `uvx` from
   [PyPI](#install), as a [container image](#container), or from the
