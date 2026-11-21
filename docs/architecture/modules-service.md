@@ -224,7 +224,8 @@ packages/mailbox-service/
         authentication.py # the receiving server's check of the sender,
                         #   read from its Authentication-Results entry
       protocols/        # the wire, one library each, in our types:
-                        #   imap/ (IMAPClient: session.py, its parts
+                        #   imap/ (IMAPClient, with the errors and the
+                        #   quoting of imaplib: session.py, its parts
                         #   folders.py and messages.py, responses.py,
                         #   values.py), smtp.py (smtplib),
                         #   pop3.py (poplib), jmap/ (JMAP over http:
@@ -301,6 +302,7 @@ packages/mailbox-service/
                         #   tests look, messages, folders, drafts
       storage/          # own records, one module per subject, table.py
                         #   for the in-memory ones, sqlite/ the database
+                        #   and the files SQLite keeps beside it
                         #   (database.py) and its rows read typed
                         #   (rows.py), sqlite/migrations/ the base, the registry,
                         #   versions/ one class per schema version,
@@ -310,7 +312,8 @@ packages/mailbox-service/
                         #   passkeys (fido2)
       backup.py         # encrypted backups of the database, restore
       files.py          # files for the owner alone (0600): database, backup, key,
-                        #   a copy removed with its journal
+                        #   the lock that tells a running service
+                        #   from a stopped one
       logbook.py        # the newest log lines in memory, for the log page
       discovery/        # autodiscovery sources and their helpers:
                         #   base.py the protocol of a source, the
