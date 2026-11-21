@@ -248,7 +248,8 @@ additions.
 move between folders. A user that should only mark mail gets the move
 with it, and a move into a remote folder can make a mail as good as
 gone for its owner. Since 0.8.0 a move into the trash or a folder below
-it needs `delete_message` as well. Every other move still comes with
+it needs `delete_message` as well. No change moves a message into the
+drafts folder: that answers `400`. Every other move still comes with
 `update_message`.
 
 - A right of its own for the move on the same route, as
