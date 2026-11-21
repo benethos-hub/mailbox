@@ -46,7 +46,7 @@ one or two `operationId`s.
 | `get_attachment` | read | `get_attachment`: images as images, PDF pages as images, text types as text, other types by name only |
 | `share_attachment` | share | `share_attachment`: a link to an attachment for another service, which fetches the file itself (6.3) |
 | `whats_new` | read | `list_all_changes` across accounts, or `list_changes` for one, the "what came in since" tool |
-| `update_messages` | write | `batch_messages`: mark read, star, move, archive, trash, add and take off keywords and labels |
+| `update_messages` | write | `batch_messages`: mark read, star, move (not into the drafts folder), archive, trash, add and take off keywords and labels |
 | `create_folder` | write | `create_folder` |
 | `update_folder` | write | `update_folder`: rename or move. Deleting a folder stays out of the tools |
 | `list_drafts` | drafts | `list_drafts` |
