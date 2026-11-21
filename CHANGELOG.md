@@ -24,6 +24,12 @@ adheres to [Semantic Versioning](https://semver.org/).
   the folders it creates and their parents more strictly on Unix. The
   service and the MCP server only look up their folders with it, and
   the folders they name stay the same.
+- Both images install certifi 2026.11.20. It drops five root
+  certificates Mozilla removed: Buypass Class 2 and Class 3, Certigna,
+  and QuoVadis Root CA 1 G3 and 3 G3. The client uses it for HTTPS, so
+  the MCP server no longer trusts a service whose certificate chains
+  only to one of them. The service checks certificates against the
+  CAs of the system.
 
 ### Fixed
 
