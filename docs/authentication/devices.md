@@ -22,7 +22,7 @@ when each was added and when it last signed in.
    **15 minutes**, and never stored before it is confirmed.
 3. The first code from the new device confirms it. Now it is stored
    encrypted, and its codes sign in.
-4. The first device of the first method turns the second factor on
+4. The first device of any method turns the second factor on
    and brings ten **recovery codes**, shown once (section 6). A
    further device brings none.
 5. Adding a device ends the user's other sessions, as a password

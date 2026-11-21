@@ -63,7 +63,7 @@ Part of the [architecture](../ARCHITECTURE.md): sections 5 to 17.
    types, and anyio, which is how it writes concurrency. No `asyncio`
    beside it, and a thread only where a blocking library is wrapped.
 5. **The standard library is a library too.** `sqlite3`, `smtplib`,
-   `poplib`, `ssl` and `email` have homes as httpx does.
+   `poplib`, `imaplib`, `ssl` and `email` have homes as httpx does.
 
 ## 8. Encapsulation and replaceable parts
 
@@ -228,6 +228,9 @@ fix that first, and say so.
   is named so and lies in the nearest common folder of the modules that
   import it, which `tests/test_code_rules.py` at the root checks in all
   four packages.
+- The tests of every package, the tests at the root and the live
+  checks use the public names of `mailbox-common`, never one with a
+  leading underscore.
 - The UI in real browsers is a suite apart,
   `packages/mailbox-service/tests/browser/`, not beside the code of
   `web/pages/` it tests: it needs the dependency group `browser`,
@@ -237,7 +240,9 @@ fix that first, and say so.
 - What checks the repository across the four packages, the publishing,
   the workflows, the READMEs, the trees of section 3, the project
   layout of CLAUDE.md, the boundaries, the rules for the tests of every
-  package and for `live/`, and the JavaScript the UI ships, is in
+  package and for `live/`, the scripts of `assets/`, the pre-commit
+  hook and what a tracked file may hold, and the JavaScript the UI
+  ships, is in
   `tests/` at its root. Beside them
   `installed_check.py` is not a test: the packages as installed, as real
   processes, run by hand and by `freshness.yml`. Nor is `interface.py`,

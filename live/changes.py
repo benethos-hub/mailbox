@@ -248,8 +248,8 @@ def main() -> int:
     parser.add_argument(
         "--keep",
         action="store_true",
-        help="keep the test mail and its folder, and put a copy into the "
-        "sender's Sent folder, to look at in a mail client",
+        help="keep the test mail in the inbox and its copy in the sender's "
+        "Sent folder, to look at in a mail client",
     )
     keep = parser.parse_args().keep
     env = read_env()

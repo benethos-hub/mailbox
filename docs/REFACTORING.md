@@ -73,9 +73,10 @@ lines in `worker.py`, and the only thing `delivery.py` took from
 import `sync`.
 
 **Decided 2026-09-28:** `accounts` does not import `sync`, which ended a
-cycle between the two. `AccountService` takes `on_delete`, a callable
-with the account id, in place of the `SyncService` it held, and the
-assembly passes `sync.forget_account`. `sync` reaches accounts through
+cycle between the two. `AccountService` takes `on_delete` in its
+`AccountHooks`, a callable with the account id, in place of the
+`SyncService` it held. The assembly passes one that calls
+`sync.forget_account` and the worker's `forget`. `sync` reaches accounts through
 `adapters`.
 
 `activity` is imported by every package that records. `rights` records
@@ -112,7 +113,8 @@ section 2. What is where, and why:
 - `sender.py` stays with the providers, since it uses `Guard` and
   `rules`.
 - `oauth` is a flow over HTTP rather than a wire protocol. It knows no
-  provider, only the endpoints `microsoft/signin.py` hands it, and is
+  provider, only the endpoints `microsoft/signin.py` and
+  `gmail/signin.py` hand it, and is
   under `protocols`.
 - Considered for `common` and left in `data`: `logbook.py` is a store of
   log lines the domain reads like a repository. `files.py` is I/O for
@@ -158,7 +160,7 @@ what was accepted. **Decided 2026-09-28:** all of it stays as built.
   background loop that ends for good.
 - The time of a log line is `log_time`, as LOGGING.md 6.9 names it, in
   `log/lines.py` of `mailbox-common`.
-- The six `why()` of the activity catalogue stay, since their reasons
+- The `why()` of the activity catalogue stay, since their reasons
   are of different types.
 - The Microsoft adapter keeps its folder roles, which come from Graph's
   well-known names, not from `rules`.
@@ -178,7 +180,8 @@ Three small changes in behaviour came with the merges:
 
 **Decided 2026-09-28:** one module per kind of tool, the kinds that
 `list_accounts` reports (`read`, `write`, `drafts`, `send`), not one
-file per tool. The records of the client go to `models.py`.
+file per tool. The records of the client go to `models.py`. `share`,
+which came later, keeps its tool in `reading.py`.
 
 **10.2 The modules.** Each module of a kind holds its tools and its part
 of the table, as `TOOLS`. `tools/__init__.py` joins them. `accounts.py`

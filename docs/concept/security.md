@@ -18,6 +18,7 @@ Part of the [concept](../CONCEPT.md): sections 7 to 7.4 and 7.6 to 7.8.
 | TOTP secret of a device | made by the service when the device is added | until the device is removed |
 | Recovery codes of the second factor | made by the service, stored as keyed hashes only | until used or made anew |
 | Signing secret of a webhook | made by the service, shown once | until renewed or the webhook is removed |
+| Secret of a link to an attachment | made by the service, shown once, stored as a digest only | until used or ended |
 
 The MCP server holds **none** of these. It only holds its own REST token, in
 the MCP client's configuration.

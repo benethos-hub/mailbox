@@ -150,17 +150,23 @@ The three layers and what each may import:
 modules, that `common/` stays on the standard library, anyio, idna (host
 names as IDNA 2008) and `mailbox-common`, that FastAPI stays in
 `web/` (and `assembly/web.py`), that providers are reached through the registry,
-that the domain picks no storage implementation, and that SQLite is
-reached through `data/storage/` alone. `tests/test_code_rules.py`
+that the domain picks no storage implementation, that SQLite is
+reached through `data/storage/` alone, and that the files SQLite keeps
+beside a database are named in `data/storage/sqlite/` alone.
+`tests/test_code_rules.py`
 checks that the data layer logs nothing above `DEBUG` and the domain
 nothing but activities, that a broad `except` raises or records, the
 sizes of modules and classes, that a helper of `common/` exists
 once, that a template asks what the page may do and never the kind
 of an account, and that the headers of htmx stand in
-`web/pages/templates.py` alone. The `tests/test_code_rules.py` at the
-root of the repository checks that no `__init__.py` of the four
-packages defines a class, and holds the rules of section 13 for the
-tests and the live checks. `tests/test_packages.py` checks that the
+`web/pages/templates.py` alone. For the service's own tests it checks
+that a test of the data layer goes through no API, that a test of the
+domain builds no adapter, and that no test reads `assets/`. The
+`tests/test_code_rules.py` at the root of the repository checks that
+no `__init__.py` of the four packages defines a class, and how the
+others use `mailbox-common`: a module from its group, none of its
+functions again and none of its private names. It holds the rules of
+section 13 for the tests and the live checks. `tests/test_packages.py` checks that the
 packages of the domain and of data are imported through
 their `__init__.py`, export what others import, have no cycle, and keep
 their lines. `tests/test_assembly.py` checks that nothing below reaches

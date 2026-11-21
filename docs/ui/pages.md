@@ -97,8 +97,9 @@ Log, and Changes if it is built (6.7).
 One record. Cards from top to bottom, always in this order:
 
 1. **Facts**: what the record is. Read-only, with tags for its state.
-2. **Related lists**: tokens of a user, folders of an account, devices
-   of the second factor, deliveries of a webhook. A related list creates
+2. **Related lists**: tokens of a user, devices of the second factor,
+   deliveries of a webhook. The folders of an account are on its mail
+   page (4.4) and work the same way. A related list creates
    at its head and acts on its rows. The plus in the card's header
    (with its word, e.g. **New token**) opens the form as the first row,
    open at once while the list is empty. A pencil on a row unfolds the
@@ -142,7 +143,7 @@ while "move to" is chosen, and the head of the list ticks every row.
 The header of a message holds what can be done with it, each as far as
 the caller may: **Reply** with its word, then as icons Reply to all,
 Forward, Download original, Mark read or unread, Star, Move (the dialog
-asks the folder), Move to the trash and Delete for good (the dialog
+asks the folder, and no move offers the drafts folder), Move to the trash and Delete for good (the dialog
 asks first).
 
 Where the account keeps threads and the caller may read them, the list

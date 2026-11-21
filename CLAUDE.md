@@ -384,8 +384,9 @@ itself without credentials. Live checks are manual scripts in `live/`, outside
 - Dependabot opens its own pull requests. The user merges them as well.
 - The pre-commit hook in `.githooks/` refuses staged settings, keys and
   state files, staged lines that look like a credential, and
-  addresses on a domain other than those reserved for examples
-  (`example.org`, `.example`). It is enabled once per clone with `git config core.hooksPath .githooks`.
+  addresses on a domain other than those reserved for examples and
+  tests (RFC 2606, RFC 6761). Examples here use `example.org` and
+  `.example`. It is enabled once per clone with `git config core.hooksPath .githooks`.
   `tests/test_repo_content.py` holds every tracked file to the same
   patterns, in CI as well, where the hook does not run. A line that must
   show such a form ends with `pragma: allowlist secret`.

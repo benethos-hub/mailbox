@@ -244,7 +244,8 @@ packages/mailbox-common/
       lines.py          # format, levels, log_time, plain or in colour
                         #   on a terminal, a program's own lines through
                         #   line_of, the stderr handler
-      redact.py         # secrets noted once, masked in every text
+      redact.py         # secrets noted once, masked in every text,
+                        #   forget for tests
     paths/              # where a program keeps its files (platformdirs)
       folders.py        # named_file, system_folders: SystemFolders
     settings/           # a program's settings (pydantic-settings)

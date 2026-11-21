@@ -20,7 +20,7 @@
 
 [![benethos-mailbox-mcp on Glama](https://glama.ai/mcp/servers/benethos-hub/mailbox/badges/card.svg)](https://glama.ai/mcp/servers/benethos-hub/mailbox)
 
-> **Beta, version 0.8.0.** Usable with real accounts. A breaking change
+> **Beta, version 0.9.0.** Usable with real accounts. A breaking change
 > of the API or the configuration is announced in the changelog. Stored
 > data is carried forward by migrations.
 
@@ -449,7 +449,7 @@ The image `ghcr.io/benethos-hub/benethos-mailbox-mcp` serves over
 streamable HTTP on port 8000, as an unprivileged user, and the command
 below runs it on a read-only root file system. A client that starts
 the server over stdio needs no image.
-Tags: the version (`0.8.0`), the minor version (`0.8`) and `latest`.
+Tags: the version (`0.9.0`), the minor version (`0.9`) and `latest`.
 
 ### With docker run
 
@@ -467,7 +467,7 @@ docker run -d --name mailbox-mcp --restart unless-stopped --network mailbox \
   -e MAILBOX_SERVICE_TOKEN=<token> \
   -e MAILBOX_MCP_BEARER_TOKEN=<a long random token> \
   -e MAILBOX_MCP_ALLOWED_HOSTS=127.0.0.1:8000,localhost:8000 \
-  ghcr.io/benethos-hub/benethos-mailbox-mcp:0.8.0
+  ghcr.io/benethos-hub/benethos-mailbox-mcp:0.9.0
 ```
 
 Inside the container the server binds to `0.0.0.0`. So
@@ -519,7 +519,7 @@ beside `server_status`, and it lists no account. The tools:
 | `whats_new` | `mail.read` | mail created, updated or deleted since the `state` of an earlier call, ids only, in one account, several or all |
 | `get_attachment` | `mail.read` | an attachment: images up to 5 MiB as images, PDF pages as PNG images (`first_page`, `pages`, up to 10, 4 megapixels a page and 12 together), text as text, HTML as the text a reader sees, both cut to `max_chars`, 20,000 by default. Other types and larger images by name only. An image, PDF or text above 10 MiB is refused, and a PDF whose pages take longer than 30 seconds to render. |
 | `share_attachment` | `mail.share` | a link to an attachment for another service, which fetches the file itself without it passing through the model: a URL that service fetches once, without a token, until it ends, after the service's `MAILBOX_SERVICE_LINK_SECONDS`, 120 by default, or sooner with `expires_in`, with when it ends, the type, the size and the file name |
-| `update_messages` | `mail.write` | up to 100 mails of one account: read or unread, star, move (folder id or role such as `archive`), add and take off keywords, a word of your own or a mark the account writes, such as `$junk`, add and take off labels where a mail can be in several folders at once, or into the trash |
+| `update_messages` | `mail.write` | up to 100 mails of one account: read or unread, star, move (folder id or role such as `archive`, not the drafts folder), add and take off keywords, a word of your own or a mark the account writes, such as `$junk`, add and take off labels where a mail can be in several folders at once, or into the trash |
 | `create_folder` | `mail.write` | a new folder, named in up to 200 characters, at the top or in a parent (id or role) |
 | `update_folder` | `mail.write` | renames a folder, in up to 200 characters, or moves it into another one or to the top. Deleting a folder is not a tool |
 | `list_drafts` | `drafts` | the drafts of an account |

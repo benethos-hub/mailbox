@@ -15,7 +15,7 @@ Base path `/v1`, JSON, bearer authentication on everything except
 | GET | `/v1/accounts` | list, paged by address (6.6) |
 | POST | `/v1/accounts` | create with credentials (IMAP, POP3 and SMTP with a password or app password, JMAP with a password or an API token), connection is tested first. OAuth accounts connect through the sign-in routes below |
 | GET | `/v1/accounts/{account_id}` | get, including `status`, `capabilities`, `marks` and `operations` |
-| PATCH | `/v1/accounts/{account_id}` | display name, settings, new password |
+| PATCH | `/v1/accounts/{account_id}` | display name, settings, new credentials |
 | DELETE | `/v1/accounts/{account_id}` | remove, credentials deleted |
 | POST | `/v1/accounts/{account_id}/verify` | test the connection now |
 | GET | `/v1/accounts/{account_id}/server-names` | the names receiving servers wrote into the newest ten mails of the inbox, each with how many mails carry it and in how many it is the topmost entry, for choosing `settings.authserv_id` (6.3). Empty for Gmail and Microsoft. Needs `update_account` |
@@ -73,6 +73,9 @@ Rules of the implementation (phase 2):
 **Decided 2026-09-24, changing messages:**
 
 - `PATCH` answers the changed message as a summary, with the same id.
+- No change puts a message into the drafts folder: a `PATCH` or a batch
+  that names it answers `400`, for every caller. The draft routes would
+  take such a message for a draft.
 - Moving needs `MOVE` or `UIDPLUS` on an IMAP server. Without both, a move
   would have to expunge the whole folder, other clients' deleted messages
   included, so the account lacks `move` and a move answers

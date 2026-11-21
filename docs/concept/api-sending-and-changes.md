@@ -54,7 +54,8 @@ Rules of the implementation for drafts (phase 2):
   `X-Mailbox-Service-Reference`, until it is sent. Both are removed before it
   goes out. The quote of a reply or forward is written when the draft is
   made, as a mail client does.
-- `get_message` shows a draft's `reference`. Replaced with that reference
+- `get_message` shows a draft's `reference`, where its header names an
+  action and a message id. Free text in its place shows none. Replaced with that reference
   and `quote: false`, the draft keeps its link to the original (In-Reply-To,
   References, the mark after sending) and nothing of the original is added
   again: the text holds the quote already. The reference of any message
@@ -253,7 +254,7 @@ One envelope for every error the API raises itself:
 |---|---|---|
 | 400 | `bad_request` | semantically invalid input |
 | 401 | `unauthorized` | missing, wrong, expired or revoked credential, or disabled user |
-| 403 | `forbidden`, `recipient_not_allowed` | the user has a grant for the account but not for this operation, or no grant allows the recipient (7.5) |
+| 403 | `forbidden`, `recipient_not_allowed` | the user has a grant for the account but not for this operation, or not in the folders it names, or no grant allows the recipient (7.5) |
 | 404 | `not_found` | account, folder, message, also an account the user has no grant for |
 | 409 | `conflict`, `idempotency_conflict`, `credential_missing` | the last: the account has no credential of the kind its sign-in needs |
 | 410 | `changes_expired` | a `since` state older than the changes kept (6.5) |

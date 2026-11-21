@@ -317,8 +317,9 @@ class ServerNames(Protocol):
 @runtime_checkable
 class Places(Protocol):
     """Reads the folders of messages named by id without their content.
-    The domain needs it to judge a change under grants that name folders,
-    where the account keeps no index."""
+    The domain needs it, where the account keeps no index, to judge a
+    change under grants that name folders and one that names the drafts
+    folder."""
 
     async def folders_of(self, message_ids: list[str]) -> dict[str, list[str]]:
         """The folder ids of each message that is there, by id."""

@@ -99,8 +99,9 @@ it is.
   need a `STATUS` per folder, POP3 has one folder.
 - **Gmail's own folders refuse neutral operations with `400`**: a
   folder made or moved below one of its own, and a message moved into
-  Sent or Drafts. Open. The domain refuses a change of a folder with a
-  role with `409` first (CONCEPT 6.2).
+  Sent. Open. A move into the drafts folder answers `400` on every
+  account. The domain refuses a change of a folder with a role with
+  `409` first (CONCEPT 6.2).
 - **Microsoft shows Outbox, Conversation History and similar folders
   without a role**, as if a person had made them. Renaming them fails at
   Graph with a general error. Left so.

@@ -52,7 +52,8 @@ Sends one test mail from the second test account to the first, flags
 and moves it, replies, forwards and sends a draft back to the second,
 checks that the mail and the reply are one thread in each account,
 makes and removes a folder, deletes it all for good, and checks the
-change feed and a webhook on a receiver at 127.0.0.1.
+change feed and a webhook on a receiver at 127.0.0.1. It needs
+`LIVE_IMAP_HOST` in `live/.env`.
 
 With `--keep` the mail stays in the inbox and the copy in the sent
 folder, to look at in a mail client. Delete them by hand.
