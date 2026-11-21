@@ -70,7 +70,8 @@ Part of the [roadmap](../ROADMAP.md): phase 5, in progress, and phase 5a, done.
     6.5, CONCEPT 7.4)**, done, live-checked in `live/ui.py`
   - **the service log activity by activity ([LOGGING.md](../LOGGING.md))**,
     done: every line an activity of `domain/activity/catalogue/`, one
-    module per area, the MCP server's lines among them, and the HTTP
+    module per area, the MCP server's lines described in LOGGING.md as
+    well, and the HTTP
     request limit with every limit a setting ([LIMITS.md](../LIMITS.md))
   - **the audit of administration of [AUDIT.md](../AUDIT.md)**, decided
     2026-10-05 (PERMISSIONS.md 8.6), done: the table `activity`,

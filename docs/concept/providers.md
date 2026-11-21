@@ -12,8 +12,9 @@ with CONDSTORE), `Threads` (threads the server keeps), `Summaries`
 (messages read by id, for threads the index keeps), `ServerNames` (the
 names receiving servers wrote into the newest mails, for choosing
 `authserv_id`) and `Places` (the
-folders of messages read by id without their content, for a change
-under grants that name folders where no index keeps them). One protocol per ability, checked with
+folders of messages read by id without their content, where no index
+keeps them: for a change under grants that name folders, and for a
+change that names the drafts folder). One protocol per ability, checked with
 `isinstance`, was **decided 2026-10-07**. What an account can do follows
 from what its server answers (5.11, R4): asked when the account is
 connected or verified, when the sync sees a folder come or go, and when
