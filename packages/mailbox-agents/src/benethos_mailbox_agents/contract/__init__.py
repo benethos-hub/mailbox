@@ -16,6 +16,7 @@ from .agent import (
     Trigger,
 )
 from .context import Context, Items, Model, Reader
+from .prompts import load_prompt
 from .registry import discover, load_agent
 
 __all__ = [
@@ -34,4 +35,5 @@ __all__ = [
     "Trigger",
     "discover",
     "load_agent",
+    "load_prompt",
 ]

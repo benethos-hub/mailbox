@@ -20,8 +20,8 @@ from ...contract import (
     Limits,
     Route,
     Trigger,
+    load_prompt,
 )
-from ...contract.prompts import load_prompt
 from ...records import LABEL, Decision, Event, Evidence, MailMessage
 from .baseline import baseline
 from .patterns import Patterns, load_patterns

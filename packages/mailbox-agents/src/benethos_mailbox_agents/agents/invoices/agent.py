@@ -35,8 +35,8 @@ from ...contract import (
     Route,
     Shown,
     Trigger,
+    load_prompt,
 )
-from ...contract.prompts import load_prompt
 from ...records import LABEL, Decision, Event, Evidence, FolderRef, MailMessage
 from .baseline import baseline
 from .folders import Places

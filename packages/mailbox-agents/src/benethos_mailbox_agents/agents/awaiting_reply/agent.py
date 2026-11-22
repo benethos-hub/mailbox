@@ -27,8 +27,8 @@ from ...contract import (
     Limits,
     Route,
     Trigger,
+    load_prompt,
 )
-from ...contract.prompts import load_prompt
 from ...errors import MessageGoneError
 from ...records import (
     DISCARD_ROLES,
