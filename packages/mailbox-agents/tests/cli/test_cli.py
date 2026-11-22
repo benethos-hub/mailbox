@@ -142,7 +142,8 @@ def test_a_data_folder_that_is_a_file_ends_run_in_one_line(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     configure(monkeypatch)
-    Path("data").write_text("not a folder", encoding="utf-8")
+    DATA_DIR.parent.mkdir()
+    DATA_DIR.write_text("not a folder", encoding="utf-8")
 
     assert main(["run", "--agent", "counting"]) == 1
 
