@@ -73,6 +73,6 @@ packages/mailbox-common/
   values (section 9).
 
 `tests/test_architecture.py` of the package checks the libraries and the
-groups. `tests/test_code_rules.py` at the root of the repository checks
-the imports of its callers, and that no module of the service or the
-MCP server defines one of its functions again.
+groups. `tests/test_common_use.py` at the root of the repository checks
+the imports of its callers, and that no module of the service, the
+MCP server or the agents defines one of its functions again.

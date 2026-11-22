@@ -165,10 +165,11 @@ of an account, and that the headers of htmx stand in
 that a test of the data layer goes through no API, that a test of the
 domain builds no adapter, and that no test reads `assets/`. The
 `tests/test_code_rules.py` at the root of the repository checks that
-no `__init__.py` of the five packages defines a class, and how the
-others use `mailbox-common`: a module from its group, none of its
-functions again and none of its private names. It holds the rules of
-section 13 for the tests and the live checks. `tests/test_packages.py` checks that the
+no `__init__.py` of the five packages defines a class, and holds the
+rules of section 13 for the tests and the live checks.
+`tests/test_common_use.py` there checks how the others use
+`mailbox-common`: a module from its group, none of its functions again
+and none of its private names. `tests/test_packages.py` checks that the
 packages of the domain and of data are imported through
 their `__init__.py`, export what others import, have no cycle, and keep
 their lines. `tests/test_assembly.py` checks that nothing below reaches
