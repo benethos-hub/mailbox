@@ -237,6 +237,8 @@ for clients: [packages/mailbox-mcp](packages/mailbox-mcp/README.md#tools).
 
 ## Documentation
 
+- [docs/README.md](docs/README.md): the documents of each package and of
+  the repository
 - [docs/mailbox-service/CONCEPT.md](docs/mailbox-service/CONCEPT.md): the design, the API, the security
   model
 - [docs/ROADMAP.md](docs/ROADMAP.md): the phases and what is done

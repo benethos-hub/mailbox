@@ -231,6 +231,7 @@ READMES = {
     "containers/README.md": "../",
     "containers/production/README.md": "../../",
     "containers/test-mail-server/README.md": "../../",
+    "docs/README.md": "../",
     "packages/mailbox-service/README.md": RAW,
     "packages/mailbox-client/README.md": RAW,
     "packages/mailbox-mcp/README.md": RAW,
@@ -250,7 +251,7 @@ def test_every_readme_has_the_3d_icon_in_its_heading(readme: str, prefix: str) -
 def test_every_readme_is_named() -> None:
     found = {
         path.relative_to(ROOT).as_posix()
-        for folder in ("", "containers/", "packages/")
+        for folder in ("", "containers/", "docs/", "packages/")
         for path in (ROOT / folder).glob("**/README.md" if folder else "README.md")
         if "vendor" not in path.parts
     }

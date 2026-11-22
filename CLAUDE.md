@@ -232,6 +232,8 @@ tests/                    # what the repository holds, across the four
   interface.py            # not a test: the public interface of a
                           #   package as JSON, for the records in docs/
 docs/
+  README.md               # the documents of each package, and of the
+                          #   repository
   RELEASING.md            # the steps of a release, in order
   ROADMAP.md              # phases and their state
   roadmap/                #   the items of each phase
