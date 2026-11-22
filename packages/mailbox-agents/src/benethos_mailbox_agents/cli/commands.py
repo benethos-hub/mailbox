@@ -27,9 +27,9 @@ from ..evaluation.run import evaluate as run_evaluation
 from ..logbook import process, record
 from ..runtime.health import check
 from ..runtime.readiness import MAILBOX_SETTINGS, folder_lines, readiness, start
-from ..settings import DEFAULT_ENV_FILE, PREFIX, Settings
+from ..settings import PREFIX, Settings, folders
 from ..sources.mailbox import matches, shown, taken
-from ..store import STATES, Store, path_for
+from ..store import STATES, Store, earlier_file, path_for
 from .report import report as make_report
 from .session import mailbox_for, now, session, upstreams
 
@@ -199,22 +199,32 @@ def status(args: argparse.Namespace, settings: Settings) -> int:
         if found.agent is not None:
             for line in _folders(found.agent, settings):
                 _say(f"  {line}")
-        path = path_for(settings.data_dir, cls.name)
-        if path.is_file():
-            try:
-                with Store.open(path, read_only=True) as store:
-                    last = store.progress()
-                    counts = _counts(store)
-            except (StateFileError, ConfigError) as exc:
-                _say(f"  state file unreadable: {exc.message}")
-                continue
-            _say(f"  {counts}")
-            _say(f"  last progress: {last.isoformat() if last else 'none'}")
+        for line in _state(cls.name, settings):
+            _say(f"  {line}")
     return 0
 
 
+def _state(name: str, settings: Settings) -> list[str]:
+    """What the state file of agent ``name`` says, and where one lies at
+    the place before."""
+    path = path_for(settings.data_dir, name)
+    earlier = earlier_file(settings.data_dir, name)
+    if earlier is not None:
+        where = path.resolve()
+        return [f"a state file lies at {earlier.resolve()}: move it to {where}"]
+    if not path.is_file():
+        return []
+    try:
+        with Store.open(path, read_only=True) as store:
+            last = store.progress()
+            counts = _counts(store)
+    except (StateFileError, ConfigError) as exc:
+        return [f"state file unreadable: {exc.message}"]
+    return [counts, f"last progress: {last.isoformat() if last else 'none'}"]
+
+
 def paths(args: argparse.Namespace, settings: Settings) -> int:
-    env = args.env_file or DEFAULT_ENV_FILE
+    env = folders(args.env_file).env_file
     print(f"settings: {env.resolve()} ({'found' if env.is_file() else 'missing'})")
     print(f"data: {settings.data_dir.resolve()}")
     for name in discover():
@@ -222,6 +232,9 @@ def paths(args: argparse.Namespace, settings: Settings) -> int:
         print(
             f"  {name}: {path.resolve()} ({'found' if path.is_file() else 'none yet'})"
         )
+        earlier = earlier_file(settings.data_dir, name)
+        if earlier is not None:
+            print(f"    a state file lies at {earlier.resolve()}: move it here")
     return 0
 
 
@@ -282,8 +295,17 @@ def evaluate(args: argparse.Namespace, settings: Settings) -> int:
     built = asyncio.run(_evaluate(cls, items, settings))
     for line in render(built):
         print(line)
-    print(f"report: {write(built, args.reports)}")
+    print(f"report: {write(built, args.reports or _reports(args, settings))}")
     return 0
+
+
+def _reports(args: argparse.Namespace, settings: Settings) -> Path:
+    """Where a report goes when --reports names no folder: the
+    repository's folder for them in its layout, else beside the state
+    files."""
+    if folders(args.env_file).origin == "working directory":
+        return Path("reports") / "mailbox-agents"
+    return settings.data_dir / "reports"
 
 
 async def _evaluate(

@@ -27,7 +27,7 @@ and `KEYWORD`.
 | `MAX_ATTEMPTS` | refused answers before a message is `failed`, `5` when unset |
 | `BACKOFF_CEILING_SECONDS` | the longest wait between two attempts, `3600` when unset |
 | `BACKFILL_DAYS` | the window `backfill` runs over after an expired feed state, `7` when unset |
-| `DATA_DIR` | where the state files live, one `<agent>.db` per agent, `data` below the working directory when unset |
+| `DATA_DIR` | where the state files live, one `<agent>.db` per agent. Unset: the data folder of where the settings come from, below |
 | `PROMPT_RETENTION_DAYS` | [state](state.md), `0` when unset |
 | `METRICS_PORT` | [operation](operation.md), `0` serves no endpoint |
 | `LOG_LEVEL` | `DEBUG`, `INFO`, `WARNING` or `ERROR`, `INFO` when unset |
@@ -40,6 +40,26 @@ setting and never the value.
 
 Settings of one agent, such as `INVOICES_FOLDERS`, `INVOICES_SUBFOLDER`,
 `REPLY_DAYS`, `INQUIRIES_PATTERNS_FILE` and `SORTING_FILE`, are named in
-the agent's file, `agent-<name>.md` beside this one. The `.env` file is
-`config/benethos-mailbox-agents/.env` below the working directory unless
-the command line names another.
+the agent's file, `agent-<name>.md` beside this one.
+
+## Where the settings and the state files are
+
+As the service finds its own (2026-11-22), first found first:
+
+| Where | The settings file | The state files when `DATA_DIR` is unset |
+|---|---|---|
+| named on purpose, by `--env-file` or `MAILBOX_AGENTS_ENV_FILE` | that file, which must exist | `data/benethos-mailbox-agents` beside it |
+| the layout of this repository, `config/benethos-mailbox-agents` or `data/benethos-mailbox-agents` in the working directory | `config/benethos-mailbox-agents/.env`, read when it exists | `data/benethos-mailbox-agents` |
+| else, installed alone | `.env` in the config folder of the operating system | the data folder of the operating system |
+
+Outside the layout of the repository a relative path in the settings,
+`DATA_DIR`, `SORTING_FILE`, `INQUIRIES_PATTERNS_FILE`, `CA_FILE` and the
+`_FILE` of a secret, counts from the folder of the settings file. In it,
+it counts from the working directory. A container sets `DATA_DIR` to
+`/data`. `paths` names what applies.
+
+Before, the state files lay in `data/` below the working directory. When
+one is still there and none at the new place, a command that writes the
+state file does not start and names both, so the cursor and the
+decisions in it are not left behind: move it, or set `DATA_DIR` to its
+folder. `paths` and `status` name it too.

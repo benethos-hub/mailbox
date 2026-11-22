@@ -97,8 +97,9 @@ def build_parser() -> argparse.ArgumentParser:
     found.add_argument(
         "--reports",
         type=Path,
-        default=Path("reports"),
-        help="where the report goes, reports/ by default",
+        default=None,
+        help="where the report goes: reports/mailbox-agents in the layout "
+        "of the repository, else reports/ in the data folder",
     )
     found.set_defaults(handler=commands.evaluate)
 

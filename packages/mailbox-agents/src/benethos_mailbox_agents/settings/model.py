@@ -14,6 +14,7 @@ from benethos_mailbox_common.log import redact
 from benethos_mailbox_common.settings import files
 
 from ..errors import ConfigError, describe_invalid
+from .folders import DATA_DIR, folders, rebased
 
 # The form a keyword must have, MAILBOX_AGENTS_KEYWORD and an agent's
 # default_keyword alike: lower case letters, digits and dashes, as
@@ -22,10 +23,6 @@ from ..errors import ConfigError, describe_invalid
 KEYWORD_FORM = re.compile(r"[a-z0-9][a-z0-9-]*")
 
 PREFIX = "MAILBOX_AGENTS_"
-
-# Where the .env file is looked for when none is named, relative to the
-# working directory. The example beside it lists every setting.
-DEFAULT_ENV_FILE = Path("config/benethos-mailbox-agents/.env")
 
 Stage = Literal["shadow", "keyword", "full"]
 
@@ -72,7 +69,7 @@ class Settings(files.FileSettings):
     backfill_days: int = Field(default=7, ge=0)
 
     # --- state, metrics, log ---------------------------------------------------
-    data_dir: Path = Path("data")
+    data_dir: Path = DATA_DIR
     prompt_retention_days: int = Field(default=0, ge=0)
     metrics_port: int = Field(default=0, ge=0, le=65535)
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
@@ -200,17 +197,20 @@ def _context(path: Path) -> ssl.SSLContext:
 
 
 def load_settings(env_file: Path | None = None, **overrides: Any) -> Settings:
-    """The settings from the environment and ``env_file``, the default
-    file when none is named and it exists.
+    """The settings from the environment and the settings file of
+    :func:`~.folders.folders`, read when it exists. A file named on
+    purpose must exist. Outside the layout of the repository a relative
+    path counts from the folder of the settings file, and the state
+    files go into the data folder that comes with it.
 
     A wrong setting becomes a :class:`ConfigError` that names the setting
     and the rule, never the value, which may be a secret.
     """
-    path = env_file if env_file is not None else DEFAULT_ENV_FILE
-    if env_file is not None and not path.is_file():
-        raise ConfigError(f"the settings file {path.name} does not exist")
+    where = folders(env_file)
+    if where.origin == "named" and not where.env_file.is_file():
+        raise ConfigError(f"the settings file {where.env_file.name} does not exist")
     try:
-        return files.load(Settings, path, **overrides)
+        return files.load(Settings, where.env_file, **rebased(where, overrides))
     except ValidationError as exc:
         problems = describe_invalid(
             exc, lambda place: f"{PREFIX}{place.upper() or 'SETTINGS'}"

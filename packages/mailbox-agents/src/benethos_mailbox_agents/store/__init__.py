@@ -4,7 +4,15 @@ docs/mailbox-agents/concept/state.md."""
 from __future__ import annotations
 
 from .migrations import MIGRATIONS, SCHEMA_VERSION
-from .store import STATES, ActionRow, MessageRow, Migrated, Store, path_for
+from .store import (
+    STATES,
+    ActionRow,
+    MessageRow,
+    Migrated,
+    Store,
+    earlier_file,
+    path_for,
+)
 
 __all__ = [
     "MIGRATIONS",
@@ -14,5 +22,6 @@ __all__ = [
     "MessageRow",
     "Migrated",
     "Store",
+    "earlier_file",
     "path_for",
 ]

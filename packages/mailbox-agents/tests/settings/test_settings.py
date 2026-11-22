@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from benethos_mailbox_agents import errors
-from benethos_mailbox_agents.settings import PREFIX, Settings, load_settings
+from benethos_mailbox_agents.settings import DATA_DIR, PREFIX, Settings, load_settings
 from benethos_mailbox_common.log import redact
 
 from ..agents_helpers import DOCS, PACKAGE_DIR, ROOT
@@ -29,7 +29,7 @@ def test_the_defaults() -> None:
     assert found.accounts == []
     assert found.prompt_retention_days == 0
     assert found.reply_days == 3
-    assert found.data_dir == Path("data")
+    assert Settings().data_dir == DATA_DIR
 
 
 def test_from_the_environment(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -13,14 +13,15 @@ from datetime import UTC, datetime
 from typing import Any
 
 from ..contract import Agent
+from ..errors import ConfigError
 from ..llm.gateway import Gateway
 from ..logbook import process, record
 from ..runtime.loop import Worker
 from ..runtime.model import NoModel
 from ..runtime.readiness import start, uses_model
-from ..settings import Settings
+from ..settings import PREFIX, Settings
 from ..sources.mailbox import Mailbox, connect
-from ..store import Store, path_for
+from ..store import Store, earlier_file, path_for
 
 __all__ = [
     "TRANSPORTS",
@@ -90,7 +91,15 @@ async def session(cls: type[Agent], settings: Settings) -> AsyncIterator[Session
     agent = start(cls, settings)
     async with AsyncExitStack() as stack:
         mailbox, gateway = await stack.enter_async_context(upstreams(agent, settings))
-        store = stack.enter_context(Store.open(path_for(settings.data_dir, agent.name)))
+        path = path_for(settings.data_dir, agent.name)
+        earlier = earlier_file(settings.data_dir, agent.name)
+        if earlier is not None:
+            raise ConfigError(
+                f"the state file of {agent.name} lies at {earlier.resolve()}, "
+                f"the agents keep it at {path.resolve()} now: move it there, "
+                f"or set {PREFIX}DATA_DIR to its folder"
+            )
+        store = stack.enter_context(Store.open(path))
         if store.migrated is not None:
             found = store.migrated
             record(

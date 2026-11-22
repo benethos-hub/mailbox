@@ -110,7 +110,7 @@ changed until the evaluation was run again.
 | `eval --agent <name> --gold <file> [--reports DIR]` | [evaluation](evaluation.md) |
 | `health --agent <name>` | exit 0 while the loop makes progress, [operation](operation.md) |
 | `status` | the version of the mailbox service and whether it matches the agents', then for each agent whether it is ready, which setting it misses, the folders that matter to it and a folder it expects that is missing or there in another case only, in each account `ACCOUNTS` names or else in each account the user is granted, its counts and its last progress |
-| `paths` | the settings file, the data folder and each state file |
+| `paths` | the settings file, the data folder and each state file, and a state file at the place before ([configuration](configuration.md#where-the-settings-and-the-state-files-are)) |
 
 `--env-file` names the settings file for every command. An error to
 correct ends with exit code 2, a mailbox service of another version
