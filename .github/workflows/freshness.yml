@@ -15,7 +15,7 @@ name: Freshness
 #   packages beneath them, the versions beyond a range and the one place to
 #   see all of it. Two jobs add the JavaScript the UI ships, which is copied
 #   into the tree and which no other tool here sees: npm-outdated and
-#   npm-audit read the lockfile in assets/vendor, tests/test_vendored.py holds
+#   npm-audit read the lockfile in assets/mailbox-service/vendor, tests/test_vendored.py holds
 #   it to the files. They only report. A new version of htmx is checked in a
 #   real browser (docs/mailbox-service/UI.md 7).
 #
@@ -112,7 +112,7 @@ jobs:
         uses: benethos-hub/.github/actions/node/freshness-outdated@main
         with:
           findings: ${{ runner.temp }}/freshness/npm-outdated
-          directory: assets/vendor
+          directory: assets/mailbox-service/vendor
 
       - name: Leave the result for the report
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -139,7 +139,7 @@ jobs:
         uses: benethos-hub/.github/actions/node/freshness-audit@main
         with:
           findings: ${{ runner.temp }}/freshness/npm-audit
-          directory: assets/vendor
+          directory: assets/mailbox-service/vendor
 
       - name: Leave the result for the report
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

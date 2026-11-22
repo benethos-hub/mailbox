@@ -1,7 +1,7 @@
 """Make the icons of the configuration UI: one sprite of the Bootstrap
 Icons named in ``ICONS``, with their licence beside it.
 
-``uv run python assets/icons.py`` downloads the package of the pinned
+``uv run python assets/mailbox-service/icons.py`` downloads the package of the pinned
 version from npm, checks its SHA-256 and picks the icons from it, read
 in memory, nothing unpacked. ``--check`` only says whether the sprite
 holds exactly ``ICONS``, without the network. Nothing is loaded from
@@ -21,11 +21,8 @@ import urllib.request
 from collections.abc import Callable
 from pathlib import Path
 
-ASSETS = Path(__file__).resolve().parent
-STATIC = (
-    ASSETS.parent
-    / "packages/mailbox-service/src/benethos_mailbox_service/web/pages/static"
-)
+ROOT = Path(__file__).resolve().parents[2]
+STATIC = ROOT / "packages/mailbox-service/src/benethos_mailbox_service/web/pages/static"
 
 VERSION = "1.13.2"
 URL = f"https://registry.npmjs.org/bootstrap-icons/-/bootstrap-icons-{VERSION}.tgz"
@@ -101,7 +98,7 @@ def sprite(read: Callable[[str], str]) -> str:
     return (
         '<svg xmlns="http://www.w3.org/2000/svg">\n'
         f"<!-- Bootstrap Icons {VERSION}, MIT licence: icons-LICENSE.txt."
-        " Made by assets/icons.py. -->\n"
+        " Made by assets/mailbox-service/icons.py. -->\n"
         f"{symbols}\n</svg>\n"
     )
 
@@ -135,7 +132,10 @@ def main(arguments: list[str]) -> int:
     if arguments == ["--check"]:
         held = names(SPRITE.read_text("utf-8")) if SPRITE.exists() else []
         if held != list(ICONS):
-            print("out of date: the sprite, run assets/icons.py", file=sys.stderr)
+            print(
+                "out of date: the sprite, run assets/mailbox-service/icons.py",
+                file=sys.stderr,
+            )
             return 1
         return 0
     if arguments:

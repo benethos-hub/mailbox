@@ -1,7 +1,8 @@
 """The JavaScript packages the UI ships against the lockfile that records them.
 
-``assets/vendor/package-lock.json`` is read by the freshness report and by
-nothing else. Nothing installs from it, so nothing keeps it true but this: a
+``assets/mailbox-service/vendor/package-lock.json`` is read by the
+freshness report and by nothing else. Nothing installs from it, so
+nothing keeps it true but this: a
 version that moved in one place only would have the report watch a version the
 UI does not ship.
 """
@@ -15,14 +16,14 @@ from typing import Any
 
 from .repository_helpers import ROOT
 
-FOLDER = ROOT / "assets" / "vendor"
+FOLDER = ROOT / "assets" / "mailbox-service" / "vendor"
 HTMX = (
     ROOT
     / "packages/mailbox-service/src/benethos_mailbox_service/web/pages/static"
     / "vendor/htmx"
 )
 HTMX_NOTE = HTMX / "README.md"
-ICONS = ROOT / "assets" / "icons.py"
+ICONS = ROOT / "assets" / "mailbox-service" / "icons.py"
 
 
 def _lock() -> dict[str, Any]:

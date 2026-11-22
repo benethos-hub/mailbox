@@ -19,7 +19,9 @@ def _build() -> ModuleType:
 
 
 def _icons() -> ModuleType:
-    return script_module("assets_icons", ROOT / "assets" / "icons.py")
+    return script_module(
+        "assets_icons", ROOT / "assets" / "mailbox-service" / "icons.py"
+    )
 
 
 # --- build.py -------------------------------------------------------------------------
@@ -162,7 +164,7 @@ def test_a_source_without_its_manifest_is_refused() -> None:
 
 
 def test_the_sprite_holds_the_icons_the_script_names() -> None:
-    # After a change of ICONS: uv run python assets/icons.py
+    # After a change of ICONS: uv run python assets/mailbox-service/icons.py
     icons = _icons()
     assert icons.main(["--check"]) == 0
     sprite = icons.SPRITE.read_text("utf-8")
