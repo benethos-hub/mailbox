@@ -48,6 +48,8 @@ def documented(*statuses: int) -> dict[int | str, dict[str, Any]]:
 COMMON = (400, 401, 403, 413, 429, 500, 503)
 # The caller itself and the catalogue: no record, no provider.
 CALLER_ERRORS = documented(*COMMON)
+# A route a setting switches off answers 404 while it is off.
+SWITCHED_ERRORS = documented(*COMMON, 404)
 # Records the service keeps: users, roles, tokens, webhooks, the audit.
 RECORD_ERRORS = documented(*COMMON, 404, 409)
 # Accounts and their mail: a provider is asked.
