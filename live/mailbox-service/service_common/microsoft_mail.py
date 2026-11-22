@@ -10,11 +10,10 @@ import re
 import time
 
 import httpx
+from common.mail import feed_types, messages_with_subject, thread_holds
+from common.run import Run, polled
 
 from benethos_mailbox_client import SyncMailboxClient
-
-from .mail import feed_types, messages_with_subject, thread_holds
-from .run import Run, polled
 
 # A keyword of this check alone, set and taken off again.
 KEYWORD = "mailbox-live"

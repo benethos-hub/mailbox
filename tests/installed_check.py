@@ -17,7 +17,7 @@ script looks at both, with the interpreter it runs under:
   ``server_status`` with the installed version, and answers a service in
   trouble, an unknown tool and an argument of the wrong type each with an
   error result. The real service behind it stays the live check
-  ``live/mcp_stdio.py``
+  ``live/mailbox-mcp/mcp_stdio.py``
 - the client: it imports, under the installed version
 - the common package: the same, and its groups import. A group with an extra
   that is not installed names that extra

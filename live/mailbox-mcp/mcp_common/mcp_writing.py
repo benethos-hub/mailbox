@@ -1,4 +1,4 @@
-"""Writing through the MCP server of ``live/mcp_stdio.py``: a folder made,
+"""Writing through the MCP server of ``live/mailbox-mcp/mcp_stdio.py``: a folder made,
 renamed and removed in the first test account, a keyword added and taken
 off, its newest inbox message starred, moved and trashed, then all put
 back as it was."""
@@ -9,12 +9,12 @@ import secrets
 from collections.abc import Awaitable, Callable
 from typing import Any
 
+from common.run import Run
 from mcp import ClientSession
 
 from benethos_mailbox_client import ApiError, MessageSummary, SyncMailboxClient
 
 from .mcp_session import READ_TOOLS, mcp_session, text_of
-from .run import Run
 
 WRITE_TOOLS = READ_TOOLS | {"update_messages", "create_folder", "update_folder"}
 # A keyword of this check alone, set and taken off again.

@@ -1,6 +1,6 @@
 """Live check of the configuration UI against the test accounts.
 
-    uv run python live/ui.py
+    uv run python live/mailbox-service/ui.py
 
 Starts a service of its own with a throwaway database, as mcp_stdio.py
 does, and adds the first test account through the API. Then it uses the
@@ -29,13 +29,13 @@ import re
 import sys
 
 import httpx
-from checks.accounts import accounts, imap_settings, read_env, register
-from checks.admin import Admin, csrf_of, ui_sign_in
-from checks.run import Run
-from checks.service import throwaway_service
-from checks.ui_factor import check_second_factor
-from checks.ui_mail import check_mail, check_writing
-from checks.ui_users import check_users
+from common.accounts import accounts, imap_settings, read_env, register
+from common.admin import Admin, csrf_of, ui_sign_in
+from common.run import Run
+from common.service import throwaway_service
+from service_common.ui_factor import check_second_factor
+from service_common.ui_mail import check_mail, check_writing
+from service_common.ui_users import check_users
 
 
 def check_sign_in(run: Run, browser: httpx.Client, admin: Admin) -> bool:

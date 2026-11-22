@@ -5,10 +5,10 @@ in the answer. Nothing is read from a mailbox."""
 
 from __future__ import annotations
 
+from common.run import Run
 from mcp import ClientSession
 
 from .mcp_session import text_of
-from .run import Run
 
 CORE = ["name", "version", "transport", "python", "mcp", "uptime_seconds"]
 

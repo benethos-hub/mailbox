@@ -1,7 +1,7 @@
 """Live check of the gmail adapter against a Gmail test account.
 
-    uv run python live/gmail.py --connect   # once: sign in in a browser
-    uv run python live/gmail.py             # the check, unattended
+    uv run python live/mailbox-service/gmail.py --connect   # once: sign in in a browser
+    uv run python live/mailbox-service/gmail.py             # the check, unattended
 
 Needs, in live/.env: the test account's address in LIVE_GMAIL_EMAIL, and
 the Google client of a Google Cloud project in LIVE_GOOGLE_CLIENT_ID and
@@ -47,24 +47,24 @@ from pathlib import Path
 from typing import Any
 
 import httpx
-from checks import capabilities
-from checks.accounts import accounts, read_env, register
-from checks.mail import (
+from common.accounts import accounts, read_env, register
+from common.mail import (
     feed_types,
     messages_with_subject,
     sweep,
     thread_holds,
 )
-from checks.own_service import (
+from common.processes import start_service, stop
+from common.run import Run
+from common.service import Service
+from service_common import capabilities
+from service_common.own_service import (
     SYNC_INTERVAL,
     URL,
     OwnService,
     account_of,
     wait_connected,
 )
-from checks.processes import start_service, stop
-from checks.run import Run
-from checks.service import Service
 
 from benethos_mailbox_client import SyncMailboxClient
 

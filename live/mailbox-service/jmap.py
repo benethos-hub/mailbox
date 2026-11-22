@@ -1,7 +1,7 @@
 """Live check of the JMAP adapter against the test mail server of our own
 (containers/test-mail-server/, Stalwart), never against another server.
 
-    uv run python live/jmap.py
+    uv run python live/mailbox-service/jmap.py
 
 A service of its own runs as a process, with SQLite in a temporary folder.
 Both accounts of the test server connect over JMAP with their passwords,
@@ -35,12 +35,12 @@ import sys
 from typing import Any
 
 import httpx
-from checks import capabilities
-from checks.accounts import read_env
-from checks.mail import delete_for_good, messages_with_subject, thread_holds
-from checks.run import Run, polled
-from checks.service import throwaway_service
-from checks.test_server import (
+from common.accounts import read_env
+from common.mail import delete_for_good, messages_with_subject, thread_holds
+from common.run import Run, polled
+from common.service import throwaway_service
+from service_common import capabilities
+from service_common.test_server import (
     HOST,
     JMAP_PORT,
     connect,
@@ -124,7 +124,7 @@ def checks(
         json={
             "to": [{"email": receiver["email"]}],
             "subject": title,
-            "text": "Sent by live/jmap.py between the test accounts.",
+            "text": "Sent by live/mailbox-service/jmap.py between the test accounts.",
         },
     )
     run.check("the first account sends through JMAP", sent.status_code == 200)
@@ -207,7 +207,7 @@ def check_read(run: Run, client: httpx.Client, base: str, message_id: str) -> No
     message = client.get(f"{base}/messages/{message_id}").json()
     run.check(
         "it reads the whole mail",
-        "live/jmap.py" in (message.get("text_body") or ""),
+        "live/mailbox-service/jmap.py" in (message.get("text_body") or ""),
     )
     thread_id = message.get("thread_id")
     held, said = thread_holds(client, base, message_id)
@@ -226,7 +226,7 @@ def check_draft(run: Run, client: httpx.Client, base: str, message_id: str) -> N
         drafts,
         json={
             "reference": {"message_id": message_id, "action": "reply"},
-            "text": "Draft of live/jmap.py, never sent.",
+            "text": "Draft of live/mailbox-service/jmap.py, never sent.",
         },
     )
     draft_id = draft.json().get("id", "?")
@@ -234,7 +234,7 @@ def check_draft(run: Run, client: httpx.Client, base: str, message_id: str) -> N
         f"{drafts}/{draft_id}",
         json={
             "reference": {"message_id": message_id, "action": "reply"},
-            "text": "Draft of live/jmap.py, replaced, never sent.",
+            "text": "Draft of live/mailbox-service/jmap.py, replaced, never sent.",
         },
     )
     # JMAP keeps a message as it was stored: the new draft has a new id.

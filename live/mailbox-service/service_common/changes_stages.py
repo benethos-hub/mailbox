@@ -1,18 +1,18 @@
-"""The stages of ``live/changes.py`` that change the test mail once it is
-there: flags, a folder of its own, a move by another client, replies and
+"""The stages of ``live/mailbox-service/changes.py`` that change the test
+mail once it is there: flags, a folder of its own, a move by another client, replies and
 forwards and the threads they make, a batch, drafts, and deleting it."""
 
 from __future__ import annotations
 
 import anyio
+from common.mail import feed_types, messages_with_subject
+from common.run import Run
 from fastapi.testclient import TestClient
 
 from benethos_mailbox_client import MessageSummary, SyncMailboxClient
 
 from .changes_trip import Trip, find_by_subject
 from .imap import OtherClient
-from .mail import feed_types, messages_with_subject
-from .run import Run
 
 FLAGGED = chr(92) + "Flagged"
 # Set and cleared again on the test mail.
@@ -39,7 +39,7 @@ def check_drafts(
         url,
         json={
             "reference": {"message_id": message_id, "action": "reply"},
-            "text": "Automatic draft of live/changes.py, never sent.",
+            "text": "Automatic draft of live/mailbox-service/changes.py, never sent.",
         },
     )
     draft_id = created.json().get("id", "?")
@@ -54,7 +54,10 @@ def check_drafts(
         f"{url}/{draft_id}",
         json={
             "reference": {"message_id": message_id, "action": "reply"},
-            "text": "Automatic draft of live/changes.py, replaced, never sent.",
+            "text": (
+                "Automatic draft of live/mailbox-service/changes.py, replaced,"
+                " never sent."
+            ),
         },
     )
     run.check(
@@ -83,7 +86,10 @@ def check_drafts(
         json={
             "to": [{"email": sender_email}],
             "subject": title,
-            "text": "Automatic draft of live/changes.py, sent to the test account.",
+            "text": (
+                "Automatic draft of live/mailbox-service/changes.py, sent to the"
+                " test account."
+            ),
         },
     )
     send_id = to_send.json().get("id", "?")
@@ -223,7 +229,7 @@ def reply_and_forward(trip: Trip) -> bool:
         send_url,
         json={
             "reference": {"message_id": trip.message_id, "action": "reply"},
-            "text": "Automatic reply of live/changes.py.",
+            "text": "Automatic reply of live/mailbox-service/changes.py.",
         },
     )
     reply = find_by_subject(trip.mailbox, trip.sender_id, f"Re: {subject}")
@@ -246,7 +252,7 @@ def reply_and_forward(trip: Trip) -> bool:
                 "forward_as": "attachment",
             },
             "to": [{"email": trip.sender["email"]}],
-            "text": "Automatic forward of live/changes.py.",
+            "text": "Automatic forward of live/mailbox-service/changes.py.",
         },
     )
     forward = find_by_subject(trip.mailbox, trip.sender_id, f"Fwd: {subject}")

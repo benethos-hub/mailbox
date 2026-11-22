@@ -9,12 +9,12 @@ from __future__ import annotations
 import secrets
 
 import anyio
+from common.run import Run
 from mcp import ClientSession
 
 from benethos_mailbox_client import Grant, SyncMailboxClient
 
 from .mcp_session import mcp_session
-from .run import Run
 
 SHARE = "share_attachment"
 LIST_CHANGED = "notifications/tools/list_changed"

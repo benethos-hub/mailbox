@@ -4,6 +4,14 @@ The manual checks in `live/`: what each one reads, sends, changes and
 deletes. They are scripts, outside `testpaths`, and no test of the
 suite reaches a mail server.
 
+Each package has a folder of its own: `live/mailbox-service/` holds the
+checks of the service, `live/mailbox-mcp/` those of the MCP server.
+What the scripts of one package share is in a folder beside them,
+`service_common/` and `mcp_common/`, what all share in `live/common/`.
+`live/pyproject.toml` installs `live/common/` into the development
+environment, so `uv sync` once after a pull, then each script runs from
+the repository root as `uv run python live/<package>/<name>.py`.
+
 They run against **test accounts**: on an IMAP server of our own, the
 Microsoft test account, the Gmail test account, and the test mail
 server in a container. The server's address and the list of test
@@ -33,7 +41,7 @@ nothing.
 
 ## `smoke.py`
 
-`uv run python live/smoke.py [--show] [--wrong-password]`
+`uv run python live/mailbox-service/smoke.py [--show] [--wrong-password]`
 
 Read-only, the folder `all` among it, and the `sender_check` of the
 newest message, without `--show` its result and reason only. It also
@@ -46,7 +54,7 @@ lists across all accounts and syncs each account once.
 
 ## `changes.py`
 
-`uv run python live/changes.py [--keep]`
+`uv run python live/mailbox-service/changes.py [--keep]`
 
 Sends one test mail from the second test account to the first, flags
 and moves it, replies, forwards and sends a draft back to the second,
@@ -60,9 +68,9 @@ folder, to look at in a mail client. Delete them by hand.
 
 ## `register.py`
 
-`MAILBOX_SERVICE_TOKEN=... uv run python live/register.py [--url URL] [--count N]`
+`MAILBOX_SERVICE_TOKEN=... uv run python live/mailbox-service/register.py [--url URL] [--count N]`
 
-`uv run python live/register.py --own-service [--count N]`
+`uv run python live/mailbox-service/register.py --own-service [--count N]`
 
 Adds the first two test accounts, or the first `N`, to a running
 service over its API and checks them. An account the service has
@@ -72,7 +80,7 @@ no token.
 
 ## `mcp_stdio.py`
 
-`uv run python live/mcp_stdio.py`
+`uv run python live/mailbox-mcp/mcp_stdio.py`
 
 Checks the MCP server over stdio against the test accounts, with a
 service and database of its own.
@@ -102,14 +110,14 @@ service and database of its own.
 
 ## `mcp_http.py`
 
-`uv run python live/mcp_http.py`
+`uv run python live/mailbox-mcp/mcp_http.py`
 
 Checks the MCP server over streamable HTTP behind its bearer token,
 read-only, with a service and database of its own.
 
 ## `ui.py`
 
-`uv run python live/ui.py`
+`uv run python live/mailbox-service/ui.py`
 
 Checks the configuration UI against the test accounts.
 
@@ -139,8 +147,8 @@ the password and a token of its user `admin`.
 
 ## `microsoft.py`
 
-`uv run python live/microsoft.py --connect` once (a person signs in in
-the browser), then `uv run python live/microsoft.py` checks the adapter
+`uv run python live/mailbox-service/microsoft.py --connect` once (a person signs in in
+the browser), then `uv run python live/mailbox-service/microsoft.py` checks the adapter
 against the Microsoft test account in `live/.env` with an app of your
 own, named there as well. With `--project` both use the project's app:
 `--connect` prints a code a person enters at Microsoft. How an app is
@@ -170,8 +178,8 @@ set up: [MICROSOFT.md](mailbox-service/MICROSOFT.md).
 
 ## `gmail.py`
 
-`uv run python live/gmail.py --connect` once (a person signs in in the
-browser), then `uv run python live/gmail.py` checks the adapter against
+`uv run python live/mailbox-service/gmail.py --connect` once (a person signs in in the
+browser), then `uv run python live/mailbox-service/gmail.py` checks the adapter against
 the Gmail test account in `live/.env` with the Google client of your
 own. How the client is set up: [GOOGLE.md](mailbox-service/GOOGLE.md).
 
@@ -188,7 +196,7 @@ own. How the client is set up: [GOOGLE.md](mailbox-service/GOOGLE.md).
 
 ## `pop3.py`
 
-`uv run python live/pop3.py`
+`uv run python live/mailbox-service/pop3.py`
 
 Checks the POP3 adapter against the test mail server in a container:
 one mail from the first account to the second, read, found by the sync
@@ -198,7 +206,7 @@ and deleted for good. The server is made by
 
 ## `jmap.py`
 
-`uv run python live/jmap.py`
+`uv run python live/mailbox-service/jmap.py`
 
 Checks the JMAP adapter against the same server, with a service of its
 own as a process: one mail from the first account to the second,
@@ -208,7 +216,7 @@ deleted for good on both sides.
 
 ## `imap.py`
 
-`uv run python live/imap.py`
+`uv run python live/mailbox-service/imap.py`
 
 Checks the IMAP adapter, with SMTP for sending, against the same server,
 with a service of its own as a process: one mail from the first account

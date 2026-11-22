@@ -1,10 +1,14 @@
 """Live check of the microsoft adapter against a Microsoft test account.
 
-    uv run python live/microsoft.py --connect   # once: sign in in a browser
-    uv run python live/microsoft.py             # the check, unattended
+    # once: sign in in a browser
+    uv run python live/mailbox-service/microsoft.py --connect
+    # the check, unattended
+    uv run python live/mailbox-service/microsoft.py
 
-    uv run python live/microsoft.py --project --connect   # with a code
-    uv run python live/microsoft.py --project             # the check
+    # with a code
+    uv run python live/mailbox-service/microsoft.py --project --connect
+    # the check
+    uv run python live/mailbox-service/microsoft.py --project
 
 Needs, in live/.env: the test account's address in LIVE_MICROSOFT_EMAIL.
 Listing the address there confirms it as a test account (CLAUDE.md,
@@ -57,12 +61,15 @@ from pathlib import Path
 from typing import Any
 
 import httpx
-from checks.accounts import accounts, read_env, register
-from checks.mail import (
+from common.accounts import accounts, read_env, register
+from common.mail import (
     sweep,
 )
-from checks.microsoft_mail import bounces, inline, large, marks, send_and_check
-from checks.own_service import (
+from common.processes import start_service, stop
+from common.run import Run
+from common.service import Service
+from service_common.microsoft_mail import bounces, inline, large, marks, send_and_check
+from service_common.own_service import (
     SYNC_INTERVAL,
     URL,
     WAIT,
@@ -70,9 +77,6 @@ from checks.own_service import (
     account_of,
     wait_connected,
 )
-from checks.processes import start_service, stop
-from checks.run import Run
-from checks.service import Service
 
 from benethos_mailbox_client import SyncMailboxClient
 

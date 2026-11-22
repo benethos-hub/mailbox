@@ -255,13 +255,25 @@ def test_no_test_reads_two_private_attributes_deep() -> None:
     assert not stale, "remove from DEEP:\n  " + "\n  ".join(stale)
 
 
+def _live_scripts() -> list[Path]:
+    """The live scripts: the files in the folder of each package under
+    live/, beside the folder of what they share."""
+    return sorted((ROOT / "live").glob("*/*.py"))
+
+
+def _live_shared() -> list[Path]:
+    """The folders of what the live scripts share: live/common/ for every
+    package, and one in the folder of a package for its scripts alone."""
+    return sorted(p.parent for p in (ROOT / "live").rglob("__init__.py"))
+
+
 def test_no_live_script_imports_another() -> None:
-    """What the live checks share is in live/checks/ (ARCHITECTURE 13): a
-    script is no library, and importing one loads all it needs."""
-    live = ROOT / "live"
-    scripts = {path.stem for path in live.glob("*.py")}
+    """What the live checks share is in live/common/ and in the shared
+    folder of a package (ARCHITECTURE 13): a script is no library, and
+    importing one loads all it needs."""
+    scripts = {path.stem for path in _live_scripts()}
     violations = []
-    for path in sorted(live.glob("*.py")):
+    for path in _live_scripts():
         for node in ast.walk(ast.parse(path.read_text("utf-8"))):
             if isinstance(node, ast.ImportFrom) and not node.level:
                 named = [node.module or ""]
@@ -278,17 +290,20 @@ def test_no_live_script_imports_another() -> None:
     )
 
 
-def test_the_package_of_the_live_checks_names_each_module() -> None:
-    """The docstring of live/checks/__init__.py says what each module
-    holds, so a new one is named there."""
-    checks = ROOT / "live" / "checks"
-    told = ast.get_docstring(ast.parse((checks / "__init__.py").read_text("utf-8")))
-    missing = [
-        path.stem
-        for path in sorted(checks.glob("*.py"))
-        if path.stem != "__init__" and f"``{path.stem}``" not in (told or "")
-    ]
-    assert not missing, "name in live/checks/__init__.py: " + ", ".join(missing)
+def test_the_shared_code_of_the_live_checks_names_each_module() -> None:
+    """The docstring of each shared folder's __init__.py says what each
+    module holds, so a new one is named there."""
+    shared = _live_shared()
+    assert [p.name for p in shared] == ["common", "mcp_common", "service_common"]
+    missing = []
+    for folder in shared:
+        told = ast.get_docstring(ast.parse((folder / "__init__.py").read_text("utf-8")))
+        missing += [
+            f"{folder.name}/{path.stem}"
+            for path in sorted(folder.glob("*.py"))
+            if path.stem != "__init__" and f"``{path.stem}``" not in (told or "")
+        ]
+    assert not missing, "name in its __init__.py: " + ", ".join(missing)
 
 
 def test_no_package_entry_defines_a_class() -> None:

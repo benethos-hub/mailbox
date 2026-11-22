@@ -23,6 +23,7 @@ dev = [
     { name = "benethos-mailbox-common", extras = ["all"], editable = "packages/mailbox-common" },
     { name = "benethos-mailbox-mcp", editable = "packages/mailbox-mcp" },
     { name = "benethos-mailbox-service", editable = "packages/mailbox-service" },
+    { name = "mailbox-live", editable = "live" },
     { name = "mcp", extras = ["cli"], specifier = ">=2.3.0,<3" },
     { name = "mypy", specifier = ">=2.1.0" },
     { name = "pytest", specifier = ">=9.1.1" },
@@ -1070,6 +1071,11 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/c4/d7/f563218dc47a38f06e3504ae7f67cab188d484848cec50a363a527050a17/librt-0.17.0-cp315-cp315t-win_amd64.whl", hash = "sha256:9c67ede964192c970426aa09d6a7ccfb6a5e41b75462309d93547c6a11e15b10", size = 140448, upload-time = "2026-11-19T14:10:47.136Z" },
     { url = "https://files.pythonhosted.org/packages/7b/75/c3d79629d6894242ffbb70b34d48006f6a5c25127958748aba71d19ce6fa/librt-0.17.0-cp315-cp315t-win_arm64.whl", hash = "sha256:bdc73adb6376765fa8955ba936ed297277c814395eac82e862c621ff3b354602", size = 128548, upload-time = "2026-11-19T14:10:48.224Z" },
 ]
+
+[[package]]
+name = "mailbox-live"
+version = "0"
+source = { editable = "live" }
 
 [[package]]
 name = "markdown-it-py"

@@ -1,4 +1,4 @@
-"""The mail of ``live/ui.py``: reading it through the pages, and writing
+"""The mail of ``live/mailbox-service/ui.py``: reading it through the pages, and writing
 on the test accounts. Folders and drafts, and one mail from the first
 test account to the second, each removed again."""
 
@@ -10,9 +10,8 @@ import secrets
 from urllib.parse import parse_qs, urlsplit
 
 import httpx
-
-from .admin import csrf_of
-from .run import Run, polled
+from common.admin import csrf_of
+from common.run import Run, polled
 
 
 def check_mail(run: Run, browser: httpx.Client, account_id: str) -> None:

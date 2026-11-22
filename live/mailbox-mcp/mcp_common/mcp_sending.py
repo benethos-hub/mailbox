@@ -1,4 +1,4 @@
-"""Sending through the MCP server of ``live/mcp_stdio.py``: mails from
+"""Sending through the MCP server of ``live/mailbox-mcp/mcp_stdio.py``: mails from
 the first test account to the second only, grants that narrow sending,
 the audit, and the test mails deleted for good afterwards."""
 
@@ -6,12 +6,13 @@ from __future__ import annotations
 
 import secrets
 
+from common.admin import user_token
+from common.mail import delete_for_good, messages_with_subject
+from common.run import Run
+
 from benethos_mailbox_client import MessageSummary, SyncMailboxClient
 
-from .admin import user_token
-from .mail import delete_for_good, messages_with_subject
 from .mcp_session import mcp_session, text_of
-from .run import Run
 
 
 def arrived(

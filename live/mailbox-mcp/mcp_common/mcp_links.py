@@ -5,12 +5,12 @@ would, then refused. Nothing is sent, and the URL is never printed."""
 from __future__ import annotations
 
 import httpx
+from common.run import Run
 from mcp import ClientSession
 
 from benethos_mailbox_client import SyncMailboxClient
 
 from .mcp_session import mcp_session, text_of
-from .run import Run
 
 # The REST client reads the attachment for the comparison up to this.
 MAX_BYTES = 50 * 1024 * 1024

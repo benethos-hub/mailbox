@@ -1,7 +1,7 @@
 """Live check of the IMAP adapter against the test mail server of our own
 (containers/test-mail-server/, Stalwart), never against another server.
 
-    uv run python live/imap.py
+    uv run python live/mailbox-service/imap.py
 
 A service of its own runs as a process, with SQLite in a temporary folder.
 Both accounts of the test server connect over IMAP with SMTP for sending,
@@ -36,12 +36,12 @@ import sys
 from typing import Any
 
 import httpx
-from checks import capabilities
-from checks.accounts import read_env
-from checks.mail import delete_for_good, messages_with_subject, thread_holds
-from checks.run import Run, polled
-from checks.service import throwaway_service
-from checks.test_server import (
+from common.accounts import read_env
+from common.mail import delete_for_good, messages_with_subject, thread_holds
+from common.run import Run, polled
+from common.service import throwaway_service
+from service_common import capabilities
+from service_common.test_server import (
     HOST,
     IMAP_TLS,
     SMTP_TLS,
@@ -124,7 +124,7 @@ def checks(
         json={
             "to": [{"email": receiver["email"]}, {"email": nobody}],
             "subject": title,
-            "text": "Sent by live/imap.py between the test accounts.",
+            "text": "Sent by live/mailbox-service/imap.py between the test accounts.",
         },
     )
     refused = [r.lower() for r in sent.json().get("refused", [])]
@@ -186,7 +186,7 @@ def check_read(run: Run, client: httpx.Client, base: str, message_id: str) -> No
     message = client.get(f"{base}/messages/{message_id}").json()
     run.check(
         "it reads the whole mail",
-        "live/imap.py" in (message.get("text_body") or ""),
+        "live/mailbox-service/imap.py" in (message.get("text_body") or ""),
     )
     thread_id = message.get("thread_id")
     held, said = thread_holds(client, base, message_id)
@@ -251,7 +251,7 @@ def check_draft(run: Run, client: httpx.Client, base: str, message_id: str) -> N
         drafts,
         json={
             "reference": {"message_id": message_id, "action": "reply"},
-            "text": "Draft of live/imap.py, never sent.",
+            "text": "Draft of live/mailbox-service/imap.py, never sent.",
         },
     )
     draft_id = draft.json().get("id", "?")
@@ -259,7 +259,7 @@ def check_draft(run: Run, client: httpx.Client, base: str, message_id: str) -> N
         f"{drafts}/{draft_id}",
         json={
             "reference": {"message_id": message_id, "action": "reply"},
-            "text": "Draft of live/imap.py, replaced, never sent.",
+            "text": "Draft of live/mailbox-service/imap.py, replaced, never sent.",
         },
     )
     listed = [d["id"] for d in client.get(drafts).json().get("items", [])]

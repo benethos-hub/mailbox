@@ -108,14 +108,14 @@ Everything real mail will depend on, before any real mailbox is connected.
   `MAILBOX_SERVICE_CHANGES_DAYS` days (6.5)**, done
 - **`GET {acc}/changes` and `GET /v1/changes` with an opaque state (6.5)**,
   done: paged with `more`, `410 changes_expired` for a state the feed no
-  longer knows, live-checked in `live/changes.py`
-- **The MCP tool `whats_new` (8)**, done, live-checked in `live/mcp_stdio.py`
+  longer knows, live-checked in `live/mailbox-service/changes.py`
+- **The MCP tool `whats_new` (8)**, done, live-checked in `live/mailbox-mcp/mcp_stdio.py`
 - **IMAP: CONDSTORE where the server offers it, so flag changes from other
   clients reach the feed (6.5)**, done, live-checked
 - **Microsoft: Graph delta queries in the worker, so the feed covers
-  Microsoft accounts (5.4, 6.5)**, done, live-checked in `live/microsoft.py`
+  Microsoft accounts (5.4, 6.5)**, done, live-checked in `live/mailbox-service/microsoft.py`
 - **Webhooks: register, sign with HMAC-SHA256, deliver with retries
-  (6.5)**, done, live-checked in `live/changes.py` against a receiver at
+  (6.5)**, done, live-checked in `live/mailbox-service/changes.py` against a receiver at
   127.0.0.1. Their pages in the UI came with phase 4b.
 - decided 2026-09-25: IMAP and Microsoft in this phase, CONDSTORE, 7 days
   by default (CONCEPT 6.5)
@@ -128,7 +128,7 @@ Everything real mail will depend on, before any real mailbox is connected.
   NIST rules, the same answer for a wrong name (7.5)**, done
 - **The UI signs in with name and password, the session holds the user,
   a changed password ends the other sessions (1, 7.5)**, done,
-  live-checked in `live/ui.py`
+  live-checked in `live/mailbox-service/ui.py`
 - **Change the own password, set another user's within one's rights,
   change at the next sign-in after that (7.5)**, done, live-checked
 - **`users create-admin` with a one-time password, `users set-password`
@@ -160,7 +160,7 @@ Scope, page types and the rules for every page in [UI.md](../mailbox-service/UI.
   each (schema 11)
 - **Status and the recovery key (UI 6.5)**, done
 - **Paging and filters on every list (UI 4.5, 4.6)**, done
-- all live-checked in `live/ui.py`
+- all live-checked in `live/mailbox-service/ui.py`
 - decided 2026-09-27: UI.md as written, the recovery key for `admin`
   after the password, the sync state in memory, a delivery log, no
   Changes page yet (UI 10)
@@ -172,7 +172,7 @@ Scope, page types and the rules for every page in [UI.md](../mailbox-service/UI.
 - **The UI sign-in switch `ui_sign_in` on the user: off for new users,
   in the API and the UI, the password deleted when it goes off
   (CONCEPT 7.5, UI 6.3)**, done: schema 12, live-checked in
-  `live/ui.py`
+  `live/mailbox-service/ui.py`
 - **Nobody disables itself or takes its own UI sign-in (7.5)**, done
 - decided 2026-09-27: a switch rather than a password removed by hand,
   new users are API users by default

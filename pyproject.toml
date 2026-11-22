@@ -18,6 +18,9 @@ benethos-mailbox-service = { workspace = true }
 benethos-mailbox-mcp = { workspace = true }
 benethos-mailbox-client = { workspace = true }
 benethos-mailbox-common = { workspace = true }
+# The live checks' shared code, live/pyproject.toml: not a member, never
+# published.
+mailbox-live = { path = "live", editable = true }
 
 [dependency-groups]
 dev = [
@@ -36,6 +39,8 @@ dev = [
     # MCP Inspector.
     "mcp[cli]>=2.3.0,<3",
     "types-defusedxml>=0.7",
+    # What the live checks share, importable from every folder of live/.
+    "mailbox-live",
 ]
 # The configuration UI in real browsers, packages/mailbox-service/tests/
 # browser: `uv run --group browser playwright install` once, then

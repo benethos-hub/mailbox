@@ -68,8 +68,8 @@ export MAILBOX_SERVICE_DISCOVERY_INTERNAL_HOSTS='["localhost","127.0.0.1"]'
 process then trusts only the test CA. Set it for a process that talks to
 this server alone.
 
-`uv run python live/pop3.py`, `uv run python live/jmap.py` and
-`uv run python live/imap.py` check the POP3, the JMAP and the IMAP
+`uv run python live/mailbox-service/pop3.py`, `uv run python live/mailbox-service/jmap.py` and
+`uv run python live/mailbox-service/imap.py` check the POP3, the JMAP and the IMAP
 adapter against this server, with both accounts, as
 `live/.env` names them in `LIVE_TEST_SERVER_ACCOUNTS`. Each sets
 `SSL_CERT_FILE` for itself and connects to `127.0.0.1`: on Windows

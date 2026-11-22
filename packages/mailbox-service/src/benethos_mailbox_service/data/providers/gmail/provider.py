@@ -12,7 +12,7 @@ push: Gmail pushes through Cloud Pub/Sub only, which needs more of
 Google Cloud set up. The worker asks instead.
 
 The parts are in ``api`` (the wire), ``messages``, ``folders``,
-``sending`` (with the drafts) and ``changes``. ``live/gmail.py`` checks
+``sending`` (with the drafts) and ``changes``. ``live/mailbox-service/gmail.py`` checks
 them against a Gmail account.
 """
 

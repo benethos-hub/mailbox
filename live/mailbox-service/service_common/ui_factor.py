@@ -14,12 +14,11 @@ import time
 from datetime import UTC, datetime
 
 import httpx
+from common.admin import Admin, csrf_of, ui_sign_in
+from common.processes import program, run_dir
+from common.run import Run
 
 from benethos_mailbox_service.data.secrets import totp
-
-from .admin import Admin, csrf_of, ui_sign_in
-from .processes import program, run_dir
-from .run import Run
 
 NAME = "ui-live-factor"
 CODES = r"<li>([0-9A-Z]{5}-[0-9A-Z]{5}-[0-9A-Z]{5})</li>"
