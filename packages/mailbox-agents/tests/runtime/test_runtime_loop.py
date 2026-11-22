@@ -18,9 +18,10 @@ from benethos_mailbox_agents.contract import (
 )
 from benethos_mailbox_agents.errors import MailboxUnavailableError, StateFileError
 from benethos_mailbox_agents.records import Event, MailMessage, MessageRef
-from benethos_mailbox_agents.runtime.health import check
+from benethos_mailbox_agents.runtime.health import check, window
 from benethos_mailbox_agents.runtime.loop import Worker
 from benethos_mailbox_agents.runtime.model import Calls
+from benethos_mailbox_agents.runtime.steps import backoff
 
 from ..agents_fake import ACCOUNT, wire_message
 from ..agents_helpers import Echo, Wired, settings, worker
@@ -336,6 +337,11 @@ async def test_the_loop_runs_until_stopped(world: Wired) -> None:
 
 
 async def test_a_long_wait_for_the_gateway_stays_healthy(world: Wired) -> None:
+    """The loop waits longer than the health window allows, yet stays
+    healthy. The gateway answers at once, so its timeout only widens the
+    window: the check then has room for a busy test machine, and the fourth
+    wait is still longer than the window."""
+
     def now() -> datetime:
         return datetime.now(UTC)
 
@@ -343,10 +349,11 @@ async def test_a_long_wait_for_the_gateway_stays_healthy(world: Wired) -> None:
         settings(
             stage="full",
             poll_seconds=0.05,
-            gateway_timeout_seconds=0.05,
+            gateway_timeout_seconds=0.45,
             backoff_ceiling_seconds=10,
         )
     )
+    assert backoff(agent.settings, 4) > window(agent.settings).total_seconds()
     run = Worker(
         agent=agent,
         store=world.store,
@@ -362,14 +369,15 @@ async def test_a_long_wait_for_the_gateway_stays_healthy(world: Wired) -> None:
 
     async def watch() -> None:
         started = time.monotonic()
-        while time.monotonic() - started < 1.5:
+        while time.monotonic() - started < 2:
             seen.append(check(world.store, agent.settings, now()).healthy)
             await asyncio.sleep(0.01)
         stop.set()
 
     await asyncio.wait_for(asyncio.gather(run.run(stop), watch()), timeout=10)
 
-    assert len(world.fake_gateway.requests) >= 3
+    # Four tries: the fourth wait, longer than the window, has begun.
+    assert len(world.fake_gateway.requests) >= 4
     assert all(seen)
 
 
