@@ -1,14 +1,22 @@
 """The scripts of ``assets/``: ``build.py`` makes the shipped images
 from the sources in ``assets/brand/`` and renders the architecture
 diagram of the READMEs, ``icons.py`` makes the UI's icon sprite from a
-pinned Bootstrap Icons package."""
+pinned Bootstrap Icons package, ``mailbox-agents/build.py`` renders the
+agents' icon and diagram and stamps each PNG with its sources."""
 
 from __future__ import annotations
 
+import hashlib
+import re
+import struct
+import subprocess
+import zlib
 from pathlib import Path
 from types import ModuleType
 
 import pytest
+
+from benethos_mailbox_agents.contract import discover
 
 from .repository_helpers import ROOT
 from .scripts_helpers import script_module
@@ -188,4 +196,165 @@ def test_the_script_turns_an_icon_into_a_symbol() -> None:
     assert made == (
         '<symbol id="plus" viewBox="0 0 16 16">'
         '<path d="M8 4"/> <path d="M1 1"/></symbol>'
+    )
+
+
+# --- mailbox-agents/build.py ----------------------------------------------------------
+
+AGENTS_BUILD = ROOT / "assets" / "mailbox-agents" / "build.py"
+
+
+@pytest.fixture(scope="module")
+def agents_build() -> ModuleType:
+    return script_module("assets_agents_build", AGENTS_BUILD)
+
+
+def _chunk(kind: bytes, data: bytes) -> bytes:
+    return (
+        struct.pack(">I", len(data))
+        + kind
+        + data
+        + struct.pack(">I", zlib.crc32(kind + data))
+    )
+
+
+PNG = (
+    b"\x89PNG\r\n\x1a\n"
+    + _chunk(b"IHDR", struct.pack(">IIBBBBB", 1, 1, 8, 6, 0, 0, 0))
+    + _chunk(b"IDAT", zlib.compress(b"\0\0\0\0\0"))
+    + _chunk(b"IEND", b"")
+)
+
+
+def _texts(png: bytes) -> list[bytes]:
+    position, found = 8, []
+    while position < len(png):
+        (length,) = struct.unpack(">I", png[position : position + 4])
+        if png[position + 4 : position + 8] == b"tEXt":
+            found.append(png[position + 8 : position + 8 + length])
+        position += 12 + length
+    return found
+
+
+def test_the_stamp_names_the_hash_of_the_svg(agents_build: ModuleType) -> None:
+    stamped = agents_build.stamped(PNG, {"icon.svg": "<svg/>"})
+
+    (text,) = _texts(stamped)
+    assert text.startswith(b"Source\0icon.svg sha256:")
+    assert stamped.endswith(PNG[33:])
+
+
+def test_another_svg_gives_another_png_and_one_stamp_only(
+    agents_build: ModuleType,
+) -> None:
+    first = agents_build.stamped(PNG, {"icon.svg": "<svg><title>a</title></svg>"})
+    second = agents_build.stamped(first, {"icon.svg": "<svg><title>b</title></svg>"})
+
+    assert first != second
+    assert len(_texts(second)) == 1
+    assert (
+        agents_build.stamped(second, {"icon.svg": "<svg><title>b</title></svg>"})
+        == second
+    )
+
+
+@pytest.mark.parametrize(
+    "png",
+    [PNG[:35], PNG[:60], PNG + b"\0\1", PNG[:-12]],
+    ids=["length-cut", "chunk-cut", "after-iend", "no-iend"],
+)
+def test_a_png_cut_short_or_with_bytes_after_its_end_is_refused(
+    agents_build: ModuleType, png: bytes
+) -> None:
+    with pytest.raises(ValueError, match="PNG"):
+        agents_build.stamped(png, {"icon.svg": "<svg/>"})
+
+
+def test_a_browser_that_writes_no_screenshot_leaves_the_png_as_it_was(
+    agents_build: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    icon = tmp_path / "icon.png"
+    icon.write_bytes(PNG)
+    monkeypatch.setattr(agents_build, "ICON", icon)
+    monkeypatch.setattr(agents_build, "_browser", lambda: "chromium")
+    monkeypatch.setattr(
+        agents_build.subprocess,
+        "run",
+        lambda *args, **kwargs: subprocess.CompletedProcess(args, 0, b"", b""),
+    )
+
+    with pytest.raises(RuntimeError, match="no screenshot for icon.png"):
+        agents_build.render_icon()
+
+    assert icon.read_bytes() == PNG
+
+
+def test_a_file_that_is_no_png_is_refused(agents_build: ModuleType) -> None:
+    with pytest.raises(ValueError):
+        agents_build.stamped(b"GIF89a", {"icon.svg": "<svg/>"})
+
+
+def test_each_source_gets_a_stamp_of_its_own_in_order(agents_build: ModuleType) -> None:
+    sources = {"page.html": "<html></html>", "icon.svg": "<svg/>"}
+
+    found = _texts(agents_build.stamped(agents_build.stamped(PNG, {"x": "y"}), sources))
+
+    assert [text.split(b" ")[0] for text in found] == [
+        b"Source\0page.html",
+        b"Source\0icon.svg",
+    ]
+
+
+def _expected(*sources: Path) -> list[bytes]:
+    return [
+        b"Source\0"
+        + f"{source.name} sha256:".encode()
+        + hashlib.sha256(source.read_text("utf-8").encode("utf-8")).hexdigest().encode()
+        for source in sources
+    ]
+
+
+def test_each_versioned_png_carries_the_stamp_of_its_sources(
+    agents_build: ModuleType,
+) -> None:
+    icon, page = agents_build.ICON_SOURCE, agents_build.DIAGRAM_SOURCE
+    expected = {
+        agents_build.ICON: _expected(icon),
+        **{target: _expected(page, icon) for target in agents_build.DIAGRAMS},
+    }
+
+    for png, stamps in expected.items():
+        assert _texts(png.read_bytes()) == stamps, png.name
+
+
+def test_the_diagram_names_every_agent(agents_build: ModuleType) -> None:
+    page = agents_build.DIAGRAM_SOURCE.read_text("utf-8")
+    listed = re.search(r'<ul class="agents">(.*?)</ul>', page, flags=re.DOTALL)
+
+    assert listed is not None
+    names = re.findall(r"<li><code>(\w+)</code></li>", listed.group(1))
+    assert sorted(names) == sorted(discover())
+
+
+def _css_size(page: str) -> tuple[int, int]:
+    found = re.search(r"html, body \{[^}]*width: (\d+)px; height: (\d+)px", page)
+    assert found is not None
+    return int(found.group(1)), int(found.group(2))
+
+
+def test_each_png_has_the_size_its_page_is_drawn_at(agents_build: ModuleType) -> None:
+    sizes = {
+        agents_build.ICON: (agents_build.ICON_SIZE, 1),
+        **{
+            png: (agents_build.DIAGRAM_SIZE, agents_build.DIAGRAM_SCALE)
+            for png in agents_build.DIAGRAMS
+        },
+    }
+
+    for png, ((width, height), scale) in sizes.items():
+        header = png.read_bytes()[16:24]
+        assert struct.unpack(">II", header) == (width * scale, height * scale), png.name
+    assert (
+        _css_size(agents_build.DIAGRAM_SOURCE.read_text("utf-8"))
+        == agents_build.DIAGRAM_SIZE
     )
