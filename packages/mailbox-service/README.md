@@ -334,7 +334,8 @@ access log), and a request as method, path and status with its name:
 2026-09-28T10:14:03.418+02:00 INFO     http                             POST /ui/login 303 See Other 127.0.0.1:52344
 ```
 
-`NO_COLOR` set to any value keeps the plain lines at a terminal too.
+`NO_COLOR` set to a value that is not empty keeps the plain lines at a
+terminal too.
 
 `MAILBOX_SERVICE_LOG_FORMAT=json` writes each line as one JSON object
 instead, for a log collector, with `time`, `level`, `source`, `message`

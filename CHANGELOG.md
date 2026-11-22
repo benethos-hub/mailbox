@@ -31,6 +31,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   how many it counts and the `--limit` that counts all. Before, the 50
   newest looked like every message, and an invoice outside them was
   missing from the senders without a word.
+- `benethos-mailbox-service` and `benethos-mailbox-mcp`: `NO_COLOR` set
+  but empty no longer turns off the colours of the log at a terminal, as
+  no-color.org has it. `benethos-mailbox-common`: `colours_wanted` takes
+  the stream to write to, stderr when none is given.
 
 ### Fixed
 
