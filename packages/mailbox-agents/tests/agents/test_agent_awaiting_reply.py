@@ -31,7 +31,8 @@ from benethos_mailbox_agents.records import Address, MailMessage, MessageRef
 from benethos_mailbox_agents.runtime.loop import Worker
 
 from ..agents_fake import ACCOUNT, wire_message
-from ..agents_helpers import Clock, Wired, settings, wired
+from ..agents_helpers import Wired, settings, wired
+from ..clocks import Clock
 
 ME = "me@example.test"
 PARTNER = "partner@partner.example"

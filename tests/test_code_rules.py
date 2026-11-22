@@ -118,6 +118,23 @@ def test_a_helper_of_the_tests_is_named_after_its_kind() -> None:
     assert not violations, "a helper named otherwise:\n  " + "\n  ".join(violations)
 
 
+CLOCKS = {"Clock", "Seconds"}
+
+
+def test_a_clock_a_test_moves_is_in_clocks() -> None:
+    """The clocks a test moves itself are in ``clocks.py``
+    (docs/mailbox-service/ARCHITECTURE.md 13), in the tests of all five
+    packages."""
+    violations = [
+        f"{path.relative_to(ROOT).as_posix()}:{node.lineno} {node.name}"
+        for path in sorted((ROOT / "packages").glob("*/tests/**/*.py"))
+        if path.stem != "clocks"
+        for node in ast.walk(ast.parse(path.read_text("utf-8")))
+        if isinstance(node, ast.ClassDef) and node.name in CLOCKS
+    ]
+    assert not violations, "a clock outside clocks.py:\n  " + "\n  ".join(violations)
+
+
 def _helpers_imported(path: Path) -> Iterator[Path]:
     """The helpers of the tests a module imports by a relative import."""
     for node in ast.walk(ast.parse(path.read_text("utf-8"))):
