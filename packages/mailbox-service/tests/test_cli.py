@@ -11,6 +11,8 @@ from benethos_mailbox_service import __version__, config
 from benethos_mailbox_service.cli import main, parser
 from benethos_mailbox_service.config import Settings, load_settings
 
+from .source_helpers import REPOSITORY
+
 
 def test_version(capsys: pytest.CaptureFixture[str]) -> None:
     with pytest.raises(SystemExit) as exc:
@@ -112,12 +114,7 @@ def test_env_example_holds_the_defaults(monkeypatch: pytest.MonkeyPatch) -> None
         "MAILBOX_SERVICE_SYNC_INTERVAL",
     ):
         monkeypatch.delenv(name, raising=False)
-    example = (
-        Path(__file__).resolve().parents[3]
-        / "config"
-        / "benethos-mailbox-service"
-        / ".env.example"
-    )
+    example = REPOSITORY / "config" / "benethos-mailbox-service" / ".env.example"
     from_file = Settings(_env_file=example)  # type: ignore[call-arg]
     defaults = Settings(_env_file=None)  # type: ignore[call-arg]
     assert from_file == defaults

@@ -4,7 +4,6 @@ change to a tool's description, schema or hints shows in review."""
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 import anyio
 import pytest
@@ -12,9 +11,9 @@ import pytest
 from benethos_mailbox_mcp import cli, server
 from benethos_mailbox_mcp.tools import TOOLS
 
-COMMITTED = (
-    Path(__file__).resolve().parents[3] / "docs" / "mailbox-mcp" / "mcp-tools.json"
-)
+from .repository_helpers import ROOT
+
+COMMITTED = ROOT / "docs" / "mailbox-mcp" / "mcp-tools.json"
 
 
 async def test_the_committed_tools_are_the_codes() -> None:

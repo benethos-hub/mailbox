@@ -30,6 +30,7 @@ from benethos_mailbox_mcp.tools import (
     writing,
 )
 
+from .repository_helpers import ROOT
 from .rights_helpers import EVERY_OPERATION
 
 READ = ["get_message", "list_all_messages", "list_folders", "list_messages"]
@@ -254,7 +255,7 @@ HINTS = {
 README = Path(__file__).resolve().parents[1] / "README.md"
 # The repository's README repeats the table short, for directories that
 # read the tools from it.
-ROOT_README = Path(__file__).resolve().parents[3] / "README.md"
+ROOT_README = ROOT / "README.md"
 
 
 @pytest.mark.parametrize("readme", [README, ROOT_README], ids=["package", "root"])

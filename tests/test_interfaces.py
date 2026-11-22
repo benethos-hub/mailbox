@@ -6,13 +6,11 @@ read like code: a removed or changed one breaks those who import it."""
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 
 from .interface import written
+from .repository_helpers import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 RECORDS = {
     "benethos_mailbox_client": "docs/mailbox-client/client-interface.json",
     "benethos_mailbox_common": "docs/mailbox-common/common-interface.json",

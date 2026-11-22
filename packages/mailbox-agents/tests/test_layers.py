@@ -423,16 +423,6 @@ def test_a_test_module_imports_no_other(path: Path) -> None:
                 assert not alias.name.startswith("test_"), f"imports {alias.name}"
 
 
-@pytest.mark.parametrize("path", sorted(TESTS.rglob("test_*.py")), ids=lambda p: p.name)
-def test_a_test_module_takes_root_from_the_helpers(path: Path) -> None:
-    """The root of the repository is ``agents_helpers.ROOT``, found once."""
-    for node in ast.parse(path.read_text(encoding="utf-8")).body:
-        if isinstance(node, (ast.Assign, ast.AnnAssign)):
-            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
-            names = [t.id for t in targets if isinstance(t, ast.Name)]
-            assert "ROOT" not in names
-
-
 def _module(path: Path) -> str:
     """The module of ``path``, a package by its ``__init__``."""
     parts = path.relative_to(SOURCE).with_suffix("").parts

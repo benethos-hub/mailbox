@@ -61,6 +61,46 @@ def test_no_test_module_imports_another() -> None:
     assert not violations, "imports a test module:\n  " + "\n  ".join(violations)
 
 
+def _root_found(path: Path, source: str | None = None) -> list[int]:
+    """The lines where ``path``, or ``source`` read as at its place, climbs
+    from its own place to the root of the repository with ``parents[n]``."""
+    depth = len(path.relative_to(ROOT).parts) - 1
+    text = path.read_text("utf-8") if source is None else source
+    return [
+        node.lineno
+        for node in ast.walk(ast.parse(text))
+        if isinstance(node, ast.Subscript)
+        and isinstance(node.value, ast.Attribute)
+        and node.value.attr == "parents"
+        and isinstance(node.slice, ast.Constant)
+        and node.slice.value == depth
+    ]
+
+
+def test_a_suite_finds_the_root_of_the_repository_once() -> None:
+    """Each suite, the one here and the one of each package, names the
+    root of the repository in one helper, a ``<subject>_helpers.py``, and
+    its modules import it from there."""
+    suites = [ROOT / "tests", *sorted((ROOT / "packages").glob("*/tests"))]
+    violations = [
+        f"{path.relative_to(ROOT).as_posix()}:{line}"
+        for suite in suites
+        for path in sorted(suite.rglob("*.py"))
+        if not path.stem.endswith("_helpers")
+        for line in _root_found(path)
+    ]
+    assert not violations, "the root found again:\n  " + "\n  ".join(violations)
+
+
+def test_the_check_of_the_root_finds_a_climb() -> None:
+    """At packages/<package>/tests/, the root is three folders up, and a
+    climb of one folder is no climb to it."""
+    probe = ROOT / "packages" / "mailbox-mcp" / "tests" / "probe.py"
+    source = "ROOT = Path(__file__).resolve().parents[3]\nX = p.parents[1]\n"
+
+    assert _root_found(probe, source) == [1]
+
+
 # A module of a test folder that is no test (docs/mailbox-service/ARCHITECTURE.md 13).
 HELPER = re.compile(r"conftest|clocks|.+_fake(_.+)?|.+_adapter|.+_helpers|__init__")
 

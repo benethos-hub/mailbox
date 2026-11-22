@@ -7,6 +7,8 @@ from pathlib import Path
 
 PACKAGE = "benethos_mailbox_service"
 ROOT = Path(__file__).resolve().parents[1] / "src" / PACKAGE
+# The root of the repository, found once for the suite.
+REPOSITORY = Path(__file__).resolve().parents[3]
 
 HELPERS = "common"
 # Assemble the app from the layers and may therefore reach anywhere.

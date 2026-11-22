@@ -9,7 +9,7 @@ import ast
 import re
 from pathlib import Path
 
-from .source_helpers import HELPERS, PACKAGE, ROOT, modules, own_part
+from .source_helpers import HELPERS, PACKAGE, REPOSITORY, ROOT, modules, own_part
 
 # The calls that write a line at INFO or above (docs/mailbox-service/LOGGING.md rule
 # 6.2).
@@ -130,7 +130,6 @@ MAX_LINES = 500
 MAX_METHODS = 30
 # Where the limits hold: the package and its tests. The tests at the
 # repository's root hold them for those and for the live checks.
-REPOSITORY = Path(__file__).resolve().parents[3]
 SIZED = (ROOT, Path(__file__).resolve().parent)
 
 

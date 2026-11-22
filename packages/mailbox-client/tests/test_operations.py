@@ -10,16 +10,15 @@ from __future__ import annotations
 
 import inspect
 import json
-from pathlib import Path
 
 import pytest
 
 from benethos_mailbox_client import MailboxClient, SyncMailboxClient, endpoints, models
 from benethos_mailbox_client import __all__ as exported
 
-CONTRACT = (
-    Path(__file__).resolve().parents[3] / "docs" / "mailbox-service" / "openapi.json"
-)
+from .repository_helpers import OPENAPI
+
+CONTRACT = OPENAPI
 METHODS = {"get", "put", "post", "patch", "delete"}
 
 
