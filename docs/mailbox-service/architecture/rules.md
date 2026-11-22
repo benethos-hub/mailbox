@@ -1,6 +1,9 @@
 # Architecture: the rules
 
 Part of the [architecture](../ARCHITECTURE.md): sections 5 to 17.
+They hold for the agents too, with the differences
+[their architecture](../../mailbox-agents/ARCHITECTURE.md#the-rules-of-the-repository)
+names.
 
 ## 5. Packages
 

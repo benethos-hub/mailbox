@@ -62,6 +62,31 @@ in `sources/mailbox.py` alone, and `mailbox-common` with its group
 settings from a file, as the service and the MCP server have them. The
 table `CONFINED` of `test_layers.py` names the modules that import each.
 
+## The rules of the repository
+
+The rules of the repository,
+[sections 5 to 17](../mailbox-service/architecture/rules.md), hold for
+the agents too, with four differences of their own design:
+
+- **Concurrency (7.4).** The agents run on asyncio, one event loop per
+  process, not on anyio
+  ([their CLAUDE.md](../../packages/mailbox-agents/CLAUDE.md)).
+- **The homes of a library (7.1).** The agents talk to two upstreams,
+  each in a module of its own. So httpx has two homes,
+  `sources/mailbox.py` and `llm/gateway.py`, and ssl three, with
+  `settings/model.py`, which reads the CA of the setup. `CONFINED`
+  names them.
+- **Imports through `__init__.py` (5.3).** `contract`, `records`,
+  `errors`, `logbook`, `settings`, `store` and `cli` offer their names
+  there. `runtime`, `llm`, `sources` and `evaluation` offer none, and
+  their callers import the module.
+- **The architecture test (13).** It is `tests/test_layers.py`, beside
+  `tests/test_code_rules.py` for the size of modules and classes (15).
+
+The tests at the root check the agents as they check the other
+packages: the boundaries (9), the module tree above (3), and the rules
+for the tests (13).
+
 ## Modules
 
 ```

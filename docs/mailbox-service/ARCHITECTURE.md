@@ -21,6 +21,7 @@ to where a piece of code goes. The rest is in
 | [The modules of the client](../mailbox-client/ARCHITECTURE.md) | 3.2 | The same for the client, and what an endpoint of it is. In the folder of its package. |
 | [The modules of the MCP server](../mailbox-mcp/ARCHITECTURE.md) | 3.3 | The same for the MCP server, and what a tool of it is. In the folder of its package. |
 | [The modules of the common package](../mailbox-common/ARCHITECTURE.md) | 3.4 | The same for `mailbox-common`. In the folder of its package. |
+| [The agents](../mailbox-agents/ARCHITECTURE.md) | their own | Their layers and modules, and where the rules below differ for them. In the folder of their package. |
 | [The rules](architecture/rules.md) | 5 to 17 | Packages, imports, libraries, the seams that keep parts replaceable, types, errors, state, logging, tests, naming, size and refactoring. |
 
 ## Every section
