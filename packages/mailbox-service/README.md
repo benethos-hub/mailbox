@@ -115,6 +115,8 @@ What the project is for: [the repository's README](https://github.com/benethos-h
   sign-ins: [Settings](#settings).
 - **Operation.** An encrypted backup and restore, a container image,
   and compose files with HTTPS through Caddy: [Container](#container).
+  Metrics for Prometheus at `GET /v1/metrics`, off by default:
+  [monitoring](https://github.com/benethos-hub/mailbox/blob/main/containers/production/README.md#monitoring-with-prometheus).
 
 ## Getting started
 
