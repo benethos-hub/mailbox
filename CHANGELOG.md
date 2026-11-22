@@ -16,6 +16,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   `prometheus-client`.
 - `benethos-mailbox-client`: `get_metrics()` of both clients answers
   the figures of `GET /v1/metrics` as text.
+- `benethos-mailbox-common`: `log.lines.Json` writes each line of a log
+  as one JSON object, a noted secret masked in each field, with the
+  fields a program adds through `fields_of`.
 
 ### Changed
 
