@@ -14,13 +14,18 @@ from pathlib import Path
 from typing import Any, TypeVar
 
 try:
-    from pydantic_settings import BaseSettings, SettingsConfigDict
+    from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 except ModuleNotFoundError as missing:
     raise ModuleNotFoundError(
         "benethos_mailbox_common.settings needs the extra settings: "
         "pip install 'benethos-mailbox-common[settings]'",
         name=missing.name,
     ) from missing
+
+# NoDecode marks a field whose value the program splits itself, such as a
+# list given as names between commas, so the environment does not read it
+# as JSON.
+__all__ = ["FileSettings", "NoDecode", "S", "load"]
 
 
 class FileSettings(BaseSettings):

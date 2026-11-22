@@ -104,7 +104,8 @@ CONFINED: dict[str, frozenset[str]] = {
     ),
     "httpx": frozenset({"sources/mailbox.py", "llm/gateway.py"}),
     "prometheus_client": frozenset({"runtime/metrics.py"}),
-    "pydantic_settings": frozenset({"settings/model.py"}),
+    # Its one home is the group settings of mailbox-common.
+    "pydantic_settings": frozenset(),
     # The TLS context of the own CA: read in the settings, used by the two
     # modules that talk to an upstream.
     "ssl": frozenset({"settings/model.py", "sources/mailbox.py", "llm/gateway.py"}),

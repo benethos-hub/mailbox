@@ -9,9 +9,9 @@ from pathlib import Path
 from typing import Annotated, Any, Literal
 
 from pydantic import Field, SecretStr, ValidationError, field_validator, model_validator
-from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 from benethos_mailbox_common.log import redact
+from benethos_mailbox_common.settings import files
 
 from ..errors import ConfigError, describe_invalid
 
@@ -30,15 +30,15 @@ DEFAULT_ENV_FILE = Path("config/benethos-mailbox-agents/.env")
 Stage = Literal["shadow", "keyword", "full"]
 
 
-class Settings(BaseSettings):
-    """The settings of one process, which runs one agent."""
+class Settings(files.FileSettings):
+    """The settings of one process, which runs one agent. A name the
+    agents do not know is left alone, as the base has it."""
 
-    model_config = SettingsConfigDict(
-        env_prefix=PREFIX,
-        env_file_encoding="utf-8",
-        extra="ignore",
-        frozen=True,
-    )
+    model_config = {
+        "env_prefix": PREFIX,
+        "env_file_encoding": "utf-8",
+        "frozen": True,
+    }
 
     # --- upstreams ---------------------------------------------------------
     service_url: str | None = None
@@ -60,7 +60,7 @@ class Settings(BaseSettings):
     ca_file: Path | None = None
 
     # --- what the agent works on and how far it may go ----------------------
-    accounts: Annotated[list[str], NoDecode] = Field(default_factory=list)
+    accounts: Annotated[list[str], files.NoDecode] = Field(default_factory=list)
     stage: Stage = "shadow"
     keyword: str | None = None
 
@@ -78,7 +78,7 @@ class Settings(BaseSettings):
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
     # --- invoices, docs/mailbox-agents/concept/agent-invoices.md ----------------------
-    invoices_folders: Annotated[list[str], NoDecode] = Field(default_factory=list)
+    invoices_folders: Annotated[list[str], files.NoDecode] = Field(default_factory=list)
     invoices_subfolder: str | None = None
     invoices_inbox_folder: str | None = None
 
@@ -210,7 +210,7 @@ def load_settings(env_file: Path | None = None, **overrides: Any) -> Settings:
     if env_file is not None and not path.is_file():
         raise ConfigError(f"the settings file {path.name} does not exist")
     try:
-        return Settings(_env_file=path if path.is_file() else None, **overrides)
+        return files.load(Settings, path, **overrides)
     except ValidationError as exc:
         problems = describe_invalid(
             exc, lambda place: f"{PREFIX}{place.upper() or 'SETTINGS'}"

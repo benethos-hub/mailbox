@@ -296,8 +296,8 @@ Decided 2026-10-10.
 - **One settings base.** pydantic-settings has one home, the group
   `settings` of `mailbox-common` with the extra `settings`, as
   platformdirs has `paths`. `FileSettings` and `load` read the
-  environment and a settings file. The service's and the MCP server's
-  `Settings` extend it. A settings file does not change the environment
+  environment and a settings file. The service's, the MCP server's and
+  the agents' `Settings` extend it. A settings file does not change the environment
   of the process.
 - **The boundaries.** `tests/test_boundaries.py`, at the root of the
   repository, checks every package but mailbox-agents: what a package hands on is a
