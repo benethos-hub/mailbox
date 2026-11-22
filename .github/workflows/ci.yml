@@ -205,6 +205,7 @@ jobs:
       editable: |
         packages/mailbox-client
         packages/mailbox-agents
+        packages/mailbox-common[settings]
       requirements: |
         pytest>=9.1.1
         pytest-asyncio>=1.4

@@ -56,6 +56,12 @@ top-level module.
 - `evaluation` stands on `runtime` and `store`.
 - `cli` wires everything on top, and `__main__` calls it.
 
+Of the other packages of the repository, the agents take the client,
+in `sources/mailbox.py` alone, and `mailbox-common` with its group
+`settings`: the lines of the log, the masking of secrets, text and
+settings from a file, as the service and the MCP server have them. The
+table `CONFINED` of `test_layers.py` names the modules that import each.
+
 ## Modules
 
 ```

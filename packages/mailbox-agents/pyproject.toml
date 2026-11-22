@@ -54,6 +54,10 @@ classifiers = [
 dependencies = [
     # The REST client. Released with this package under the same version.
     "benethos-mailbox-client==0.10.0",
+    # The lines of the log, the masking of secrets, text and settings, as
+    # the other programs of Mailbox have them. Released with this package
+    # under the same version.
+    "benethos-mailbox-common[settings]==0.10.0",
     "httpx>=0.28.1",
     "prometheus-client>=0.26.0",
     "pydantic>=2.14.3",

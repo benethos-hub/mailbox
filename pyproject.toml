@@ -4,7 +4,8 @@
 #   packages/mailbox-service  the service: REST API, adapters, credential store
 #   packages/mailbox-client   the Python client of the REST API
 #   packages/mailbox-mcp      the MCP server, on top of the client
-#   packages/mailbox-common   what the service and the MCP server share
+#   packages/mailbox-common   what the service, the MCP server and the
+#                             agents share
 #   packages/mailbox-agents   small AI agents that work on a mailbox, on top
 #                             of the client
 #

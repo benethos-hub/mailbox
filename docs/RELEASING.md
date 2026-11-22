@@ -3,7 +3,7 @@
 A release is its own `release/X.Y.Z` branch and pull request. The five
 packages carry the same version. The MCP server pins the client and the
 common package to it, the service the common package, the agents the
-client.
+client and the common package.
 
 1. `uv lock --upgrade --dry-run`. If it moves anything, run
    `uv lock --upgrade` as a commit of its own, then all checks. Check
@@ -19,7 +19,8 @@ client.
    `benethos-mailbox-client==X.Y.Z` and
    `benethos-mailbox-common[paths,settings]==X.Y.Z` in the MCP server's
    and `benethos-mailbox-common[paths,settings]==X.Y.Z` in the
-   service's, `benethos-mailbox-client==X.Y.Z` in the agents', then
+   service's, `benethos-mailbox-client==X.Y.Z` and
+   `benethos-mailbox-common[settings]==X.Y.Z` in the agents', then
    `uv lock` and `uv sync`. Set it as well in
    `.github/publish/mcp-registry/server.json`, there also in the
    bundle's address, in `.github/publish/mcpb/manifest.json` and in

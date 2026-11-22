@@ -35,6 +35,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   but empty no longer turns off the colours of the log at a terminal, as
   no-color.org has it. `benethos-mailbox-common`: `colours_wanted` takes
   the stream to write to, stderr when none is given.
+- `benethos-mailbox-agents` take `benethos-mailbox-common[settings]` of
+  their own version.
 
 ### Fixed
 

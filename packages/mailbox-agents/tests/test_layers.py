@@ -87,6 +87,9 @@ CONFINED: dict[str, frozenset[str]] = {
     # A step of the schema is handed the connection to run its statements on.
     "sqlite3": frozenset({"store/store.py", "store/migrations/migration.py"}),
     "benethos_mailbox_client": frozenset({"sources/mailbox.py"}),
+    # What the programs of Mailbox share: the lines of the log, the masking
+    # of secrets, text and settings.
+    "benethos_mailbox_common": frozenset(),
     "httpx": frozenset({"sources/mailbox.py", "llm/gateway.py"}),
     "prometheus_client": frozenset({"runtime/metrics.py"}),
     "pydantic_settings": frozenset({"settings/model.py"}),
