@@ -6,7 +6,9 @@ import logging
 from dataclasses import dataclass
 from typing import ClassVar
 
-from ..activity import Activity, plural
+from benethos_mailbox_common.values import text as text_values
+
+from ..activity import Activity
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -18,7 +20,7 @@ class Read(Activity):
 
     def says(self) -> str:
         return (
-            f"read {plural(self.changes, 'change')} from the feed "
+            f"read {text_values.plural(self.changes, 'change')} from the feed "
             f"and selected {self.selected}"
         )
 
@@ -44,6 +46,6 @@ class Backfilled(Activity):
 
     def says(self) -> str:
         return (
-            f"backfilled {plural(self.messages, 'message')} "
-            f"of the last {plural(self.days, 'day')}"
+            f"backfilled {text_values.plural(self.messages, 'message')} "
+            f"of the last {text_values.plural(self.days, 'day')}"
         )

@@ -20,7 +20,6 @@ from benethos_mailbox_agents.logbook import (
     Failure,
     actions,
     describe,
-    escaped,
     feed,
     messages,
     process,
@@ -30,6 +29,7 @@ from benethos_mailbox_agents.logbook import (
 from benethos_mailbox_agents.logbook.catalogue import AREAS
 from benethos_mailbox_agents.logbook.output import PACKAGE
 from benethos_mailbox_common.log import lines, redact
+from benethos_mailbox_common.values import text as text_values
 
 from ..agents_helpers import DOCS
 
@@ -258,7 +258,7 @@ def test_an_id_with_a_line_break_stays_on_one_line(
 
 
 def test_escaped_leaves_printable_text_alone() -> None:
-    assert escaped("Rechnung über 12 € – ok") == "Rechnung über 12 € – ok"
+    assert text_values.escaped("Rechnung über 12 € – ok") == "Rechnung über 12 € – ok"
 
 
 @pytest.mark.parametrize(
@@ -280,7 +280,7 @@ def test_escaped_leaves_printable_text_alone() -> None:
 )
 def test_escaped_writes_a_direction_mark_as_its_escape(mark: str) -> None:
     """A sender or subject cannot turn the text of a report around."""
-    assert escaped(f"a{mark}b") == f"a\\u{ord(mark):04x}b"
+    assert text_values.escaped(f"a{mark}b") == f"a\\u{ord(mark):04x}b"
 
 
 def test_an_error_is_named_never_quoted(stream: io.StringIO) -> None:
@@ -382,7 +382,7 @@ def test_a_failure_is_a_warning_by_default() -> None:
 
 
 def test_a_lone_surrogate_is_written_as_its_escape() -> None:
-    found = escaped("x" + chr(0xD800))
+    found = text_values.escaped("x" + chr(0xD800))
 
     assert not any(0xD800 <= ord(c) <= 0xDFFF for c in found)
     found.encode("utf-8")

@@ -12,6 +12,8 @@ from contextlib import ExitStack, suppress
 from pathlib import Path
 from typing import Any
 
+from benethos_mailbox_common.values import text as text_values
+
 from ..contract import Agent, discover, load
 from ..errors import (
     ConfigError,
@@ -22,7 +24,7 @@ from ..errors import (
 from ..evaluation.gold import GoldItem, load_gold
 from ..evaluation.report import build, render, write
 from ..evaluation.run import evaluate as run_evaluation
-from ..logbook import escaped, process, record
+from ..logbook import process, record
 from ..runtime.health import check
 from ..runtime.readiness import MAILBOX_SETTINGS, folder_lines, readiness, start
 from ..settings import DEFAULT_ENV_FILE, PREFIX, Settings
@@ -173,7 +175,7 @@ def _say(line: str) -> None:
     """Print one line of ``status``. A folder's name is the owner's or the
     server's: a control or direction character in it is written escaped,
     as in ``report``."""
-    print(escaped(line))
+    print(text_values.escaped(line))
 
 
 def status(args: argparse.Namespace, settings: Settings) -> int:

@@ -89,7 +89,18 @@ CONFINED: dict[str, frozenset[str]] = {
     # What the programs of Mailbox share: the lines of the log, the masking
     # of secrets, text and settings.
     "benethos_mailbox_common": frozenset(
-        {"errors/base.py", "logbook/output.py", "settings/model.py"}
+        {
+            "errors/base.py",
+            "logbook/output.py",
+            "logbook/activity.py",
+            "logbook/catalogue/feed.py",
+            "logbook/catalogue/worker.py",
+            "settings/model.py",
+            "agents/sorting/agent.py",
+            "cli/__init__.py",
+            "cli/commands.py",
+            "cli/report.py",
+        }
     ),
     "httpx": frozenset({"sources/mailbox.py", "llm/gateway.py"}),
     "prometheus_client": frozenset({"runtime/metrics.py"}),

@@ -11,9 +11,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from benethos_mailbox_common.values import text as text_values
+
 from ..contract import Action, Agent, Reader, Shown
 from ..errors import MailboxRefusedError
-from ..logbook import escaped
 from ..records import Decision, MailMessage, StepResult
 from ..settings import Settings
 from ..store import ActionRow, MessageRow, Store, path_for
@@ -119,7 +120,7 @@ def render(entries: list[Entry]) -> list[str]:
         lines.append("")
     # Nothing from a mail or a model moves the cursor, sets the title or
     # starts a line of its own in the terminal.
-    return [escaped(line) for line in lines]
+    return [text_values.escaped(line) for line in lines]
 
 
 def _actions(rows: list[ActionRow]) -> tuple[tuple[Action, bool], ...]:
@@ -151,7 +152,7 @@ def summary(agent: Agent, entries: list[Entry], total: int | None = None) -> lis
             f"messages, --limit {total} counts all)",
             *lines,
         ]
-    return [escaped(line) for line in lines]
+    return [text_values.escaped(line) for line in lines]
 
 
 async def report(

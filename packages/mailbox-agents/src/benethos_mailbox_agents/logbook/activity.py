@@ -10,25 +10,14 @@ only when that level is written.
 from __future__ import annotations
 
 import logging
-import unicodedata
 from dataclasses import dataclass
 from typing import ClassVar
 
+from benethos_mailbox_common.values import text as text_values
+
 from .output import PACKAGE
 
-__all__ = ["Activity", "Failure", "describe", "escaped", "plural", "record"]
-
-# What ends a line or moves the cursor for a reader: the control
-# characters, C1 among them, and the separators of lines and paragraphs.
-# And a lone surrogate, which cannot be written to a terminal at all.
-_BREAKS = frozenset({"Cc", "Zl", "Zp", "Cs"})
-
-# What turns the direction of the text after it: the Arabic letter mark,
-# the marks left to right and right to left, the embeddings and overrides,
-# and the isolates. A sender or subject would turn a report around.
-_BIDI = frozenset(
-    map(chr, (0x061C, 0x200E, 0x200F, *range(0x202A, 0x202F), *range(0x2066, 0x206A)))
-)
+__all__ = ["Activity", "Failure", "describe", "record"]
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -91,7 +80,7 @@ def record(activity: Activity) -> None:
     Below the level the line is not built."""
     log = logging.getLogger(f"{PACKAGE}.{activity.source()}")
     if log.isEnabledFor(activity.level):
-        log.log(activity.level, "%s", escaped(activity.line()))
+        log.log(activity.level, "%s", text_values.escaped(activity.line()))
 
 
 def describe(error: BaseException) -> str:
@@ -100,22 +89,3 @@ def describe(error: BaseException) -> str:
     code = getattr(error, "code", None)
     name = type(error).__name__
     return f"{name}({code})" if isinstance(code, str) and code else name
-
-
-def escaped(text: str) -> str:
-    """``text`` as one line: each control character, line separator and
-    mark of direction written as its escape, such as a line feed as
-    backslash and n. Nothing an upstream chose then starts a line of its
-    own, moves the cursor, sets the title of a terminal or turns the text
-    around."""
-    return "".join(
-        ch.encode("unicode_escape").decode("ascii")
-        if ch in _BIDI or unicodedata.category(ch) in _BREAKS
-        else ch
-        for ch in text
-    )
-
-
-def plural(count: int, word: str) -> str:
-    """``1 message``, ``2 messages``."""
-    return f"{count} {word}" if count == 1 else f"{count} {word}s"

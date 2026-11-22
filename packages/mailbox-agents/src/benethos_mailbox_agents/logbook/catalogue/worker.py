@@ -6,7 +6,9 @@ import logging
 from dataclasses import dataclass
 from typing import ClassVar
 
-from ..activity import Activity, Failure, plural
+from benethos_mailbox_common.values import text as text_values
+
+from ..activity import Activity, Failure
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -20,7 +22,7 @@ class PassDone(Activity):
     def says(self) -> str:
         return (
             f"finished a pass in {self.seconds:.2f}s with "
-            f"{plural(self.pending, 'message')} pending"
+            f"{text_values.plural(self.pending, 'message')} pending"
         )
 
 
@@ -58,4 +60,4 @@ class TickDone(Activity):
     actions: int
 
     def says(self) -> str:
-        return f"ticked with {plural(self.actions, 'action')}"
+        return f"ticked with {text_values.plural(self.actions, 'action')}"

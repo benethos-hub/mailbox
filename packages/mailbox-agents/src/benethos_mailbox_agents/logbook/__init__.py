@@ -11,7 +11,7 @@ answered. See docs/mailbox-agents/concept/safety.md.
 
 from __future__ import annotations
 
-from .activity import Activity, Failure, describe, escaped, record
+from .activity import Activity, Failure, describe, record
 from .catalogue import actions, feed, messages, process, worker
 from .output import LIBRARIES, configure
 
@@ -22,7 +22,6 @@ __all__ = [
     "actions",
     "configure",
     "describe",
-    "escaped",
     "feed",
     "messages",
     "process",
