@@ -305,12 +305,14 @@ sync worker, every account by its id, provider and status, and the
 webhooks. Never an address or the text of an error. What each figure
 means: [CONCEPT 6.1](../../docs/concept/api-mail.md#61-accounts).
 
-1. Switch it on: `MAILBOX_SERVICE_METRICS=true` in `service.env`, then
-   `docker compose up -d`. Until then the route answers `404`.
-2. In the UI, a role `monitor` that holds only the right of the service
+The route is on unless `MAILBOX_SERVICE_METRICS=false` in `service.env`
+switches it off, then it answers `404`. Without a token with the right
+`metrics` it answers nothing either way.
+
+1. In the UI, a role `monitor` that holds only the right of the service
    `metrics`, a user `monitor` with that role, and a token on that
    user's page. The token reads the figures and nothing else.
-3. The token into a file Prometheus reads, readable by it alone, and the
+2. The token into a file Prometheus reads, readable by it alone, and the
    scrape. `compose.yaml` publishes the service on `127.0.0.1:8080` of
    the host, so Prometheus on the same host asks it past Caddy:
 
@@ -324,7 +326,7 @@ means: [CONCEPT 6.1](../../docs/concept/api-mail.md#61-accounts).
          - targets: ["127.0.0.1:8080"]
    ```
 
-4. With the profile `https`, keep the path from the outside:
+3. With the profile `https`, keep the path from the outside:
    `caddy.d/metrics.caddy.example` to `caddy.d/metrics.caddy`, then
    `docker compose up -d`. The token protects the figures either way.
 

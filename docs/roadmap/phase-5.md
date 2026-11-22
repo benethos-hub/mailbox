@@ -100,7 +100,7 @@ Part of the [roadmap](../ROADMAP.md): phase 5, in progress, and phase 5a, done.
   `accounts.read`
 - **Metrics for Prometheus (6.1)**, decided 2026-11-22, done:
   `GET /v1/metrics` with `get_metrics`, a right of the service in the
-  group `metrics`, off until `MAILBOX_SERVICE_METRICS=true`. An account
+  group `metrics`, on unless `MAILBOX_SERVICE_METRICS=false`. An account
   by its id, provider and status, never its address or the text of an
   error. Not in the MCP server
 - **Paging for the lists that answered everything at once (6.6)**,

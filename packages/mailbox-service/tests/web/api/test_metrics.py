@@ -29,7 +29,7 @@ def monitor(services: Services) -> dict[str, str]:
 
 
 def test_switched_off_the_route_is_not_found(services: Services) -> None:
-    off = TestClient(create_app(Settings(storage="memory"), services))
+    off = TestClient(create_app(Settings(storage="memory", metrics=False), services))
     answer = off.get("/v1/metrics", headers=admin_bearer(services))
     assert answer.status_code == 404
     assert answer.json()["error"]["code"] == "not_found"

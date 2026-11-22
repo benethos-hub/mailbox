@@ -149,7 +149,8 @@ some folders, such as the invoices, and end after a week.
   service log.
 - **Operation:** encrypted backup and restore, container images, compose
   files for operation with HTTPS through Caddy and MCP server instances,
-  and metrics for Prometheus at `GET /v1/metrics`, off by default:
+  and metrics for Prometheus at `GET /v1/metrics`, for a token with
+  their right:
   [monitoring](containers/production/README.md#monitoring-with-prometheus).
 
 What comes next, and in which order, is in

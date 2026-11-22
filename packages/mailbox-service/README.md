@@ -115,7 +115,8 @@ What the project is for: [the repository's README](https://github.com/benethos-h
   sign-ins: [Settings](#settings).
 - **Operation.** An encrypted backup and restore, a container image,
   and compose files with HTTPS through Caddy: [Container](#container).
-  Metrics for Prometheus at `GET /v1/metrics`, off by default:
+  Metrics for Prometheus at `GET /v1/metrics`, for a token with their
+  right:
   [monitoring](https://github.com/benethos-hub/mailbox/blob/main/containers/production/README.md#monitoring-with-prometheus).
 
 ## Getting started
@@ -268,7 +269,7 @@ names the settings file it read and the database at start.
 | `MAILBOX_SERVICE_SYNC_INTERVAL` | `300` | seconds between two polls of every folder. `0` switches the sync off. |
 | `MAILBOX_SERVICE_SYNC_IDLE` | `true` | wait for the server to report a change: IMAP IDLE, with a second connection per account, or a JMAP server's event source |
 | `MAILBOX_SERVICE_SYNC_WATCHERS` | `50` | accounts watched at once. An IMAP account holds a thread of its own while it waits in IDLE. Further accounts are polled only. |
-| `MAILBOX_SERVICE_METRICS` | `false` | the figures of the service for Prometheus at `GET /v1/metrics`, for a token with the right `get_metrics`. Off, the route answers `404`. |
+| `MAILBOX_SERVICE_METRICS` | `true` | the figures of the service for Prometheus at `GET /v1/metrics`, for a token with the right `get_metrics`. Off, the route answers `404`. |
 | `MAILBOX_SERVICE_THREAD_MESSAGES` | `500` | the messages a thread lists at most, the newest |
 | `MAILBOX_SERVICE_THREAD_REFERENCES` | `20` | IMAP accounts, which the service threads itself: how many of the last `References` of a message count |
 | `MAILBOX_SERVICE_CHANGES_DAYS` | `7` | days the change feed keeps a change |

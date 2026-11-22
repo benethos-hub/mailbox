@@ -11,8 +11,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `GET /v1/metrics` hands the state of the sync worker, of every account
   and of the webhooks to Prometheus, in its text format. It needs the
   new right `get_metrics` of the service, in the group `metrics`, and
-  names an account by its id and provider, never by its address. Off
-  until `MAILBOX_SERVICE_METRICS=true`. The service now needs
+  names an account by its id and provider, never by its address.
+  `MAILBOX_SERVICE_METRICS=false` switches it off. The service now needs
   `prometheus-client`.
 - `benethos-mailbox-client`: `get_metrics()` of both clients answers
   the figures of `GET /v1/metrics` as text.
