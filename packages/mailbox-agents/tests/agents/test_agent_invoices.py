@@ -266,6 +266,53 @@ async def test_an_invoice_in_the_inbox_is_marked_and_stays(
     assert invoices_world.service.made() == []
 
 
+async def test_an_invoice_written_in_html_alone_is_read_and_marked(
+    invoices_world: Wired,
+) -> None:
+    """Its text is the visible text of its HTML part, so the quote of the
+    model is found in it, as the baseline's hint is."""
+    invoices_world.service.add(
+        wire_message(
+            "html-only",
+            subject="Ihre Monatsübersicht",
+            text=None,
+            html="<p>Ihre Rechnung ist online im Kundencenter abrufbar.</p>",
+        ),
+        change=None,
+    )
+    invoices_world.fake_gateway.answer(answer("invoice", "Ihre Rechnung ist online"))
+
+    assert await run(invoices_world, "html-only", agent()) == "done"
+
+    found = decision(invoices_world, "html-only")
+    assert (found["label"], found.get("refused")) == ("invoice", None)
+    assert [e["found"] for e in found["evidence"]] == [True]
+    ref = MessageRef(account_id=ACCOUNT, message_id="html-only")
+    baseline = [s for s in invoices_world.store.steps(ref) if s.step == "baseline"]
+    assert baseline and baseline[-1].result["label"] == "invoice"
+    assert mail(invoices_world, "html-only")["keywords"] == ["agent-invoice"]
+
+
+async def test_a_message_decided_under_the_prompt_before_is_asked_again(
+    invoices_world: Wired,
+) -> None:
+    """A decision of v4, such as one refused for an empty text, is not
+    taken again under v5: backfill asks the model anew."""
+
+    class Before(Invoices):
+        prompt_version = "v4"
+
+    invoices_world.fake_gateway.answer(
+        answer("invoice", "please find attached invoice INV-77"),
+        answer("invoice", "please find attached invoice INV-77"),
+    )
+    assert await run(invoices_world, "inv-unlisted", Before(agent().settings)) == "done"
+
+    assert await run(invoices_world, "inv-unlisted", agent(), again=True) == "done"
+
+    assert len(invoices_world.fake_gateway.requests) == 2
+
+
 async def test_an_inbox_folder_takes_an_invoice_from_the_inbox(
     invoices_world: Wired,
 ) -> None:

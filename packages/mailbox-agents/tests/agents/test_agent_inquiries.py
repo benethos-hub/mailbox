@@ -242,7 +242,9 @@ async def test_each_field_with_its_quote(inquiries_world: Wired) -> None:
     assert await run(inquiries_world, "inq-staffing", agent()) == "done"
 
     ref = MessageRef(account_id=ACCOUNT, message_id="inq-staffing")
-    found = inquiries_world.store.step(ref, "decision", "v3", "alias")
+    found = inquiries_world.store.step(
+        ref, "decision", Inquiries.prompt_version, "alias"
+    )
     assert found is not None
     assert found.result["fields"] == {
         "role": "Python-Entwickler",
@@ -261,7 +263,9 @@ async def test_another_message_has_no_fields(inquiries_world: Wired) -> None:
     await run(inquiries_world, "job-digest", agent())
 
     ref = MessageRef(account_id=ACCOUNT, message_id="job-digest")
-    found = inquiries_world.store.step(ref, "decision", "v3", "alias")
+    found = inquiries_world.store.step(
+        ref, "decision", Inquiries.prompt_version, "alias"
+    )
     assert found is not None and found.result["fields"] == {}
 
 

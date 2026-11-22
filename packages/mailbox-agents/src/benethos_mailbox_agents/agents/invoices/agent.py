@@ -55,7 +55,7 @@ MOVED_ELSEWHERE = "moved_elsewhere"
 
 class Invoices(Agent):
     name = "invoices"
-    version = "5"
+    version = "6"
     description = (
         "Marks invoices, and moves one into the subfolder of the folder it lies in."
     )
@@ -67,7 +67,7 @@ class Invoices(Agent):
     default_keyword = "agent-invoice"
     report_labels = frozenset({"invoice", "other"})
     report_fields = frozenset({"near_miss"})
-    prompt_version = "v4"
+    prompt_version = "v5"
     # A marked invoice its state file does not know stays where it lies,
     # also one the owner took out of its subfolder (decided 2026-11-19).
     skip_marked = True

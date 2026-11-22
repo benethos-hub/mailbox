@@ -32,7 +32,7 @@ __all__ = ["Inquiries"]
 
 class Inquiries(Agent):
     name = "inquiries"
-    version = "1"
+    version = "2"
     description = "Marks project inquiries."
     triggers = Trigger(events=frozenset({"message.created"}))
     actions = frozenset({Action.ADD_KEYWORD})
@@ -40,7 +40,7 @@ class Inquiries(Agent):
     default_keyword = "agent-inquiry"
     report_labels = frozenset({"inquiry", "other"})
     report_fields = frozenset(FIELDS)
-    prompt_version = "v3"
+    prompt_version = "v4"
 
     def prepare(self) -> None:
         _ = self.patterns

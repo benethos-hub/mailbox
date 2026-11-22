@@ -96,6 +96,7 @@ CONFINED: dict[str, frozenset[str]] = {
             "logbook/catalogue/feed.py",
             "logbook/catalogue/worker.py",
             "settings/model.py",
+            "sources/mailbox.py",
             "agents/sorting/agent.py",
             "cli/__init__.py",
             "cli/commands.py",
