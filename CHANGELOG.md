@@ -8,7 +8,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- The service image installs publicsuffixlist 1.1.2.20261121 from the
+- The service image installs publicsuffixlist 1.1.2.20261122 from the
   lockfile.
 
 ## [0.9.0] - 2026-11-21
