@@ -375,7 +375,7 @@ def _version() -> str:
 def test_the_production_example_pulls_this_release() -> None:
     example = ROOT / "containers" / "production" / "mailbox-agents" / ".env.example"
 
-    assert f"MAILBOX_AGENTS_VERSION={_version()}\n" in example.read_text("utf-8")
+    assert f"MAILBOX_VERSION={_version()}\n" in example.read_text("utf-8")
 
 
 def test_the_changelog_names_this_release_and_links_it() -> None:

@@ -29,7 +29,7 @@ x-logging: &logging
 # names, nothing written but its volume and /tmp, no Linux capability, and
 # nothing gained later through a setuid binary. The secrets come as files.
 x-agent: &agent
-  image: ghcr.io/benethos-hub/benethos-mailbox-agents:${MAILBOX_AGENTS_VERSION:?set MAILBOX_AGENTS_VERSION in .env, see .env.example}
+  image: ghcr.io/benethos-hub/benethos-mailbox-agents:${MAILBOX_VERSION:?set MAILBOX_VERSION in .env, see .env.example}
   restart: unless-stopped
   logging: *logging
   read_only: true

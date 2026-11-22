@@ -16,7 +16,7 @@ Part of the [concept](../CONCEPT.md).
   most five log files of 10 MB. One Compose service per agent from the same
   image, each behind a profile of its own name, `restart: unless-stopped`,
   its health check `health --agent <name>`. The image is named by
-  `MAILBOX_AGENTS_VERSION`, best as the version with the digest of the
+  `MAILBOX_VERSION`, best as the version with the digest of the
   release, `<version>@sha256:<digest>`: a tag on ghcr.io can be moved, a
   digest cannot (2026-11-19). The live setup pins the images it pulls from other projects so.
 - **Health:** `health --agent <name>` exits 0 while the loop's last sign

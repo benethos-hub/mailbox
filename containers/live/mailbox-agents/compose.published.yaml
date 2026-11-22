@@ -1,10 +1,10 @@
 # The published image of the mailbox service instead of one built from
-# this checkout. setup.sh adds this file with MAILBOX_LIVE_SERVICE=published and
-# MAILBOX_SERVICE_VERSION set to the release to pull. The agents take
-# the service of their own minor version only.
+# this checkout. setup.sh adds this file with MAILBOX_LIVE_SERVICE=published
+# and MAILBOX_VERSION set to the release to pull. The agents take the
+# service of their own minor version only.
 
 services:
   mailbox-service:
-    image: ghcr.io/benethos-hub/benethos-mailbox-service:${MAILBOX_SERVICE_VERSION:?the release of the service to pull}
+    image: ghcr.io/benethos-hub/benethos-mailbox-service:${MAILBOX_VERSION:?the release of the service to pull}
     build: !reset null
     pull_policy: always

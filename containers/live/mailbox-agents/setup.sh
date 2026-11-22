@@ -21,7 +21,7 @@
 # The Claude API key and the fetched models are kept across runs.
 #
 # The mailbox service is built from this checkout, the version of the
-# agents beside it. MAILBOX_LIVE_SERVICE=published with MAILBOX_SERVICE_VERSION
+# agents beside it. MAILBOX_LIVE_SERVICE=published with MAILBOX_VERSION
 # pulls a published release instead (compose.published.yaml).
 
 set -eu

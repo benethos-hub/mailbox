@@ -55,7 +55,7 @@ its stage.
 
 ## Update
 
-Change `MAILBOX_AGENTS_VERSION` in `.env`, then:
+Change `MAILBOX_VERSION` in `.env`, then:
 
 ```sh
 docker compose --profile invoices pull
