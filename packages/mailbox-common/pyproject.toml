@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "benethos-mailbox-common"
-version = "0.9.0"
+version = "0.10.0"
 description = "What benethos-mailbox-service and benethos-mailbox-mcp share, not meant to be used on its own: mail as plain text, the folders of the operating system, settings from a file, the time of a log line, secrets masked in text, JSON for a hash."
 readme = "README.md"
 requires-python = ">=3.11"

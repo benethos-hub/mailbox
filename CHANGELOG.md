@@ -6,6 +6,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-22
+
 ### Added
 
 - `GET /v1/metrics` hands the state of the sync worker, of every account
@@ -38,6 +40,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   nothing.
 - The service image installs publicsuffixlist 1.1.2.20261122 from the
   lockfile.
+- The files to run the published images moved to
+  `containers/production/mailbox-service/`, the development compose file
+  to `containers/development/mailbox-service/`: the download loop of
+  its README fetches from there. The documents moved into a folder per
+  package under `docs/`, `openapi.json` to `docs/mailbox-service/`.
 
 ## [0.9.0] - 2026-11-21
 
@@ -2423,7 +2430,8 @@ the configuration may change without notice.
 - One error envelope `{"error": {"code", "message"}}`, authentication errors
   included.
 
-[Unreleased]: https://github.com/benethos-hub/mailbox/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/benethos-hub/mailbox/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/benethos-hub/mailbox/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/benethos-hub/mailbox/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/benethos-hub/mailbox/compare/v0.7.5...v0.8.0
 [0.7.5]: https://github.com/benethos-hub/mailbox/compare/v0.7.4...v0.7.5
