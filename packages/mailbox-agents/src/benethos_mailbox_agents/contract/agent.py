@@ -18,7 +18,15 @@ from enum import StrEnum
 from typing import ClassVar
 
 from ..errors import ContractError
-from ..records import EVENTS, Decision, Event, FolderRef, MailMessage, MessageRef
+from ..records import (
+    EVENTS,
+    Decision,
+    Event,
+    EventType,
+    FolderRef,
+    MailMessage,
+    MessageRef,
+)
 from ..settings import KEYWORD_FORM, Settings
 from .context import Context
 
@@ -76,7 +84,7 @@ class Route(StrEnum):
 class Trigger:
     """The feed events an agent wants, and whether it wants the tick."""
 
-    events: frozenset[str]
+    events: frozenset[EventType]
     tick: bool = False
 
 
