@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from types import TracebackType
-from typing import IO, Any, TypeVar
+from typing import IO, Any, Literal, TypeVar, get_args
 
 from ..errors import ConfigError, StateFileError
 from ..records import KEYWORD_REMOVED, MessageRef, OpenItem, Step, StepResult
@@ -29,6 +29,7 @@ T = TypeVar("T")
 
 __all__ = [
     "STATES",
+    "State",
     "Migrated",
     "ActionRow",
     "MessageRow",
@@ -37,7 +38,9 @@ __all__ = [
     "path_for",
 ]
 
-STATES = ("pending", "skipped", "decided", "done", "failed")
+# The states of a message in the state file.
+State = Literal["pending", "skipped", "decided", "done", "failed"]
+STATES: tuple[State, ...] = get_args(State)
 
 
 def path_for(data_dir: Path, agent: str) -> Path:
@@ -398,7 +401,7 @@ class Store:
     def set_state(
         self,
         ref: MessageRef,
-        state: str,
+        state: State,
         now: datetime,
         *,
         attempts: int | None = None,
@@ -421,7 +424,7 @@ class Store:
 
     def counts(self) -> dict[str, int]:
         """How many messages are in each state, every state named."""
-        found = dict.fromkeys(STATES, 0)
+        found: dict[str, int] = dict.fromkeys(STATES, 0)
         for state, count in self._all(
             "SELECT state, COUNT(*) FROM messages GROUP BY state"
         ):
