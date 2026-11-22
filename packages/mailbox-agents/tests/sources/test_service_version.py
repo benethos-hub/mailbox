@@ -16,7 +16,7 @@ from benethos_mailbox_agents.errors import (
     ServiceVersionError,
 )
 from benethos_mailbox_agents.records import MessageRef
-from benethos_mailbox_agents.sources.mailbox import matches, taken
+from benethos_mailbox_agents.sources.versions import matches, taken
 
 from ..agents_fake import ACCOUNT, FakeService, wire_message
 from ..agents_helpers import PACKAGE_DIR, ROOT, Wired, configure, worker

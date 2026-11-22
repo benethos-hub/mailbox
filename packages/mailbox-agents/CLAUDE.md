@@ -39,7 +39,7 @@ each agent.
   `docs/mailbox-agents/concept/` until then.
 - **The agents take the service of their own version.** Before 1.0 the
   same minor version, from 1.0 the same major and no older minor
-  (`matches` in `sources/mailbox.py`,
+  (`matches` in `sources/versions.py`,
   [mailbox-service.md](../../docs/mailbox-agents/concept/mailbox-service.md)).
   The client is pinned to the agents' version.
 - A live check is a manual run, never a gate:

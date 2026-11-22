@@ -84,6 +84,7 @@ packages/mailbox-agents/src/benethos_mailbox_agents/
                   # FolderRef, Thread
   sources/
     mailbox.py    # the only module importing benethos_mailbox_client
+    versions.py   # which versions of the service the agents take
   llm/
     gateway.py    # the only module that talks to the model gateway
     evidence.py   # whether a quote is in the mail the model was given

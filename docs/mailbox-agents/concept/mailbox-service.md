@@ -169,7 +169,7 @@ service of their own version (decided 2026-11-22):
   `0.10.0rc1` or `0.10.1.dev3` matches no agents, also one of a later
   patch (decided 2026-11-20). The agents' own version
   counts by its first two numbers, also as a pre-release.
-- **The check** is `matches` in `sources/mailbox.py`, against
+- **The check** is `matches` in `sources/versions.py`, against
   `__version__` of the package. The worker asks the service for its
   version before every pass and every backfill. A service of another
   version, or one that names no version or refuses `/health`, ends the
