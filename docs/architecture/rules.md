@@ -232,6 +232,11 @@ fix that first, and say so.
 - The tests of every package, the tests at the root and the live
   checks use the public names of `mailbox-common`, never one with a
   leading underscore.
+- A test runs beside others at the same time, on up to eight processes.
+  It takes no fixed port, writes no file outside `tmp_path`, and keeps
+  no state another test reads. The name of a parametrized case is fixed
+  text, never the text of a set or of an object with an address: the
+  processes of a run must collect the same cases.
 - The UI in real browsers is a suite apart,
   `packages/mailbox-service/tests/browser/`, not beside the code of
   `web/pages/` it tests: it needs the dependency group `browser`,
