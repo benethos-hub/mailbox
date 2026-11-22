@@ -17,7 +17,7 @@
 #
 # It removes the volumes of an earlier run. What it makes stays in
 # containers/live/mailbox-agents/secrets/, never versioned: the CA, the passwords, the
-# tokens, and secrets/agent.env, the settings the agents and smoke.py read.
+# tokens, and secrets/agent.env, the settings the agents and agents_smoke.py read.
 # The Claude API key and the fetched models are kept across runs.
 #
 # The mailbox service is built from this checkout, the version of the

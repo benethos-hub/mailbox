@@ -145,6 +145,11 @@ the keyword is set and the rest recorded. The runtime moves a message at
 most once for the agent, so an invoice the owner takes out of its
 subfolder stays where the owner put it.
 
+The senders `report` lists count an invoice marked in the end station
+too, although it is where it belongs: the report knows what was decided
+and done for a message, not the folder it lay in, so it cannot tell such
+an invoice from one left in the inbox (2026-11-19).
+
 **Marked mail the state file does not know is skipped (decided
 2026-11-19).** The runtime's record of a move lives in the state file. A
 state file made anew, or a message that comes back under another id,
@@ -240,11 +245,7 @@ passed. The two orders beside `sorting` ended as with version 4. Then:
   the keyword `agent-invoice` beforehand ended as `skipped`, with no step
   and no model call, and the other three invoices were decided.
 
-Each check put the mail back, compared by Message-ID. Against the mailbox
-service 0.7.5 two of the four messages `sorting` had moved were named
-under another id after they were moved back, in each of four runs.
-Against 0.8.0, on the same day, none was
-([mailbox service](mailbox-service.md)).
+Each check put the mail back, compared by Message-ID.
 
 ## Measured, version 5
 
@@ -263,58 +264,3 @@ agent works as built, not how well it sorts real mail.
 
 The other models of the gateway are in the table of
 [containers/live/mailbox-agents/README.md](../../../containers/live/mailbox-agents/README.md).
-
-## What changed from version 3
-
-| Part | Version 3 | Version 4 |
-|---|---|---|
-| Question | an invoice, and from which listed supplier | an invoice |
-| Triggers | `message.created` | `message.created`, and `message.updated` for a message with an open item |
-| `admit` | in the inbox | in the inbox or in a folder it looks in |
-| Model answer | label, near miss, supplier, two quotes | label, near miss, one quote |
-| Prompt | `v3`, names the suppliers | `v4`, names none |
-| Baseline | uses the supplier list | the invoice rules alone |
-| Where an invoice goes | the folder of its supplier under one parent, by a sender rule of the list | the subfolder of the folder it lies in |
-| Actions | `add_keyword`, `move_to_folder` | the same and `create_folder`, for the subfolder only |
-| `report` | senders of invoices without a supplier | senders of invoices marked and not moved, as candidates for a group of `sorting` |
-| Evaluation | label, and the supplier by its source | label alone |
-
-The senders `report` lists count an invoice marked in the end station
-too, although it is where it belongs: the report knows what was decided
-and done for a message, not the folder it lay in, so it cannot tell such
-an invoice from one left in the inbox (2026-11-19).
-
-Version 3 decided the supplier by a sender rule of a list, and the model
-could name one of the list with a quote that names it (decided 2026-11-17).
-Only an address or a pattern rule moved. That list and its rules are now
-the business of [sorting](agent-sorting.md), which moves by the sender before
-`invoices` asks its question.
-
-The existing gold set still serves: its labels stay. The invented gold sets
-dropped their supplier field. In a gold file that still names one, the
-supplier counts as missing, as the agent no longer answers it: drop the
-field. The settings of version 3, `MAILBOX_AGENTS_INVOICES_FOLDER` and
-`MAILBOX_AGENTS_INVOICES_SUPPLIERS_FILE`, went with the supplier list. A
-`.env` that still names them starts, as an unknown setting is ignored.
-
-## Measured, version 4
-
-On the 11 invented messages of the test account, 2026-11-18, the reports
-in `reports/mailbox-agents/invoices/`. Numbers on invented mail say that the agent works
-as built, not how well it sorts real mail.
-
-| Model | Right | Invoices found | Near miss invented | Tokens in per message |
-|---|---|---|---|---|
-| `mail-classifier` (Claude Haiku 5.5) | 11 of 11 | 3 of 3 | 1 | 1081 |
-| `mail-classifier-gpu` (local) | 11 of 11 | 3 of 3 | 2 | 495 |
-| the rules alone | 10 of 11 | 3 of 3, and one more | | |
-
-`live/mailbox-agents/invoices.py` ran `invoices` in `shadow` with `Providers/*` and
-`{folder}/Rechnungen` beside `sorting` in `full`, in both orders.
-`invoices` first: it marked the three invoices in the inbox and opened an
-item for each. Once `sorting` had moved two of them, their updates reached
-`invoices` through the feed after about 23 seconds, and it recorded the
-folders and the moves into `Rechnungen` with no further model call. The
-third, of a held group, stayed in the inbox with its item open. `sorting`
-first: `backfill` found the two in the folders of their groups, and
-`invoices` recorded the same. The mail was put back.

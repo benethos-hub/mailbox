@@ -9,7 +9,7 @@
 4. The mailbox service: the administrator's password set through the UI
    and a token made there, the account connected, a user ``agents`` with
    mail.read and mail.write on it, and that user's token. The same step
-   writes ``secrets/agent.env``: the settings the agents and smoke.py
+   writes ``secrets/agent.env``: the settings the agents and agents_smoke.py
    read, the model gateway, the agents' key and its alias among them.
 
 Every secret goes to a file under ``secrets/``, none to the terminal.

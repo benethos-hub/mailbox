@@ -50,7 +50,7 @@ containers/
 | `test-mail-server/` | the adapters against a mail server of our own | Stalwart |
 | `production/mailbox-agents/` | running the agents, without a clone of the repository | from the GitHub container registry, the version named in `.env` |
 | `development/mailbox-agents/` | trying a change of the agents in a container | built from this repository |
-| `live/mailbox-agents/` | the agents' test account | Stalwart, the published mailbox service, LiteLLM with its database, llama.cpp |
+| `live/mailbox-agents/` | the agents' test account | Stalwart, the mailbox service built from this repository (a published release with `LIVE_SERVICE=published`), LiteLLM with its database, llama.cpp |
 
 How to start and run the service and the MCP server, with `docker run`
 or with compose:
@@ -93,8 +93,9 @@ or from an `.env` beside the file, not versioned:
 
 ## The images
 
-`ghcr.io/benethos-hub/benethos-mailbox-service` and
-`ghcr.io/benethos-hub/benethos-mailbox-mcp`, for `linux/amd64` and
+`ghcr.io/benethos-hub/benethos-mailbox-service`,
+`ghcr.io/benethos-hub/benethos-mailbox-mcp` and
+`ghcr.io/benethos-hub/benethos-mailbox-agents`, for `linux/amd64` and
 `linux/arm64`, built by `.github/workflows/publish.yml` with the same
 version as the PyPI packages:
 
@@ -104,12 +105,13 @@ version as the PyPI packages:
 | release marked as a pre-release | its version only |
 | started by hand on `main` (Actions, Publish, Run workflow) | `edge` |
 
-- The service image holds the service package, the MCP image the MCP
-  server and the client, both the common package, each installed from
-  `uv.lock` without the development tools.
-- Both build on `python:3.15-slim` and take `uv` from its image, each
-  named by its tag and the digest of that tag. Dependabot raises both,
-  also for a new build under the same tag.
+- The service image holds the service and the common package, the MCP
+  image the MCP server, the client and the common package, the agents'
+  image the agents and the client. Each is installed from `uv.lock`
+  without the development tools.
+- All three build on `python:3.15-slim` and take `uv` from its image,
+  each named by its tag and the digest of that tag. Dependabot raises
+  them, also for a new build under the same tag.
 - They run as user `mailbox` (uid 10001), which the Dockerfiles name by
   its id, so that a host or an orchestrator can see it is not root. The
   compose files of `development/` and `production/` add a read-only root
@@ -117,8 +119,8 @@ version as the PyPI packages:
   well, which keeps only `NET_BIND_SERVICE` for its ports 80 and 443.
   The test mail server runs Stalwart without these.
 - Settings come from the environment only.
-- Both have a health check: the service on `GET /health`, the MCP server
-  on its port.
+- The service and the MCP server have a health check: the service on
+  `GET /health`, the MCP server on its port.
 - The compose files of `development/` and `production/` cap the log Docker
   keeps of each container at 5 files of 10 MB, the oldest dropped first
   (`x-logging`, and in `mcp.yaml` on the service itself). The test mail
@@ -142,7 +144,7 @@ the file is mounted. The key itself never enters the image, it is
 mounted as a secret when the container starts. The warning is left as
 it is.
 
-`ci.yml` builds both on every pull request and every push to `main`,
+`ci.yml` builds all three on every pull request and every push to `main`,
 for arm64 as well. It checks that the
 compose files in `development/` and `production/` keep every port on the loopback
 address, all but Caddy's 80 and 443, production with the instances of
@@ -150,8 +152,8 @@ its example override file. It also starts the
 service until its health check reports healthy, and the MCP server's
 image twice: once for its version, and once as a catalogue
 (`MAILBOX_MCP_CATALOGUE=true`, over stdio), whose tools must be as
-many as `docs/mailbox-mcp/mcp-tools.json` names. Its job `dockerfile-lint` reads both
-Dockerfiles with hadolint, and what that finds goes to Security, Code
+many as `docs/mailbox-mcp/mcp-tools.json` names. Its job `dockerfile-lint` reads every
+Dockerfile with hadolint, and what that finds goes to Security, Code
 scanning.
 
 ## The agents

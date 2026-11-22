@@ -47,7 +47,8 @@ each agent.
   says how to start the setup of its own, and
   `live/mailbox-agents/agents_smoke.py` checks the package against it,
   read-only.
-- An evaluation run is manual too, against a gold set under `data/`. Its
+- An evaluation run is manual too, against a gold set under `data/`, or the one
+  `live/mailbox-agents/gold.py` writes for the test account. Its
   report goes into `reports/mailbox-agents/`, as
   `--reports reports/mailbox-agents`, and holds numbers only.
 

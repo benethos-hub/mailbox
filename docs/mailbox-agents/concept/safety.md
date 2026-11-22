@@ -36,16 +36,14 @@ Further rules:
   was given, each on its own: sender, subject, attachment names, text.
   The frame the code writes around them, `From:`, `To:`, `Subject:` and
   `Attachments:`, is no part, and a quote that starts with one is looked
-  up without it. A test holds the words each agent writes to that list. Both sides are
+  up without it. A test holds the frame words each agent writes to the words the check strips. Both sides are
   brought to Unicode NFC and compared word for word: case, punctuation,
   typographic quotes and dashes, and the whitespace between words do not
   count, the words and their order do. A changed or missing word is not
   forgiven, nor a first or last word cut short: a quote matches whole
   words only (confirmed 2026-11-19). A quote of fewer than eight letters
   and digits counts as not
-  found (decided 2026-11-17, case and punctuation forgiven 2026-11-18: of
-  13 quotes the shadow run on the owner's account refused, none was
-  invented, and every one differed in such marks or in a few characters).
+  found (decided 2026-11-17, case and punctuation forgiven 2026-11-18).
   A value code found by a rule, such as the group of a sender rule of
   `sorting`, carries no quote, so nothing of the mail is stored for it. A
   field whose quote is not found is dropped, and a label whose quote is

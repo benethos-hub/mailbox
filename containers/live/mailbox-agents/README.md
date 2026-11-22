@@ -43,7 +43,7 @@ earlier run, then, not in this order:
 
 - makes a test CA and a certificate for `mail.agents.test`,
 - starts Stalwart in its bootstrap mode, sets host name and domain
-   without ACME and DKIM, restarts it out of that mode, installs the
+  without ACME and DKIM, restarts it out of that mode, installs the
   certificate and creates the account,
 - appends the invented mail of `mail.py` over IMAP: invoices with and
   without a PDF, a receipt that carries its invoice, near misses (a
@@ -51,14 +51,14 @@ earlier run, then, not in this order:
   project inquiry, a newsletter, sent mail that waits for a reply and some
   that does not, a reply and an automatic answer,
 - makes the mailbox service's keys and administrator, signs in to its UI
-   once for the first token, connects the account, and creates the user
-   `agents` with `mail.read` and `mail.write` on it and that user's token,
+  once for the first token, connects the account, and creates the user
+  `agents` with `mail.read` and `mail.write` on it and that user's token,
 - starts the gateway with a master key of its own, and a local model when
-   the agents are to use one (below),
+  the agents are to use one (below),
 - makes a key of the gateway for the agents that reaches the three
-   `mail-classifier` aliases only, with a budget of 5 USD, so the lock of
-   the gateway that the safety concept counts on is used here too. The
-   master key stays in `secrets/gateway.env`.
+  `mail-classifier` aliases only, with a budget of 5 USD, so the lock of
+  the gateway that the safety concept counts on is used here too. The
+  master key stays in `secrets/gateway.env`.
 
 ### Which model the agents use
 
@@ -152,6 +152,9 @@ MAILBOX_AGENTS_MODEL=claude/haiku-5-5 uv run benethos-mailbox-agents \
     --reports containers/live/mailbox-agents/secrets/reports
 ```
 
+A report to keep goes into the repository with
+`--reports reports/mailbox-agents`. It holds numbers only.
+
 Measured on 2026-11-20 with llama.cpp build 12464 behind LiteLLM 1.110.2,
 an RTX 4070 with 12 GB and a 12th generation Core i9 with 24 threads, and
 Claude through the Claude API, its seconds including the way over the
@@ -182,9 +185,6 @@ with the agents' own key. Their seconds are in the reports under
 | `gpu/qwen3.6-35b-a3b` | 22.1 GB | 12 | 12 | 3 | 4 of 5 | 9.5 / 3.7 |
 | `claude/haiku-5-5` | hosted | 12 | 12 | 3 | 4 of 5 | 1.4 / 1.8 |
 | `claude/opus-5-5` | hosted | 12 | 12 | 3 | 4 of 4 | 1.9 / 2.3 |
-
-The seconds of `invoices` with a local model are higher than in the run
-of 2026-11-17 with its prompt `v1`. Why was not looked into.
 
 What decided, measured on 2026-11-17 and 2026-11-18 with 11 messages and
 prompt `v1` of `invoices`. The run of 2026-11-20 bears the choices out.
@@ -276,8 +276,9 @@ uv run benethos-mailbox-agents --env-file containers/live/mailbox-agents/secrets
 ```
 
 `agent.env` sets the stage `shadow`. An agent that may change a message
-does so only in this account. The scripts in `live/` read `agent.env`
-alone, not the variables of the shell, stop with exit code 2 when the
+does so only in this account. The scripts in `live/mailbox-agents/` read
+`agent.env` alone, or the file `--env-file` names, not the variables of
+the shell, stop with exit code 2 when the
 mailbox service is not the one of this setup, on this machine at port
 38081, and print the account first. A mailbox service on this machine
 at another port, such as its default 8080, may be a real one.

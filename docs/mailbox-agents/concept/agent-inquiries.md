@@ -43,4 +43,4 @@ are cut at 300 characters each (2026-11-19), the sender's address at 320
 looks a quote up in the same cut text.
 
 Recognising an inquiry seen before, and anything that writes a reply, come
-later ([roadmap](../../ROADMAP.md)).
+later ([roadmap](../../roadmap/agents.md#next)).

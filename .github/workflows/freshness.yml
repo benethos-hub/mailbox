@@ -7,8 +7,8 @@ name: Freshness
 #
 #   "Pinned versions have newer releases", the organisation's report: every
 #   package uv.lock pins that has a newer release, within the ranges the
-#   four pyproject.toml allow and beyond them, the build backends, known
-#   vulnerabilities, the images of both Dockerfiles and the compose files by
+#   five pyproject.toml allow and beyond them, the build backends, known
+#   vulnerabilities, the images of the three Dockerfiles and the compose files by
 #   digest and by tag, every action pinned to a commit, and under Checks one
 #   sentence per job below on what passed. Dependabot proposes the direct
 #   dependencies, the actions and the base images. The issue adds the

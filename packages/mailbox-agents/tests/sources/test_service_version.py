@@ -355,8 +355,13 @@ def test_the_readme_says_which_service_the_agents_take() -> None:
     before installing anything."""
     text = " ".join((PACKAGE_DIR / "README.md").read_text("utf-8").split())
 
-    assert "of the same minor version" in text
-    assert "[mailbox service](https://github.com/benethos-hub/mailbox" in text
+    assert "take only a service of their own version" in text
+    assert "the same minor version" in text
+    assert "from 1.0 the same major version" in text
+    service = (
+        "https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-service"
+    )
+    assert f"({service})" in text
 
 
 def _version() -> str:

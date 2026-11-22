@@ -8,7 +8,7 @@
 > `sorting` itself have not run on a real mailbox. None acts on a real
 > mailbox yet.** A statement about another system that nobody has checked
 > yet is marked **(to verify)**, and a choice that is still open is listed
-> in [ROADMAP.md](../ROADMAP.md) rather than written as fact.
+> in [the agents' roadmap](../roadmap/agents.md#open-questions) rather than written as fact.
 
 This file is the overview: what the project is, what is in scope, its
 names and the decisions that matter most. Each topic has a file of its
@@ -47,7 +47,7 @@ code.
 | [ARCHITECTURE.md](ARCHITECTURE.md) | The layers, the modules and the design decisions behind them. |
 | [LOGGING.md](LOGGING.md) | What an agent writes to its log, and the catalogue of every line. |
 | [RELEASING.md](../RELEASING.md) | The steps of a release, in order. |
-| [ROADMAP.md](../ROADMAP.md) | The phases, ideas and the open questions. |
+| [Roadmap of the agents](../roadmap/agents.md) | What is built, what comes next and the open questions. |
 
 ## Purpose
 
@@ -80,12 +80,14 @@ agent against a labelled set of mail, and exposing health and metrics.
 - Sending mail, and deleting mail, to the trash or for good.
 - A model that chooses tools. No step in this project hands tools to a
   model. Work of that kind belongs to a separate agent server, which a
-  later phase may call over HTTP ([roadmap](../ROADMAP.md)).
+  later step may call over HTTP ([roadmap](../roadmap/agents.md#next)).
 - An agent framework. One call with a schema needs none
   ([model gateway](concept/model-gateway.md)).
 - Talking IMAP, SMTP or a provider API. The mailbox service does that.
-- Parsing MIME, decoding character sets or turning HTML into text. The
-  mailbox service does that too.
+- Parsing MIME or decoding character sets. The mailbox service does that
+  too. Its API does not turn HTML into text: a mail with an HTML body alone
+  reaches an agent with an empty text
+  ([mailbox service](concept/mailbox-service.md)).
 - A conversation or session store. Every model call is a single turn
   ([state](concept/state.md)).
 - A user interface. The mailbox is the interface: a keyword or a folder is
@@ -103,13 +105,13 @@ on one runtime, and each process runs one of them.
 | Where | Name |
 |---|---|
 | Display name, in the README and the brand | Mailbox Agents |
-| Repository | `mailbox-agents` |
+| Repository | `benethos-hub/mailbox`, folder `packages/mailbox-agents` |
 | PyPI distribution | `benethos-mailbox-agents` |
 | Import package | `benethos_mailbox_agents` |
 | Console script | `benethos-mailbox-agents` |
 | Container image | `ghcr.io/benethos-hub/benethos-mailbox-agents` |
 | Settings prefix | `MAILBOX_AGENTS_` |
-| Agent names | lowercase letters, digits and `_`: `invoices`, `awaiting_reply`, `inquiries` |
+| Agent names | a lowercase letter, then lowercase letters, digits and `_`: `invoices`, `awaiting_reply`, `inquiries` |
 
 ## What matters most
 

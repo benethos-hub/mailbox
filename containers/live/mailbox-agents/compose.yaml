@@ -1,8 +1,8 @@
 # A mail server, a mailbox service and a model gateway of their own, for
 # the live checks.
 # Nothing here reaches a real mailbox: Stalwart holds one account made for
-# the agents, filled with invented mail, and the service is the published
-# image. setup.sh makes it, README.md says how to use it, and
+# the agents, filled with invented mail, and the service is built from
+# this checkout. setup.sh makes it, README.md says how to use it, and
 # live/mailbox-agents/agents_smoke.py checks the package against it. Every port is on
 # 127.0.0.1 only.
 name: mailbox-agents-live

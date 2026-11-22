@@ -94,8 +94,6 @@ names the services.
   activities it records follow it, `activity.system.*` (LOGGING.md
   7.2). A name has at most 32 characters, so that the longest fits the
   source column of a log line.
-- **The tests mirror the packages.** When code moves, they move and
-  change their imports, nothing else.
 - **`data/` got a similar look,** from a concept of its own, section 8.
 
 ## 8. The data layer and `common`
@@ -124,8 +122,9 @@ section 2. What is where, and why:
 through its `__init__.py`, from the names in its `__all__`, with no
 cycle between packages and in the lines of ARCHITECTURE.md, section 2.
 Like `activity`, `mail` exports modules. Tests may import a module
-inside a package, since they test it. `tests/test_packages.py` runs the
-same checks over both layers.
+inside a package, since they test it.
+`packages/mailbox-service/tests/test_packages.py` runs the same checks
+over both layers.
 
 **Decided 2026-09-28 (8.6):**
 
@@ -133,15 +132,12 @@ same checks over both layers.
 - `logbook` stays in `data`.
 - The `Clock` and `Sleep` types stay where they are. They are merged
   into `common/clock.py` when a third user of them appears.
-- CLAUDE.md points to ARCHITECTURE.md for the architecture, which took
-  over what CLAUDE.md said about the layers and the replaceable parts.
 
 ## 9. Code written twice
 
 The code written twice in the domain, the web layer and the data layer
-was merged into helpers. **Decided 2026-09-28:** one branch for all of
-it, in a fixed order, since several findings touched the same files. A
-helper new to `common` or the domain gets its test in the same commit.
+was merged into helpers. A helper new to `common` or the domain gets
+its test in the same commit (decided 2026-09-28).
 
 Considered and left: the `rpartition("@")` one-liners, the
 case-insensitive substring filter (five places, an idiom),
@@ -166,15 +162,6 @@ what was accepted. **Decided 2026-09-28:** all of it stays as built.
   well-known names, not from `rules`.
 - The method is `MessageFilter.flags_match`, not `matches`, since it
   checks unread, starred and attachments alone.
-
-Three small changes in behaviour came with the merges:
-
-- A user's new name is checked after the right and the cover. A caller
-  who may not manage the user learns nothing about taken names: `403`
-  where it was `409`.
-- The log page hands out an opaque cursor, as every other list.
-- `is_host_name(..., dotted=False)` for the domain of an address, so
-  its error messages stayed as they were.
 
 ## 10. The MCP server
 
@@ -205,7 +192,7 @@ rights, the bounds of the arguments, the start and the log.
 ## 11. The migrations of the schema
 
 Of 2026-10-05. Each step of the schema is a class of one base. How a
-new one is written: CLAUDE.md, Conventions.
+new one is written: [the service's CLAUDE.md](../packages/mailbox-service/CLAUDE.md).
 
 - **`Migration`**, in `migration.py`, has a `version`, its `statements`
   and `before` for a step in Python. `apply` is the template: the same
@@ -244,36 +231,9 @@ by `version` as it is imported, a second class with the same number
 refused at once. That is the one piece of reflection worth having here.
 It is not built.
 
-## 12. The work list of 2026-10
-
-A list of 2026-10-07, after a review of the code and the documents,
-built the same day. Decided by the user then:
-
-- The client of the REST API is a package of its own,
-  `packages/mailbox-client`: one description per endpoint,
-  `MailboxClient` and `SyncMailboxClient` as thin transports over it.
-  The MCP server is built on it.
-- `MailProvider` was split by capability into protocols a provider
-  implements as far as it can. The domain answers `501` for the rest.
-- JSON from a server is read into a shape at the edge
-  (`data/protocols/wire.py`). A body of another shape is a
-  `ProviderError`.
-
-**12.3 The limits.** Decided by the user on 2026-10-07: hard limits,
-without exceptions and without `noqa`. What grows beyond one is split.
-The numbers are in [architecture/rules.md](mailbox-service/architecture/rules.md),
-section 15. `formatTime` keeps its name, which `logging.Formatter` gives
-it.
-
-## 14. The client's records in parts
-
-Decided by the user on 2026-10-09: `models/` of the client is a package,
-one module per resource as `endpoints/` is, and its `__init__.py` offers
-every record.
-
 ## 15. A fourth package, `mailbox-common`
 
-Decided by the user on 2026-10-09: what the service and the MCP server
+Decided 2026-10-09: what the service and the MCP server
 both need is a package of its own, `benethos-mailbox-common` on PyPI,
 with the version of the others, pinned by the service and the MCP
 server. It has no image: the images of the service and the MCP server
@@ -282,19 +242,19 @@ install it with them. It sees neither of them, nor the client.
 - It needs the standard library alone. platformdirs and
   pydantic-settings are extras, `paths` and `settings`. The client does
   not use platformdirs.
-- The log moved as a whole, as the user decided during the work: the
+- The log moved as a whole: the
   format, the levels, `log_time`, the plain and the coloured line and a
   stderr handler. The service keeps its dictConfig for uvicorn, the log
   page and its access line. The MCP server keeps stderr alone and the
   quiet libraries. So the two logs look alike by construction.
 - `publish.yml` uploads the packages in the order of their
-  dependencies, as the user decided: common first, then the client and
-  the service, then the MCP server. `test_publish.py` holds the order
+  dependencies: common first, then the client and
+  the service, then the MCP server and the agents. `test_publish.py` holds the order
   to the pyproject files.
 - Each program keeps its own search order for its folders, since the
   service also looks for its data folder in the working directory.
 
-**15.4 Groups, and three more moves.** Decided by the user on
+**15.4 Groups, and three more moves.** Decided
 2026-10-10, before the first push of the package.
 
 - **Groups.** While the package is small, it splits into `mail`, `log`,
@@ -327,7 +287,7 @@ install it with them. It sees neither of them, nor the client.
 
 ## 16. Records, one settings base, the boundaries
 
-Decided by the user on 2026-10-10.
+Decided 2026-10-10.
 
 - **Records in the client.** A message is `Message`, a summary
   `MessageSummary`, which `Message` extends, with `Address`,
@@ -340,7 +300,7 @@ Decided by the user on 2026-10-10.
   `Settings` extend it. A settings file does not change the environment
   of the process.
 - **The boundaries.** `tests/test_boundaries.py`, at the root of the
-  repository, checks all four packages: what a package hands on is a
+  repository, checks every package but mailbox-agents: what a package hands on is a
   named record, frozen and with slots, not a tuple or a dict. Each
   exception stands in `ALLOWED` with its reason, and an entry that no
   longer matches fails. The tuples of the domain became `IssuedToken`,

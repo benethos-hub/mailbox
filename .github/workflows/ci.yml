@@ -251,7 +251,7 @@ jobs:
         --ignore=packages/mailbox-common/tests/settings
         packages/mailbox-common/tests
 
-  # hadolint over both Dockerfiles: an image without a tag, ADD where COPY would
+  # hadolint over every Dockerfile: an image without a tag, ADD where COPY would
   # do, no USER, the shell form of CMD, and ShellCheck over every RUN line. A
   # FROM from a registry other than the two named is a finding as well. The
   # findings go to Security, Code scanning, and this job stays green on them,
