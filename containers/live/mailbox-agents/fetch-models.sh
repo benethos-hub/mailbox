@@ -19,7 +19,7 @@
 set -eu
 
 here=$(cd "$(dirname "$0")" && pwd)
-dir="${MODELS_DIR:-$here/models}"
+dir="${MAILBOX_LIVE_MODELS_DIR:-$here/models}"
 hub=https://huggingface.co
 
 # name | repository | revision | file | sha256 | bytes, looked up 2026-11-18

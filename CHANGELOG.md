@@ -24,7 +24,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   service's version. The list of tested lines and `COMPATIBILITY.md` are
   gone. `status` says whether the service matches.
 - `benethos-mailbox-agents`: the live setup builds the mailbox service
-  from the checkout. `LIVE_SERVICE=published` with
+  from the checkout. `MAILBOX_LIVE_SERVICE=published` with
   `MAILBOX_SERVICE_VERSION` pulls a published release instead.
 - `benethos-mailbox-agents`: `report` says when the summary at its end
   counts only part of the messages: a line before it names how many of

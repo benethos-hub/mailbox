@@ -35,7 +35,7 @@ release no published image has it. To pull a published release
 instead:
 
 ```
-LIVE_SERVICE=published MAILBOX_SERVICE_VERSION=0.10.0 sh containers/live/mailbox-agents/setup.sh
+MAILBOX_LIVE_SERVICE=published MAILBOX_SERVICE_VERSION=0.10.0 sh containers/live/mailbox-agents/setup.sh
 ```
 
 The script makes everything anew each time. It removes the volumes of an
@@ -65,8 +65,8 @@ earlier run, then, not in this order:
 | Situation | Model | Alias in `agent.env` |
 |---|---|---|
 | a Claude API key is there | Claude Haiku 5.5 | `mail-classifier` |
-| no key, or `LIVE_LOCAL=gpu`, and NVIDIA's CDI spec on the host | local, on the graphics card | `mail-classifier-gpu` |
-| no key and no CDI spec, or `LIVE_LOCAL=cpu` | local, on the CPU | `mail-classifier-cpu` |
+| no key, or `MAILBOX_LIVE_LOCAL=gpu`, and NVIDIA's CDI spec on the host | local, on the graphics card | `mail-classifier-gpu` |
+| no key and no CDI spec, or `MAILBOX_LIVE_LOCAL=cpu` | local, on the CPU | `mail-classifier-cpu` |
 
 The Claude API key goes into `secrets/anthropic_api_key` or the variable
 `ANTHROPIC_API_KEY`. The script keeps the file across runs.
