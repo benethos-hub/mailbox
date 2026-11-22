@@ -21,6 +21,10 @@ script looks at both, with the interpreter it runs under:
 - the client: it imports, under the installed version
 - the common package: the same, and its groups import. A group with an extra
   that is not installed names that extra
+- the agents: they import under the installed version, their command
+  names it, and every agent is found. An agent needs a mailbox service and
+  a model gateway to do more, which the live checks of
+  ``live/mailbox-agents/`` bring
 
 Exits with 0 when every answer is as expected and with 1 otherwise. No
 account and no mail server, and nothing but ``127.0.0.1``. The settings of
@@ -56,6 +60,7 @@ SERVICE = "benethos-mailbox-service"
 MCP = "benethos-mailbox-mcp"
 CLIENT = "benethos-mailbox-client"
 COMMON = "benethos-mailbox-common"
+AGENTS = "benethos-mailbox-agents"
 # How long the service may take to answer, and the whole MCP conversation.
 TIMEOUT = 60.0
 # The service's settings in the environment.
@@ -395,11 +400,33 @@ def check_common() -> None:
             )
 
 
+def check_agents() -> None:
+    check_import(AGENTS)
+    version = importlib.metadata.version(AGENTS)
+    with scratch_folder() as scratch:
+        done = subprocess.run(
+            [program(AGENTS), "--version"],
+            cwd=scratch,
+            capture_output=True,
+            text=True,
+            timeout=TIMEOUT,
+        )
+    check(
+        done.returncode == 0 and version in done.stdout,
+        f"{AGENTS} --version: exit {done.returncode}, says {done.stdout.strip()!r}",
+    )
+    contract = importlib.import_module("benethos_mailbox_agents.contract")
+    found = sorted(contract.discover())
+    check(bool(found), f"{AGENTS} finds no agent")
+    print(f"{AGENTS} {version}, agents {', '.join(found)}")
+
+
 CHECKS: dict[str, Callable[[], None]] = {
     SERVICE: check_service,
     CLIENT: check_client,
     MCP: check_mcp,
     COMMON: check_common,
+    AGENTS: check_agents,
 }
 
 
@@ -412,7 +439,7 @@ def leaves(exc: BaseException) -> list[BaseException]:
 
 
 def main() -> int:
-    """The package ``FRESHNESS_PACKAGE`` names, else all four. Every failure
+    """The package ``FRESHNESS_PACKAGE`` names, else all five. Every failure
     is a finding, and exit code 3 would read as a rate limit, so it is 1."""
     package = os.environ.get("FRESHNESS_PACKAGE")
     if package and package not in CHECKS:

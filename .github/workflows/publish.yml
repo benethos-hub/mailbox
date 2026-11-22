@@ -1,22 +1,23 @@
 name: Publish
 
-# Publishes a release: the four packages to PyPI, both images to ghcr.io,
+# Publishes a release: the five packages to PyPI, three images to ghcr.io,
 # the MCP server's Claude Desktop bundle onto the release, and its entry in
 # the MCP Registry. Each upload is done by an action of the organisation in
 # benethos-hub/.github (actions/publish), followed at main like the CI
 # workflows. Its README describes the gate, the trial run, the release tags
 # and the one-time setup. What follows is what this project adds.
 #
-# Four packages carry one version, and the release tag names it. They go
+# Five packages carry one version, and the release tag names it. They go
 # to PyPI in the order of their dependencies, one job each, since a package
 # on PyPI that pins one not yet there cannot be installed: common first,
-# then client and service, then mcp. test_publish.py holds that order to
+# then client and service, then mcp and agents. test_publish.py holds that order to
 # the pyproject files. PyPI trusts this file, publish.yml, together with
 # the environment pypi-<package> of each job. Renaming either has PyPI
 # refuse the next upload.
 #
-# Two images, benethos-mailbox-service and benethos-mailbox-mcp, from one
-# matrix. The client and the common package have no image.
+# Three images, benethos-mailbox-service, benethos-mailbox-mcp and
+# benethos-mailbox-agents, from one matrix. The client and the common
+# package have no image.
 #
 # The bundle pins the MCP server's version on PyPI, so it is locked and
 # packed once that version is there, and the registry entry waits for it.
@@ -132,7 +133,28 @@ jobs:
             benethos_mailbox_mcp/py.typed
             benethos_mailbox_mcp-{version}.dist-info/licenses/LICENSE
 
-  # The PyPI half of a manual run, for all four packages, without the
+  pypi-agents:
+    name: PyPI benethos-mailbox-agents
+    if: github.event_name == 'release'
+    needs: [ci-passed, pypi-client]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: pypi-benethos-mailbox-agents
+      url: https://pypi.org/p/benethos-mailbox-agents
+    permissions:
+      contents: read
+      id-token: write # required for Trusted Publishing (OIDC)
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: benethos-hub/.github/actions/publish/pypi@main
+        with:
+          package: benethos-mailbox-agents
+          wheel-contains: |
+            benethos_mailbox_agents/py.typed
+            benethos_mailbox_agents-{version}.dist-info/licenses/LICENSE
+
+  # The PyPI half of a manual run, for all five packages, without the
   # environments and without an OIDC token, since nothing is uploaded.
   pypi-trial:
     # A fixed name: a release skips this job, and GitHub does not expand
@@ -155,6 +177,8 @@ jobs:
             module: benethos_mailbox_service
           - package: benethos-mailbox-mcp
             module: benethos_mailbox_mcp
+          - package: benethos-mailbox-agents
+            module: benethos_mailbox_agents
     permissions:
       contents: read
     steps:
@@ -188,6 +212,9 @@ jobs:
           - image: benethos-mailbox-mcp
             folder: mailbox-mcp
             description: "Mailbox, benethos-mailbox-mcp: the MCP server over streamable HTTP. Reaches mail through the REST API of benethos-mailbox-service only."
+          - image: benethos-mailbox-agents
+            folder: mailbox-agents
+            description: "Mailbox, benethos-mailbox-agents: small AI agents that work on a mailbox through the REST API of benethos-mailbox-service, one agent per container."
     permissions:
       contents: read
       packages: write # push to ghcr.io as the GITHUB_TOKEN identity

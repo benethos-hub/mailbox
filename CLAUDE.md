@@ -178,9 +178,9 @@ containers/               # images/ (one folder per image), and one folder
                           #   fresh install, images, the UI in real
                           #   browsers,
                           #   publish.yml: on a release, through the
-                          #   organisation's actions, the four packages
+                          #   organisation's actions, the five packages
                           #   to PyPI, in the order of their dependencies,
-                          #   both images to GHCR, the MCP server's
+                          #   three images to GHCR, the MCP server's
                           #   Claude Desktop bundle onto the release and
                           #   its entry to the MCP Registry. A manual run
                           #   on main tries PyPI and pushes the images as
@@ -431,9 +431,10 @@ itself without credentials. Live checks are manual scripts in `live/`, outside
 
 ## Releasing
 
-A release is its own `release/X.Y.Z` branch and pull request. The four
+A release is its own `release/X.Y.Z` branch and pull request. The five
 packages carry the same version. The MCP server pins the client and the
-common package to it, the service the common package.
+common package to it, the service the common package, the agents the
+client.
 
 The steps in order, from the pins to what is checked after the
 publish: [docs/RELEASING.md](docs/RELEASING.md).

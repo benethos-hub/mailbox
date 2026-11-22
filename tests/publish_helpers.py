@@ -18,9 +18,6 @@ MCP = ROOT / "packages" / "mailbox-mcp"
 COMMON = ROOT / "packages" / "mailbox-common"
 AGENTS = ROOT / "packages" / "mailbox-agents"
 PACKAGES = [SERVICE, CLIENT, MCP, COMMON, AGENTS]
-# The packages publish.yml and freshness.yml know. The agents join with
-# their own jobs there.
-PUBLISHED = [SERVICE, CLIENT, MCP, COMMON]
 
 
 def project_of(package: Path) -> dict[str, Any]:
