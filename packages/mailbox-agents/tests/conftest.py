@@ -8,9 +8,9 @@ from pathlib import Path
 
 import pytest
 
-from benethos_mailbox_agents import errors
 from benethos_mailbox_agents.cli import session
 from benethos_mailbox_agents.settings import PREFIX
+from benethos_mailbox_common.log import redact
 
 from .agents_fake import FakeGateway, FakeService
 from .agents_helpers import Wired, wired
@@ -25,9 +25,9 @@ def no_configuration_from_this_machine(
     for name in list(os.environ):
         if name.startswith(PREFIX):
             monkeypatch.delenv(name)
-    errors.forget_secrets()
+    redact.forget()
     yield
-    errors.forget_secrets()
+    redact.forget()
 
 
 @pytest.fixture

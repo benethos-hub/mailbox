@@ -14,7 +14,7 @@ import pkgutil
 from ..errors import ContractError
 from .agent import Agent
 
-__all__ = ["AGENTS_PACKAGE", "discover", "load"]
+__all__ = ["AGENTS_PACKAGE", "discover", "load_agent"]
 
 AGENTS_PACKAGE = __name__.rsplit(".", 2)[0] + ".agents"
 
@@ -52,7 +52,7 @@ def discover(package: str = AGENTS_PACKAGE) -> dict[str, type[Agent]]:
     return dict(sorted(found.items()))
 
 
-def load(name: str, package: str = AGENTS_PACKAGE) -> type[Agent]:
+def load_agent(name: str, package: str = AGENTS_PACKAGE) -> type[Agent]:
     """The agent called ``name``, or a :class:`ContractError` naming those
     that exist."""
     agents = discover(package)

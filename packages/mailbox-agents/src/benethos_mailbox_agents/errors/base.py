@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .redaction import redact
+from benethos_mailbox_common.log import redact
 
 __all__ = ["MailboxAgentError"]
 
@@ -17,7 +17,7 @@ class MailboxAgentError(Exception):
     code: str = "error"
 
     def __init__(self, message: str) -> None:
-        super().__init__(redact(message))
+        super().__init__(redact.redact(message))
 
     @property
     def message(self) -> str:

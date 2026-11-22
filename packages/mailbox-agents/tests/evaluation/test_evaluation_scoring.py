@@ -9,7 +9,7 @@ from benethos_mailbox_agents.evaluation.scoring import (
     FieldScore,
     LabelScore,
     Outcome,
-    same,
+    same_label,
     score,
 )
 from benethos_mailbox_agents.records import Decision
@@ -24,9 +24,9 @@ def decided(label: str, source: str = "model", **fields: str) -> Decision:
 
 
 def test_same_ignores_case_and_whitespace() -> None:
-    assert same("Cloud  Host", "cloud host")
-    assert not same("CloudHost", "Telco")
-    assert same(None, "  ")
+    assert same_label("Cloud  Host", "cloud host")
+    assert not same_label("CloudHost", "Telco")
+    assert same_label(None, "  ")
 
 
 def test_precision_and_recall_per_label() -> None:

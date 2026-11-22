@@ -48,6 +48,7 @@ def wire_message(
     sender_name: str | None = None,
     to: list[str] | None = None,
     text: str | None = "Hello.",
+    html: str | None = None,
     attachments: list[dict[str, Any]] | None = None,
     thread_id: str | None = None,
     keywords: list[str] | None = None,
@@ -75,7 +76,7 @@ def wire_message(
         "message_id_header": f"<{message_id}@example.test>",
         "in_reply_to": None,
         "text_body": text,
-        "html_body": None,
+        "html_body": html,
         "attachments": [
             {"id": f"att{i}", "size": 1000, "inline": False, **a}
             for i, a in enumerate(attachments or [])

@@ -21,7 +21,9 @@ skills, desired skills, deadline to apply.
 
 Every field comes with a quote from the message ([safety](safety.md)). What a
 message does not say stays empty. The fields come in the same call as the
-label, with the prompt `prompts/system.v3.md`, version `v3`, each either
+label, with the prompt `prompts/system.v4.md`, version `v4` (`v3`
+unchanged, under a new version since the agent version 2 reads an
+HTML-only mail by the visible text of its HTML part, 2026-11-22), each either
 null or a value with its quote, in the schema as
 `role`, `start`, `end`, `duration`, `workload`, `location`,
 `remote_share`, `contract_form`, `intermediary`, `end_client`, `rate`,

@@ -3,7 +3,7 @@
 > **Status: alpha, 2026-11-19. The runtime and the agents `counting`, `invoices`,
 > `awaiting_reply`, `inquiries` and `sorting` are built and run against a
 > test account of invented mail. `invoices` version 3 ran in `shadow` on its
-> owner's real account, read-only, and changed nothing. Version 5, which
+> owner's real account, read-only, and changed nothing. Version 6, which
 > works beside `sorting` with the inbox folder as an end station, and
 > `sorting` itself have not run on a real mailbox. None acts on a real
 > mailbox yet.** A statement about another system that nobody has checked
@@ -35,9 +35,9 @@ code.
 | Agent | Question | Status | Its file |
 |---|---|---|---|
 | `counting` | none: counts what arrives and is sent, changes nothing | built | [agent-counting.md](concept/agent-counting.md) |
-| `invoices` | is this an invoice? It moves one into the subfolder of the folder it lies in | built, version 5, prompt `v4` | [agent-invoices.md](concept/agent-invoices.md) |
-| `awaiting_reply` | does this sent message wait for an answer? | built | [agent-awaiting-reply.md](concept/agent-awaiting-reply.md) |
-| `inquiries` | is this a project inquiry, and what does it say? | built, prompt `v3` | [agent-inquiries.md](concept/agent-inquiries.md) |
+| `invoices` | is this an invoice? It moves one into the subfolder of the folder it lies in | built, version 6, prompt `v5` | [agent-invoices.md](concept/agent-invoices.md) |
+| `awaiting_reply` | does this sent message wait for an answer? | built, version 2, prompt `v2` | [agent-awaiting-reply.md](concept/agent-awaiting-reply.md) |
+| `inquiries` | is this a project inquiry, and what does it say? | built, version 2, prompt `v4` | [agent-inquiries.md](concept/agent-inquiries.md) |
 | `sorting` | is the sender one of a listed group, and which folder is the group's? | built, no model. `invoices` then files an invoice within the folder `sorting` put it in | [agent-sorting.md](concept/agent-sorting.md) |
 
 ## Beside the concept
@@ -85,8 +85,8 @@ agent against a labelled set of mail, and exposing health and metrics.
   ([model gateway](concept/model-gateway.md)).
 - Talking IMAP, SMTP or a provider API. The mailbox service does that.
 - Parsing MIME or decoding character sets. The mailbox service does that
-  too. Its API does not turn HTML into text: a mail with an HTML body alone
-  reaches an agent with an empty text
+  too. A mail with an HTML body alone reaches an agent with the text a
+  reader sees of it, as the mail page and the MCP server show it
   ([mailbox service](concept/mailbox-service.md)).
 - A conversation or session store. Every model call is a single turn
   ([state](concept/state.md)).

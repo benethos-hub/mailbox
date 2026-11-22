@@ -16,6 +16,8 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
+from benethos_mailbox_common.values import text as text_values
+
 from .. import __version__, logbook
 from ..errors import (
     ConfigError,
@@ -126,9 +128,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         logbook.configure(settings.log_level)
         code: int = args.handler(args, settings)
     except (ConfigError, ContractError, ServiceVersionError) as exc:
-        print(f"{PROG}: {logbook.escaped(exc.message)}", file=sys.stderr)
+        print(f"{PROG}: {text_values.escaped(exc.message)}", file=sys.stderr)
         return 2
     except MailboxAgentError as exc:
-        print(f"{PROG}: {logbook.escaped(exc.message)}", file=sys.stderr)
+        print(f"{PROG}: {text_values.escaped(exc.message)}", file=sys.stderr)
         return 1
     return code

@@ -27,7 +27,7 @@ to where a piece of code goes. The rest is in
 
 - [1. The shape](#1-the-shape)
 - [2. The layers](#2-the-layers)
-- [3. The code, module by module](architecture/modules-service.md#3-the-code-module-by-module): [3.1 The service](architecture/modules-service.md#31-the-service) · [3.2 The client](../mailbox-client/ARCHITECTURE.md#32-the-client) · [3.3 The MCP server](../mailbox-mcp/ARCHITECTURE.md#33-the-mcp-server) · [3.4 What the service and the MCP server share](../mailbox-common/ARCHITECTURE.md#34-what-the-service-and-the-mcp-server-share)
+- [3. The code, module by module](architecture/modules-service.md#3-the-code-module-by-module): [3.1 The service](architecture/modules-service.md#31-the-service) · [3.2 The client](../mailbox-client/ARCHITECTURE.md#32-the-client) · [3.3 The MCP server](../mailbox-mcp/ARCHITECTURE.md#33-the-mcp-server) · [3.4 What the service, the MCP server and the agents share](../mailbox-common/ARCHITECTURE.md#34-what-the-service-the-mcp-server-and-the-agents-share)
 - [4. Where does it go?](#4-where-does-it-go)
 - [5. Packages](architecture/rules.md#5-packages)
 - [6. Imports](architecture/rules.md#6-imports)

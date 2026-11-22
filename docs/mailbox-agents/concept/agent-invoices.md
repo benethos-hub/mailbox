@@ -2,9 +2,10 @@
 
 Part of the [concept](../CONCEPT.md).
 
-> **Status: version 5, prompt `v4`. Evaluated on the invented mail of the
-> test account and run there in `shadow` beside
-> [sorting](agent-sorting.md). Not run on a real mailbox in this version.
+> **Status: version 6, prompt `v5`. Version 5 was evaluated on the
+> invented mail of the test account and run there in `shadow` beside
+> [sorting](agent-sorting.md). Version 6 reads the text of an HTML-only
+> mail and is not evaluated yet. Not run on a real mailbox in this version.
 > A run on the owner's account is the owner's decision, in `shadow`
 > first.**
 
@@ -178,7 +179,7 @@ folder the model fills on its own judgement would make one look checked.
 near miss and a quote, nothing else: an answer with another field is
 refused. The folder follows from where the message lies and the settings.
 
-The prompt is `prompts/system.v4.md`, version `v4`. It names no supplier.
+The prompt is `prompts/system.v5.md`, version `v5`. It names no supplier.
 The model is given the sender, the subject, the names and types of the
 attachments and the first 6000 characters of the text. A stranger chooses
 all of them, so each is cut (2026-11-19): the sender's name and the
@@ -228,6 +229,15 @@ has no tick. Every update of a message is fetched and looked at, as for
 | Prompt | `v4` | `v4`, unchanged |
 
 The agent version is 5, and it starts in `shadow` (decided 2026-11-19).
+
+## What changed from version 5
+
+Version 6 reads a mail whose text part is missing or holds white space
+only by the visible text of its HTML part (2026-11-22). Before, such a
+mail reached the model with an empty text, the evidence check found no
+quote and the decision was refused. The prompt `v5` is `v4` unchanged,
+under a new version so every message is decided anew. Version 6 starts
+in `shadow`, and its evaluation report is still to make.
 
 ## Checked live, version 5
 

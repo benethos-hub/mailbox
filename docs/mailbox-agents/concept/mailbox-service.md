@@ -21,8 +21,11 @@ Operation names below are the service's `operationId`s.
 `sources/mailbox.py` offers these and nothing else: no send, no delete, no
 trash. Which folder an agent may make is the runtime's to decide
 ([agent contract](agent-contract.md)). A move sets the message's folders to
-the one target. A message without a text body is read with an empty
-text. The service does not convert an HTML-only message into text.
+the one target. A message is read with its text part. When that holds
+white space only, or is missing, the visible text of its HTML part takes
+its place, with `mail_text` of `mailbox-common`, as the mail page of the
+service and the MCP server read it. Hidden elements, scripts and styles
+are left out (2026-11-22).
 `list_all_messages` without a folder lists the inbox alone (measured
 2026-11-17 against 0.7.5), so a backfill names each folder role it wants.
 
@@ -34,8 +37,7 @@ What the agents rely on:
 - The feed may name a change more than once. Every step is therefore
   idempotent ([runtime](runtime.md)).
 - The text of a message is its plain text part. The service does not
-  convert an HTML body, so a mail with an HTML body alone arrives with an
-  empty text.
+  convert an HTML body: the agents do, as above.
 - A change of flags made in another mail client reaches the feed only where
   the provider reports it, for IMAP with CONDSTORE. `awaiting_reply` depends
   on this ([awaiting reply](agent-awaiting-reply.md)).

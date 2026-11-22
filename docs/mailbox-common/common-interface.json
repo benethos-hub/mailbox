@@ -236,6 +236,12 @@
     ]
   },
   "benethos_mailbox_common.settings.files": {
+    "__all__": [
+      "FileSettings",
+      "NoDecode",
+      "S",
+      "load"
+    ],
     "FileSettings": {
       "bases": [
         "pydantic_settings.main.BaseSettings"

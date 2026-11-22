@@ -110,6 +110,33 @@ async def test_a_message_without_text_has_an_empty_one(
     assert (found.text, found.sender) == ("", None)
 
 
+HIDDEN = '<p>Ihre Rechnung ist online</p><div style="display:none">x</div>'
+
+
+@pytest.mark.parametrize(
+    ("text", "html", "read"),
+    [
+        (None, HIDDEN, "Ihre Rechnung ist online"),
+        (" \n ", HIDDEN, "Ihre Rechnung ist online"),
+        ("Ihre Rechnung liegt bei.\n", HIDDEN, "Ihre Rechnung liegt bei.\n"),
+        (None, f"<p>Rechnung{chr(0xD800)}</p>", "Rechnung�"),
+    ],
+    ids=["html-only", "white-space-text", "text", "lone-surrogate"],
+)
+async def test_the_text_is_the_text_part_else_the_visible_html(
+    fake_service: FakeService,
+    mailbox: Mailbox,
+    text: str | None,
+    html: str,
+    read: str,
+) -> None:
+    fake_service.add(wire_message("m1", text=text, html=html))
+
+    found = await mailbox.message(REF)
+
+    assert found.text == read
+
+
 async def test_a_new_folder_is_asked_for_again(
     fake_service: FakeService, mailbox: Mailbox
 ) -> None:

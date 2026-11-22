@@ -32,8 +32,7 @@ SOURCE = Path(benethos_mailbox_agents.__file__).parent
 # purpose.
 MAY_IMPORT: dict[str, frozenset[str]] = {
     "errors": frozenset(),
-    # errors for redact, which every line passes before it is written.
-    "logbook": frozenset({"errors"}),
+    "logbook": frozenset(),
     "settings": frozenset({"errors"}),
     "records": frozenset(),
     "contract": frozenset({"errors", "records", "settings"}),
@@ -87,9 +86,27 @@ CONFINED: dict[str, frozenset[str]] = {
     # A step of the schema is handed the connection to run its statements on.
     "sqlite3": frozenset({"store/store.py", "store/migrations/migration.py"}),
     "benethos_mailbox_client": frozenset({"sources/mailbox.py"}),
+    # What the programs of Mailbox share: the lines of the log, the masking
+    # of secrets, text and settings.
+    "benethos_mailbox_common": frozenset(
+        {
+            "errors/base.py",
+            "logbook/output.py",
+            "logbook/activity.py",
+            "logbook/catalogue/feed.py",
+            "logbook/catalogue/worker.py",
+            "settings/model.py",
+            "sources/mailbox.py",
+            "agents/sorting/agent.py",
+            "cli/__init__.py",
+            "cli/commands.py",
+            "cli/report.py",
+        }
+    ),
     "httpx": frozenset({"sources/mailbox.py", "llm/gateway.py"}),
     "prometheus_client": frozenset({"runtime/metrics.py"}),
-    "pydantic_settings": frozenset({"settings/model.py"}),
+    # Its one home is the group settings of mailbox-common.
+    "pydantic_settings": frozenset(),
     # The TLS context of the own CA: read in the settings, used by the two
     # modules that talk to an upstream.
     "ssl": frozenset({"settings/model.py", "sources/mailbox.py", "llm/gateway.py"}),

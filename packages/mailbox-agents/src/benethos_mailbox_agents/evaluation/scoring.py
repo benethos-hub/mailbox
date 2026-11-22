@@ -21,7 +21,7 @@ __all__ = [
     "LabelScore",
     "Outcome",
     "Scores",
-    "same",
+    "same_label",
     "score",
 ]
 
@@ -30,7 +30,7 @@ def _uniform(value: str | None) -> str:
     return " ".join((value or "").split()).casefold()
 
 
-def same(expected: str | None, found: str | None) -> bool:
+def same_label(expected: str | None, found: str | None) -> bool:
     return _uniform(expected) == _uniform(found)
 
 
@@ -68,7 +68,7 @@ class FieldScore:
             self.missing += 1
         elif not _uniform(expected):
             self.invented += 1
-        elif same(expected, found):
+        elif same_label(expected, found):
             self.right += 1
         else:
             self.wrong += 1

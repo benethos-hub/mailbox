@@ -136,7 +136,7 @@ jobs:
   pypi-agents:
     name: PyPI benethos-mailbox-agents
     if: github.event_name == 'release'
-    needs: [ci-passed, pypi-client]
+    needs: [ci-passed, pypi-client, pypi-common]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment:

@@ -329,7 +329,7 @@ def test_no_package_entry_defines_a_class() -> None:
 COMMON = "benethos_mailbox_common"
 COMMON_SOURCE = ROOT / "packages/mailbox-common/src" / COMMON
 # The packages that use the common package.
-CONSUMERS = ("mailbox-service", "mailbox-mcp")
+CONSUMERS = ("mailbox-service", "mailbox-mcp", "mailbox-agents")
 PACKAGES = ROOT / "packages"
 
 

@@ -59,7 +59,7 @@ Everything else talks to that service only, through one REST API that
 looks the same for every provider. `mailbox-client` is the Python
 client of that API, for scripts and apps. `mailbox-mcp`, the MCP
 server, builds on the client and opens the service to AI agents.
-`mailbox-common` holds what the service and the MCP server share.
+`mailbox-common` holds what the service, the MCP server and the agents share.
 `mailbox-agents`, still alpha, are small AI agents that work on a
 mailbox through the client, one narrow question each. The
 service decides who may do what. A script, an app or an AI agent gets
@@ -182,7 +182,7 @@ provider in [the concept, section 5.3](docs/mailbox-service/concept/providers.md
 | `mailbox-service` | the service: REST API, configuration UI, users and rights, accounts, encrypted credentials, provider adapters, background sync | permanently | [packages/mailbox-service](packages/mailbox-service/README.md) |
 | `mailbox-client` | the Python client of the REST API, async and sync | inside your own code | [packages/mailbox-client](packages/mailbox-client/README.md) |
 | `mailbox-mcp` | the MCP server, on top of `mailbox-client` | per client over stdio, or as a server over HTTP | [packages/mailbox-mcp](packages/mailbox-mcp/README.md) |
-| `mailbox-common` | what the service and the MCP server share | installed with them | [packages/mailbox-common](packages/mailbox-common/README.md) |
+| `mailbox-common` | what the service, the MCP server and the agents share | installed with them | [packages/mailbox-common](packages/mailbox-common/README.md) |
 | `mailbox-agents` | small AI agents that sort and mark mail, on top of `mailbox-client`, alpha | a process per agent | [packages/mailbox-agents](packages/mailbox-agents/README.md) |
 
 A release publishes all five to PyPI under the same version, as

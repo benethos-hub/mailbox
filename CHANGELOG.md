@@ -35,6 +35,20 @@ adheres to [Semantic Versioning](https://semver.org/).
   but empty no longer turns off the colours of the log at a terminal, as
   no-color.org has it. `benethos-mailbox-common`: `colours_wanted` takes
   the stream to write to, stderr when none is given.
+- `benethos-mailbox-agents` take `benethos-mailbox-common[settings]` of
+  their own version.
+- `benethos-mailbox-agents` write a secret of their settings as `***` in
+  an error and a line of the log, as the service and the MCP server do.
+  Before, they wrote `[redacted]`.
+- `benethos-mailbox-agents` read a mail whose text part is missing or
+  holds white space only by the visible text of its HTML part, as the
+  mail page and the MCP server do. Before, such a mail reached an agent
+  with an empty text: `invoices`, `inquiries` and `awaiting_reply` found
+  no quote in it and their decision was refused. `invoices` is now
+  version 6 with prompt `v5`, `inquiries` version 2 with prompt `v4` and
+  `awaiting_reply` version 2 with prompt `v2`, the prompts unchanged, so
+  every message is decided anew. Run each in `shadow` again before a
+  higher stage.
 
 ### Fixed
 

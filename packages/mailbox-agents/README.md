@@ -62,7 +62,7 @@ back to the service.
 | **`mailbox-agents`** | This package. Small AI agents that sort and mark mail. | [Install](#install) |
 | [`mailbox-client`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-client) | The Python client of the REST API. The agents make every request with it. | installed with the agents |
 | [`mailbox-mcp`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-mcp) | The MCP server. It turns the REST API into tools for an AI assistant. The agents do not use it. | not needed here |
-| [`mailbox-common`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-common) | What the service and the MCP server share. The agents do not use it. | not needed here |
+| [`mailbox-common`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-common) | What the service, the MCP server and the agents share. | installed with this package |
 
 > **The agents take only a service of their own version:** before 1.0
 > the same minor version, from 1.0 the same major version and a minor

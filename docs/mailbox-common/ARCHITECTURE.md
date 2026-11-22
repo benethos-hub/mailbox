@@ -5,7 +5,7 @@ The modules of `mailbox-common`: section 3.4 of the
 layers of the service and the rules for every package (sections 5
 to 17) are there.
 
-## 3.4 What the service and the MCP server share
+## 3.4 What the service, the MCP server and the agents share
 
 What the service and the MCP server both need is a package of its own,
 `mailbox-common`, since the MCP server cannot see the service. It sees

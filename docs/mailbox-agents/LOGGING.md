@@ -107,9 +107,11 @@ Allowed on purpose: the agent's name, ids of messages and accounts,
 states, stages, names of steps and actions, counts, durations, ports,
 versions, the notes of a migration.
 
-Every line, a traceback included, passes `errors.redact` before it is
-written. That is the second line of defence, not the first: a line is
-written as if there were no redaction.
+Every line, a traceback included, passes `redact` of `mailbox-common`
+before it is written, which writes a secret the settings hold as `***`,
+as the service and the MCP server do. That is the second line of
+defence, not the first: a line is written as if there were no
+redaction.
 
 ## 5. Rules for writing a line
 

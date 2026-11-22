@@ -21,6 +21,8 @@ from collections import Counter
 from collections.abc import Mapping
 from functools import cached_property
 
+from benethos_mailbox_common.values import text as text_values
+
 from ...contract import (
     Action,
     ActionRequest,
@@ -41,10 +43,6 @@ __all__ = ["NONE", "Sorting"]
 
 # The senders in no group a report names at most, as candidates.
 CANDIDATES = 10
-
-
-def _plural(count: int, word: str) -> str:
-    return f"{count} {word}{'' if count == 1 else 's'}"
 
 
 def _version(groups: Groups) -> str:
@@ -176,7 +174,7 @@ class Sorting(Agent):
         if unknown:
             lines.append("senders in no group, candidates for the list:")
             lines += [
-                f"  {sender} ({_plural(count, 'message')})"
+                f"  {sender} ({text_values.plural(count, 'message')})"
                 for sender, count in unknown.most_common(CANDIDATES)
             ]
         alike = Counter(
@@ -187,7 +185,7 @@ class Sorting(Agent):
         if alike:
             lines.append("left alone, two groups name the sender alike:")
             lines += [
-                f"  {sender}: {groups} ({_plural(count, 'message')})"
+                f"  {sender}: {groups} ({text_values.plural(count, 'message')})"
                 for (sender, groups), count in alike.most_common()
             ]
         return lines

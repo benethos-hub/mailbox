@@ -68,7 +68,7 @@ def _when(message: MailMessage, fallback: datetime) -> datetime:
 
 class AwaitingReply(Agent):
     name = "awaiting_reply"
-    version = "1"
+    version = "2"
     description = "Marks sent mail that still waits for an answer after its deadline."
     triggers = Trigger(
         events=frozenset({"message.sent", "message.created", "message.updated"}),
@@ -78,7 +78,7 @@ class AwaitingReply(Agent):
     limits = Limits(model_calls_per_message=1, model_calls_per_day=2000)
     default_keyword = "agent-awaiting-reply"
     report_labels = frozenset({EXPECTS, NO_REPLY, INCOMING})
-    prompt_version = "v1"
+    prompt_version = "v2"
 
     @cached_property
     def system(self) -> str:

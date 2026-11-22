@@ -60,8 +60,8 @@ def test_the_packages_share_one_version() -> None:
 
 @pytest.mark.parametrize(
     ("package", "needed"),
-    [(MCP, CLIENT), (MCP, COMMON), (SERVICE, COMMON)],
-    ids=["mcp-client", "mcp-common", "service-common"],
+    [(MCP, CLIENT), (MCP, COMMON), (SERVICE, COMMON), (AGENTS, COMMON)],
+    ids=["mcp-client", "mcp-common", "service-common", "agents-common"],
 )
 def test_a_package_needs_another_of_its_own_version(
     package: Path, needed: Path

@@ -3,7 +3,9 @@
 Part of the [concept](../CONCEPT.md).
 
 All settings carry the prefix `MAILBOX_AGENTS_` and come from the environment
-or from one `.env` file, read with pydantic-settings (decided 2026-11-17).
+or from one `.env` file, read with pydantic-settings (decided 2026-11-17)
+through `FileSettings` of `mailbox-common`, as the service and the MCP
+server read theirs.
 A process runs one agent, so one environment describes one agent. A secret
 may be given as a file with the suffix `_FILE`. An empty line, such as
 `MAILBOX_AGENTS_SORTING_FILE=`, counts as not set for a secret, a file

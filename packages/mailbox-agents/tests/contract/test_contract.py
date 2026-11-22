@@ -24,7 +24,7 @@ from benethos_mailbox_agents.contract import (
     Route,
     Trigger,
     discover,
-    load,
+    load_agent,
 )
 from benethos_mailbox_agents.errors import ContractError
 from benethos_mailbox_agents.records import Decision, Event, FolderRef, MailMessage
@@ -198,12 +198,12 @@ def package(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> str:
 
 def test_the_registry_finds_every_agent_by_name(package: str) -> None:
     assert list(discover(package)) == ["alpha", "beta"]
-    assert load("beta", package).name == "beta"
+    assert load_agent("beta", package).name == "beta"
 
 
 def test_an_unknown_agent_names_those_there_are(package: str) -> None:
     with pytest.raises(ContractError, match="there are: alpha, beta"):
-        load("gamma", package)
+        load_agent("gamma", package)
 
 
 def test_a_module_with_two_agents_is_refused(

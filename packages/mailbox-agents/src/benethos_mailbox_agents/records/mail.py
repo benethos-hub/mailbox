@@ -84,8 +84,9 @@ class FolderRef(_Record):
 
 
 class MailMessage(_Record):
-    """A message as an agent reads it. ``text`` is the text the service
-    converted, hidden HTML content already dropped."""
+    """A message as an agent reads it. ``text`` is its text part, else
+    the visible text of its HTML part, hidden HTML content already
+    dropped."""
 
     ref: MessageRef
     thread_id: str | None = None

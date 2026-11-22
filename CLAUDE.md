@@ -351,8 +351,8 @@ packages/
     CLAUDE.md             # the MCP server's own rules
     src/benethos_mailbox_mcp/       # modules: docs/mailbox-mcp/ARCHITECTURE.md
     tests/                # REST mocked with httpx.MockTransport
-  mailbox-common/         # what the service and the MCP server share,
-                          #   no image
+  mailbox-common/         # what the service, the MCP server and the
+                          #   agents share, no image
     CLAUDE.md             # the common package's own rules
     src/benethos_mailbox_common/    # groups, one per concern:
                           #   docs/mailbox-common/ARCHITECTURE.md
@@ -442,7 +442,7 @@ the agents, count as confirmed test accounts for golden rule 1.
 A release is its own `release/X.Y.Z` branch and pull request. The five
 packages carry the same version. The MCP server pins the client and the
 common package to it, the service the common package, the agents the
-client.
+client and the common package.
 
 The steps in order, from the pins to what is checked after the
 publish: [docs/RELEASING.md](docs/RELEASING.md).

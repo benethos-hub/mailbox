@@ -12,7 +12,9 @@ from contextlib import ExitStack, suppress
 from pathlib import Path
 from typing import Any
 
-from ..contract import Agent, discover, load
+from benethos_mailbox_common.values import text as text_values
+
+from ..contract import Agent, discover, load_agent
 from ..errors import (
     ConfigError,
     MailboxAgentError,
@@ -22,7 +24,7 @@ from ..errors import (
 from ..evaluation.gold import GoldItem, load_gold
 from ..evaluation.report import build, render, write
 from ..evaluation.run import evaluate as run_evaluation
-from ..logbook import escaped, process, record
+from ..logbook import process, record
 from ..runtime.health import check
 from ..runtime.readiness import MAILBOX_SETTINGS, folder_lines, readiness, start
 from ..settings import DEFAULT_ENV_FILE, PREFIX, Settings
@@ -67,7 +69,7 @@ def _stop_on_signals(stop: asyncio.Event) -> None:
 
 
 async def _worker(name: str, settings: Settings) -> None:
-    async with session(load(name), settings) as found:
+    async with session(load_agent(name), settings) as found:
         record(
             process.Started(
                 agent=found.agent.name,
@@ -99,7 +101,7 @@ def run(args: argparse.Namespace, settings: Settings) -> int:
 
 
 async def _run(name: str, settings: Settings) -> int:
-    async with session(load(name), settings) as found:
+    async with session(load_agent(name), settings) as found:
         await found.worker.run_pass()
         print(f"{found.agent.name}: {_counts(found.store)}")
         return 1 if found.worker.away else 0
@@ -113,7 +115,7 @@ def backfill(args: argparse.Namespace, settings: Settings) -> int:
 
 
 async def _backfill(name: str, days: int, settings: Settings) -> int:
-    async with session(load(name), settings) as found:
+    async with session(load_agent(name), settings) as found:
         added = await found.worker.backfill(days, again=True)
         await found.worker.drain()
         print(f"{found.agent.name}: {added} taken up, {_counts(found.store)}")
@@ -173,7 +175,7 @@ def _say(line: str) -> None:
     """Print one line of ``status``. A folder's name is the owner's or the
     server's: a control or direction character in it is written escaped,
     as in ``report``."""
-    print(escaped(line))
+    print(text_values.escaped(line))
 
 
 def status(args: argparse.Namespace, settings: Settings) -> int:
@@ -227,7 +229,7 @@ def paths(args: argparse.Namespace, settings: Settings) -> int:
 
 
 def report(args: argparse.Namespace, settings: Settings) -> int:
-    agent = load(args.agent)(settings)
+    agent = load_agent(args.agent)(settings)
     name = agent.name
     if args.state is not None and args.state not in STATES:
         raise ConfigError(f"--state is one of {', '.join(STATES)}")
@@ -255,7 +257,7 @@ def health(args: argparse.Namespace, settings: Settings) -> int:
     """0 while the agent's loop makes progress, 1 when it does not, a
     state file not there yet or one that cannot be read included: Docker
     keeps 2 for itself."""
-    name = load(args.agent).name
+    name = load_agent(args.agent).name
     path = path_for(settings.data_dir, name)
     if not path.is_file():
         print(f"{name}: unhealthy, no progress yet")
@@ -275,7 +277,7 @@ def health(args: argparse.Namespace, settings: Settings) -> int:
 
 def evaluate(args: argparse.Namespace, settings: Settings) -> int:
     """Run an agent over a gold set, print the scores, write the report."""
-    cls = load(args.agent)
+    cls = load_agent(args.agent)
     items = load_gold(args.gold)
     built = asyncio.run(_evaluate(cls, items, settings))
     for line in render(built):

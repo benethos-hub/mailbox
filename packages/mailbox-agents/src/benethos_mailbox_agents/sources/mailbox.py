@@ -32,6 +32,7 @@ from benethos_mailbox_client import (
     ServiceUnavailableError,
 )
 from benethos_mailbox_client import models as wire
+from benethos_mailbox_common.mail import plaintext
 
 from .. import __version__
 from ..errors import (
@@ -377,7 +378,11 @@ class Mailbox:
                 date=found.date,
                 received=found.received,
                 keywords=tuple(found.keywords),
-                text=_sound(found.text_body or ""),
+                # The text part, else the visible text of the HTML part,
+                # as the mail page and the MCP server read it.
+                text=plaintext.mail_text(
+                    _sound_or_none(found.text_body), _sound_or_none(found.html_body)
+                ),
                 attachments=tuple(
                     Attachment(
                         filename=_sound_or_none(a.filename),
