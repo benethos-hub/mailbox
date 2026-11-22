@@ -252,19 +252,11 @@ class Worker:
             message = await self._mailbox.message(ref)
             await self.executor(await self.agent.observe(message, self.context()))
             self._look_again(message)
-        except MailboxUnavailableError as exc:
-            if not self._stuck_at(ref):
+        except (MailboxUnavailableError, MailboxRefusedError) as exc:
+            # A service away is waited for, unless the message is stuck:
+            # then its update is left, as a refused one is.
+            if isinstance(exc, MailboxUnavailableError) and not self._stuck_at(ref):
                 raise
-            # The update is left, as a refused one is.
-            record(
-                messages.StepFailed(
-                    agent=self.agent.name,
-                    message_id=ref.message_id,
-                    step="observe",
-                    error=exc,
-                )
-            )
-        except MailboxRefusedError as exc:
             record(
                 messages.StepFailed(
                     agent=self.agent.name,
