@@ -14,36 +14,39 @@ done. Update the roadmap in the same commit that finishes an item.
    satisfies this rule. Without uv, use `.\.venv\Scripts\python.exe`.
 3. **English in the repo.** Code, comments, docstrings and documentation are
    English. Conversation with the user may be German.
-4. **The OpenAPI document is the contract.** `docs/mailbox-service/openapi.json` is checked in
-   and a test compares it with the code. After any change to a route or model,
-   regenerate it with `uv run benethos-mailbox-service openapi > docs/mailbox-service/openapi.json`
-   and review the diff like code. `operationId` is the route function name and
-   must stay stable, since generated clients and the MCP server depend on it.
-   Likewise `docs/mailbox-mcp/mcp-tools.json` holds the MCP server's tools as a client
-   lists them. After any change to a tool, regenerate it with
-   `uv run benethos-mailbox-mcp --list-tools > docs/mailbox-mcp/mcp-tools.json` and
-   review the diff of its descriptions like code. And
-   `docs/mailbox-client/client-interface.json` and `docs/mailbox-common/common-interface.json` hold the
-   public interface of the two libraries others import. After any change
-   to a name, a signature, a field or a default there, regenerate them
-   with `uv run python tests/interface.py benethos_mailbox_client >
-   docs/mailbox-client/client-interface.json`, the same with `benethos_mailbox_common`,
-   and review the diff like code: a removed or changed name breaks
-   whoever imports it. The client's requests are held to
-   `docs/mailbox-service/openapi.json` as well, their paths, parameters and bodies.
+4. **The generated records are the contract.** What a package shows to
+   others is a file under `docs/<package>/`, checked in and held to the
+   code by a test: the OpenAPI document of the service, the tools of the
+   MCP server, the public interface of the client and of the common
+   package. After a change to it, regenerate the file with the command
+   in that package's CLAUDE.md and review the diff like code.
 5. **Secrets never travel.** Provider passwords, OAuth tokens and API tokens
    are never logged, never returned in a response and redacted from error
    text. No real address, credential or message content in any versioned file.
-6. **The MCP server is a REST client.** It reaches mail only through the REST
-   API, with the client package `mailbox-client`, in packages that cannot
-   see the service. Anything the MCP server needs that the API lacks is
-   added to the API first.
+6. **The MCP server is a REST client.** It reaches mail only through the
+   REST API, and anything it needs that the API lacks is added to the
+   API first. The details: [its CLAUDE.md](packages/mailbox-mcp/CLAUDE.md).
 7. **Encapsulate, keep parts replaceable.** Every external library,
    protocol and storage sits behind an interface this project owns, so it
    can be exchanged by rewriting one module. See
    [docs/mailbox-service/ARCHITECTURE.md](docs/mailbox-service/ARCHITECTURE.md).
 8. **The repo stands on its own.** No references to the author's other
    repositories, local filesystem paths or email addresses in versioned files.
+
+## The packages
+
+Each package has a CLAUDE.md of its own with the rules that hold for it
+alone. Before a change in a package, read its file as well as this one:
+
+- [packages/mailbox-service/CLAUDE.md](packages/mailbox-service/CLAUDE.md):
+  the OpenAPI document, the error envelope, paging, migrations, the
+  configuration UI and its check in real browsers
+- [packages/mailbox-mcp/CLAUDE.md](packages/mailbox-mcp/CLAUDE.md): the
+  REST client, the tools and their record
+- [packages/mailbox-client/CLAUDE.md](packages/mailbox-client/CLAUDE.md):
+  the public interface and the requests held to the OpenAPI document
+- [packages/mailbox-common/CLAUDE.md](packages/mailbox-common/CLAUDE.md):
+  the public interface
 
 ## Environment
 
@@ -294,6 +297,7 @@ docs/
     common-interface.json # the same for mailbox-common
 packages/
   mailbox-service/            # the service, runs permanently
+    CLAUDE.md             # the service's own rules
     src/benethos_mailbox_service/   # layers and modules: docs/mailbox-service/ARCHITECTURE.md
     tests/                # in folders like the source: domain/<package>/,
                           #   data/, web/, common/. integration/ for tests
@@ -317,18 +321,21 @@ packages/
                             #   a suite of its own (Verifying)
   mailbox-client/         # the Python client of the REST API, async and
                           #   sync, no image
-    src/benethos_mailbox_client/    # modules: docs/mailbox-service/ARCHITECTURE.md
+    CLAUDE.md             # the client's own rules
+    src/benethos_mailbox_client/    # modules: docs/mailbox-client/ARCHITECTURE.md
     tests/                # REST mocked with httpx.MockTransport, each
                           #   test for both clients, in files like
                           #   the modules, endpoints/ and models/
                           #   for the packages
   mailbox-mcp/            # the MCP server, on top of mailbox-client
-    src/benethos_mailbox_mcp/       # modules: docs/mailbox-service/ARCHITECTURE.md
+    CLAUDE.md             # the MCP server's own rules
+    src/benethos_mailbox_mcp/       # modules: docs/mailbox-mcp/ARCHITECTURE.md
     tests/                # REST mocked with httpx.MockTransport
   mailbox-common/         # what the service and the MCP server share,
                           #   no image
+    CLAUDE.md             # the common package's own rules
     src/benethos_mailbox_common/    # groups, one per concern:
-                          #   docs/mailbox-service/ARCHITECTURE.md
+                          #   docs/mailbox-common/ARCHITECTURE.md
     tests/                # in folders like the groups
 ```
 
@@ -353,16 +360,9 @@ that adds a module, a package, a library or a seam.
 - Lint and format: `uv run ruff check .` and `uv run ruff format .`.
 - Types: `uv run mypy`.
 - Lockfile: `uv lock --check`.
-- The UI in real browsers, the one check that runs its JavaScript:
-  `uv run --group browser playwright install chromium firefox webkit`
-  once, then `MAILBOX_BROWSER_TESTS=1 uv run --group browser pytest
-  packages/mailbox-service/tests/browser`. The sign-in with a code must
-  go on by itself through htmx, and no page reached from the overview
-  may break the content security policy or miss a file of its own. In
-  Chromium a passkey is made on the page Second factor and signs in,
-  through its virtual authenticator. The
-  default run leaves the folder out, CI's browser job runs it. Run it
-  after a change to a template, to `static/` or to htmx.
+- The UI in real browsers, the one check that runs its JavaScript: the
+  service's [CLAUDE.md](packages/mailbox-service/CLAUDE.md). The default
+  run leaves it out, CI's browser job runs it.
 
 Never write a test that reaches a real mail server, and never one that skips
 itself without credentials. Live checks are manual scripts in `live/`, outside
@@ -372,20 +372,11 @@ itself without credentials. Live checks are manual scripts in `live/`, outside
 ## Conventions
 
 - Type hints everywhere, `from __future__ import annotations` at the top.
-- Every error response uses the envelope `{"error": {"code", "message"}}`.
-- Lists are paged with an opaque `next_cursor`, never with page numbers.
 - `CHANGELOG.md` gets an entry under `[Unreleased]` in the same commit as the
   change, written for someone using the API.
-- A change to the database schema is a new migration: a class
-  `VNNNN<Subject>` of the base `Migration` in a module
-  `vNNNN_<subject>.py` in `data/storage/sqlite/migrations/versions/` with
-  the next number, added to the registry `MIGRATIONS` in
-  `migrations/__init__.py`. The module's docstring says what it
-  does and why. Each statement stands alone, and a step in Python is the
-  method `before`. A migration that shipped in a release is never changed:
-  `RELEASED` in
-  `packages/mailbox-service/tests/data/storage/test_sqlite.py` holds the fingerprint
-  of each.
+- A decision from a conversation stands in a versioned file in words of
+  its own, in English, with its date. Never the user's wording, in no
+  language, and never who proposed what.
 
 ## Git and commits
 
