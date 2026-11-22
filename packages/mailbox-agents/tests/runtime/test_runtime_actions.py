@@ -186,7 +186,7 @@ async def test_a_message_in_the_trash_or_junk_is_left_alone(
     async with wired(tmp_path) as found:
         found.service.add(wire_message("m1", folder_ids=[folder]))
 
-        assert await executor(found)([request_]) == [Outcome.REFUSED]
+        assert await executor(found)([request_]) == [Outcome.DISCARDED]
         assert found.service.writes() == []
         assert found.store.actions() == []
 

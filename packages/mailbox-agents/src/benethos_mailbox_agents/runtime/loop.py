@@ -32,7 +32,13 @@ from ..errors import (
     UnavailableError,
 )
 from ..logbook import feed, messages, record, worker
-from ..records import MESSAGE_GONE, Event, MailMessage, MessageRef
+from ..records import (
+    MESSAGE_DISCARDED,
+    MESSAGE_GONE,
+    Event,
+    MailMessage,
+    MessageRef,
+)
 from ..store import Store
 from .actions import Executor, Outcome, Writer
 from .metrics import Metrics
@@ -366,8 +372,11 @@ class Worker:
             try:
                 outcomes = await self.executor(group)
             except MessageGoneError:
-                # No tick could set its keyword again.
+                # No tick could set its keyword again, nor take it off: an
+                # item closed already keeps its reason, and its keyword
+                # counts as gone with the message.
                 self.store.close_item(ref, MESSAGE_GONE, self._now())
+                self.store.mark_keyword(ref, False)
                 continue
             for request, outcome in zip(group, outcomes, strict=False):
                 self._note(request, outcome)
@@ -378,9 +387,11 @@ class Worker:
         """Keep on an open item what became of its keyword: set when it is on
         the message, recorded in this stage when the stage did not allow it.
         A refused keyword leaves the item due. An item whose message is not
-        there any more is closed by the tick as ``message_gone``."""
+        there any more is closed by the tick as ``message_gone``. A message
+        in the trash, junk or spam is not asked again: a keyword to take off
+        counts as gone, and an item due there closes as ``discarded``."""
         if request.action is Action.REMOVE_KEYWORD:
-            if outcome in (Outcome.DONE, Outcome.PRESENT):
+            if outcome in (Outcome.DONE, Outcome.PRESENT, Outcome.DISCARDED):
                 self.store.mark_keyword(request.ref, False)
             return
         if request.action is not Action.ADD_KEYWORD:
@@ -389,6 +400,8 @@ class Worker:
             self.store.mark_keyword(request.ref, True)
         elif outcome is Outcome.RECORDED:
             self.store.record_keyword_stage(request.ref, self.settings.stage)
+        elif outcome is Outcome.DISCARDED:
+            self.store.close_item(request.ref, MESSAGE_DISCARDED, self._now())
 
     def _purge(self, now: datetime) -> None:
         days = self.settings.prompt_retention_days

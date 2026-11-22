@@ -32,7 +32,9 @@ A sent message that expects a reply becomes an open item. It closes when:
   message of its thread no longer finds, and the later message goes on
   (2026-11-20),
 - the sent message is moved to the trash, junk or spam: the item closes as
-  `discarded`, as no keyword is set there (decided 2026-11-20).
+  `discarded`, as no keyword is set there (decided 2026-11-20). An update
+  that says so closes it, and so does the tick when it finds the message
+  there.
 
 A sent message whose thread already holds a later answer from someone
 else opens no item. So a reply taken up before the message it answers,
@@ -52,8 +54,10 @@ An item closed as `replied` or `followed_up` takes the keyword off with
 the step that closes it. When that write fails, the step run again finds
 no open item. So the tick also takes the keyword off every such item that
 still counts it as set, and the item counts it as gone once the keyword
-is off the message (2026-11-20). An item closed as `keyword_removed` or
-`message_gone` is never asked about.
+is off the message (2026-11-20). When the message is deleted or in the
+trash, junk or spam by then, the keyword counts as gone with it, and the
+tick asks about it no more. An item closed as `keyword_removed`,
+`message_gone` or `discarded` is never asked about.
 
 The model is given the recipients, the subject and the text the sender
 wrote, without what it quotes, the last 4000 characters of it. The

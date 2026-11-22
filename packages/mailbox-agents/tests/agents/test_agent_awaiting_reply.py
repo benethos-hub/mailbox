@@ -782,3 +782,80 @@ async def test_an_item_whose_message_went_to_the_trash_closes(
         r for r in awaiting_world.w.service.requests[asked:] if r.method == "PATCH"
     ]
     assert patches == []
+
+
+def _asked_for(awaiting_world: World, message_id: str, since: int) -> list[str]:
+    """The requests about ``message_id`` from the ``since``-th on."""
+    return [
+        r.method
+        for r in awaiting_world.w.service.requests[since:]
+        if r.url.path.endswith(f"/{message_id}")
+    ]
+
+
+async def _replied_with_the_keyword_noted(awaiting_world: World) -> None:
+    """An item closed by a reply, its keyword taken off by the step and
+    still noted as set until the tick sees it gone."""
+    await _due(awaiting_world)
+    awaiting_world.add(received("r1", date="2026-11-20T10:00:00+00:00"))
+    await awaiting_world.run()
+    assert awaiting_world.item("s1").reason == "replied"
+    assert awaiting_world.item("s1").keyword_set
+
+
+async def test_a_closed_item_whose_message_went_to_the_trash_is_asked_no_more(
+    awaiting_world: World,
+) -> None:
+    await _replied_with_the_keyword_noted(awaiting_world)
+    awaiting_world.w.service.messages[(ACCOUNT, "s1")]["folder_ids"] = ["trash"]
+
+    awaiting_world.clock.advance(days=1)
+    await awaiting_world.run()
+    assert not awaiting_world.item("s1").keyword_set
+    asked = len(awaiting_world.w.service.requests)
+    for _ in range(2):
+        awaiting_world.clock.advance(days=1)
+        await awaiting_world.run()
+
+    assert _asked_for(awaiting_world, "s1", asked) == []
+    assert awaiting_world.item("s1").reason == "replied"
+
+
+async def test_a_closed_item_whose_message_is_deleted_is_asked_no_more(
+    awaiting_world: World,
+) -> None:
+    await _replied_with_the_keyword_noted(awaiting_world)
+    del awaiting_world.w.service.messages[(ACCOUNT, "s1")]
+
+    awaiting_world.clock.advance(days=1)
+    await awaiting_world.run()
+    assert not awaiting_world.item("s1").keyword_set
+    asked = len(awaiting_world.w.service.requests)
+    for _ in range(2):
+        awaiting_world.clock.advance(days=1)
+        await awaiting_world.run()
+
+    assert _asked_for(awaiting_world, "s1", asked) == []
+    assert awaiting_world.item("s1").reason == "replied"
+
+
+async def test_an_item_due_in_the_trash_closes_as_discarded_on_the_tick(
+    awaiting_world: World,
+) -> None:
+    awaiting_world.add(sent("s1", ASK), "message.sent")
+    awaiting_world.w.fake_gateway.answer(expects(QUESTION))
+    await awaiting_world.run()
+    # Moved without an update the agent saw, as after a feed that expired.
+    awaiting_world.w.service.messages[(ACCOUNT, "s1")]["folder_ids"] = ["trash"]
+
+    awaiting_world.clock.advance(days=4)
+    await awaiting_world.run()
+    assert (awaiting_world.item("s1").is_open, awaiting_world.item("s1").reason) == (
+        False,
+        "discarded",
+    )
+    asked = len(awaiting_world.w.service.requests)
+    awaiting_world.clock.advance(days=1)
+    await awaiting_world.run()
+
+    assert _asked_for(awaiting_world, "s1", asked) == []
