@@ -16,9 +16,10 @@ from benethos_mailbox_agents.errors import (
     MailboxUnavailableError,
 )
 from benethos_mailbox_agents.records import MessageRef
+from benethos_mailbox_agents.sources import mailbox as sources
 from benethos_mailbox_agents.sources.mailbox import Mailbox, _call, connect
 
-from ..fakes import ACCOUNT, FakeService, wire_message
+from ..agents_fake import ACCOUNT, FakeService, wire_message
 
 REF = MessageRef(account_id=ACCOUNT, message_id="m1")
 
@@ -28,25 +29,27 @@ DEEP = 1_000_000
 
 
 @pytest.fixture
-def service() -> FakeService:
+def fake_service() -> FakeService:
     return FakeService()
 
 
 @pytest.fixture
-async def mailbox(service: FakeService) -> AsyncIterator[Mailbox]:
+async def mailbox(fake_service: FakeService) -> AsyncIterator[Mailbox]:
     async with connect(
-        "https://mailbox.example.test", "token-value", transport=service.transport()
+        "https://mailbox.example.test",
+        "token-value",
+        transport=fake_service.transport(),
     ) as opened:
         yield opened
 
 
 async def test_the_feed_from_a_state_with_pages_followed(
-    service: FakeService, mailbox: Mailbox
+    fake_service: FakeService, mailbox: Mailbox
 ) -> None:
     start = await mailbox.start()
     for number in range(450):
-        service.change("message.created", f"m{number}")
-    service.feed.append(
+        fake_service.change("message.created", f"m{number}")
+    fake_service.feed.append(
         {
             "type": "account.updated",
             "id": "x",
@@ -65,18 +68,18 @@ async def test_the_feed_from_a_state_with_pages_followed(
 
 
 async def test_an_expired_state_is_its_own_error(
-    service: FakeService, mailbox: Mailbox
+    fake_service: FakeService, mailbox: Mailbox
 ) -> None:
-    service.expired.add("7")
+    fake_service.expired.add("7")
 
     with pytest.raises(ChangesExpiredError):
         await mailbox.changes("7")
 
 
 async def test_a_message_with_its_folders_by_path(
-    service: FakeService, mailbox: Mailbox
+    fake_service: FakeService, mailbox: Mailbox
 ) -> None:
-    service.add(
+    fake_service.add(
         wire_message(
             "m1",
             folder_ids=["inv-hosting"],
@@ -98,9 +101,9 @@ async def test_a_message_with_its_folders_by_path(
 
 
 async def test_a_message_without_text_has_an_empty_one(
-    service: FakeService, mailbox: Mailbox
+    fake_service: FakeService, mailbox: Mailbox
 ) -> None:
-    service.add(wire_message("m1", text=None, sender=None))
+    fake_service.add(wire_message("m1", text=None, sender=None))
 
     found = await mailbox.message(REF)
 
@@ -108,10 +111,10 @@ async def test_a_message_without_text_has_an_empty_one(
 
 
 async def test_a_new_folder_is_asked_for_again(
-    service: FakeService, mailbox: Mailbox
+    fake_service: FakeService, mailbox: Mailbox
 ) -> None:
     await mailbox.folders(ACCOUNT)
-    service.folders[ACCOUNT].append({"id": "new", "name": "New", "role": None})
+    fake_service.folders[ACCOUNT].append({"id": "new", "name": "New", "role": None})
 
     found = await mailbox.folder_at(ACCOUNT, "New")
 
@@ -119,9 +122,13 @@ async def test_a_new_folder_is_asked_for_again(
     assert await mailbox.folder_at(ACCOUNT, "Missing") is None
 
 
-async def test_a_thread_oldest_first(service: FakeService, mailbox: Mailbox) -> None:
-    service.add(wire_message("m2", thread_id="t", date="2026-11-18T08:00:00+00:00"))
-    service.add(wire_message("m1", thread_id="t", folder_ids=["sent"]))
+async def test_a_thread_oldest_first(
+    fake_service: FakeService, mailbox: Mailbox
+) -> None:
+    fake_service.add(
+        wire_message("m2", thread_id="t", date="2026-11-18T08:00:00+00:00")
+    )
+    fake_service.add(wire_message("m1", thread_id="t", folder_ids=["sent"]))
 
     found = await mailbox.thread(ACCOUNT, "t")
 
@@ -129,17 +136,21 @@ async def test_a_thread_oldest_first(service: FakeService, mailbox: Mailbox) -> 
     assert found.messages[0].in_role("sent")
 
 
-async def test_recent_follows_the_pages(service: FakeService, mailbox: Mailbox) -> None:
+async def test_recent_follows_the_pages(
+    fake_service: FakeService, mailbox: Mailbox
+) -> None:
     for number in range(250):
-        service.add(wire_message(f"m{number:03d}"), change=None)
-    service.add(wire_message("s1", folder_ids=["sent"]), change=None)
-    service.add(wire_message("x1", folder_ids=["inv"]), change=None)
+        fake_service.add(wire_message(f"m{number:03d}"), change=None)
+    fake_service.add(wire_message("s1", folder_ids=["sent"]), change=None)
+    fake_service.add(wire_message("x1", folder_ids=["inv"]), change=None)
 
     found = await mailbox.recent(date(2026, 11, 10), roles=("inbox", "sent"))
 
     assert len(found) == 251
     assert MessageRef(account_id=ACCOUNT, message_id="s1") in found
-    asked = [r.url.params for r in service.requests if r.url.path == "/v1/messages"]
+    asked = [
+        r.url.params for r in fake_service.requests if r.url.path == "/v1/messages"
+    ]
     assert [(p["folder"], p.get("cursor")) for p in asked] == [
         ("inbox", None),
         ("inbox", "200"),
@@ -148,28 +159,28 @@ async def test_recent_follows_the_pages(service: FakeService, mailbox: Mailbox) 
     assert asked[0]["after"] == "2026-11-10"
 
 
-async def test_the_three_actions(service: FakeService, mailbox: Mailbox) -> None:
-    service.add(wire_message("m1"))
+async def test_the_three_actions(fake_service: FakeService, mailbox: Mailbox) -> None:
+    fake_service.add(wire_message("m1"))
 
     await mailbox.add_keyword(REF, "invoice")
     await mailbox.remove_keyword(REF, "old")
     await mailbox.move(REF, "inv-mo")
 
-    assert service.writes() == [
+    assert fake_service.writes() == [
         (f"/v1/accounts/{ACCOUNT}/messages/m1", {"add_keywords": ["invoice"]}),
         (f"/v1/accounts/{ACCOUNT}/messages/m1", {"remove_keywords": ["old"]}),
         (f"/v1/accounts/{ACCOUNT}/messages/m1", {"folder_ids": ["inv-mo"]}),
     ]
-    assert service.messages[(ACCOUNT, "m1")]["folder_ids"] == ["inv-mo"]
+    assert fake_service.messages[(ACCOUNT, "m1")]["folder_ids"] == ["inv-mo"]
 
 
 async def test_a_folder_is_made_at_the_top_and_below_another(
-    service: FakeService, mailbox: Mailbox
+    fake_service: FakeService, mailbox: Mailbox
 ) -> None:
     top = await mailbox.create_folder(ACCOUNT, "Providers")
     below = await mailbox.create_folder(ACCOUNT, "Providers/CloudHost")
 
-    assert service.made() == [
+    assert fake_service.made() == [
         {"name": "Providers"},
         {"name": "CloudHost", "parent_id": top.id},
     ]
@@ -179,14 +190,14 @@ async def test_a_folder_is_made_at_the_top_and_below_another(
 
 
 async def test_a_folder_below_a_missing_one_is_refused(
-    service: FakeService, mailbox: Mailbox
+    fake_service: FakeService, mailbox: Mailbox
 ) -> None:
     with pytest.raises(MailboxRefusedError) as raised:
         await mailbox.create_folder(ACCOUNT, "Missing/CloudHost")
 
     assert raised.value.reason == "parent_missing"
     assert raised.value.status is None
-    assert service.made() == []
+    assert fake_service.made() == []
 
 
 async def test_a_folder_that_exists_is_refused_by_the_service(
@@ -206,9 +217,9 @@ async def test_a_refusal_carries_status_and_code(mailbox: Mailbox) -> None:
 
 
 async def test_a_service_that_is_down_is_unavailable(
-    service: FakeService, mailbox: Mailbox
+    fake_service: FakeService, mailbox: Mailbox
 ) -> None:
-    service.down = True
+    fake_service.down = True
 
     with pytest.raises(MailboxUnavailableError):
         await mailbox.start()
@@ -243,14 +254,30 @@ async def test_an_answer_of_the_wrong_shape_is_a_refusal() -> None:
 
 
 async def test_the_environment_sets_no_proxy(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The client gets a transport that reads no proxy, and httpx takes no
+    proxy of the environment for a client given a transport."""
     monkeypatch.setenv("HTTPS_PROXY", "http://proxy.example.test:3128")
     monkeypatch.setenv("ALL_PROXY", "http://proxy.example.test:3128")
+    made: list[dict[str, object]] = []
+    given: list[object] = []
+    real_transport, real_client = httpx.AsyncHTTPTransport, sources.MailboxClient
 
-    async with connect("https://mailbox.example.test", "token-value") as mailbox:
-        http = mailbox._client._http
+    def transport(**kwargs: object) -> httpx.AsyncHTTPTransport:
+        made.append(kwargs)
+        return real_transport(**kwargs)
 
-    assert http._mounts == {}
-    assert isinstance(http._transport, httpx.AsyncHTTPTransport)
+    def client(**kwargs: object) -> object:
+        given.append(kwargs["transport"])
+        return real_client(**kwargs)
+
+    monkeypatch.setattr(sources.httpx, "AsyncHTTPTransport", transport)
+    monkeypatch.setattr(sources, "MailboxClient", client)
+
+    async with connect("https://mailbox.example.test", "token-value"):
+        pass
+
+    assert [kwargs["trust_env"] for kwargs in made] == [False]
+    assert len(given) == 1 and isinstance(given[0], real_transport)
 
 
 async def test_http_to_another_machine_needs_allowing() -> None:
@@ -265,23 +292,23 @@ async def test_http_to_another_machine_needs_allowing() -> None:
 
 
 async def test_accounts_are_the_ids_the_user_is_granted(
-    service: FakeService, mailbox: Mailbox
+    fake_service: FakeService, mailbox: Mailbox
 ) -> None:
-    service.folders["acc2"] = []
+    fake_service.folders["acc2"] = []
 
     assert await mailbox.accounts() == (ACCOUNT, "acc2")
 
 
 async def test_recent_in_lists_one_folder_of_one_account(
-    service: FakeService, mailbox: Mailbox
+    fake_service: FakeService, mailbox: Mailbox
 ) -> None:
-    service.add(wire_message("h1", folder_ids=["inv-hosting"]), change=None)
-    service.add(wire_message("i1"), change=None)
+    fake_service.add(wire_message("h1", folder_ids=["inv-hosting"]), change=None)
+    fake_service.add(wire_message("i1"), change=None)
 
     found = await mailbox.recent_in(ACCOUNT, "inv-hosting", date(2026, 11, 10))
 
     assert found == [MessageRef(account_id=ACCOUNT, message_id="h1")]
-    (asked,) = [r for r in service.requests if r.url.path.endswith("/messages")]
+    (asked,) = [r for r in fake_service.requests if r.url.path.endswith("/messages")]
     assert asked.url.path == f"/v1/accounts/{ACCOUNT}/messages"
     assert (asked.url.params["folder"], asked.url.params["after"]) == (
         "inv-hosting",
@@ -312,13 +339,13 @@ async def test_a_ca_of_the_settings_is_what_the_service_is_trusted_by(
 
 
 async def test_a_lone_surrogate_from_the_service_becomes_a_replacement(
-    service: FakeService, mailbox: Mailbox
+    fake_service: FakeService, mailbox: Mailbox
 ) -> None:
     odd = chr(0xDCFC)
-    service.folders[ACCOUNT].append(
+    fake_service.folders[ACCOUNT].append(
         {"id": "odd", "name": f"Ablage{odd}", "role": None, "parent_id": None}
     )
-    service.add(
+    fake_service.add(
         wire_message(
             "m1",
             folder_ids=["odd"],
@@ -350,9 +377,9 @@ async def test_a_lone_surrogate_from_the_service_becomes_a_replacement(
 
 
 async def test_a_string_without_a_surrogate_stays_as_it_is(
-    service: FakeService, mailbox: Mailbox
+    fake_service: FakeService, mailbox: Mailbox
 ) -> None:
-    service.add(wire_message("m1", subject="Grüße \u00e9 \U0001f600", text="Text"))
+    fake_service.add(wire_message("m1", subject="Grüße \u00e9 \U0001f600", text="Text"))
 
     found = await mailbox.message(REF)
 
@@ -363,11 +390,11 @@ async def test_a_string_without_a_surrogate_stays_as_it_is(
     "field", ["subject", "text_body", "thread_id"], ids=["subject", "text", "thread"]
 )
 async def test_a_field_of_another_type_is_a_refusal_without_its_value(
-    service: FakeService, mailbox: Mailbox, field: str
+    fake_service: FakeService, mailbox: Mailbox, field: str
 ) -> None:
     message = wire_message("m1")
     message[field] = ["Geheimer Betreff"]
-    service.add(message)
+    fake_service.add(message)
 
     with pytest.raises(MailboxRefusedError) as found:
         await mailbox.message(REF)

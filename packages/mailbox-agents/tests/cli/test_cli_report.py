@@ -19,8 +19,8 @@ from benethos_mailbox_agents.records import (
 )
 from benethos_mailbox_agents.store import ActionRow, MessageRow
 
-from ..fakes import ACCOUNT, FakeService, wire_message
-from ..helpers import configure
+from ..agents_fake import ACCOUNT, FakeService, wire_message
+from ..agents_helpers import configure
 
 NOW = datetime(2026, 11, 17, 9, 0, tzinfo=UTC)
 REF = MessageRef(account_id=ACCOUNT, message_id="m1")

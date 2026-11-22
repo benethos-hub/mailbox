@@ -17,8 +17,17 @@ from benethos_mailbox_agents.records import MessageRef
 from benethos_mailbox_agents.runtime.loop import Worker
 from benethos_mailbox_agents.runtime.readiness import readiness
 
-from ..fakes import ACCOUNT, wire_message
-from ..helpers import Wired, actions, decision, mail, run, settings, wired, worker
+from ..agents_fake import ACCOUNT, wire_message
+from ..agents_helpers import (
+    Wired,
+    actions,
+    decision,
+    mail,
+    run,
+    settings,
+    wired,
+    worker,
+)
 
 GROUPS: list[dict[str, Any]] = [
     {
@@ -58,7 +67,7 @@ def agent(tmp_path: Path, stage: str = "full", **values: Any) -> Sorting:
 
 
 @pytest.fixture
-async def world(tmp_path: Path) -> AsyncIterator[Wired]:
+async def sorting_world(tmp_path: Path) -> AsyncIterator[Wired]:
     async with wired(tmp_path) as found:
         for message_id, sender in MESSAGES.items():
             found.service.add(wire_message(message_id, sender=sender), change=None)
@@ -86,61 +95,63 @@ async def world(tmp_path: Path) -> AsyncIterator[Wired]:
 
 @pytest.mark.parametrize("message_id", ["filed", "binned", "put-back"])
 async def test_a_message_not_for_the_agent_is_skipped(
-    world: Wired, tmp_path: Path, message_id: str
+    sorting_world: Wired, tmp_path: Path, message_id: str
 ) -> None:
-    before = dict(mail(world, message_id))
+    before = dict(mail(sorting_world, message_id))
 
-    assert await run(world, message_id, agent(tmp_path)) == "skipped"
+    assert await run(sorting_world, message_id, agent(tmp_path)) == "skipped"
 
-    assert mail(world, message_id) == before
-    assert world.service.writes() == []
+    assert mail(sorting_world, message_id) == before
+    assert sorting_world.service.writes() == []
 
 
-async def test_a_sender_in_no_group_is_left_alone(world: Wired, tmp_path: Path) -> None:
-    assert await run(world, "unknown", agent(tmp_path)) == "done"
+async def test_a_sender_in_no_group_is_left_alone(
+    sorting_world: Wired, tmp_path: Path
+) -> None:
+    assert await run(sorting_world, "unknown", agent(tmp_path)) == "done"
 
-    assert decision(world, "unknown")["label"] == "none"
-    assert decision(world, "unknown")["details"] == {"match": "none"}
-    assert world.service.writes() == []
-    assert world.service.made() == []
+    assert decision(sorting_world, "unknown")["label"] == "none"
+    assert decision(sorting_world, "unknown")["details"] == {"match": "none"}
+    assert sorting_world.service.writes() == []
+    assert sorting_world.service.made() == []
 
 
 async def test_a_sender_of_two_groups_alike_is_left_alone(
-    world: Wired, tmp_path: Path
+    sorting_world: Wired, tmp_path: Path
 ) -> None:
-    assert await run(world, "alike", agent(tmp_path)) == "done"
+    assert await run(sorting_world, "alike", agent(tmp_path)) == "done"
 
-    found = decision(world, "alike")
+    found = decision(sorting_world, "alike")
     assert found["label"] == "none"
     assert found["details"] == {"match": "ambiguous", "groups": "TelcoA,TelcoB"}
-    assert world.service.writes() == []
+    assert sorting_world.service.writes() == []
 
 
 async def test_a_message_of_a_group_is_moved_and_marked(
-    world: Wired, tmp_path: Path
+    sorting_world: Wired, tmp_path: Path
 ) -> None:
-    assert await run(world, "hosting", agent(tmp_path)) == "done"
+    assert await run(sorting_world, "hosting", agent(tmp_path)) == "done"
 
-    assert mail(world, "hosting")["folder_ids"] == ["inv-hosting"]
-    assert mail(world, "hosting")["keywords"] == ["agent-sorted"]
-    assert world.service.made() == []
-    found = decision(world, "hosting")
+    assert mail(sorting_world, "hosting")["folder_ids"] == ["inv-hosting"]
+    assert mail(sorting_world, "hosting")["keywords"] == ["agent-sorted"]
+    assert sorting_world.service.made() == []
+    found = decision(sorting_world, "hosting")
     assert (found["label"], found["source"]) == ("Hosting", "baseline")
     assert found["details"] == {"match": "group", "rule": "pattern"}
     assert "@" not in json.dumps(found)
 
 
 async def test_a_missing_folder_is_made_from_the_top_first(
-    world: Wired, tmp_path: Path
+    sorting_world: Wired, tmp_path: Path
 ) -> None:
-    assert await run(world, "cloudhost", agent(tmp_path)) == "done"
+    assert await run(sorting_world, "cloudhost", agent(tmp_path)) == "done"
 
-    assert world.service.made() == [
+    assert sorting_world.service.made() == [
         {"name": "Providers"},
         {"name": "CloudHost", "parent_id": "Providers"},
     ]
-    assert mail(world, "cloudhost")["folder_ids"] == ["Providers/CloudHost"]
-    assert actions(world, "cloudhost") == [
+    assert mail(sorting_world, "cloudhost")["folder_ids"] == ["Providers/CloudHost"]
+    assert actions(sorting_world, "cloudhost") == [
         ("create_folder", "Providers", True),
         ("create_folder", "Providers/CloudHost", True),
         ("move_to_folder", "Providers/CloudHost", True),
@@ -148,13 +159,15 @@ async def test_a_missing_folder_is_made_from_the_top_first(
     ]
 
 
-async def test_a_held_group_moves_nothing_in_full(world: Wired, tmp_path: Path) -> None:
-    assert await run(world, "bank", agent(tmp_path)) == "done"
+async def test_a_held_group_moves_nothing_in_full(
+    sorting_world: Wired, tmp_path: Path
+) -> None:
+    assert await run(sorting_world, "bank", agent(tmp_path)) == "done"
 
-    assert world.service.writes() == []
-    assert world.service.made() == []
-    assert decision(world, "bank")["details"]["hold"] == "yes"
-    assert actions(world, "bank") == [
+    assert sorting_world.service.writes() == []
+    assert sorting_world.service.made() == []
+    assert decision(sorting_world, "bank")["details"]["hold"] == "yes"
+    assert actions(sorting_world, "bank") == [
         ("create_folder", "Providers", False),
         ("create_folder", "Providers/Bank", False),
         ("move_to_folder", "Providers/Bank", False),
@@ -163,12 +176,12 @@ async def test_a_held_group_moves_nothing_in_full(world: Wired, tmp_path: Path) 
 
 
 async def test_a_log_line_names_no_group(
-    world: Wired, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    sorting_world: Wired, tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
     caplog.set_level("DEBUG")
 
-    assert await run(world, "cloudhost", agent(tmp_path, "shadow")) == "done"
-    assert await run(world, "bank", agent(tmp_path, "shadow")) == "done"
+    assert await run(sorting_world, "cloudhost", agent(tmp_path, "shadow")) == "done"
+    assert await run(sorting_world, "bank", agent(tmp_path, "shadow")) == "done"
 
     lines = [r.getMessage() for r in caplog.records]
     assert not any("CloudHost" in line or "Bank" in line for line in lines)
@@ -182,13 +195,13 @@ async def test_a_log_line_names_no_group(
 
 @pytest.mark.parametrize("stage", ["shadow", "keyword"])
 async def test_below_full_the_folders_and_the_move_are_recorded(
-    world: Wired, tmp_path: Path, stage: str
+    sorting_world: Wired, tmp_path: Path, stage: str
 ) -> None:
-    assert await run(world, "cloudhost", agent(tmp_path, stage)) == "done"
+    assert await run(sorting_world, "cloudhost", agent(tmp_path, stage)) == "done"
 
-    assert world.service.writes() == []
-    assert world.service.made() == []
-    assert actions(world, "cloudhost") == [
+    assert sorting_world.service.writes() == []
+    assert sorting_world.service.made() == []
+    assert actions(sorting_world, "cloudhost") == [
         ("create_folder", "Providers", False),
         ("create_folder", "Providers/CloudHost", False),
         ("move_to_folder", "Providers/CloudHost", False),
@@ -197,25 +210,27 @@ async def test_below_full_the_folders_and_the_move_are_recorded(
 
 
 async def test_in_keyword_the_keyword_is_recorded_and_not_set(
-    world: Wired, tmp_path: Path
+    sorting_world: Wired, tmp_path: Path
 ) -> None:
-    assert await run(world, "hosting", agent(tmp_path, "keyword")) == "done"
+    assert await run(sorting_world, "hosting", agent(tmp_path, "keyword")) == "done"
 
-    assert world.service.writes() == []
-    assert mail(world, "hosting")["keywords"] == []
-    assert actions(world, "hosting") == [
+    assert sorting_world.service.writes() == []
+    assert mail(sorting_world, "hosting")["keywords"] == []
+    assert actions(sorting_world, "hosting") == [
         ("move_to_folder", "Invoices/Hosting", False),
         ("add_keyword", "agent-sorted", False),
     ]
 
 
 async def test_a_backfill_run_again_records_nothing_twice(
-    world: Wired, tmp_path: Path
+    sorting_world: Wired, tmp_path: Path
 ) -> None:
     for _ in range(3):
-        assert await run(world, "cloudhost", agent(tmp_path, "shadow"), again=True)
+        assert await run(
+            sorting_world, "cloudhost", agent(tmp_path, "shadow"), again=True
+        )
 
-    assert actions(world, "cloudhost") == [
+    assert actions(sorting_world, "cloudhost") == [
         ("create_folder", "Providers", False),
         ("create_folder", "Providers/CloudHost", False),
         ("move_to_folder", "Providers/CloudHost", False),
@@ -224,11 +239,11 @@ async def test_a_backfill_run_again_records_nothing_twice(
 
 
 async def test_below_full_a_folder_that_exists_is_not_recorded(
-    world: Wired, tmp_path: Path
+    sorting_world: Wired, tmp_path: Path
 ) -> None:
-    assert await run(world, "hosting", agent(tmp_path, "shadow")) == "done"
+    assert await run(sorting_world, "hosting", agent(tmp_path, "shadow")) == "done"
 
-    assert actions(world, "hosting") == [
+    assert actions(sorting_world, "hosting") == [
         ("move_to_folder", "Invoices/Hosting", False),
         ("add_keyword", "agent-sorted", False),
     ]
@@ -238,43 +253,45 @@ async def test_below_full_a_folder_that_exists_is_not_recorded(
 
 
 async def test_a_sender_added_to_the_list_reaches_a_message_decided_before(
-    world: Wired, tmp_path: Path
+    sorting_world: Wired, tmp_path: Path
 ) -> None:
     without = [g for g in GROUPS if g["name"] != "Hosting"]
     first = Sorting(settings(stage="full", sorting_file=listed(tmp_path, without)))
-    assert await run(world, "hosting", first) == "done"
-    assert world.service.writes() == []
+    assert await run(sorting_world, "hosting", first) == "done"
+    assert sorting_world.service.writes() == []
 
-    assert await run(world, "hosting", agent(tmp_path), again=True) == "done"
+    assert await run(sorting_world, "hosting", agent(tmp_path), again=True) == "done"
 
-    assert mail(world, "hosting")["folder_ids"] == ["inv-hosting"]
+    assert mail(sorting_world, "hosting")["folder_ids"] == ["inv-hosting"]
 
 
-async def test_a_changed_list_is_decided_anew(world: Wired, tmp_path: Path) -> None:
+async def test_a_changed_list_is_decided_anew(
+    sorting_world: Wired, tmp_path: Path
+) -> None:
     from benethos_mailbox_agents.cli.report import collect, summary
 
     without = [g for g in GROUPS if g["name"] != "Hosting"]
     first = Sorting(settings(stage="full", sorting_file=listed(tmp_path, without)))
     first.prepare()
-    assert await run(world, "hosting", first) == "done"
-    assert decision(world, "hosting")["label"] == "none"
+    assert await run(sorting_world, "hosting", first) == "done"
+    assert decision(sorting_world, "hosting")["label"] == "none"
 
     second = agent(tmp_path)
     second.prepare()
     assert second.prompt_version != first.prompt_version
-    assert await run(world, "hosting", second, again=True) == "done"
+    assert await run(sorting_world, "hosting", second, again=True) == "done"
 
-    found = decision(world, "hosting")
+    found = decision(sorting_world, "hosting")
     assert (found["label"], found["details"]) == (
         "Hosting",
         {"match": "group", "rule": "pattern"},
     )
-    entries = await collect(world.store, world.mailbox, limit=10)
+    entries = await collect(sorting_world.store, sorting_world.mailbox, limit=10)
     assert summary(second, entries) == ["groups:", "  Hosting: 1 moved"]
 
 
 async def test_the_report_shows_the_baseline_of_the_changed_list(
-    world: Wired, tmp_path: Path
+    sorting_world: Wired, tmp_path: Path
 ) -> None:
     """A backfill under a changed list runs the rules anew beside the
     decision, so the report shows no baseline of the list before."""
@@ -283,15 +300,15 @@ async def test_the_report_shows_the_baseline_of_the_changed_list(
     without = [g for g in GROUPS if g["name"] != "Hosting"]
     first = Sorting(settings(stage="full", sorting_file=listed(tmp_path, without)))
     first.prepare()
-    assert await run(world, "hosting", first) == "done"
+    assert await run(sorting_world, "hosting", first) == "done"
 
     second = agent(tmp_path)
     second.prepare()
-    backfilling = worker(world, second)
+    backfilling = worker(sorting_world, second)
     assert await backfilling.backfill(30, again=True) > 0
     await backfilling.drain()
 
-    entries = await collect(world.store, world.mailbox, limit=20)
+    entries = await collect(sorting_world.store, sorting_world.mailbox, limit=20)
     [shown] = [e for e in entries if e.row.ref.message_id == "hosting"]
     lines = render([shown])
     assert any(line.startswith("  decision: Hosting (baseline") for line in lines)
@@ -318,23 +335,25 @@ def test_the_version_is_the_list_read(tmp_path: Path) -> None:
 # -- no model -------------------------------------------------------------------
 
 
-async def test_no_model_is_asked_and_none_counted(world: Wired, tmp_path: Path) -> None:
+async def test_no_model_is_asked_and_none_counted(
+    sorting_world: Wired, tmp_path: Path
+) -> None:
     worker = Worker(
         agent=agent(tmp_path),
-        store=world.store,
-        mailbox=world.mailbox,
-        gateway=world.gateway,
-        now=world.clock,
+        store=sorting_world.store,
+        mailbox=sorting_world.mailbox,
+        gateway=sorting_world.gateway,
+        now=sorting_world.clock,
     )
     for message_id in MESSAGES:
-        world.store.enqueue(
-            MessageRef(account_id=ACCOUNT, message_id=message_id), world.clock()
+        sorting_world.store.enqueue(
+            MessageRef(account_id=ACCOUNT, message_id=message_id), sorting_world.clock()
         )
 
     await worker.process_due()
 
-    assert world.fake_gateway.requests == []
-    assert world.store.counts()["done"] == len(MESSAGES)
+    assert sorting_world.fake_gateway.requests == []
+    assert sorting_world.store.counts()["done"] == len(MESSAGES)
 
 
 # -- readiness ------------------------------------------------------------------
@@ -409,13 +428,15 @@ def test_summarize_per_group_candidates_and_alike(tmp_path: Path) -> None:
     assert agent(tmp_path).summarize([]) == []
 
 
-async def test_the_report_ends_with_the_groups(world: Wired, tmp_path: Path) -> None:
+async def test_the_report_ends_with_the_groups(
+    sorting_world: Wired, tmp_path: Path
+) -> None:
     from benethos_mailbox_agents.cli.report import collect, render, summary
 
     for message_id in ("hosting", "unknown"):
-        await run(world, message_id, agent(tmp_path))
+        await run(sorting_world, message_id, agent(tmp_path))
 
-    entries = await collect(world.store, world.mailbox, limit=10)
+    entries = await collect(sorting_world.store, sorting_world.mailbox, limit=10)
     lines = render(entries) + summary(agent(tmp_path), entries)
 
     assert lines[-4:] == [
@@ -427,37 +448,37 @@ async def test_the_report_ends_with_the_groups(world: Wired, tmp_path: Path) -> 
 
 
 async def test_a_keyword_the_service_failed_after_the_move_is_set_again(
-    world: Wired, tmp_path: Path
+    sorting_world: Wired, tmp_path: Path
 ) -> None:
-    world.service.keyword_failures = 1
-    sorter = worker(world, agent(tmp_path))
+    sorting_world.service.keyword_failures = 1
+    sorter = worker(sorting_world, agent(tmp_path))
     hosting = MessageRef(account_id=ACCOUNT, message_id="hosting")
-    world.store.enqueue(hosting, world.clock())
+    sorting_world.store.enqueue(hosting, sorting_world.clock())
 
     with pytest.raises(MailboxUnavailableError):
         await sorter.process_due()
-    assert mail(world, "hosting")["folder_ids"] == ["inv-hosting"]
+    assert mail(sorting_world, "hosting")["folder_ids"] == ["inv-hosting"]
 
     await sorter.process_due()
 
-    row = world.store.message(hosting)
+    row = sorting_world.store.message(hosting)
     assert row is not None
     assert row.state == "done"
 
-    assert mail(world, "hosting")["keywords"] == ["agent-sorted"]
-    assert mail(world, "hosting")["folder_ids"] == ["inv-hosting"]
+    assert mail(sorting_world, "hosting")["keywords"] == ["agent-sorted"]
+    assert mail(sorting_world, "hosting")["folder_ids"] == ["inv-hosting"]
 
 
 async def test_a_sorted_message_put_back_is_not_moved_again_by_a_backfill(
-    world: Wired, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    sorting_world: Wired, tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
-    assert await run(world, "hosting", agent(tmp_path)) == "done"
-    mail(world, "hosting")["folder_ids"] = ["inbox"]
-    mail(world, "hosting")["keywords"] = []
+    assert await run(sorting_world, "hosting", agent(tmp_path)) == "done"
+    mail(sorting_world, "hosting")["folder_ids"] = ["inbox"]
+    mail(sorting_world, "hosting")["keywords"] = []
     caplog.set_level("INFO")
 
-    assert await run(world, "hosting", agent(tmp_path), again=True) == "done"
+    assert await run(sorting_world, "hosting", agent(tmp_path), again=True) == "done"
 
-    assert mail(world, "hosting")["folder_ids"] == ["inbox"]
+    assert mail(sorting_world, "hosting")["folder_ids"] == ["inbox"]
     names = [r.name.rsplit(".", 1)[-1] for r in caplog.records if ".actions." in r.name]
     assert "kept" in names

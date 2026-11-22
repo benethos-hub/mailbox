@@ -30,8 +30,8 @@ from benethos_mailbox_agents.agents.awaiting_reply.text import (
 from benethos_mailbox_agents.records import Address, MailMessage, MessageRef
 from benethos_mailbox_agents.runtime.loop import Worker
 
-from ..fakes import ACCOUNT, wire_message
-from ..helpers import Clock, Wired, settings, wired
+from ..agents_fake import ACCOUNT, wire_message
+from ..agents_helpers import Clock, Wired, settings, wired
 
 ME = "me@example.test"
 PARTNER = "partner@partner.example"
@@ -127,7 +127,7 @@ class World:
 
 
 @pytest.fixture
-async def world(tmp_path: Path) -> AsyncIterator[World]:
+async def awaiting_world(tmp_path: Path) -> AsyncIterator[World]:
     async with wired(tmp_path) as found:
         made = World(found)
         await made.start()
@@ -225,107 +225,109 @@ def test_the_model_is_given_recipients_subject_and_own_text() -> None:
 
 
 async def test_a_sent_message_that_asks_waits_and_is_marked_when_due(
-    world: World,
+    awaiting_world: World,
 ) -> None:
-    world.add(sent("s1", ASK), "message.sent")
-    world.w.fake_gateway.answer(expects(QUESTION))
+    awaiting_world.add(sent("s1", ASK), "message.sent")
+    awaiting_world.w.fake_gateway.answer(expects(QUESTION))
 
-    await world.run()
+    await awaiting_world.run()
 
-    item = world.item("s1")
+    item = awaiting_world.item("s1")
     assert item.is_open and item.due == datetime(2026, 11, 19, 9, tzinfo=UTC)
-    assert world.keywords("s1") == []
+    assert awaiting_world.keywords("s1") == []
 
-    world.clock.advance(days=3, minutes=1)
-    await world.run()
+    awaiting_world.clock.advance(days=3, minutes=1)
+    await awaiting_world.run()
 
-    assert world.keywords("s1") == ["agent-awaiting-reply"]
-    assert world.item("s1").keyword_set
-    assert world.w.service.messages[(ACCOUNT, "s1")]["folder_ids"] == ["sent"]
-
-
-async def test_a_sent_message_that_does_not_ask_opens_nothing(world: World) -> None:
-    world.add(sent("s1", "Danke dir, passt so."), "message.sent")
-    world.w.fake_gateway.answer(no_reply("Danke dir, passt so."))
-
-    await world.run()
-
-    assert world.item("s1") is None
+    assert awaiting_world.keywords("s1") == ["agent-awaiting-reply"]
+    assert awaiting_world.item("s1").keyword_set
+    assert awaiting_world.w.service.messages[(ACCOUNT, "s1")]["folder_ids"] == ["sent"]
 
 
-async def test_a_quote_not_in_the_message_opens_nothing(world: World) -> None:
-    world.add(sent("s1", ASK), "message.sent")
-    world.w.fake_gateway.answer(expects("Please answer at once"))
+async def test_a_sent_message_that_does_not_ask_opens_nothing(
+    awaiting_world: World,
+) -> None:
+    awaiting_world.add(sent("s1", "Danke dir, passt so."), "message.sent")
+    awaiting_world.w.fake_gateway.answer(no_reply("Danke dir, passt so."))
 
-    await world.run()
+    await awaiting_world.run()
 
-    assert world.item("s1") is None
+    assert awaiting_world.item("s1") is None
+
+
+async def test_a_quote_not_in_the_message_opens_nothing(awaiting_world: World) -> None:
+    awaiting_world.add(sent("s1", ASK), "message.sent")
+    awaiting_world.w.fake_gateway.answer(expects("Please answer at once"))
+
+    await awaiting_world.run()
+
+    assert awaiting_world.item("s1") is None
 
 
 # -- what closes an item ------------------------------------------------------------
 
 
 async def test_a_reply_to_a_sent_message_deleted_since_blocks_nothing(
-    world: World,
+    awaiting_world: World,
 ) -> None:
-    world.add(sent("s1", ASK), "message.sent")
-    world.w.fake_gateway.answer(expects(QUESTION))
-    await world.run()
-    del world.w.service.messages[(ACCOUNT, "s1")]
+    awaiting_world.add(sent("s1", ASK), "message.sent")
+    awaiting_world.w.fake_gateway.answer(expects(QUESTION))
+    await awaiting_world.run()
+    del awaiting_world.w.service.messages[(ACCOUNT, "s1")]
 
-    world.add(received("r1"))
-    await world.run()
+    awaiting_world.add(received("r1"))
+    await awaiting_world.run()
 
-    found = world.w.store.message(ref("r1"))
+    found = awaiting_world.w.store.message(ref("r1"))
     assert found is not None and found.state == "done"
-    assert (world.item("s1").is_open, world.item("s1").reason) == (
+    assert (awaiting_world.item("s1").is_open, awaiting_world.item("s1").reason) == (
         False,
         "message_gone",
     )
-    assert world.w.store.cursor() == world.w.service.state
+    assert awaiting_world.w.store.cursor() == awaiting_world.w.service.state
 
 
 async def test_a_gateway_that_is_away_holds_up_neither_tick_nor_replies(
-    world: World,
+    awaiting_world: World,
 ) -> None:
-    world.add(sent("s1", ASK), "message.sent")
-    world.w.fake_gateway.answer(expects(QUESTION))
-    await world.run()
-    world.clock.advance(days=4)
-    world.add(sent("s2", ASK, thread="t2"), "message.sent")
-    world.add(sent("s3", ASK, thread="t3"), "message.sent")
-    world.add(received("r9", thread="t9"))
-    world.w.fake_gateway.answer(httpx.Response(503))
+    awaiting_world.add(sent("s1", ASK), "message.sent")
+    awaiting_world.w.fake_gateway.answer(expects(QUESTION))
+    await awaiting_world.run()
+    awaiting_world.clock.advance(days=4)
+    awaiting_world.add(sent("s2", ASK, thread="t2"), "message.sent")
+    awaiting_world.add(sent("s3", ASK, thread="t3"), "message.sent")
+    awaiting_world.add(received("r9", thread="t9"))
+    awaiting_world.w.fake_gateway.answer(httpx.Response(503))
 
-    await world.run()
+    await awaiting_world.run()
 
-    assert world.keywords("s1") == ["agent-awaiting-reply"]
-    states = {m: world.w.store.message(ref(m)) for m in ("s2", "s3", "r9")}
+    assert awaiting_world.keywords("s1") == ["agent-awaiting-reply"]
+    states = {m: awaiting_world.w.store.message(ref(m)) for m in ("s2", "s3", "r9")}
     assert {m: (row.state, row.attempts) for m, row in states.items() if row} == {
         "s2": ("pending", 0),
         "s3": ("pending", 0),
         "r9": ("done", 0),
     }
-    assert len(world.w.fake_gateway.requests) == 2
+    assert len(awaiting_world.w.fake_gateway.requests) == 2
 
 
 async def test_no_tick_while_a_message_waits_for_another_reason(
-    world: World,
+    awaiting_world: World,
 ) -> None:
-    world.add(sent("s1", ASK), "message.sent")
-    world.w.fake_gateway.answer(expects(QUESTION))
-    await world.run()
-    world.clock.advance(days=4)
-    world.add(sent("s2", ASK, thread="t2"), "message.sent")
-    world.w.fake_gateway.answer(httpx.Response(503))
-    await world.run()
-    assert world.w.store.message(ref("s2")) is not None
-    assert world.worker._only_gateway_waits()
+    awaiting_world.add(sent("s1", ASK), "message.sent")
+    awaiting_world.w.fake_gateway.answer(expects(QUESTION))
+    await awaiting_world.run()
+    awaiting_world.clock.advance(days=4)
+    awaiting_world.add(sent("s2", ASK, thread="t2"), "message.sent")
+    awaiting_world.w.fake_gateway.answer(httpx.Response(503))
+    await awaiting_world.run()
+    assert awaiting_world.w.store.message(ref("s2")) is not None
+    assert awaiting_world.worker._only_gateway_waits()
 
     # One due beyond the batch of this pass, such as a reply.
-    world.w.store.enqueue(ref("late"), world.clock())
+    awaiting_world.w.store.enqueue(ref("late"), awaiting_world.clock())
 
-    assert not world.worker._only_gateway_waits()
+    assert not awaiting_world.worker._only_gateway_waits()
 
 
 async def staged(tmp_path: Path, stage: str) -> AsyncIterator[World]:
@@ -335,186 +337,195 @@ async def staged(tmp_path: Path, stage: str) -> AsyncIterator[World]:
         yield made
 
 
-async def _due(world: World) -> None:
-    world.add(sent("s1", ASK), "message.sent")
-    world.w.fake_gateway.answer(expects(QUESTION))
-    await world.run()
-    world.clock.advance(days=4)
-    await world.run()
+async def _due(awaiting_world: World) -> None:
+    awaiting_world.add(sent("s1", ASK), "message.sent")
+    awaiting_world.w.fake_gateway.answer(expects(QUESTION))
+    await awaiting_world.run()
+    awaiting_world.clock.advance(days=4)
+    await awaiting_world.run()
 
 
 async def test_shadow_records_an_item_once_and_a_star_closes_nothing(
     tmp_path: Path,
 ) -> None:
-    async for world in staged(tmp_path, "shadow"):
-        await _due(world)
-        assert world.keywords("s1") == []
-        assert [a.executed for a in world.w.store.actions(ref("s1"))] == [False]
+    async for awaiting_world in staged(tmp_path, "shadow"):
+        await _due(awaiting_world)
+        assert awaiting_world.keywords("s1") == []
+        assert [a.executed for a in awaiting_world.w.store.actions(ref("s1"))] == [
+            False
+        ]
 
-        world.w.service.change("message.updated", "s1")
-        world.clock.advance(days=1)
-        await world.run()
+        awaiting_world.w.service.change("message.updated", "s1")
+        awaiting_world.clock.advance(days=1)
+        await awaiting_world.run()
 
-        assert world.item("s1").is_open
-        assert not world.item("s1").keyword_set
-        assert len(world.w.store.actions(ref("s1"))) == 1
+        assert awaiting_world.item("s1").is_open
+        assert not awaiting_world.item("s1").keyword_set
+        assert len(awaiting_world.w.store.actions(ref("s1"))) == 1
 
 
 async def test_a_keyword_the_service_refused_is_offered_again(tmp_path: Path) -> None:
-    async for world in staged(tmp_path, "full"):
-        world.w.service.write_refusal = (422, "keyword_refused")
-        await _due(world)
-        assert world.keywords("s1") == []
-        assert not world.item("s1").keyword_set
+    async for awaiting_world in staged(tmp_path, "full"):
+        awaiting_world.w.service.write_refusal = (422, "keyword_refused")
+        await _due(awaiting_world)
+        assert awaiting_world.keywords("s1") == []
+        assert not awaiting_world.item("s1").keyword_set
 
-        world.w.service.write_refusal = None
-        world.clock.advance(days=1)
-        await world.run()
+        awaiting_world.w.service.write_refusal = None
+        awaiting_world.clock.advance(days=1)
+        await awaiting_world.run()
 
-        assert world.keywords("s1") == ["agent-awaiting-reply"]
-        assert world.item("s1").keyword_set
+        assert awaiting_world.keywords("s1") == ["agent-awaiting-reply"]
+        assert awaiting_world.item("s1").keyword_set
 
 
 async def test_an_item_whose_sent_message_is_gone_closes_on_the_tick(
-    world: World,
+    awaiting_world: World,
 ) -> None:
-    world.add(sent("s1", ASK), "message.sent")
-    world.w.fake_gateway.answer(expects(QUESTION))
-    await world.run()
-    del world.w.service.messages[(ACCOUNT, "s1")]
-    world.clock.advance(days=4)
+    awaiting_world.add(sent("s1", ASK), "message.sent")
+    awaiting_world.w.fake_gateway.answer(expects(QUESTION))
+    await awaiting_world.run()
+    del awaiting_world.w.service.messages[(ACCOUNT, "s1")]
+    awaiting_world.clock.advance(days=4)
 
-    await world.run()
+    await awaiting_world.run()
 
-    found = world.item("s1")
+    found = awaiting_world.item("s1")
     assert found.closed is not None and found.reason == "message_gone"
-    assert world.w.store.due_items(world.clock()) == []
+    assert awaiting_world.w.store.due_items(awaiting_world.clock()) == []
 
 
 async def test_after_shadow_the_keyword_stage_sets_the_keyword(tmp_path: Path) -> None:
-    async for world in staged(tmp_path, "shadow"):
-        await _due(world)
-        assert world.keywords("s1") == []
+    async for awaiting_world in staged(tmp_path, "shadow"):
+        await _due(awaiting_world)
+        assert awaiting_world.keywords("s1") == []
 
-        moment = world.clock.moment
-        keyword = World(world.w, "keyword")
-        world.clock.moment = moment
-        world.clock.advance(days=1)
+        moment = awaiting_world.clock.moment
+        keyword = World(awaiting_world.w, "keyword")
+        awaiting_world.clock.moment = moment
+        awaiting_world.clock.advance(days=1)
         await keyword.run()
 
-        assert world.keywords("s1") == ["agent-awaiting-reply"]
-        assert world.item("s1").keyword_set
+        assert awaiting_world.keywords("s1") == ["agent-awaiting-reply"]
+        assert awaiting_world.item("s1").keyword_set
 
 
 async def test_a_reply_decided_before_its_sent_message_opens_nothing(
-    world: World,
+    awaiting_world: World,
 ) -> None:
-    world.add(received("r1"), "")
-    world.add(sent("s1", ASK), "")
-    world.w.fake_gateway.answer(expects(QUESTION))
-    await world.worker.backfill(30)
-    order = [row.ref.message_id for row in world.w.store.messages("pending")]
+    awaiting_world.add(received("r1"), "")
+    awaiting_world.add(sent("s1", ASK), "")
+    awaiting_world.w.fake_gateway.answer(expects(QUESTION))
+    await awaiting_world.worker.backfill(30)
+    order = [row.ref.message_id for row in awaiting_world.w.store.messages("pending")]
     assert set(order) == {"r1", "s1"}
 
-    await world.worker.process_due()
-    world.clock.advance(days=4)
-    await world.run()
+    await awaiting_world.worker.process_due()
+    awaiting_world.clock.advance(days=4)
+    await awaiting_world.run()
 
-    assert world.item("s1") is None
-    assert world.keywords("s1") == []
-
-
-async def test_a_later_automatic_answer_still_opens_the_item(world: World) -> None:
-    world.add(received("r1", sender="noreply@partner.example"), "")
-    world.add(sent("s1", ASK), "message.sent")
-    world.w.fake_gateway.answer(expects(QUESTION))
-
-    await world.run()
-
-    assert world.item("s1").is_open
+    assert awaiting_world.item("s1") is None
+    assert awaiting_world.keywords("s1") == []
 
 
-async def test_taking_a_message_up_again_reopens_nothing(world: World) -> None:
-    world.add(sent("s1", ASK), "message.sent")
-    world.w.fake_gateway.answer(expects(QUESTION))
-    await world.run()
-    world.clock.advance(days=4)
-    await world.run()
-    assert world.keywords("s1") == ["agent-awaiting-reply"]
-    world.w.service.messages[(ACCOUNT, "s1")]["keywords"] = []
-    world.w.service.change("message.updated", "s1")
-    await world.run()
-    assert world.item("s1").reason == "keyword_removed"
+async def test_a_later_automatic_answer_still_opens_the_item(
+    awaiting_world: World,
+) -> None:
+    awaiting_world.add(received("r1", sender="noreply@partner.example"), "")
+    awaiting_world.add(sent("s1", ASK), "message.sent")
+    awaiting_world.w.fake_gateway.answer(expects(QUESTION))
 
-    await world.worker.backfill(30, again=True)
-    world.clock.advance(days=1)
-    await world.run()
+    await awaiting_world.run()
 
-    assert world.item("s1").reason == "keyword_removed"
-    assert world.keywords("s1") == []
+    assert awaiting_world.item("s1").is_open
+
+
+async def test_taking_a_message_up_again_reopens_nothing(awaiting_world: World) -> None:
+    awaiting_world.add(sent("s1", ASK), "message.sent")
+    awaiting_world.w.fake_gateway.answer(expects(QUESTION))
+    await awaiting_world.run()
+    awaiting_world.clock.advance(days=4)
+    await awaiting_world.run()
+    assert awaiting_world.keywords("s1") == ["agent-awaiting-reply"]
+    awaiting_world.w.service.messages[(ACCOUNT, "s1")]["keywords"] = []
+    awaiting_world.w.service.change("message.updated", "s1")
+    await awaiting_world.run()
+    assert awaiting_world.item("s1").reason == "keyword_removed"
+
+    await awaiting_world.worker.backfill(30, again=True)
+    awaiting_world.clock.advance(days=1)
+    await awaiting_world.run()
+
+    assert awaiting_world.item("s1").reason == "keyword_removed"
+    assert awaiting_world.keywords("s1") == []
 
 
 async def test_a_keyword_the_service_answers_in_another_case(tmp_path: Path) -> None:
     async with wired(tmp_path) as found:
-        world = World(found)
-        world.agent = AwaitingReply(
+        awaiting_world = World(found)
+        awaiting_world.agent = AwaitingReply(
             settings(stage="full", reply_days=3, keyword="awaiting-reply")
         )
-        world.worker = Worker(
-            agent=world.agent,
+        awaiting_world.worker = Worker(
+            agent=awaiting_world.agent,
             store=found.store,
             mailbox=found.mailbox,
             gateway=found.gateway,
             now=found.clock,
         )
-        await world.start()
-        world.add(sent("s1", ASK), "message.sent")
-        world.w.fake_gateway.answer(expects(QUESTION))
-        await world.run()
-        world.clock.advance(days=4)
-        await world.run()
-        message = world.w.service.messages[(ACCOUNT, "s1")]
+        await awaiting_world.start()
+        awaiting_world.add(sent("s1", ASK), "message.sent")
+        awaiting_world.w.fake_gateway.answer(expects(QUESTION))
+        await awaiting_world.run()
+        awaiting_world.clock.advance(days=4)
+        await awaiting_world.run()
+        message = awaiting_world.w.service.messages[(ACCOUNT, "s1")]
         message["keywords"] = [k.upper() for k in message["keywords"]]
-        world.w.service.change("message.updated", "s1")
-        world.clock.advance(days=1)
-        await world.run()
+        awaiting_world.w.service.change("message.updated", "s1")
+        awaiting_world.clock.advance(days=1)
+        await awaiting_world.run()
 
-        assert world.item("s1").is_open
+        assert awaiting_world.item("s1").is_open
         assert message["keywords"] == ["AWAITING-REPLY"]
-        assert len(world.w.store.actions(ref("s1"))) == 1
+        assert len(awaiting_world.w.store.actions(ref("s1"))) == 1
 
 
 async def test_a_reply_in_the_thread_closes_it_and_takes_the_keyword_off(
-    world: World,
+    awaiting_world: World,
 ) -> None:
-    world.add(sent("s1", ASK), "message.sent")
-    world.w.fake_gateway.answer(expects(QUESTION))
-    await world.run()
-    world.clock.advance(days=4)
-    await world.run()
-    assert world.keywords("s1") == ["agent-awaiting-reply"]
+    awaiting_world.add(sent("s1", ASK), "message.sent")
+    awaiting_world.w.fake_gateway.answer(expects(QUESTION))
+    await awaiting_world.run()
+    awaiting_world.clock.advance(days=4)
+    await awaiting_world.run()
+    assert awaiting_world.keywords("s1") == ["agent-awaiting-reply"]
 
-    world.add(received("r1", date="2026-11-20T10:00:00+00:00"))
-    await world.run()
+    awaiting_world.add(received("r1", date="2026-11-20T10:00:00+00:00"))
+    await awaiting_world.run()
 
-    assert (world.item("s1").is_open, world.item("s1").reason) == (False, "replied")
-    assert world.keywords("s1") == []
-
-
-async def test_an_automatic_answer_does_not_close_it(world: World) -> None:
-    world.add(sent("s1", ASK), "message.sent")
-    world.w.fake_gateway.answer(expects(QUESTION))
-    await world.run()
-
-    world.add(received("a1", subject="Automatische Antwort: Angebot"))
-    await world.run()
-
-    assert world.item("s1").is_open
+    assert (awaiting_world.item("s1").is_open, awaiting_world.item("s1").reason) == (
+        False,
+        "replied",
+    )
+    assert awaiting_world.keywords("s1") == []
 
 
-async def test_writing_again_with_a_question_moves_the_item(world: World) -> None:
-    world.add(sent("s1", ASK), "message.sent")
-    world.add(
+async def test_an_automatic_answer_does_not_close_it(awaiting_world: World) -> None:
+    awaiting_world.add(sent("s1", ASK), "message.sent")
+    awaiting_world.w.fake_gateway.answer(expects(QUESTION))
+    await awaiting_world.run()
+
+    awaiting_world.add(received("a1", subject="Automatische Antwort: Angebot"))
+    await awaiting_world.run()
+
+    assert awaiting_world.item("s1").is_open
+
+
+async def test_writing_again_with_a_question_moves_the_item(
+    awaiting_world: World,
+) -> None:
+    awaiting_world.add(sent("s1", ASK), "message.sent")
+    awaiting_world.add(
         sent(
             "s2",
             "Haben Sie meine Frage gesehen? Bitte kurz melden.",
@@ -522,21 +533,24 @@ async def test_writing_again_with_a_question_moves_the_item(world: World) -> Non
         ),
         "message.sent",
     )
-    world.w.fake_gateway.answer(
+    awaiting_world.w.fake_gateway.answer(
         expects(QUESTION), expects("Haben Sie meine Frage gesehen?")
     )
 
-    await world.run()
+    await awaiting_world.run()
 
-    assert (world.item("s1").is_open, world.item("s1").reason) == (False, "followed_up")
-    assert world.item("s2").due == datetime(2026, 11, 23, 9, tzinfo=UTC)
+    assert (awaiting_world.item("s1").is_open, awaiting_world.item("s1").reason) == (
+        False,
+        "followed_up",
+    )
+    assert awaiting_world.item("s2").due == datetime(2026, 11, 23, 9, tzinfo=UTC)
 
 
 async def test_writing_again_without_a_question_restarts_the_deadline(
-    world: World,
+    awaiting_world: World,
 ) -> None:
-    world.add(sent("s1", ASK), "message.sent")
-    world.add(
+    awaiting_world.add(sent("s1", ASK), "message.sent")
+    awaiting_world.add(
         sent(
             "s2",
             "Noch eine Ergänzung zum Umfang anbei.",
@@ -544,58 +558,58 @@ async def test_writing_again_without_a_question_restarts_the_deadline(
         ),
         "message.sent",
     )
-    world.w.fake_gateway.answer(
+    awaiting_world.w.fake_gateway.answer(
         expects(QUESTION), no_reply("Noch eine Ergänzung zum Umfang anbei.")
     )
 
-    await world.run()
+    await awaiting_world.run()
 
-    assert world.item("s1").is_open
-    assert world.item("s1").due == datetime(2026, 11, 23, 9, tzinfo=UTC)
-    assert world.item("s2") is None
+    assert awaiting_world.item("s1").is_open
+    assert awaiting_world.item("s1").due == datetime(2026, 11, 23, 9, tzinfo=UTC)
+    assert awaiting_world.item("s2") is None
 
 
-async def test_a_keyword_taken_off_by_a_person_closes_it(world: World) -> None:
-    world.add(sent("s1", ASK), "message.sent")
-    world.w.fake_gateway.answer(expects(QUESTION))
-    await world.run()
-    world.clock.advance(days=4)
-    await world.run()
+async def test_a_keyword_taken_off_by_a_person_closes_it(awaiting_world: World) -> None:
+    awaiting_world.add(sent("s1", ASK), "message.sent")
+    awaiting_world.w.fake_gateway.answer(expects(QUESTION))
+    await awaiting_world.run()
+    awaiting_world.clock.advance(days=4)
+    await awaiting_world.run()
 
-    world.w.service.messages[(ACCOUNT, "s1")]["keywords"] = []
-    world.w.service.change("message.updated", "s1")
-    await world.run()
+    awaiting_world.w.service.messages[(ACCOUNT, "s1")]["keywords"] = []
+    awaiting_world.w.service.change("message.updated", "s1")
+    await awaiting_world.run()
 
-    assert (world.item("s1").is_open, world.item("s1").reason) == (
+    assert (awaiting_world.item("s1").is_open, awaiting_world.item("s1").reason) == (
         False,
         "keyword_removed",
     )
 
 
-async def test_its_own_keyword_does_not_close_it(world: World) -> None:
-    world.add(sent("s1", ASK), "message.sent")
-    world.w.fake_gateway.answer(expects(QUESTION))
-    await world.run()
-    world.clock.advance(days=4)
-    await world.run()
+async def test_its_own_keyword_does_not_close_it(awaiting_world: World) -> None:
+    awaiting_world.add(sent("s1", ASK), "message.sent")
+    awaiting_world.w.fake_gateway.answer(expects(QUESTION))
+    await awaiting_world.run()
+    awaiting_world.clock.advance(days=4)
+    await awaiting_world.run()
 
-    world.w.service.change("message.updated", "s1")
-    await world.run()
+    awaiting_world.w.service.change("message.updated", "s1")
+    await awaiting_world.run()
 
-    assert world.item("s1").is_open
+    assert awaiting_world.item("s1").is_open
 
 
 async def test_shadow_records_the_keyword_and_sets_none(tmp_path: Path) -> None:
     async with wired(tmp_path) as found:
-        world = World(found, stage="shadow")
-        await world.start()
-        world.add(sent("s1", ASK), "message.sent")
-        world.w.fake_gateway.answer(expects(QUESTION))
-        await world.run()
-        world.clock.advance(days=4)
-        await world.run()
+        awaiting_world = World(found, stage="shadow")
+        await awaiting_world.start()
+        awaiting_world.add(sent("s1", ASK), "message.sent")
+        awaiting_world.w.fake_gateway.answer(expects(QUESTION))
+        await awaiting_world.run()
+        awaiting_world.clock.advance(days=4)
+        await awaiting_world.run()
 
-        assert world.keywords("s1") == []
+        assert awaiting_world.keywords("s1") == []
         assert [(a.action, a.executed) for a in found.store.actions()] == [
             ("add_keyword", False)
         ]
@@ -605,61 +619,67 @@ async def test_shadow_records_the_keyword_and_sets_none(tmp_path: Path) -> None:
 
 
 async def test_known_miss_an_answer_outside_the_thread_closes_nothing(
-    world: World,
+    awaiting_world: World,
 ) -> None:
-    world.add(sent("s1", ASK), "message.sent")
-    world.w.fake_gateway.answer(expects(QUESTION))
-    await world.run()
+    awaiting_world.add(sent("s1", ASK), "message.sent")
+    awaiting_world.w.fake_gateway.answer(expects(QUESTION))
+    await awaiting_world.run()
 
-    world.add(received("r1", subject="Angebot anbei", thread="t-new"))
-    await world.run()
+    awaiting_world.add(received("r1", subject="Angebot anbei", thread="t-new"))
+    await awaiting_world.run()
 
-    assert world.item("s1").is_open
-
-
-async def test_known_miss_an_answer_by_telephone_closes_nothing(world: World) -> None:
-    world.add(sent("s1", ASK), "message.sent")
-    world.w.fake_gateway.answer(expects(QUESTION))
-    await world.run()
-
-    world.clock.advance(days=4)
-    await world.run()
-
-    assert world.keywords("s1") == ["agent-awaiting-reply"]
+    assert awaiting_world.item("s1").is_open
 
 
-async def test_known_miss_one_of_several_recipients_closes_it(world: World) -> None:
-    world.add(sent("s1", ASK, to="team@partner.example"), "message.sent")
-    world.w.fake_gateway.answer(expects(QUESTION))
-    await world.run()
+async def test_known_miss_an_answer_by_telephone_closes_nothing(
+    awaiting_world: World,
+) -> None:
+    awaiting_world.add(sent("s1", ASK), "message.sent")
+    awaiting_world.w.fake_gateway.answer(expects(QUESTION))
+    await awaiting_world.run()
 
-    world.add(received("r1", sender="one@partner.example"))
-    await world.run()
+    awaiting_world.clock.advance(days=4)
+    await awaiting_world.run()
 
-    assert world.item("s1").reason == "replied"
+    assert awaiting_world.keywords("s1") == ["agent-awaiting-reply"]
+
+
+async def test_known_miss_one_of_several_recipients_closes_it(
+    awaiting_world: World,
+) -> None:
+    awaiting_world.add(sent("s1", ASK, to="team@partner.example"), "message.sent")
+    awaiting_world.w.fake_gateway.answer(expects(QUESTION))
+    await awaiting_world.run()
+
+    awaiting_world.add(received("r1", sender="one@partner.example"))
+    await awaiting_world.run()
+
+    assert awaiting_world.item("s1").reason == "replied"
 
 
 # -- what it passes over -------------------------------------------------------------
 
 
-async def test_a_message_outside_inbox_and_sent_is_skipped(world: World) -> None:
-    world.add(wire_message("x1", folder_ids=["inv"], thread_id="t9"))
+async def test_a_message_outside_inbox_and_sent_is_skipped(
+    awaiting_world: World,
+) -> None:
+    awaiting_world.add(wire_message("x1", folder_ids=["inv"], thread_id="t9"))
 
-    await world.run()
+    await awaiting_world.run()
 
-    row = world.w.store.message(ref("x1"))
+    row = awaiting_world.w.store.message(ref("x1"))
     assert row is not None and row.state == "skipped"
 
 
-async def test_its_own_copy_in_the_inbox_closes_nothing(world: World) -> None:
-    world.add(sent("s1", ASK), "message.sent")
-    world.w.fake_gateway.answer(expects(QUESTION))
-    await world.run()
+async def test_its_own_copy_in_the_inbox_closes_nothing(awaiting_world: World) -> None:
+    awaiting_world.add(sent("s1", ASK), "message.sent")
+    awaiting_world.w.fake_gateway.answer(expects(QUESTION))
+    await awaiting_world.run()
 
-    world.add(received("c1", sender=ME))
-    await world.run()
+    awaiting_world.add(received("c1", sender=ME))
+    await awaiting_world.run()
 
-    assert world.item("s1").is_open
+    assert awaiting_world.item("s1").is_open
 
 
 def test_a_long_subject_cannot_blow_up_the_call() -> None:
@@ -677,74 +697,88 @@ def test_a_long_subject_cannot_blow_up_the_call() -> None:
 
 
 async def test_a_keyword_whose_removal_failed_is_taken_off_on_the_tick(
-    world: World,
+    awaiting_world: World,
 ) -> None:
-    await _due(world)
-    assert world.keywords("s1") == ["agent-awaiting-reply"]
-    world.w.service.write_refusal = (503, "unavailable")
-    world.add(received("r1", date="2026-11-20T10:00:00+00:00"))
-    await world.run()
-    world.w.service.write_refusal = None
+    await _due(awaiting_world)
+    assert awaiting_world.keywords("s1") == ["agent-awaiting-reply"]
+    awaiting_world.w.service.write_refusal = (503, "unavailable")
+    awaiting_world.add(received("r1", date="2026-11-20T10:00:00+00:00"))
+    await awaiting_world.run()
+    awaiting_world.w.service.write_refusal = None
 
     for _ in range(2):
-        world.clock.advance(days=1)
-        await world.run()
+        awaiting_world.clock.advance(days=1)
+        await awaiting_world.run()
 
-    assert (world.item("s1").is_open, world.item("s1").reason) == (False, "replied")
-    assert world.keywords("s1") == []
-    assert not world.item("s1").keyword_set
+    assert (awaiting_world.item("s1").is_open, awaiting_world.item("s1").reason) == (
+        False,
+        "replied",
+    )
+    assert awaiting_world.keywords("s1") == []
+    assert not awaiting_world.item("s1").keyword_set
 
 
 async def test_an_item_closed_as_its_keyword_was_taken_off_asks_nothing(
-    world: World,
+    awaiting_world: World,
 ) -> None:
-    await _due(world)
-    world.w.service.messages[(ACCOUNT, "s1")]["keywords"] = []
-    world.w.service.change("message.updated", "s1")
-    await world.run()
-    assert world.item("s1").reason == "keyword_removed"
-    asked = len(world.w.service.requests)
+    await _due(awaiting_world)
+    awaiting_world.w.service.messages[(ACCOUNT, "s1")]["keywords"] = []
+    awaiting_world.w.service.change("message.updated", "s1")
+    await awaiting_world.run()
+    assert awaiting_world.item("s1").reason == "keyword_removed"
+    asked = len(awaiting_world.w.service.requests)
 
-    world.clock.advance(days=1)
-    await world.run()
+    awaiting_world.clock.advance(days=1)
+    await awaiting_world.run()
 
-    patches = [r for r in world.w.service.requests[asked:] if r.method == "PATCH"]
+    patches = [
+        r for r in awaiting_world.w.service.requests[asked:] if r.method == "PATCH"
+    ]
     assert patches == []
 
 
 async def test_an_earlier_item_whose_message_is_gone_blocks_no_new_one(
-    world: World,
+    awaiting_world: World,
 ) -> None:
-    world.add(sent("s1", ASK), "message.sent")
-    world.w.fake_gateway.answer(expects(QUESTION))
-    await world.run()
-    assert world.item("s1").is_open
-    del world.w.service.messages[(ACCOUNT, "s1")]
+    awaiting_world.add(sent("s1", ASK), "message.sent")
+    awaiting_world.w.fake_gateway.answer(expects(QUESTION))
+    await awaiting_world.run()
+    assert awaiting_world.item("s1").is_open
+    del awaiting_world.w.service.messages[(ACCOUNT, "s1")]
 
-    world.add(sent("s2", ASK, date="2026-11-17T09:00:00+00:00"), "message.sent")
-    world.w.fake_gateway.answer(expects(QUESTION))
-    await world.run()
+    awaiting_world.add(
+        sent("s2", ASK, date="2026-11-17T09:00:00+00:00"), "message.sent"
+    )
+    awaiting_world.w.fake_gateway.answer(expects(QUESTION))
+    await awaiting_world.run()
 
-    assert world.w.store.message(ref("s2")).state == "done"
-    assert world.item("s2").is_open
-    assert (world.item("s1").is_open, world.item("s1").reason) == (
+    assert awaiting_world.w.store.message(ref("s2")).state == "done"
+    assert awaiting_world.item("s2").is_open
+    assert (awaiting_world.item("s1").is_open, awaiting_world.item("s1").reason) == (
         False,
         "message_gone",
     )
 
 
-async def test_an_item_whose_message_went_to_the_trash_closes(world: World) -> None:
-    world.add(sent("s1", ASK), "message.sent")
-    world.w.fake_gateway.answer(expects(QUESTION))
-    await world.run()
-    world.w.service.messages[(ACCOUNT, "s1")]["folder_ids"] = ["trash"]
-    world.w.service.change("message.updated", "s1")
-    await world.run()
+async def test_an_item_whose_message_went_to_the_trash_closes(
+    awaiting_world: World,
+) -> None:
+    awaiting_world.add(sent("s1", ASK), "message.sent")
+    awaiting_world.w.fake_gateway.answer(expects(QUESTION))
+    await awaiting_world.run()
+    awaiting_world.w.service.messages[(ACCOUNT, "s1")]["folder_ids"] = ["trash"]
+    awaiting_world.w.service.change("message.updated", "s1")
+    await awaiting_world.run()
 
-    assert (world.item("s1").is_open, world.item("s1").reason) == (False, "discarded")
+    assert (awaiting_world.item("s1").is_open, awaiting_world.item("s1").reason) == (
+        False,
+        "discarded",
+    )
 
-    asked = len(world.w.service.requests)
-    world.clock.advance(days=4)
-    await world.run()
-    patches = [r for r in world.w.service.requests[asked:] if r.method == "PATCH"]
+    asked = len(awaiting_world.w.service.requests)
+    awaiting_world.clock.advance(days=4)
+    await awaiting_world.run()
+    patches = [
+        r for r in awaiting_world.w.service.requests[asked:] if r.method == "PATCH"
+    ]
     assert patches == []

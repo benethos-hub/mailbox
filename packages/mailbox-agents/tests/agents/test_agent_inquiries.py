@@ -29,8 +29,8 @@ from benethos_mailbox_agents.evaluation.report import build
 from benethos_mailbox_agents.evaluation.run import evaluate
 from benethos_mailbox_agents.records import Address, MailMessage, MessageRef
 
-from ..fakes import ACCOUNT, invented
-from ..helpers import ROOT, Wired, run, settings, wired
+from ..agents_fake import ACCOUNT, invented
+from ..agents_helpers import ROOT, Wired, run, settings, wired
 
 DATA = Path(__file__).resolve().parent.parent / "data"
 PATTERNS = ROOT / "config" / "benethos-mailbox-agents" / "inquiries.example.json"
@@ -52,7 +52,7 @@ def agent(stage: str = "full", **values: Any) -> Inquiries:
 
 
 @pytest.fixture
-async def world(tmp_path: Path) -> AsyncIterator[Wired]:
+async def inquiries_world(tmp_path: Path) -> AsyncIterator[Wired]:
     async with wired(tmp_path) as found:
         for message in MESSAGES.values():
             found.service.add(message, change=None)
@@ -158,32 +158,34 @@ def test_a_wrong_patterns_file_stops_the_start(tmp_path: Path) -> None:
 # -- the label -----------------------------------------------------------------------
 
 
-def keywords(world: Wired, message_id: str) -> list[str]:
-    return world.service.messages[(ACCOUNT, message_id)]["keywords"]
+def keywords(inquiries_world: Wired, message_id: str) -> list[str]:
+    return inquiries_world.service.messages[(ACCOUNT, message_id)]["keywords"]
 
 
-async def test_an_inquiry_is_marked(world: Wired) -> None:
-    world.fake_gateway.answer(said("inquiry", "suchen wir ab 01.02.2027"))
+async def test_an_inquiry_is_marked(inquiries_world: Wired) -> None:
+    inquiries_world.fake_gateway.answer(said("inquiry", "suchen wir ab 01.02.2027"))
 
-    assert await run(world, "inq-staffing", agent()) == "done"
-    assert keywords(world, "inq-staffing") == ["agent-inquiry"]
-
-
-async def test_another_message_is_not(world: Wired) -> None:
-    world.fake_gateway.answer(said("other", "10 neue Jobs für Sie"))
-
-    assert await run(world, "job-digest", agent()) == "done"
-    assert keywords(world, "job-digest") == []
+    assert await run(inquiries_world, "inq-staffing", agent()) == "done"
+    assert keywords(inquiries_world, "inq-staffing") == ["agent-inquiry"]
 
 
-async def test_a_label_without_its_quote_is_not_acted_on(world: Wired) -> None:
-    world.fake_gateway.answer(said("inquiry", "a great project for you"))
+async def test_another_message_is_not(inquiries_world: Wired) -> None:
+    inquiries_world.fake_gateway.answer(said("other", "10 neue Jobs für Sie"))
 
-    assert await run(world, "personal", agent()) == "decided"
-    assert keywords(world, "personal") == []
+    assert await run(inquiries_world, "job-digest", agent()) == "done"
+    assert keywords(inquiries_world, "job-digest") == []
 
 
-async def test_the_label_has_an_evaluation_of_its_own(world: Wired) -> None:
+async def test_a_label_without_its_quote_is_not_acted_on(
+    inquiries_world: Wired,
+) -> None:
+    inquiries_world.fake_gateway.answer(said("inquiry", "a great project for you"))
+
+    assert await run(inquiries_world, "personal", agent()) == "decided"
+    assert keywords(inquiries_world, "personal") == []
+
+
+async def test_the_label_has_an_evaluation_of_its_own(inquiries_world: Wired) -> None:
     items = load_gold(DATA / "gold-inquiries.jsonl")
     quotes = {
         "inq-staffing": ("inquiry", "für einen Kunden aus der Logistik"),
@@ -196,18 +198,18 @@ async def test_the_label_has_an_evaluation_of_its_own(world: Wired) -> None:
     }
     for item in items:
         label, quote = quotes[item.message_id]
-        world.fake_gateway.answer(said(label, quote))
+        inquiries_world.fake_gateway.answer(said(label, quote))
     the_agent = agent(inquiries_patterns_file=PATTERNS)
 
     outcomes = await evaluate(
         the_agent,
         items,
-        reader=world.mailbox,
-        gateway=world.gateway,
-        store=world.store,
-        now=world.clock,
+        reader=inquiries_world.mailbox,
+        gateway=inquiries_world.gateway,
+        store=inquiries_world.store,
+        now=inquiries_world.clock,
     )
-    report = build(the_agent, "alias", outcomes, world.clock())
+    report = build(the_agent, "alias", outcomes, inquiries_world.clock())
 
     model, rules = report["model"], report["baseline"]
     assert model["labels"]["inquiry"] == {
@@ -224,8 +226,8 @@ async def test_the_label_has_an_evaluation_of_its_own(world: Wired) -> None:
 # -- the fields --------------------------------------------------------------------
 
 
-async def test_each_field_with_its_quote(world: Wired) -> None:
-    world.fake_gateway.answer(
+async def test_each_field_with_its_quote(inquiries_world: Wired) -> None:
+    inquiries_world.fake_gateway.answer(
         said(
             "inquiry",
             "Projektanfrage: Python-Entwicklung, remote",
@@ -237,10 +239,10 @@ async def test_each_field_with_its_quote(world: Wired) -> None:
         )
     )
 
-    assert await run(world, "inq-staffing", agent()) == "done"
+    assert await run(inquiries_world, "inq-staffing", agent()) == "done"
 
     ref = MessageRef(account_id=ACCOUNT, message_id="inq-staffing")
-    found = world.store.step(ref, "decision", "v3", "alias")
+    found = inquiries_world.store.step(ref, "decision", "v3", "alias")
     assert found is not None
     assert found.result["fields"] == {
         "role": "Python-Entwickler",
@@ -251,15 +253,15 @@ async def test_each_field_with_its_quote(world: Wired) -> None:
     assert dropped == ["location"]
 
 
-async def test_another_message_has_no_fields(world: Wired) -> None:
-    world.fake_gateway.answer(
+async def test_another_message_has_no_fields(inquiries_world: Wired) -> None:
+    inquiries_world.fake_gateway.answer(
         said("other", "10 neue Jobs für Sie", role=("Data Engineer", "Data Engineer"))
     )
 
-    await run(world, "job-digest", agent())
+    await run(inquiries_world, "job-digest", agent())
 
     ref = MessageRef(account_id=ACCOUNT, message_id="job-digest")
-    found = world.store.step(ref, "decision", "v3", "alias")
+    found = inquiries_world.store.step(ref, "decision", "v3", "alias")
     assert found is not None and found.result["fields"] == {}
 
 
@@ -270,9 +272,11 @@ def test_the_prompt_names_every_field() -> None:
     assert "{fields}" not in system
 
 
-async def test_the_fields_have_an_evaluation_of_their_own(world: Wired) -> None:
+async def test_the_fields_have_an_evaluation_of_their_own(
+    inquiries_world: Wired,
+) -> None:
     items = [i for i in load_gold(DATA / "gold-inquiries.jsonl") if i.fields]
-    world.fake_gateway.answer(
+    inquiries_world.fake_gateway.answer(
         said(
             "inquiry",
             "Projektanfrage: Python-Entwicklung, remote",
@@ -293,12 +297,14 @@ async def test_the_fields_have_an_evaluation_of_their_own(world: Wired) -> None:
     outcomes = await evaluate(
         the_agent,
         items,
-        reader=world.mailbox,
-        gateway=world.gateway,
-        store=world.store,
-        now=world.clock,
+        reader=inquiries_world.mailbox,
+        gateway=inquiries_world.gateway,
+        store=inquiries_world.store,
+        now=inquiries_world.clock,
     )
-    fields = build(the_agent, "alias", outcomes, world.clock())["model"]["fields"]
+    fields = build(the_agent, "alias", outcomes, inquiries_world.clock())["model"][
+        "fields"
+    ]
 
     assert fields["role"] == {
         "right": 1,

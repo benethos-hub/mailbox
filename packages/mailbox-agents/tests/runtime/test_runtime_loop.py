@@ -22,8 +22,8 @@ from benethos_mailbox_agents.runtime.health import check
 from benethos_mailbox_agents.runtime.loop import Worker
 from benethos_mailbox_agents.runtime.model import Calls
 
-from ..fakes import ACCOUNT, wire_message
-from ..helpers import Echo, Wired, settings, worker
+from ..agents_fake import ACCOUNT, wire_message
+from ..agents_helpers import Echo, Wired, settings, worker
 
 MATCH = {"label": "match", "quote": "Your invoice"}
 

@@ -15,7 +15,7 @@ import pytest
 from benethos_mailbox_agents.contract import discover
 from benethos_mailbox_agents.settings import Stage
 
-from .helpers import DOCS, PACKAGE_DIR, ROOT
+from .agents_helpers import DOCS, PACKAGE_DIR, ROOT
 
 CONCEPT = DOCS / "concept"
 PARTS = sorted(CONCEPT.glob("*.md"))

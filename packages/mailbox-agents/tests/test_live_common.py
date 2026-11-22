@@ -14,8 +14,8 @@ import pytest
 from benethos_mailbox_agents.records import MessageRef
 from benethos_mailbox_agents.sources.mailbox import connect
 
-from .fakes import ACCOUNT, FakeService, wire_message
-from .helpers import ROOT, load_script
+from .agents_fake import ACCOUNT, FakeService, wire_message
+from .agents_helpers import ROOT, load_script
 
 # live/ is no package and lies outside testpaths: the module is loaded by
 # its path, as a script would find it beside itself.

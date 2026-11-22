@@ -18,7 +18,7 @@ from benethos_mailbox_agents.errors import (
 )
 from benethos_mailbox_agents.llm.gateway import Gateway, strict_schema
 
-from ..fakes import FakeGateway
+from ..agents_fake import FakeGateway
 
 OTHER = '{"label": "other", "quote": "q", "supplier": null}'
 

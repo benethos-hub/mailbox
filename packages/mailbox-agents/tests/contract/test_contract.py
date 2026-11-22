@@ -30,7 +30,7 @@ from benethos_mailbox_agents.errors import ContractError
 from benethos_mailbox_agents.records import Decision, Event, FolderRef, MailMessage
 from benethos_mailbox_agents.settings import Settings
 
-from ..helpers import DOCS, PACKAGE_DIR, ROOT
+from ..agents_helpers import DOCS, PACKAGE_DIR, ROOT
 
 
 class Sample(Agent):

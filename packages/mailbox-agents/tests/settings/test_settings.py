@@ -12,7 +12,7 @@ import pytest
 from benethos_mailbox_agents import errors
 from benethos_mailbox_agents.settings import PREFIX, Settings, load_settings
 
-from ..helpers import DOCS, PACKAGE_DIR, ROOT
+from ..agents_helpers import DOCS, PACKAGE_DIR, ROOT
 
 
 @pytest.fixture(autouse=True)

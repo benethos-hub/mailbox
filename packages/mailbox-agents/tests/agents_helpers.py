@@ -1,6 +1,6 @@
 """What the tests share: the root of the repository and ``load_script``
 for a script outside the package, an agent for the tests, a clock, the
-pieces wired over the fakes of ``fakes.py``, ``configure`` for the
+pieces wired over the fakes of ``agents_fake.py``, ``configure`` for the
 command line, and a look at what became of a message."""
 
 from __future__ import annotations
@@ -41,7 +41,7 @@ from benethos_mailbox_agents.settings import Settings
 from benethos_mailbox_agents.sources.mailbox import Mailbox, connect
 from benethos_mailbox_agents.store import Store
 
-from .fakes import ACCOUNT, FakeGateway, FakeService
+from .agents_fake import ACCOUNT, FakeGateway, FakeService
 
 # The root of the repository, the folder of this package in it, and the
 # folder of its documents: what the tests of files beside the code read.

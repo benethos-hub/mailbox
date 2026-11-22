@@ -12,8 +12,8 @@ from benethos_mailbox_agents import errors
 from benethos_mailbox_agents.cli import session
 from benethos_mailbox_agents.settings import PREFIX
 
-from .fakes import FakeGateway, FakeService
-from .helpers import Wired, wired
+from .agents_fake import FakeGateway, FakeService
+from .agents_helpers import Wired, wired
 
 
 @pytest.fixture

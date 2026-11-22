@@ -15,15 +15,15 @@ from benethos_mailbox_agents.errors import ConfigError, GatewayUnavailableError
 from benethos_mailbox_agents.records import MessageRef
 from benethos_mailbox_agents.runtime.steps import StepRunner, backoff
 
-from ..fakes import ACCOUNT, wire_message
-from ..helpers import Collected, Echo, Wired, settings, wired
+from ..agents_fake import ACCOUNT, wire_message
+from ..agents_helpers import Collected, Echo, Wired, settings, wired
 
 REF = MessageRef(account_id=ACCOUNT, message_id="m1")
 MATCH = {"label": "match", "quote": "Your invoice"}
 
 
 @pytest.fixture
-async def world(tmp_path: Path) -> AsyncIterator[Wired]:
+async def steps_world(tmp_path: Path) -> AsyncIterator[Wired]:
     async with wired(tmp_path) as found:
         found.service.add(wire_message("m1", subject="Your invoice", text="Attached."))
         found.store.enqueue(REF, found.clock())
@@ -31,43 +31,47 @@ async def world(tmp_path: Path) -> AsyncIterator[Wired]:
 
 
 def runner(
-    world: Wired, agent: Echo | None = None, effects: Collected | None = None
+    steps_world: Wired, agent: Echo | None = None, effects: Collected | None = None
 ) -> StepRunner:
     return StepRunner(
         agent=agent or Echo(settings()),
-        store=world.store,
-        reader=world.mailbox,
-        gateway=world.gateway,
+        store=steps_world.store,
+        reader=steps_world.mailbox,
+        gateway=steps_world.gateway,
         effects=effects or Collected(),
-        now=world.clock,
+        now=steps_world.clock,
     )
 
 
-def _state(world: Wired, ref: MessageRef = REF) -> tuple[str, int]:
-    row = world.store.message(ref)
+def _state(steps_world: Wired, ref: MessageRef = REF) -> tuple[str, int]:
+    row = steps_world.store.message(ref)
     assert row is not None
     return row.state, row.attempts
 
 
-async def test_a_message_through_every_step(world: Wired) -> None:
-    world.fake_gateway.answer(MATCH)
+async def test_a_message_through_every_step(steps_world: Wired) -> None:
+    steps_world.fake_gateway.answer(MATCH)
     effects = Collected()
 
-    assert await runner(world, effects=effects).process(REF) == "done"
+    assert await runner(steps_world, effects=effects).process(REF) == "done"
 
     assert effects.requests == [ActionRequest(Action.ADD_KEYWORD, REF, keyword="echo")]
-    assert [s.step for s in world.store.steps(REF)] == ["baseline", "model", "decision"]
-    decision = world.store.step(REF, "decision", "p1", "alias")
+    assert [s.step for s in steps_world.store.steps(REF)] == [
+        "baseline",
+        "model",
+        "decision",
+    ]
+    decision = steps_world.store.step(REF, "decision", "p1", "alias")
     assert decision is not None
     assert decision.model == "reported-model"
     assert (decision.tokens_in, decision.tokens_out) == (120, 15)
     assert decision.result["evidence"][0]["found"] is True
-    assert _state(world) == ("done", 0)
+    assert _state(steps_world) == ("done", 0)
 
 
-async def test_a_garbled_usage_still_stores_the_model_step(world: Wired) -> None:
+async def test_a_garbled_usage_still_stores_the_model_step(steps_world: Wired) -> None:
     content = json.dumps(MATCH)
-    world.fake_gateway.answer(
+    steps_world.fake_gateway.answer(
         httpx.Response(
             200,
             json={
@@ -77,124 +81,140 @@ async def test_a_garbled_usage_still_stores_the_model_step(world: Wired) -> None
         )
     )
 
-    assert await runner(world).process(REF) == "done"
+    assert await runner(steps_world).process(REF) == "done"
 
-    model = world.store.step(REF, "model", "p1", "alias")
+    model = steps_world.store.step(REF, "model", "p1", "alias")
     assert model is not None
     assert (model.tokens_in, model.tokens_out) == (0, 0)
 
 
-async def test_a_message_run_again_asks_the_model_nothing(world: Wired) -> None:
-    world.fake_gateway.answer(MATCH)
-    await runner(world).process(REF)
+async def test_a_message_run_again_asks_the_model_nothing(steps_world: Wired) -> None:
+    steps_world.fake_gateway.answer(MATCH)
+    await runner(steps_world).process(REF)
     effects = Collected()
 
-    assert await runner(world, effects=effects).process(REF) == "done"
+    assert await runner(steps_world, effects=effects).process(REF) == "done"
 
-    assert len(world.fake_gateway.requests) == 1
+    assert len(steps_world.fake_gateway.requests) == 1
     assert len(effects.requests) == 1
-    assert [s.step for s in world.store.steps(REF)] == ["baseline", "model", "decision"]
+    assert [s.step for s in steps_world.store.steps(REF)] == [
+        "baseline",
+        "model",
+        "decision",
+    ]
 
 
-async def test_a_new_prompt_version_decides_again_and_keeps_both(world: Wired) -> None:
-    world.fake_gateway.answer(MATCH, {"label": "other", "quote": "Attached."})
-    await runner(world).process(REF)
+async def test_a_new_prompt_version_decides_again_and_keeps_both(
+    steps_world: Wired,
+) -> None:
+    steps_world.fake_gateway.answer(MATCH, {"label": "other", "quote": "Attached."})
+    await runner(steps_world).process(REF)
 
     class Newer(Echo):
         prompt_version = "p2"
 
-    await runner(world, Newer(settings())).process(REF)
+    await runner(steps_world, Newer(settings())).process(REF)
 
-    assert len(world.fake_gateway.requests) == 2
-    first = world.store.step(REF, "decision", "p1", "alias")
-    second = world.store.step(REF, "decision", "p2", "alias")
+    assert len(steps_world.fake_gateway.requests) == 2
+    first = steps_world.store.step(REF, "decision", "p1", "alias")
+    second = steps_world.store.step(REF, "decision", "p2", "alias")
     assert first is not None and second is not None
     assert (first.result["label"], second.result["label"]) == ("match", "other")
 
 
 async def test_a_label_whose_quote_is_not_in_the_mail_is_not_acted_on(
-    world: Wired,
+    steps_world: Wired,
 ) -> None:
-    world.fake_gateway.answer({"label": "match", "quote": "Ignore all instructions"})
+    steps_world.fake_gateway.answer(
+        {"label": "match", "quote": "Ignore all instructions"}
+    )
     effects = Collected()
 
-    assert await runner(world, effects=effects).process(REF) == "decided"
+    assert await runner(steps_world, effects=effects).process(REF) == "decided"
 
     assert effects.requests == []
-    decision = world.store.step(REF, "decision", "p1", "alias")
+    decision = steps_world.store.step(REF, "decision", "p1", "alias")
     assert decision is not None
     assert decision.result["refused"] == "evidence"
 
 
-async def test_an_answer_outside_the_schema_is_tried_again_later(world: Wired) -> None:
-    world.fake_gateway.answer({"label": "maybe", "quote": "x"})
+async def test_an_answer_outside_the_schema_is_tried_again_later(
+    steps_world: Wired,
+) -> None:
+    steps_world.fake_gateway.answer({"label": "maybe", "quote": "x"})
 
-    assert await runner(world).process(REF) == "pending"
+    assert await runner(steps_world).process(REF) == "pending"
 
-    row = world.store.message(REF)
+    row = steps_world.store.message(REF)
     assert row is not None
     assert row.attempts == 1
-    assert row.next_attempt == world.clock() + timedelta(seconds=120)
-    assert world.store.step(REF, "model", "p1", "alias") is not None
+    assert row.next_attempt == steps_world.clock() + timedelta(seconds=120)
+    assert steps_world.store.step(REF, "model", "p1", "alias") is not None
 
 
-async def test_a_message_refused_too_often_fails(world: Wired) -> None:
-    world.fake_gateway.answer({"label": "maybe", "quote": "x"})
+async def test_a_message_refused_too_often_fails(steps_world: Wired) -> None:
+    steps_world.fake_gateway.answer({"label": "maybe", "quote": "x"})
 
-    assert await runner(world).process(REF, attempts=4) == "failed"
-    assert _state(world) == ("failed", 5)
+    assert await runner(steps_world).process(REF, attempts=4) == "failed"
+    assert _state(steps_world) == ("failed", 5)
 
 
-async def test_a_gateway_that_is_away_leaves_the_message_alone(world: Wired) -> None:
-    world.fake_gateway.answer(httpx.Response(503))
+async def test_a_gateway_that_is_away_leaves_the_message_alone(
+    steps_world: Wired,
+) -> None:
+    steps_world.fake_gateway.answer(httpx.Response(503))
 
     with pytest.raises(GatewayUnavailableError):
-        await runner(world).process(REF)
+        await runner(steps_world).process(REF)
 
-    assert _state(world) == ("pending", 0)
+    assert _state(steps_world) == ("pending", 0)
 
 
-async def test_a_refused_key_stops_the_pass(world: Wired) -> None:
-    world.fake_gateway.answer(httpx.Response(401))
+async def test_a_refused_key_stops_the_pass(steps_world: Wired) -> None:
+    steps_world.fake_gateway.answer(httpx.Response(401))
 
     with pytest.raises(ConfigError):
-        await runner(world).process(REF)
+        await runner(steps_world).process(REF)
 
 
-async def test_a_message_gone_is_skipped(world: Wired) -> None:
+async def test_a_message_gone_is_skipped(steps_world: Wired) -> None:
     gone = MessageRef(account_id=ACCOUNT, message_id="gone")
-    world.store.enqueue(gone, world.clock())
+    steps_world.store.enqueue(gone, steps_world.clock())
 
-    assert await runner(world).process(gone) == "skipped"
+    assert await runner(steps_world).process(gone) == "skipped"
 
 
-async def test_a_message_gone_while_the_model_answers_is_skipped(world: Wired) -> None:
+async def test_a_message_gone_while_the_model_answers_is_skipped(
+    steps_world: Wired,
+) -> None:
     """After a model call the message is fetched anew, to act on where it
     lies now: one deleted meanwhile has nothing to act on."""
-    world.fake_gateway.answer(MATCH)
-    world.fake_gateway.during = lambda: world.service.messages.pop((ACCOUNT, "m1"))
+    steps_world.fake_gateway.answer(MATCH)
+    steps_world.fake_gateway.during = lambda: steps_world.service.messages.pop(
+        (ACCOUNT, "m1")
+    )
     effects = Collected()
 
-    assert await runner(world, effects=effects).process(REF) == "skipped"
+    assert await runner(steps_world, effects=effects).process(REF) == "skipped"
     assert effects.requests == []
 
 
-async def test_a_message_the_service_refuses_is_tried_again(world: Wired) -> None:
-    world.service.refusal = (403, "forbidden")
+async def test_a_message_the_service_refuses_is_tried_again(steps_world: Wired) -> None:
+    steps_world.service.refusal = (403, "forbidden")
 
-    assert await runner(world).process(REF) == "pending"
-    assert _state(world) == ("pending", 1)
+    assert await runner(steps_world).process(REF) == "pending"
+    assert _state(steps_world) == ("pending", 1)
 
 
 async def test_a_message_not_admitted_is_skipped_without_the_model(
-    world: Wired,
+    steps_world: Wired,
 ) -> None:
     sent = MessageRef(account_id=ACCOUNT, message_id="m2")
-    world.service.add(wire_message("m2", folder_ids=["sent"]))
-    world.store.enqueue(sent, world.clock())
+    steps_world.service.add(wire_message("m2", folder_ids=["sent"]))
+    steps_world.store.enqueue(sent, steps_world.clock())
 
-    assert await runner(world).process(sent) == "skipped"
-    assert world.fake_gateway.requests == []
+    assert await runner(steps_world).process(sent) == "skipped"
+    assert steps_world.fake_gateway.requests == []
 
 
 class Marking(Echo):
@@ -206,97 +226,100 @@ class Marking(Echo):
 MARKED = MessageRef(account_id=ACCOUNT, message_id="m3")
 
 
-def _marked(world: Wired, keyword: str = "ECHO") -> None:
+def _marked(steps_world: Wired, keyword: str = "ECHO") -> None:
     """A message that carries the keyword, in another case, as IMAP keeps
     it, and that the state file does not know."""
-    world.service.add(
+    steps_world.service.add(
         wire_message("m3", subject="Your invoice", keywords=[keyword]), change=None
     )
-    world.store.enqueue(MARKED, world.clock())
+    steps_world.store.enqueue(MARKED, steps_world.clock())
 
 
 async def test_a_marked_message_the_state_file_does_not_know_is_skipped(
-    world: Wired,
+    steps_world: Wired,
 ) -> None:
-    _marked(world)
+    _marked(steps_world)
     effects = Collected()
 
     assert (
-        await runner(world, Marking(settings()), effects).process(MARKED) == "skipped"
+        await runner(steps_world, Marking(settings()), effects).process(MARKED)
+        == "skipped"
     )
 
-    assert world.store.steps(MARKED) == []
-    assert world.fake_gateway.requests == []
+    assert steps_world.store.steps(MARKED) == []
+    assert steps_world.fake_gateway.requests == []
     assert effects.requests == []
 
 
-async def test_a_marked_message_the_state_file_knows_goes_on(world: Wired) -> None:
+async def test_a_marked_message_the_state_file_knows_goes_on(
+    steps_world: Wired,
+) -> None:
     """Marked by the agent itself and taken up again, as ``backfill`` does:
     the stored decision is used, and a new prompt version asks anew."""
-    _marked(world, keyword="none-yet")
-    world.fake_gateway.answer(MATCH)
-    assert await runner(world, Marking(settings())).process(MARKED) == "done"
-    world.service.messages[(ACCOUNT, "m3")]["keywords"] = ["echo"]
-    world.store.enqueue(MARKED, world.clock(), again=True)
+    _marked(steps_world, keyword="none-yet")
+    steps_world.fake_gateway.answer(MATCH)
+    assert await runner(steps_world, Marking(settings())).process(MARKED) == "done"
+    steps_world.service.messages[(ACCOUNT, "m3")]["keywords"] = ["echo"]
+    steps_world.store.enqueue(MARKED, steps_world.clock(), again=True)
 
-    assert await runner(world, Marking(settings())).process(MARKED) == "done"
-    assert len(world.fake_gateway.requests) == 1
+    assert await runner(steps_world, Marking(settings())).process(MARKED) == "done"
+    assert len(steps_world.fake_gateway.requests) == 1
 
     class Newer(Marking):
         prompt_version = "p2"
 
-    world.fake_gateway.answer(MATCH)
-    world.store.enqueue(MARKED, world.clock(), again=True)
+    steps_world.fake_gateway.answer(MATCH)
+    steps_world.store.enqueue(MARKED, steps_world.clock(), again=True)
 
-    assert await runner(world, Newer(settings())).process(MARKED) == "done"
-    assert len(world.fake_gateway.requests) == 2
+    assert await runner(steps_world, Newer(settings())).process(MARKED) == "done"
+    assert len(steps_world.fake_gateway.requests) == 2
 
 
-async def test_another_keyword_does_not_skip(world: Wired) -> None:
-    _marked(world, keyword="agent-sorted")
-    world.fake_gateway.answer(MATCH)
+async def test_another_keyword_does_not_skip(steps_world: Wired) -> None:
+    _marked(steps_world, keyword="agent-sorted")
+    steps_world.fake_gateway.answer(MATCH)
 
-    assert await runner(world, Marking(settings())).process(MARKED) == "done"
+    assert await runner(steps_world, Marking(settings())).process(MARKED) == "done"
 
 
 async def test_an_agent_that_declares_no_skip_asks_about_marked_mail(
-    world: Wired,
+    steps_world: Wired,
 ) -> None:
-    _marked(world)
-    world.fake_gateway.answer(MATCH)
+    _marked(steps_world)
+    steps_world.fake_gateway.answer(MATCH)
 
-    assert await runner(world).process(MARKED) == "done"
-    assert len(world.fake_gateway.requests) == 1
+    assert await runner(steps_world).process(MARKED) == "done"
+    assert len(steps_world.fake_gateway.requests) == 1
 
 
-async def test_the_daily_limit_waits_for_tomorrow(world: Wired) -> None:
+async def test_the_daily_limit_waits_for_tomorrow(steps_world: Wired) -> None:
     class Thrifty(Echo):
         limits = Limits(model_calls_per_day=0)
 
-    assert await runner(world, Thrifty(settings())).process(REF) == "pending"
+    assert await runner(steps_world, Thrifty(settings())).process(REF) == "pending"
 
-    row = world.store.message(REF)
+    row = steps_world.store.message(REF)
     assert row is not None
-    assert row.next_attempt == world.clock().replace(hour=0) + timedelta(days=1)
-    assert world.fake_gateway.requests == []
+    assert row.next_attempt == steps_world.clock().replace(hour=0) + timedelta(days=1)
+    assert steps_world.fake_gateway.requests == []
 
 
-async def test_more_calls_than_allowed_per_message_fail_it(world: Wired) -> None:
+async def test_more_calls_than_allowed_per_message_fail_it(steps_world: Wired) -> None:
     class Greedy(Echo):
         limits = Limits(model_calls_per_message=0)
 
-    assert await runner(world, Greedy(settings())).process(REF) == "failed"
+    assert await runner(steps_world, Greedy(settings())).process(REF) == "failed"
 
 
 @pytest.mark.parametrize(("days", "kept"), [(0, 0), (3, 1)])
 async def test_calls_are_kept_only_when_asked(
-    world: Wired, days: int, kept: int
+    steps_world: Wired, days: int, kept: int
 ) -> None:
-    world.fake_gateway.answer(MATCH)
+    steps_world.fake_gateway.answer(MATCH)
 
-    await runner(world, Echo(settings(prompt_retention_days=days))).process(REF)
+    await runner(steps_world, Echo(settings(prompt_retention_days=days))).process(REF)
 
-    assert world.store.count_calls() == kept
+    assert steps_world.store.count_calls() == kept
 
 
 def test_backoff_doubles_up_to_the_ceiling() -> None:
@@ -312,26 +335,28 @@ def test_backoff_after_weeks_of_tries_is_the_ceiling() -> None:
 
 
 async def test_an_answer_with_a_lone_surrogate_is_refused_and_counted(
-    world: Wired,
+    steps_world: Wired,
 ) -> None:
-    world.fake_gateway.answer('{"label": "match", "quote": "Your invoice \\ud800"}')
+    steps_world.fake_gateway.answer(
+        '{"label": "match", "quote": "Your invoice \\ud800"}'
+    )
 
-    assert await runner(world).process(REF) == "pending"
+    assert await runner(steps_world).process(REF) == "pending"
 
-    assert _state(world) == ("pending", 1)
-    model = world.store.step(REF, "model", "p1", "alias")
+    assert _state(steps_world) == ("pending", 1)
+    model = steps_world.store.step(REF, "model", "p1", "alias")
     assert model is not None
     assert model.result == {"refused": "schema"}
 
 
 async def test_a_lone_surrogate_in_the_reported_model_is_stored_replaced(
-    world: Wired,
+    steps_world: Wired,
 ) -> None:
     body = {
         "choices": [{"message": {"content": json.dumps(MATCH)}}],
         "model": "local\ud800",
     }
-    world.fake_gateway.answer(
+    steps_world.fake_gateway.answer(
         httpx.Response(
             200,
             content=json.dumps(body).encode("ascii"),
@@ -339,32 +364,34 @@ async def test_a_lone_surrogate_in_the_reported_model_is_stored_replaced(
         )
     )
 
-    found = await runner(world, Echo(settings(prompt_retention_days=3))).process(REF)
+    found = await runner(steps_world, Echo(settings(prompt_retention_days=3))).process(
+        REF
+    )
 
     assert found == "done"
-    model = world.store.step(REF, "model", "p1", "alias")
+    model = steps_world.store.step(REF, "model", "p1", "alias")
     assert model is not None
     assert model.model == "local?"
-    assert world.store.count_calls() == 1
+    assert steps_world.store.count_calls() == 1
 
 
 async def test_a_message_the_service_answers_garbled_is_tried_again(
-    world: Wired,
+    steps_world: Wired,
 ) -> None:
     garbled = wire_message("m2", subject="Your invoice")
     garbled["subject"] = ["Your invoice"]
-    world.service.add(garbled)
+    steps_world.service.add(garbled)
     ref = MessageRef(account_id=ACCOUNT, message_id="m2")
-    world.store.enqueue(ref, world.clock())
+    steps_world.store.enqueue(ref, steps_world.clock())
 
-    assert await runner(world).process(ref) == "pending"
-    assert _state(world, ref) == ("pending", 1)
+    assert await runner(steps_world).process(ref) == "pending"
+    assert _state(steps_world, ref) == ("pending", 1)
 
 
 async def test_a_token_count_beyond_sqlite_still_stores_the_step(
-    world: Wired,
+    steps_world: Wired,
 ) -> None:
-    world.fake_gateway.answer(
+    steps_world.fake_gateway.answer(
         httpx.Response(
             200,
             json={
@@ -374,15 +401,15 @@ async def test_a_token_count_beyond_sqlite_still_stores_the_step(
         )
     )
 
-    assert await runner(world).process(REF) == "done"
+    assert await runner(steps_world).process(REF) == "done"
 
 
 async def test_a_redirect_of_the_gateway_leaves_the_message_pending(
-    world: Wired,
+    steps_world: Wired,
 ) -> None:
-    world.fake_gateway.answer(httpx.Response(307))
+    steps_world.fake_gateway.answer(httpx.Response(307))
 
     with pytest.raises(ConfigError):
-        await runner(world).process(REF)
+        await runner(steps_world).process(REF)
 
-    assert _state(world) == ("pending", 0)
+    assert _state(steps_world) == ("pending", 0)

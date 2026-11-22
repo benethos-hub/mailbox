@@ -21,7 +21,7 @@ import pytest
 
 import benethos_mailbox_agents
 
-from .helpers import PACKAGE_DIR
+from .agents_helpers import PACKAGE_DIR
 
 PACKAGE = "benethos_mailbox_agents"
 SOURCE = Path(benethos_mailbox_agents.__file__).parent
@@ -89,10 +89,10 @@ CONFINED: dict[str, frozenset[str]] = {
     "benethos_mailbox_client": frozenset({"sources/mailbox.py"}),
     "httpx": frozenset({"sources/mailbox.py", "llm/gateway.py"}),
     "prometheus_client": frozenset({"runtime/metrics.py"}),
-    "pydantic_settings": frozenset({"settings/__init__.py"}),
+    "pydantic_settings": frozenset({"settings/model.py"}),
     # The TLS context of the own CA: read in the settings, used by the two
     # modules that talk to an upstream.
-    "ssl": frozenset({"settings/__init__.py", "sources/mailbox.py", "llm/gateway.py"}),
+    "ssl": frozenset({"settings/model.py", "sources/mailbox.py", "llm/gateway.py"}),
     # Nothing starts a process or opens a socket of its own, and no mail is
     # read or sent but through the mailbox service: no IMAP, no SMTP.
     "subprocess": frozenset(),
@@ -374,7 +374,8 @@ TESTS = PACKAGE_DIR / "tests"
 
 @pytest.mark.parametrize("path", sorted(TESTS.rglob("test_*.py")), ids=lambda p: p.name)
 def test_a_test_module_imports_no_other(path: Path) -> None:
-    """What test modules share lives in conftest.py, helpers.py and fakes.py."""
+    """What test modules share lives in conftest.py, agents_helpers.py and
+    agents_fake.py."""
     for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
         if isinstance(node, ast.ImportFrom) and node.module:
             assert not node.module.startswith("test_"), f"imports {node.module}"
@@ -385,7 +386,7 @@ def test_a_test_module_imports_no_other(path: Path) -> None:
 
 @pytest.mark.parametrize("path", sorted(TESTS.rglob("test_*.py")), ids=lambda p: p.name)
 def test_a_test_module_takes_root_from_the_helpers(path: Path) -> None:
-    """The root of the repository is ``helpers.ROOT``, found once."""
+    """The root of the repository is ``agents_helpers.ROOT``, found once."""
     for node in ast.parse(path.read_text(encoding="utf-8")).body:
         if isinstance(node, (ast.Assign, ast.AnnAssign)):
             targets = node.targets if isinstance(node, ast.Assign) else [node.target]

@@ -17,7 +17,7 @@ import pytest
 
 from benethos_mailbox_agents.contract import discover
 
-from .helpers import ROOT, load_script
+from .agents_helpers import ROOT, load_script
 
 BUILD = ROOT / "assets" / "mailbox-agents" / "build.py"
 

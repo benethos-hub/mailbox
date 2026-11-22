@@ -294,7 +294,12 @@ def test_the_shared_code_of_the_live_checks_names_each_module() -> None:
     """The docstring of each shared folder's __init__.py says what each
     module holds, so a new one is named there."""
     shared = _live_shared()
-    assert [p.name for p in shared] == ["common", "mcp_common", "service_common"]
+    assert [p.name for p in shared] == [
+        "common",
+        "agents_common",
+        "mcp_common",
+        "service_common",
+    ]
     missing = []
     for folder in shared:
         told = ast.get_docstring(ast.parse((folder / "__init__.py").read_text("utf-8")))

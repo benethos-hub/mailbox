@@ -10,7 +10,7 @@ import pytest
 from benethos_mailbox_agents.agents.inquiries.patterns import load_patterns
 from benethos_mailbox_agents.agents.sorting.groups import load_groups
 
-from .helpers import ROOT
+from .agents_helpers import ROOT
 
 EXAMPLES = sorted(
     [

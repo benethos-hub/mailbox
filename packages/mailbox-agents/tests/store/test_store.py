@@ -36,7 +36,7 @@ from benethos_mailbox_agents.store.migrations import (
     versions,
 )
 
-from ..helpers import DOCS
+from ..agents_helpers import DOCS
 
 NOW = datetime(2026, 11, 17, 9, 0, tzinfo=UTC)
 REF = MessageRef(account_id="acc", message_id="m1")

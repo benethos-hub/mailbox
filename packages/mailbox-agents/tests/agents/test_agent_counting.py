@@ -9,8 +9,8 @@ from benethos_mailbox_agents.contract import discover
 from benethos_mailbox_agents.records import MessageRef
 from benethos_mailbox_agents.runtime.loop import Worker
 
-from ..fakes import ACCOUNT, wire_message
-from ..helpers import settings, wired
+from ..agents_fake import ACCOUNT, wire_message
+from ..agents_helpers import settings, wired
 
 
 def test_the_registry_finds_it() -> None:

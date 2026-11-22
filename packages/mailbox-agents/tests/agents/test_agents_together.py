@@ -17,8 +17,8 @@ from benethos_mailbox_agents.runtime.loop import Worker
 from benethos_mailbox_agents.runtime.model import NoModel
 from benethos_mailbox_agents.store import Store
 
-from ..fakes import ACCOUNT, invented
-from ..helpers import Wired, item, mail, run, settings, wired, worker
+from ..agents_fake import ACCOUNT, invented
+from ..agents_helpers import Wired, item, mail, run, settings, wired, worker
 
 QUOTE = "please find attached invoice INV-77"
 
@@ -38,14 +38,14 @@ def answer() -> dict[str, Any]:
 
 
 @pytest.fixture
-async def world(tmp_path: Path) -> AsyncIterator[Wired]:
+async def together_world(tmp_path: Path) -> AsyncIterator[Wired]:
     async with wired(tmp_path) as found:
         for message in invented():
             found.service.add(message, change=None)
         yield found
 
 
-async def sort(world: Wired, tmp_path: Path, message_id: str) -> None:
+async def sort(together_world: Wired, tmp_path: Path, message_id: str) -> None:
     """The agent sorting, with a state file of its own, moves the mail of
     accounts@paperworks.example into Invoices/Hosting."""
     listed = tmp_path / "sorting.json"
@@ -59,109 +59,124 @@ async def sort(world: Wired, tmp_path: Path, message_id: str) -> None:
         moving = Worker(
             agent=sorting,
             store=store,
-            mailbox=world.mailbox,
+            mailbox=together_world.mailbox,
             gateway=NoModel(),
-            now=world.clock,
+            now=together_world.clock,
         )
         store.enqueue(
-            MessageRef(account_id=ACCOUNT, message_id=message_id), world.clock()
+            MessageRef(account_id=ACCOUNT, message_id=message_id),
+            together_world.clock(),
         )
         await moving.process_due()
 
 
 async def test_invoices_first_then_sorting_moves_it_on(
-    world: Wired, tmp_path: Path
+    together_world: Wired, tmp_path: Path
 ) -> None:
-    world.fake_gateway.answer(answer())
-    marking = worker(world, invoices())
+    together_world.fake_gateway.answer(answer())
+    marking = worker(together_world, invoices())
     await marking.run_pass()
-    await run(world, "inv-unlisted", invoices())
+    await run(together_world, "inv-unlisted", invoices())
 
-    await sort(world, tmp_path, "inv-unlisted")
-    assert mail(world, "inv-unlisted")["folder_ids"] == ["inv-hosting"]
-    world.service.change("message.updated", "inv-unlisted")
+    await sort(together_world, tmp_path, "inv-unlisted")
+    assert mail(together_world, "inv-unlisted")["folder_ids"] == ["inv-hosting"]
+    together_world.service.change("message.updated", "inv-unlisted")
     await marking.run_pass()
 
-    assert mail(world, "inv-unlisted")["folder_ids"] == ["inv-hosting/Rechnungen"]
-    assert sorted(mail(world, "inv-unlisted")["keywords"]) == [
+    assert mail(together_world, "inv-unlisted")["folder_ids"] == [
+        "inv-hosting/Rechnungen"
+    ]
+    assert sorted(mail(together_world, "inv-unlisted")["keywords"]) == [
         "agent-invoice",
         "agent-sorted",
     ]
-    found = item(world, "inv-unlisted")
+    found = item(together_world, "inv-unlisted")
     assert found is not None and (found.is_open, found.reason) == (False, "filed")
-    assert len(world.fake_gateway.requests) == 1
+    assert len(together_world.fake_gateway.requests) == 1
 
 
 async def test_an_invoice_not_moved_into_a_missing_inbox_folder_is_filed_later(
-    world: Wired, tmp_path: Path
+    together_world: Wired, tmp_path: Path
 ) -> None:
     missing = invoices(invoices_inbox_folder="Missing")
-    world.fake_gateway.answer(answer())
-    marking = worker(world, missing)
+    together_world.fake_gateway.answer(answer())
+    marking = worker(together_world, missing)
     await marking.run_pass()
-    await run(world, "inv-unlisted", missing)
+    await run(together_world, "inv-unlisted", missing)
 
-    found = item(world, "inv-unlisted")
+    found = item(together_world, "inv-unlisted")
     assert found is not None and found.is_open
-    await sort(world, tmp_path, "inv-unlisted")
-    world.service.change("message.updated", "inv-unlisted")
+    await sort(together_world, tmp_path, "inv-unlisted")
+    together_world.service.change("message.updated", "inv-unlisted")
     await marking.run_pass()
 
-    assert mail(world, "inv-unlisted")["folder_ids"] == ["inv-hosting/Rechnungen"]
-    found = item(world, "inv-unlisted")
+    assert mail(together_world, "inv-unlisted")["folder_ids"] == [
+        "inv-hosting/Rechnungen"
+    ]
+    found = item(together_world, "inv-unlisted")
     assert found is not None and found.reason == "filed"
 
 
 async def test_a_filing_cut_short_by_the_service_is_done_on_the_next_pass(
-    world: Wired, tmp_path: Path
+    together_world: Wired, tmp_path: Path
 ) -> None:
-    world.fake_gateway.answer(answer())
-    marking = worker(world, invoices())
+    together_world.fake_gateway.answer(answer())
+    marking = worker(together_world, invoices())
     await marking.run_pass()
-    await run(world, "inv-unlisted", invoices())
-    await sort(world, tmp_path, "inv-unlisted")
-    world.service.change("message.updated", "inv-unlisted")
-    world.service.write_refusal = (503, "unavailable")
+    await run(together_world, "inv-unlisted", invoices())
+    await sort(together_world, tmp_path, "inv-unlisted")
+    together_world.service.change("message.updated", "inv-unlisted")
+    together_world.service.write_refusal = (503, "unavailable")
 
     with pytest.raises(MailboxUnavailableError):
         await marking.run_pass()
-    world.service.write_refusal = None
+    together_world.service.write_refusal = None
     await marking.run_pass()
 
-    assert mail(world, "inv-unlisted")["folder_ids"] == ["inv-hosting/Rechnungen"]
-    found = item(world, "inv-unlisted")
+    assert mail(together_world, "inv-unlisted")["folder_ids"] == [
+        "inv-hosting/Rechnungen"
+    ]
+    found = item(together_world, "inv-unlisted")
     assert found is not None and (found.is_open, found.reason) == (False, "filed")
 
 
 async def test_sorting_first_then_invoices_moves_it_on(
-    world: Wired, tmp_path: Path
+    together_world: Wired, tmp_path: Path
 ) -> None:
-    await sort(world, tmp_path, "inv-unlisted")
-    world.fake_gateway.answer(answer())
+    await sort(together_world, tmp_path, "inv-unlisted")
+    together_world.fake_gateway.answer(answer())
 
-    assert await run(world, "inv-unlisted", invoices()) == "done"
+    assert await run(together_world, "inv-unlisted", invoices()) == "done"
 
-    assert mail(world, "inv-unlisted")["folder_ids"] == ["inv-hosting/Rechnungen"]
-    assert item(world, "inv-unlisted") is None
+    assert mail(together_world, "inv-unlisted")["folder_ids"] == [
+        "inv-hosting/Rechnungen"
+    ]
+    assert item(together_world, "inv-unlisted") is None
 
 
 async def test_an_invoice_sorting_moves_while_the_model_answers_is_filed_there(
-    world: Wired,
+    together_world: Wired,
 ) -> None:
     """sorting moves the invoice out of the inbox while invoices asks the
     model about it: invoices files it where it lies when it acts, not into
     the inbox folder."""
 
     def sorting_moves_it() -> None:
-        mail(world, "inv-unlisted")["folder_ids"] = ["inv-hosting"]
+        mail(together_world, "inv-unlisted")["folder_ids"] = ["inv-hosting"]
 
-    world.fake_gateway.answer(answer())
-    world.fake_gateway.during = sorting_moves_it
+    together_world.fake_gateway.answer(answer())
+    together_world.fake_gateway.during = sorting_moves_it
 
     assert (
-        await run(world, "inv-unlisted", invoices(invoices_inbox_folder="Invoices/mo"))
+        await run(
+            together_world,
+            "inv-unlisted",
+            invoices(invoices_inbox_folder="Invoices/mo"),
+        )
         == "done"
     )
 
-    assert mail(world, "inv-unlisted")["folder_ids"] == ["inv-hosting/Rechnungen"]
-    assert item(world, "inv-unlisted") is None
+    assert mail(together_world, "inv-unlisted")["folder_ids"] == [
+        "inv-hosting/Rechnungen"
+    ]
+    assert item(together_world, "inv-unlisted") is None

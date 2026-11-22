@@ -38,7 +38,7 @@ from benethos_mailbox_agents.logbook.output import (
     log_time,
 )
 
-from ..helpers import DOCS
+from ..agents_helpers import DOCS
 
 # The package folder, the one above logbook/.
 SOURCE = Path(logbook.__file__).resolve().parent.parent

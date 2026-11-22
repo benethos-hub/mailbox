@@ -14,32 +14,34 @@ from benethos_mailbox_agents.records import FolderRef, MessageRef
 from benethos_mailbox_agents.runtime.actions import Executor, Outcome
 from benethos_mailbox_agents.runtime.readiness import accounts_of, folder_lines
 
-from ..fakes import ACCOUNT, wire_message
-from ..helpers import Echo, Wired, settings, wired
+from ..agents_fake import ACCOUNT, wire_message
+from ..agents_helpers import Echo, Wired, settings, wired
 
 REF = MessageRef(account_id=ACCOUNT, message_id="m1")
 
 
 @pytest.fixture
-async def world(tmp_path: Path) -> AsyncIterator[Wired]:
+async def readiness_world(tmp_path: Path) -> AsyncIterator[Wired]:
     async with wired(tmp_path) as found:
         found.service.add(wire_message("m1"), change=None)
         yield found
 
 
 async def test_the_accounts_are_those_named_or_else_those_granted(
-    world: Wired,
+    readiness_world: Wired,
 ) -> None:
-    assert await accounts_of(settings(accounts=["named"]), world.mailbox) == ["named"]
-    assert await accounts_of(settings(), world.mailbox) == [ACCOUNT]
+    assert await accounts_of(settings(accounts=["named"]), readiness_world.mailbox) == [
+        "named"
+    ]
+    assert await accounts_of(settings(), readiness_world.mailbox) == [ACCOUNT]
 
 
-async def test_the_lines_of_the_folders_of_an_agent(world: Wired) -> None:
+async def test_the_lines_of_the_folders_of_an_agent(readiness_world: Wired) -> None:
     agent = Invoices(
         settings(invoices_folders=["Invoices/*", "invoices/hosting", "Missing/*"])
     )
 
-    lines = await folder_lines(agent, world.mailbox)
+    lines = await folder_lines(agent, readiness_world.mailbox)
 
     assert lines[0] == f"folders in {ACCOUNT}:"
     assert "  Invoices/Hosting: looked in, an invoice is marked and stays" in lines
@@ -67,15 +69,18 @@ class Expecting(Echo):
     [("invoices", True), ("INVOICES", True), ("Invoices", False), ("Elsewhere", False)],
 )
 async def test_status_says_another_case_where_the_executor_refuses_it(
-    world: Wired, path: str, another_case: bool
+    readiness_world: Wired, path: str, another_case: bool
 ) -> None:
     agent = Expecting(settings(stage="full"))
     agent.expected = path
     executor = Executor(
-        agent=agent, store=world.store, mailbox=world.mailbox, now=world.clock
+        agent=agent,
+        store=readiness_world.store,
+        mailbox=readiness_world.mailbox,
+        now=readiness_world.clock,
     )
 
-    said = await folder_lines(agent, world.mailbox)
+    said = await folder_lines(agent, readiness_world.mailbox)
     done = await executor([ActionRequest(Action.CREATE_FOLDER, REF, folder=path)])
 
     assert (f"folder in another case in {ACCOUNT}: {path}" in said) is another_case

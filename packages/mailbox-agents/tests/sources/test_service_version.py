@@ -18,8 +18,8 @@ from benethos_mailbox_agents.records import MessageRef
 from benethos_mailbox_agents.sources import mailbox as source
 from benethos_mailbox_agents.sources.mailbox import TESTED, is_tested, line_names
 
-from ..fakes import ACCOUNT, FakeService, wire_message
-from ..helpers import DOCS, PACKAGE_DIR, ROOT, Wired, configure, worker
+from ..agents_fake import ACCOUNT, FakeService, wire_message
+from ..agents_helpers import DOCS, PACKAGE_DIR, ROOT, Wired, configure, worker
 
 
 def _numbers(version: str) -> tuple[int, int, int]:

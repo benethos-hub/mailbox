@@ -10,7 +10,7 @@ from benethos_mailbox_agents.errors import ConfigError
 from benethos_mailbox_agents.evaluation.gold import load_gold
 from benethos_mailbox_agents.records import MessageRef
 
-from ..fakes import ACCOUNT, invented
+from ..agents_fake import ACCOUNT, invented
 
 DATA = Path(__file__).resolve().parent.parent / "data"
 

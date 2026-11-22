@@ -20,8 +20,8 @@ from benethos_mailbox_agents.cli import PROG, main, session
 from benethos_mailbox_agents.runtime.loop import Worker
 from benethos_mailbox_agents.settings import PREFIX
 
-from ..fakes import FakeGateway, FakeService, wire_message
-from ..helpers import configure
+from ..agents_fake import FakeGateway, FakeService, wire_message
+from ..agents_helpers import configure
 
 
 def test_version_is_the_distributions() -> None:

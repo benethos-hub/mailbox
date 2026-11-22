@@ -19,8 +19,8 @@ from benethos_mailbox_agents.evaluation.run import evaluate
 from benethos_mailbox_agents.evaluation.scoring import Outcome
 from benethos_mailbox_agents.records import Decision
 
-from ..fakes import ACCOUNT, FakeService, wire_message
-from ..helpers import Echo, configure, settings, wired
+from ..agents_fake import ACCOUNT, FakeService, wire_message
+from ..agents_helpers import Echo, configure, settings, wired
 
 WHEN = datetime(2026, 11, 17, 12, 0, tzinfo=UTC)
 
