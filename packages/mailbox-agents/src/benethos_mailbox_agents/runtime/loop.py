@@ -211,6 +211,10 @@ class Worker:
             record(feed.Expired(agent=self.agent.name))
             fresh = await self._mailbox.start(self.accounts)
             await self._backfill(self.settings.backfill_days)
+            # The backfill takes up new messages only. An update in the gap
+            # of a message the agent follows is seen by observing it now.
+            for item in self.store.open_items():
+                await self._observe(item.ref)
             return fresh, []
         return fresh, events
 

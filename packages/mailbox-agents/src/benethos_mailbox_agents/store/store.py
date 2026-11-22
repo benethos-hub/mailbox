@@ -569,6 +569,11 @@ class Store:
         )
         return [_item(row) for row in rows]
 
+    def open_items(self) -> list[OpenItem]:
+        """The items not closed, the oldest first."""
+        rows = self._all(_ITEM_SQL + " WHERE closed IS NULL ORDER BY opened")
+        return [_item(row) for row in rows]
+
     def due_items(self, now: datetime, stage: str | None = None) -> list[OpenItem]:
         """Open items past their deadline that do not carry the keyword yet,
         those already recorded in ``stage`` left out."""
