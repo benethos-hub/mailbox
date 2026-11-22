@@ -1,0 +1,155 @@
+# In operation: the published image from the GitHub container registry,
+# nothing built. This folder is all it needs: this file, an .env beside it
+# made from .env.example, which names the version, and for each agent a
+# folder under agents/ with its settings and a folder under secrets/ with
+# its token and key. README.md beside it says how.
+#
+#   docker compose --profile invoices up -d        start one agent
+#   docker compose --profile invoices --profile awaiting_reply up -d
+#   docker compose logs -f invoices                follow what it says
+#   docker compose exec invoices benethos-mailbox-agents report --agent invoices
+#   docker compose down                            stop everything
+#
+# One service per agent, each behind a profile of its own name, so a plain
+# `up` starts nothing and an agent runs only where it was asked for. Each
+# has its own credentials, its own state volume, its own health and its own
+# restart. They share the image and nothing else. See docs/mailbox-agents/concept/operation.md.
+
+name: benethos-mailbox-agents
+
+# At most five files of 10 MB of log per container, the oldest dropped
+# first. A line names ids, states, counts and durations, never mail.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+# What every agent's container is: the published image at the version .env
+# names, nothing written but its volume and /tmp, no Linux capability, and
+# nothing gained later through a setuid binary. The secrets come as files.
+x-agent: &agent
+  image: ghcr.io/benethos-hub/benethos-mailbox-agents:${MAILBOX_AGENTS_VERSION:?set MAILBOX_AGENTS_VERSION in .env, see .env.example}
+  restart: unless-stopped
+  logging: *logging
+  read_only: true
+  tmpfs:
+    - /tmp
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+
+x-secrets: &secrets
+  MAILBOX_AGENTS_SERVICE_TOKEN_FILE: /run/secrets/service_token
+  MAILBOX_AGENTS_GATEWAY_KEY_FILE: /run/secrets/gateway_key
+
+services:
+  invoices:
+    <<: *agent
+    profiles: ["invoices"]
+    command: ["worker", "--agent", "invoices"]
+    env_file: ./agents/invoices/.env
+    environment:
+      <<: *secrets
+    volumes:
+      - invoices-data:/data
+      - ./secrets/invoices:/run/secrets:ro
+    ports:
+      - "127.0.0.1:${INVOICES_METRICS_PORT:-9471}:9464"
+    healthcheck:
+      test: ["CMD", "benethos-mailbox-agents", "health", "--agent", "invoices"]
+      interval: 60s
+      timeout: 10s
+      start_period: 120s
+      retries: 3
+
+  awaiting_reply:
+    <<: *agent
+    profiles: ["awaiting_reply"]
+    command: ["worker", "--agent", "awaiting_reply"]
+    env_file: ./agents/awaiting_reply/.env
+    environment:
+      <<: *secrets
+    volumes:
+      - awaiting-reply-data:/data
+      - ./secrets/awaiting_reply:/run/secrets:ro
+    ports:
+      - "127.0.0.1:${AWAITING_REPLY_METRICS_PORT:-9472}:9464"
+    healthcheck:
+      test: ["CMD", "benethos-mailbox-agents", "health", "--agent", "awaiting_reply"]
+      interval: 60s
+      timeout: 10s
+      start_period: 120s
+      retries: 3
+
+  inquiries:
+    <<: *agent
+    profiles: ["inquiries"]
+    command: ["worker", "--agent", "inquiries"]
+    env_file: ./agents/inquiries/.env
+    environment:
+      <<: *secrets
+      MAILBOX_AGENTS_INQUIRIES_PATTERNS_FILE: /config/inquiries.json
+    volumes:
+      - inquiries-data:/data
+      - ./agents/inquiries:/config:ro
+      - ./secrets/inquiries:/run/secrets:ro
+    ports:
+      - "127.0.0.1:${INQUIRIES_METRICS_PORT:-9473}:9464"
+    healthcheck:
+      test: ["CMD", "benethos-mailbox-agents", "health", "--agent", "inquiries"]
+      interval: 60s
+      timeout: 10s
+      start_period: 120s
+      retries: 3
+
+  # Asks no model: needs the mailbox service alone.
+  sorting:
+    <<: *agent
+    profiles: ["sorting"]
+    command: ["worker", "--agent", "sorting"]
+    env_file: ./agents/sorting/.env
+    environment:
+      MAILBOX_AGENTS_SERVICE_TOKEN_FILE: /run/secrets/service_token
+      MAILBOX_AGENTS_SORTING_FILE: /config/sorting.json
+    volumes:
+      - sorting-data:/data
+      - ./agents/sorting:/config:ro
+      - ./secrets/sorting:/run/secrets:ro
+    ports:
+      - "127.0.0.1:${SORTING_METRICS_PORT:-9474}:9464"
+    healthcheck:
+      test: ["CMD", "benethos-mailbox-agents", "health", "--agent", "sorting"]
+      interval: 60s
+      timeout: 10s
+      start_period: 120s
+      retries: 3
+
+  # Changes nothing and asks no model: a deployment checked end to end
+  # before an agent that may change a message is started.
+  counting:
+    <<: *agent
+    profiles: ["counting"]
+    command: ["worker", "--agent", "counting"]
+    env_file: ./agents/counting/.env
+    environment:
+      MAILBOX_AGENTS_SERVICE_TOKEN_FILE: /run/secrets/service_token
+    volumes:
+      - counting-data:/data
+      - ./secrets/counting:/run/secrets:ro
+    ports:
+      - "127.0.0.1:${COUNTING_METRICS_PORT:-9470}:9464"
+    healthcheck:
+      test: ["CMD", "benethos-mailbox-agents", "health", "--agent", "counting"]
+      interval: 60s
+      timeout: 10s
+      start_period: 120s
+      retries: 3
+
+volumes:
+  invoices-data:
+  awaiting-reply-data:
+  inquiries-data:
+  sorting-data:
+  counting-data:

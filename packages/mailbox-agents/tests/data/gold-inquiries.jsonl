@@ -1,0 +1,8 @@
+# Invented messages of packages/mailbox-agents/tests/data/invented-inquiries.json, labelled for inquiries.
+{"account_id": "acc1", "message_id": "inq-staffing", "label": "inquiry", "fields": {"role": "Python-Entwickler", "start": "01.02.2027", "end": null, "duration": "6 Monate", "workload": "4 Tage pro Woche", "location": "Hamburg", "remote_share": "80 %", "contract_form": "Freiberuflich", "intermediary": null, "end_client": "Kunde aus der Logistik", "rate": "bis 95 EUR", "required_skills": "FastAPI, PostgreSQL", "desired_skills": "Kubernetes", "deadline": "15.12.2026"}}
+{"account_id": "acc1", "message_id": "inq-direct", "label": "inquiry", "fields": {"role": "Migration der Kundendatenbank", "start": "März 2027", "end": "Ende Juni 2027", "duration": null, "workload": null, "location": null, "remote_share": "komplett remote", "contract_form": null, "intermediary": null, "end_client": null, "rate": "90 €/h", "required_skills": null, "desired_skills": null, "deadline": null}}
+{"account_id": "acc1", "message_id": "inq-english", "label": "inquiry", "fields": {"role": "Senior Python Engineer", "start": "2027-01-15", "end": null, "duration": "3 months", "workload": "full time", "location": "Munich", "remote_share": "hybrid, 2 days on site", "contract_form": null, "intermediary": null, "end_client": "an insurer in Munich", "rate": "up to 700 EUR", "required_skills": "Django, AWS", "desired_skills": "Terraform", "deadline": null}}
+{"account_id": "acc1", "message_id": "job-digest", "label": "other"}
+{"account_id": "acc1", "message_id": "meeting", "label": "other"}
+{"account_id": "acc1", "message_id": "invoice", "label": "other"}
+{"account_id": "acc1", "message_id": "personal", "label": "other"}

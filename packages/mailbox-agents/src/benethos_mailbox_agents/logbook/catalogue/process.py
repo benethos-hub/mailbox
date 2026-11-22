@@ -1,0 +1,63 @@
+"""The process of one agent: its start, its state file, its metrics, its
+stop."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import ClassVar
+
+from ..activity import Activity
+
+
+@dataclass(frozen=True, kw_only=True)
+class Started(Activity):
+    name: ClassVar[str] = "started"
+
+    version: str
+    stage: str
+
+    def says(self) -> str:
+        return f"started version {self.version} in stage {self.stage}"
+
+
+@dataclass(frozen=True, kw_only=True)
+class Stopped(Activity):
+    name: ClassVar[str] = "stopped"
+
+    reason: str
+
+    def says(self) -> str:
+        return "stopped"
+
+    def why(self) -> str | None:
+        return self.reason
+
+
+@dataclass(frozen=True, kw_only=True)
+class Migrated(Activity):
+    """The state file was made, or brought from schema ``before`` to
+    ``after``. The notes are the steps' own, words of code."""
+
+    name: ClassVar[str] = "migrated"
+
+    before: int
+    after: int
+    notes: tuple[str, ...]
+
+    def says(self) -> str:
+        if self.before == 0:
+            return f"made its state file at schema {self.after}"
+        return f"migrated its state file from schema {self.before} to {self.after}"
+
+    def why(self) -> str | None:
+        return ", ".join(self.notes) or None
+
+
+@dataclass(frozen=True, kw_only=True)
+class MetricsServing(Activity):
+    name: ClassVar[str] = "metrics_serving"
+
+    port: int
+
+    def says(self) -> str:
+        return f"began serving metrics on port {self.port}"

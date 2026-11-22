@@ -1,0 +1,44 @@
+[
+ {
+  "id": "inq-staffing",
+  "subject": "Projektanfrage: Python-Entwicklung, remote",
+  "sender": "jana@staffing.example",
+  "text": "Hallo,\n\nfür einen Kunden aus der Logistik suchen wir ab 01.02.2027 für 6 Monate Unterstützung als Python-Entwickler, Auslastung 4 Tage pro Woche, 80 % remote, Einsatzort Hamburg. Vertragsform Freiberuflich über uns. Stundensatz bis 95 EUR. Wichtig sind FastAPI und PostgreSQL, Kubernetes wäre schön. Bewerbungen bitte bis 15.12.2026.\n\nViele Grüße\nJana"
+ },
+ {
+  "id": "inq-direct",
+  "subject": "Anfrage: Unterstützung bei einer Datenmigration",
+  "sender": "it@client.example",
+  "text": "Guten Tag,\n\nwir suchen ab März 2027 Unterstützung bei der Migration unserer Kundendatenbank, voraussichtlich bis Ende Juni 2027, komplett remote. Das Budget liegt bei 90 €/h.\n\nMit freundlichen Grüßen"
+ },
+ {
+  "id": "inq-english",
+  "subject": "Contract role: Senior Python Engineer",
+  "sender": "sam@agency.example",
+  "text": "Hi,\n\non behalf of our client, an insurer in Munich, we are looking for a Senior Python Engineer. Start 2027-01-15, duration 3 months, full time, hybrid with 2 days on site. Day rate up to 700 EUR. Must have: Django, AWS. Nice to have: Terraform.\n\nBest,\nSam"
+ },
+ {
+  "id": "job-digest",
+  "subject": "10 neue Jobs für Sie",
+  "sender": "jobs@jobboard.example",
+  "text": "Diese Woche neu: Python-Entwickler (m/w/d) in Berlin, Data Engineer in Köln, und acht weitere Stellen. Jetzt ansehen."
+ },
+ {
+  "id": "meeting",
+  "subject": "Termin zum laufenden Projekt",
+  "sender": "pm@client.example",
+  "text": "Hallo,\n\nkönnen wir am 20.11.2026 über den Stand sprechen?\n\nGrüße"
+ },
+ {
+  "id": "invoice",
+  "subject": "Rechnung 2026-11",
+  "sender": "billing@cloudhost.example",
+  "text": "Anbei Ihre Rechnung über 12,40 EUR."
+ },
+ {
+  "id": "personal",
+  "subject": "Abendessen am Samstag?",
+  "sender": "friend@friends.example",
+  "text": "Hast du am Samstag Zeit?"
+ }
+]

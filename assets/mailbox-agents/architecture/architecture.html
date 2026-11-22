@@ -1,0 +1,301 @@
+<!doctype html>
+<!--
+  The architecture diagram, in the look of the social preview.
+  `uv run python assets/mailbox-agents/build.py --diagram` renders it to
+  architecture.png, and with #dark in the address to
+  architecture-dark.png, the image for a dark page.
+
+  The four steps of a message stand at the heights of the four chips in
+  the cards at the left and the right, 86 pixels apart, and an arrow joins
+  a step with the chip it uses. Whoever moves one moves the others.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mailbox Agents architecture</title>
+<style>
+  :root {
+    --page:
+      radial-gradient(circle at 10% 8%, rgba(255,165,82,.20) 0, rgba(255,165,82,0) 38%),
+      radial-gradient(circle at 92% 96%, rgba(242,100,48,.16) 0, rgba(242,100,48,0) 44%),
+      linear-gradient(150deg, #FFFDFB 0%, #FFF4EB 55%, #FDE7D8 100%);
+    --grid: rgba(194,58,26,.07); --mark: .06;
+    --text: #2B120A; --muted: #8A5A44; --ink: #A8330F; --accent: #E0501F;
+    --card: rgba(255,255,255,.76); --card-line: #F3D9C8;
+    --card-shadow: 0 10px 30px rgba(194,58,26,.08);
+    --tile: #FFEDE0;
+    --upstream: rgba(255,240,229,.92); --upstream-line: #F0C3A6; --name: #7A2410;
+    --panel: rgba(255,255,255,.97); --panel-top: #FFEFE3;
+    --panel-shadow: 0 24px 60px rgba(122,36,16,.20), 0 4px 12px rgba(122,36,16,.10);
+    --door: linear-gradient(135deg, #E85A26 0%, #C23A1A 100%);
+    --door-small: rgba(255,255,255,.86);
+    --chip: rgba(255,255,255,.88); --chip-line: #F2CDB5;
+    --step: rgba(255,244,236,.80);
+    --arrow: #B08A77;
+  }
+  :root.dark {
+    --page:
+      radial-gradient(circle at 10% 8%, rgba(255,165,82,.20) 0, rgba(255,165,82,0) 40%),
+      radial-gradient(circle at 92% 96%, rgba(242,100,48,.26) 0, rgba(242,100,48,0) 45%),
+      linear-gradient(150deg, #2B120A 0%, #1E0C07 55%, #160805 100%);
+    --grid: rgba(255,190,150,.06); --mark: .04;
+    --text: #FCE7DA; --muted: #CFA590; --ink: #FFC9A3; --accent: #FFA552;
+    --card: rgba(255,255,255,.06); --card-line: #55291A;
+    --card-shadow: 0 10px 30px rgba(0,0,0,.30);
+    --tile: #43200F;
+    --upstream: rgba(242,100,48,.13); --upstream-line: #6E3620; --name: #FFE3CC;
+    --panel: rgba(38,17,10,.96); --panel-top: #3A1A0E;
+    --panel-shadow: 0 24px 60px rgba(0,0,0,.50), 0 4px 12px rgba(0,0,0,.30);
+    --door: linear-gradient(135deg, #E85A26 0%, #C23A1A 100%);
+    --door-small: rgba(255,255,255,.86);
+    --chip: rgba(255,255,255,.07); --chip-line: #663320;
+    --step: rgba(255,255,255,.035);
+    --arrow: #A98470;
+  }
+  html, body { margin: 0; width: 1430px; height: 776px; overflow: hidden; }
+  body { background: var(--page); color: var(--text); position: relative;
+         font-family: "Segoe UI", "Inter", "Helvetica Neue", Arial, sans-serif; }
+  code { font-family: "Cascadia Code", Consolas, monospace; }
+
+  /* The ground of the social preview: a faint grid, and the icon large
+     and faint at the right. */
+  .grid { position: absolute; inset: 0;
+          background-image:
+            linear-gradient(var(--grid) 1px, transparent 1px),
+            linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+          background-size: 40px 40px;
+          -webkit-mask-image: radial-gradient(circle at 78% 50%, #000 0%, transparent 72%); }
+  .mark { position: absolute; right: -150px; top: 150px; width: 540px;
+          opacity: var(--mark); transform: rotate(-8deg); }
+  svg { position: absolute; left: 0; top: 0; }
+
+  .head { position: absolute; top: 26px; font-size: 14px; font-weight: 600;
+          letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+
+  /* A sign in a tile. */
+  .sign { flex: none; width: 42px; height: 42px; border-radius: 12px;
+          background: var(--tile); color: var(--accent);
+          display: flex; align-items: center; justify-content: center; }
+  .sign svg { position: static; }
+
+  /* What an upstream stands on: a frosted card with a sign. */
+  .card { position: absolute; box-sizing: border-box; width: 300px; height: 86px;
+          padding: 0 16px; display: flex; align-items: center; gap: 13px;
+          background: var(--card); border: 1.5px solid var(--card-line);
+          border-radius: 18px; box-shadow: var(--card-shadow); }
+  .card div { display: flex; flex-direction: column; min-width: 0; }
+  .card b { font-size: 19px; font-weight: 600; white-space: nowrap; }
+  .card small { font-size: 14.5px; color: var(--muted); margin-top: 2px;
+                white-space: nowrap; }
+
+  /* An upstream: a system of its own that the agents talk to. */
+  .upstream { position: absolute; top: 72px; width: 300px; height: 488px;
+              box-sizing: border-box; overflow: hidden; background: var(--upstream);
+              border: 1.5px solid var(--upstream-line); border-radius: 22px;
+              box-shadow: var(--card-shadow); }
+  .upstream .top, .panel .top {
+              position: absolute; left: 0; right: 0; top: 0; height: 124px;
+              box-sizing: border-box; display: flex; align-items: center; }
+  .upstream .top { padding: 0 18px; gap: 14px;
+                   border-bottom: 1.5px solid var(--upstream-line); }
+  .top div { display: flex; flex-direction: column; min-width: 0; }
+  .top b { font-size: 21px; font-weight: 700; color: var(--name); white-space: nowrap; }
+  .top code { font-size: 13.5px; font-weight: 600; color: var(--accent);
+              white-space: nowrap; }
+  .top small { font-size: 14.5px; color: var(--muted); margin-top: 5px;
+               white-space: nowrap; }
+  .top small + small { font-size: 13.5px; opacity: .85; margin-top: 2px; }
+  .upstream li { position: absolute; left: 18px; right: 18px; height: 40px; }
+  ul { margin: 0; padding: 0; list-style: none; }
+  li { font-size: 15px; font-weight: 600; color: var(--ink);
+       background: var(--chip); border: 1.5px solid var(--chip-line);
+       border-radius: 999px; box-sizing: border-box; padding: 0 15px;
+       display: flex; align-items: center; white-space: nowrap; }
+
+  /* The project, in front like the cards of the preview. */
+  .panel { position: absolute; left: 430px; top: 72px; width: 570px; height: 628px;
+           box-sizing: border-box; overflow: hidden; background: var(--panel);
+           border: 2px solid var(--accent); border-radius: 24px;
+           box-shadow: var(--panel-shadow); }
+  .panel .top { padding: 0 22px; gap: 18px; background: var(--panel-top);
+                border-bottom: 1.5px solid var(--chip-line); }
+  .panel .top img { width: 64px; height: auto; }
+  .panel .top b { font-size: 25px; }
+  .panel .top code { font-size: 14.5px; }
+  .panel .top small { font-size: 15px; }
+  .panel .top small + small { font-size: 13.5px; }
+  .caption { position: absolute; left: 22px; font-size: 12.5px; font-weight: 700;
+             letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+
+  /* A step of a message: its name on the brand's colour, then what it
+     consists of. */
+  .step { position: absolute; left: 20px; right: 20px; height: 74px;
+          box-sizing: border-box; display: flex; align-items: center; gap: 14px;
+          background: var(--step); border: 1.5px solid var(--chip-line);
+          border-radius: 17px; }
+  .door { flex: none; width: 152px; height: 74px; margin: -1.5px 0 -1.5px -1.5px;
+          box-sizing: border-box; padding: 0 16px; display: flex;
+          flex-direction: column; justify-content: center;
+          background: var(--door); color: #fff; border-radius: 16px 6px 6px 16px;
+          box-shadow: 0 6px 16px rgba(194,58,26,.24); }
+  .door b { font-size: 18px; font-weight: 600; }
+  .door small { font-size: 13.5px; color: var(--door-small); white-space: nowrap; }
+  .next { position: absolute; left: 90px; width: 12px; height: 8px;
+          background: var(--accent); clip-path: polygon(0 0, 100% 0, 50% 100%); }
+  .step ul { display: flex; gap: 6px; }
+  .step li { height: 34px; padding: 0 11px; font-size: 14.5px; }
+  .step li code { font-size: 13.5px; font-weight: 700; margin-right: 5px; }
+  .step li span { font-weight: 400; color: var(--muted); }
+
+  .agents { position: absolute; left: 20px; right: 20px; top: 532px;
+            display: flex; justify-content: space-between; }
+  .agents li { height: 34px; padding: 0 13px; }
+  .agents code { font-size: 13.5px; font-weight: 700; }
+  .state { position: absolute; left: 22px; right: 20px; top: 580px; height: 30px;
+           display: flex; align-items: center; gap: 9px; font-size: 14.5px;
+           color: var(--muted); white-space: nowrap; }
+  .state svg { position: static; flex: none; color: var(--accent); }
+  .state strong { color: var(--ink); font-weight: 600; }
+
+  .foot { position: absolute; left: 24px; top: 724px; font-size: 18px; color: var(--muted);
+          display: flex; align-items: center; gap: 10px; }
+  .foot svg { position: static; color: var(--accent); }
+  .foot strong { color: var(--ink); }
+  /* Where the project lives, as on the social preview. */
+  .address { position: absolute; right: 24px; top: 724px; font-size: 18px;
+             color: var(--muted); letter-spacing: .2px; display: flex;
+             align-items: center; gap: 8px; }
+  .address svg { position: static; color: var(--accent); }
+
+  .arrows text { font: 600 13px "Segoe UI", system-ui, sans-serif; fill: var(--muted);
+                 text-anchor: middle; }
+  .plain { stroke: var(--arrow); }
+  .bold { stroke: var(--accent); }
+  .tip-plain { fill: var(--arrow); }
+  .tip-bold { fill: var(--accent); }
+</style>
+<script>
+  if (location.hash === "#dark") document.documentElement.classList.add("dark");
+</script>
+</head>
+<body>
+  <div class="grid"></div>
+  <img class="mark" src="../brand/icon.svg" alt="">
+
+  <div class="head" style="left:24px">Where the mail is</div>
+  <div class="head" style="left:430px">This project, on your own machine</div>
+  <div class="head" style="left:1106px">Where a model answers</div>
+
+  <svg class="arrows" width="1430" height="776" viewBox="0 0 1430 776">
+    <defs>
+      <marker id="p" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path class="tip-plain" d="M0,0 L10,5 L0,10 z"/>
+      </marker>
+      <marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path class="tip-bold" d="M0,0 L10,5 L0,10 z"/>
+      </marker>
+    </defs>
+    <g stroke-width="2.5" fill="none" stroke-linecap="round">
+      <!-- the change feed starts a step, the message is fetched -->
+      <line class="bold" x1="330" y1="273" x2="424" y2="273" marker-end="url(#b)"/>
+      <line class="bold" x1="330" y1="359" x2="424" y2="359" marker-end="url(#b)"/>
+      <!-- the effect goes back to the mailbox -->
+      <line class="bold" x1="424" y1="531" x2="330" y2="531" marker-end="url(#b)"/>
+      <!-- one model call and its answer -->
+      <line class="bold" x1="1006" y1="445" x2="1100" y2="445" marker-start="url(#b)" marker-end="url(#b)"/>
+      <!-- each upstream and what it stands on -->
+      <line class="plain" x1="174" y1="566" x2="174" y2="608" marker-start="url(#p)" marker-end="url(#p)"/>
+      <line class="plain" x1="1256" y1="566" x2="1256" y2="608" marker-start="url(#p)" marker-end="url(#p)"/>
+    </g>
+    <text x="377" y="262">change feed</text>
+    <text x="377" y="348">the message</text>
+    <text x="377" y="520">keyword, move</text>
+    <text x="1053" y="434">one call</text>
+    <text x="1053" y="466">no tools</text>
+  </svg>
+
+  <div class="upstream" style="left:24px">
+    <div class="top">
+      <span class="sign"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></span>
+      <div><b>Mailbox Service</b><code>benethos-mailbox-service</code><small>REST, one API for every provider</small><small>a project of its own</small></div>
+    </div>
+    <ul>
+      <li style="top:179.5px">Change feed of every account</li>
+      <li style="top:265.5px">Messages, already as text</li>
+      <li style="top:351.5px">A user and rights per agent</li>
+      <li style="top:437.5px">Keywords and folders</li>
+    </ul>
+  </div>
+  <div class="card" style="left:24px; top:614px">
+    <span class="sign"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13l2.5-7h11L20 13v5H4z"/><path d="M4 13h4.5l1 2.5h5l1-2.5H20"/></svg></span>
+    <div><b>Mail accounts</b><small>IMAP, JMAP, Graph, Gmail, POP3</small></div>
+  </div>
+
+  <div class="panel">
+    <div class="top">
+      <img src="../brand/icon.svg" alt="">
+      <div><b>Mailbox Agents</b><code>benethos-mailbox-agents</code><small>one image, one process per agent</small><small>PyPI and container image</small></div>
+    </div>
+
+    <div class="caption" style="top:137px">One message, four steps</div>
+    <div class="step" style="top:162px">
+      <div class="door"><b>Trigger</b><small>what starts it</small></div>
+      <ul><li>change feed</li><li>clock tick</li></ul>
+    </div>
+    <div class="next" style="top:238px"></div>
+    <div class="step" style="top:248px">
+      <div class="door"><b>Selection</b><small>is this mine?</small></div>
+      <ul><li>decided by code, no model</li></ul>
+    </div>
+    <div class="next" style="top:324px"></div>
+    <div class="step" style="top:334px">
+      <div class="door"><b>Decision</b><small>one narrow question</small></div>
+      <ul><li>rules</li><li>one model call</li><li>evidence check</li></ul>
+    </div>
+    <div class="next" style="top:410px"></div>
+    <div class="step" style="top:420px">
+      <div class="door"><b>Effect</b><small>one reversible action</small></div>
+      <ul><li><code>shadow</code><span>record</span></li><li><code>keyword</code><span>mark</span></li><li><code>full</code><span>move</span></li></ul>
+    </div>
+
+    <div class="caption" style="top:507px">Five agents, a state file each</div>
+    <ul class="agents">
+      <li><code>sorting</code></li>
+      <li><code>invoices</code></li>
+      <li><code>awaiting_reply</code></li>
+      <li><code>inquiries</code></li>
+      <li><code>counting</code></li>
+    </ul>
+    <div class="state">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg>
+      <span><strong>SQLite:</strong> ids, decisions and what was done.</span>
+    </div>
+  </div>
+
+  <div class="upstream" style="left:1106px">
+    <div class="top">
+      <span class="sign"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="2.5"/><circle cx="19" cy="5" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M7.5 12h4M11.5 12c2 0 2-7 5-7M11.5 12c2 0 2 7 5 7"/></svg></span>
+      <div><b>Model gateway</b><code>OpenAI-compatible HTTP</code><small>LiteLLM, for one</small><small>not part of this project</small></div>
+    </div>
+    <ul>
+      <li style="top:179.5px">A model behind an alias</li>
+      <li style="top:265.5px">A key per agent</li>
+      <li style="top:351.5px">The answer in a JSON schema</li>
+      <li style="top:437.5px">Models and budget per key</li>
+    </ul>
+  </div>
+  <div class="card" style="left:1106px; top:614px">
+    <span class="sign"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M10 10h4v4h-4zM9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg></span>
+    <div><b>Model backends</b><small>local or hosted</small></div>
+  </div>
+
+  <div class="foot">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+    <span><strong>Shadow first.</strong> A new agent only records what it would do, until it was measured against labelled mail.</span>
+  </div>
+  <div class="address">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>
+    github.com/benethos-hub/mailbox-agents
+  </div>
+</body>
+</html>

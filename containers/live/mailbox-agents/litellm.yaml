@@ -1,0 +1,121 @@
+# The model gateway of the live setup: LiteLLM with one alias per backend.
+# The agents name an alias in MAILBOX_AGENTS_MODEL and never a model. There
+# is no fallback from one alias to another: a key that reads mail must not
+# reach a hosted model through a backend that was away (docs/mailbox-agents/concept/model-gateway.md).
+
+# What every local model is called with. Unlike Claude, a local model takes
+# a temperature, and on the CPU it takes its time.
+x-gpu: &gpu
+  api_base: http://llama-gpu:8080/v1
+  api_key: none
+  temperature: 0
+  max_tokens: 2048
+  timeout: 600
+x-cpu: &cpu
+  api_base: http://llama-cpu:8080/v1
+  api_key: none
+  temperature: 0
+  max_tokens: 2048
+  timeout: 600
+
+model_list:
+  # Claude through the Claude API, with the key in secrets/anthropic_api_key
+  # or ANTHROPIC_API_KEY. Neither Haiku 5.5 nor Opus 5.5 takes a sampling
+  # setting, so none is set. The agents use Haiku, chosen by the comparison
+  # in README.md. The cost per token is the list price of the Claude API in
+  # dollars (2026-11-18), Haiku's for a prompt of 100K tokens or fewer:
+  # $0.10 in and $0.50 out per million tokens, Opus $4 and $20.
+  - model_name: mail-classifier
+    litellm_params: &haiku
+      model: anthropic/claude-haiku-5-5
+      api_key: os.environ/ANTHROPIC_API_KEY
+      max_tokens: 4096
+      input_cost_per_token: 0.0000001
+      output_cost_per_token: 0.0000005
+
+  # Each Claude model by its own name, for comparing them in evaluation runs.
+  - model_name: claude/haiku-5-5
+    litellm_params: *haiku
+  - model_name: claude/opus-5-5
+    litellm_params:
+      model: anthropic/claude-opus-5-5
+      api_key: os.environ/ANTHROPIC_API_KEY
+      max_tokens: 4096
+      input_cost_per_token: 0.000004
+      output_cost_per_token: 0.00002
+
+  # The local model the agents use, on the card and on the CPU, chosen by
+  # the comparison in README.md.
+  #
+  # The cost per token of a local model is an estimate of the electricity
+  # it burns, from the comparison in README.md: the time llama.cpp took per
+  # token read and written, the power the card drew while it worked plus
+  # 100 W for the rest of the machine (220 W where the CPU computes, as for
+  # the 35B model's experts), at $0.40 a kWh. The hardware is not in it.
+  - model_name: mail-classifier-gpu
+    litellm_params: &gpu-qwen35-9b
+      <<: *gpu
+      model: openai/qwen3.5-9b
+      input_cost_per_token: 0.0000000066
+      output_cost_per_token: 0.0000004
+  - model_name: mail-classifier-cpu
+    litellm_params: &cpu-qwen35-4b
+      <<: *cpu
+      model: openai/qwen3.5-4b
+      input_cost_per_token: 0.000000044
+      output_cost_per_token: 0.0000014
+
+  # Every local model by its own name, for comparing them in evaluation
+  # runs. The names are the sections of llama/presets-*.ini.
+  - model_name: gpu/ministral-3-8b
+    litellm_params:
+      <<: *gpu
+      model: openai/ministral-3-8b
+      input_cost_per_token: 0.000000002
+      output_cost_per_token: 0.00000039
+  - model_name: gpu/qwen3.5-9b
+    litellm_params: *gpu-qwen35-9b
+  - model_name: gpu/gemma-4-12b
+    litellm_params:
+      <<: *gpu
+      model: openai/gemma-4-12b
+      input_cost_per_token: 0.00000001
+      output_cost_per_token: 0.0000005
+  - model_name: gpu/qwen3.6-35b-a3b
+    litellm_params:
+      <<: *gpu
+      model: openai/qwen3.6-35b-a3b
+      input_cost_per_token: 0.000000036
+      output_cost_per_token: 0.00000064
+  - model_name: cpu/qwen3-4b-2507
+    litellm_params:
+      <<: *cpu
+      model: openai/qwen3-4b-2507
+      input_cost_per_token: 0.000000042
+      output_cost_per_token: 0.0000013
+  - model_name: cpu/qwen3.5-4b
+    litellm_params: *cpu-qwen35-4b
+  - model_name: cpu/gemma-4-e4b
+    litellm_params:
+      <<: *cpu
+      model: openai/gemma-4-e4b
+      input_cost_per_token: 0.000000029
+      output_cost_per_token: 0.0000015
+  - model_name: cpu/qwen3.6-35b-a3b
+    litellm_params:
+      <<: *cpu
+      model: openai/qwen3.6-35b-a3b
+      input_cost_per_token: 0.000000057
+      output_cost_per_token: 0.0000014
+
+litellm_settings:
+  # Mail content in the gateway's own log would undo what the agents keep
+  # out of theirs.
+  turn_off_message_logging: true
+  drop_params: false
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+  # The database keeps the keys and what each spent, never a prompt or an
+  # answer.
+  store_prompts_in_spend_logs: false

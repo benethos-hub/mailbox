@@ -1,0 +1,11 @@
+# Invented messages of packages/mailbox-agents/tests/data/invented.json, labelled for invoices.
+{"account_id": "acc1", "message_id": "inv-cloudhost", "label": "invoice", "fields": {"near_miss": null}}
+{"account_id": "acc1", "message_id": "inv-telco-notice", "label": "invoice", "fields": {"near_miss": null}}
+{"account_id": "acc1", "message_id": "inv-telco-random-sender", "label": "invoice", "fields": {"near_miss": null}}
+{"account_id": "acc1", "message_id": "inv-unlisted", "label": "invoice", "fields": {"near_miss": null}}
+{"account_id": "acc1", "message_id": "inv-platform", "label": "invoice", "fields": {"near_miss": null}}
+{"account_id": "acc1", "message_id": "near-reminder", "label": "other", "fields": {"near_miss": "reminder"}}
+{"account_id": "acc1", "message_id": "near-quote", "label": "other", "fields": {"near_miss": "quotation"}}
+{"account_id": "acc1", "message_id": "near-order", "label": "other", "fields": {"near_miss": "order_confirmation"}}
+{"account_id": "acc1", "message_id": "near-receipt", "label": "other", "fields": {"near_miss": "payment_receipt"}}
+{"account_id": "acc1", "message_id": "plain", "label": "other", "fields": {"near_miss": null}}

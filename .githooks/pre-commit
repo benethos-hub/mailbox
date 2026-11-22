@@ -30,6 +30,10 @@ forbidden=$(
     printf '%s\n' "$staged" | while IFS= read -r file; do
         case "$file" in
             .gitkeep | */.gitkeep | *.env.example) ;;
+            # The templates of the agents' lists, and the public
+            # certificate of the CA their tests trust, no key.
+            config/*/*.example.json) ;;
+            packages/mailbox-agents/tests/data/test-ca.pem) ;;
             .env | */.env | .env.* | */.env.* | */service.env)
                 printf '%s\n' "$file" ;;
             config/* | data/* | backups/* | */backups/*)
@@ -57,7 +61,9 @@ fi
 # prefix. Then what the providers hand out: a Google client secret,
 # access token and refresh token, a Microsoft client secret. Then what a
 # developer's machine holds besides.
-credential='mbx_[A-Za-z0-9]{16,}'
+credential='mbx_[A-Za-z0-9_-]{16,}'
+credential="$credential|sk-ant-[A-Za-z0-9_-]{16,}|sk-[A-Za-z0-9_-]{20,}"
+credential="$credential|glpat-[A-Za-z0-9_-]{16,}|AKIA[0-9A-Z]{16}"
 credential="$credential|whsec_[A-Za-z0-9_-]{16,}"
 credential="$credential|GOCSPX-[A-Za-z0-9_-]{16,}"
 credential="$credential|ya29\\.[A-Za-z0-9_-]{20,}"

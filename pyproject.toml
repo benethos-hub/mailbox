@@ -1,14 +1,17 @@
-# Workspace root. Not a package itself: it holds the four distributions
+# Workspace root. Not a package itself: it holds the five distributions
 # under packages/, the shared development tools and the tool configuration.
 #
 #   packages/mailbox-service  the service: REST API, adapters, credential store
 #   packages/mailbox-client   the Python client of the REST API
 #   packages/mailbox-mcp      the MCP server, on top of the client
 #   packages/mailbox-common   what the service and the MCP server share
+#   packages/mailbox-agents   small AI agents that work on a mailbox, on top
+#                             of the client
 #
-# Neither the client nor the MCP package depends on the service package.
-# That is what keeps them REST clients: they cannot import an adapter
-# because they cannot see one. The common package sees none of the others.
+# Neither the client, the MCP package nor the agents depend on the service
+# package. That is what keeps them REST clients: they cannot import an
+# adapter because they cannot see one. The common package sees none of the
+# others.
 
 [tool.uv.workspace]
 members = ["packages/*"]
@@ -18,6 +21,7 @@ benethos-mailbox-service = { workspace = true }
 benethos-mailbox-mcp = { workspace = true }
 benethos-mailbox-client = { workspace = true }
 benethos-mailbox-common = { workspace = true }
+benethos-mailbox-agents = { workspace = true }
 # The live checks' shared code, live/pyproject.toml: not a member, never
 # published.
 mailbox-live = { path = "live", editable = true }
@@ -28,6 +32,7 @@ dev = [
     "benethos-mailbox-mcp",
     "benethos-mailbox-client",
     "benethos-mailbox-common[all]",
+    "benethos-mailbox-agents",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4",
     "pytest-cov>=7.1.0",
@@ -56,6 +61,7 @@ testpaths = [
     "packages/mailbox-client/tests",
     "packages/mailbox-mcp/tests",
     "packages/mailbox-common/tests",
+    "packages/mailbox-agents/tests",
 ]
 asyncio_mode = "auto"
 # A file, socket or database left open fails the run. One found by the
@@ -79,6 +85,7 @@ source = [
     "benethos_mailbox_client",
     "benethos_mailbox_mcp",
     "benethos_mailbox_common",
+    "benethos_mailbox_agents",
 ]
 branch = true
 
@@ -129,9 +136,15 @@ files = [
     "packages/mailbox-client/src",
     "packages/mailbox-mcp/src",
     "packages/mailbox-common/src",
+    "packages/mailbox-agents/src",
     # The live checks run by hand: a break shows here, not in a run.
     "live",
+    # The live setup of the agents: its invented mail and its provisioning.
+    "containers/live/mailbox-agents",
 ]
+# The live checks of the agents import the invented mail of their setup as
+# mail.
+mypy_path = "containers/live/mailbox-agents"
 warn_unused_ignores = true
 warn_redundant_casts = true
 no_implicit_optional = true

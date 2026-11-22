@@ -1,0 +1,169 @@
+# A mail server, a mailbox service and a model gateway of their own, for
+# the live checks.
+# Nothing here reaches a real mailbox: Stalwart holds one account made for
+# the agents, filled with invented mail, and the service is the published
+# image. setup.sh makes it, README.md says how to use it, and
+# live/mailbox-agents/agents_smoke.py checks the package against it. Every port is on
+# 127.0.0.1 only.
+name: mailbox-agents-live
+
+services:
+  stalwart:
+    image: stalwartlabs/stalwart:v1.1.1@sha256:5ebdf474b237161742fe4309396af4ae8797c938e8e6eb7e2d4837332c4f9851
+    init: true
+    restart: unless-stopped
+    environment:
+      # Set by setup.sh for the first start only, then empty.
+      STALWART_RECOVERY_ADMIN: ${STALWART_RECOVERY_ADMIN:-}
+    networks:
+      live:
+        aliases:
+          - mail.agents.test
+    ports:
+      - "127.0.0.1:38080:8080"
+      - "127.0.0.1:38465:465"
+      - "127.0.0.1:38993:993"
+    volumes:
+      - stalwart-etc:/etc/stalwart
+      - stalwart-data:/var/lib/stalwart
+
+  mailbox-service:
+    image: ghcr.io/benethos-hub/benethos-mailbox-service:0.10.0@sha256:e101158a4745fa54ccff977784b0f9bdbc54bfcce68c33329a3c225098c8d928
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      # The mail server's name resolves to a private address, which the
+      # service refuses unless it is named here.
+      MAILBOX_SERVICE_DISCOVERY_INTERNAL_HOSTS: '["mail.agents.test"]'
+      # The service checks every certificate. This one trusts the test CA.
+      SSL_CERT_FILE: /run/secrets/ca.pem
+      MAILBOX_SERVICE_SYNC_INTERVAL: "30"
+      MAILBOX_SERVICE_RATE_LIMIT_PER_MINUTE: "0"
+    networks:
+      - live
+    ports:
+      - "127.0.0.1:38081:8080"
+    volumes:
+      - service-data:/data
+      - ./secrets/master_key:/run/secrets/master_key:ro
+      - ./secrets/tls/ca.pem:/run/secrets/ca.pem:ro
+
+  # The model gateway: LiteLLM, its aliases in litellm.yaml, its master key,
+  # the Claude API key and the address of its database in
+  # secrets/gateway.env, made by setup.sh. The image with the database
+  # client built in: the web interface signs in only with a database.
+  gateway:
+    image: ghcr.io/berriai/litellm-database:1.110.2@sha256:3b239acc68e601c436e5feeec7ca0f01a41cd5dffe50975142b7fa7155c1b2ff
+    restart: unless-stopped
+    command: ["--config", "/etc/litellm/config.yaml", "--port", "4000"]
+    env_file: ./secrets/gateway.env
+    depends_on:
+      gateway-db:
+        condition: service_healthy
+    networks:
+      - live
+      - models
+      - gateway-db
+    ports:
+      - "127.0.0.1:38400:4000"
+    volumes:
+      - ./litellm.yaml:/etc/litellm/config.yaml:ro
+    healthcheck:
+      # The image has Python but no curl.
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:4000/health/liveliness', timeout=4)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+      retries: 3
+
+  # The gateway's database: its keys and what each spent, for its web
+  # interface. No prompt and no answer, litellm.yaml says so. Reached by
+  # the gateway alone, on a network with no way out. The volume sits at
+  # /var/lib/postgresql, the data in a folder per major version below it,
+  # so a new major starts with an empty database and leaves the folder of
+  # the old one unread. After a change of major, run setup.sh: it removes
+  # the volume, the gateway sets its tables up anew, and the agents get a
+  # new key.
+  gateway-db:
+    image: postgres:19.0-alpine@sha256:8b0ff4cdf221f0c53d7fcda681d3b461be725c492cd881c5ec9c0ad25023f188
+    restart: unless-stopped
+    env_file: ./secrets/gateway-db.env
+    networks:
+      - gateway-db
+    volumes:
+      - gateway-db:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U litellm -d litellm"]
+      interval: 5s
+      timeout: 3s
+      start_period: 10s
+      retries: 10
+
+  # Local models under llama.cpp, one router per kind of hardware. Each
+  # serves the models of its presets file, one at a time, and loads a model
+  # on its first request. fetch-models.sh fetches the files into ./models,
+  # which a new setup keeps. Neither service has a port or a way out: the
+  # gateway is the only one to reach them.
+
+  # On the graphics card, with the profile gpu. Needs the NVIDIA Container
+  # Toolkit and its CDI spec on the host (README.md).
+  llama-gpu:
+    profiles: ["gpu"]
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda-b12602@sha256:26f89ebd3bf17a5ecf6caee62bdabfa55abea3058150879f6f07b1fc786baa2d
+    restart: unless-stopped
+    command: &llama-command
+      - --models-preset
+      - /etc/llama/presets.ini
+      - --models-max
+      - "1"
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8080"
+    devices:
+      - nvidia.com/gpu=all
+    networks:
+      - models
+    volumes:
+      - ./models:/models:ro
+      - ./llama/presets-gpu.ini:/etc/llama/presets.ini:ro
+    healthcheck: &llama-health
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+
+  # On the CPU, with the profile cpu: what a server without a card would do.
+  llama-cpu:
+    profiles: ["cpu"]
+    image: ghcr.io/ggml-org/llama.cpp:server-b12602@sha256:ae28f5c2046de51dfd00c9116a36fe44b5e8703ef730d0aea69082781eecb1f7
+    restart: unless-stopped
+    command: *llama-command
+    networks:
+      - models
+    volumes:
+      - ./models:/models:ro
+      - ./llama/presets-cpu.ini:/etc/llama/presets.ini:ro
+    healthcheck: *llama-health
+
+networks:
+  live:
+  # Shared by the gateway and the llama services only, with no way out.
+  models:
+    internal: true
+  # Shared by the gateway and its database only, with no way out.
+  gateway-db:
+    internal: true
+
+volumes:
+  gateway-db:
+  stalwart-etc:
+  stalwart-data:
+  service-data:

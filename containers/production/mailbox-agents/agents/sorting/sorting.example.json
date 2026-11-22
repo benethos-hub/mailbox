@@ -1,0 +1,28 @@
+{
+  "groups": [
+    {
+      "name": "Bank",
+      "folder": "Providers/Bank",
+      "senders": [
+        "service@bank-two.example",
+        "*@bank-one.example"
+      ],
+      "hold": true
+    },
+    {
+      "name": "CloudHost",
+      "folder": "Providers/CloudHost",
+      "senders": [
+        "*@cloudhost.example"
+      ]
+    },
+    {
+      "name": "Shop",
+      "folder": "Providers/Shop",
+      "senders": [
+        "*@shop.example",
+        "*@*.shop.example"
+      ]
+    }
+  ]
+}

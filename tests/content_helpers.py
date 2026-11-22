@@ -31,7 +31,11 @@ PATH = re.compile(
 SERVICE_ID = re.compile(r"\b[a-z]{3}_[0-9a-f]{32,}\b")
 CREDENTIAL = re.compile(
     # A token of the service and a signing secret of a webhook.
-    r"mbx_[A-Za-z0-9]{16,}|whsec_[A-Za-z0-9_-]{16,}"
+    r"mbx_[A-Za-z0-9_-]{16,}|whsec_[A-Za-z0-9_-]{16,}"
+    # A key of a model provider, as the agents' gateway takes one, a
+    # GitLab token and an AWS access key.
+    r"|sk-ant-[A-Za-z0-9_-]{16,}|sk-[A-Za-z0-9_-]{20,}"
+    r"|glpat-[A-Za-z0-9_-]{16,}|AKIA[0-9A-Z]{16}"
     # A Google client secret, access token and refresh token, and a
     # Microsoft client secret.
     r"|GOCSPX-[A-Za-z0-9_-]{16,}|ya29\.[A-Za-z0-9_-]{20,}|1//0[A-Za-z0-9_-]{30,}"
@@ -153,6 +157,10 @@ CREDENTIALS = {
     "microsoft-client-secret": "abc8" + "Q~" + "A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7",
     "bearer": "Authorization: " + "Bearer " + "abcdefghijklmnop1234",
     "github-token": "gh" + "p_" + "A1b2C3d4E5f6G7h8I9j0",
+    "anthropic-key": "key " + "sk" + "-ant-" + "api03-A1b2C3d4E5f6G7h8I9",
+    "model-key": "key " + "sk" + "-" + "proj-A1b2C3d4E5f6G7h8I9j0",
+    "gitlab-token": "glpat" + "-" + "A1b2C3d4E5f6G7h8I9j0",
+    "aws-key": "AKIA" + "ABCDEFGHIJKLMNOP",
     "private-key": "-----" + "BEGIN " + "OPENSSH PRIVATE KEY-----",
     "env-bare": "MAILBOX_SERVICE_TOKEN" + "=" + _RANDOM,
     "env-spaced-quoted": "LIVE_IMAP_PASSWORD = " + '"' + _RANDOM + '"',

@@ -1,0 +1,86 @@
+[
+ {
+  "id": "inv-cloudhost",
+  "subject": "Ihre Rechnung R-2026-1101",
+  "sender": "billing@cloudhost.example",
+  "text": "Guten Tag,\n\nanbei erhalten Sie Ihre Rechnung R-2026-1101 über 12,40 EUR.\n\nIhr CloudHost-Team",
+  "attachments": [
+   {
+    "filename": "R-2026-1101.pdf",
+    "content_type": "application/pdf"
+   }
+  ]
+ },
+ {
+  "id": "inv-telco-notice",
+  "subject": "Ihre Rechnung für November ist online",
+  "sender": "rechnung@telco.example",
+  "text": "Hallo,\n\nIhre Rechnung für November steht ab sofort im Kundenportal zum Abruf bereit.\n\nIhr Telco-Team"
+ },
+ {
+  "id": "inv-telco-random-sender",
+  "subject": "Neue Rechnung verfügbar",
+  "sender": "mailbox7f3a9@telco.example",
+  "text": "Ihre neue Rechnung ist im Portal verfügbar."
+ },
+ {
+  "id": "inv-unlisted",
+  "subject": "Invoice INV-77",
+  "sender": "accounts@paperworks.example",
+  "text": "Hello,\n\nplease find attached invoice INV-77.\n\nKind regards,\nPaperworks",
+  "attachments": [
+   {
+    "filename": "INV-77.pdf",
+    "content_type": "application/pdf"
+   }
+  ]
+ },
+ {
+  "id": "inv-platform",
+  "subject": "Your receipt from Platform Billing",
+  "sender": "billing@platform.example",
+  "text": "Invoice for your subscription to CloudHost Storage, invoice number P-3301.",
+  "attachments": [
+   {
+    "filename": "P-3301.pdf",
+    "content_type": "application/pdf"
+   }
+  ]
+ },
+ {
+  "id": "near-reminder",
+  "subject": "Zahlungserinnerung zu R-2026-1001",
+  "sender": "billing@cloudhost.example",
+  "text": "Zu unserer Rechnung R-2026-1001 konnten wir noch keinen Zahlungseingang feststellen."
+ },
+ {
+  "id": "near-quote",
+  "subject": "Angebot Nr. 5521",
+  "sender": "sales@paperworks.example",
+  "text": "Wie besprochen erhalten Sie unser Angebot Nr. 5521.",
+  "attachments": [
+   {
+    "filename": "Angebot-5521.pdf",
+    "content_type": "application/pdf"
+   }
+  ]
+ },
+ {
+  "id": "near-order",
+  "subject": "Ihre Bestellung 4711 ist bestätigt",
+  "sender": "orders@shop.example",
+  "text": "Danke für Ihre Bestellung 4711."
+ },
+ {
+  "id": "near-receipt",
+  "subject": "Zahlungseingang bestätigt",
+  "sender": "billing@cloudhost.example",
+  "text": "Wir haben Ihre Zahlung zu R-2026-1001 erhalten."
+ },
+ {
+  "id": "plain",
+  "subject": "Mittagessen?",
+  "sender": "friend@friends.example",
+  "text": "Hast du morgen Zeit zum Mittagessen?"
+ }
+]

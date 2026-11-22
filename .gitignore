@@ -33,6 +33,7 @@ Thumbs.db
 config/**
 !config/**/
 !config/*/.env.example
+!config/*/*.example.json
 *.token.json
 # containers/*/secrets/: the master key of a deployment, the passwords
 # and the CA of the test mail server
@@ -42,6 +43,14 @@ containers/**/service.env
 # containers/production/mailbox-service/: the MCP server instances and their routes in Caddy
 containers/production/mailbox-service/compose.override.yaml
 containers/production/mailbox-service/caddy.d/*.caddy
+# containers/*/mailbox-agents/agents/: each agent's settings and lists of a
+# deployment. Only the templates are versioned.
+containers/*/mailbox-agents/agents/**
+!containers/*/mailbox-agents/agents/**/
+!containers/*/mailbox-agents/agents/**/.env.example
+!containers/*/mailbox-agents/agents/**/*.example.json
+# The local models of the agents' live setup, fetched by fetch-models.sh
+containers/live/mailbox-agents/models/
 
 # Service data: the database holds encrypted credentials, backups the same.
 # data/: per package, only the folders are versioned (.gitkeep)
