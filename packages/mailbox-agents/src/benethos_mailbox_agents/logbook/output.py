@@ -4,7 +4,7 @@ A line is written as docs/mailbox-agents/LOGGING.md section 3 says: the time, th
 the source and the message. On a terminal the line is in colour and the
 source short, elsewhere, in a container log or the journal, plain text
 with the whole name of the logger. Either way each line, a traceback
-included, passes ``errors.redact`` before it is written: the second line
+included, passes ``redact`` of mailbox-common before it is written: the second line
 of defence, after the catalogue that has no field for a secret.
 """
 
@@ -16,7 +16,7 @@ import sys
 from datetime import datetime
 from typing import TextIO
 
-from ..errors import redact
+from benethos_mailbox_common.log import redact
 
 __all__ = [
     "FORMAT",
@@ -81,7 +81,7 @@ class Plain(logging.Formatter):
         super().__init__(FORMAT)
 
     def format(self, record: logging.LogRecord) -> str:
-        return redact(super().format(record))
+        return redact.redact(super().format(record))
 
     def formatTime(  # noqa: N802 - the name logging calls
         self, record: logging.LogRecord, datefmt: str | None = None
@@ -104,7 +104,7 @@ class Console(Plain):
         )
         if record.exc_info:
             text += "\n" + self.formatException(record.exc_info)
-        return redact(text)
+        return redact.redact(text)
 
 
 def configure(

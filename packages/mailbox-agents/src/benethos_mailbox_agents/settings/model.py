@@ -11,7 +11,9 @@ from typing import Annotated, Any, Literal
 from pydantic import Field, SecretStr, ValidationError, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
-from ..errors import ConfigError, describe_invalid, register_secret
+from benethos_mailbox_common.log import redact
+
+from ..errors import ConfigError, describe_invalid
 
 # The form a keyword must have, MAILBOX_AGENTS_KEYWORD and an agent's
 # default_keyword alike: lower case letters, digits and dashes, as
@@ -168,7 +170,7 @@ class Settings(BaseSettings):
                     raise ValueError(
                         f"{setting} holds a character that is not printable ASCII"
                     )
-                register_secret(value)
+                redact.note(value)
         return self
 
     def missing(self, names: tuple[str, ...]) -> list[str]:

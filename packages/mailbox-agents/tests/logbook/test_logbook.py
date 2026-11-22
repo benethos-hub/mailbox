@@ -37,6 +37,7 @@ from benethos_mailbox_agents.logbook.output import (
     colours_wanted,
     log_time,
 )
+from benethos_mailbox_common.log import redact
 
 from ..agents_helpers import DOCS
 
@@ -346,7 +347,7 @@ def _record(message: str, exc: BaseException | None = None) -> logging.LogRecord
 
 
 def test_a_registered_secret_is_masked_in_the_line_and_the_traceback() -> None:
-    errors.register_secret("tok-123456789")
+    redact.note("tok-123456789")
     try:
         try:
             raise KeyError("tok-123456789")
@@ -357,7 +358,7 @@ def test_a_registered_secret_is_masked_in_the_line_and_the_traceback() -> None:
             assert "tok-123456789" not in written
             assert "KeyError" in written
     finally:
-        errors.forget_secrets()
+        redact.forget()
 
 
 def test_the_console_shows_the_source_short_and_in_colour() -> None:

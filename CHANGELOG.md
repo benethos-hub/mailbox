@@ -37,6 +37,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   the stream to write to, stderr when none is given.
 - `benethos-mailbox-agents` take `benethos-mailbox-common[settings]` of
   their own version.
+- `benethos-mailbox-agents` write a secret of their settings as `***` in
+  an error and a line of the log, as the service and the MCP server do.
+  Before, they wrote `[redacted]`.
 
 ### Fixed
 

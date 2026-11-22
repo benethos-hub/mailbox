@@ -10,6 +10,7 @@ import pytest
 
 from benethos_mailbox_agents import errors
 from benethos_mailbox_agents.settings import PREFIX, Settings, load_settings
+from benethos_mailbox_common.log import redact
 
 from ..agents_helpers import DOCS, PACKAGE_DIR, ROOT
 
@@ -73,7 +74,7 @@ def test_a_secret_from_a_file_is_read_and_registered(
     found = load_settings()
 
     assert found.secret("service_token") == "service-token-value"
-    assert errors.redact("x service-token-value") == "x [redacted]"
+    assert redact.redact("x service-token-value") == "x ***"
 
 
 def test_a_secret_given_directly_wins_over_its_file(

@@ -1,9 +1,9 @@
-"""The error hierarchy, and ``redact``.
+"""The error hierarchy.
 
 Every error of this package derives from :class:`MailboxAgentError`, whose
-message is redacted on construction: a secret registered with
-:func:`register_secret` never survives into the text of an error, however
-it got there. A log line names the class of an error and its ``code``,
+message is masked on construction: a secret noted with ``redact.note`` of
+mailbox-common never survives into the text of an error, however it got
+there. A log line names the class of an error and its ``code``,
 never its message, see ``logbook``. Each error has a module of its own
 here, and every name is imported from this package.
 """
@@ -22,7 +22,6 @@ from .limit_reached import LimitReachedError
 from .mailbox_refused import MailboxRefusedError
 from .mailbox_unavailable import MailboxUnavailableError
 from .message_gone import MessageGoneError
-from .redaction import forget_secrets, redact, register_secret
 from .service_version import ServiceVersionError
 from .state_file import StateFileError
 from .unavailable import UnavailableError
@@ -43,7 +42,4 @@ __all__ = [
     "StateFileError",
     "UnavailableError",
     "describe_invalid",
-    "forget_secrets",
-    "redact",
-    "register_secret",
 ]
