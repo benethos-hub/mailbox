@@ -22,10 +22,11 @@ from .lifecycle import opened
 from .providers import build_oauth, offered_providers
 from .secrets import key_provider
 from .services import Services
-from .web import create_app, openapi_json
+from .web import alert_rules, create_app, openapi_json
 
 __all__ = [
     "Services",
+    "alert_rules",
     "build_oauth",
     "build_services",
     "create_app",

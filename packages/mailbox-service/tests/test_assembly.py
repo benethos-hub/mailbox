@@ -20,7 +20,16 @@ PART_LINES = {
         {"services"},
     ),
     "cli": (
-        {"serve", "openapi", "paths", "users", "keys", "backup", "restore"},
+        {
+            "serve",
+            "openapi",
+            "alert_rules",
+            "paths",
+            "users",
+            "keys",
+            "backup",
+            "restore",
+        },
         {"common"},
     ),
 }

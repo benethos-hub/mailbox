@@ -3,13 +3,18 @@ HTTP (`web/api/exposition.py`)."""
 
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime
 
 from benethos_mailbox_service.data.models import Account, AccountStatus, ProviderType
 from benethos_mailbox_service.domain.sync import SyncState, WorkerState
 from benethos_mailbox_service.domain.system import AccountHealth, Figures
 from benethos_mailbox_service.domain.webhooks import WebhookCounts
-from benethos_mailbox_service.web.api.exposition import CONTENT_TYPE, exposition
+from benethos_mailbox_service.web.api.exposition import (
+    CONTENT_TYPE,
+    alert_rules,
+    exposition,
+)
 
 AT = datetime(2026, 11, 22, 12, tzinfo=UTC)
 SECONDS = AT.timestamp()
@@ -142,3 +147,15 @@ def test_a_status_no_account_has_counts_0() -> None:
 
 def test_the_answer_is_the_text_format() -> None:
     assert CONTENT_TYPE.startswith("text/plain")
+
+
+def test_every_figure_an_alert_names_is_written() -> None:
+    """A figure renamed here would leave an operator's alert silent."""
+    every = AccountHealth(
+        IMAP, SyncState(last_sync_at=AT, passes=1), synced=True, watching=True
+    )
+    written = {name.partition("{")[0] for name in lines(figures(every))}
+    expressions = re.findall(r"^\s*expr: (.+)$", alert_rules(), re.M)
+    named = {n for e in expressions for n in re.findall(r"\bmailbox_\w+", e)}
+    assert len(expressions) == 3 and named
+    assert named <= written, named - written

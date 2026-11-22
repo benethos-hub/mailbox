@@ -14,6 +14,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   names an account by its id and provider, never by its address.
   `MAILBOX_SERVICE_METRICS=false` switches it off. The service now needs
   `prometheus-client`.
+- `benethos-mailbox-service alert-rules` prints three alerts on the
+  figures of `GET /v1/metrics`, a file for `rule_files` of Prometheus.
+  They come with the service, so they match the figures of its version.
 - `benethos-mailbox-client`: `get_metrics()` of both clients answers
   the figures of `GET /v1/metrics` as text.
 - `MAILBOX_SERVICE_LOG_FORMAT=json` writes each line of the service's

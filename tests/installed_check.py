@@ -182,6 +182,12 @@ def check_service() -> None:
         )
         command_output(env, scratch, "keys", "init")
         one_time = command_output(env, scratch, "users", "create-admin")
+        # The rules are a file of the package: the wheel must carry it.
+        rules = command_output(env, scratch, "alert-rules")
+        check(
+            rules.count("- alert: Mailbox") == 3,
+            "alert-rules printed no three alerts",
+        )
         process = subprocess.Popen(
             [program(SERVICE), "serve"],
             env=env,

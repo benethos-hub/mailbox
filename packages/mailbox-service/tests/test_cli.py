@@ -164,6 +164,32 @@ def test_openapi_needs_no_key_and_no_oauth_app(
     assert err == ""
 
 
+def test_alert_rules_need_no_key_and_no_oauth_app(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+) -> None:
+    """A file for rule_files of Prometheus: one group, three alerts."""
+    monkeypatch.setenv("MAILBOX_SERVICE_KEY_PROVIDER", "file")
+    monkeypatch.delenv("MAILBOX_SERVICE_KEY_FILE", raising=False)
+    monkeypatch.setenv("MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_ID", "client-1")
+    monkeypatch.setenv(
+        "MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_SECRET_FILE", str(tmp_path / "none")
+    )
+    assert main(["alert-rules"]) == 0
+    out, err = capsys.readouterr()
+    assert err == "" and out.endswith("\n")
+    rules = [line for line in out.splitlines() if not line.startswith("#")]
+    assert rules[:3] == ["groups:", "  - name: mailbox", "    rules:"]
+    alerts = [line.strip() for line in rules if line.lstrip().startswith("- alert:")]
+    assert alerts == [
+        "- alert: MailboxAccountNeedsALook",
+        "- alert: MailboxSyncStalls",
+        "- alert: MailboxWebhookFails",
+    ]
+    assert "\t" not in out
+
+
 @pytest.mark.parametrize("command", [["openapi"], ["keys", "generate"]])
 def test_every_command_takes_the_settings_file(
     command: list[str], tmp_path: Path, capsys: pytest.CaptureFixture[str]
