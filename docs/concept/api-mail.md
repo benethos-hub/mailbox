@@ -43,7 +43,7 @@ does not exist yet, such as the last round before the first, is no
 series, never 0. A deleted account is gone from the next answer. The
 figures live in memory and start again after a restart. The route
 answers `404` until `MAILBOX_SERVICE_METRICS=true`. How to scrape it
-and three alerts: [containers/production/README.md](../../containers/production/README.md).
+and three alerts: [containers/production/README.md](../../containers/production/README.md#monitoring-with-prometheus).
 
 **Decided 2026-11-22:** a right of its own, `get_metrics`, a right of
 the service, since `GET /v1/status` hands out the address and the text
