@@ -328,6 +328,9 @@ that adds a module, a package, a library or a seam.
   `domain/mailbox/`, also when it goes through the API. A test that
   checks several layers at once, such as a backup through the command
   line down to the database file, goes to `tests/integration/`.
+  The tests run on up to eight processes (pytest-xdist, `addopts` in
+  `pyproject.toml`). `-n 0` runs them in one, e.g. for a debugger or
+  `-s`.
 - Coverage floor 80%: `uv run pytest --cov --cov-fail-under=80`.
 - Lint and format: `uv run ruff check .` and `uv run ruff format .`.
 - Types: `uv run mypy`.

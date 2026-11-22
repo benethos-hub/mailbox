@@ -54,12 +54,13 @@ and the open questions.
 | Crypto | `cryptography` (AES-256-GCM), `keyring` |
 | Mail | IMAPClient, imap-tools (parser), smtplib, poplib, httpx (JMAP, Graph, Gmail), dnspython, defusedxml and publicsuffixlist (autodiscovery), idna |
 | MCP | `mcp` 2.x |
-| Quality | pytest, pytest-asyncio, pytest-cov (≥ 80 %), ruff, mypy, GitHub Actions, CodeQL and hadolint under Code scanning |
+| Quality | pytest, pytest-asyncio, pytest-cov (≥ 80 %), pytest-xdist, ruff, mypy, GitHub Actions, CodeQL and hadolint under Code scanning |
 | Container | non-root image, compose file bound to the loopback address |
 
 ## 10. Testing
 
-- **Offline suite is the gate.** No test reaches a mail server.
+- **Offline suite is the gate.** No test reaches a mail server. It runs
+  on up to eight processes at once.
 - API tests run against the `memory` adapter through `TestClient`.
 - IMAP adapter tests use a fake `IMAPClient` object at the library boundary.
   A Stalwart container, `containers/test-mail-server/` (since

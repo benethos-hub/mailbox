@@ -30,14 +30,18 @@ ADAPTERS = [
     (MemoryProvider, EVERY - {Watches, Deltas}),
     (Pop3Provider, {Deletes, Sends}),
 ]
+# The name of each case is the adapter's alone: a set of classes is
+# written in an order that differs from process to process, and the
+# processes of a parallel run must collect the same cases.
+NAMES = [adapter.__name__ for adapter, _ in ADAPTERS]
 
 
-@pytest.mark.parametrize(("adapter", "able"), ADAPTERS, ids=str)
+@pytest.mark.parametrize(("adapter", "able"), ADAPTERS, ids=NAMES)
 def test_each_adapter_implements_what_it_can(adapter: type, able: set[type]) -> None:
     assert {p for p in PROTOCOLS if issubclass(adapter, p)} == able
 
 
-@pytest.mark.parametrize(("adapter", "able"), ADAPTERS, ids=str)
+@pytest.mark.parametrize(("adapter", "able"), ADAPTERS, ids=NAMES)
 def test_each_adapter_says_whether_its_ids_stay(adapter: type, able: set[type]) -> None:
     # IMAP and POP3 ids name a place, and the domain maps them.
     assert adapter.stable_ids is (adapter not in (ImapProvider, Pop3Provider))

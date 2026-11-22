@@ -28,6 +28,8 @@ dev = [
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4",
     "pytest-cov>=7.1.0",
+    # The tests on up to eight processes (addopts below).
+    "pytest-xdist>=3.8.0",
     "ruff>=0.15.19",
     "mypy>=2.1.0",
     # Gives back the `mcp` command, whose `mcp dev` runs a server against the
@@ -61,7 +63,10 @@ filterwarnings = [
 # Each async fixture gets the loop of its test. Unset, pytest-asyncio warns.
 asyncio_default_fixture_loop_scope = "function"
 # The packages have tests with the same file names (test_cli.py, ...).
-addopts = "--import-mode=importlib"
+# The tests run on one process per core, eight at most: the whole suite
+# gains nothing beyond eight, and a small run grows slower with more. A
+# runner with four cores takes four. -n 0 runs them in one process.
+addopts = "--import-mode=importlib -n auto --maxprocesses 8"
 
 [tool.coverage.run]
 source = [
