@@ -919,6 +919,30 @@ async def test_a_marked_inbox_invoice_moved_later_is_still_filed(
     assert len(invoices_world.fake_gateway.requests) == 1
 
 
+async def test_a_marked_inbox_invoice_moved_while_the_feed_expired_is_filed(
+    invoices_world: Wired,
+) -> None:
+    """Its update fell into the gap of a feed that expired. The backfill
+    takes up new messages only, so the open item is looked at anew."""
+    invoices_world.fake_gateway.answer(
+        answer("invoice", "please find attached invoice INV-77")
+    )
+    marking = worker(invoices_world, agent())
+    await marking.run_pass()
+    await run(invoices_world, "inv-unlisted", agent())
+
+    mail(invoices_world, "inv-unlisted")["folder_ids"] = ["inv-hosting"]
+    invoices_world.store.set_cursor("stale", invoices_world.clock())
+    invoices_world.service.expired.add("stale")
+    await marking.run_pass()
+
+    assert mail(invoices_world, "inv-unlisted")["folder_ids"] == [
+        "inv-hosting/Rechnungen"
+    ]
+    found = item(invoices_world, "inv-unlisted")
+    assert found is not None and found.reason == "filed"
+
+
 def test_a_stranger_cannot_blow_up_the_call() -> None:
     """Subject, name and attachments are the sender's choice: each is cut,
     the same for the model and for the evidence check."""

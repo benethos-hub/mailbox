@@ -83,9 +83,17 @@ class Outcome(StrEnum):
     PRESENT = "present"  # its result was already there
     RECORDED = "recorded"  # the stage does not allow it, it was recorded only
     REFUSED = "refused"  # the executor or the mailbox service refused it
+    # refused as the message lies in the trash, junk or spam, where the
+    # owner put it: no failure, and no action of an agent comes there
+    DISCARDED = "discarded"
     # a folder for a move not taken, not made, or a move of a message the
     # agent moved once before, where the owner's folder stands
     SKIPPED = "skipped"
+
+
+class _DiscardedError(Exception):
+    """The message lies in the trash, junk or spam, where the owner put
+    it: no action of an agent is taken there."""
 
 
 class _OwnersChoiceError(Exception):
@@ -200,7 +208,7 @@ class Executor:
             outcome = await self._run(replace(request, held=True) if held else request)
             outcomes.append(outcome)
             if request.action in _FOLDER_ACTIONS:
-                if outcome in (Outcome.REFUSED, Outcome.SKIPPED):
+                if outcome in (Outcome.REFUSED, Outcome.DISCARDED, Outcome.SKIPPED):
                     break
                 if outcome is Outcome.RECORDED:
                     recorded.add(request.ref)
@@ -238,13 +246,8 @@ class Executor:
             planned = await self._plan(request, message)
         except (ActionRefusedError, MailboxRefusedError) as exc:
             return self._refused(request, exc)
-        except _OwnersChoiceError:
-            # Settled, not refused: no warning and no failure counted, as an
-            # update that asks for the move again comes with every change.
-            record(
-                actions.Kept(agent=self.agent.name, message_id=request.ref.message_id)
-            )
-            return Outcome.SKIPPED
+        except (_OwnersChoiceError, _DiscardedError) as exc:
+            return self._settled(request, exc)
         if planned is None:
             return Outcome.PRESENT
         executed = (
@@ -315,6 +318,33 @@ class Executor:
     ) -> Outcome:
         """Log the refusal and count it. Answers ``REFUSED``, and raises the
         error again when the message is not there any more."""
+        self._log_refused(request, exc)
+        self.metrics.step_failed(exc.code)
+        if isinstance(exc, MessageGoneError):
+            raise exc
+        return Outcome.REFUSED
+
+    def _settled(
+        self, request: ActionRequest, exc: _OwnersChoiceError | _DiscardedError
+    ) -> Outcome:
+        """An action the owner's choice settles, not refused: no failure
+        counted. A move asked again of a message moved once is not taken,
+        without a warning, as an update that asks for it comes with every
+        change. An action on a message in the trash, junk or spam is logged
+        as refused, and the caller notes it so it is not asked again."""
+        if isinstance(exc, _OwnersChoiceError):
+            record(
+                actions.Kept(agent=self.agent.name, message_id=request.ref.message_id)
+            )
+            return Outcome.SKIPPED
+        self._log_refused(
+            request, ActionRefusedError("the message is in the trash, junk or spam")
+        )
+        return Outcome.DISCARDED
+
+    def _log_refused(
+        self, request: ActionRequest, exc: ActionRefusedError | MailboxRefusedError
+    ) -> None:
         record(
             actions.Refused(
                 agent=self.agent.name,
@@ -323,10 +353,6 @@ class Executor:
                 error=exc,
             )
         )
-        self.metrics.step_failed(exc.code)
-        if isinstance(exc, MessageGoneError):
-            raise exc
-        return Outcome.REFUSED
 
     def _admissible(self, request: ActionRequest) -> None:
         if request.action not in self.agent.actions:
@@ -352,7 +378,7 @@ class Executor:
         already there."""
         account = request.ref.account_id
         if await self._in_forbidden(account, message):
-            raise ActionRefusedError("the message is in the trash, junk or spam")
+            raise _DiscardedError
         if request.action is Action.MOVE_TO_FOLDER:
             path = request.folder or ""  # never empty, _admissible checked it
             folder = await self._mailbox.folder_at(account, path)

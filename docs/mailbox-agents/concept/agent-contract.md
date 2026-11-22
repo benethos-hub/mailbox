@@ -108,7 +108,9 @@ The runtime carries out an action only on these terms: it is declared, a
 keyword is the agent's own, a move goes into a folder that exists and is
 neither the trash, junk or spam nor below them, the message itself is in
 none of them nor in a folder below one, and the account is one the agent
-works on. The path of a folder, for a move or to be made, is names between
+works on. A message in one of them is the owner's choice: its action is
+logged as refused and not counted as a failure, and the runtime notes it
+so an item of it is not asked about again. The path of a folder, for a move or to be made, is names between
 slashes: one that starts or ends with a slash, holds two in a row or names
 `.` or `..` is refused, whatever the agent may make. A folder is made only when the agent's `may_create` answers yes
 for its path, the folder above it exists and is none of those three nor

@@ -21,7 +21,7 @@ import pytest
 
 import benethos_mailbox_agents
 
-from .agents_helpers import PACKAGE_DIR
+from .agents_helpers import PACKAGE_DIR, ROOT
 
 PACKAGE = "benethos_mailbox_agents"
 SOURCE = Path(benethos_mailbox_agents.__file__).parent
@@ -194,13 +194,11 @@ def test_every_layer_has_a_row() -> None:
     assert layers == set(MAY_IMPORT)
 
 
-LIVE = SOURCE.parent.parent / "live"
+LIVE = ROOT / "live" / "mailbox-agents"
+LIVE_SCRIPTS = sorted(LIVE.rglob("*.py"))
 
 
-@pytest.mark.parametrize("path", sorted(LIVE.glob("*.py")), ids=lambda p: p.name)
-def test_a_live_script_imports_nothing_of_the_command_line(path: Path) -> None:
-    """A live script works with the runtime, as the command line does, not
-    through it."""
+def _imports_nothing_of_the_command_line(path: Path) -> None:
     for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
         if isinstance(node, ast.ImportFrom) and node.module:
             names = [node.module]
@@ -211,6 +209,29 @@ def test_a_live_script_imports_nothing_of_the_command_line(path: Path) -> None:
         for name in names:
             assert name != f"{PACKAGE}.cli", f"{path.name} imports {name}"
             assert not name.startswith(f"{PACKAGE}.cli."), f"{path.name} imports {name}"
+
+
+def test_the_live_scripts_are_found() -> None:
+    """The scripts of live/mailbox-agents are there to be held, so the test
+    below never passes over an empty list."""
+    assert len(LIVE_SCRIPTS) >= 5
+
+
+@pytest.mark.parametrize(
+    "path", LIVE_SCRIPTS, ids=lambda p: p.relative_to(LIVE).as_posix()
+)
+def test_a_live_script_imports_nothing_of_the_command_line(path: Path) -> None:
+    """A live script works with the runtime, as the command line does, not
+    through it."""
+    _imports_nothing_of_the_command_line(path)
+
+
+def test_an_import_of_the_command_line_is_caught(tmp_path: Path) -> None:
+    script = tmp_path / "script.py"
+    script.write_text(f"from {PACKAGE}.cli import main\n", encoding="utf-8")
+
+    with pytest.raises(AssertionError):
+        _imports_nothing_of_the_command_line(script)
 
 
 # Where an HTTP status may be read: the modules of the upstreams, and the

@@ -34,6 +34,7 @@ from ...records import (
     DISCARD_ROLES,
     KEYWORD_REMOVED,
     LABEL,
+    MESSAGE_DISCARDED,
     MESSAGE_GONE,
     Decision,
     Event,
@@ -51,10 +52,9 @@ EXPECTS, NO_REPLY, INCOMING = "expects_reply", "no_reply", "incoming"
 # Why an item closes when a later message of its thread comes: a reply of
 # another sender, or a new message of its own sender.
 REPLIED, FOLLOWED_UP = "replied", "followed_up"
-# Why an item closes when its message went to the trash, junk or spam.
-DISCARDED = "discarded"
 # The items the tick takes the keyword off while it is still noted as set.
-# One closed as keyword_removed or message_gone is never asked about.
+# One closed as keyword_removed, message_gone or discarded is never asked
+# about.
 CLOSED_WITH_KEYWORD = (REPLIED, FOLLOWED_UP)
 
 
@@ -231,7 +231,7 @@ class AwaitingReply(Agent):
         if item is None or not item.is_open:
             return []
         if any(folder.role in DISCARD_ROLES for folder in message.folders):
-            await context.items.close(message.ref, DISCARDED)
+            await context.items.close(message.ref, MESSAGE_DISCARDED)
         elif item.keyword_set and not message.has_keyword(self.keyword):
             await context.items.close(message.ref, KEYWORD_REMOVED)
         return []

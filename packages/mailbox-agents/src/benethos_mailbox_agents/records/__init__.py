@@ -4,7 +4,7 @@ what reads a field."""
 from __future__ import annotations
 
 from .decisions import LABEL, Decision, Evidence, Step, StepResult
-from .items import KEYWORD_REMOVED, MESSAGE_GONE, OpenItem
+from .items import KEYWORD_REMOVED, MESSAGE_DISCARDED, MESSAGE_GONE, OpenItem
 from .mail import (
     DISCARD_ROLES,
     EVENTS,
@@ -22,6 +22,7 @@ __all__ = [
     "EVENTS",
     "KEYWORD_REMOVED",
     "LABEL",
+    "MESSAGE_DISCARDED",
     "MESSAGE_GONE",
     "Address",
     "Attachment",

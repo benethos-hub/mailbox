@@ -9,13 +9,15 @@ from pydantic import BaseModel, ConfigDict
 
 from .mail import MessageRef
 
-__all__ = ["KEYWORD_REMOVED", "MESSAGE_GONE", "OpenItem"]
+__all__ = ["KEYWORD_REMOVED", "MESSAGE_DISCARDED", "MESSAGE_GONE", "OpenItem"]
 
 # Why an item closed, where more than one module reads it. A person took
 # the keyword off, so the item never starts again.
 KEYWORD_REMOVED = "keyword_removed"
 # The message is not there any more.
 MESSAGE_GONE = "message_gone"
+# The message went to the trash, junk or spam, where no keyword is set.
+MESSAGE_DISCARDED = "discarded"
 
 
 class OpenItem(BaseModel):

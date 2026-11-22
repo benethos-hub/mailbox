@@ -32,6 +32,23 @@ adheres to [Semantic Versioning](https://semver.org/).
   newest looked like every message, and an invoice outside them was
   missing from the senders without a word.
 
+### Fixed
+
+- `benethos-mailbox-agents`: `awaiting_reply` no longer asks the service
+  about an item on every tick for good. An item closed by a reply whose
+  sent message was deleted or put into the trash, junk or spam before
+  the tick took its keyword off, and an item due whose message lies
+  there, each came back with a request and a failure counted every 15
+  minutes. The keyword now counts as gone with the message, and the item
+  due closes as `discarded`. An action on a message in the trash, junk
+  or spam is no longer counted as a failure.
+- `benethos-mailbox-agents`: after the change feed answered
+  `410 changes_expired`, the agents look at each open item again. Before,
+  the backfill took up only new messages, and an update in the gap was
+  lost: an invoice marked in the inbox and moved into a folder `invoices`
+  looks in was never filed, and a keyword taken off for `awaiting_reply`
+  went unseen.
+
 ### Security
 
 - `benethos-mailbox-agents`: a sender pattern of `sorting` is matched in
