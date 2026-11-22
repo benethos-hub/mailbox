@@ -30,6 +30,22 @@
     "FORMAT": {
       "value": "%(asctime)s %(levelname)-8s %(name)s: %(message)s"
     },
+    "FieldsOf": {
+      "source": "Callable[[logging.LogRecord], dict[str, object] | None]"
+    },
+    "Json": {
+      "bases": [
+        "benethos_mailbox_common.log.lines.Redacting"
+      ],
+      "methods": {
+        "__init__": {
+          "signature": "(self, fields_of: 'FieldsOf | None' = None) -> 'None'"
+        },
+        "format": {
+          "signature": "(self, record: 'logging.LogRecord') -> 'str'"
+        }
+      }
+    },
     "LEVELS": {
       "source": "{\n    \"critical\": logging.CRITICAL,\n    \"error\": logging.ERROR,\n    \"warning\": logging.WARNING,\n    \"info\": logging.INFO,\n    \"debug\": logging.DEBUG,\n    \"trace\": 5,\n}"
     },

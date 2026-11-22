@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import json
 import logging
 import re
 import sys
@@ -15,6 +16,7 @@ from benethos_mailbox_common.log.lines import (
     FORMAT,
     SOURCE_WIDTH,
     Console,
+    Json,
     Redacting,
     colours_wanted,
     formatter,
@@ -132,3 +134,56 @@ def test_the_handler_writes_to_stderr(monkeypatch: pytest.MonkeyPatch) -> None:
     handler.emit(_record())
     assert stream.getvalue().endswith(f"INFO     {PACKAGE}.server: started\n")
     assert isinstance(stderr_handler(PACKAGE, colours=True).formatter, Console)
+
+
+def test_a_json_line_is_one_line_with_its_fields() -> None:
+    record = _record(message="first\nsecond")
+    try:
+        raise RuntimeError("boom")
+    except RuntimeError:
+        record.exc_info = sys.exc_info()
+    line = Json().format(record)
+    assert "\n" not in line
+    found = json.loads(line)
+    assert found["time"] == Redacting().formatTime(record)
+    assert (found["level"], found["source"]) == ("INFO", f"{PACKAGE}.server")
+    assert found["message"] == "first\nsecond"
+    assert found["traceback"].endswith("RuntimeError: boom")
+
+
+def test_a_json_line_without_a_traceback_has_no_such_field() -> None:
+    assert "traceback" not in json.loads(Json().format(_record()))
+
+
+def test_a_program_adds_fields_but_replaces_none() -> None:
+    def fields(record: logging.LogRecord) -> dict[str, object] | None:
+        return {"status": 200, "message": "not this"} if record.name == "x" else None
+
+    found = json.loads(Json(fields).format(_record("x")))
+    assert (found["status"], found["message"]) == (200, "started")
+    assert "status" not in json.loads(Json(fields).format(_record()))
+
+
+def test_a_json_line_masks_a_secret_before_encoding_it() -> None:
+    """JSON writes a quote, a backslash and a line break anew: masking
+    the finished line would miss a secret holding one."""
+    secret = 'pa"ss\\wörd\nline'
+    redact.note(secret)
+    record = _record(message=f"echoed {secret}")
+    try:
+        raise RuntimeError(f"raised {secret}")
+    except RuntimeError:
+        record.exc_info = sys.exc_info()
+    line = Json(lambda _: {"path": f"/x/{secret}"}).format(record)
+    found = json.loads(line)
+    assert found["message"] == "echoed ***"
+    assert found["traceback"].endswith("RuntimeError: raised ***")
+    assert found["path"] == "/x/***"
+    assert "wörd" not in line
+
+
+def test_a_json_line_masks_a_secret_in_the_arguments() -> None:
+    redact.note("an-argument-secret")
+    record = _record(message="sent %s")
+    record.args = ("an-argument-secret",)
+    assert json.loads(Json().format(record))["message"] == "sent ***"

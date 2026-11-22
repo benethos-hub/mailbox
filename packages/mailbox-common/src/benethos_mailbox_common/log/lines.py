@@ -3,13 +3,16 @@
 noted secret masked (``redact``).
 
 On a terminal a line is short and in colour, elsewhere, in a container
-log or the journal, plain text. What a program logs, and its own kinds
-of lines such as the access line of a web server, stay its own: it
-hands ``Console`` a ``line_of`` for them.
+log or the journal, plain text. A program may write each line as one
+JSON object instead (``Json``), for a log collector. What a program
+logs, and its own kinds of lines such as the access line of a web
+server, stay its own: it hands ``Console`` a ``line_of`` and ``Json`` a
+``fields_of`` for them.
 """
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import sys
@@ -47,6 +50,8 @@ SOURCE_WIDTH = 32
 
 # A program's own text for a record, None for the message as it is.
 LineOf = Callable[[logging.LogRecord], str | None]
+# A program's own fields of a record in a JSON line, None for none.
+FieldsOf = Callable[[logging.LogRecord], dict[str, object] | None]
 
 
 def log_time(value: datetime) -> str:
@@ -110,6 +115,37 @@ class Console(Redacting):
         if record.exc_info:
             text += "\n" + self.formatException(record.exc_info)
         return redact.redact(head + text)
+
+
+class Json(Redacting):
+    """Each line as one JSON object, for a log collector: ``time`` as
+    every line writes it, ``level``, ``source`` (the logger's whole
+    name), ``message``, ``traceback`` where there is one, and the fields
+    ``fields_of`` gives, which never replace these. A noted secret is
+    masked in each text before it is encoded, since JSON writes quotes,
+    backslashes and line breaks anew."""
+
+    def __init__(self, fields_of: FieldsOf | None = None) -> None:
+        super().__init__()
+        self._fields_of = fields_of
+
+    def format(self, record: logging.LogRecord) -> str:
+        found: dict[str, object] = {
+            "time": self.formatTime(record),
+            "level": record.levelname,
+            "source": record.name,
+            "message": record.getMessage(),
+        }
+        if record.exc_info:
+            found["traceback"] = self.formatException(record.exc_info)
+        own = self._fields_of(record) if self._fields_of is not None else None
+        for key, value in (own or {}).items():
+            found.setdefault(key, value)
+        masked = {
+            key: redact.redact(value) if isinstance(value, str) else value
+            for key, value in found.items()
+        }
+        return json.dumps(masked, ensure_ascii=False)
 
 
 def formatter(

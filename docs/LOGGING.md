@@ -108,9 +108,18 @@ past tense, in this order:
   is one.
 
 Ids are written in full. A person searches the log page for an id
-copied from a page, and a prefix would not match. The format has no
-key-value pairs and no JSON, since the log page searches text and a
-person reads it.
+copied from a page, and a prefix would not match. The message has no
+key-value pairs, since the log page searches text and a person reads
+it.
+
+`MAILBOX_SERVICE_LOG_FORMAT=json` writes each line on stderr as one JSON
+object instead, for a log collector: `time` as rule 6.9 says, `level`,
+`source` with the package's name, `message`, the same sentence, and
+`traceback` where there is one. An access line adds `method`, `path`
+without its query, `status` as a number and `client`. A noted secret is
+masked in each field before it is encoded. The log page shows text
+either way. **Decided 2026-11-22:** JSON as an option for the service,
+text stays the default. The MCP server has no such setting.
 
 ## 4. What never goes into a line
 
@@ -198,7 +207,7 @@ defence, not the first: a line is written as if there were no masking.
    every place and in every format: ISO 8601, the local time of the
    machine, to the millisecond, with the offset:
    `2026-09-30T10:12:22.123+02:00`. That holds for the plain lines, the
-   console, the log page, the MCP server's log and a time inside a
+   console, the JSON lines, the log page, the MCP server's log and a time inside a
    message, such as the end of a purge. `log_time` in `log/lines.py` of
    `mailbox-common` writes it. **Decided 2026-09-30.**
 10. **An activity is one line.** A name or an address a caller chose may

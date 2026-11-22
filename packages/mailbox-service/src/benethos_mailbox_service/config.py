@@ -60,6 +60,9 @@ class Settings(files.FileSettings):
     log_level: Literal["critical", "error", "warning", "info", "debug", "trace"] = (
         "info"
     )
+    # Each line of the log on stderr as text, or as one JSON object for a
+    # log collector. The log page shows text either way.
+    log_format: Literal["text", "json"] = "text"
     # Where the database lives. Without it the data folder that `paths`
     # names. A relative path counts from the folder of the settings file.
     data_dir: Path = DATA_DIR
@@ -168,7 +171,7 @@ class Settings(files.FileSettings):
     oauth_google_client_secret: SecretStr | None = None
     oauth_google_client_secret_file: Path | None = None
 
-    @field_validator("log_level", mode="before")
+    @field_validator("log_level", "log_format", mode="before")
     @classmethod
     def _lower(cls, value: object) -> object:
         return value.lower() if isinstance(value, str) else value

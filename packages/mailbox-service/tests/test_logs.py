@@ -2,16 +2,19 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import logging.config
 import re
 
 import pytest
+from pydantic import ValidationError
 
 from benethos_mailbox_common.log import redact
 from benethos_mailbox_common.log.lines import LEVELS, SOURCE_WIDTH
 from benethos_mailbox_service import logs
 from benethos_mailbox_service.assembly import Services
+from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.logbook import LogBook
 from benethos_mailbox_service.data.models import Grant
 
@@ -199,3 +202,56 @@ def test_an_access_line_masks_the_secret_of_a_link(
     assert "/v1/links/…" in err and link_key not in err
     [entry] = book.newest_first()
     assert link_key not in entry.message
+
+
+# --- as JSON for a log collector ------------------------------------------------------
+
+
+def json_lines(err: str) -> list[dict[str, object]]:
+    """Every line on stderr, each one JSON object."""
+    return [json.loads(line) for line in err.splitlines()]
+
+
+def test_as_json_every_line_is_one_object(capsys: pytest.CaptureFixture[str]) -> None:
+    logging.config.dictConfig(logs.log_config("info", form="json"))
+    logging.getLogger(f"{logs.PACKAGE}.domain.auth").info("signed in\nagain")
+    logging.getLogger("uvicorn.error").info("Application startup complete.")
+    service, server = json_lines(capsys.readouterr().err)
+    assert service["source"] == f"{logs.PACKAGE}.domain.auth"
+    assert (service["level"], service["message"]) == ("INFO", "signed in\nagain")
+    assert server["source"] == "uvicorn.error"
+    assert "\033" not in str(server)
+
+
+def test_as_json_an_access_line_has_its_fields(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Without the query, and the secret of a link masked."""
+    link_key = "s3cr3t" * 21
+    book = LogBook()
+    logging.config.dictConfig(logs.log_config("info", book, form="json"))
+    access = logging.getLogger("uvicorn.access")
+    for path in ("/v1/messages?q=holiday", f"/v1/links/{link_key}?x=1"):
+        access.info(
+            '%s - "%s %s HTTP/%s" %d', "127.0.0.1:5000", "GET", path, "1.1", 200
+        )
+    err = capsys.readouterr().err
+    search, link = json_lines(err)
+    assert search["source"] == "uvicorn.access"
+    assert (search["method"], search["path"], search["status"]) == (
+        "GET",
+        "/v1/messages",
+        200,
+    )
+    assert search["client"] == "127.0.0.1:5000"
+    assert link["path"] == "/v1/links/…"
+    assert "holiday" not in err and link_key not in err
+    # The log page keeps its text.
+    assert all(not entry.message.startswith("{") for entry in book.newest_first())
+
+
+def test_the_lines_are_text_unless_asked() -> None:
+    assert Settings(storage="memory").log_format == "text"
+    assert Settings(storage="memory", log_format="JSON").log_format == "json"
+    with pytest.raises(ValidationError):
+        Settings(storage="memory", log_format="xml")
