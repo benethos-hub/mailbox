@@ -109,6 +109,8 @@ def test_the_hook_is_executable_in_the_repository() -> None:
         "config/benethos-mailbox-agents/sorting.json",
         "packages/mailbox-agents/tests/data/other.pem",
         "sicherung/März.db",
+        "containers/production/mailbox-agents/agents/sorting/sorting.json",
+        "containers/production/mailbox-agents/agents/inquiries/inquiries.json",
     ],
 )
 def test_refuses_files_that_never_belong(repo: Path, name: str) -> None:
@@ -134,6 +136,8 @@ def test_refuses_files_that_never_belong(repo: Path, name: str) -> None:
         "containers/production/mailbox-service/compose.yaml",
         "packages/mailbox-service/src/benethos_mailbox_service/data/secrets/keys.py",
         "packages/mailbox-service/src/benethos_mailbox_service/data/models/x.py",
+        "containers/production/mailbox-agents/agents/sorting/sorting.example.json",
+        "containers/production/mailbox-agents/agents/invoices/.env.example",
     ],
 )
 def test_lets_the_rest_pass(repo: Path, name: str) -> None:

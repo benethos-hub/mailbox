@@ -37,7 +37,8 @@ is fetched again by its id when it is needed.
 
 One exception, off by default: `MAILBOX_AGENTS_PROMPT_RETENTION_DAYS` above
 zero keeps the full request and answer of each model call for that many
-days, for finding an error. They are deleted after it.
+days, for finding an error. They are deleted after it, and the deleted
+rows are overwritten in the file and in its write-ahead log.
 
 There is no session store. No step carries a conversation from one call to
 the next. Context a decision needs, such as the thread, is fetched fresh.

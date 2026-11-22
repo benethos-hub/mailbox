@@ -334,6 +334,18 @@ def test_kept_calls_are_purged(store: Store) -> None:
     assert store.count_calls() == 1
 
 
+def test_a_purged_call_leaves_no_text_in_the_files(path: Path) -> None:
+    marker = "Marker-of-a-kept-call-7f3a"
+    with Store.open(path) as store:
+        store.add_call(REF, {"messages": [{"content": marker}]}, {}, NOW)
+        assert store.purge_calls(NOW + timedelta(days=1)) == 1
+
+    # Read only after the store is closed: Windows keeps an open file locked.
+    files = [path, *(path.with_name(path.name + end) for end in ("-wal", "-shm"))]
+    found = [f.name for f in files if f.exists() and marker.encode() in f.read_bytes()]
+    assert found == []
+
+
 def test_progress(store: Store) -> None:
     assert store.progress() is None
     store.set_progress(NOW)
