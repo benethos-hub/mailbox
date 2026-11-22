@@ -6,8 +6,9 @@ service's records then had no handler: below WARNING they were dropped,
 above they came without time or source. Libraries log from WARNING on,
 so a debug level shows the service without the IMAP commands of a
 library. The lines are those of ``benethos_mailbox_common.log.lines``, a
-secret the service holds masked in every one. The access line of
-uvicorn is the service's own.
+secret the service holds masked in every one: text, or with
+``MAILBOX_SERVICE_LOG_FORMAT=json`` one JSON object each. The access
+line of uvicorn is the service's own, and its fields in a JSON line.
 """
 
 from __future__ import annotations
