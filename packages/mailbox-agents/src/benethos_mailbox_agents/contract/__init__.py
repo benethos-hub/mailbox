@@ -16,7 +16,7 @@ from .agent import (
     Trigger,
 )
 from .context import Context, Items, Model, Reader
-from .registry import discover, load
+from .registry import discover, load_agent
 
 __all__ = [
     "REVERSED_BY",
@@ -33,5 +33,5 @@ __all__ = [
     "Shown",
     "Trigger",
     "discover",
-    "load",
+    "load_agent",
 ]
