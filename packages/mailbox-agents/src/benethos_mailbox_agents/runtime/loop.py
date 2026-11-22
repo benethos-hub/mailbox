@@ -40,12 +40,13 @@ from ..records import (
     MessageRef,
 )
 from ..store import Store
-from .actions import Executor, Outcome, Writer
+from .actions import Executor, Outcome
 from .metrics import Metrics
 from .model import Asker
 from .reader import ReadOnlyMailbox
 from .readiness import accounts_of
 from .steps import StepRunner, backoff, make_calls
+from .writer import Writer
 
 __all__ = ["BACKFILL_ROLES", "BATCH", "Upstream", "Worker"]
 
