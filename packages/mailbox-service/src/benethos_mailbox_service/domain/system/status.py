@@ -1,5 +1,6 @@
 """The state of the service, for the overview, the accounts list and the
-dots of the sidebar (docs/UI.md, sections 3 and 5), and `GET /v1/status`.
+dots of the sidebar (docs/UI.md, sections 3 and 5), `GET /v1/status`, and
+its figures for a monitor at `GET /v1/metrics`.
 
 It reads what the other services keep: the accounts, the sync state of
 each, the worker and the caller's webhooks. Nothing is asked of a
@@ -15,7 +16,7 @@ from ...errors import ForbiddenError, MailboxServiceError
 from ..accounts import AccountService
 from ..rights import Access
 from ..sync import SyncService, SyncState, SyncWorker, WorkerState
-from ..webhooks import WebhookService
+from ..webhooks import WebhookCounts, WebhookService
 
 
 @dataclass(frozen=True, slots=True)
@@ -55,6 +56,18 @@ class ServiceStatus:
     @property
     def failing(self) -> list[Webhook]:
         return [webhook for webhook in self.webhooks if webhook.last_error]
+
+
+@dataclass(frozen=True, slots=True)
+class Figures:
+    """The state of the service for a monitor: every account, whatever
+    the caller's grants reach, the worker and the webhooks of every user
+    as counts."""
+
+    accounts: list[AccountHealth]
+    # None when the worker is switched off.
+    worker: WorkerState | None
+    webhooks: WebhookCounts
 
 
 @dataclass(frozen=True, slots=True)
@@ -98,6 +111,17 @@ class StatusService:
         accounts = self._healths(self._accounts.list(access, may="get_status"), worker)
         return ServiceStatus(
             accounts=accounts, worker=worker, webhooks=self._own_webhooks(access)
+        )
+
+    def figures(self, access: Access) -> Figures:
+        """Every account, the worker and the counts of the webhooks.
+        Nothing is asked of a provider for it."""
+        access.require("get_metrics")
+        worker = self._worker.state() if self._worker is not None else None
+        return Figures(
+            accounts=self._healths(self._accounts.every(access), worker),
+            worker=worker,
+            webhooks=self._webhooks.counts(access),
         )
 
     def healths(

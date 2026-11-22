@@ -10,6 +10,7 @@ and kept sealed with the data key.
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import datetime
 from urllib.parse import urlsplit
 
@@ -44,6 +45,16 @@ SECRET_PREFIX = "whsec_"
 def sealed_label(webhook_id: str) -> str:
     """What a webhook's secret is bound to when sealed."""
     return f"webhook:{webhook_id}"
+
+
+@dataclass(frozen=True, slots=True)
+class WebhookCounts:
+    """The webhooks of every user, counted for the figures of the
+    service."""
+
+    total: int
+    # Those whose last post failed.
+    failing: int
 
 
 class WebhookService:
@@ -119,6 +130,14 @@ class WebhookService:
             and (account is None or hook.accounts is None or account in hook.accounts)
             and (failing is None or (hook.last_error is not None) == failing)
         ]
+
+    def counts(self, access: Access) -> WebhookCounts:
+        """How many webhooks there are, of every user, and how many of
+        them fail."""
+        access.require("get_metrics")
+        hooks = [record.webhook for record in self._repository.list()]
+        failing = sum(1 for hook in hooks if hook.last_error is not None)
+        return WebhookCounts(total=len(hooks), failing=failing)
 
     def get_webhook(self, access: Access, webhook_id: str) -> WebhookDetail:
         """One of the caller's own webhooks, with its last posts, newest

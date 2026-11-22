@@ -1,18 +1,19 @@
 """The service at a glance: the status of accounts, sync and webhooks
-(``StatusService``), the recovery key (``RecoveryKey``) and the newest
-lines of the log (``ServiceLog``).
+and its figures for a monitor (``StatusService``), the recovery key
+(``RecoveryKey``) and the newest lines of the log (``ServiceLog``).
 """
 
 from __future__ import annotations
 
 from .recovery import RecoveryKey
 from .servicelog import LEVELS, ServiceLog
-from .status import AccountHealth, Attention, ServiceStatus, StatusService
+from .status import AccountHealth, Attention, Figures, ServiceStatus, StatusService
 
 __all__ = [
     "LEVELS",
     "AccountHealth",
     "Attention",
+    "Figures",
     "ServiceStatus",
     "RecoveryKey",
     "ServiceLog",
