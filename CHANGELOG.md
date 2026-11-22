@@ -60,6 +60,12 @@ adheres to [Semantic Versioning](https://semver.org/).
   `MAILBOX_AGENTS_PROMPT_RETENTION_DAYS` is overwritten when it is
   deleted after that time. Before, the text of its mail stayed readable
   in the free space of the state file and its write-ahead log.
+- `benethos-mailbox-service`: a line of its log writes the control
+  characters U+0080 to U+009F, the marks that turn the direction of the
+  text and a lone surrogate as their escapes, as it wrote line breaks
+  already. Before, a name an account or a client chose could hold a
+  command for the terminal that showed the log, turn the line around,
+  or make the log drop the line.
 
 ## [0.10.0] - 2026-11-22
 
