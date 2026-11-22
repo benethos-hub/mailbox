@@ -4,7 +4,7 @@ A mail server, a mailbox service and a model gateway of their own, for the
 live checks in `live/mailbox-agents/`. Nothing here reaches a real mailbox:
 [Stalwart](https://stalw.art) holds one account made for the agents,
 `agents@agents.test`, filled with invented mail, and the mailbox service is
-the published image `ghcr.io/benethos-hub/benethos-mailbox-service`. The
+built from this checkout, the version of the agents beside it. The
 gateway is [LiteLLM](https://docs.litellm.ai) in front of Claude and of
 local models under [llama.cpp](https://github.com/ggml-org/llama.cpp). It
 is a manual aid, never part of `uv run pytest`.
@@ -27,6 +27,15 @@ or in WSL. From the repository:
 
 ```
 sh containers/live/mailbox-agents/setup.sh
+```
+
+The mailbox service is built from the checkout, since the agents take
+the service of their own minor version only, and on a branch before a
+release no published image has it. To pull a published release
+instead:
+
+```
+LIVE_SERVICE=published MAILBOX_SERVICE_VERSION=0.10.0 sh containers/live/mailbox-agents/setup.sh
 ```
 
 The script makes everything anew each time. It removes the volumes of an

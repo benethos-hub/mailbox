@@ -45,7 +45,6 @@ code.
 | Document | What it holds |
 |---|---|
 | [ARCHITECTURE.md](ARCHITECTURE.md) | The layers, the modules and the design decisions behind them. |
-| [COMPATIBILITY.md](COMPATIBILITY.md) | Which releases of the mailbox service each release works with. |
 | [LOGGING.md](LOGGING.md) | What an agent writes to its log, and the catalogue of every line. |
 | [RELEASING.md](../RELEASING.md) | The steps of a release, in order. |
 | [ROADMAP.md](../ROADMAP.md) | The phases, ideas and the open questions. |

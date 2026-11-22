@@ -27,8 +27,14 @@ services:
       - stalwart-etc:/etc/stalwart
       - stalwart-data:/var/lib/stalwart
 
+  # Built from this checkout, so it is the version of the agents beside it,
+  # also on a branch before a release. compose.published.yaml takes the
+  # published image instead (LIVE_SERVICE=published, README.md).
   mailbox-service:
-    image: ghcr.io/benethos-hub/benethos-mailbox-service:0.10.0@sha256:e101158a4745fa54ccff977784b0f9bdbc54bfcce68c33329a3c225098c8d928
+    image: benethos-mailbox-service:local
+    build:
+      context: ../../..
+      dockerfile: containers/images/mailbox-service/Dockerfile
     restart: unless-stopped
     read_only: true
     tmpfs:

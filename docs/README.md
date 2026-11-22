@@ -16,7 +16,7 @@ like the package. What holds for the whole repository stays here.
 | [mailbox-mcp](mailbox-mcp/) | [CONCEPT.md](mailbox-mcp/CONCEPT.md), sections 8 and 8.1 of the concept. [ARCHITECTURE.md](mailbox-mcp/ARCHITECTURE.md), its modules. Its tools as a client lists them, [mcp-tools.json](mailbox-mcp/mcp-tools.json). |
 | [mailbox-client](mailbox-client/) | [CONCEPT.md](mailbox-client/CONCEPT.md), section 8.2 of the concept. [ARCHITECTURE.md](mailbox-client/ARCHITECTURE.md), its modules. Its public interface, [client-interface.json](mailbox-client/client-interface.json). |
 | [mailbox-common](mailbox-common/) | [ARCHITECTURE.md](mailbox-common/ARCHITECTURE.md), its modules. Its public interface, [common-interface.json](mailbox-common/common-interface.json). |
-| [mailbox-agents](mailbox-agents/) | [CONCEPT.md](mailbox-agents/CONCEPT.md), the design of the agents, with sections of their own. [ARCHITECTURE.md](mailbox-agents/ARCHITECTURE.md), their layers. [LOGGING.md](mailbox-agents/LOGGING.md), their log. [COMPATIBILITY.md](mailbox-agents/COMPATIBILITY.md), which service each release takes. |
+| [mailbox-agents](mailbox-agents/) | [CONCEPT.md](mailbox-agents/CONCEPT.md), the design of the agents, with sections of their own. [ARCHITECTURE.md](mailbox-agents/ARCHITECTURE.md), their layers. [LOGGING.md](mailbox-agents/LOGGING.md), their log. |
 
 The section numbers of the concept and of the architecture count across
 the packages of the service: "CONCEPT 8.2" is in the client's folder,

@@ -311,7 +311,6 @@ docs/
     concept/              #   and per agent
     ARCHITECTURE.md       # the layers and modules of the agents
     LOGGING.md            # every activity of the agents' log
-    COMPATIBILITY.md      # which service each release takes
 packages/
   mailbox-service/            # the service, runs permanently
     CLAUDE.md             # the service's own rules

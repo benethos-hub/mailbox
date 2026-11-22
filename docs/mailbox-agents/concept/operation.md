@@ -7,9 +7,9 @@ Part of the [concept](../CONCEPT.md).
   for amd64 and arm64, once the CI of its commit on `main` is green. The
   tag is `v` and the version of `pyproject.toml`. A manual run is the
   trial: it checks the package without uploading and pushes the image as
-  `edge`. [RELEASING.md](../../RELEASING.md) has the steps, and
-  [COMPATIBILITY.md](../COMPATIBILITY.md) the releases of the mailbox
-  service each release works with.
+  `edge`. [RELEASING.md](../../RELEASING.md) has the steps. The agents
+  take the mailbox service of their own minor version
+  ([mailbox service](mailbox-service.md#the-version-of-the-service)).
 - **Container:** non-root (uid 10001), read-only root file system, no
   capabilities, `no-new-privileges`, one volume for the state file, the
   token and the key mounted as files and named in `*_FILE` settings, at

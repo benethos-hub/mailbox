@@ -8,8 +8,8 @@ __all__ = ["ServiceVersionError"]
 
 
 class ServiceVersionError(MailboxAgentError):
-    """The mailbox service runs a version outside the lines this package
-    is tested against, or names none that can be read. Nothing goes on
-    against it: what the service does there has not been measured."""
+    """The mailbox service runs another version than the agents take, or
+    names none that can be read. Nothing goes on against it: what the
+    service does there has not been measured with these agents."""
 
     code = "service_version"

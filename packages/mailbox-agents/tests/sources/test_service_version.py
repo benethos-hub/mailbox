@@ -1,6 +1,6 @@
-"""The version of the mailbox service: the tested lines, the check before
-every pass and every backfill, what the commands say, and the pins of the
-repository held to the lines. See docs/mailbox-agents/concept/mailbox-service.md."""
+"""The version of the mailbox service: the agents take the service of
+their own version, the check before every pass and every backfill, and
+what the commands say. See docs/mailbox-agents/concept/mailbox-service.md."""
 
 from __future__ import annotations
 
@@ -9,110 +9,110 @@ import re
 
 import pytest
 
+from benethos_mailbox_agents import __version__
 from benethos_mailbox_agents.cli import PROG, main
 from benethos_mailbox_agents.errors import (
     MailboxUnavailableError,
     ServiceVersionError,
 )
 from benethos_mailbox_agents.records import MessageRef
-from benethos_mailbox_agents.sources import mailbox as source
-from benethos_mailbox_agents.sources.mailbox import TESTED, is_tested, line_names
+from benethos_mailbox_agents.sources.mailbox import matches, taken
 
 from ..agents_fake import ACCOUNT, FakeService, wire_message
-from ..agents_helpers import DOCS, PACKAGE_DIR, ROOT, Wired, configure, worker
+from ..agents_helpers import PACKAGE_DIR, ROOT, Wired, configure, worker
 
-
-def _numbers(version: str) -> tuple[int, int, int]:
-    major, minor, patch = (int(part) for part in version.split(".")[:3])
-    return major, minor, patch
-
-
-# -- the lines ----------------------------------------------------------------------
+# -- the rule -----------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
     ("version", "expected"),
     [
-        ("0.7.5", True),
-        ("0.7.6", True),
-        ("0.7.12", True),
-        ("0.7.5+local", True),
-        ("0.7.6+build.1", True),
-        ("0.7.5rc1", False),
-        ("0.7.6.dev3", False),
-        ("0.7.5a1", False),
-        ("0.7.5-beta", False),
-        ("0.7.5+", False),
-        ("0.7.5 ", False),
-        ("0.7.4", False),
-        ("0.6.9", False),
-        ("0.8.0", False),
-        ("1.0.0", False),
-        ("7.5", False),
-        ("v0.7.5", False),
+        ("0.10.0", True),
+        ("0.10.1", True),
+        ("0.10.12", True),
+        ("0.10.0+local", True),
+        ("0.10.1+build.1", True),
+        ("0.10.0rc1", False),
+        ("0.10.1.dev3", False),
+        ("0.10.0a1", False),
+        ("0.10.0-beta", False),
+        ("0.10.0+", False),
+        ("0.10.0 ", False),
+        ("0.9.9", False),
+        ("0.11.0", False),
+        ("1.10.0", False),
+        ("10.0", False),
+        ("v0.10.0", False),
         ("unknown", False),
         ("", False),
     ],
 )
-def test_a_version_is_tested_in_its_line_from_the_lowest_release(
-    version: str, expected: bool, monkeypatch: pytest.MonkeyPatch
+def test_before_1_0_the_service_has_the_agents_minor_version(
+    version: str, expected: bool
 ) -> None:
-    monkeypatch.setattr(source, "TESTED", ((0, 7, 5),))
-
-    assert is_tested(version) is expected
+    """With another patch, and never as a pre-release."""
+    assert matches(version, "0.10.2") is expected
 
 
 @pytest.mark.parametrize(
     ("version", "expected"),
     [
-        ("0.7.5", True),
-        ("0.8.0", False),
         ("1.2.0", True),
-        ("1.2.3", True),
+        ("1.2.5", True),
         ("1.9.0", True),
         ("1.1.9", False),
-        ("2.0.0", False),
+        ("2.2.0", False),
+        ("0.2.0", False),
+        ("1.3.0rc1", False),
     ],
 )
-def test_a_line_is_the_major_version_from_1_on_and_several_can_be_tested(
-    version: str, expected: bool, monkeypatch: pytest.MonkeyPatch
+def test_from_1_0_the_service_has_the_agents_major_version_and_no_older_minor(
+    version: str, expected: bool
 ) -> None:
-    monkeypatch.setattr(source, "TESTED", ((0, 7, 5), (1, 2, 0)))
-
-    assert is_tested(version) is expected
-    assert line_names() == "0.7 from 0.7.5 and 1 from 1.2.0"
+    assert matches(version, "1.2.0") is expected
 
 
-def test_the_lines_are_in_order_and_each_once() -> None:
-    lines = [floor[:2] if floor[0] == 0 else floor[:1] for floor in TESTED]
+def test_a_pre_release_of_the_agents_takes_the_releases_of_its_minor() -> None:
+    assert matches("0.11.0", "0.11.0rc1")
+    assert matches("0.11.3", "0.11.0.dev2")
+    assert not matches("0.10.9", "0.11.0rc1")
 
-    assert TESTED
-    assert list(TESTED) == sorted(TESTED)
-    assert len(set(lines)) == len(lines)
+
+def test_what_the_agents_take_is_named_in_words() -> None:
+    assert taken("0.10.0") == "0.10"
+    assert taken("0.10.0rc1") == "0.10"
+    assert taken("1.2.3") == "1 from 1.2"
+
+
+def test_by_default_the_agents_compare_their_own_version() -> None:
+    major, minor = __version__.split(".")[:2]
+    assert matches(f"{major}.{minor}.0")
+    assert not matches(f"{major}.{int(minor) + 1}.0")
+    assert taken() == taken(__version__)
 
 
 # -- the check ----------------------------------------------------------------------
 
 
-async def test_a_service_in_a_tested_line_is_answered_with_its_version(
+async def test_a_service_that_matches_is_answered_with_its_version(
     world: Wired,
 ) -> None:
-    assert await world.mailbox.ensure_tested() == world.service.version
-    assert is_tested(world.service.version)
+    assert await world.mailbox.ensure_matching() == world.service.version
+    assert matches(world.service.version)
 
 
-def test_the_fake_service_runs_the_newest_tested_line() -> None:
-    assert FakeService().version == ".".join(map(str, TESTED[-1]))
+def test_the_fake_service_runs_the_agents_minor_version() -> None:
+    assert FakeService().version == ".".join(__version__.split(".")[:2]) + ".0"
 
 
-async def test_a_service_outside_the_lines_is_refused_by_name(world: Wired) -> None:
+async def test_a_service_that_does_not_match_is_refused_by_name(world: Wired) -> None:
     world.service.version = "0.99.0"
 
     with pytest.raises(ServiceVersionError) as raised:
-        await world.mailbox.ensure_tested()
+        await world.mailbox.ensure_matching()
 
     assert "'0.99.0'" in raised.value.message
-    assert line_names() in raised.value.message
+    assert f"take the service {taken()}" in raised.value.message
     assert raised.value.code == "service_version"
 
 
@@ -120,7 +120,7 @@ async def test_a_version_that_is_no_version_is_refused_and_cut(world: Wired) -> 
     world.service.version = "x" * 500
 
     with pytest.raises(ServiceVersionError) as raised:
-        await world.mailbox.ensure_tested()
+        await world.mailbox.ensure_matching()
 
     assert "x" * 40 in raised.value.message
     assert "x" * 41 not in raised.value.message
@@ -135,7 +135,7 @@ async def test_every_pass_asks_the_service_for_its_version(world: Wired) -> None
     assert world.service.health_asked == 2
 
 
-async def test_a_pass_against_another_line_reads_nothing_and_changes_nothing(
+async def test_a_pass_against_another_version_reads_nothing_and_changes_nothing(
     world: Wired,
 ) -> None:
     world.service.add(wire_message("m1", subject="Your invoice"))
@@ -163,7 +163,9 @@ async def test_a_service_replaced_between_two_passes_is_seen(world: Wired) -> No
     assert world.store.message(MessageRef(account_id=ACCOUNT, message_id="m1")) is None
 
 
-async def test_a_backfill_against_another_line_takes_nothing_up(world: Wired) -> None:
+async def test_a_backfill_against_another_version_takes_nothing_up(
+    world: Wired,
+) -> None:
     world.service.add(wire_message("m1", subject="Your invoice"))
     world.service.version = "0.99.0"
 
@@ -174,7 +176,7 @@ async def test_a_backfill_against_another_line_takes_nothing_up(world: Wired) ->
     assert world.store.counts()["pending"] == 0
 
 
-async def test_another_line_ends_the_loop(world: Wired) -> None:
+async def test_another_version_ends_the_loop(world: Wired) -> None:
     """A pass after it would be refused the same way, forever."""
     world.service.version = "0.99.0"
     run = worker(world, poll_seconds=0.01)
@@ -186,7 +188,7 @@ async def test_another_line_ends_the_loop(world: Wired) -> None:
 
 
 @pytest.mark.parametrize("health", ["no version", "refused"])
-async def test_a_service_that_names_no_version_is_outside_the_lines(
+async def test_a_service_that_names_no_version_does_not_match(
     world: Wired, health: str
 ) -> None:
     if health == "no version":
@@ -195,12 +197,12 @@ async def test_a_service_that_names_no_version_is_outside_the_lines(
         world.service.health_status = 404
 
     with pytest.raises(ServiceVersionError) as raised:
-        await world.mailbox.ensure_tested()
+        await world.mailbox.ensure_matching()
 
     assert raised.value.message.startswith(
         "the mailbox service names no version at /health"
     )
-    assert line_names() in raised.value.message
+    assert f"take the service {taken()}" in raised.value.message
 
 
 async def test_a_service_that_names_no_version_ends_the_loop(world: Wired) -> None:
@@ -214,7 +216,7 @@ async def test_a_service_that_names_no_version_ends_the_loop(world: Wired) -> No
     assert world.service.requests == []
 
 
-async def test_a_service_away_is_away_and_not_another_line(world: Wired) -> None:
+async def test_a_service_away_is_away_and_not_another_version(world: Wired) -> None:
     world.service.down = True
 
     with pytest.raises(MailboxUnavailableError):
@@ -224,7 +226,7 @@ async def test_a_service_away_is_away_and_not_another_line(world: Wired) -> None
 # -- the commands -------------------------------------------------------------------
 
 
-def test_run_against_another_line_is_an_error_to_correct(
+def test_run_against_another_version_is_an_error_to_correct(
     service: FakeService,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
@@ -266,13 +268,13 @@ def test_status_names_a_service_that_names_no_version(
 
     lines = capsys.readouterr().out.splitlines()
     assert lines[0] == (
-        "mailbox service names no version: not tested, no agent starts "
-        f"(tested: {line_names()})"
+        "mailbox service names no version: no match, no agent starts "
+        f"(the agents take {taken()})"
     )
     assert any(line.startswith("counting ") for line in lines)
 
 
-def test_backfill_against_another_line_is_an_error_to_correct(
+def test_backfill_against_another_version_is_an_error_to_correct(
     service: FakeService, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     configure(monkeypatch)
@@ -282,7 +284,7 @@ def test_backfill_against_another_line_is_an_error_to_correct(
     assert service.requests == []
 
 
-def test_status_names_the_service_and_its_line(
+def test_status_names_the_service_and_that_it_matches(
     service: FakeService,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
@@ -292,10 +294,12 @@ def test_status_names_the_service_and_its_line(
     assert main(["status"]) == 0
 
     first = capsys.readouterr().out.splitlines()[0]
-    assert first == f"mailbox service {service.version}: tested ({line_names()})"
+    assert first == (
+        f"mailbox service {service.version}: matches (the agents take {taken()})"
+    )
 
 
-def test_status_names_a_service_outside_the_lines(
+def test_status_names_a_service_that_does_not_match(
     service: FakeService,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
@@ -307,7 +311,7 @@ def test_status_names_a_service_outside_the_lines(
 
     first = capsys.readouterr().out.splitlines()[0]
     assert first == (
-        f"mailbox service 0.99.0: not tested, no agent starts (tested: {line_names()})"
+        f"mailbox service 0.99.0: no match, no agent starts (the agents take {taken()})"
     )
 
 
@@ -338,59 +342,21 @@ def test_status_without_a_service_named_asks_none(
 # -- the pins of the repository -----------------------------------------------------
 
 
-def test_the_client_is_pinned_to_the_newest_tested_line() -> None:
-    """The client is pinned to the release of the newest line, the same
-    one the agent accepts of the service, as the workspace releases them
-    together."""
+def test_the_client_is_pinned_to_the_agents_version() -> None:
+    """The agents and the client are released together, under one
+    version."""
     text = (PACKAGE_DIR / "pyproject.toml").read_text("utf-8")
-    found = re.search(r'"benethos-mailbox-client==(\d+\.\d+\.\d+)"', text)
 
-    assert found is not None
-    assert _numbers(found.group(1)) == TESTED[-1]
+    assert f'"benethos-mailbox-client=={_version()}"' in text
 
 
-def test_the_live_setup_runs_a_service_of_the_newest_tested_line() -> None:
-    text = (ROOT / "containers" / "live" / "mailbox-agents" / "compose.yaml").read_text(
-        "utf-8"
-    )
-    found = re.search(r"benethos-mailbox-service:(\d+\.\d+\.\d+)@sha256:", text)
-
-    assert found is not None
-    newest = TESTED[-1]
-    width = 2 if newest[0] == 0 else 1
-    assert is_tested(found.group(1))
-    assert _numbers(found.group(1))[:width] == newest[:width]
-
-
-def test_the_readme_names_the_tested_lines_and_the_service() -> None:
+def test_the_readme_says_which_service_the_agents_take() -> None:
     """A reader learns which service the agents need, and where it is,
     before installing anything."""
     text = " ".join((PACKAGE_DIR / "README.md").read_text("utf-8").split())
 
-    assert f"today {line_names()}," in text
-    assert "[mailbox service](https://github.com/benethos-hub/mailbox)" in text
-
-
-def test_the_compatibility_table_names_this_release_on_top() -> None:
-    """The newest row of docs/mailbox-agents/COMPATIBILITY.md is the version of
-    pyproject.toml, with the tested lines and the pin of the client."""
-    project = (PACKAGE_DIR / "pyproject.toml").read_text("utf-8")
-    version = re.search(r'^version = "([^"]+)"', project, re.MULTILINE)
-    pin = re.search(r'"benethos-mailbox-client(==[^"]+)"', project)
-    table = (DOCS / "COMPATIBILITY.md").read_text("utf-8")
-    rows = [
-        [cell.strip() for cell in line.strip().strip("|").split("|")]
-        for line in table.splitlines()
-        if line.startswith("| ") and not line.startswith("| Mailbox Agents")
-    ]
-
-    assert version is not None
-    assert pin is not None
-    assert rows
-    agents, service, client = rows[0]
-    assert agents in (version.group(1), f"{version.group(1)} (not released yet)")
-    assert service == line_names()
-    assert client == f"`{pin.group(1)}`"
+    assert "of the same minor version" in text
+    assert "[mailbox service](https://github.com/benethos-hub/mailbox" in text
 
 
 def _version() -> str:

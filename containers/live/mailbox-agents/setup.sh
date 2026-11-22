@@ -19,6 +19,10 @@
 # containers/live/mailbox-agents/secrets/, never versioned: the CA, the passwords, the
 # tokens, and secrets/agent.env, the settings the agents and smoke.py read.
 # The Claude API key and the fetched models are kept across runs.
+#
+# The mailbox service is built from this checkout, the version of the
+# agents beside it. LIVE_SERVICE=published with MAILBOX_SERVICE_VERSION
+# pulls a published release instead (compose.published.yaml).
 
 set -eu
 # Secrets readable by their owner only. What a container reads as another
@@ -30,6 +34,12 @@ secrets="$here/secrets"
 # The compose file by the environment, not by -f: a path with a space
 # would split the command where $compose is used unquoted below.
 export COMPOSE_FILE="$here/compose.yaml"
+case "${LIVE_SERVICE:-checkout}" in
+    checkout) ;;
+    published) COMPOSE_FILE="$COMPOSE_FILE:$here/compose.published.yaml" ;;
+    *) echo "setup: LIVE_SERVICE is checkout or published, not $LIVE_SERVICE" >&2
+       exit 2 ;;
+esac
 compose="docker compose"
 
 say() { printf 'setup: %s\n' "$1" >&2; }

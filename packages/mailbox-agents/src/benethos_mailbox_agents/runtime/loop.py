@@ -7,8 +7,8 @@ that are due, asks the agent on the tick what is due, and stores the
 cursor last. A crash repeats work and skips no mail. A mailbox service that
 is away leaves every message where it is, a gateway that is away only
 those that ask a model, and the next pass waits twice as long, up to the
-ceiling. A service outside the tested
-lines ends the loop. See docs/mailbox-agents/concept/runtime.md.
+ceiling. A service of another version
+ends the loop. See docs/mailbox-agents/concept/runtime.md.
 """
 
 from __future__ import annotations
@@ -76,8 +76,8 @@ class Upstream(Reader, Writer, Protocol):
     async def accounts(self) -> tuple[str, ...]:
         """The ids of the accounts the user is granted."""
 
-    async def ensure_tested(self) -> str:
-        """The version of the service, once it is in a tested line."""
+    async def ensure_matching(self) -> str:
+        """The version of the service, once it matches the agents'."""
 
 
 class Worker:
@@ -161,7 +161,7 @@ class Worker:
                 self._stuck, self._stuck_passes = None, 0
 
     async def _pass(self, started: float) -> float:
-        await self._mailbox.ensure_tested()
+        await self._mailbox.ensure_matching()
         state, events = await self._read_feed()
         observe = self._record(events)
         for ref in observe:
@@ -415,7 +415,7 @@ class Worker:
         before is taken up anew, for a new prompt or model. Answers how
         many are pending because of it. The service is asked for its
         version first, as a pass does."""
-        await self._mailbox.ensure_tested()
+        await self._mailbox.ensure_matching()
         return await self._backfill(days, again=again)
 
     async def _backfill(self, days: int, *, again: bool = False) -> int:
@@ -459,7 +459,7 @@ class Worker:
                 wait = self._wait_after(exc)
             except (StateFileError, ServiceVersionError):
                 # Nothing goes on without the state file, nor against a
-                # service outside the tested lines: a pass after it would
+                # service of another version: a pass after it would
                 # fail the same way, forever.
                 raise
             except MailboxAgentError as exc:
