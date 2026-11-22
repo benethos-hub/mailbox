@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 
 from benethos_mailbox_common.values import text as text_values
 
-from ..contract import Action, Agent, Reader, Shown
+from ..contract import Action, Agent, Reader, Shown, ShownAction
 from ..errors import MailboxRefusedError
 from ..records import Decision, MailMessage, StepResult
 from ..settings import Settings
@@ -123,11 +123,13 @@ def render(entries: list[Entry]) -> list[str]:
     return [text_values.escaped(line) for line in lines]
 
 
-def _actions(rows: list[ActionRow]) -> tuple[tuple[Action, bool], ...]:
+def _actions(rows: list[ActionRow]) -> tuple[ShownAction, ...]:
     """The actions of a message as its summary sees them. A row of an
     action this version does not know is left out."""
     known = {action.value for action in Action}
-    return tuple((Action(a.action), a.executed) for a in rows if a.action in known)
+    return tuple(
+        ShownAction(Action(a.action), a.executed) for a in rows if a.action in known
+    )
 
 
 def summary(agent: Agent, entries: list[Entry], total: int | None = None) -> list[str]:

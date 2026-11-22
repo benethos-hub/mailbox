@@ -6,8 +6,8 @@ a field of a dataclass holds no tuple of fixed length.
 
 What a package offers: every module of a group of mailbox-common; what
 mailbox-client exports, and the answer of each endpoint, which is a
-method of both clients; what a package of the service or the MCP server
-names in ``__all__``, all of a module it offers so, and the public
+method of both clients; what a package of the service, the MCP server or
+the agents names in ``__all__``, all of a module it offers so, and the public
 methods of the domain services the web layer reaches through
 ``Services``.
 
@@ -30,6 +30,7 @@ SRC = {
     "client": PACKAGES / "mailbox-client/src/benethos_mailbox_client",
     "service": PACKAGES / "mailbox-service/src/benethos_mailbox_service",
     "mcp": PACKAGES / "mailbox-mcp/src/benethos_mailbox_mcp",
+    "agents": PACKAGES / "mailbox-agents/src/benethos_mailbox_agents",
 }
 # The packages above each one: their types are not its parameters.
 ABOVE = {
@@ -37,10 +38,16 @@ ABOVE = {
         "benethos_mailbox_service",
         "benethos_mailbox_mcp",
         "benethos_mailbox_client",
+        "benethos_mailbox_agents",
     ),
-    "client": ("benethos_mailbox_service", "benethos_mailbox_mcp"),
-    "service": ("benethos_mailbox_mcp",),
-    "mcp": ("benethos_mailbox_service",),
+    "client": (
+        "benethos_mailbox_service",
+        "benethos_mailbox_mcp",
+        "benethos_mailbox_agents",
+    ),
+    "service": ("benethos_mailbox_mcp", "benethos_mailbox_agents"),
+    "mcp": ("benethos_mailbox_service", "benethos_mailbox_agents"),
+    "agents": ("benethos_mailbox_service", "benethos_mailbox_mcp"),
 }
 # What an answer may not be. Call[T] of the client is judged by T.
 UNNAMED = re.compile(r"^(tuple|dict|Mapping|MutableMapping)\b|^(list|Sequence)\[dict")
@@ -77,6 +84,9 @@ ALLOWED = {
     # choice, a name and its value for a query string.
     "service data/models/connections.py SettingField": "value and label",
     "service data/protocols/oauth/values.py Endpoints": "query pairs",
+    # Every agent by its name, a lookup the command line and the
+    # readiness check go through.
+    "agents contract/registry.py discover": "agents by name",
 }
 
 
@@ -186,6 +196,7 @@ def offered() -> list[Offered]:
     found += _exported("service")
     found += _domain_services()
     found += _exported("mcp")
+    found += _exported("agents")
     unique = {item.key: item for item in found}
     return sorted(unique.values(), key=lambda item: item.key)
 
@@ -277,6 +288,7 @@ def test_the_check_reaches_every_package() -> None:
     assert "service domain/users/totp.py TotpService.begin" in names
     assert "common values/text.py joined" in names
     assert "service data/mail/compose.py references" in names
+    assert "agents logbook/catalogue/worker.py PassDone" in names
 
 
 # What the rule below found when it came, left for a change of its own

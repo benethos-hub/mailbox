@@ -82,7 +82,7 @@ class Items(Protocol):
         the agent set and has not seen taken off since."""
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Context:
     """What one step of an agent may reach. Its settings it has as
     ``self.settings``."""

@@ -9,7 +9,7 @@ from typing import ClassVar
 from ..activity import Activity
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class Started(Activity):
     name: ClassVar[str] = "started"
 
@@ -20,7 +20,7 @@ class Started(Activity):
         return f"started version {self.version} in stage {self.stage}"
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class Stopped(Activity):
     name: ClassVar[str] = "stopped"
 
@@ -33,7 +33,7 @@ class Stopped(Activity):
         return self.reason
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class Migrated(Activity):
     """The state file was made, or brought from schema ``before`` to
     ``after``. The notes are the steps' own, words of code."""
@@ -53,7 +53,7 @@ class Migrated(Activity):
         return ", ".join(self.notes) or None
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class MetricsServing(Activity):
     name: ClassVar[str] = "metrics_serving"
 

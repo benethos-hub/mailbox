@@ -8,7 +8,7 @@ import pytest
 
 from benethos_mailbox_agents.cli import main
 from benethos_mailbox_agents.cli.report import Entry, render, summary
-from benethos_mailbox_agents.contract import Action, Shown
+from benethos_mailbox_agents.contract import Action, Shown, ShownAction
 from benethos_mailbox_agents.records import (
     LABEL,
     Address,
@@ -89,7 +89,9 @@ def test_the_summary_sees_known_actions_and_leaves_out_others() -> None:
     )
 
     assert summary(Listening(), [entry]) == []  # type: ignore[arg-type]
-    assert [item.actions for item in seen] == [((Action.MOVE_TO_FOLDER, True),)]
+    assert [item.actions for item in seen] == [
+        (ShownAction(Action.MOVE_TO_FOLDER, True),)
+    ]
 
 
 class Talking:

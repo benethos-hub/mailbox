@@ -1,8 +1,9 @@
 """The mailbox service: the only module that imports benethos_mailbox_client.
 
 It offers what the agents need of the service and nothing else: its
-version and whether it matches this package's, the change feed, the messages of the
-last days for a backfill, the accounts, a message, a thread, the folders,
+version and whether it matches this package's (by :mod:`.versions`),
+the change feed, the messages of the last days for a backfill, the
+accounts, a message, a thread, the folders,
 a keyword set or taken off, a move, and a folder made. There is no way
 here to send, delete or trash, so the runtime cannot do any of it whatever
 an agent asks. Which folder may be made is the runtime's to decide. Every
@@ -12,7 +13,6 @@ an error of :mod:`errors`. See docs/mailbox-agents/concept/mailbox-service.md.
 
 from __future__ import annotations
 
-import re
 import ssl
 from collections.abc import AsyncIterator, Awaitable, Iterable, Iterator
 from contextlib import asynccontextmanager, contextmanager
@@ -53,66 +53,17 @@ from ..records import (
     MessageRef,
     Thread,
 )
+from .versions import matches, shown, taken
 
-__all__ = ["Mailbox", "connect", "matches", "shown", "taken"]
+__all__ = ["Mailbox", "connect"]
 
 T = TypeVar("T")
 
 # The size of one page of the feed and of a message list.
 _PAGE = 200
 
-# A release of the service: three numbers and at most a local part after
-# a "+". A pre-release such as 0.10.0rc1 or 0.10.1.dev3 is none, also of a
-# later patch: the agents take releases of the service only.
-_VERSION = re.compile(r"(\d+)\.(\d+)\.(\d+)(?:\+[0-9A-Za-z.-]+)?")
-
-# The major and minor version of the agents themselves, also of a
-# pre-release of their own.
-_OWN = re.compile(r"(\d+)\.(\d+)")
-
 # How each refusal of a service of another version ends.
 _RUN_MATCHING = ": run the agents of the same version as the service"
-
-
-def _own(own: str | None) -> tuple[int, int]:
-    """The major and minor version of ``own``, this package's by default."""
-    found = _OWN.match(own if own is not None else __version__)
-    if found is None:
-        return (0, 0)
-    return int(found.group(1)), int(found.group(2))
-
-
-def matches(version: str, own: str | None = None) -> bool:
-    """Whether the service of ``version`` fits the agents of ``own``, this
-    package's version by default. The agents are released with the
-    service under one version. While the major version is 0, a minor
-    release may change what the service does, so the service has the
-    agents' minor version. From 1.0 it has their major version and a
-    minor version no older than theirs, which may call what that minor
-    version added. A pre-release of the service fits none."""
-    match = _VERSION.fullmatch(version)
-    if match is None:
-        return False
-    major, minor = int(match.group(1)), int(match.group(2))
-    own_major, own_minor = _own(own)
-    if own_major == 0:
-        return (major, minor) == (own_major, own_minor)
-    return major == own_major and minor >= own_minor
-
-
-def taken(own: str | None = None) -> str:
-    """Which versions of the service the agents of ``own`` take, in words,
-    for a person."""
-    own_major, own_minor = _own(own)
-    if own_major == 0:
-        return f"{own_major}.{own_minor}"
-    return f"{own_major} from {own_major}.{own_minor}"
-
-
-def shown(version: str) -> str:
-    """``version`` as the service names it, cut for a line of text: a
-    service may answer anything there."""
-    return version[:40]
 
 
 async def _call(pending: Awaitable[T]) -> T:

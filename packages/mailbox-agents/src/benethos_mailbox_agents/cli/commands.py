@@ -28,7 +28,7 @@ from ..logbook import process, record
 from ..runtime.health import check
 from ..runtime.readiness import MAILBOX_SETTINGS, folder_lines, readiness, start
 from ..settings import PREFIX, Settings, folders
-from ..sources.mailbox import matches, shown, taken
+from ..sources.versions import matches, shown, taken
 from ..store import STATES, Store, earlier_file, path_for
 from .report import report as make_report
 from .session import mailbox_for, now, session, upstreams

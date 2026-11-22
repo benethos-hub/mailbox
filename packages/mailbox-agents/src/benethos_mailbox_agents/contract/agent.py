@@ -80,7 +80,7 @@ class Route(StrEnum):
     OBSERVE = "observe"
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Trigger:
     """The feed events an agent wants, and whether it wants the tick."""
 
@@ -88,7 +88,7 @@ class Trigger:
     tick: bool = False
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Limits:
     """Model calls an agent may make, per message and per day."""
 
@@ -96,7 +96,7 @@ class Limits:
     model_calls_per_day: int = 2000
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Requires:
     """Settings that must be present before the agent starts, by their
     field names in :class:`~benethos_mailbox_agents.settings.Settings`."""
@@ -104,7 +104,7 @@ class Requires:
     settings: tuple[str, ...] = ()
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class ActionRequest:
     """One action an agent asks the runtime to take.
 
@@ -124,15 +124,24 @@ class ActionRequest:
     held: bool = False
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
+class ShownAction:
+    """An action of a message of a report: what it was, and whether it
+    was carried out."""
+
+    action: Action
+    done: bool
+
+
+@dataclass(frozen=True, slots=True)
 class Shown:
     """One message of a report, as an agent's summary sees it: its
     sender's address, fetched for the report, its decision, and its
-    actions, each as its name and whether it was carried out."""
+    actions."""
 
     sender: str | None
     decision: Decision
-    actions: tuple[tuple[Action, bool], ...] = ()
+    actions: tuple[ShownAction, ...] = ()
 
 
 class Agent(ABC):

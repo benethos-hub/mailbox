@@ -13,6 +13,7 @@ from .agent import (
     Requires,
     Route,
     Shown,
+    ShownAction,
     Trigger,
 )
 from .context import Context, Items, Model, Reader
@@ -32,6 +33,7 @@ __all__ = [
     "Requires",
     "Route",
     "Shown",
+    "ShownAction",
     "Trigger",
     "discover",
     "load_agent",

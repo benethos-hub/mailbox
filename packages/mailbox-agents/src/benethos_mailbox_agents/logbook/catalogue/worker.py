@@ -11,7 +11,7 @@ from benethos_mailbox_common.values import text as text_values
 from ..activity import Activity, Failure
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class PassDone(Activity):
     name: ClassVar[str] = "pass_done"
     level: ClassVar[int] = logging.DEBUG
@@ -26,7 +26,7 @@ class PassDone(Activity):
         )
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class PassFailed(Failure):
     """A pass failed with an error of the agent's own. The loop waits
     ``wait`` seconds and tries again, as after an upstream away."""
@@ -40,7 +40,7 @@ class PassFailed(Failure):
         return f"failed a pass and waits {self.wait:.0f}s"
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class UpstreamAway(Failure):
     """The mailbox service or the gateway did not answer. The loop waits
     ``wait`` seconds and tries again."""
@@ -53,7 +53,7 @@ class UpstreamAway(Failure):
         return f"found an upstream away and waits {self.wait:.0f}s"
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class TickDone(Activity):
     name: ClassVar[str] = "tick_done"
 

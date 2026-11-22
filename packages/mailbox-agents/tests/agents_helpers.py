@@ -53,12 +53,16 @@ DOCS = ROOT / "docs" / "mailbox-agents"
 @contextmanager
 def load_script(path: Path, name: str) -> Iterator[ModuleType]:
     """The script at ``path`` as the module ``name``, loaded by its path as
-    it runs beside what it imports. Afterwards ``sys.path`` is as it was,
-    and the script and every module it brought from a folder it put on the
-    path are gone from ``sys.modules``."""
+    it runs beside what it imports, an ``__init__.py`` as the package
+    ``name`` with its modules beside it. Afterwards ``sys.path`` is as it
+    was, and the script, its modules and every module it brought from a
+    folder it put on the path are gone from ``sys.modules``."""
     path_before = list(sys.path)
     modules_before = set(sys.modules)
-    spec = importlib.util.spec_from_file_location(name, path)
+    beside = [str(path.parent)] if path.name == "__init__.py" else None
+    spec = importlib.util.spec_from_file_location(
+        name, path, submodule_search_locations=beside
+    )
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     # Registered before it runs, as an import does: a dataclass of the
@@ -72,8 +76,10 @@ def load_script(path: Path, name: str) -> Iterator[ModuleType]:
         sys.path[:] = path_before
         for key in set(sys.modules) - modules_before:
             file = getattr(sys.modules[key], "__file__", None)
-            if key == name or (
-                file and any(Path(file).is_relative_to(d) for d in added)
+            if (
+                key == name
+                or key.startswith(f"{name}.")
+                or (file and any(Path(file).is_relative_to(d) for d in added))
             ):
                 del sys.modules[key]
 

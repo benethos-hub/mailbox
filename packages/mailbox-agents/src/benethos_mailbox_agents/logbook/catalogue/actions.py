@@ -10,7 +10,7 @@ from typing import ClassVar
 from ..activity import Activity, Failure
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class Done(Activity):
     """The action was carried out on the message, and recorded."""
 
@@ -31,7 +31,7 @@ class Done(Activity):
         return self.reason or None
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class Recorded(Done):
     """The action was recorded, not carried out: the stage did not allow
     it, the agent asked it to be held, as a group of ``sorting`` with
@@ -47,7 +47,7 @@ class Recorded(Done):
         )
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class Kept(Activity):
     """A move of a message the agent moved once already: the folder the
     owner chose since stands, and the move is not taken."""
@@ -63,7 +63,7 @@ class Kept(Activity):
         )
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class Refused(Failure):
     """The executor or the mailbox service refused the action."""
 
