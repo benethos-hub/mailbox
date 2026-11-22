@@ -8,7 +8,7 @@ common package to it, the service the common package.
    `uv lock --upgrade` as a commit of its own, then all checks. Check
    the other pins as well: the base images of both Dockerfiles, a newer
    tag or a new digest under the same tag, the actions of the
-   workflows, and htmx and Bootstrap Icons in `assets/vendor`, with
+   workflows, and htmx and Bootstrap Icons in `assets/mailbox-service/vendor`, with
    their highest stable version on npm and not the tag `latest`. Each
    update is a commit of its own. The issue "Pinned
    versions have newer releases", which `freshness.yml` keeps daily, lists

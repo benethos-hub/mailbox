@@ -101,7 +101,7 @@ These rules bind every page.
    nowhere needs a link or a test of its own there.
 8. **Checklist for a new page**: route module or a route in one. The
    template of its type. The sidebar entry with its right and its icon.
-   Icons only from the sprite, a new one added in `assets/icons.py`.
+   Icons only from the sprite, a new one added in `assets/mailbox-service/icons.py`.
    Nothing loaded from elsewhere, no CDN. The tests of rule 7. A line
    in the table of section 3 and, if it changes a workflow, in
    section 6. The roadmap item. A CHANGELOG entry only when a person

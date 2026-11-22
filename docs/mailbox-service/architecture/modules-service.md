@@ -134,7 +134,7 @@ packages/mailbox-service/
                         #   a passkey), vendored htmx, img/ (the icon
                         #   and the logo, made by assets/build.py, the
                         #   sprite of Bootstrap Icons with its licence,
-                        #   made by assets/icons.py)
+                        #   made by assets/mailbox-service/icons.py)
     domain/             # BUSINESS LOGIC: decides, knows no HTTP
                         # one package per area (docs/REFACTORING.md),
                         #   the service of a package in service.py,

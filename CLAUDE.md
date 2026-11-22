@@ -130,12 +130,13 @@ assets/                   # brand/: the organisation's brand assets,
                           #   preview, with --diagram the diagram,
                           #   with --icon brand/icon.png for the MCP
                           #   Registry and the Claude Desktop bundle.
-                          #   icons.py makes the UI's icon sprite
-                          #   from a pinned Bootstrap Icons package.
-                          #   vendor/: the versions of the JavaScript
-                          #   packages the UI ships, a package-lock.json
-                          #   for the freshness report, nothing installs
-                          #   from it (test_vendored.py)
+                          #   mailbox-service/: icons.py makes the UI's
+                          #   icon sprite from a pinned Bootstrap Icons
+                          #   package. vendor/: the versions of the
+                          #   JavaScript packages the UI ships, a
+                          #   package-lock.json for the freshness
+                          #   report, nothing installs from it
+                          #   (test_vendored.py)
 live/                     # manual checks against the test accounts,
                           #   what they share in live/checks/, one module
                           #   per subject
@@ -166,7 +167,7 @@ containers/               # images/ (one folder per image), and one folder
                           #   edge,
                           #   freshness.yml: daily and after every run of
                           #   publish.yml, what is pinned and what is
-                          #   newer, assets/vendor among it, and whether
+                          #   newer, assets/mailbox-service/vendor among it, and whether
                           #   the newest versions
                           #   allowed and the published packages still
                           #   work, two issues through the organisation's
@@ -219,7 +220,7 @@ tests/                    # what the repository holds, across the four
   test_mcp_registry.py    # the MCP Registry entry held to the package
   test_mcpb.py            # the Claude Desktop bundle held to the package
   test_freshness.py       # the call of freshness.yml
-  test_vendored.py        # the lockfile of assets/vendor held to the
+  test_vendored.py        # the lockfile of assets/mailbox-service/vendor held to the
                           #   JavaScript the UI ships
   test_assets.py          # the scripts of assets/: the images made
                           #   from their sources, the diagram, the icon

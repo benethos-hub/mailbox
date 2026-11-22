@@ -58,7 +58,7 @@ Part of [UI.md](../UI.md): section 7.
   and `breadcrumb` are among them.
 - **Icons**: a hand-picked set of [Bootstrap Icons](https://icons.getbootstrap.com/)
   (MIT), one sprite `static/img/icons.svg` with the licence beside it.
-  `assets/icons.py` names them and makes the sprite from the npm
+  `assets/mailbox-service/icons.py` names them and makes the sprite from the npm
   package of a pinned version, checked by its SHA-256. A new icon is a
   line there. The macro `icon(name)` draws one in the colour of the
   text around it. The primary action of a page (Create, Save, Send,
@@ -97,7 +97,7 @@ Part of [UI.md](../UI.md): section 7.
 - **Nothing from elsewhere**: no CDN. Every script, style, font and
   image the UI loads is kept under `static/`, as htmx and the icons
   are. A test checks the templates and the stylesheet for it.
-  `assets/vendor/package-lock.json` records the version of each, for
+  `assets/mailbox-service/vendor/package-lock.json` records the version of each, for
   the freshness report, and a test holds it to what the UI ships. A
   new version of htmx moves the file, its note with the digest of the
   file in its npm package, and the lockfile together. The browser
