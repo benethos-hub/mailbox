@@ -31,6 +31,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   how many it counts and the `--limit` that counts all. Before, the 50
   newest looked like every message, and an invoice outside them was
   missing from the senders without a word.
+- `benethos-mailbox-service` and `benethos-mailbox-mcp`: `NO_COLOR` set
+  but empty no longer turns off the colours of the log at a terminal, as
+  no-color.org has it. `benethos-mailbox-common`: `colours_wanted` takes
+  the stream to write to, stderr when none is given.
 
 ### Fixed
 
@@ -48,6 +52,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   lost: an invoice marked in the inbox and moved into a folder `invoices`
   looks in was never filed, and a keyword taken off for `awaiting_reply`
   went unseen.
+- The mail page of the configuration UI and the MCP server show the text
+  of the HTML part of a mail whose text part holds white space only.
+  Before, the page showed nothing and the MCP server an empty body.
+  `benethos-mailbox-common`: `plaintext.mail_text` gives the text of a
+  mail as both read it.
 
 ### Security
 
@@ -60,6 +69,12 @@ adheres to [Semantic Versioning](https://semver.org/).
   `MAILBOX_AGENTS_PROMPT_RETENTION_DAYS` is overwritten when it is
   deleted after that time. Before, the text of its mail stayed readable
   in the free space of the state file and its write-ahead log.
+- `benethos-mailbox-service`: a line of its log writes the control
+  characters U+0080 to U+009F, the marks that turn the direction of the
+  text and a lone surrogate as their escapes, as it wrote line breaks
+  already. Before, a name an account or a client chose could hold a
+  command for the terminal that showed the log, turn the line around,
+  or make the log drop the line.
 
 ## [0.10.0] - 2026-11-22
 

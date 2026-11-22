@@ -16,15 +16,25 @@ import re
 # beyond ASCII, U+2028 among them.
 _BREAKS = re.compile(r"[\x00-\x1f\x7f\x85\u2028\u2029]")
 _RUNS = re.compile(_BREAKS.pattern + "+")
+# What a line of the log must not hold as it is: every control character,
+# C1 among them, which a terminal reads as a command, the line and
+# paragraph separators, the marks that turn the direction of the text
+# after them, and a lone surrogate, which no encoding can write.
+_UNSAFE = re.compile(
+    r"[\x00-\x1f\x7f-\x9f؜‎‏‪-‮  "
+    r"⁦-⁩\ud800-\udfff]"
+)
 # What ends a command or a value of a protocol of lines.
 _LINE_ENDS = re.compile(r"[\r\n\x00]")
 
 
 def escaped(text: str) -> str:
-    """``text`` as one line: each break written as its escape, such as a
-    line feed as backslash and n. For the log, where a name a caller chose
-    must not start a line of its own."""
-    return _BREAKS.sub(lambda m: m.group().encode("unicode_escape").decode(), text)
+    """``text`` as one line: each break, control character, mark of
+    direction and lone surrogate written as its escape, such as a line feed
+    as backslash and n. For the log, where a name a caller chose must not
+    start a line of its own, move the cursor of a terminal or turn the
+    text around."""
+    return _UNSAFE.sub(lambda m: m.group().encode("unicode_escape").decode(), text)
 
 
 def joined(text: str) -> str:

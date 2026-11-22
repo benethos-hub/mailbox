@@ -18,6 +18,7 @@ import os
 import sys
 from collections.abc import Callable
 from datetime import datetime
+from typing import TextIO
 
 from . import redact
 
@@ -61,9 +62,11 @@ def log_time(value: datetime) -> str:
     return value.astimezone().isoformat(timespec="milliseconds")
 
 
-def colours_wanted() -> bool:
-    """Colours on a terminal, unless ``NO_COLOR`` is set (no-color.org)."""
-    return sys.stderr.isatty() and "NO_COLOR" not in os.environ
+def colours_wanted(stream: TextIO | None = None) -> bool:
+    """Colours when ``stream``, stderr when None, is a terminal, unless
+    ``NO_COLOR`` is set to a value that is not empty (no-color.org)."""
+    target = sys.stderr if stream is None else stream
+    return target.isatty() and not os.environ.get("NO_COLOR")
 
 
 def short_source(name: str, package: str) -> str:

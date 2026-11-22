@@ -283,8 +283,8 @@ async def message(
         account=account,
         trail=[*trail, (found.subject or "(no subject)", None)],
         message=found,
-        body=_body(found),
-        from_html=not found.text_body and bool(found.html_body),
+        body=plaintext.mail_text(found.text_body, found.html_body),
+        from_html=bool(found.html_body) and not (found.text_body or "").strip(),
         tree=_tree(folders),
         in_trash=any(
             f.role is FolderRole.TRASH for f in folders if f.id in found.folder_ids
@@ -364,12 +364,6 @@ def _counted(folder: Folder) -> str:
         return folder.name
     unread = f", {folder.unread} unread" if folder.unread else ""
     return f"{folder.name} · {folder.total} messages{unread}"
-
-
-def _body(message: Message) -> str:
-    if message.text_body:
-        return message.text_body
-    return plaintext.from_html(message.html_body) if message.html_body else ""
 
 
 @router.get("/accounts/{account_id}/mail/{message_id}/raw")

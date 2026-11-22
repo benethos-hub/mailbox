@@ -75,7 +75,7 @@
       "value": 32
     },
     "colours_wanted": {
-      "signature": "() -> 'bool'"
+      "signature": "(stream: 'TextIO | None' = None) -> 'bool'"
     },
     "formatter": {
       "signature": "(package: 'str', *, colours: 'bool | None' = None, line_of: 'LineOf | None' = None) -> 'logging.Formatter'"
@@ -198,6 +198,9 @@
     },
     "hides": {
       "signature": "(style: 'str') -> 'bool'"
+    },
+    "mail_text": {
+      "signature": "(text: 'str | None', html: 'str | None') -> 'str'"
     }
   },
   "benethos_mailbox_common.paths": {

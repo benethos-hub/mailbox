@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import unicodedata
+
 import pytest
 
 from benethos_mailbox_common.values.text import (
@@ -28,6 +30,41 @@ def test_a_reader_sees_every_break_and_control(value: str) -> None:
 def test_escaped_writes_the_break_as_its_escape() -> None:
     assert escaped("evil\nINFO forged") == "evil\\nINFO forged"
     assert escaped("plain text, with ümlauts") == "plain text, with ümlauts"
+
+
+@pytest.mark.parametrize(
+    ("value", "written"),
+    [
+        ("\x9b", "\\x9b"),
+        ("\x85", "\\x85"),
+        ("‮", "\\u202e"),
+        ("⁦", "\\u2066"),
+        ("؜", "\\u061c"),
+        ("\ud800", "\\ud800"),
+    ],
+)
+def test_escaped_writes_c1_direction_and_a_lone_surrogate_as_escapes(
+    value: str, written: str
+) -> None:
+    assert escaped(f"a{value}b") == f"a{written}b"
+
+
+# The marks that turn the direction of the text after them.
+_DIRECTION = frozenset(
+    map(chr, (0x061C, 0x200E, 0x200F, *range(0x202A, 0x202F), *range(0x2066, 0x206A)))
+)
+
+
+def test_escaped_writes_exactly_the_controls_separators_marks_and_surrogates() -> None:
+    """The rule by Unicode's own categories: control, line and paragraph
+    separator, surrogate, and the marks of direction. Checked over every
+    code point."""
+    for code in range(0x110000):
+        char = chr(code)
+        unsafe = (
+            unicodedata.category(char) in {"Cc", "Zl", "Zp", "Cs"} or char in _DIRECTION
+        )
+        assert (escaped(char) != char) is unsafe, hex(code)
 
 
 def test_joined_makes_one_space_of_a_run() -> None:

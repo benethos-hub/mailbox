@@ -17,8 +17,9 @@ packages/mailbox-common/
   src/benethos_mailbox_common/
     __init__.py         # __version__, no group imported
     mail/               # mail itself, nothing of Mailbox
-      plaintext.py      # the visible text of an HTML body: the mail page
-                        #   shows it, the model of the MCP server reads it
+      plaintext.py      # the visible text of an HTML body, and the text
+                        #   of a mail: the mail page shows it, the
+                        #   model of the MCP server reads it
       addresses.py      # readable: Name <email>, quoted for a form
       marks.py          # the marks of RFC 8621 and their words, as
                         #   the UI and the MCP server show them

@@ -127,6 +127,24 @@ def test_colours_on_a_terminal_unless_no_color(monkeypatch: pytest.MonkeyPatch) 
     assert type(formatter(PACKAGE)) is Redacting
 
 
+def test_an_empty_no_color_leaves_the_colours_on(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """no-color.org: only a value that is not empty turns them off."""
+    monkeypatch.setenv("NO_COLOR", "")
+    assert colours_wanted(Terminal())
+    monkeypatch.setenv("NO_COLOR", "1")
+    assert not colours_wanted(Terminal())
+
+
+def test_the_colours_follow_the_stream_given(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    monkeypatch.setattr(sys, "stderr", io.StringIO())
+    assert colours_wanted(Terminal())
+    monkeypatch.setattr(sys, "stderr", Terminal())
+    assert not colours_wanted(io.StringIO())
+
+
 def test_the_handler_writes_to_stderr(monkeypatch: pytest.MonkeyPatch) -> None:
     stream = io.StringIO()
     monkeypatch.setattr(sys, "stderr", stream)
