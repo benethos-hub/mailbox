@@ -46,6 +46,7 @@ its own. To use Mailbox, start with the service:
 | [`mailbox-client`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-client) | The Python client of the REST API. It does not use this package. | from PyPI: [Install](https://github.com/benethos-hub/mailbox/blob/main/packages/mailbox-client/README.md#install) |
 | [`mailbox-mcp`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-mcp) | The MCP server. It turns the REST API into tools for an AI assistant, on top of the client. | after the service: [Getting started](https://github.com/benethos-hub/mailbox/blob/main/packages/mailbox-mcp/README.md#getting-started) |
 | **`mailbox-common`** | This package. What the service and the MCP server share. | installed with both |
+| [`mailbox-agents`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-agents) | Small AI agents that sort and mark mail, on top of the client. They do not use this package. | not needed here |
 
 What the project is for: [the repository's README](https://github.com/benethos-hub/mailbox#readme).
 

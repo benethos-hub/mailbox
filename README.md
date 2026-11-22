@@ -24,8 +24,8 @@
 [![benethos-mailbox-mcp on Glama](https://glama.ai/mcp/servers/benethos-hub/mailbox/badges/card.svg)](https://glama.ai/mcp/servers/benethos-hub/mailbox)
 
 One REST API for all your mailboxes, whichever provider they are at, a
-Python client for it and an MCP server on top. Scripts, tools and AI
-agents work with your mail through one door you control.
+Python client for it, an MCP server and small AI agents on top. Scripts,
+tools and AI agents work with your mail through one door you control.
 
 > **Status: beta, version 0.10.0.** Usable with real accounts. A breaking
 > change of the API or the configuration is announced in the changelog.
@@ -272,6 +272,8 @@ for clients: [packages/mailbox-mcp](packages/mailbox-mcp/README.md#tools).
   Google client of your own
 - [docs/mailbox-service/openapi.json](docs/mailbox-service/openapi.json): the API contract. A running
   service shows it at `/docs`
+- [docs/mailbox-agents/CONCEPT.md](docs/mailbox-agents/CONCEPT.md): the agents, what each one does and
+  how they run
 - [CHANGELOG.md](CHANGELOG.md)
 - [SECURITY.md](SECURITY.md): how to report a vulnerability
 - [containers/](containers/README.md): the Dockerfiles, and compose files

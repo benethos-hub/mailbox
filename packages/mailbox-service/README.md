@@ -54,9 +54,11 @@ token and its rights, and goes to the provider of the account.
 | [`mailbox-client`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-client) | The Python client of the REST API, async and sync, for your own scripts and apps. | from PyPI, where your code runs: [Install](https://github.com/benethos-hub/mailbox/blob/main/packages/mailbox-client/README.md#install) |
 | [`mailbox-mcp`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-mcp) | The MCP server. It turns the REST API into tools for an AI assistant, on top of the client. | after the service: [Getting started](https://github.com/benethos-hub/mailbox/blob/main/packages/mailbox-mcp/README.md#getting-started) |
 | [`mailbox-common`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-common) | What the service and the MCP server share. | installed with this package |
+| [`mailbox-agents`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-agents) | Small AI agents that sort and mark mail through the REST API, on top of the client. Alpha. | after the service: [Install](https://github.com/benethos-hub/mailbox/blob/main/packages/mailbox-agents/README.md#install) |
 
 > **The MCP server and the service must have the same version** to work
-> together. Update both at once.
+> together. Update both at once. The agents need a service of their own
+> minor version.
 
 What the project is for: [the repository's README](https://github.com/benethos-hub/mailbox#readme).
 
