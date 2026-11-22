@@ -21,6 +21,7 @@ in [CONCEPT.md](mailbox-service/CONCEPT.md). The section numbers below point the
 | [4c](roadmap/phases-0-4.md#phase-4c--api-users) | API users | **done** |
 | [5](roadmap/phase-5.md#phase-5--more-providers-and-the-configuration-ui) | More providers and the configuration UI | **in progress** |
 | [5a](roadmap/phase-5.md#phase-5a--one-way-to-operate-every-mailbox) | One way to operate every mailbox | **done** |
+| [Agents](roadmap/agents.md#the-agents) | The agents, `mailbox-agents`, alpha | **in progress** |
 
 Undecided ideas wait in [IDEAS.md](IDEAS.md) until they are designed.
 
@@ -31,7 +32,8 @@ API design early.
 The phases themselves are in [roadmap/](roadmap/):
 [phases 0 to 4c](roadmap/phases-0-4.md), all done, and
 [phases 5 and 5a](roadmap/phase-5.md), where phase 5 lists what is
-done first and what is open at its end.
+done first and what is open at its end,
+and [the agents](roadmap/agents.md), what they hold and what comes next.
 
 ## Keeping this file current
 

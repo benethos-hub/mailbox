@@ -1,4 +1,4 @@
-"""Rules for the code across the four packages, held where they all are
+"""Rules for the code across the five packages, held where they all are
 read (docs/mailbox-service/ARCHITECTURE.md 13): the tests of every package, its helpers
 and fixtures, the live checks, the entries of the packages, the size of
 the tests here and of live/, how deep a test reads, and how the service
@@ -47,7 +47,7 @@ def test_no_test_module_imports_another() -> None:
     """What tests of several modules share is a fixture in the conftest.py
     of their nearest common folder, or a helper in a module of its own
     there (docs/mailbox-service/ARCHITECTURE.md 13): a test module is no library. In the
-    tests of all four packages."""
+    tests of all five packages."""
     violations = []
     for path in sorted((ROOT / "packages").glob("*/tests/**/*.py")):
         for node in ast.walk(ast.parse(path.read_text("utf-8"))):
@@ -68,7 +68,7 @@ HELPER = re.compile(r"conftest|clocks|.+_fake(_.+)?|.+_adapter|.+_helpers|__init
 def test_a_helper_of_the_tests_is_named_after_its_kind() -> None:
     """A fake in ``<subject>_fake.py``, an adapter on it in
     ``<kind>_adapter.py``, anything else in ``<subject>_helpers.py``, in
-    the tests of all four packages. ``tests/installed_check.py`` at the
+    the tests of all five packages. ``tests/installed_check.py`` at the
     root is no helper but a script."""
     violations = [
         path.relative_to(ROOT).as_posix()
@@ -100,7 +100,7 @@ EVERYWHERE = {"clocks", "conftest", "__init__"}
 
 def test_a_helper_sits_in_the_nearest_folder_of_its_importers() -> None:
     """A helper lives in the nearest common folder of the modules that
-    import it (docs/mailbox-service/ARCHITECTURE.md 13), in the tests of all four
+    import it (docs/mailbox-service/ARCHITECTURE.md 13), in the tests of all five
     packages. ``clocks.py`` is for every folder of a suite."""
     importers: dict[Path, set[Path]] = {}
     for path in sorted((ROOT / "packages").glob("*/tests/**/*.py")):
@@ -151,7 +151,7 @@ def _fixtures(path: Path) -> set[str]:
 
 
 def _test_modules() -> list[tuple[Path, Path]]:
-    """Every test module of the four packages, with its package's tests."""
+    """Every test module of the five packages, with its package's tests."""
     return [
         (tests, path)
         for tests in sorted((ROOT / "packages").glob("*/tests"))
@@ -313,7 +313,7 @@ def test_the_shared_code_of_the_live_checks_names_each_module() -> None:
 
 def test_no_package_entry_defines_a_class() -> None:
     """The entry of a package offers, it does not implement
-    (ARCHITECTURE 5.2): no __init__.py of the four packages defines a
+    (ARCHITECTURE 5.2): no __init__.py of the five packages defines a
     class."""
     violations = [
         f"{path.relative_to(ROOT).as_posix()}: {node.name}"

@@ -1,13 +1,24 @@
-# The live setup
+# <img src="../../../assets/mailbox-agents/brand/icon.svg" alt="" height="36" align="absmiddle"> The live setup of the agents
 
 A mail server, a mailbox service and a model gateway of their own, for the
-live checks in `live/`. Nothing here reaches a real mailbox:
+live checks in `live/mailbox-agents/`. Nothing here reaches a real mailbox:
 [Stalwart](https://stalw.art) holds one account made for the agents,
 `agents@agents.test`, filled with invented mail, and the mailbox service is
 the published image `ghcr.io/benethos-hub/benethos-mailbox-service`. The
 gateway is [LiteLLM](https://docs.litellm.ai) in front of Claude and of
 local models under [llama.cpp](https://github.com/ggml-org/llama.cpp). It
 is a manual aid, never part of `uv run pytest`.
+
+**Contents**
+
+- [Set it up](#set-it-up)
+  - [Which model the agents use](#which-model-the-agents-use)
+- [Local models](#local-models)
+  - [Comparing models](#comparing-models)
+  - [What a model costs](#what-a-model-costs)
+- [Ports](#ports)
+- [Use it](#use-it)
+- [Take it down](#take-it-down)
 
 ## Set it up
 

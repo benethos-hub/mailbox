@@ -238,20 +238,26 @@ READMES = {
     "containers/README.md": "../",
     "containers/production/mailbox-service/README.md": "../../../",
     "containers/test-mail-server/README.md": "../../",
+    "containers/production/mailbox-agents/README.md": "../../../",
+    "containers/live/mailbox-agents/README.md": "../../../",
     "docs/README.md": "../",
     "packages/mailbox-service/README.md": RAW,
     "packages/mailbox-client/README.md": RAW,
     "packages/mailbox-mcp/README.md": RAW,
     "packages/mailbox-common/README.md": RAW,
+    "packages/mailbox-agents/README.md": RAW,
 }
 
 
 @pytest.mark.parametrize(("readme", "prefix"), READMES.items())
 def test_every_readme_has_the_3d_icon_in_its_heading(readme: str, prefix: str) -> None:
+    """The icon of the organisation, and in the agents' READMEs their own."""
+    icon = (
+        "assets/mailbox-agents/brand" if "mailbox-agents" in readme else "assets/brand"
+    )
     first = (ROOT / readme).read_text("utf-8").splitlines()[0]
     assert first.startswith(
-        f'# <img src="{prefix}assets/brand/icon.svg" alt="" height="36"'
-        ' align="absmiddle"> '
+        f'# <img src="{prefix}{icon}/icon.svg" alt="" height="36" align="absmiddle"> '
     ), first
 
 

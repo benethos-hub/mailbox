@@ -15,6 +15,9 @@
 
 [![PyPI benethos-mailbox-common](https://img.shields.io/pypi/v/benethos-mailbox-common?label=PyPI%20benethos-mailbox-common&logo=pypi&logoColor=white)](https://pypi.org/project/benethos-mailbox-common/)
 
+[![PyPI benethos-mailbox-agents](https://img.shields.io/pypi/v/benethos-mailbox-agents?label=PyPI%20benethos-mailbox-agents&logo=pypi&logoColor=white)](https://pypi.org/project/benethos-mailbox-agents/)
+[![Container benethos-mailbox-agents](https://img.shields.io/badge/ghcr.io-benethos--mailbox--agents-2496ED?logo=docker&logoColor=white)](https://github.com/benethos-hub/mailbox/pkgs/container/benethos-mailbox-agents)
+
 [![Sponsor](https://raw.githubusercontent.com/benethos-hub/.github/main/profile/badges/sponsor.svg)](https://github.com/sponsors/BeneODev)
 [![PayPal](https://raw.githubusercontent.com/benethos-hub/.github/main/profile/badges/paypal.svg)](https://paypal.me/BeneODev)
 
@@ -32,7 +35,7 @@ are at, as far as its token allows. It searches and reads mail, tells
 what is new since it last looked, looks at attachments (PDF pages as
 images), sorts messages, writes drafts and, if you let it, sends.
 
-Mailbox is self-hosted and has four packages. This server is one of
+Mailbox is self-hosted and has five packages. This server is one of
 them and does not work alone. It needs the service, which runs on your
 own machine or server and holds the connections to your mail accounts.
 **Install the service first:** [Install](https://github.com/benethos-hub/mailbox/blob/main/packages/mailbox-service/README.md#install)

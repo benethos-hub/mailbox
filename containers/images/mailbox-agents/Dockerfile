@@ -27,17 +27,14 @@ ENV UV_COMPILE_BYTECODE=1 \
     UV_PYTHON_DOWNLOADS=0 \
     UV_PROJECT_ENVIRONMENT=/opt/venv
 
-WORKDIR /app
+WORKDIR /src
 
-# Dependencies first, from the lockfile and without the project itself: this
-# layer is rebuilt only when pyproject.toml or uv.lock change.
-COPY pyproject.toml uv.lock README.md ./
-RUN uv sync --frozen --no-install-project --no-dev
-
-# Then the project, as a real wheel rather than an editable install, so
-# /opt/venv is self-contained and can simply be copied.
-COPY src ./src
-RUN uv sync --frozen --no-dev --no-editable
+# The workspace needs every member's pyproject.toml. The lockfile pins all.
+# The package is installed as a real wheel rather than an editable install,
+# so /opt/venv is self-contained and can simply be copied.
+COPY pyproject.toml uv.lock ./
+COPY packages packages
+RUN uv sync --frozen --no-dev --no-editable --package benethos-mailbox-agents
 
 # ---- runtime ---------------------------------------------------------------
 FROM python:3.15-slim@sha256:65a65fc7b30b06cb6df4930fd4650697cb23f4c2698ab81fc87e4b031bc36928 AS runtime

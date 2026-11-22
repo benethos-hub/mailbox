@@ -15,6 +15,9 @@
 
 [![PyPI benethos-mailbox-common](https://img.shields.io/pypi/v/benethos-mailbox-common?label=PyPI%20benethos-mailbox-common&logo=pypi&logoColor=white)](https://pypi.org/project/benethos-mailbox-common/)
 
+[![PyPI benethos-mailbox-agents](https://img.shields.io/pypi/v/benethos-mailbox-agents?label=PyPI%20benethos-mailbox-agents&logo=pypi&logoColor=white)](https://pypi.org/project/benethos-mailbox-agents/)
+[![Container benethos-mailbox-agents](https://img.shields.io/badge/ghcr.io-benethos--mailbox--agents-2496ED?logo=docker&logoColor=white)](https://github.com/benethos-hub/mailbox/pkgs/container/benethos-mailbox-agents)
+
 [![Sponsor](https://raw.githubusercontent.com/benethos-hub/.github/main/profile/badges/sponsor.svg)](https://github.com/sponsors/BeneODev)
 [![PayPal](https://raw.githubusercontent.com/benethos-hub/.github/main/profile/badges/paypal.svg)](https://paypal.me/BeneODev)
 
@@ -39,7 +42,7 @@ It knows the service through its REST API alone, and needs nothing but
 [httpx](https://www.python-httpx.org/). The REST API follows the status
 above. This package's Python interface has no stability promise yet.
 
-Mailbox is self-hosted and has four packages. The client needs a
+Mailbox is self-hosted and has five packages. The client needs a
 running service: [Install](https://github.com/benethos-hub/mailbox/blob/main/packages/mailbox-service/README.md#install)
 and [First start](https://github.com/benethos-hub/mailbox/blob/main/packages/mailbox-service/README.md#first-start)
 in its README.

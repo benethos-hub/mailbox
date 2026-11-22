@@ -179,7 +179,7 @@ def _tested() -> list[str]:
 
 
 def test_the_classifiers_name_the_tested_versions() -> None:
-    """The four name the same, as test_the_packages_describe_themselves_alike
+    """The five name the same, as test_the_packages_describe_themselves_alike
     checks, so the service stands for all."""
     classifiers = project_of(SERVICE)["classifiers"]
     assert isinstance(classifiers, list)
@@ -265,6 +265,7 @@ VERSION_EXAMPLES = [
     ("packages/mailbox-client/README.md", "status"),
     ("packages/mailbox-mcp/README.md", "status"),
     ("packages/mailbox-common/README.md", "status"),
+    ("packages/mailbox-agents/README.md", "status"),
     ("packages/mailbox-mcp/README.md", "tag"),
     ("packages/mailbox-mcp/README.md", "image"),
     (".github/publish/mcp-registry/server.json", "json"),

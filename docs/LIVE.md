@@ -226,3 +226,20 @@ thread read, changed, moved into a new folder that is renamed with the
 mail in it, moved back, a draft replaced under its id, left out of `all`
 in the trash, then deleted for good on both sides. The folder is deleted
 as well.
+
+## The agents
+
+The live checks of the agents run against a setup of their own,
+[containers/live/mailbox-agents/](../containers/live/mailbox-agents/README.md):
+a mail server with one account made for them and filled with invented
+mail, a mailbox service and a model gateway. None of them reaches a test
+account of `live/.env`. Each refuses a mailbox service that is not on
+this machine. How they fit into the tests of the agents:
+[testing.md](mailbox-agents/concept/testing.md).
+
+| Check | Against | Writes |
+|---|---|---|
+| `live/mailbox-agents/agents_smoke.py` | the agents' test account | nothing |
+| `live/mailbox-agents/sorting.py` | the agents' test account | moves and keywords of `sorting`, all put back |
+| `live/mailbox-agents/invoices.py` | the agents' test account | the same, with `invoices` beside `sorting` |
+| `live/mailbox-agents/gold.py` | the agents' test account | nothing there, the gold files under its `secrets/` |

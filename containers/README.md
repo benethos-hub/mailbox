@@ -12,21 +12,31 @@ own `secrets/`, never versioned.
 
 - [For development](#for-development)
 - [The images](#the-images)
+- [The agents](#the-agents)
 
 ```
 containers/
   images/                        # what the CI builds and publishes
     mailbox-service/Dockerfile   # build context: the repository root
     mailbox-mcp/Dockerfile       # the MCP server over streamable HTTP
+    mailbox-agents/Dockerfile    # the one image of every agent
   production/                    # in operation, the published images
     mailbox-service/             #   the service, Caddy and the MCP
                                  #   server instances, one compose project
       README.md                  #   how to set it up and run it, and
                                  #   what each file is
+    mailbox-agents/              #   the agents, one service per agent,
+                                 #   a compose project of its own
   development/                   # for development, built from the repository
     mailbox-service/
       compose.yaml               # the service, the MCP server with the
                                  #   profile mcp, ports on 127.0.0.1 only
+    mailbox-agents/
+      compose.yaml               # an agent against the live setup
+  live/
+    mailbox-agents/              # a mail server, a mailbox service and a
+                                 #   model gateway of the agents' own,
+                                 #   with a test account of invented mail
   test-mail-server/              # Stalwart as a mail server for tests
     compose.yaml                 #   ports on 127.0.0.1 only
     setup.sh                     #   makes the server anew
@@ -38,6 +48,9 @@ containers/
 | `production/mailbox-service/` | running Mailbox, without a clone of the repository | from the GitHub container registry, the version named in `.env` |
 | `development/mailbox-service/` | trying a change in a container | built from this repository |
 | `test-mail-server/` | the adapters against a mail server of our own | Stalwart |
+| `production/mailbox-agents/` | running the agents, without a clone of the repository | from the GitHub container registry, the version named in `.env` |
+| `development/mailbox-agents/` | trying a change of the agents in a container | built from this repository |
+| `live/mailbox-agents/` | the agents' test account | Stalwart, the published mailbox service, LiteLLM with its database, llama.cpp |
 
 How to start and run the service and the MCP server, with `docker run`
 or with compose:
@@ -140,3 +153,51 @@ image twice: once for its version, and once as a catalogue
 many as `docs/mailbox-mcp/mcp-tools.json` names. Its job `dockerfile-lint` reads both
 Dockerfiles with hadolint, and what that finds goes to Security, Code
 scanning.
+
+## The agents
+
+The agents have their own folder under each place, and compose projects
+of their own, so they reach the service only over REST and may run on
+another machine:
+
+| Folder | Ports | Compose project |
+|---|---|---|
+| `production/mailbox-agents/` | metrics on 9470 to 9474, 127.0.0.1 | `benethos-mailbox-agents` |
+| `development/mailbox-agents/` | metrics on 9480 to 9482, 127.0.0.1 | `benethos-mailbox-agents-dev` |
+| `live/mailbox-agents/` | 38080, 38081, 38400, 38465, 38993, 127.0.0.1 | `mailbox-agents-live` |
+
+Each has its own volumes, so a trial in `development/` never reaches the
+state of an installation in `production/`, and nothing in
+`development/` reaches a real mailbox. How to set them up:
+[production/mailbox-agents/README.md](production/mailbox-agents/README.md)
+and [live/mailbox-agents/README.md](live/mailbox-agents/README.md).
+
+For development, against the test account of the live setup:
+
+```sh
+sh containers/live/mailbox-agents/setup.sh    # once: the test account
+cd containers/development/mailbox-agents
+docker compose up -d --build                  # the agent counting
+docker compose exec counting benethos-mailbox-agents report --agent counting
+docker compose down -v                        # stop, and forget the volumes
+```
+
+An agent that asks a model reaches the gateway by its name on the live
+network: `MAILBOX_AGENTS_GATEWAY_URL=http://gateway:4000/v1` in an `.env`
+beside `development/mailbox-agents/compose.yaml`, which is not versioned.
+The key and the model come from `agent.env`, and the `.env` may override
+them.
+
+The image `ghcr.io/benethos-hub/benethos-mailbox-agents` is built from
+the repository root:
+
+```sh
+docker build -f containers/images/mailbox-agents/Dockerfile -t benethos-mailbox-agents:local .
+docker run --rm benethos-mailbox-agents:local --version
+```
+
+It runs as uid 10001, keeps the state file in the volume `/data`, serves
+metrics on 9464 and holds no secret. A container runs one agent, named in
+its command: `worker --agent <name>`. Its health check is
+`benethos-mailbox-agents health --agent <name>`, set per service in
+compose.

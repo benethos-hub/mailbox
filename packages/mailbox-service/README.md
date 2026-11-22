@@ -15,6 +15,9 @@
 
 [![PyPI benethos-mailbox-common](https://img.shields.io/pypi/v/benethos-mailbox-common?label=PyPI%20benethos-mailbox-common&logo=pypi&logoColor=white)](https://pypi.org/project/benethos-mailbox-common/)
 
+[![PyPI benethos-mailbox-agents](https://img.shields.io/pypi/v/benethos-mailbox-agents?label=PyPI%20benethos-mailbox-agents&logo=pypi&logoColor=white)](https://pypi.org/project/benethos-mailbox-agents/)
+[![Container benethos-mailbox-agents](https://img.shields.io/badge/ghcr.io-benethos--mailbox--agents-2496ED?logo=docker&logoColor=white)](https://github.com/benethos-hub/mailbox/pkgs/container/benethos-mailbox-agents)
+
 [![Sponsor](https://raw.githubusercontent.com/benethos-hub/.github/main/profile/badges/sponsor.svg)](https://github.com/sponsors/BeneODev)
 [![PayPal](https://raw.githubusercontent.com/benethos-hub/.github/main/profile/badges/paypal.svg)](https://paypal.me/BeneODev)
 
@@ -31,7 +34,7 @@ or server, holds the connections to the accounts, keeps their
 credentials encrypted and syncs in the background. It keeps a feed of
 what changed in the mailboxes and posts it to webhooks.
 
-Mailbox is self-hosted and has four packages. The service is the one
+Mailbox is self-hosted and has five packages. The service is the one
 that works alone, and the others build on it. Scripts and apps reach
 mail through the Python client, AI assistants through the MCP server,
 each with a token of its own. None of them holds a mail password.

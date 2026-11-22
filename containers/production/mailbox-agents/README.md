@@ -1,7 +1,13 @@
-# In operation
+# <img src="../../../assets/mailbox-agents/brand/icon.svg" alt="" height="36" align="absmiddle"> Mailbox Agents in operation
 
 The published image, one container per agent, each started by its profile.
 This folder is all it needs, no clone of the repository.
+
+**Contents**
+
+- [Set it up](#set-it-up)
+- [Update](#update)
+- [What is where](#what-is-where)
 
 ## Set it up
 

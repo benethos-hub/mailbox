@@ -1,5 +1,5 @@
 # For development: the image built from this checkout, run against the
-# test account of ../live, never against a real mailbox. A project, volumes
+# test account of ../../live/mailbox-agents, never against a real mailbox. A project, volumes
 # and ports of its own. It joins the network of the live setup, so start
 # that first: sh containers/live/mailbox-agents/setup.sh
 #
@@ -9,7 +9,7 @@
 #   docker compose exec counting benethos-mailbox-agents report --agent counting
 #   docker compose down -v                          stop, and forget the volumes
 #
-# Why each setting is what it is: ../production/compose.yaml.
+# Why each setting is what it is: ../../production/mailbox-agents/compose.yaml.
 
 name: benethos-mailbox-agents-dev
 
@@ -21,7 +21,7 @@ x-logging: &logging
 
 x-agent: &agent
   build:
-    context: ../..
+    context: ../../..
     dockerfile: containers/images/mailbox-agents/Dockerfile
   image: benethos-mailbox-agents:local
   restart: unless-stopped
@@ -37,7 +37,7 @@ x-agent: &agent
     - live
   env_file:
     # The test account, its token and the stage shadow, made by setup.sh.
-    - path: ../live/secrets/agent.env
+    - path: ../../live/mailbox-agents/secrets/agent.env
       required: true
     # The gateway, for an agent that asks a model: GATEWAY_URL, GATEWAY_KEY
     # and MODEL. Not versioned, and not needed by counting.
@@ -93,7 +93,7 @@ services:
       MAILBOX_AGENTS_SORTING_FILE: /config/sorting.json
     volumes:
       - sorting-data:/data
-      - ../live/sorting.json:/config/sorting.json:ro
+      - ../../live/mailbox-agents/sorting.json:/config/sorting.json:ro
     ports:
       - "127.0.0.1:${SORTING_METRICS_PORT:-9482}:9464"
     healthcheck:
