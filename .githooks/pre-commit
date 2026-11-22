@@ -33,7 +33,10 @@ forbidden=$(
             # The templates of the agents' lists, and the public
             # certificate of the CA their tests trust, no key.
             config/*/*.example.json) ;;
+            containers/*/mailbox-agents/agents/*/*.example.json) ;;
             packages/mailbox-agents/tests/data/test-ca.pem) ;;
+            # Each agent's settings and lists of a deployment.
+            containers/*/mailbox-agents/agents/*) printf '%s\n' "$file" ;;
             .env | */.env | .env.* | */.env.* | */service.env)
                 printf '%s\n' "$file" ;;
             config/* | data/* | backups/* | */backups/*)
