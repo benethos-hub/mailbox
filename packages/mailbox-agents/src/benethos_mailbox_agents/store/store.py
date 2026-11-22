@@ -193,6 +193,9 @@ class Store:
                 if read_only:
                     store._check_version()
                 else:
+                    # A deleted row is overwritten, so a kept call purged
+                    # after its time leaves no text of a mail in the file.
+                    connection.execute("PRAGMA secure_delete = ON")
                     connection.execute("PRAGMA journal_mode = WAL")
                     connection.execute("PRAGMA synchronous = NORMAL")
                     store.migrate()
@@ -643,8 +646,13 @@ class Store:
         )
 
     def purge_calls(self, before: datetime) -> int:
-        """Delete the kept calls older than ``before``. Answers how many."""
-        return self._write("DELETE FROM calls WHERE at < ?", _text(before))
+        """Delete the kept calls older than ``before``. Answers how many.
+        After a deletion the write-ahead log is written back and emptied, so
+        the deleted text is gone from it as well."""
+        purged = self._write("DELETE FROM calls WHERE at < ?", _text(before))
+        if purged:
+            self._one("PRAGMA wal_checkpoint(TRUNCATE)")
+        return purged
 
     def count_calls(self) -> int:
         return int(self._one("SELECT COUNT(*) FROM calls")[0])
