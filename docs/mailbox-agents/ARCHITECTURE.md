@@ -88,23 +88,30 @@ packages/mailbox-agents/src/benethos_mailbox_agents/
   llm/
     gateway.py    # the only module that talks to the model gateway
     evidence.py   # whether a quote is in the mail the model was given
-  store/          # SQLite: schema, migrations, one file per agent
+  store/          # SQLite, one file per agent: store.py opens and
+                  # migrates it, rows.py is what its parts stand on,
+                  # messages.py, steps.py, actions.py, items.py and
+                  # calls.py are a part each, migrations/ the schema's
+                  # steps, versions/ a module per step
   runtime/        # worker loop, feed reader, tick, step runner, the model
                   # calls of one message, open items over the state file,
                   # the read-only mailbox, action executor, readiness,
                   # health, metrics
   evaluation/     # the gold format, the run, scoring per label and per
                   # field, the report
-  agents/
-    <name>/       # one package per agent
-      agent.py    # one Agent subclass, no side effects at import, always
-      schema.py   # for an agent that asks a model: what it must answer
-      baseline.py # for an agent that asks a model, where its rules need
-                  # a module of their own: the question by rules
-      prompts/    # for an agent that asks a model: its system prompts as
-                  # Markdown, each with a version
-      ...         # modules of its own, such as sorting/groups.py,
-                  # inquiries/patterns.py, awaiting_reply/text.py
+  agents/         # one package per agent. agent.py holds its one
+                  # Agent subclass, no side effects at import. An agent
+                  # that asks a model has schema.py, what it must answer,
+                  # and prompts/, its system prompts as Markdown, each
+                  # with a version
+    counting/     # agent.py alone: it only counts
+    invoices/     # schema.py, prompts/, baseline.py the question by
+                  # rules, folders.py where it looks and files
+    inquiries/    # schema.py, prompts/, baseline.py the question by
+                  # rules, patterns.py the domains and phrases it knows
+    awaiting_reply/  # schema.py, prompts/, text.py what its rules read
+                  # in a mail
+    sorting/      # groups.py the list of groups of senders, no model
 packages/mailbox-agents/tests/  # offline: REST and gateway through
                                 # httpx.MockTransport
 live/mailbox-agents/    # run by hand, outside testpaths, against the test

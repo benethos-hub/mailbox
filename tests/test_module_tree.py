@@ -17,10 +17,12 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from . import publish_helpers
 from .repository_helpers import ROOT
 
 ARCHITECTURE = ROOT / "docs" / "mailbox-service" / "architecture"
-PACKAGES = ("mailbox-service", "mailbox-client", "mailbox-mcp", "mailbox-common")
+# Every package of the workspace, the service first.
+PACKAGES = tuple(package.name for package in publish_helpers.PACKAGES)
 # Section 3, the trees: the service's beside the rules, every other
 # package's in the folder of its documents. Sections 5 to 17, the rules.
 TREES = (
