@@ -36,7 +36,8 @@ tokens, second factors, webhooks, the audit and the state of the
 service, as far as its token allows. Every operation of the API is a
 method of both clients, named like its `operationId`. The MCP server of the project,
 [`mailbox-mcp`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-mcp),
-is built on it.
+is built on it, and so are the agents,
+[`mailbox-agents`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-agents).
 
 It knows the service through its REST API alone, and needs nothing but
 [httpx](https://www.python-httpx.org/). The REST API follows the status

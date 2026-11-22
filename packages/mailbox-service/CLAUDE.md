@@ -21,9 +21,10 @@ on it. The client's requests are held to it as well
 - Lists are paged with an opaque `next_cursor`, never with page numbers.
 - A change to the database schema is a new migration: a class
   `VNNNN<Subject>` of the base `Migration` in a module
-  `vNNNN_<subject>.py` in `data/storage/sqlite/migrations/versions/` with
-  the next number, added to the registry `MIGRATIONS` in
-  `migrations/__init__.py`. The module's docstring says what it
+  `vNNNN_<subject>.py` in
+  `src/benethos_mailbox_service/data/storage/sqlite/migrations/versions/`
+  with the next number, added to the registry `MIGRATIONS` in the
+  `__init__.py` of `migrations/`. The module's docstring says what it
   does and why. Each statement stands alone, and a step in Python is the
   method `before`. A migration that shipped in a release is never changed:
   `RELEASED` in `tests/data/storage/test_sqlite.py` holds the fingerprint
@@ -37,7 +38,7 @@ How the pages look and behave, and the checklist for a new page:
 The UI in real browsers is the one check that runs its JavaScript:
 `uv run --group browser playwright install chromium firefox webkit`
 once, then `MAILBOX_BROWSER_TESTS=1 uv run --group browser pytest
-packages/mailbox-service/tests/browser`. The sign-in with a code must
+packages/mailbox-service/tests/browser -n 0`. The sign-in with a code must
 go on by itself through htmx, and no page reached from the overview
 may break the content security policy or miss a file of its own. In
 Chromium a passkey is made on the page Second factor and signs in,

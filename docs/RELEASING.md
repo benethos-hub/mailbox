@@ -24,7 +24,8 @@ client.
    `.github/publish/mcp-registry/server.json`, there also in the
    bundle's address, in `.github/publish/mcpb/manifest.json` and in
    `containers/production/mailbox-service/.env.example` and
-   `containers/production/mailbox-agents/.env.example`, and regenerate
+   `containers/production/mailbox-agents/.env.example`, in the example of
+   `containers/live/mailbox-agents/README.md`, and regenerate
    `docs/mailbox-service/openapi.json`, which carries it. `test_packaging.py` names
    every such place and every version example in the documentation
    that still shows the old one.

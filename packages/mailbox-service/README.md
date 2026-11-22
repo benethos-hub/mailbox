@@ -37,7 +37,7 @@ what changed in the mailboxes and posts it to webhooks.
 Mailbox is self-hosted and has five packages. The service is the one
 that works alone, and the others build on it. Scripts and apps reach
 mail through the Python client, AI assistants through the MCP server,
-each with a token of its own. None of them holds a mail password.
+the agents through the client as well, each with a token of its own. None of them holds a mail password.
 
 <picture>
   <source srcset="https://raw.githubusercontent.com/benethos-hub/mailbox/main/assets/architecture/architecture-dark.png" media="(prefers-color-scheme: dark)">

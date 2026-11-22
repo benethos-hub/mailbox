@@ -107,6 +107,9 @@ alone. Before a change in a package, read its file as well as this one:
   - `uv run python live/mailbox-service/gmail.py [--connect]`: the Gmail test account.
   - `uv run python live/mailbox-service/pop3.py`, `live/mailbox-service/jmap.py` and `live/mailbox-service/imap.py`:
     the test mail server in a container.
+  - `live/mailbox-agents/`: the checks of the agents, against a mail
+    server, a service and a model gateway of their own
+    ([docs/LIVE.md](docs/LIVE.md#the-agents)).
 
 ## Project layout
 
@@ -199,9 +202,10 @@ containers/               # images/ (one folder per image), and one folder
 .github/dependabot.yml    # weekly, minor and patch grouped: uv.lock, with
                           #   the ranges kept while they allow the release,
                           #   the actions by commit, the base images of
-                          #   both Dockerfiles, the images of the
+                          #   the three Dockerfiles, the images of the
                           #   production and test mail server compose
-                          #   files by their tags
+                          #   files by their tags, those of the agents'
+                          #   live setup by digest
 .github/publish/          # one folder per place a release is listed:
                           #   mcp-registry/server.json, the MCP server's
                           #   entry (test_mcp_registry.py), mcpb/, its
@@ -209,7 +213,7 @@ containers/               # images/ (one folder per image), and one folder
 tests/                    # what the repository holds, across the five
                           #   packages
   test_boundaries.py      # records, not tuples, where a package hands
-                          #   values on, in all five
+                          #   values on, in all but mailbox-agents
   test_api_names.py       # names the MCP server takes from the API,
                           #   held to docs/mailbox-service/openapi.json
   test_interfaces.py      # docs/mailbox-client/client-interface.json and
@@ -219,7 +223,7 @@ tests/                    # what the repository holds, across the five
                           #   package's entry, sizes here and in live/,
                           #   how the others use mailbox-common
   test_readmes.py         # the links of every README, of docs/ and of
-                          #   this file lead somewhere, and a README of
+                          #   every CLAUDE.md lead somewhere, and a README of
                           #   two sections or more lists them in its
                           #   contents at the top, under the 3D icon
   test_module_tree.py     # the trees of docs/mailbox-service/ARCHITECTURE.md section 3
@@ -261,8 +265,8 @@ docs/
   IDEAS.md                # collected, not yet decided
   LIVE.md                 # the live checks: what each one reads,
                           #   sends, changes and deletes
-  REFACTORING.md          # how the layout came to be: what was
-                          #   decided, and the reasons
+  REFACTORING.md          # how the code got its layout, 2026-09 to
+                          #   2026-10: what was decided, and the reasons
   mailbox-service/        # the service, and what holds for every package
     CONCEPT.md            # design: the overview and where each section is
     concept/              #   one file per topic, the sections under
@@ -368,15 +372,18 @@ packages/
 The layers, what each package and module holds, the seams that keep
 parts replaceable, and the rules for a new piece of code:
 [docs/mailbox-service/ARCHITECTURE.md](docs/mailbox-service/ARCHITECTURE.md). Read it before a change
-that adds a module, a package, a library or a seam.
+that adds a module, a package, a library or a seam. The agents have
+their own: [docs/mailbox-agents/ARCHITECTURE.md](docs/mailbox-agents/ARCHITECTURE.md).
 
 ## Verifying
 
 - Tests: `uv run pytest -q` (offline, must stay green). A test sits in
-  the folder of the code it tests, `tests/domain/mailbox/` for
+  the folder of the code it tests, in the service
+  `packages/mailbox-service/tests/domain/mailbox/` for its
   `domain/mailbox/`, also when it goes through the API. A test that
   checks several layers at once, such as a backup through the command
-  line down to the database file, goes to `tests/integration/`.
+  line down to the database file, goes to that package's
+  `tests/integration/`.
   The tests run on up to eight processes (pytest-xdist, `addopts` in
   `pyproject.toml`). `-n 0` runs them in one, e.g. for a debugger or
   `-s`.
@@ -391,7 +398,8 @@ that adds a module, a package, a library or a seam.
 Never write a test that reaches a real mail server, and never one that skips
 itself without credentials. Live checks are manual scripts in `live/`, outside
 `testpaths` ([docs/LIVE.md](docs/LIVE.md)). Only the accounts listed in
-`live/.env` count as confirmed test accounts for golden rule 1.
+`live/.env`, and the account `containers/live/mailbox-agents/` makes for
+the agents, count as confirmed test accounts for golden rule 1.
 
 ## Conventions
 
