@@ -21,8 +21,8 @@ Operation names below are the service's `operationId`s.
 `sources/mailbox.py` offers these and nothing else: no send, no delete, no
 trash. Which folder an agent may make is the runtime's to decide
 ([agent contract](agent-contract.md)). A move sets the message's folders to
-the one target. A message without a text body is read with an empty text
-**(to verify: whether the service always converts an HTML-only message)**.
+the one target. A message without a text body is read with an empty
+text. The service does not convert an HTML-only message into text.
 `list_all_messages` without a folder lists the inbox alone (measured
 2026-11-17 against 0.7.5), so a backfill names each folder role it wants.
 
@@ -33,8 +33,9 @@ What the agents rely on:
   changes for answers `410 changes_expired`.
 - The feed may name a change more than once. Every step is therefore
   idempotent ([runtime](runtime.md)).
-- The text of a message arrives already converted, with hidden HTML content
-  dropped.
+- The text of a message is its plain text part. The service does not
+  convert an HTML body, so a mail with an HTML body alone arrives with an
+  empty text.
 - A change of flags made in another mail client reaches the feed only where
   the provider reports it, for IMAP with CONDSTORE. `awaiting_reply` depends
   on this ([awaiting reply](agent-awaiting-reply.md)).
@@ -64,14 +65,9 @@ Stalwart, on the test account:
   under an id no state file knows, but with an agent's keyword, comes from
   a state file made anew, or from a provider that gives a moved message a
   new id, which this check did not see at Stalwart.
-- A message moved and moved back keeps its id. Against 0.7.5 it did not
-  always: in each of four runs of `live/mailbox-agents/invoices.py` two of the messages
-  `sorting` moved into `Providers/CloudHost` and the check moved back
-  came back in the inbox under a new id. The service fixed this in 0.8.0
-  for a move made while it syncs the account, and in the run of
-  2026-11-19 against 0.8.0 no message of either put-back came back under
-  another id, nor in the runs of 2026-11-21 against 0.8.0 and 0.9.0. An agent that relies on its state file would meet such a
-  message as a new one: `invoices` skips it when it carries the agent's
+- A message moved and moved back keeps its id (measured 2026-11-19 to
+  2026-11-21 against 0.8.0 and 0.9.0). A message that came back under a
+  new id would be new to an agent's state file: `invoices` skips it when it carries the agent's
   keyword, and asks about it when it does not.
 - `create_folder` makes a folder at the top without a parent, and below
   another with the parent's id. At IMAP a folder's id follows its path.
@@ -105,14 +101,8 @@ Stalwart, on the test account:
   state taken before it. A backfill keeps a cursor for one listing only,
   so a restart of the service in the middle of a backfill ends it with
   exit code 1 before it takes anything up, and the backfill is run again.
-- A message named that is gone by the time it is read: against 0.7.5 a
-  listing of a folder named one or two messages moved out of it shortly
-  before (2026-11-18), and while moves were synced the feed named two ids
-  per run of `live/mailbox-agents/invoices.py` as `message.created` that were deleted at
-  the next sync. Each was logged as a failed step `fetch` with
-  `MessageGoneError`. The service fixed both in 0.8.0, and the run of
-  2026-11-19 against 0.8.0 logged no such step. Should one come again, the
-  runtime ends the message as `skipped`, as for any message deleted
+- A message the feed or a listing names may be gone by the time it is
+  read. The runtime then ends it as `skipped`, as for any message deleted
   before it is read, and nothing is decided or done.
 - `get_me` answers the agents' user exactly the one account it is
   granted, the test account (measured 2026-11-18). `list_accounts` answers it `200` with no
@@ -139,11 +129,12 @@ call refused.
 `mail.write` also allows moving a message to the trash and creating a
 folder. The service cannot refuse those to an agent that may move mail, so
 the runtime does ([safety](safety.md)). Narrowing a grant to chosen folders is
-possible in the service. Whether a move between two granted folders works
-under such a grant is **(to verify)**. Since 0.9.0, by its changelog, the
-service refuses such a grant a change that replaces the folders of a
-message lying in a folder outside the grant, `403`, and a move of an agent
-replaces the folders **(to verify)**.
+possible in the service
+([PERMISSIONS.md](../../mailbox-service/PERMISSIONS.md#85-two-more-constraints)):
+`mail.write` with folders moves only between them, and refuses a change of
+a message that also lies outside them. A move of an agent replaces the
+message's folders with the one target. Whether an agent works under such
+a grant is not measured yet.
 
 A move into the drafts folder is refused by the service since 0.9.0,
 `400 bad_request`, and the message stays where it was: measured
@@ -161,10 +152,9 @@ asked.
 The service names its version at `/health`, which it answers without a
 right and counts against no limit. While its major version is 0, a minor
 release may change what it does and what its interface takes, and the
-offline suite sees none of that: it mocks the service. Since 2026-11-22
-the agents are released with the service, from one repository and under
-one version, so they work against the service of their own version
-(decided 2026-11-22, replacing the tested lines of 2026-11-19):
+offline suite sees none of that: it mocks the service. The agents are
+released with the service under one version, so they work against the
+service of their own version (decided 2026-11-22):
 
 - **Before 1.0** the service has the agents' minor version: the agents
   0.10.x take the service 0.10.x, of any patch. **From 1.0** it has their
@@ -175,7 +165,7 @@ one version, so they work against the service of their own version
 - **A release** is three numbers with at most a local part after a `+`,
   such as `0.10.0+local`. A pre-release of the service such as
   `0.10.0rc1` or `0.10.1.dev3` matches no agents, also one of a later
-  patch (decided 2026-11-20, kept 2026-11-22). The agents' own version
+  patch (decided 2026-11-20). The agents' own version
   counts by its first two numbers, also as a pre-release.
 - **The check** is `matches` in `sources/mailbox.py`, against
   `__version__` of the package. The worker asks the service for its
@@ -200,9 +190,7 @@ one version, so they work against the service of their own version
   workspace releases both together.
 
 What follows from it: an operator updates the image of the service and
-the images of the agents together, to the same minor version. The
-published agents 0.2.0 take the service 0.8 and 0.9 only, and refuse
-0.10.
+the images of the agents together, to the same version.
 
 An agent does not go back to the stage `shadow` because of a new release
 of the service (decided 2026-11-19): its prompt and its model are the

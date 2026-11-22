@@ -15,7 +15,7 @@ Part of the [concept](../CONCEPT.md).
 A sent message that expects a reply becomes an open item. It closes when:
 
 - a later message from another sender appears in its thread, automatic
-  answers not counted. The service exposes no header, so an automatic
+  answers not counted. The agents read no header, so an automatic
   answer is told by a sender such as `noreply` or `mailer-daemon` and a
   subject such as `automatische antwort` or `out of office`, matched
   without case (decided 2026-11-17),

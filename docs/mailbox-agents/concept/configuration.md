@@ -25,7 +25,7 @@ and `KEYWORD`.
 | `MAX_ATTEMPTS` | refused answers before a message is `failed`, `5` when unset |
 | `BACKOFF_CEILING_SECONDS` | the longest wait between two attempts, `3600` when unset |
 | `BACKFILL_DAYS` | the window `backfill` runs over after an expired feed state, `7` when unset |
-| `DATA_DIR` | where the state file lives |
+| `DATA_DIR` | where the state files live, one `<agent>.db` per agent, `data` below the working directory when unset |
 | `PROMPT_RETENTION_DAYS` | [state](state.md), `0` when unset |
 | `METRICS_PORT` | [operation](operation.md), `0` serves no endpoint |
 | `LOG_LEVEL` | `DEBUG`, `INFO`, `WARNING` or `ERROR`, `INFO` when unset |

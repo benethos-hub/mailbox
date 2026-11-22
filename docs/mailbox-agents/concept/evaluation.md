@@ -11,8 +11,8 @@ agent runs over it and the scoring counts where it agrees.
   message does not fill, and an optional `note`. A line starting with `#`
   is a comment. A message named twice is refused. The mail itself is
   fetched by id at run time.
-- **Where it lives:** under `data/`, never versioned, because it points at
-  real mail. The repository holds the format, the scoring and a small set of
+- **Where it lives:** outside version control, such as under `data/` or
+  the `secrets/` of the live setup, because it points at real mail. The repository holds the format, the scoring and a small set of
   invented messages the tests use.
 - **What is reported:** for a label, precision and recall. For each field,
   how often the value is right, wrong, missing or invented, and how often
@@ -34,8 +34,10 @@ agent runs over it and the scoring counts where it agrees.
   code 2, as a pass does, since it reads mail and writes a report that is
   kept (decided 2026-11-20).
 - **A report is versioned.** Each run writes one file,
-  `reports/mailbox-agents/<agent>/<date>-v<agent version>-<prompt version>-<model alias>.json`,
-  naming the agent version, prompt version, model alias, the models the
+  `<agent>/<date>-v<agent version>-<prompt version>-<model alias>.json`
+  below the folder `--reports` names, `reports/` by default. The
+  repository keeps them in `reports/mailbox-agents/`, so a run for it
+  names `--reports reports/mailbox-agents`. The file names the agent version, prompt version, model alias, the models the
   gateway reported and the date, with numbers only: no id, no label of a
   single message and no content of any mail. A change to a prompt or a
   model is merged with its report.

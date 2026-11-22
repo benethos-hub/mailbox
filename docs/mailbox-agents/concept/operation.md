@@ -8,7 +8,7 @@ Part of the [concept](../CONCEPT.md).
   tag is `v` and the version of `pyproject.toml`. A manual run is the
   trial: it checks the package without uploading and pushes the image as
   `edge`. [RELEASING.md](../../RELEASING.md) has the steps. The agents
-  take the mailbox service of their own minor version
+  take the mailbox service of their own version
   ([mailbox service](mailbox-service.md#the-version-of-the-service)).
 - **Container:** non-root (uid 10001), read-only root file system, no
   capabilities, `no-new-privileges`, one volume for the state file, the
@@ -17,8 +17,8 @@ Part of the [concept](../CONCEPT.md).
   image, each behind a profile of its own name, `restart: unless-stopped`,
   its health check `health --agent <name>`. The image is named by
   `MAILBOX_AGENTS_VERSION`, best as the version with the digest of the
-  release, `0.2.0@sha256:<digest>`: a tag on ghcr.io can be moved, a
-  digest cannot (2026-11-19). The live setup pins every image so.
+  release, `<version>@sha256:<digest>`: a tag on ghcr.io can be moved, a
+  digest cannot (2026-11-19). The live setup pins the images it pulls from other projects so.
 - **Health:** `health --agent <name>` exits 0 while the loop's last sign
   of progress, written to the state file after each message and at the end
   of each pass, is younger than three poll intervals plus one model call

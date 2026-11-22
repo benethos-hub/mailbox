@@ -6,8 +6,7 @@ Part of the [concept](../CONCEPT.md).
 > Not run on a real mailbox. A run on the owner's account is the owner's
 > decision, in `shadow` first.** Its purpose: the mail of providers such
 > as a shop, a hoster or a bank goes into a folder of its own, and one
-> folder may take several, such as all banks. A decision is marked with
-> its date.
+> folder may take several, such as all banks.
 
 **Question:** is the sender of this message in the inbox one of a listed
 group, and which folder is the group's?
@@ -56,7 +55,7 @@ Telco/
 ## 2. The list
 
 A JSON file named in `MAILBOX_AGENTS_SORTING_FILE`, not versioned. An example
-of it is versioned as `sorting.example.json`.
+of it is versioned as `config/benethos-mailbox-agents/sorting.example.json`.
 
 ```json
 {
@@ -117,9 +116,7 @@ sender. Each is named by its group, and a rule by its place too.
   as too broad. Whether two names are a registered domain, such as
   `co.uk`, is not checked.
 
-**A domain rule is refused (decided 2026-11-18).** A bare domain was a
-rule that marks and does not move, in `invoices` before its version 4.
-`sorting` sets no keyword a domain could mark with, so such a rule would
+**A domain rule is refused (decided 2026-11-18).** `sorting` sets no keyword a domain could mark with, so such a rule would
 do nothing. The message says to
 write `*@domain` or `*@*.domain`.
 
@@ -232,8 +229,8 @@ genuine.
 
 What would settle it is the result of the receiving server's check of the
 sender (SPF, DKIM, DMARC), which the server writes into the message. The
-mailbox service exposes no header of a message (measured 2026-11-17 against
-0.7.5). Since 0.8.0 it names that result for each message as
+agents read no header of a message: `get_message` names none, and they do
+not fetch the raw source. Since 0.8.0 the mailbox service names that result for each message as
 `sender_check`, and `unknown` for an account without the name of its
 receiving server set (measured 2026-11-19 on the test account). The agents
 do not read it yet.
@@ -244,7 +241,7 @@ records its moves as `shadow` does, whatever the stage of the agent, and
 Left out, a group is not held.
 
 What is planned on top of it: a switch for a group that moves only mail
-whose sender was verified ([roadmap](../../ROADMAP.md)).
+whose sender was verified ([roadmap](../../roadmap/agents.md#next)).
 
 ## 6. Settings
 
@@ -316,8 +313,3 @@ another, was measured there first
   and the list, and the gold format has no place for it.
 - **One list for both agents.** `invoices` must work without `sorting`
   (decided 2026-11-18), so it takes folders, not groups.
-
-## 12. Open
-
-- The switch for verified senders of section 5. The mailbox service
-  answers what it needs since 0.8.0.
