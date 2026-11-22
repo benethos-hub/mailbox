@@ -177,16 +177,16 @@ def _as_described() -> Iterator[None]:
         ) from None
 
 
-def _address(found: wire.Address | None) -> Address | None:
-    if not found:
-        return None
+def _record(found: wire.Address) -> Address:
     return Address(email=_sound(found.email), name=_sound_or_none(found.name))
 
 
+def _address(found: wire.Address | None) -> Address | None:
+    return _record(found) if found else None
+
+
 def _addresses(found: Iterable[wire.Address]) -> tuple[Address, ...]:
-    return tuple(
-        Address(email=_sound(a.email), name=_sound_or_none(a.name)) for a in found
-    )
+    return tuple(_record(a) for a in found)
 
 
 class Mailbox:
