@@ -32,6 +32,14 @@ adheres to [Semantic Versioning](https://semver.org/).
   newest looked like every message, and an invoice outside them was
   missing from the senders without a word.
 
+### Security
+
+- `benethos-mailbox-agents`: a sender pattern of `sorting` is matched in
+  time linear in the length of the address. Before, a pattern of several
+  `*` took time that grew with a power of that length, and a mail from a
+  long address that did not match held the worker for seconds to
+  minutes.
+
 ## [0.10.0] - 2026-11-22
 
 ### Added

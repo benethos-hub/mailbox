@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import time
 from pathlib import Path
 from typing import Any
@@ -331,3 +332,60 @@ def test_an_address_longer_than_any_mail_allows_matches_nothing() -> None:
     assert listed.match(address) is None
     assert time.monotonic() - started < 0.5
     assert listed.match("a" * (MAX_ADDRESS - 20) + "b@shop.example") is not None
+
+
+def test_a_pattern_of_many_stars_is_matched_in_linear_time() -> None:
+    listed = groups(
+        {"name": "A", "folder": "A", "senders": ["x*x*x*x*x*x*y@shop.example"]},
+    )
+    address = "x" * (MAX_ADDRESS - len("@shop.example")) + "@shop.example"
+
+    started = time.monotonic()
+    assert listed.match(address) is None
+    assert time.monotonic() - started < 0.1
+
+
+def _by_regex(local: str, found: str) -> bool:
+    """The match of a pattern as a regular expression, as it was before
+    patterns were matched in linear time."""
+    pattern = "^" + ".*".join(re.escape(p) for p in local.split("*")) + "$"
+    return re.match(pattern, found) is not None
+
+
+@pytest.mark.parametrize(
+    ("local", "found"),
+    [
+        ("info*", "info"),
+        ("info*", "info-desk"),
+        ("info*", "inf"),
+        ("*desk", "desk"),
+        ("*desk", "help-desk"),
+        ("*desk", "desks"),
+        ("a*b", "ab"),
+        ("a*b", "a"),
+        ("a*b", "b"),
+        ("ab*ba", "aba"),
+        ("ab*ba", "abba"),
+        ("a*b*c", "abc"),
+        ("a*b*c", "acbc"),
+        ("a*b*c", "acb"),
+        ("a*bc*bc*d", "abcbcd"),
+        ("a*bc*bc*d", "abcd"),
+        ("*", ""),
+        ("*", "any"),
+        ("**", "x"),
+        ("a**b", "ab"),
+        ("*.*", "first.last"),
+        ("*.*", "firstlast"),
+        ("x*x*x*y", "xxxy"),
+        ("x*x*x*y", "xxy"),
+    ],
+)
+def test_a_pattern_matches_as_its_regular_expression_did(
+    local: str, found: str
+) -> None:
+    listed = groups({"name": "A", "folder": "A", "senders": [f"{local}@shop.example"]})
+
+    matched = listed.match(f"{found}@shop.example") is not None
+
+    assert matched is _by_regex(local, found)

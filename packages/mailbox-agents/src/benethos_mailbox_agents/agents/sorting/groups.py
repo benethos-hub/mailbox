@@ -53,8 +53,9 @@ __all__ = ["NONE", "READERS", "Group", "Groups", "Kind", "Match", "load_groups"]
 NONE = "none"
 
 # An address longer than this matches no rule: 64 characters before the
-# @, 255 after it, as much as the mail standards allow. A pattern of
-# several * takes time in the square of the length it is matched with.
+# @, 255 after it, as much as the mail standards allow. A pattern is
+# matched in time linear in the length of the address and the number of
+# its *, so the limit only bounds that time.
 MAX_ADDRESS = 320
 
 _NAME = r"[^\s@*]+"
@@ -116,8 +117,27 @@ def _matches(rule: str, kind: Kind, address: str) -> bool:
             return False
     elif found_domain != domain:
         return False
-    pattern = "^" + ".*".join(re.escape(p) for p in local.split("*")) + "$"
-    return re.match(pattern, found_local) is not None
+    return _glob(local, found_local)
+
+
+def _glob(pattern: str, text: str) -> bool:
+    """Whether ``text`` is ``pattern`` with each * standing for any run of
+    characters. Each piece between two * is taken where it first fits,
+    which is right for a pattern of * alone and keeps the time linear in
+    the length of ``text``."""
+    if "*" not in pattern:
+        return text == pattern
+    first, *middle, last = pattern.split("*")
+    end = len(text) - len(last)
+    if end < len(first) or not text.startswith(first) or not text.endswith(last):
+        return False
+    position = len(first)
+    for piece in middle:
+        found = text.find(piece, position, end)
+        if found < 0:
+            return False
+        position = found + len(piece)
+    return True
 
 
 class Group(BaseModel):
