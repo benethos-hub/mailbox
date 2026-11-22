@@ -360,8 +360,7 @@ def service(password: str, gateway_key: str) -> None:
     (SECRETS / "agent.env").write_text(
         "\n".join(
             [
-                "# Made by containers/live/mailbox-agents/setup.sh, for the test"
-                " account only.",
+                "# Made by containers/live/mailbox-agents/setup.sh, test account only.",
                 f"MAILBOX_AGENTS_SERVICE_URL={SERVICE}",
                 f"MAILBOX_AGENTS_SERVICE_TOKEN={agent_token}",
                 f"MAILBOX_AGENTS_ACCOUNTS={account_id}",
