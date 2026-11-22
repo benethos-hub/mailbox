@@ -6,6 +6,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- The service image installs publicsuffixlist 1.1.2.20261121 from the
+  lockfile.
+
 ## [0.9.0] - 2026-11-21
 
 ### Added
