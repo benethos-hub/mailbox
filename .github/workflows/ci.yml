@@ -154,6 +154,7 @@ jobs:
         packages/mailbox-client
         packages/mailbox-mcp
         packages/mailbox-common[all]
+        packages/mailbox-agents
       requirements: |
         pytest>=9.1.1
         pytest-asyncio>=1.4

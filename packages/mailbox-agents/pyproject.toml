@@ -1,0 +1,76 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "benethos-mailbox-agents"
+version = "0.10.0"
+description = "Small self-hosted AI agents that work on a mailbox continuously. Each agent answers one narrow question about a message and takes one reversible action."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Benedikt Oswald" }]
+keywords = [
+    "ai-agents",
+    "email",
+    "email-automation",
+    "email-classification",
+    "email-sorting",
+    "evaluation",
+    "inbox",
+    "information-extraction",
+    "invoices",
+    "llm",
+    "local-llm",
+    "mailbox",
+    "self-hosted",
+    "structured-outputs",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Framework :: AsyncIO",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: System Administrators",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
+    "Topic :: Communications :: Email",
+    "Topic :: Communications :: Email :: Filters",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Typing :: Typed",
+]
+# Each minimum is the version the agents were tested with when they came
+# into this repository: the job lowest-agents of ci.yml checks them
+# against OSV.
+dependencies = [
+    # The REST client. Released with this package under the same version.
+    "benethos-mailbox-client==0.10.0",
+    "httpx>=0.28.1",
+    "prometheus-client>=0.26.0",
+    "pydantic>=2.14.3",
+    "pydantic-settings>=2.16.3",
+]
+
+[project.urls]
+Homepage = "https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-agents#readme"
+Documentation = "https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-agents#readme"
+Repository = "https://github.com/benethos-hub/mailbox"
+Issues = "https://github.com/benethos-hub/mailbox/issues"
+Changelog = "https://github.com/benethos-hub/mailbox/blob/main/CHANGELOG.md"
+
+[project.scripts]
+# One name only, identical to the distribution name, so every identifier
+# matches and `uvx benethos-mailbox-agents` works.
+benethos-mailbox-agents = "benethos_mailbox_agents.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/benethos_mailbox_agents"]

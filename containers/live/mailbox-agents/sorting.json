@@ -1,0 +1,33 @@
+{
+  "groups": [
+    {
+      "name": "CloudHost",
+      "folder": "Providers/CloudHost",
+      "senders": [
+        "*@cloudhost.example"
+      ]
+    },
+    {
+      "name": "Telco",
+      "folder": "Providers/Telco",
+      "senders": [
+        "rechnung@telco.example"
+      ]
+    },
+    {
+      "name": "Paperworks",
+      "folder": "Paperworks",
+      "senders": [
+        "*@paperworks.example"
+      ],
+      "hold": true
+    },
+    {
+      "name": "Shop",
+      "folder": "Providers/Shop",
+      "senders": [
+        "*@*.shop.example"
+      ]
+    }
+  ]
+}

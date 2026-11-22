@@ -161,7 +161,7 @@ fix that first, and say so.
   them, and a key without a value stays out of the answer rather than
   going as null.
   `tests/test_boundaries.py` at the root of the repository checks it for
-  the four packages: what each offers, and the methods of the domain services
+  the five packages: what each offers, and the methods of the domain services
   the web layer reaches. Its `ALLOWED` names what stays, with the
   reason, such as a lookup by key or the free JSON of an account's
   settings.
@@ -228,7 +228,7 @@ fix that first, and say so.
   `clocks.py`. No test module imports another, every other module
   is named so and lies in the nearest common folder of the modules that
   import it, which `tests/test_code_rules.py` at the root checks in all
-  four packages.
+  five packages.
 - The tests of every package, the tests at the root and the live
   checks use the public names of `mailbox-common`, never one with a
   leading underscore.
@@ -243,7 +243,7 @@ fix that first, and say so.
   Playwright's browsers and fixtures of its own in its `conftest.py`,
   and it is collected only with `MAILBOX_BROWSER_TESTS=1`
   (CLAUDE.md, Verifying).
-- What checks the repository across the four packages, the publishing,
+- What checks the repository across the five packages, the publishing,
   the workflows, the READMEs, the trees of section 3, the project
   layout of CLAUDE.md, the boundaries, the rules for the tests of every
   package and for `live/`, the scripts of `assets/`, the pre-commit

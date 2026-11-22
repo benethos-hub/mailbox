@@ -15,6 +15,9 @@
 
 [![PyPI benethos-mailbox-common](https://img.shields.io/pypi/v/benethos-mailbox-common?label=PyPI%20benethos-mailbox-common&logo=pypi&logoColor=white)](https://pypi.org/project/benethos-mailbox-common/)
 
+[![PyPI benethos-mailbox-agents](https://img.shields.io/pypi/v/benethos-mailbox-agents?label=PyPI%20benethos-mailbox-agents&logo=pypi&logoColor=white)](https://pypi.org/project/benethos-mailbox-agents/)
+[![Container benethos-mailbox-agents](https://img.shields.io/badge/ghcr.io-benethos--mailbox--agents-2496ED?logo=docker&logoColor=white)](https://github.com/benethos-hub/mailbox/pkgs/container/benethos-mailbox-agents)
+
 [![Sponsor](https://raw.githubusercontent.com/benethos-hub/.github/main/profile/badges/sponsor.svg)](https://github.com/sponsors/BeneODev)
 [![PayPal](https://raw.githubusercontent.com/benethos-hub/.github/main/profile/badges/paypal.svg)](https://paypal.me/BeneODev)
 
@@ -35,7 +38,7 @@ agents work with your mail through one door you control.
   - [More uses](#more-uses)
 - [What it can do today](#what-it-can-do-today)
 - [Providers](#providers)
-- [The four packages](#the-four-packages)
+- [The five packages](#the-five-packages)
 - [Tools](#tools)
 - [Getting started](#getting-started)
 - [Documentation](#documentation)
@@ -50,13 +53,15 @@ info@ address at some hoster, maybe a Gmail account. Each speaks its own
 dialect: IMAP here, Microsoft Graph there. Every tool that wants to work
 with mail has to learn all of them and has to be given the passwords.
 
-Mailbox turns that around. It has four packages. `mailbox-service` runs on
+Mailbox turns that around. It has five packages. `mailbox-service` runs on
 your own machine or server and holds the connections to all accounts.
 Everything else talks to that service only, through one REST API that
 looks the same for every provider. `mailbox-client` is the Python
 client of that API, for scripts and apps. `mailbox-mcp`, the MCP
 server, builds on the client and opens the service to AI agents.
-`mailbox-common` holds what the service and the MCP server share. The
+`mailbox-common` holds what the service and the MCP server share.
+`mailbox-agents`, still alpha, are small AI agents that work on a
+mailbox through the client, one narrow question each. The
 service decides who may do what. A script, an app or an AI agent gets
 a token of its own. That token opens exactly the accounts and
 operations it was given, nothing more.
@@ -170,7 +175,7 @@ What comes next, and in which order, is in
 Not supportable: Tuta, which offers no IMAP and no API. Details per
 provider in [the concept, section 5.3](docs/mailbox-service/concept/providers.md#53-what-each-provider-offers).
 
-## The four packages
+## The five packages
 
 | Package | What it is | Runs | Read more |
 |---|---|---|---|
@@ -178,6 +183,7 @@ provider in [the concept, section 5.3](docs/mailbox-service/concept/providers.md
 | `mailbox-client` | the Python client of the REST API, async and sync | inside your own code | [packages/mailbox-client](packages/mailbox-client/README.md) |
 | `mailbox-mcp` | the MCP server, on top of `mailbox-client` | per client over stdio, or as a server over HTTP | [packages/mailbox-mcp](packages/mailbox-mcp/README.md) |
 | `mailbox-common` | what the service and the MCP server share | installed with them | [packages/mailbox-common](packages/mailbox-common/README.md) |
+| `mailbox-agents` | small AI agents that sort and mark mail, on top of `mailbox-client`, alpha | a process per agent | [packages/mailbox-agents](packages/mailbox-agents/README.md) |
 
 A release publishes all four to PyPI under the same version, as
 `benethos-mailbox-service`, `benethos-mailbox-client`,
@@ -273,7 +279,7 @@ for clients: [packages/mailbox-mcp](packages/mailbox-mcp/README.md#tools).
 
 ## Development
 
-One uv workspace, one lockfile, four distributions.
+One uv workspace, one lockfile, five distributions.
 
 ```
 uv sync

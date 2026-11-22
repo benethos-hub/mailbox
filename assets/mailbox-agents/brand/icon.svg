@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-8 0 216 224" width="216" height="224">
+<title>Mailbox Agents</title>
+<defs><linearGradient id="tile" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFA552"/><stop offset=".55" stop-color="#F26430"/><stop offset="1" stop-color="#C23A1A"/></linearGradient>
+<radialGradient id="shine" cx=".22" cy=".12" r=".8"><stop offset="0" stop-color="#FFF" stop-opacity=".32"/><stop offset=".55" stop-color="#FFF" stop-opacity=".06"/><stop offset="1" stop-color="#FFF" stop-opacity="0"/></radialGradient>
+<clipPath id="face"><rect width="200" height="200" rx="44"/></clipPath>
+<linearGradient id="paper" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#FCE7DA"/></linearGradient>
+<linearGradient id="visor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5A1E0E"/><stop offset="1" stop-color="#3B1208"/></linearGradient></defs>
+<rect x="6" y="14" width="188" height="190" rx="46" fill="#2A0E05" opacity="0.045"/><rect x="4" y="16" width="192" height="190" rx="48" fill="#2A0E05" opacity="0.045"/><rect x="2" y="18" width="196" height="190" rx="50" fill="#2A0E05" opacity="0.045"/><rect x="0" y="20" width="200" height="190" rx="52" fill="#2A0E05" opacity="0.045"/><rect x="-2" y="22" width="204" height="190" rx="54" fill="#2A0E05" opacity="0.045"/><rect x="-4" y="24" width="208" height="190" rx="56" fill="#2A0E05" opacity="0.045"/><rect y="7" width="200" height="200" rx="44" fill="#8E2A12"/><rect width="200" height="200" rx="44" fill="url(#tile)"/>
+<g clip-path="url(#face)"><rect width="200" height="200" fill="url(#shine)"/><g fill="none" stroke="#FFF" stroke-linecap="round"><circle cx="206" cy="206" r="62" stroke-width="12" stroke-opacity=".07"/><circle cx="206" cy="206" r="104" stroke-width="8" stroke-opacity=".05"/></g>
+<!-- Two agents behind, one in front with a message: a team of agents at work on mail. -->
+<g opacity="0.5">
+<line x1="40" y1="70" x2="40" y2="60" stroke="#FFF" stroke-width="4" stroke-linecap="round"/><circle cx="40" cy="57" r="5" fill="#FFF"/>
+<rect x="16" y="70" width="48" height="40" rx="12" fill="url(#paper)"/><rect x="22" y="79" width="36" height="20" rx="8" fill="url(#visor)"/>
+<circle cx="33" cy="89" r="4" fill="#FDBA74"/><circle cx="47" cy="89" r="4" fill="#FDBA74"/>
+<rect x="18" y="116" width="44" height="90" rx="14" fill="url(#paper)"/>
+<line x1="160" y1="70" x2="160" y2="60" stroke="#FFF" stroke-width="4" stroke-linecap="round"/><circle cx="160" cy="57" r="5" fill="#FFF"/>
+<rect x="136" y="70" width="48" height="40" rx="12" fill="url(#paper)"/><rect x="142" y="79" width="36" height="20" rx="8" fill="url(#visor)"/>
+<circle cx="153" cy="89" r="4" fill="#FDBA74"/><circle cx="167" cy="89" r="4" fill="#FDBA74"/>
+<rect x="138" y="116" width="44" height="90" rx="14" fill="url(#paper)"/></g>
+<rect x="56" y="134" width="96" height="80" rx="24" fill="#000" opacity="0.16"/>
+<rect x="52" y="130" width="96" height="80" rx="24" fill="url(#paper)"/></g>
+<rect x="1" y="1" width="198" height="198" rx="43" fill="none" stroke="#FFF" stroke-opacity=".22" stroke-width="2"/>
+<line x1="100" y1="50" x2="100" y2="34" stroke="#FFF" stroke-width="6" stroke-linecap="round"/>
+<circle cx="100" cy="30" r="8" fill="#FDBA74" stroke="#FFF" stroke-width="3"/>
+<rect x="44" y="76" width="10" height="26" rx="4" fill="url(#paper)"/><rect x="146" y="76" width="10" height="26" rx="4" fill="url(#paper)"/>
+<rect x="56" y="54" width="92" height="70" rx="22" fill="#000" opacity="0.16"/>
+<rect x="52" y="50" width="96" height="72" rx="22" fill="url(#paper)"/>
+<rect x="62" y="64" width="76" height="40" rx="14" fill="url(#visor)"/>
+<circle cx="84" cy="84" r="8" fill="#FDBA74"/><circle cx="116" cy="84" r="8" fill="#FDBA74"/>
+<circle cx="86" cy="81" r="2.5" fill="#FFF" opacity="0.8"/><circle cx="118" cy="81" r="2.5" fill="#FFF" opacity="0.8"/>
+<rect x="72" y="146" width="60" height="42" rx="7" fill="#000" opacity="0.14"/>
+<rect x="70" y="142" width="60" height="42" rx="7" fill="#F26430"/>
+<path d="M72 146 L100 166 L128 146" fill="none" stroke="#FFF" stroke-width="5" stroke-linejoin="round" stroke-linecap="round" opacity="0.9"/>
+</svg>

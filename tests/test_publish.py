@@ -12,7 +12,7 @@ import re
 from .publish_helpers import (
     CLIENT,
     COMMON,
-    PACKAGES,
+    PUBLISHED,
     WORKFLOW,
     module_of,
     project_of,
@@ -60,8 +60,8 @@ def test_every_package_is_published() -> None:
     of its own, named after the package, since PyPI takes a pending
     publisher for one project only."""
     jobs = _publish_jobs()
-    assert set(jobs) == {str(project_of(p)["name"]) for p in PACKAGES}
-    for package in PACKAGES:
+    assert set(jobs) == {str(project_of(p)["name"]) for p in PUBLISHED}
+    for package in PUBLISHED:
         name = str(project_of(package)["name"])
         assert _wheel_contains(module_of(package)) in str(jobs[name]["body"])
         assert jobs[name]["environment"] == f"pypi-{name}"
@@ -72,7 +72,7 @@ def test_a_manual_run_tries_every_package() -> None:
     an environment and without an OIDC token."""
     trial = workflow_job("pypi-trial")
     tried = dict(re.findall(r"^ +- package: (\S+)\n +module: (\S+)$", trial, re.M))
-    assert tried == {str(project_of(p)["name"]): module_of(p) for p in PACKAGES}
+    assert tried == {str(project_of(p)["name"]): module_of(p) for p in PUBLISHED}
     assert "dry-run: true" in trial
     assert _wheel_contains("${{ matrix.module }}") in trial
     assert "environment:" not in trial and "id-token" not in trial
@@ -102,7 +102,7 @@ def test_a_package_is_published_after_those_it_needs() -> None:
     the packages it needs. The client waits for the common package too,
     so it may come to need it without a change here."""
     jobs = _publish_jobs()
-    for package in PACKAGES:
+    for package in PUBLISHED:
         name = str(project_of(package)["name"])
         needed = workspace_needs(package)
         if package == CLIENT:

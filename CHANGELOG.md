@@ -6,6 +6,22 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `benethos-mailbox-agents`, small AI agents that work on a mailbox
+  through the client, released with the other packages from now on and
+  still alpha. Up to 0.2.0 they had a repository and a changelog of their
+  own, benethos-hub/mailbox-agents. They take the client of the same
+  version.
+
+### Changed
+
+- `benethos-mailbox-agents`: `report` says when the summary at its end
+  counts only part of the messages: a line before it names how many of
+  how many it counts and the `--limit` that counts all. Before, the 50
+  newest looked like every message, and an invoice outside them was
+  missing from the senders without a word.
+
 ## [0.10.0] - 2026-11-22
 
 ### Added

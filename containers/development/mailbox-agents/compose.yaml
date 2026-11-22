@@ -1,0 +1,114 @@
+# For development: the image built from this checkout, run against the
+# test account of ../../live/mailbox-agents, never against a real mailbox. A project, volumes
+# and ports of its own. It joins the network of the live setup, so start
+# that first: sh containers/live/mailbox-agents/setup.sh
+#
+#   docker compose up -d --build                    the agent counting
+#   docker compose --profile invoices up -d         an agent that asks a model,
+#                                                   with the gateway in ./.env
+#   docker compose exec counting benethos-mailbox-agents report --agent counting
+#   docker compose down -v                          stop, and forget the volumes
+#
+# Why each setting is what it is: ../../production/mailbox-agents/compose.yaml.
+
+name: benethos-mailbox-agents-dev
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+x-agent: &agent
+  build:
+    context: ../../..
+    dockerfile: containers/images/mailbox-agents/Dockerfile
+  image: benethos-mailbox-agents:local
+  restart: unless-stopped
+  logging: *logging
+  read_only: true
+  tmpfs:
+    - /tmp
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  networks:
+    - live
+  env_file:
+    # The test account, its token and the stage shadow, made by setup.sh.
+    - path: ../../live/mailbox-agents/secrets/agent.env
+      required: true
+    # The gateway, for an agent that asks a model: GATEWAY_URL, GATEWAY_KEY
+    # and MODEL. Not versioned, and not needed by counting.
+    - path: ./.env
+      required: false
+  environment: &environment
+    # The service by its name on the live network, over http between two
+    # containers, which the client refuses unless it is allowed.
+    MAILBOX_AGENTS_SERVICE_URL: http://mailbox-service:8080
+    MAILBOX_AGENTS_SERVICE_ALLOW_HTTP: "true"
+    # The gateway too, when ./.env names it by its name on the network.
+    MAILBOX_AGENTS_GATEWAY_ALLOW_HTTP: "true"
+    MAILBOX_AGENTS_DATA_DIR: /data
+    MAILBOX_AGENTS_POLL_SECONDS: "15"
+
+services:
+  counting:
+    <<: *agent
+    command: ["worker", "--agent", "counting"]
+    volumes:
+      - counting-data:/data
+    ports:
+      - "127.0.0.1:${COUNTING_METRICS_PORT:-9480}:9464"
+    healthcheck:
+      test: ["CMD", "benethos-mailbox-agents", "health", "--agent", "counting"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+
+  invoices:
+    <<: *agent
+    profiles: ["invoices"]
+    command: ["worker", "--agent", "invoices"]
+    volumes:
+      - invoices-data:/data
+    ports:
+      - "127.0.0.1:${INVOICES_METRICS_PORT:-9481}:9464"
+    healthcheck:
+      test: ["CMD", "benethos-mailbox-agents", "health", "--agent", "invoices"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+
+  # Asks no model. Writes to the test account in the stage full only.
+  sorting:
+    <<: *agent
+    profiles: ["sorting"]
+    command: ["worker", "--agent", "sorting"]
+    environment:
+      <<: *environment
+      MAILBOX_AGENTS_SORTING_FILE: /config/sorting.json
+    volumes:
+      - sorting-data:/data
+      - ../../live/mailbox-agents/sorting.json:/config/sorting.json:ro
+    ports:
+      - "127.0.0.1:${SORTING_METRICS_PORT:-9482}:9464"
+    healthcheck:
+      test: ["CMD", "benethos-mailbox-agents", "health", "--agent", "sorting"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+
+networks:
+  live:
+    name: mailbox-agents-live_live
+    external: true
+
+volumes:
+  counting-data:
+  invoices-data:
+  sorting-data:

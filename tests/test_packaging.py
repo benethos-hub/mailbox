@@ -1,7 +1,7 @@
-"""What the four distributions ship beside their code.
+"""What the five distributions ship beside their code.
 
 Each package carries a copy of the repository's LICENSE, since a wheel can
-only include files from its own folder, and all four are released
+only include files from its own folder, and all five are released
 together under one version. The documentation quotes that version in several
 places, and those examples must follow it.
 """
@@ -18,6 +18,7 @@ from pathlib import Path
 import pytest
 
 from .publish_helpers import (
+    AGENTS,
     CLIENT,
     COMMON,
     MCP,
@@ -122,9 +123,10 @@ SHARED_CLASSIFIERS = (
 
 
 def test_the_packages_describe_themselves_alike() -> None:
-    """The same Python versions, author, status and links, so that PyPI
-    shows the four as one release. Each points to its own README, as its
-    homepage and as its documentation."""
+    """The same Python versions, author, audience and links, so that PyPI
+    shows the five as one release. Each points to its own README, as its
+    homepage and as its documentation. The status is each package's own
+    (test_the_status_follows_the_classifier)."""
     projects = [project_of(package) for package in PACKAGES]
     for key in ("requires-python", "authors"):
         values = {json.dumps(project[key]) for project in projects}
@@ -133,7 +135,14 @@ def test_the_packages_describe_themselves_alike() -> None:
     for project in projects:
         classifiers = project["classifiers"]
         assert isinstance(classifiers, list)
-        shared.add(tuple(c for c in classifiers if c.startswith(SHARED_CLASSIFIERS)))
+        shared.add(
+            tuple(
+                c
+                for c in classifiers
+                if c.startswith(SHARED_CLASSIFIERS)
+                and not c.startswith("Development Status ::")
+            )
+        )
     assert len(shared) == 1, f"the classifiers differ: {sorted(shared)}"
     links = set()
     for package, project in zip(PACKAGES, projects, strict=True):
@@ -170,7 +179,7 @@ def _tested() -> list[str]:
 
 
 def test_the_classifiers_name_the_tested_versions() -> None:
-    """The four name the same, as test_the_packages_describe_themselves_alike
+    """The five name the same, as test_the_packages_describe_themselves_alike
     checks, so the service stands for all."""
     classifiers = project_of(SERVICE)["classifiers"]
     assert isinstance(classifiers, list)
@@ -256,6 +265,7 @@ VERSION_EXAMPLES = [
     ("packages/mailbox-client/README.md", "status"),
     ("packages/mailbox-mcp/README.md", "status"),
     ("packages/mailbox-common/README.md", "status"),
+    ("packages/mailbox-agents/README.md", "status"),
     ("packages/mailbox-mcp/README.md", "tag"),
     ("packages/mailbox-mcp/README.md", "image"),
     (".github/publish/mcp-registry/server.json", "json"),
@@ -353,29 +363,37 @@ def test_the_changelog_names_the_version_as_its_newest_release() -> None:
     assert re.search(rf"^\[{re.escape(current)}\]: {base}/", text, re.M)
 
 
+def _status(package: Path) -> str:
+    """The word of a package's one ``Development Status`` classifier."""
+    classifiers = project_of(package)["classifiers"]
+    assert isinstance(classifiers, list)
+    found = [
+        c.rpartition(" - ")[2].lower()
+        for c in classifiers
+        if c.startswith("Development Status ::")
+    ]
+    assert len(found) == 1, found
+    return found[0]
+
+
 def test_the_status_follows_the_classifier() -> None:
-    """One ``Development Status`` classifier in every package, and its
-    word, such as "beta", in every status line of the documentation
-    and in SECURITY.md."""
-    statuses = set()
-    for package in PACKAGES:
-        classifiers = project_of(package)["classifiers"]
-        assert isinstance(classifiers, list)
-        statuses |= {
-            c.rpartition(" - ")[2].lower()
-            for c in classifiers
-            if c.startswith("Development Status ::")
-        }
+    """The four packages of the service share one status, the agents have
+    their own until they reach it. Its word, such as "beta", stands in
+    every status line of the documentation: a file of the agents, with
+    mailbox-agents in its path, names theirs, every other file the
+    repository's, as SECURITY.md does."""
+    statuses = {_status(package) for package in PACKAGES if package != AGENTS}
     assert len(statuses) == 1, statuses
     status = statuses.pop()
     wrong = []
     for relative, kind in VERSION_EXAMPLES:
         if kind != "status":
             continue
+        wanted = _status(AGENTS) if "mailbox-agents" in relative else status
         text = (ROOT / relative).read_text("utf-8")
         words = re.findall(r"([\w-]+), version \d+\.\d+\.\d+\.", text)
-        wrong += [f"{relative}: {w}" for w in words if w.lower() != status]
-    assert not wrong, f"not {status!r}:\n  " + "\n  ".join(wrong)
+        wrong += [f"{relative}: {w}" for w in words if w.lower() != wanted]
+    assert not wrong, "not the package's status:\n  " + "\n  ".join(wrong)
     assert f"The project is {status}." in (ROOT / "SECURITY.md").read_text("utf-8")
 
 

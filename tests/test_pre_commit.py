@@ -106,6 +106,8 @@ def test_the_hook_is_executable_in_the_repository() -> None:
         "account.token.json",
         "somewhere/server.pem",
         "config/x/schlüssel.key",
+        "config/benethos-mailbox-agents/sorting.json",
+        "packages/mailbox-agents/tests/data/other.pem",
         "sicherung/März.db",
     ],
 )
@@ -122,6 +124,8 @@ def test_refuses_files_that_never_belong(repo: Path, name: str) -> None:
     "name",
     [
         "config/benethos-mailbox-service/.env.example",
+        "config/benethos-mailbox-agents/sorting.example.json",
+        "packages/mailbox-agents/tests/data/test-ca.pem",
         "live/.env.example",
         "data/benethos-mailbox-service/.gitkeep",
         "containers/production/mailbox-service/service.env.example",

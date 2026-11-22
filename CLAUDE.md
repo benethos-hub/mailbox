@@ -47,6 +47,9 @@ alone. Before a change in a package, read its file as well as this one:
   the public interface and the requests held to the OpenAPI document
 - [packages/mailbox-common/CLAUDE.md](packages/mailbox-common/CLAUDE.md):
   the public interface
+- [packages/mailbox-agents/CLAUDE.md](packages/mailbox-agents/CLAUDE.md):
+  shadow first, nothing of a mail in a log line, one module per
+  upstream, a model without tools, prompts and migrations
 
 ## Environment
 
@@ -107,7 +110,7 @@ alone. Before a change in a package, read its file as well as this one:
 
 ## Project layout
 
-A uv workspace with four distributions and one lockfile.
+A uv workspace with five distributions and one lockfile.
 
 ```
 pyproject.toml            # workspace root: members, dev group, tool config
@@ -140,11 +143,17 @@ assets/                   # brand/: the organisation's brand assets,
                           #   JavaScript packages the UI ships, a
                           #   package-lock.json for the freshness
                           #   report, nothing installs from it
-                          #   (test_vendored.py)
+                          #   (test_vendored.py). mailbox-agents/: the
+                          #   agents' own icon and diagram, and their
+                          #   build.py that renders them
+reports/                  # mailbox-agents/: evaluation reports of the
+                          #   agents, numbers only
 live/                     # manual checks against the test accounts, a
                           #   folder per package (mailbox-service/,
-                          #   mailbox-mcp/) with what its scripts share
-                          #   beside them (service_common/, mcp_common/),
+                          #   mailbox-mcp/, mailbox-agents/) with what
+                          #   its scripts share beside them
+                          #   (service_common/, mcp_common/,
+                          #   agents_common/),
                           #   what all share in common/, one module per
                           #   subject. pyproject.toml installs common/
                           #   into the development environment
@@ -153,6 +162,8 @@ containers/               # images/ (one folder per image), and one folder
                           #   package under it: production/ (the
                           #   published images, Caddy, MCP instances),
                           #   development/ (built from the repository),
+                          #   live/ (the agents' mail server, service
+                          #   and model gateway of their own),
                           #   test-mail-server/ (Stalwart for tests).
                           #   Each keeps its secrets/ local
 .githooks/                # pre-commit: refuses staged settings, keys,
@@ -195,15 +206,15 @@ containers/               # images/ (one folder per image), and one folder
                           #   mcp-registry/server.json, the MCP server's
                           #   entry (test_mcp_registry.py), mcpb/, its
                           #   Claude Desktop bundle (test_mcpb.py)
-tests/                    # what the repository holds, across the four
+tests/                    # what the repository holds, across the five
                           #   packages
   test_boundaries.py      # records, not tuples, where a package hands
-                          #   values on, in all four
+                          #   values on, in all five
   test_api_names.py       # names the MCP server takes from the API,
                           #   held to docs/mailbox-service/openapi.json
   test_interfaces.py      # docs/mailbox-client/client-interface.json and
                           #   docs/mailbox-common/common-interface.json against the code
-  test_code_rules.py      # the rules for the tests of all four
+  test_code_rules.py      # the rules for the tests of all five
                           #   packages and for live/, no class in a
                           #   package's entry, sizes here and in live/,
                           #   how the others use mailbox-common
@@ -295,6 +306,12 @@ docs/
   mailbox-common/
     ARCHITECTURE.md       # its modules, ARCHITECTURE 3.4
     common-interface.json # the same for mailbox-common
+  mailbox-agents/         # the agents, sections of their own
+    CONCEPT.md            # the overview, concept/ one file per topic
+    concept/              #   and per agent
+    ARCHITECTURE.md       # the layers and modules of the agents
+    LOGGING.md            # every activity of the agents' log
+    COMPATIBILITY.md      # which service each release takes
 packages/
   mailbox-service/            # the service, runs permanently
     CLAUDE.md             # the service's own rules
@@ -337,6 +354,14 @@ packages/
     src/benethos_mailbox_common/    # groups, one per concern:
                           #   docs/mailbox-common/ARCHITECTURE.md
     tests/                # in folders like the groups
+  mailbox-agents/         # small AI agents on a mailbox, on top of
+                          #   mailbox-client, alpha
+    CLAUDE.md             # the agents' own rules
+    src/benethos_mailbox_agents/    # layers and modules:
+                          #   docs/mailbox-agents/ARCHITECTURE.md
+    tests/                # in folders like the source, the service and
+                          #   the gateway mocked with
+                          #   httpx.MockTransport
 ```
 
 ## Architecture
