@@ -9,7 +9,6 @@ import re
 import typing
 from collections.abc import Iterator
 from dataclasses import dataclass, fields
-from datetime import datetime
 from pathlib import Path
 from typing import ClassVar
 
@@ -29,15 +28,8 @@ from benethos_mailbox_agents.logbook import (
     worker,
 )
 from benethos_mailbox_agents.logbook.catalogue import AREAS
-from benethos_mailbox_agents.logbook.output import (
-    PACKAGE,
-    SOURCE_WIDTH,
-    Console,
-    Plain,
-    colours_wanted,
-    log_time,
-)
-from benethos_mailbox_common.log import redact
+from benethos_mailbox_agents.logbook.output import PACKAGE
+from benethos_mailbox_common.log import lines, redact
 
 from ..agents_helpers import DOCS
 
@@ -107,7 +99,7 @@ def test_each_activity_has_a_name_a_level_a_line_and_no_mail(
     assert "name" in vars(cls), "each activity sets its name"
     assert NAME.fullmatch(cls.name), cls.name
     assert not cls.name.startswith(cls.area.rstrip("s") + "_"), "the area twice"
-    assert len(cls.source()) <= SOURCE_WIDTH, cls.source()
+    assert len(cls.source()) <= lines.SOURCE_WIDTH, cls.source()
     assert cls.level in LEVELS
     assert cls.says is not Activity.says, "says() writes the line"
     hints = typing.get_type_hints(cls)
@@ -334,11 +326,6 @@ def test_a_plain_line_has_the_time_the_level_and_the_whole_source(
     )
 
 
-def test_a_time_is_iso_with_milliseconds_and_offset() -> None:
-    written = log_time(datetime(2026, 11, 18, 10, 12, 22, 123456).astimezone())
-    assert re.fullmatch(r"2026-11-18T10:12:22\.123[+-]\d\d:\d\d", written)
-
-
 def _record(message: str, exc: BaseException | None = None) -> logging.LogRecord:
     exc_info = (type(exc), exc, exc.__traceback__) if exc is not None else None
     return logging.LogRecord(
@@ -353,7 +340,7 @@ def test_a_registered_secret_is_masked_in_the_line_and_the_traceback() -> None:
             raise KeyError("tok-123456789")
         except KeyError as exc:
             caught = exc
-        for formatter in (Plain(), Console()):
+        for formatter in (lines.Redacting(), lines.Console(PACKAGE)):
             written = formatter.format(_record("sent tok-123456789", caught))
             assert "tok-123456789" not in written
             assert "KeyError" in written
@@ -362,7 +349,7 @@ def test_a_registered_secret_is_masked_in_the_line_and_the_traceback() -> None:
 
 
 def test_the_console_shows_the_source_short_and_in_colour() -> None:
-    written = Console().format(_record("a read 3 changes"))
+    written = lines.Console(PACKAGE).format(_record("a read 3 changes"))
 
     assert "\033[" in written
     assert f"{PACKAGE}." not in written
@@ -373,16 +360,6 @@ def test_the_console_shows_the_source_short_and_in_colour() -> None:
 class _Terminal(io.StringIO):
     def isatty(self) -> bool:
         return True
-
-
-def test_colours_only_on_a_terminal_without_no_color(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.delenv("NO_COLOR", raising=False)
-    assert colours_wanted(_Terminal())
-    assert not colours_wanted(io.StringIO())
-    monkeypatch.setenv("NO_COLOR", "1")
-    assert not colours_wanted(_Terminal())
 
 
 def test_a_terminal_gets_the_console(monkeypatch: pytest.MonkeyPatch) -> None:
