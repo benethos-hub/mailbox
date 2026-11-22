@@ -5,9 +5,10 @@ deletes. They are scripts, outside `testpaths`, and no test of the
 suite reaches a mail server.
 
 Each package has a folder of its own: `live/mailbox-service/` holds the
-checks of the service, `live/mailbox-mcp/` those of the MCP server.
-What the scripts of one package share is in a folder beside them,
-`service_common/` and `mcp_common/`, what all share in `live/common/`.
+checks of the service, `live/mailbox-mcp/` those of the MCP server,
+`live/mailbox-agents/` those of the agents. What the scripts of one
+package share is in a folder beside them, `service_common/`,
+`mcp_common/` and `agents_common/`, what all share in `live/common/`.
 `live/pyproject.toml` installs `live/common/` into the development
 environment, so `uv sync` once after a pull, then each script runs from
 the repository root as `uv run python live/<package>/<name>.py`.
@@ -17,7 +18,9 @@ Microsoft test account, the Gmail test account, and the test mail
 server in a container. The server's address and the list of test
 accounts are in `live/.env` (not versioned, template
 `live/.env.example`). Only the accounts listed there count as confirmed
-test accounts for golden rule 1 of [CLAUDE.md](../CLAUDE.md).
+test accounts for golden rule 1 of [CLAUDE.md](../CLAUDE.md). The
+checks of the agents run against a setup of their own
+([below](#the-agents)).
 
 | Check | Against | Writes |
 |---|---|---|
@@ -233,13 +236,16 @@ The live checks of the agents run against a setup of their own,
 [containers/live/mailbox-agents/](../containers/live/mailbox-agents/README.md):
 a mail server with one account made for them and filled with invented
 mail, a mailbox service and a model gateway. None of them reaches a test
-account of `live/.env`. Each refuses a mailbox service that is not on
-this machine. How they fit into the tests of the agents:
+account of `live/.env`. Each reads
+`containers/live/mailbox-agents/secrets/agent.env`, or the file
+`--env-file` names, and stops with exit code 2 when the mailbox service
+of its settings is not the one of that setup, at port 38081 of this
+machine. How they fit into the tests of the agents:
 [testing.md](mailbox-agents/concept/testing.md).
 
 | Check | Against | Writes |
 |---|---|---|
 | `live/mailbox-agents/agents_smoke.py` | the agents' test account | nothing |
-| `live/mailbox-agents/sorting.py` | the agents' test account | moves and keywords of `sorting`, all put back |
-| `live/mailbox-agents/invoices.py` | the agents' test account | the same, with `invoices` beside `sorting` |
-| `live/mailbox-agents/gold.py` | the agents' test account | nothing there, the gold files under its `secrets/` |
+| `live/mailbox-agents/sorting.py` | the agents' test account | moves and keywords of `sorting`, put back. The folders `Providers`, `Providers/CloudHost` and `Providers/Telco` stay |
+| `live/mailbox-agents/invoices.py` | the agents' test account | as `sorting.py`, and the keyword `agent-invoice` and a move into `Invoices/Telco`, all put back. One model call per message and run |
+| `live/mailbox-agents/gold.py` | the agents' test account | nothing there. It writes `containers/live/mailbox-agents/secrets/gold-<agent>.jsonl` |
