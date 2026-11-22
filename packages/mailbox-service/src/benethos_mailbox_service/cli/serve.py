@@ -20,6 +20,11 @@ def add(commands: Commands, option: argparse.ArgumentParser) -> None:
     serve.add_argument("--port", type=int)
 
 
+# The exit code of uvicorn.run for a server that never started. Older
+# releases of uvicorn do not export the name.
+STARTUP_FAILURE = 3
+
+
 class _Stop:
     """Ends the server once it runs, and remembers that it did."""
 
@@ -38,7 +43,6 @@ def run(args: argparse.Namespace) -> None:
     import sys
 
     import uvicorn
-    from uvicorn.config import STARTUP_FAILURE
 
     from .. import assembly
     from ..data.logbook import LogBook
