@@ -43,7 +43,8 @@ below for 0.9.0. `main` holds the newest:
 ```sh
 mkdir -p mailbox/caddy.d && cd mailbox
 for file in compose.yaml Caddyfile .env.example service.env.example setup.sh README.md \
-    mcp.yaml compose.override.yaml.example caddy.d/mcp.caddy.example; do
+    mcp.yaml compose.override.yaml.example caddy.d/mcp.caddy.example \
+    caddy.d/metrics.caddy.example; do
   curl -fsSL -o "$file" "https://raw.githubusercontent.com/benethos-hub/mailbox/main/containers/production/$file"
 done
 ```
