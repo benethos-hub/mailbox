@@ -4,7 +4,6 @@ docs/mailbox-agents/concept/configuration.md."""
 from __future__ import annotations
 
 import re
-from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -16,17 +15,10 @@ from ..agents_helpers import DOCS, PACKAGE_DIR, ROOT
 
 
 @pytest.fixture(autouse=True)
-def _clean(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[None]:
-    """No setting of the machine, and no default .env, reaches a test."""
-    import os
-
-    for name in list(os.environ):
-        if name.startswith(PREFIX):
-            monkeypatch.delenv(name)
+def _clean(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """No default .env reaches a test. The environment is cleaned for
+    every test of the agents in conftest.py."""
     monkeypatch.chdir(tmp_path)
-    errors.forget_secrets()
-    yield
-    errors.forget_secrets()
 
 
 def test_the_defaults() -> None:
