@@ -240,9 +240,6 @@ docs/
                           #   sends, changes and deletes
   REFACTORING.md          # how the layout came to be: what was
                           #   decided, and the reasons
-  architecture/           # modules-packages.md, the modules of the
-                          #   client, the MCP server and the common
-                          #   package (ARCHITECTURE 3.2 to 3.4)
   mailbox-service/        # the service, and what holds for every package
     CONCEPT.md            # design: the overview and where each section is
     concept/              #   one file per topic, the sections under
@@ -275,13 +272,16 @@ docs/
     openapi.json          # generated, checked in, guarded by a test
   mailbox-mcp/
     CONCEPT.md            # the MCP server, CONCEPT 8 and 8.1
+    ARCHITECTURE.md       # its modules, ARCHITECTURE 3.3
     mcp-tools.json        # the MCP server's tools as a client lists them,
                           #   generated, checked in, guarded by a test
   mailbox-client/
     CONCEPT.md            # the Python client, CONCEPT 8.2
+    ARCHITECTURE.md       # its modules, ARCHITECTURE 3.2
     client-interface.json # the public interface of mailbox-client,
                           #   generated, checked in, guarded by a test
   mailbox-common/
+    ARCHITECTURE.md       # its modules, ARCHITECTURE 3.4
     common-interface.json # the same for mailbox-common
 packages/
   mailbox-service/            # the service, runs permanently

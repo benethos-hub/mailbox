@@ -18,14 +18,16 @@ to where a piece of code goes. The rest is in
 | Topic | Sections | In short |
 |---|---|---|
 | [The modules of the service](architecture/modules-service.md) | 3, 3.1 | What each package and module of the service holds, as a tree that a test holds to the disk. |
-| [The modules of the other packages](../architecture/modules-packages.md) | 3.2 to 3.4 | The same for the client, the MCP server and `mailbox-common`, and what an endpoint of the client and a tool of the MCP server are. |
+| [The modules of the client](../mailbox-client/ARCHITECTURE.md) | 3.2 | The same for the client, and what an endpoint of it is. In the folder of its package. |
+| [The modules of the MCP server](../mailbox-mcp/ARCHITECTURE.md) | 3.3 | The same for the MCP server, and what a tool of it is. In the folder of its package. |
+| [The modules of the common package](../mailbox-common/ARCHITECTURE.md) | 3.4 | The same for `mailbox-common`. In the folder of its package. |
 | [The rules](architecture/rules.md) | 5 to 17 | Packages, imports, libraries, the seams that keep parts replaceable, types, errors, state, logging, tests, naming, size and refactoring. |
 
 ## Every section
 
 - [1. The shape](#1-the-shape)
 - [2. The layers](#2-the-layers)
-- [3. The code, module by module](architecture/modules-service.md#3-the-code-module-by-module): [3.1 The service](architecture/modules-service.md#31-the-service) · [3.2 The client](../architecture/modules-packages.md#32-the-client) · [3.3 The MCP server](../architecture/modules-packages.md#33-the-mcp-server) · [3.4 What the service and the MCP server share](../architecture/modules-packages.md#34-what-the-service-and-the-mcp-server-share)
+- [3. The code, module by module](architecture/modules-service.md#3-the-code-module-by-module): [3.1 The service](architecture/modules-service.md#31-the-service) · [3.2 The client](../mailbox-client/ARCHITECTURE.md#32-the-client) · [3.3 The MCP server](../mailbox-mcp/ARCHITECTURE.md#33-the-mcp-server) · [3.4 What the service and the MCP server share](../mailbox-common/ARCHITECTURE.md#34-what-the-service-and-the-mcp-server-share)
 - [4. Where does it go?](#4-where-does-it-go)
 - [5. Packages](architecture/rules.md#5-packages)
 - [6. Imports](architecture/rules.md#6-imports)

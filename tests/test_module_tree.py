@@ -1,5 +1,6 @@
-"""The trees of docs/mailbox-service/ARCHITECTURE.md section 3, which are in
-docs/mailbox-service/architecture/, against the disk.
+"""The trees of ARCHITECTURE section 3 against the disk: the service's
+in docs/mailbox-service/architecture/, each other package's in the
+ARCHITECTURE.md of its folder under docs/.
 
 Each package's tree names its modules: some as lines of their own, some
 in the comment of the folder that holds them. A module added or moved
@@ -19,13 +20,14 @@ from pathlib import Path
 from .repository_helpers import ROOT
 
 ARCHITECTURE = ROOT / "docs" / "mailbox-service" / "architecture"
-# Section 3, the trees, and sections 5 to 17, the rules.
+PACKAGES = ("mailbox-service", "mailbox-client", "mailbox-mcp", "mailbox-common")
+# Section 3, the trees: the service's beside the rules, every other
+# package's in the folder of its documents. Sections 5 to 17, the rules.
 TREES = (
     ARCHITECTURE / "modules-service.md",
-    ROOT / "docs" / "architecture" / "modules-packages.md",
+    *(ROOT / "docs" / package / "ARCHITECTURE.md" for package in PACKAGES[1:]),
 )
 RULES = ARCHITECTURE / "rules.md"
-PACKAGES = ("mailbox-service", "mailbox-client", "mailbox-mcp", "mailbox-common")
 
 _TREE = re.compile(r"^```\n(packages/.*?)^```", re.M | re.S)
 # A line of a tree: its indent, a path (a folder ends in /), a comment.
