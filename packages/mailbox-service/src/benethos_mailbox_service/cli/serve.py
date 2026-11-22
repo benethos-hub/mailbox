@@ -39,6 +39,7 @@ class _Stop:
 
 
 def run(args: argparse.Namespace) -> None:
+    import contextlib
     import logging.config
     import sys
 
@@ -73,10 +74,10 @@ def run(args: argparse.Namespace) -> None:
         )
     )
     stop.server = server
-    try:
+    # Ctrl-C at a terminal ends serve as it ended uvicorn.run, without a
+    # traceback. The server has shut down by then.
+    with contextlib.suppress(KeyboardInterrupt):
         server.run()
-    except KeyboardInterrupt:
-        pass
     if not server.started:
         sys.exit(STARTUP_FAILURE)
     if stop.asked:
