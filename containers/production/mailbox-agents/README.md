@@ -35,9 +35,9 @@ This folder is all it needs, no clone of the repository.
    else, `counting` with `mail.read` alone, and each that asks a model a
    key of its own at the gateway. See
    docs/mailbox-agents/concept/mailbox-service.md and docs/mailbox-agents/concept/model-gateway.md.
-   The mailbox service has to run a version the agents are tested
-   against, which `status` names and docs/mailbox-agents/COMPATIBILITY.md lists per
-   release. An agent refuses any other and ends with exit code 2.
+   The mailbox service has to run the agents' minor version: the agents
+   0.10.x take the service 0.10.x. `status` names whether it matches. An
+   agent refuses any other and ends with exit code 2.
 4. Start the agents, first `counting`, which changes nothing, to see the
    deployment work:
 

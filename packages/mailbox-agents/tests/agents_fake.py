@@ -17,7 +17,7 @@ from urllib.parse import unquote
 
 import httpx
 
-from benethos_mailbox_agents.sources.mailbox import TESTED
+from benethos_mailbox_agents import __version__
 
 ACCOUNT = "acc1"
 
@@ -117,9 +117,9 @@ class FakeService:
         self.down = False
         # What /health names, and how often it was asked. A version of None
         # leaves the key out, and a status refuses /health with it.
-        # The lowest release of the newest tested line, so the suite
-        # follows a change of the lines.
-        self.version: str | None = ".".join(map(str, TESTED[-1]))
+        # The first release of the agents' own minor version, so the
+        # suite follows the version of the package.
+        self.version: str | None = ".".join(__version__.split(".")[:2]) + ".0"
         self.health_status: int | None = None
         self.health_asked = 0
         # Status and code every request is refused with while set.

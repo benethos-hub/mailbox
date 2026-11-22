@@ -26,7 +26,7 @@ from ..logbook import escaped, process, record
 from ..runtime.health import check
 from ..runtime.readiness import MAILBOX_SETTINGS, folder_lines, readiness, start
 from ..settings import DEFAULT_ENV_FILE, PREFIX, Settings
-from ..sources.mailbox import is_tested, line_names, shown
+from ..sources.mailbox import matches, shown, taken
 from ..store import STATES, Store, path_for
 from .report import report as make_report
 from .session import mailbox_for, now, session, upstreams
@@ -143,7 +143,7 @@ async def _folder_lines(agent: Agent, settings: Settings) -> list[str]:
 
 def _service(settings: Settings) -> str | None:
     """What ``status`` says of the mailbox service: its version and whether
-    that is in a tested line, or why it was not asked. None while the
+    it matches the agents', or why it was not asked. None while the
     settings name no service, which each agent's line says already."""
     if settings.missing(MAILBOX_SETTINGS):
         return None
@@ -151,16 +151,16 @@ def _service(settings: Settings) -> str | None:
         found = asyncio.run(_version(settings))
     except ServiceVersionError:
         return (
-            "mailbox service names no version: not tested, no agent starts "
-            f"(tested: {line_names()})"
+            "mailbox service names no version: no match, no agent starts "
+            f"(the agents take {taken()})"
         )
     except MailboxAgentError as exc:
         return f"mailbox service not asked: {exc.message}"
-    if is_tested(found):
-        return f"mailbox service {found}: tested ({line_names()})"
+    if matches(found):
+        return f"mailbox service {found}: matches (the agents take {taken()})"
     return (
-        f"mailbox service {shown(found)}: not tested, no agent starts "
-        f"(tested: {line_names()})"
+        f"mailbox service {shown(found)}: no match, no agent starts "
+        f"(the agents take {taken()})"
     )
 
 
@@ -290,8 +290,8 @@ async def _evaluate(
     agent = start(cls, settings)
     async with upstreams(agent, settings) as (mailbox, gateway):
         # It reads mail and writes a report that is kept: only from a
-        # service in a tested line, as a pass.
-        await mailbox.ensure_tested()
+        # service that matches, as a pass.
+        await mailbox.ensure_matching()
         with tempfile.TemporaryDirectory() as folder:
             with Store.open(Path(folder) / "evaluation.db") as store:
                 outcomes = await run_evaluation(

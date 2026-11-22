@@ -28,8 +28,9 @@ Part of the [concept](../CONCEPT.md).
 - Live checks are scripts in `live/`, run by hand against a test account.
   `containers/live/mailbox-agents/` holds it (decided 2026-11-17): a mail server of our
   own, Stalwart, in a local container, with an account made for the agents
-  and filled with invented mail, and the published image of the mailbox
-  service in front of it. `setup.sh` makes it in one run, and
+  and filled with invented mail, and the mailbox service in front of it,
+  built from the checkout (since 2026-11-22, the version of the agents
+  beside it). `setup.sh` makes it in one run, and
   `live/mailbox-agents/agents_smoke.py` reads it through the package without writing to it.
   `live/mailbox-agents/sorting.py` runs `sorting` on it in `shadow` and in `full`, makes
   its folders, moves the mail and puts it back. `live/mailbox-agents/invoices.py` runs

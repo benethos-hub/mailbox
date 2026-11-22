@@ -37,12 +37,11 @@ each agent.
   assumption about the mailbox service or the gateway with a live check
   before building on it, and mark it **(to verify)** in its file under
   `docs/mailbox-agents/concept/` until then.
-- **The mailbox service is tested by line.** The agents refuse a service
-  outside `TESTED` in `sources/mailbox.py`.
-  [mailbox-service.md](../../docs/mailbox-agents/concept/mailbox-service.md)
-  has the steps of a new line. Tests hold the pin of the client and the
-  image of the live setup to the newest line, and `README.md` and the
-  top row of `docs/mailbox-agents/COMPATIBILITY.md` to all the lines.
+- **The agents take the service of their own version.** Before 1.0 the
+  same minor version, from 1.0 the same major and no older minor
+  (`matches` in `sources/mailbox.py`,
+  [mailbox-service.md](../../docs/mailbox-agents/concept/mailbox-service.md)).
+  The client is pinned to the agents' version.
 - A live check is a manual run, never a gate:
   [containers/live/mailbox-agents/README.md](../../containers/live/mailbox-agents/README.md)
   says how to start the setup of its own, and

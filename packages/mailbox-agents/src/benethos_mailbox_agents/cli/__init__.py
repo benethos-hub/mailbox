@@ -3,7 +3,7 @@
 Each command is a function in :mod:`.commands`. The command line reads the
 settings once, sets up the log and turns an error of this package into a
 sentence on stderr and an exit code: 2 for a configuration to correct, a
-contract or a mailbox service outside the tested lines, 1 for any other,
+contract or a mailbox service of another version, 1 for any other,
 such as an upstream that is away or a state file that cannot be read.
 See docs/mailbox-agents/ARCHITECTURE.md.
 """

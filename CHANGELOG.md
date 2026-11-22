@@ -16,6 +16,16 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Breaking:** `benethos-mailbox-agents` take the mailbox service of
+  their own version: before 1.0 the same minor version, such as the
+  service 0.10.x for the agents 0.10.x, from 1.0 the same major version
+  and no older minor version. Any other service ends a command with exit
+  code 2, as before, with a message that says to run the agents of the
+  service's version. The list of tested lines and `COMPATIBILITY.md` are
+  gone. `status` says whether the service matches.
+- `benethos-mailbox-agents`: the live setup builds the mailbox service
+  from the checkout. `LIVE_SERVICE=published` with
+  `MAILBOX_SERVICE_VERSION` pulls a published release instead.
 - `benethos-mailbox-agents`: `report` says when the summary at its end
   counts only part of the messages: a line before it names how many of
   how many it counts and the `--limit` that counts all. Before, the 50

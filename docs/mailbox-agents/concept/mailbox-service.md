@@ -161,84 +161,50 @@ asked.
 The service names its version at `/health`, which it answers without a
 right and counts against no limit. While its major version is 0, a minor
 release may change what it does and what its interface takes, and the
-offline suite sees none of that: it mocks the service. So the agents work
-only against the lines they were tested against (decided 2026-11-19).
+offline suite sees none of that: it mocks the service. Since 2026-11-22
+the agents are released with the service, from one repository and under
+one version, so they work against the service of their own version
+(decided 2026-11-22, replacing the tested lines of 2026-11-19):
 
-- **A line** is the minor version while the major is 0, such as 0.8, and
-  the major version from 1 on. It starts at the lowest release that was
-  tested, and every later release of it counts as tested. A release is
-  three numbers with at most a local part after a `+`, such as
-  `0.8.0+local`. A pre-release such as `0.8.0rc1` or `0.8.1.dev3` is in
-  no line, also one of a later patch, since a line counts releases
-  (decided 2026-11-20).
-- **The lines** are `TESTED` in `sources/mailbox.py`, the newest last.
-  The newest line is also the pin of `benethos-mailbox-client` in
-  `pyproject.toml` and the line of the image in
-  `containers/live/mailbox-agents/compose.yaml`. `README.md` names the lines with a link
-  to the service, and the top row of
-  [COMPATIBILITY.md](../COMPATIBILITY.md) names them beside the version
-  of the release, which is where to read the lines of today. Tests hold
-  all five equal.
-- **The check.** The worker asks the service for its version before every
-  pass and every backfill. A service outside the lines, or one that names
-  no version or refuses `/health`, ends the command with a
-  `ServiceVersionError` and exit code
-  2, before the feed is read: nothing is read, decided or changed. It is
-  asked in every pass and not only at the start, since a service can be
-  replaced by another release between two passes without one request
-  failing.
+- **Before 1.0** the service has the agents' minor version: the agents
+  0.10.x take the service 0.10.x, of any patch. **From 1.0** it has their
+  major version and a minor version no older than theirs: the agents
+  1.2.x take the service 1.2.0 and later releases of 1, since a newer
+  minor release adds and an older one may lack a route the agents call
+  (decided 2026-11-22).
+- **A release** is three numbers with at most a local part after a `+`,
+  such as `0.10.0+local`. A pre-release of the service such as
+  `0.10.0rc1` or `0.10.1.dev3` matches no agents, also one of a later
+  patch (decided 2026-11-20, kept 2026-11-22). The agents' own version
+  counts by its first two numbers, also as a pre-release.
+- **The check** is `matches` in `sources/mailbox.py`, against
+  `__version__` of the package. The worker asks the service for its
+  version before every pass and every backfill. A service of another
+  version, or one that names no version or refuses `/health`, ends the
+  command with a `ServiceVersionError` and exit code 2, before the feed is
+  read: nothing is read, decided or changed. Its message names the
+  version the agents take and says to run the agents of the service's
+  version. It is asked in every pass and not only at the start, since a
+  service can be replaced by another release between two passes without
+  one request failing.
 - **In every stage, with no setting to pass it.** The stage `shadow` is
   refused as well: what it records would be read from a service nobody
   measured. A warning alone would go unread in a process that runs for
   weeks.
 - **`eval`** asks too, before it reads the gold set's mail, and is
   refused the same way (decided 2026-11-20).
-- **`status`** names the version of the service and whether it is tested,
+- **`status`** names the version of the service and whether it matches,
   or that it names none, and starts no agent. `status` and `report` read
   only for showing and are not refused.
-- **The client is not compared with the service.** Within a line the
-  installed client may be older or newer than the service, and the agents
-  run: a patch release of the service is taken to change no interface.
-  The pin `~=X.Y.Z` keeps the client in the line, from its lowest tested
-  release on. A pin to one exact release of both was decided against
-  (2026-11-19): after every patch release of the service no agent would
-  start until a release of the agents followed. A patch release that
-  changes what the service does after all is not seen by the check. The
-  live checks are there for it, run when the client or the image of the
-  live setup is raised.
+- **The client** is pinned to the agents' version, `==X.Y.Z`, as the
+  workspace releases both together.
 
-What follows from it: while the service is at 0.x, each of its minor
-releases needs a release of the agents before the two work together. So
-that the agents can be updated first and the service after them, a
-release of the agents may hold two lines for a time, the old and the new.
-Release 0.2.0 holds 0.8 and 0.9: on 2026-11-21 the live checks ran with
-the client 0.9.0 against the service 0.8.0 and against 0.9.0, and the
-code of the client is the same in both releases. Release 0.1.0 refuses a
-service 0.9.0, measured the same day.
+What follows from it: an operator updates the image of the service and
+the images of the agents together, to the same minor version. The
+published agents 0.2.0 take the service 0.8 and 0.9 only, and refuse
+0.10.
 
-A new line is a change of its own, in this order:
-
-1. Read the changelog of the service from the last tested release to the
-   new one, its breaking changes and its fixes, against this file: each
-   statement here that carries a date and a version, and each one marked
-   **(to verify)**.
-2. Raise the image of `containers/live/mailbox-agents/compose.yaml`, tag and digest, set
-   the live setup up anew and run the live checks of
-   [testing](testing.md) against it.
-3. Measure again what step 1 found changed, and write the result here
-   with its date and the version. A statement that no longer holds goes.
-4. Add the line to `TESTED`, raise the pin of the client, name the line
-   in `README.md` and in the top row of
-   [COMPATIBILITY.md](../COMPATIBILITY.md), all in the same commit,
-   with an entry in `CHANGELOG.md` that names the service the release
-   needs. The old line
-   leaves `TESTED` once the code relies on something only the new one
-   does.
-
-A later release within a tested line needs none of this. Dependabot
-raises the client in `uv.lock` and the image of the live setup each in a
-pull request of its own, and each wants a run of the live checks.
-
-An agent does not go back to the stage `shadow` because of a new line
-(decided 2026-11-19): its prompt and its model are the same, and the live
-checks on the test account are the gate for the service.
+An agent does not go back to the stage `shadow` because of a new release
+of the service (decided 2026-11-19): its prompt and its model are the
+same, and the live checks on the test account are the gate for the
+service.

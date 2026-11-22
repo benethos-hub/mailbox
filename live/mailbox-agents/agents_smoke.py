@@ -5,7 +5,7 @@ containers/live/mailbox-agents/.
     uv run python live/mailbox-agents/agents_smoke.py
         [--env-file containers/live/mailbox-agents/secrets/agent.env]
 
-It asks the service for its version, which has to be in a tested line, and
+It asks the service for its version, which has to match the agents', and
 reads the change feed, the folders, every message of the last weeks, a
 thread and the attachments, through the package's own module for the
 mailbox service, and runs the agent ``counting`` over all of it with a
@@ -65,8 +65,8 @@ class Live:
 
 
 async def version(live: Live) -> str:
-    found = await live.mailbox.ensure_tested()
-    return f"the service runs {found}, a tested line"
+    found = await live.mailbox.ensure_matching()
+    return f"the service runs {found}, which matches"
 
 
 async def feed(live: Live) -> str:

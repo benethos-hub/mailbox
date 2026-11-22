@@ -57,11 +57,10 @@ which keeps their history and their changelog up to that release.
 
 - Mail is reached only through the REST API of the
   [mailbox service](https://github.com/benethos-hub/mailbox), with its
-  Python client `benethos-mailbox-client`. An agent works only against a
-  version of the service it was tested against, today 0.8 from 0.8.0 and
-  0.9 from 0.9.0 and 0.10 from 0.10.0, and refuses any other. Which release works with which release of the
-  service:
-  [docs/mailbox-agents/COMPATIBILITY.md](https://github.com/benethos-hub/mailbox/blob/main/docs/mailbox-agents/COMPATIBILITY.md).
+  Python client `benethos-mailbox-client`. An agent works only against
+  the service of the same minor version, released with it, and refuses
+  any other: the agents 0.10.x take the service 0.10.x. The published
+  agents 0.2.0 take the service 0.8 and 0.9 only.
 - A language model is reached only through an OpenAI-compatible gateway,
   with one call per message, a JSON schema for the answer and no tools.
 - Everything else is deterministic code: which messages an agent looks at,
