@@ -1,5 +1,5 @@
 """Every adapter through its fake, held to the same contract towards the
-domain (docs/UNIFORM.md section 7): the folders, the summaries and the
+domain (docs/mailbox-service/UNIFORM.md section 7): the folders, the summaries and the
 messages it hands on, its pages, a missing message, and the protocols
 behind the capabilities it announces. What a client sees of the rules,
 `501` among them, is held by ``tests/integration/test_conformance.py``."""
@@ -167,7 +167,7 @@ async def test_the_sender_check_reads_the_own_entry_alone(kind: str) -> None:
 
 @pytest.mark.parametrize("kind", READERS)
 async def test_a_from_with_two_addresses_is_unreadable(kind: str) -> None:
-    """docs/CONCEPT.md 6.3: one address in From, or no judgement."""
+    """docs/mailbox-service/CONCEPT.md 6.3: one address in From, or no judgement."""
     found = box(kind)
     entry = f"{found.authserv_id}; dmarc=pass header.from=example.org"
     found.put(

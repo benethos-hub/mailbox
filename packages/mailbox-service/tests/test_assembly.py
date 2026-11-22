@@ -1,4 +1,4 @@
-"""The assembly and the command line (docs/ARCHITECTURE.md 2): nothing
+"""The assembly and the command line (docs/mailbox-service/ARCHITECTURE.md 2): nothing
 below reaches them, the assembly knows no command, and their modules
 keep their lines."""
 

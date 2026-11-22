@@ -1,5 +1,5 @@
 """The activities of administration: users, tokens, roles, accounts and
-OAuth (docs/LOGGING.md 5.2 to 5.4). Each line names who, what and to
+OAuth (docs/mailbox-service/LOGGING.md 5.2 to 5.4). Each line names who, what and to
 which record, and never a secret."""
 
 from __future__ import annotations

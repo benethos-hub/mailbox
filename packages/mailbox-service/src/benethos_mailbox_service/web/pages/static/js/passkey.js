@@ -1,4 +1,4 @@
-// The second factor in a form, and passkeys (docs/AUTHENTICATION.md 4,
+// The second factor in a form, and passkeys (docs/mailbox-service/AUTHENTICATION.md 4,
 // 5). The browser makes and signs passkeys, this script carries its
 // answer into the form that asked.
 //

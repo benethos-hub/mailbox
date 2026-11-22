@@ -1,4 +1,5 @@
-"""The limits of the web layer, for both front ends (docs/LOGGING.md 5.9).
+"""The limits of the web layer, for both front ends (docs/mailbox-service/LOGGING.md
+5.9).
 
 A request whose body is larger than ``MAX_BODY`` is refused with ``413``
 before the service reads it all: when its ``Content-Length`` says so,

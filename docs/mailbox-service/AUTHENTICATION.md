@@ -105,7 +105,7 @@ In the code the frame is `domain/auth/factors.py` and
   3.2), after the password.
 - **A switch for the operator** that requires a second factor, for
   everyone or for users with `users.manage`
-  ([IDEAS.md](IDEAS.md)). The way stays open: the sign-in has its steps
+  ([IDEAS.md](../IDEAS.md)). The way stays open: the sign-in has its steps
   after the password in one place, the code and the forced password
   change. A required setup would be one more step there, before the
   rest of the UI opens.

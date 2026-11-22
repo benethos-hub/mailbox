@@ -1,6 +1,6 @@
 """Rights as users and roles hold them: grants on accounts, the rights
 of the service by name, and the catalogue that names them all
-(docs/PERMISSIONS.md)."""
+(docs/mailbox-service/PERMISSIONS.md)."""
 
 from __future__ import annotations
 

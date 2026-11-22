@@ -1,6 +1,6 @@
 """What an account can do, checked by the domain before its adapter is
-asked (docs/UNIFORM.md, rules R2 to R4): the needs of each operation, the
-answer for a lack, the abilities stored with the account and asked again
+asked (docs/mailbox-service/UNIFORM.md, rules R2 to R4): the needs of each operation,
+the answer for a lack, the abilities stored with the account and asked again
 where the server contradicts them."""
 
 from __future__ import annotations

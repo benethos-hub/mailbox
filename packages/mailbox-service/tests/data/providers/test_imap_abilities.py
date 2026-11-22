@@ -1,5 +1,5 @@
 """What an IMAP account can do follows from what its server answers
-(docs/UNIFORM.md, rule R4): the capabilities it announces, the special
+(docs/mailbox-service/UNIFORM.md, rule R4): the capabilities it announces, the special
 folders it lists and the flags its inbox keeps."""
 
 from __future__ import annotations

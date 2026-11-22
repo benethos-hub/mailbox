@@ -1,4 +1,4 @@
-"""Autodiscovery (docs/LOGGING.md 5.8, 5.9). A lookup names the domain
+"""Autodiscovery (docs/mailbox-service/LOGGING.md 5.8, 5.9). A lookup names the domain
 alone: the local part of the address is the person's."""
 
 from __future__ import annotations

@@ -98,8 +98,8 @@ def failing(
 ) -> Iterator[None]:
     """A domain error or a form error inside sends the browser back to
     ``path`` with the message, ``prefix`` in front of it, or shows the
-    form's page ``again``: an editor keeps what was typed (docs/UI.md 4.7).
-    A form sent from a dialog names it as ``dialog``: the page opens it
+    form's page ``again``: an editor keeps what was typed (docs/mailbox-service/UI.md
+    4.7). A form sent from a dialog names it as ``dialog``: the page opens it
     again with the message. A form with a second factor names the
     method it came by as ``first`` (``first_way``): the page shows it
     first again."""

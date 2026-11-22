@@ -284,7 +284,7 @@ def user_page(
     )
 
 
-# The tabs of a user's page (docs/UI.md 6.3).
+# The tabs of a user's page (docs/mailbox-service/UI.md 6.3).
 TABS = (("rights", "Rights"), ("access", "Access"), ("activity", "Activity"))
 
 

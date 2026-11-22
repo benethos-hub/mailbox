@@ -4,7 +4,7 @@ of the audit for one marked ``audited``.
 The line goes to the logger of the activity, ``activity.<area>.<name>``
 below the service's package, so the level of the service's log applies,
 and a level set on one name applies to it alone. The audit of
-docs/AUDIT.md keeps its record whatever the level: nothing else writes
+docs/mailbox-service/AUDIT.md keeps its record whatever the level: nothing else writes
 one.
 """
 
@@ -59,7 +59,7 @@ class ActivityLog:
     @contextmanager
     def atomic(self) -> Iterator[None]:
         """The changes to the store in the block and the audit records of
-        the activities recorded in it, in one transaction (docs/AUDIT.md
+        the activities recorded in it, in one transaction (docs/mailbox-service/AUDIT.md
         4). A record that cannot be kept undoes the changes and raises.
         The lines of the log follow once the transaction is committed,
         none when it is not. Inside another block, a part of it.

@@ -36,8 +36,8 @@ from ..tokenapi import TokenApi, signed
 from . import mappers
 from .shapes import Batch, ErrorDetail, Failure, Item, Listing, Placed
 
-# DEBUG alone: the data layer decides nothing (docs/LOGGING.md rule 6.2).
-# A pause Graph asks for reaches the domain as an error.
+# DEBUG alone: the data layer decides nothing (docs/mailbox-service/LOGGING.md rule
+# 6.2). A pause Graph asks for reaches the domain as an error.
 log = logging.getLogger(__name__)
 
 GRAPH = "https://graph.microsoft.com"

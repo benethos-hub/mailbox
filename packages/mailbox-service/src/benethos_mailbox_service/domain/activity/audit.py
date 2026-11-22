@@ -1,4 +1,4 @@
-"""The audit of administration (docs/AUDIT.md): the activities marked
+"""The audit of administration (docs/mailbox-service/AUDIT.md): the activities marked
 ``audited``, kept in the database for the days the settings say.
 
 The log is for the operator and may be dropped. The audit answers who

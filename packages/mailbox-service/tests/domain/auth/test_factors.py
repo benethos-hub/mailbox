@@ -1,6 +1,6 @@
 """The second factor at the sign-in: a code of a device or a recovery
 code after the password, and recovery codes made anew
-(docs/AUTHENTICATION.md 3, 5)."""
+(docs/mailbox-service/AUTHENTICATION.md 3, 5)."""
 
 from __future__ import annotations
 

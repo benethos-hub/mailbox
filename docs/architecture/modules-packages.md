@@ -1,6 +1,6 @@
 # Architecture: the modules of the client, the MCP server and what they share
 
-Part of the [architecture](../ARCHITECTURE.md): sections 3.2 to 3.4.
+Part of the [architecture](../mailbox-service/ARCHITECTURE.md): sections 3.2 to 3.4.
 
 ## 3.2 The client
 
@@ -138,7 +138,7 @@ packages/mailbox-mcp/
                         #   tool, none run but server_status
                         #   (CATALOGUE).
                         #   tools_json: the tools as a client lists
-                        #   them, docs/mcp-tools.json
+                        #   them, docs/mailbox-mcp/mcp-tools.json
     listeners.py        # the clients told that the tool list changed:
                         #   their connections, the announcement, the
                         #   bus of listen streams
@@ -218,7 +218,7 @@ may carry a description of its own and its bounds, in `Annotated` with
 `Field`. The server checks the bounds before the tool runs. Its test is
 in `tests/tools/`, against `httpx.MockTransport`. The tables of the
 package's README and of the root README name it, and
-`docs/mcp-tools.json` holds it as a client lists it
+`docs/mailbox-mcp/mcp-tools.json` holds it as a client lists it
 (`test_tools_snapshot.py`). The manifest of the Claude Desktop bundle,
 `.github/publish/mcpb/manifest.json`, lists it with the first sentence
 of its description (`test_mcpb.py`).

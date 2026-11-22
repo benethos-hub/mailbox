@@ -146,7 +146,7 @@ Everything real mail will depend on, before any real mailbox is connected.
 **Done.**
 
 A rework of the configuration UI before the providers of phase 5.
-Scope, page types and the rules for every page in [UI.md](../UI.md).
+Scope, page types and the rules for every page in [UI.md](../mailbox-service/UI.md).
 
 - **The frame: palette, sidebar, top bar with breadcrumb, components
   (UI 3, 7)**, done

@@ -46,7 +46,7 @@ class Settings(files.FileSettings):
     # The address people reach the service at, e.g. https://mail.example.org
     # behind a proxy. Builds the OAuth redirect address, which the provider
     # must know. It also fixes the origin and the RP ID of passkeys
-    # (docs/AUTHENTICATION.md). Empty: taken from each request.
+    # (docs/mailbox-service/AUTHENTICATION.md). Empty: taken from each request.
     public_url: str | None = None
     # Behind a reverse proxy: the proxy's address (or several, separated by
     # commas, or "*"), whose X-Forwarded-For and X-Forwarded-Proto headers
@@ -164,7 +164,7 @@ class Settings(files.FileSettings):
     # consumers, organizations, or one tenant's id or domain.
     oauth_microsoft_tenant: str = "common"
     # OAuth for Gmail and Google Workspace: a client the operator made in
-    # a Google Cloud project (CONCEPT 5.5, docs/GOOGLE.md). The project
+    # a Google Cloud project (CONCEPT 5.5, docs/mailbox-service/GOOGLE.md). The project
     # ships none. Without it, Gmail connects over IMAP with an app
     # password. The secret from a file or from the environment.
     oauth_google_client_id: str | None = None

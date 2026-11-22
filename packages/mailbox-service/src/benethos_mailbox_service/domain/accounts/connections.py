@@ -1,5 +1,5 @@
 """How each kind of account is connected, as its adapter describes it
-(docs/UNIFORM.md, U6): the UI draws its forms from these."""
+(docs/mailbox-service/UNIFORM.md, U6): the UI draws its forms from these."""
 
 from __future__ import annotations
 

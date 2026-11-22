@@ -1,5 +1,5 @@
 """The receiving server's statement about the sender, read from its
-Authentication-Results entry: the table of docs/CONCEPT.md row by row,
+Authentication-Results entry: the table of docs/mailbox-service/CONCEPT.md row by row,
 and the forgeries it must not believe."""
 
 from __future__ import annotations

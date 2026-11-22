@@ -35,8 +35,8 @@ its user (prompt injection) beyond what CONCEPT 7.7 already describes,
 and anything that reaches other hosts through autodiscovery.
 
 The design of these protections is in
-[docs/CONCEPT.md](docs/CONCEPT.md), section 7. Every rate limit, and how
-the limits work together, is in [docs/LIMITS.md](docs/LIMITS.md).
+[docs/mailbox-service/CONCEPT.md](docs/mailbox-service/CONCEPT.md), section 7. Every rate limit, and how
+the limits work together, is in [docs/mailbox-service/LIMITS.md](docs/mailbox-service/LIMITS.md).
 
 CodeQL reads the code and the workflows on every change and once a week,
 with GitHub's security and quality queries, and hadolint reads the

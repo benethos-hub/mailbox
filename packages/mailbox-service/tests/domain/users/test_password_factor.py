@@ -1,5 +1,5 @@
 """The own password changed with the current one and, for a user with a
-second factor, a code of it or a passkey (docs/AUTHENTICATION.md 4).
+second factor, a code of it or a passkey (docs/mailbox-service/AUTHENTICATION.md 4).
 The forced change after the sign-in asks for none: the step after the
 password asked a moment before."""
 

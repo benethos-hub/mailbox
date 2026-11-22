@@ -1,5 +1,5 @@
 """The recovery codes of users' second factors, as keyed hashes
-(docs/AUTHENTICATION.md 6), each with the id of the data key its hash
+(docs/mailbox-service/AUTHENTICATION.md 6), each with the id of the data key its hash
 came from. They belong to the second factor, not to one of its methods.
 
 It only stores. The domain makes the codes and decides when they go.

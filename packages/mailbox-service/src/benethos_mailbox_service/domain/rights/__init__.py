@@ -1,4 +1,4 @@
-"""Rights: who may do what (docs/PERMISSIONS.md).
+"""Rights: who may do what (docs/mailbox-service/PERMISSIONS.md).
 
 The catalogue of rights and groups is ``permissions``, what one caller
 may do is ``Access``.

@@ -1,5 +1,5 @@
 """Rules for the code across the four packages, held where they all are
-read (docs/ARCHITECTURE.md 13): the tests of every package, its helpers
+read (docs/mailbox-service/ARCHITECTURE.md 13): the tests of every package, its helpers
 and fixtures, the live checks, the entries of the packages, the size of
 the tests here and of live/, how deep a test reads, and how the service
 and the MCP server use the common package. Each package's own tests
@@ -15,7 +15,7 @@ from pathlib import Path
 
 from .repository_helpers import ROOT
 
-# Hard limits (docs/ARCHITECTURE.md 15), as each package holds them for
+# Hard limits (docs/mailbox-service/ARCHITECTURE.md 15), as each package holds them for
 # its own source and tests.
 MAX_LINES = 500
 MAX_METHODS = 30
@@ -46,7 +46,7 @@ def test_modules_and_classes_stay_small() -> None:
 def test_no_test_module_imports_another() -> None:
     """What tests of several modules share is a fixture in the conftest.py
     of their nearest common folder, or a helper in a module of its own
-    there (docs/ARCHITECTURE.md 13): a test module is no library. In the
+    there (docs/mailbox-service/ARCHITECTURE.md 13): a test module is no library. In the
     tests of all four packages."""
     violations = []
     for path in sorted((ROOT / "packages").glob("*/tests/**/*.py")):
@@ -61,7 +61,7 @@ def test_no_test_module_imports_another() -> None:
     assert not violations, "imports a test module:\n  " + "\n  ".join(violations)
 
 
-# A module of a test folder that is no test (docs/ARCHITECTURE.md 13).
+# A module of a test folder that is no test (docs/mailbox-service/ARCHITECTURE.md 13).
 HELPER = re.compile(r"conftest|clocks|.+_fake(_.+)?|.+_adapter|.+_helpers|__init__")
 
 
@@ -100,7 +100,7 @@ EVERYWHERE = {"clocks", "conftest", "__init__"}
 
 def test_a_helper_sits_in_the_nearest_folder_of_its_importers() -> None:
     """A helper lives in the nearest common folder of the modules that
-    import it (docs/ARCHITECTURE.md 13), in the tests of all four
+    import it (docs/mailbox-service/ARCHITECTURE.md 13), in the tests of all four
     packages. ``clocks.py`` is for every folder of a suite."""
     importers: dict[Path, set[Path]] = {}
     for path in sorted((ROOT / "packages").glob("*/tests/**/*.py")):

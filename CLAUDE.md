@@ -1,7 +1,7 @@
 # Working guidelines for Claude
 
 How to work in this repository. Read this before making changes. See
-[docs/CONCEPT.md](docs/CONCEPT.md) for what the project is and its API
+[docs/mailbox-service/CONCEPT.md](docs/mailbox-service/CONCEPT.md) for what the project is and its API
 design, and [docs/ROADMAP.md](docs/ROADMAP.md) for the phases and what is
 done. Update the roadmap in the same commit that finishes an item.
 
@@ -14,23 +14,23 @@ done. Update the roadmap in the same commit that finishes an item.
    satisfies this rule. Without uv, use `.\.venv\Scripts\python.exe`.
 3. **English in the repo.** Code, comments, docstrings and documentation are
    English. Conversation with the user may be German.
-4. **The OpenAPI document is the contract.** `docs/openapi.json` is checked in
+4. **The OpenAPI document is the contract.** `docs/mailbox-service/openapi.json` is checked in
    and a test compares it with the code. After any change to a route or model,
-   regenerate it with `uv run benethos-mailbox-service openapi > docs/openapi.json`
+   regenerate it with `uv run benethos-mailbox-service openapi > docs/mailbox-service/openapi.json`
    and review the diff like code. `operationId` is the route function name and
    must stay stable, since generated clients and the MCP server depend on it.
-   Likewise `docs/mcp-tools.json` holds the MCP server's tools as a client
+   Likewise `docs/mailbox-mcp/mcp-tools.json` holds the MCP server's tools as a client
    lists them. After any change to a tool, regenerate it with
-   `uv run benethos-mailbox-mcp --list-tools > docs/mcp-tools.json` and
+   `uv run benethos-mailbox-mcp --list-tools > docs/mailbox-mcp/mcp-tools.json` and
    review the diff of its descriptions like code. And
-   `docs/client-interface.json` and `docs/common-interface.json` hold the
+   `docs/mailbox-client/client-interface.json` and `docs/mailbox-common/common-interface.json` hold the
    public interface of the two libraries others import. After any change
    to a name, a signature, a field or a default there, regenerate them
    with `uv run python tests/interface.py benethos_mailbox_client >
-   docs/client-interface.json`, the same with `benethos_mailbox_common`,
+   docs/mailbox-client/client-interface.json`, the same with `benethos_mailbox_common`,
    and review the diff like code: a removed or changed name breaks
    whoever imports it. The client's requests are held to
-   `docs/openapi.json` as well, their paths, parameters and bodies.
+   `docs/mailbox-service/openapi.json` as well, their paths, parameters and bodies.
 5. **Secrets never travel.** Provider passwords, OAuth tokens and API tokens
    are never logged, never returned in a response and redacted from error
    text. No real address, credential or message content in any versioned file.
@@ -41,7 +41,7 @@ done. Update the roadmap in the same commit that finishes an item.
 7. **Encapsulate, keep parts replaceable.** Every external library,
    protocol and storage sits behind an interface this project owns, so it
    can be exchanged by rewriting one module. See
-   [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+   [docs/mailbox-service/ARCHITECTURE.md](docs/mailbox-service/ARCHITECTURE.md).
 8. **The repo stands on its own.** No references to the author's other
    repositories, local filesystem paths or email addresses in versioned files.
 
@@ -51,7 +51,7 @@ done. Update the roadmap in the same commit that finishes an item.
   coverage on the newest and builds the fresh install with it. A new
   version goes into the CI matrix, `coverage-python`, `UV_PYTHON` of
   fresh-install and browser, the classifiers, the table of
-  `docs/CONCEPT.md` 9 and this line at once, as `test_packaging.py`
+  `docs/mailbox-service/CONCEPT.md` 9 and this line at once, as `test_packaging.py`
   checks.
 - Set up: `uv sync` (the workspace dev group holds pytest, ruff, mypy).
 - Configuration: one folder per package under `config/`, e.g.
@@ -75,10 +75,10 @@ done. Update the roadmap in the same commit that finishes an item.
   For Claude Code and Claude Desktop see `packages/mailbox-mcp/README.md`.
 - The configuration UI: `http://127.0.0.1:8080/ui`, sign in with a user
   name and a password. How the pages look and behave, and the checklist
-  for a new page: `docs/UI.md`.
+  for a new page: `docs/mailbox-service/UI.md`.
 - Microsoft accounts: the service comes with the project's app,
-  `docs/MICROSOFT.md` also sets up an app of your own. Gmail accounts: a
-  Google client of your own, `docs/GOOGLE.md`.
+  `docs/mailbox-service/MICROSOFT.md` also sets up an app of your own. Gmail accounts: a
+  Google client of your own, `docs/mailbox-service/GOOGLE.md`.
 - A test mail server of our own: `sh containers/test-mail-server/setup.sh`
   makes Stalwart in a container anew, with IMAP, POP3, SMTP and JMAP on
   `127.0.0.1:30xxx`, two accounts and a local test CA
@@ -190,9 +190,9 @@ tests/                    # what the repository holds, across the four
   test_boundaries.py      # records, not tuples, where a package hands
                           #   values on, in all four
   test_api_names.py       # names the MCP server takes from the API,
-                          #   held to docs/openapi.json
-  test_interfaces.py      # docs/client-interface.json and
-                          #   docs/common-interface.json against the code
+                          #   held to docs/mailbox-service/openapi.json
+  test_interfaces.py      # docs/mailbox-client/client-interface.json and
+                          #   docs/mailbox-common/common-interface.json against the code
   test_code_rules.py      # the rules for the tests of all four
                           #   packages and for live/, no class in a
                           #   package's entry, sizes here and in live/,
@@ -201,7 +201,7 @@ tests/                    # what the repository holds, across the four
                           #   this file lead somewhere, and a README of
                           #   two sections or more lists them in its
                           #   contents at the top, under the 3D icon
-  test_module_tree.py     # the trees of docs/ARCHITECTURE.md section 3
+  test_module_tree.py     # the trees of docs/mailbox-service/ARCHITECTURE.md section 3
                           #   against the disk, the seams of its
                           #   section 8 against the code
   test_layout.py          # this file's project layout against the disk
@@ -232,51 +232,60 @@ tests/                    # what the repository holds, across the four
   interface.py            # not a test: the public interface of a
                           #   package as JSON, for the records in docs/
 docs/
-  CONCEPT.md              # design: the overview and where each section is
-  concept/                #   one file per topic, the sections under
-                          #   their numbers
-  ARCHITECTURE.md         # the shape, the layers, where a piece of code
-                          #   goes, and where each section is
-  architecture/           #   the modules of the four packages (section
-                          #   3) and the rules (sections 5 to 17)
-  LIMITS.md               # every rate limit and how they work together
-  PERMISSIONS.md          # users, roles and rights
-  LOGGING.md              # what the service log holds, at which level,
-                          #   the rules for a line
-  logging/                #   every activity, and where they live in
-                          #   the code
-  AUDIT.md                # the audit of administration
-  UI.md                   # the goals, the rules for a page, the new page
-                          #   checklist, and where each section is
-  ui/                     #   the pages, the workflows, the look
-  REFACTORING.md          # how the layout came to be: what was
-                          #   decided, and the reasons
-  MICROSOFT.md            # connecting Microsoft accounts, an app of your own
-  GOOGLE.md               # connecting Gmail accounts, the Google client
-  AUTHENTICATION.md       # the factors of the UI sign-in: password,
-                          #   TOTP, passkeys, and where each section is
-  authentication/         #   the methods and the sign-in, devices and
-                          #   recovery codes, where it lives in the
-                          #   service
-  UNIFORM.md              # one way to operate every mailbox: the
-                          #   principle, the rules, the capabilities
-  uniform/                #   what still differs per provider,
-                          #   the decisions, the UI and the MCP server
-  LIVE.md                 # the live checks: what each one reads,
-                          #   sends, changes and deletes
   RELEASING.md            # the steps of a release, in order
   ROADMAP.md              # phases and their state
   roadmap/                #   the items of each phase
   IDEAS.md                # collected, not yet decided
-  openapi.json            # generated, checked in, guarded by a test
-  mcp-tools.json          # the MCP server's tools as a client lists them,
+  LIVE.md                 # the live checks: what each one reads,
+                          #   sends, changes and deletes
+  REFACTORING.md          # how the layout came to be: what was
+                          #   decided, and the reasons
+  concept/                # mcp.md, the MCP server and the client
+                          #   (CONCEPT 8)
+  architecture/           # modules-packages.md, the modules of the
+                          #   client, the MCP server and the common
+                          #   package (ARCHITECTURE 3.2 to 3.4)
+  mailbox-service/        # the service, and what holds for every package
+    CONCEPT.md            # design: the overview and where each section is
+    concept/              #   one file per topic, the sections under
+                          #   their numbers
+    ARCHITECTURE.md       # the shape, the layers, where a piece of code
+                          #   goes, and where each section is
+    architecture/         #   the modules of the service (section 3)
+                          #   and the rules (sections 5 to 17)
+    LIMITS.md             # every rate limit and how they work together
+    PERMISSIONS.md        # users, roles and rights
+    LOGGING.md            # what the service log holds, at which level,
+                          #   the rules for a line
+    logging/              #   every activity, and where they live in
+                          #   the code
+    AUDIT.md              # the audit of administration
+    UI.md                 # the goals, the rules for a page, the new page
+                          #   checklist, and where each section is
+    ui/                   #   the pages, the workflows, the look
+    MICROSOFT.md          # connecting Microsoft accounts, an app of your own
+    GOOGLE.md             # connecting Gmail accounts, the Google client
+    AUTHENTICATION.md     # the factors of the UI sign-in: password,
+                          #   TOTP, passkeys, and where each section is
+    authentication/       #   the methods and the sign-in, devices and
+                          #   recovery codes, where it lives in the
+                          #   service
+    UNIFORM.md            # one way to operate every mailbox: the
+                          #   principle, the rules, the capabilities
+    uniform/              #   what still differs per provider,
+                          #   the decisions, the UI and the MCP server
+    openapi.json          # generated, checked in, guarded by a test
+  mailbox-mcp/
+    mcp-tools.json        # the MCP server's tools as a client lists them,
                           #   generated, checked in, guarded by a test
-  client-interface.json   # the public interface of mailbox-client and
-  common-interface.json   #   of mailbox-common, generated, checked in,
-                          #   guarded by a test
+  mailbox-client/
+    client-interface.json # the public interface of mailbox-client,
+                          #   generated, checked in, guarded by a test
+  mailbox-common/
+    common-interface.json # the same for mailbox-common
 packages/
   mailbox-service/            # the service, runs permanently
-    src/benethos_mailbox_service/   # layers and modules: docs/ARCHITECTURE.md
+    src/benethos_mailbox_service/   # layers and modules: docs/mailbox-service/ARCHITECTURE.md
     tests/                # in folders like the source: domain/<package>/,
                           #   data/, web/, common/. integration/ for tests
                           #   of several layers at once. At the top the
@@ -290,7 +299,7 @@ packages/
       test_code_rules.py    # logging, handlers, sizes, helpers once,
                             #   htmx in one module, the tests of the
                             #   data layer
-      test_openapi.py       # docs/openapi.json equals the code's
+      test_openapi.py       # docs/mailbox-service/openapi.json equals the code's
       test_cli.py           # the command line
       test_errors.py        # the errors every layer raises
       test_logs.py          # the log of serve: what reaches it, in
@@ -299,18 +308,18 @@ packages/
                             #   a suite of its own (Verifying)
   mailbox-client/         # the Python client of the REST API, async and
                           #   sync, no image
-    src/benethos_mailbox_client/    # modules: docs/ARCHITECTURE.md
+    src/benethos_mailbox_client/    # modules: docs/mailbox-service/ARCHITECTURE.md
     tests/                # REST mocked with httpx.MockTransport, each
                           #   test for both clients, in files like
                           #   the modules, endpoints/ and models/
                           #   for the packages
   mailbox-mcp/            # the MCP server, on top of mailbox-client
-    src/benethos_mailbox_mcp/       # modules: docs/ARCHITECTURE.md
+    src/benethos_mailbox_mcp/       # modules: docs/mailbox-service/ARCHITECTURE.md
     tests/                # REST mocked with httpx.MockTransport
   mailbox-common/         # what the service and the MCP server share,
                           #   no image
     src/benethos_mailbox_common/    # groups, one per concern:
-                          #   docs/ARCHITECTURE.md
+                          #   docs/mailbox-service/ARCHITECTURE.md
     tests/                # in folders like the groups
 ```
 
@@ -318,7 +327,7 @@ packages/
 
 The layers, what each package and module holds, the seams that keep
 parts replaceable, and the rules for a new piece of code:
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Read it before a change
+[docs/mailbox-service/ARCHITECTURE.md](docs/mailbox-service/ARCHITECTURE.md). Read it before a change
 that adds a module, a package, a library or a seam.
 
 ## Verifying

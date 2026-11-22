@@ -1,5 +1,5 @@
 """The client covers the whole REST API: every operation of
-docs/openapi.json is a method of both clients, named like its
+docs/mailbox-service/openapi.json is a method of both clients, named like its
 ``operationId``. No operation is left out, but those a link opens: their
 URL is the credential, which another service holds, never a client with
 a token. A route added to the service without its method fails here.
@@ -17,7 +17,9 @@ import pytest
 from benethos_mailbox_client import MailboxClient, SyncMailboxClient, endpoints, models
 from benethos_mailbox_client import __all__ as exported
 
-CONTRACT = Path(__file__).resolve().parents[3] / "docs" / "openapi.json"
+CONTRACT = (
+    Path(__file__).resolve().parents[3] / "docs" / "mailbox-service" / "openapi.json"
+)
 METHODS = {"get", "put", "post", "patch", "delete"}
 
 

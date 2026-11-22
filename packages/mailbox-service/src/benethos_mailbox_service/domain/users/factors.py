@@ -1,6 +1,6 @@
 """The second factor of users who sign in to the UI, as a whole: its
 state, new recovery codes, and every method removed within the caller's
-rights or on the host (docs/AUTHENTICATION.md 2, 5, 6). What each
+rights or on the host (docs/mailbox-service/AUTHENTICATION.md 2, 5, 6). What each
 method does is in a module of its own, TOTP in ``totp``, passkeys in
 ``passkeys``.
 """

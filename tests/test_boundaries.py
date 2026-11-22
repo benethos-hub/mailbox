@@ -1,7 +1,7 @@
-"""At a package boundary, values travel as named records (docs/ARCHITECTURE.md
-9). For each package of the workspace, what it offers is checked: an
-answer is no tuple and no dict, a parameter carries no type of a package
-above it, a dataclass is frozen and slotted, a class is no NamedTuple and
+"""At a package boundary, values travel as named records
+(docs/mailbox-service/ARCHITECTURE.md 9). For each package of the workspace, what it
+offers is checked: an answer is no tuple and no dict, a parameter carries no type of a
+package above it, a dataclass is frozen and slotted, a class is no NamedTuple and
 a field of a dataclass holds no tuple of fixed length.
 
 What a package offers: every module of a group of mailbox-common; what

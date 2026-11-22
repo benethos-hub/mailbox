@@ -1,5 +1,5 @@
 """The second factor of a user: the frame its methods share
-(docs/AUTHENTICATION.md 2).
+(docs/mailbox-service/AUTHENTICATION.md 2).
 
 The frame knows which methods a user has, checks a code against each of
 them and then the recovery codes, makes the recovery codes with the

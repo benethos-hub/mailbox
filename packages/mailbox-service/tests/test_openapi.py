@@ -18,7 +18,9 @@ from benethos_mailbox_service.web.api import PREFIX as API_PREFIX
 
 from .conftest import METHODS
 
-COMMITTED = Path(__file__).resolve().parents[3] / "docs" / "openapi.json"
+COMMITTED = (
+    Path(__file__).resolve().parents[3] / "docs" / "mailbox-service" / "openapi.json"
+)
 
 
 def _operations() -> list[tuple[str, dict[str, Any]]]:
@@ -33,8 +35,8 @@ def _operations() -> list[tuple[str, dict[str, Any]]]:
 
 def test_committed_document_is_current() -> None:
     assert COMMITTED.read_text(encoding="utf-8") == openapi_json(), (
-        "docs/openapi.json is stale, regenerate it with "
-        "`uv run benethos-mailbox-service openapi > docs/openapi.json`"
+        "docs/mailbox-service/openapi.json is stale, regenerate it with "
+        "`uv run benethos-mailbox-service openapi > docs/mailbox-service/openapi.json`"
     )
 
 

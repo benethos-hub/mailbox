@@ -1,5 +1,5 @@
 """Names the MCP server takes from the API as literals, held to the API's
-own document, docs/openapi.json. The MCP server cannot import the
+own document, docs/mailbox-service/openapi.json. The MCP server cannot import the
 service, so its names are checked here, where both are read."""
 
 from __future__ import annotations
@@ -29,7 +29,9 @@ def _keys_of(path: Path, name: str) -> set[str]:
 def test_the_limits_an_account_names_are_capabilities_of_the_api() -> None:
     """``render.ACCOUNT_LIMITS`` names what an account cannot do by the
     API's ``Capability``. A name the API does not know would never match."""
-    document = json.loads((ROOT / "docs/openapi.json").read_text("utf-8"))
+    document = json.loads(
+        (ROOT / "docs/mailbox-service/openapi.json").read_text("utf-8")
+    )
     capabilities = set(document["components"]["schemas"]["Capability"]["enum"])
     limits = _keys_of(RENDER, "ACCOUNT_LIMITS")
     assert limits, "ACCOUNT_LIMITS is empty"

@@ -74,8 +74,8 @@ def alert_rules() -> str:
 
 
 def openapi_json() -> str:
-    """The OpenAPI document, formatted the way ``docs/openapi.json`` stores it.
-    Built from the routes alone: no key, no OAuth app, nothing stored."""
+    """The OpenAPI document, formatted the way ``docs/mailbox-service/openapi.json``
+    stores it. Built from the routes alone: no key, no OAuth app, nothing stored."""
     settings = Settings(storage="memory", sync_interval=0)
     services = build_services(settings, oauth_clients={}, keys=EnvKeyProvider(None))
     app = create_app(settings, services)

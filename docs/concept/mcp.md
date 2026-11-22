@@ -1,6 +1,6 @@
 # Concept: the MCP server
 
-Part of the [concept](../CONCEPT.md): section 8.
+Part of the [concept](../mailbox-service/CONCEPT.md): section 8.
 
 ## 8. MCP server
 
@@ -82,7 +82,7 @@ token keeps to the token's rights unchanged, and a token beside the
 catalogue stops the start.
 
 `benethos-mailbox-mcp --list-tools` prints the tools as a client lists
-them, as JSON, without starting a server. `docs/mcp-tools.json` holds
+them, as JSON, without starting a server. `docs/mailbox-mcp/mcp-tools.json` holds
 that list, and a test compares it with the code.
 
 Principles:
@@ -245,7 +245,7 @@ the same code.
 **Decided 2026-10-09:** it covers the whole REST API, not only what the
 MCP server needs. Every operation is a method of both clients, named
 like its `operationId`, and a test holds every operation of
-`docs/openapi.json` to one, but the route a link opens: its URL is the
+`docs/mailbox-service/openapi.json` to one, but the route a link opens: its URL is the
 credential, which another service holds, never a client with a token.
 A new route is
 incomplete until the client has its method. A secret the service

@@ -1,4 +1,4 @@
-"""The filter bar above a list (docs/UI.md, 4.5).
+"""The filter bar above a list (docs/mailbox-service/UI.md, 4.5).
 
 Every list that filters has the same bar: one search field first, more
 filters folded below it, and the active ones as chips, each removable.

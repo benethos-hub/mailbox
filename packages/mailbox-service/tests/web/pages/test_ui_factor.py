@@ -1,5 +1,5 @@
 """The second factor in the UI: the code after the password, the page of
-the devices, and their removal (docs/AUTHENTICATION.md)."""
+the devices, and their removal (docs/mailbox-service/AUTHENTICATION.md)."""
 
 from __future__ import annotations
 

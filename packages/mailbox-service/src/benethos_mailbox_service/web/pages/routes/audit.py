@@ -1,4 +1,4 @@
-"""The audit of administration (docs/AUDIT.md): who signed in and who
+"""The audit of administration (docs/mailbox-service/AUDIT.md): who signed in and who
 changed users, tokens, roles, accounts and webhooks. One list, narrowed
 by the filter bar."""
 

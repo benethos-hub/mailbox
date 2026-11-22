@@ -1,5 +1,5 @@
 """TOTP devices, an authenticator app each: added, renamed and removed by their
-owner, removed by an administrator or the host (docs/AUTHENTICATION.md
+owner, removed by an administrator or the host (docs/mailbox-service/AUTHENTICATION.md
 4)."""
 
 from __future__ import annotations

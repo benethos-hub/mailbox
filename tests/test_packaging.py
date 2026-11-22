@@ -210,7 +210,7 @@ def test_the_newest_tested_version_measures_and_installs() -> None:
     ("relative", "pattern"),
     [
         ("CLAUDE.md", r"Python (3\.\d+)-(3\.\d+)\."),
-        ("docs/CONCEPT.md", r"^\| Python \| (3\.\d+)–(3\.\d+) \|$"),
+        ("docs/mailbox-service/CONCEPT.md", r"^\| Python \| (3\.\d+)–(3\.\d+) \|$"),
     ],
     ids=["CLAUDE.md", "CONCEPT.md"],
 )
@@ -246,10 +246,10 @@ VERSION_EXAMPLES = [
     ("containers/production/.env.example", "env"),
     ("containers/production/README.md", "image"),
     ("packages/mailbox-service/README.md", "env"),
-    ("docs/CONCEPT.md", "status"),
+    ("docs/mailbox-service/CONCEPT.md", "status"),
     ("docs/ROADMAP.md", "status"),
-    ("docs/MICROSOFT.md", "status"),
-    ("docs/GOOGLE.md", "status"),
+    ("docs/mailbox-service/MICROSOFT.md", "status"),
+    ("docs/mailbox-service/GOOGLE.md", "status"),
     ("packages/mailbox-service/README.md", "status"),
     ("packages/mailbox-service/README.md", "tag"),
     ("packages/mailbox-service/README.md", "image"),
@@ -261,7 +261,7 @@ VERSION_EXAMPLES = [
     (".github/publish/mcp-registry/server.json", "json"),
     (".github/publish/mcp-registry/server.json", "bundle"),
     (".github/publish/mcpb/manifest.json", "json"),
-    ("docs/openapi.json", "json"),
+    ("docs/mailbox-service/openapi.json", "json"),
 ]
 
 MINOR_EXAMPLES = [
@@ -329,7 +329,9 @@ def test_no_file_names_another_version() -> None:
 
 
 def test_the_openapi_document_has_the_version() -> None:
-    document = json.loads((ROOT / "docs" / "openapi.json").read_text("utf-8"))
+    document = json.loads(
+        (ROOT / "docs" / "mailbox-service" / "openapi.json").read_text("utf-8")
+    )
     assert document["info"]["version"] == _version()
 
 

@@ -1,5 +1,5 @@
 """TOTP, the first method of the second factor: a user's authenticator
-apps, each a device with a secret of its own (docs/AUTHENTICATION.md 3,
+apps, each a device with a secret of its own (docs/mailbox-service/AUTHENTICATION.md 3,
 5).
 
 This module checks a code and keeps the devices. The frame they belong

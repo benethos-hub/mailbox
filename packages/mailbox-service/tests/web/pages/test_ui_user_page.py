@@ -1,5 +1,5 @@
 """A user's page in tabs, the grant editor in lines, and the batch of the
-users list (docs/UI.md 6.3)."""
+users list (docs/mailbox-service/UI.md 6.3)."""
 
 from __future__ import annotations
 

@@ -289,8 +289,8 @@ class UserService:
     ) -> BatchOutcome:
         """One change to each of several users, as ``update_user`` makes
         it: within the caller's rights, recorded per user. Every user is
-        changed or none (docs/UI.md 4.1): a user it cannot change is named
-        with the reason, and recorded, and nothing changes. ``action`` is one of
+        changed or none (docs/mailbox-service/UI.md 4.1): a user it cannot change is
+        named with the reason, and recorded, and nothing changes. ``action`` is one of
         ``BATCH_ACTIONS``, the role ones with ``role``."""
         if action not in BATCH_ACTIONS:
             raise BadRequestError(f"no such change of users: {action}")

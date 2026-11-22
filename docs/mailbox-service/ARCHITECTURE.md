@@ -4,8 +4,8 @@ Decided 2026-09-28 as a whole. The rules of this service: the layers,
 the modules and the seams, where a piece of code goes, how it is
 imported, how it is named, and how it is moved.
 [CONCEPT.md](CONCEPT.md) says what the service is,
-[CLAUDE.md](../CLAUDE.md) how to work in the repository,
-[REFACTORING.md](REFACTORING.md) how the layout came to be. This file is
+[CLAUDE.md](../../CLAUDE.md) how to work in the repository,
+[REFACTORING.md](../REFACTORING.md) how the layout came to be. This file is
 the reference: a change that adds a module, a package, a library or a
 seam is measured against it.
 
@@ -18,14 +18,14 @@ to where a piece of code goes. The rest is in
 | Topic | Sections | In short |
 |---|---|---|
 | [The modules of the service](architecture/modules-service.md) | 3, 3.1 | What each package and module of the service holds, as a tree that a test holds to the disk. |
-| [The modules of the other packages](architecture/modules-packages.md) | 3.2 to 3.4 | The same for the client, the MCP server and `mailbox-common`, and what an endpoint of the client and a tool of the MCP server are. |
+| [The modules of the other packages](../architecture/modules-packages.md) | 3.2 to 3.4 | The same for the client, the MCP server and `mailbox-common`, and what an endpoint of the client and a tool of the MCP server are. |
 | [The rules](architecture/rules.md) | 5 to 17 | Packages, imports, libraries, the seams that keep parts replaceable, types, errors, state, logging, tests, naming, size and refactoring. |
 
 ## Every section
 
 - [1. The shape](#1-the-shape)
 - [2. The layers](#2-the-layers)
-- [3. The code, module by module](architecture/modules-service.md#3-the-code-module-by-module): [3.1 The service](architecture/modules-service.md#31-the-service) · [3.2 The client](architecture/modules-packages.md#32-the-client) · [3.3 The MCP server](architecture/modules-packages.md#33-the-mcp-server) · [3.4 What the service and the MCP server share](architecture/modules-packages.md#34-what-the-service-and-the-mcp-server-share)
+- [3. The code, module by module](architecture/modules-service.md#3-the-code-module-by-module): [3.1 The service](architecture/modules-service.md#31-the-service) · [3.2 The client](../architecture/modules-packages.md#32-the-client) · [3.3 The MCP server](../architecture/modules-packages.md#33-the-mcp-server) · [3.4 What the service and the MCP server share](../architecture/modules-packages.md#34-what-the-service-and-the-mcp-server-share)
 - [4. Where does it go?](#4-where-does-it-go)
 - [5. Packages](architecture/rules.md#5-packages)
 - [6. Imports](architecture/rules.md#6-imports)
@@ -142,7 +142,7 @@ The three layers and what each may import:
   ```
 - **The domain logs activities.** A line at `INFO` or above is an
   activity of `domain/activity/catalogue/`, handed to
-  `ActivityLog.record`, a sentence as docs/LOGGING.md section 3 shapes
+  `ActivityLog.record`, a sentence as docs/mailbox-service/LOGGING.md section 3 shapes
   it. The data layer logs at `DEBUG` at most: what it notices goes up as
   a result or an error.
 
@@ -195,7 +195,7 @@ An import or a line that breaks a rule fails the suite.
 | a wire protocol | a module in `data/protocols/`, one library, in our types. The adapters compose it |
 | an autodiscovery source | a module in `data/discovery/`, behind `DiscoverySource`, put in order in `sources.py` |
 | a command of the CLI | a module in `cli/` with `add` and `run`, its line in `COMMANDS`. It builds the service through `assembly/` |
-| a tool of the MCP server | `tools/<kind>.py` of the MCP package with its line in `TOOLS` there, its request in the client package, its answer a `TypedDict` in `answers.py`, filled by `render.py` (section 3), then `docs/mcp-tools.json` is regenerated and the bundle's manifest names it |
+| a tool of the MCP server | `tools/<kind>.py` of the MCP package with its line in `TOOLS` there, its request in the client package, its answer a `TypedDict` in `answers.py`, filled by `render.py` (section 3), then `docs/mailbox-mcp/mcp-tools.json` is regenerated and the bundle's manifest names it |
 | a request of the Python client | the module of its resource in `endpoints/` of the client package, and one line on each client (section 3) |
 | a library | one wrapper module, in the layer that needs it, and nowhere else. The wrapper maps into our types and our errors |
 | an error | `errors.py`, a subclass of `MailboxServiceError`. `web/errors.py` gives it a status |

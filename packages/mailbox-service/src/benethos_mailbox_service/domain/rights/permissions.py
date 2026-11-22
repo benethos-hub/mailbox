@@ -66,7 +66,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
     # other group, so a grant names it on purpose.
     "mail.share": ("share_attachment",),
     # Who sent what to whom, never content. In service: who did what in
-    # the service (docs/AUDIT.md).
+    # the service (docs/mailbox-service/AUDIT.md).
     "audit": ("list_sends", "list_all_sends", "list_activity"),
     # Signing in again by OAuth is update_account: the domain checks it.
     # So is list_server_names, which serves choosing a setting.

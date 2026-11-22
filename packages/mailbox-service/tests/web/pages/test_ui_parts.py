@@ -1,4 +1,4 @@
-"""The parts every page shares (docs/UI.md 7): the icons and the script
+"""The parts every page shares (docs/mailbox-service/UI.md 7): the icons and the script
 that picks them, the question before a form, copying a secret, times in
 lists, and that nothing is loaded from elsewhere."""
 
@@ -163,7 +163,7 @@ def test_a_relative_time_has_the_full_stamp_as_tooltip(ui: TestClient) -> None:
 
 def test_nothing_is_loaded_from_elsewhere() -> None:
     """No CDN: every script, style, font and image the UI loads is under
-    static/ (docs/UI.md 8)."""
+    static/ (docs/mailbox-service/UI.md 8)."""
     loaded = re.compile(r'\b(?:src|href|srcset)="(?:https?:)?//', re.I)
     imported = re.compile(r"@import|url\(\s*['\"]?(?:https?:)?//", re.I)
     found = [

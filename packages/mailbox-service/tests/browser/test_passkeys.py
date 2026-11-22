@@ -1,6 +1,6 @@
 """Passkeys in a real browser: the script hands the options to WebAuthn,
 a virtual authenticator of Chromium makes and signs the passkey, and the
-answer signs in after the password (docs/AUTHENTICATION.md 4, 5).
+answer signs in after the password (docs/mailbox-service/AUTHENTICATION.md 4, 5).
 
 Only Chromium offers a virtual authenticator, through its DevTools
 protocol, so this test runs in Chromium alone. The service is reached

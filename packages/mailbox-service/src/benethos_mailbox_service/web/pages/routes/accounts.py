@@ -1,4 +1,4 @@
-"""Accounts: list, connect from the address (docs/UI.md, 6.1), change,
+"""Accounts: list, connect from the address (docs/mailbox-service/UI.md, 6.1), change,
 verify, remove."""
 
 from __future__ import annotations

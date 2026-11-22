@@ -1,4 +1,4 @@
-"""The overview (docs/UI.md, section 5): who is signed in, its accounts,
+"""The overview (docs/mailbox-service/UI.md, section 5): who is signed in, its accounts,
 and for those who may list accounts what needs attention."""
 
 from __future__ import annotations

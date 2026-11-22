@@ -1,5 +1,5 @@
 """Sending, drafts, idempotency, the send limit, links to attachments
-(docs/LOGGING.md 5.6, 5.9).
+(docs/mailbox-service/LOGGING.md 5.6, 5.9).
 
 Drafts are mail content and change nothing others see: not logged. A
 send names the count of its recipients, never their addresses: those are

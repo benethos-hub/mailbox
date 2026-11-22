@@ -1,5 +1,5 @@
 """The layout of the client package, checked instead of only written down
-(docs/ARCHITECTURE.md 3).
+(docs/mailbox-service/ARCHITECTURE.md 3).
 
 It knows the service through the REST API alone: it neither depends on
 nor imports the service or the MCP server. Each module imports only the
@@ -163,7 +163,7 @@ def test_the_endpoints_are_imported_through_their_package() -> None:
     assert violations == []
 
 
-# Hard limits (docs/ARCHITECTURE.md 15): what grows beyond them is split
+# Hard limits (docs/mailbox-service/ARCHITECTURE.md 15): what grows beyond them is split
 # by subject.
 MAX_LINES = 500
 MAX_METHODS = 30

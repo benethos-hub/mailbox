@@ -132,6 +132,6 @@ its example override file. It also starts the
 service until its health check reports healthy, and the MCP server's
 image twice: once for its version, and once as a catalogue
 (`MAILBOX_MCP_CATALOGUE=true`, over stdio), whose tools must be as
-many as `docs/mcp-tools.json` names. Its job `dockerfile-lint` reads both
+many as `docs/mailbox-mcp/mcp-tools.json` names. Its job `dockerfile-lint` reads both
 Dockerfiles with hadolint, and what that finds goes to Security, Code
 scanning.

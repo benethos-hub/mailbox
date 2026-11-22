@@ -1,4 +1,4 @@
-"""Sync and the worker (docs/LOGGING.md 5.5)."""
+"""Sync and the worker (docs/mailbox-service/LOGGING.md 5.5)."""
 
 from __future__ import annotations
 

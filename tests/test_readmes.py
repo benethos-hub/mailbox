@@ -166,8 +166,8 @@ def test_the_documents_are_found() -> None:
     names = {p.relative_to(ROOT).as_posix() for p in _documents()}
     assert {
         "CLAUDE.md",
-        "docs/CONCEPT.md",
-        "docs/concept/security.md",
+        "docs/mailbox-service/CONCEPT.md",
+        "docs/mailbox-service/concept/security.md",
         "README.md",
     } <= names
 

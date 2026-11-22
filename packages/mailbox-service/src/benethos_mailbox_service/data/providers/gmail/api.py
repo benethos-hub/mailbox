@@ -31,7 +31,8 @@ from ..base import TokenSource
 from ..tokenapi import TokenApi, signed
 from .shapes import Failure, Label, Labels
 
-# DEBUG alone: the data layer decides nothing (docs/LOGGING.md rule 6.2).
+# DEBUG alone: the data layer decides nothing (docs/mailbox-service/LOGGING.md rule
+# 6.2).
 log = logging.getLogger(__name__)
 
 GMAIL = "https://gmail.googleapis.com"

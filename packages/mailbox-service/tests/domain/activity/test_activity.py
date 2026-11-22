@@ -1,5 +1,5 @@
 """Activities: the catalogue, the recorder, who acted and from where
-(docs/LOGGING.md sections 3, 6 and 7)."""
+(docs/mailbox-service/LOGGING.md sections 3, 6 and 7)."""
 
 from __future__ import annotations
 
@@ -58,7 +58,7 @@ FORBIDDEN_NAMES = {"password", "secret", "plain", "subject", "body", "url", "que
 
 
 # The packages of docs/REFACTORING.md section 4 that record, and the two
-# areas beyond them (docs/LOGGING.md 7.2).
+# areas beyond them (docs/mailbox-service/LOGGING.md 7.2).
 AREAS = {
     "system",
     "auth",
@@ -72,8 +72,14 @@ AREAS = {
     "http",
 }
 NAME = re.compile(r"[a-z][a-z0-9]*(_[a-z0-9]+)*")
-# Section 7 of docs/LOGGING.md, which is a file of its own.
-LOGGING_MD = Path(__file__).resolve().parents[5] / "docs" / "logging" / "code.md"
+# Section 7 of docs/mailbox-service/LOGGING.md, which is a file of its own.
+LOGGING_MD = (
+    Path(__file__).resolve().parents[5]
+    / "docs"
+    / "mailbox-service"
+    / "logging"
+    / "code.md"
+)
 
 
 def test_the_areas_are_the_packages_of_the_domain() -> None:
@@ -96,7 +102,7 @@ def test_every_activity_is_listed_in_the_concept_and_nothing_else() -> None:
 @pytest.mark.parametrize("cls", activities(), ids=lambda cls: cls.__name__)
 def test_each_activity_has_a_level_a_line_and_no_secret(cls: type[Activity]) -> None:
     assert cls.area == cls.__module__.rpartition(".")[2]
-    # Set in the class, not taken from its name (docs/LOGGING.md 7.2).
+    # Set in the class, not taken from its name (docs/mailbox-service/LOGGING.md 7.2).
     assert "name" in vars(cls), "each activity sets its name"
     assert NAME.fullmatch(cls.name), cls.name
     assert not cls.name.startswith(cls.area.rstrip("s") + "_"), "the area twice"

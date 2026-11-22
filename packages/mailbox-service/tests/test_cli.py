@@ -401,7 +401,7 @@ def test_a_command_that_changes_the_database_logs_it_too(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
     """The host prints to the person at the terminal and writes the same
-    to the log (docs/LOGGING.md rule 6.8)."""
+    to the log (docs/mailbox-service/LOGGING.md rule 6.8)."""
     folder = settings_folder(tmp_path, monkeypatch)
     named = str(folder / "service.env")
     with caplog.at_level("INFO"):

@@ -1,6 +1,6 @@
 """Passkeys, the second method of the second factor: added, renamed and
 removed by their owner, removed by an administrator, and signing in
-after the password (docs/AUTHENTICATION.md 4, 5)."""
+after the password (docs/mailbox-service/AUTHENTICATION.md 4, 5)."""
 
 from __future__ import annotations
 

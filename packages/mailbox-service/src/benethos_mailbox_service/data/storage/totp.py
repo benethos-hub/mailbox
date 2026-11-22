@@ -1,5 +1,5 @@
 """The TOTP devices of users, each with its secret sealed
-(docs/AUTHENTICATION.md 3, 7). TOTP is one method of the second factor.
+(docs/mailbox-service/AUTHENTICATION.md 3, 7). TOTP is one method of the second factor.
 
 It only stores. The domain makes the secrets, and decides who may add
 or remove a device.

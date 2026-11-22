@@ -6,7 +6,7 @@
 Needs, in live/.env: the test account's address in LIVE_GMAIL_EMAIL, and
 the Google client of a Google Cloud project in LIVE_GOOGLE_CLIENT_ID and
 LIVE_GOOGLE_CLIENT_SECRET, with the redirect URI
-http://localhost:8080/ui/oauth/gmail/callback (docs/GOOGLE.md). Listing
+http://localhost:8080/ui/oauth/gmail/callback (docs/mailbox-service/GOOGLE.md). Listing
 the address there confirms it as a test account (CLAUDE.md, golden
 rule 1).
 

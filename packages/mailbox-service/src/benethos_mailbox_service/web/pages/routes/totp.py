@@ -1,6 +1,6 @@
 """TOTP, an authenticator app, on the page Second factor: a device added
 from its QR code, renamed and removed, and one of another user's
-devices removed from its page (docs/AUTHENTICATION.md 5)."""
+devices removed from its page (docs/mailbox-service/AUTHENTICATION.md 5)."""
 
 from __future__ import annotations
 

@@ -1,6 +1,6 @@
 """The state of the service, for the overview, the accounts list and the
-dots of the sidebar (docs/UI.md, sections 3 and 5), `GET /v1/status`, and
-its figures for a monitor at `GET /v1/metrics`.
+dots of the sidebar (docs/mailbox-service/UI.md, sections 3 and 5), `GET /v1/status`,
+and its figures for a monitor at `GET /v1/metrics`.
 
 It reads what the other services keep: the accounts, the sync state of
 each, the worker and the caller's webhooks. Nothing is asked of a

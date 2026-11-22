@@ -1,5 +1,5 @@
 """What a JMAP account can do follows from its session and its folders
-(docs/UNIFORM.md, rule R4): sending from the server's submission and a
+(docs/mailbox-service/UNIFORM.md, rule R4): sending from the server's submission and a
 folder to send from, push from its event source."""
 
 from __future__ import annotations

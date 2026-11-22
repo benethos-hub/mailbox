@@ -1,6 +1,6 @@
 """Passkeys on the page Second factor: one made by the browser, renamed
 and removed, and one of another user's removed from its page
-(docs/AUTHENTICATION.md 5)."""
+(docs/mailbox-service/AUTHENTICATION.md 5)."""
 
 from __future__ import annotations
 

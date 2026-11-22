@@ -1,6 +1,6 @@
 """TOTP devices of users who sign in to the UI: one's own added, renamed
 and removed with the password and a code, another's removed within the
-caller's rights (docs/AUTHENTICATION.md 5).
+caller's rights (docs/mailbox-service/AUTHENTICATION.md 5).
 
 Adding a device is for the person who scans the secret. Nobody adds one
 for another user.

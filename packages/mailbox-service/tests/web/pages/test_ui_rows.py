@@ -1,4 +1,4 @@
-"""Lists that act in the row (docs/UI.md 4.2): the plus in a card's
+"""Lists that act in the row (docs/mailbox-service/UI.md 4.2): the plus in a card's
 header opens the form at the head of the list, a pencil the form under
 its row, a bin the question, and ticked rows go together."""
 

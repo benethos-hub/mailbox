@@ -245,7 +245,8 @@ def test_every_text_colour_is_readable_on_its_backgrounds() -> None:
 def test_every_editor_has_a_way_back(
     ui: TestClient, account_id: str, page: str, back: str
 ) -> None:
-    """docs/UI.md 4.3: an editor page has Cancel back where it came from."""
+    """docs/mailbox-service/UI.md 4.3: an editor page has Cancel back where it came
+    from."""
     text = ui.get(page.format(account_id=account_id)).text
     assert (
         f'<a class="btn" href="{back.format(account_id=account_id)}">Cancel</a>' in text
@@ -253,8 +254,8 @@ def test_every_editor_has_a_way_back(
 
 
 def test_every_primary_action_has_an_icon() -> None:
-    """docs/UI.md 7: the primary action of a page keeps its word, with an
-    icon beside it."""
+    """docs/mailbox-service/UI.md 7: the primary action of a page keeps its word, with
+    an icon beside it."""
     bare = []
     for template in sorted((TEMPLATE_DIR / "pages").glob("*.html")):
         text = template.read_text(encoding="utf-8")
@@ -265,7 +266,7 @@ def test_every_primary_action_has_an_icon() -> None:
 
 
 def test_every_batch_bar_looks_alike() -> None:
-    """docs/UI.md 4.1: one bar above the table for what is ticked, the
+    """docs/mailbox-service/UI.md 4.1: one bar above the table for what is ticked, the
     same on every list."""
     odd = []
     for template in sorted((TEMPLATE_DIR / "pages").glob("*.html")):
@@ -304,7 +305,8 @@ def test_no_template_marks_text_as_safe() -> None:
     assert marked == []
 
 
-# --- the account menu and the folded sidebar (docs/UI.md 3) ----------------------
+# --- the account menu and the folded sidebar (docs/mailbox-service/UI.md 3)
+# ----------------------
 
 
 def test_the_account_menu_holds_what_is_personal(ui: TestClient) -> None:

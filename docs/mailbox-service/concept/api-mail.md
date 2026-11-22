@@ -44,7 +44,7 @@ series, never 0. A deleted account is gone from the next answer. The
 figures live in memory and start again after a restart. The route
 answers `404` while `MAILBOX_SERVICE_METRICS=false`. Three alerts on the
 figures come with the service: the command `alert-rules` prints them. How
-to scrape it and load them: [containers/production/README.md](../../containers/production/README.md#monitoring-with-prometheus).
+to scrape it and load them: [containers/production/README.md](../../../containers/production/README.md#monitoring-with-prometheus).
 
 **Decided 2026-11-22:** a right of its own, `get_metrics`, a right of
 the service, since `GET /v1/status` hands out the address and the text

@@ -9,7 +9,7 @@ get locked out when a client asks too much (CONCEPT 5.9).
 The numbers below are the defaults. Most limits are settings of the
 service, `MAILBOX_SERVICE_*` in its `.env`, named in the column "Set
 by". What each limit logs is in [LOGGING.md](LOGGING.md) 5.9. How to
-report a weakness is in [SECURITY.md](../SECURITY.md).
+report a weakness is in [SECURITY.md](../../SECURITY.md).
 
 ## 1. Overview
 

@@ -1,4 +1,4 @@
-"""Every record named like a schema of docs/openapi.json, or named
+"""Every record named like a schema of docs/mailbox-service/openapi.json, or named
 after one in ``SCHEMA_OF``, holds each of its fields. A field the API
 adds and the client forgets fails here."""
 
@@ -12,7 +12,9 @@ import pytest
 
 from benethos_mailbox_client import models
 
-CONTRACT = Path(__file__).resolve().parents[4] / "docs" / "openapi.json"
+CONTRACT = (
+    Path(__file__).resolve().parents[4] / "docs" / "mailbox-service" / "openapi.json"
+)
 SCHEMAS = json.loads(CONTRACT.read_text("utf-8"))["components"]["schemas"]
 # A field named like a keyword of Python.
 RENAMED = {"from": "sender"}
