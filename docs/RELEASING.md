@@ -20,7 +20,7 @@ client and the common package.
    `benethos-mailbox-common[paths,settings]==X.Y.Z` in the MCP server's
    and `benethos-mailbox-common[paths,settings]==X.Y.Z` in the
    service's, `benethos-mailbox-client==X.Y.Z` and
-   `benethos-mailbox-common[settings]==X.Y.Z` in the agents', then
+   `benethos-mailbox-common[paths,settings]==X.Y.Z` in the agents', then
    `uv lock` and `uv sync`. Set it as well in
    `.github/publish/mcp-registry/server.json`, there also in the
    bundle's address, in `.github/publish/mcpb/manifest.json` and in

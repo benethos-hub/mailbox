@@ -33,6 +33,7 @@ __all__ = [
     "ActionRow",
     "MessageRow",
     "Store",
+    "earlier_file",
     "path_for",
 ]
 
@@ -42,6 +43,22 @@ STATES = ("pending", "skipped", "decided", "done", "failed")
 def path_for(data_dir: Path, agent: str) -> Path:
     """Where the state file of ``agent`` lives."""
     return data_dir / f"{agent}.db"
+
+
+# Where the state files lay before they had a folder of their own: data/
+# below the working directory, unless a setting named another.
+EARLIER_DATA_DIR = Path("data")
+
+
+def earlier_file(data_dir: Path, agent: str) -> Path | None:
+    """The state file of ``agent`` at the place before, when there is
+    one and none at ``data_dir``: a writer does not start anew beside
+    it, as the cursor and every decision are in it."""
+    found = path_for(EARLIER_DATA_DIR, agent)
+    now = path_for(data_dir, agent)
+    if now.is_file() or not found.is_file():
+        return None
+    return None if found.resolve() == now.resolve() else found
 
 
 @dataclass(frozen=True)

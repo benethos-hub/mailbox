@@ -71,7 +71,8 @@ packages/mailbox-agents/src/benethos_mailbox_agents/
   __main__.py     # enables `python -m benethos_mailbox_agents`
   errors/         # the error hierarchy, one module per error, its texts
                   #   masked with redact of mailbox-common
-  settings/       # settings resolution, secrets from files
+  settings/       # settings resolution, secrets from files, and where the
+                  # settings file and the state files are
   logbook/        # every line on stderr as an activity of its catalogue,
                   # and what a line may never carry (docs/mailbox-agents/LOGGING.md)
   contract/       # Agent (ABC), Action, Trigger, Limits, Requires, the
@@ -126,7 +127,9 @@ config/benethos-mailbox-agents/  # .env.example and the example lists
 docs/mailbox-agents/    # CONCEPT.md, the overview, and concept/, a file
                         # per topic and per agent, ARCHITECTURE.md and
                         # LOGGING.md
-data/                   # state files and the gold set, never versioned
+data/benethos-mailbox-agents/
+                        # the state files and the gold set, never
+                        # versioned
 reports/mailbox-agents/ # evaluation reports, numbers only, versioned
 assets/mailbox-agents/  # brand/icon.svg and architecture/architecture.html,
                         # the diagram of the README, and the PNGs

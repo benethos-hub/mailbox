@@ -35,7 +35,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   but empty no longer turns off the colours of the log at a terminal, as
   no-color.org has it. `benethos-mailbox-common`: `colours_wanted` takes
   the stream to write to, stderr when none is given.
-- `benethos-mailbox-agents` take `benethos-mailbox-common[settings]` of
+- `benethos-mailbox-agents` take `benethos-mailbox-common[paths,settings]` of
   their own version.
 - `benethos-mailbox-agents` write a secret of their settings as `***` in
   an error and a line of the log, as the service and the MCP server do.
@@ -49,6 +49,16 @@ adheres to [Semantic Versioning](https://semver.org/).
   `awaiting_reply` version 2 with prompt `v2`, the prompts unchanged, so
   every message is decided anew. Run each in `shadow` again before a
   higher stage.
+- `benethos-mailbox-agents` find their settings and keep their state
+  files as the service does. In this repository the state files go to
+  `data/benethos-mailbox-agents/`. A settings file named by `--env-file`
+  or the new `MAILBOX_AGENTS_ENV_FILE` keeps them beside it, and a
+  relative path in it counts from its folder. Installed alone, the
+  agents use the folders of the operating system. Before, they went to
+  `data/` below whatever folder a command started in. A state file still
+  at `data/<agent>.db` stops a command that writes it, which names both
+  places: move it, or set `MAILBOX_AGENTS_DATA_DIR` to its folder.
+  Containers set the folder and are not touched.
 
 ### Fixed
 

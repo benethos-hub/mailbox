@@ -18,7 +18,7 @@ from benethos_mailbox_agents.agents.sorting import agent as sorting_agent
 from benethos_mailbox_agents.agents.sorting.groups import Groups
 from benethos_mailbox_agents.cli import PROG, main, session
 from benethos_mailbox_agents.runtime.loop import Worker
-from benethos_mailbox_agents.settings import PREFIX
+from benethos_mailbox_agents.settings import DATA_DIR, PREFIX
 
 from ..agents_fake import FakeGateway, FakeService, wire_message
 from ..agents_helpers import configure
@@ -120,7 +120,7 @@ def test_a_broken_state_file_is_named_and_the_others_still_listed(
     configure(monkeypatch)
     assert main(["run", "--agent", "counting"]) == 0
     capsys.readouterr()
-    Path("data", "awaiting_reply.db").write_text("no database " * 100)
+    (DATA_DIR / "awaiting_reply.db").write_text("no database " * 100)
 
     assert main(["status"]) == 0
     out = capsys.readouterr().out
@@ -161,7 +161,7 @@ def test_a_state_file_of_a_newer_schema_is_named_and_unhealthy(
     configure(monkeypatch)
     assert main(["run", "--agent", "counting"]) == 0
     capsys.readouterr()
-    with sqlite3.connect(Path("data", "counting.db")) as db:
+    with sqlite3.connect(DATA_DIR / "counting.db") as db:
         db.execute("PRAGMA user_version = 99")
     db.close()
 
@@ -236,7 +236,31 @@ def test_worker_runs_until_stopped(
     monkeypatch.setattr(Worker, "run", one_pass)
 
     assert main(["worker", "--agent", "counting"]) == 0
-    assert (tmp_path / "data" / "counting.db").is_file()
+    assert (tmp_path / DATA_DIR / "counting.db").is_file()
+
+
+def test_a_state_file_at_the_place_before_is_not_left_behind(
+    service: FakeService,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Before, the state files lay in data/ below the working directory. A
+    writer does not start a new one beside such a file, and paths and
+    status name it."""
+    configure(monkeypatch)
+    Path("data").mkdir()
+    Path("data", "counting.db").write_bytes(b"")
+
+    assert main(["run", "--agent", "counting"]) == 2
+    err = capsys.readouterr().err
+    assert "the state file of counting lies at" in err
+    assert f"set {PREFIX}DATA_DIR to its folder" in err
+    assert not (DATA_DIR / "counting.db").exists()
+
+    assert main(["paths"]) == 0
+    assert "a state file lies at" in capsys.readouterr().out
+    assert main(["status"]) == 0
+    assert "move it to" in capsys.readouterr().out
 
 
 def test_paths(
