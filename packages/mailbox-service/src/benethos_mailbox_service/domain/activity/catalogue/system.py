@@ -1,6 +1,6 @@
 """The area system: the service itself, its start, schema and stop, its
 background loops, the recovery key, the log page, the keys and backups
-of the host. What the assembly records is here as well (docs/LOGGING.md
+of the host. What the assembly records is here as well (docs/mailbox-service/LOGGING.md
 5.1, 5.8)."""
 
 from __future__ import annotations

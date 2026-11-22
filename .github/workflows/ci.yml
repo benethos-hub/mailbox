@@ -105,12 +105,12 @@ jobs:
           import json
 
           fresh = json.load(open("/tmp/openapi.json"))
-          checked_in = json.load(open("docs/openapi.json"))
+          checked_in = json.load(open("docs/mailbox-service/openapi.json"))
           assert fresh == checked_in, (
-              "a fresh install describes another API than docs/openapi.json: "
+              "a fresh install describes another API than docs/mailbox-service/openapi.json: "
               "a dependency outside uv.lock changes the contract"
           )
-          print(f"OK: {len(fresh['paths'])} paths, same as docs/openapi.json")
+          print(f"OK: {len(fresh['paths'])} paths, same as docs/mailbox-service/openapi.json")
           PY
 
   # The configuration UI in Chrome, Firefox and WebKit through Playwright:
@@ -396,10 +396,10 @@ jobs:
 
       # What a directory such as Glama sees: the image in a sandbox, no
       # service, no token, the tool list read over stdio. It must hold
-      # every tool of docs/mcp-tools.json, the tools as a client lists them.
+      # every tool of docs/mailbox-mcp/mcp-tools.json, the tools as a client lists them.
       - name: Smoke test (the MCP server image lists every tool as a catalogue)
         run: |
-          expected=$(jq length docs/mcp-tools.json)
+          expected=$(jq length docs/mailbox-mcp/mcp-tools.json)
           # stdin stays open until the answer is read. At the end of its
           # input the server ends the session, as MCP's stdio shutdown
           # has it, and drops a request still running.
@@ -425,8 +425,8 @@ jobs:
           done
           exec {to_server}>&- {from_server}<&-
           wait "$pid" || true
-          echo "listed $listed tools, docs/mcp-tools.json names $expected"
+          echo "listed $listed tools, docs/mailbox-mcp/mcp-tools.json names $expected"
           if [ "$listed" != "$expected" ]; then
-            echo "::error::the catalogue lists $listed tools, docs/mcp-tools.json names $expected"
+            echo "::error::the catalogue lists $listed tools, docs/mailbox-mcp/mcp-tools.json names $expected"
             exit 1
           fi

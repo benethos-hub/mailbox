@@ -1,4 +1,4 @@
-"""Webhooks and their posts (docs/LOGGING.md 5.7). A webhook is named by
+"""Webhooks and their posts (docs/mailbox-service/LOGGING.md 5.7). A webhook is named by
 its id and the host it posts to, never by its URL: a URL may carry a key
 in its query."""
 

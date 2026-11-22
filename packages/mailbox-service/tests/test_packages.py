@@ -106,7 +106,7 @@ def test_no_cycle_between_the_packages(layer: str) -> None:
         assert cycle is None, "a cycle: " + " -> ".join(cycle)
 
 
-# The packages of each layer in lines (docs/ARCHITECTURE.md 2): each
+# The packages of each layer in lines (docs/mailbox-service/ARCHITECTURE.md 2): each
 # imports only the lines below its own.
 LINES = {
     "domain": (

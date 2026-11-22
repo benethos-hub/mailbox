@@ -5,7 +5,7 @@
 > data is carried forward by migrations.
 
 The phases in which Mailbox is built. What each item means is designed
-in [CONCEPT.md](CONCEPT.md). The section numbers below point there.
+in [CONCEPT.md](mailbox-service/CONCEPT.md). The section numbers below point there.
 
 | Phase | Topic | State |
 |---|---|---|

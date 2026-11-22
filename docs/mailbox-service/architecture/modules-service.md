@@ -206,9 +206,9 @@ packages/mailbox-service/
                         #   Activity (base.py), ActivityLog (recorder.py),
                         #   catalogue/ one module per area of the domain,
                         #   and http for what the web layer refuses:
-                        #   activity.<area>.<name> (docs/LOGGING.md 7.2),
+                        #   activity.<area>.<name> (docs/mailbox-service/LOGGING.md 7.2),
                         #   Audit (audit.py): those marked audited kept
-                        #   and read (docs/AUDIT.md)
+                        #   and read (docs/mailbox-service/AUDIT.md)
       paging.py         # the cursors this service hands out itself, the
                         #   page they continue, encode_before and
                         #   decode_before for a list newest first

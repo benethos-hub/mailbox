@@ -1,6 +1,6 @@
 """The marks of RFC 8621 a person sees on a message, and the words for
 them. The UI and the MCP server show marks through these and spell no
-``$`` keyword of their own (docs/UNIFORM.md, U3). How the UI draws one
+``$`` keyword of their own (docs/mailbox-service/UNIFORM.md, U3). How the UI draws one
 is the UI's.
 
 ``$seen`` and ``$flagged`` are no marks here: they are read and starred.

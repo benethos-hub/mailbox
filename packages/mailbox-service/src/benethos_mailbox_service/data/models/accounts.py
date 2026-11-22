@@ -20,8 +20,8 @@ class ProviderType(StrEnum):
 
 class Capability(StrEnum):
     """What an account can do beyond reading its inbox, each guarding one
-    thing (docs/UNIFORM.md section 3). Where one is missing, the operations
-    that need it answer `501 not_supported`. They follow from what the
+    thing (docs/mailbox-service/UNIFORM.md section 3). Where one is missing, the
+    operations that need it answer `501 not_supported`. They follow from what the
     account's server offers."""
 
     # `unread` is kept and can be set.

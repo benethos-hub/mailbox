@@ -1,6 +1,6 @@
-"""The lines of a log, alike in every program of Mailbox (docs/LOGGING.md
-6.9): the time, the level, where a line comes from and the message, a
-noted secret masked (``redact``).
+"""The lines of a log, alike in every program of Mailbox
+(docs/mailbox-service/LOGGING.md 6.9): the time, the level, where a line comes from and
+the message, a noted secret masked (``redact``).
 
 On a terminal a line is short and in colour, elsewhere, in a container
 log or the journal, plain text. A program may write each line as one
@@ -44,8 +44,8 @@ _LEVEL_COLOURS = {
 }
 _SOURCE = "\033[36m"
 # The column of the source: the longest name of an activity of the
-# service, ``activity.<area>.<name>``, has 32 characters (docs/LOGGING.md
-# 7.2).
+# service, ``activity.<area>.<name>``, has 32 characters
+# (docs/mailbox-service/LOGGING.md 7.2).
 SOURCE_WIDTH = 32
 
 # A program's own text for a record, None for the message as it is.

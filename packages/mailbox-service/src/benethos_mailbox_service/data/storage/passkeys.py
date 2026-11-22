@@ -1,4 +1,4 @@
-"""The passkeys of users (docs/AUTHENTICATION.md 5, 7). Passkeys are one
+"""The passkeys of users (docs/mailbox-service/AUTHENTICATION.md 5, 7). Passkeys are one
 method of the second factor.
 
 It only stores. A passkey holds a public key, no secret: whoever reads it

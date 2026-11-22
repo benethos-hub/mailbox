@@ -1,6 +1,6 @@
 """The public interface of the two libraries other code imports, the
 client and the common package, is written in docs/ and held to the code,
-as docs/openapi.json is held to the service. A change to a name, a
+as docs/mailbox-service/openapi.json is held to the service. A change to a name, a
 signature, a field or a default shows as a diff of the record, to be
 read like code: a removed or changed one breaks those who import it."""
 
@@ -14,8 +14,8 @@ from .interface import written
 
 ROOT = Path(__file__).resolve().parents[1]
 RECORDS = {
-    "benethos_mailbox_client": "docs/client-interface.json",
-    "benethos_mailbox_common": "docs/common-interface.json",
+    "benethos_mailbox_client": "docs/mailbox-client/client-interface.json",
+    "benethos_mailbox_common": "docs/mailbox-common/common-interface.json",
 }
 
 

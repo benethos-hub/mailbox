@@ -5,7 +5,7 @@ a token opens.
 The project ships no app of its own for Google. The Gmail scopes are
 restricted: an app used by anyone would need Google's verification and
 a yearly security assessment. Each deployment registers its own client
-in a Google Cloud project instead (CONCEPT 5.5, docs/GOOGLE.md).
+in a Google Cloud project instead (CONCEPT 5.5, docs/mailbox-service/GOOGLE.md).
 """
 
 from __future__ import annotations

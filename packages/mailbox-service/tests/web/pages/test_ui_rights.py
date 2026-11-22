@@ -127,7 +127,8 @@ def test_the_editor_shows_what_the_mcp_server_uses(ui: TestClient) -> None:
     assert 'name="service" value="accounts.connect"' in service
 
 
-# --- a refused editor keeps what was typed (docs/UI.md 4.7) ------------------------
+# --- a refused editor keeps what was typed (docs/mailbox-service/UI.md 4.7)
+# ------------------------
 
 
 def test_a_refused_new_user_keeps_what_was_typed(

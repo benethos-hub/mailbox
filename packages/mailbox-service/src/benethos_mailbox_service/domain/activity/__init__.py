@@ -1,5 +1,5 @@
-"""Activities: what was done in the service, and by whom (docs/LOGGING.md
-section 7).
+"""Activities: what was done in the service, and by whom
+(docs/mailbox-service/LOGGING.md section 7).
 
 The catalogue has one module per area, and this package offers each:
 a domain service imports its area, ``from ..activity import mailbox as

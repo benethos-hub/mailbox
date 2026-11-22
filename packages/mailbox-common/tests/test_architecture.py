@@ -1,7 +1,7 @@
 """The package stands below the others: it imports none of them, and
 nothing but the standard library and the libraries named here. It is
 made of groups: a module imports only inside its own, and a caller
-imports a module from its group, never deeper (docs/ARCHITECTURE.md 5.3
+imports a module from its group, never deeper (docs/mailbox-service/ARCHITECTURE.md 5.3
 and 5.4)."""
 
 from __future__ import annotations
@@ -44,7 +44,7 @@ def test_only_the_standard_library_and_the_named_libraries() -> None:
 
 
 def test_no_module_is_long() -> None:
-    """The limit of the other packages (docs/ARCHITECTURE.md 15)."""
+    """The limit of the other packages (docs/mailbox-service/ARCHITECTURE.md 15)."""
     long = [
         f"{path.name}: {n}"
         for path in sorted(ROOT.rglob("*.py"))

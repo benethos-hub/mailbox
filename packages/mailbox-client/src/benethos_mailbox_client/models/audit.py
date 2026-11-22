@@ -1,5 +1,5 @@
 """The audit of administration: who did what to which record, and how
-it came out (docs/AUDIT.md)."""
+it came out (docs/mailbox-service/AUDIT.md)."""
 
 from __future__ import annotations
 

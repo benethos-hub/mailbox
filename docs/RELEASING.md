@@ -21,7 +21,7 @@ common package to it, the service the common package.
    `.github/publish/mcp-registry/server.json`, there also in the
    bundle's address, in `.github/publish/mcpb/manifest.json` and in
    `containers/production/.env.example`, and regenerate
-   `docs/openapi.json`, which carries it. `test_packaging.py` names
+   `docs/mailbox-service/openapi.json`, which carries it. `test_packaging.py` names
    every such place and every version example in the documentation
    that still shows the old one.
 3. Close `[Unreleased]` in `CHANGELOG.md` as `[X.Y.Z] - <date>`, in the

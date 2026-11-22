@@ -108,7 +108,7 @@ noticing. Every change is measured against that.
 | Passkeys | `registration`, `registered`, `authentication` and `asserted` in `data/secrets/passkeys.py` | fido2 | another WebAuthn library |
 | QR code | `data_uri` in `web/pages/qr.py` | segno | another QR library |
 | Metrics | `exposition` in `web/api/exposition.py`, the text format of `GET /v1/metrics` | prometheus_client | another Prometheus library, or the text format written by hand |
-| Client ↔ service | the REST API, `docs/openapi.json` | the package `mailbox-client`: each endpoint in `endpoints/`, sent by an async and a sync client over httpx. The MCP server uses it | a generated client, another HTTP library in `client.py`, `sync.py`, `calls.py`, `environment.py` and the modules that read an answer |
+| Client ↔ service | the REST API, `docs/mailbox-service/openapi.json` | the package `mailbox-client`: each endpoint in `endpoints/`, sent by an async and a sync client over httpx. The MCP server uses it | a generated client, another HTTP library in `client.py`, `sync.py`, `calls.py`, `environment.py` and the modules that read an answer |
 
 **When you add something new**, ask first where its seam is. A new
 provider is a new module behind `Reads`, not a branch in a route. A

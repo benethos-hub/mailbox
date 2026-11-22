@@ -5,7 +5,7 @@ Icons named in ``ICONS``, with their licence beside it.
 version from npm, checks its SHA-256 and picks the icons from it, read
 in memory, nothing unpacked. ``--check`` only says whether the sprite
 holds exactly ``ICONS``, without the network. Nothing is loaded from
-elsewhere when the UI runs (docs/UI.md 7).
+elsewhere when the UI runs (docs/mailbox-service/UI.md 7).
 
 A new icon is a line in ``ICONS``, then the sprite is made anew.
 """

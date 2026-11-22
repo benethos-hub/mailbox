@@ -1,9 +1,9 @@
-"""The recovery key in the UI (docs/UI.md, 6.5).
+"""The recovery key in the UI (docs/mailbox-service/UI.md, 6.5).
 
 The recovery key is the master key written out: whoever holds it opens
 every stored secret. So only ``admin`` on every account sees it, and
 only after typing the password again, and a code when the user has a
-second factor (docs/AUTHENTICATION.md 7). It is never stored or logged.
+second factor (docs/mailbox-service/AUTHENTICATION.md 7). It is never stored or logged.
 The log says that it was shown, and to whom.
 """
 

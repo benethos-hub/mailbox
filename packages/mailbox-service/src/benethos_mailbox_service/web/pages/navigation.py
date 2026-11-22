@@ -1,5 +1,5 @@
 """The sidebar: which entries a caller sees and which carry a dot for
-what waits for a person (docs/UI.md, section 3), and the breadcrumb of
+what waits for a person (docs/mailbox-service/UI.md, section 3), and the breadcrumb of
 the mail pages.
 
 An entry shows only to a caller with the right its page needs. The page

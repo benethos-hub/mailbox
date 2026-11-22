@@ -1,7 +1,7 @@
 """An activity: something done in the service, and who did it.
 
-One sentence per activity, in the past tense (docs/LOGGING.md section 3):
-``<who> <did what> <to which> [from <where>][: <why>]``. A subclass
+One sentence per activity, in the past tense (docs/mailbox-service/LOGGING.md section
+3): ``<who> <did what> <to which> [from <where>][: <why>]``. A subclass
 says the middle part in ``says``, the rest comes from here.
 """
 
@@ -80,9 +80,9 @@ def someone(source: str | None) -> Actor:
 class Activity:
     """One activity. ``name`` is set by each class and stays when the class
     is renamed: the log, an operator's filters and the audit know it
-    (docs/LOGGING.md 7.2). ``level`` is its level in the log, ``audited``
-    whether the audit of docs/AUDIT.md keeps it, and ``outcome`` what it
-    says there. ``at`` is set by the recorder."""
+    (docs/mailbox-service/LOGGING.md 7.2). ``level`` is its level in the log,
+    ``audited`` whether the audit of docs/mailbox-service/AUDIT.md keeps it, and
+    ``outcome`` what it says there. ``at`` is set by the recorder."""
 
     # The module's name in the catalogue: auth, users, ...
     area: ClassVar[str] = ""

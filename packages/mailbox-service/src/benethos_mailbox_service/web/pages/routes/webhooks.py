@@ -1,5 +1,5 @@
 """Webhooks: list, create, one with its delivery log, change, a new
-secret, remove (docs/UI.md, 6.4)."""
+secret, remove (docs/mailbox-service/UI.md, 6.4)."""
 
 from __future__ import annotations
 

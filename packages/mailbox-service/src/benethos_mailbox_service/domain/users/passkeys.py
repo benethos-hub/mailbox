@@ -1,6 +1,6 @@
 """Passkeys of users who sign in to the UI: one's own added, renamed and
 removed with the password and a code or a passkey, another's removed
-within the caller's rights (docs/AUTHENTICATION.md 5).
+within the caller's rights (docs/mailbox-service/AUTHENTICATION.md 5).
 
 Adding a passkey is for the person whose device makes it. Nobody adds
 one for another user.

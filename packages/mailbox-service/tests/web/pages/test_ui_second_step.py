@@ -1,5 +1,5 @@
 """How the second step of a form looks on the pages: a named group, its
-methods, the list of the others (docs/UI.md 6.3)."""
+methods, the list of the others (docs/mailbox-service/UI.md 6.3)."""
 
 from __future__ import annotations
 

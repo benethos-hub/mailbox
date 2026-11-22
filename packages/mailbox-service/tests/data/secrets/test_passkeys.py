@@ -1,5 +1,5 @@
-"""Passkeys, the ceremonies of a relying party (docs/AUTHENTICATION.md 4,
-5): what the service checks in a browser's answer."""
+"""Passkeys, the ceremonies of a relying party (docs/mailbox-service/AUTHENTICATION.md
+4, 5): what the service checks in a browser's answer."""
 
 from __future__ import annotations
 

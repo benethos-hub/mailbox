@@ -172,6 +172,6 @@ def test_the_sender_template_wants_recipients(
 
 
 def test_no_role_yet_sits_in_the_card(ui: TestClient) -> None:
-    """docs/UI.md 8: the empty state inside its card, as on Accounts."""
+    """docs/mailbox-service/UI.md 8: the empty state inside its card, as on Accounts."""
     page = ui.get("/ui/roles").text
     assert "No role yet." in page.split('<section class="card', 1)[1]

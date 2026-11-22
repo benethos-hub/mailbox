@@ -1,6 +1,6 @@
 # Ideas
 
-Collected, not decided. An idea moves into [CONCEPT.md](CONCEPT.md) once it
+Collected, not decided. An idea moves into [CONCEPT.md](mailbox-service/CONCEPT.md) once it
 is designed, and into [ROADMAP.md](ROADMAP.md) once it is scheduled. Until
 then nothing in the code depends on it.
 
@@ -21,7 +21,7 @@ identity may have its own signature and reply-to.
 
 With Microsoft every installation signs in through the project's app.
 For Gmail each one needs a Google client of its own, or an app
-password (docs/GOOGLE.md). A project app would spare that. It needs:
+password (docs/mailbox-service/GOOGLE.md). A project app would spare that. It needs:
 
 - **Google's verification and a yearly security assessment (CASA)**,
   since every Gmail scope that reads mail is restricted. Google charges
@@ -141,7 +141,7 @@ would do the same with less.
 ## More for the UI sign-in
 
 TOTP came on 2026-10-09 as a choice per user, passkeys as its second
-method on 2026-11-18 ([AUTHENTICATION.md](AUTHENTICATION.md)). Left for
+method on 2026-11-18 ([AUTHENTICATION.md](mailbox-service/AUTHENTICATION.md)). Left for
 later:
 
 - A switch for the operator that requires a second factor, for everyone
@@ -216,7 +216,7 @@ settings rather than in code.
 CONCEPT.md open question 5 asks the same. The search runs on the
 provider's server, so how text matches differs
 per provider: IMAP finds parts of words, Microsoft beginnings of words,
-Gmail whole words only (docs/UNIFORM.md, decision 6.7). A search for
+Gmail whole words only (docs/mailbox-service/UNIFORM.md, decision 6.7). A search for
 `rechnung` finds "Stromrechnung" on IMAP alone, and "Rechnungsnummer"
 on IMAP and Microsoft. Finding parts of words on every account needs
 the service to search itself.
@@ -233,8 +233,8 @@ the service to search itself.
 
 ## Breaking changes found against the last release
 
-Collected 2026-11-18. `docs/client-interface.json` and
-`docs/common-interface.json` show every change of the two libraries as
+Collected 2026-11-18. `docs/mailbox-client/client-interface.json` and
+`docs/mailbox-common/common-interface.json` show every change of the two libraries as
 a diff. A tool such as `griffe check` could compare the packages with
 the last release tag and name the changes that break a caller, a
 removed name, a parameter gone or moved, a default changed, as a check

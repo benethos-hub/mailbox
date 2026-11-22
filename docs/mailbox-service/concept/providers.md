@@ -259,7 +259,7 @@ The same consent screen covers the Gmail API and IMAP with XOAUTH2, so the
 API costs nothing extra in verification. That settles `gmail` over `imap`
 for Google accounts.
 
-**Built 2026-10-09** (`data/providers/gmail/`, docs/GOOGLE.md), checked
+**Built 2026-10-09** (`data/providers/gmail/`, docs/mailbox-service/GOOGLE.md), checked
 live against a Gmail account (`live/gmail.py`):
 
 - The client goes into the settings, `MAILBOX_SERVICE_OAUTH_GOOGLE_CLIENT_ID`

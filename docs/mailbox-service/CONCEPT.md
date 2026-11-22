@@ -2,7 +2,7 @@
 
 > **Status: draft, 2026-09-24. The software is beta, version 0.9.0.**
 > Describes the target design. What is built today is marked in
-> [ROADMAP.md](ROADMAP.md). Facts about third-party products were taken
+> [ROADMAP.md](../ROADMAP.md). Facts about third-party products were taken
 > from their public documentation on 2026-09-24. Items marked
 > **(to verify)** could not be confirmed there.
 
@@ -22,7 +22,8 @@ leads to it.
 | [The API for sending, changes and lists](concept/api-sending-and-changes.md) | 6.4 to 6.8 | Sending and drafts, the change feed and webhooks, lists with search and paging, the error envelope and the OpenAPI document. |
 | [Security](concept/security.md) | 7 to 7.4, 7.6 to 7.8 | What is stored and how it is encrypted, the threat model, the rules for secrets, mail content as untrusted input, backup and restore. |
 | [Users, permissions and authentication](concept/users.md) | 7.5 | Users, roles, grants and tokens, and how a caller proves who it is. |
-| [The MCP server](concept/mcp.md) | 8 | The MCP server as a client of the API, how it is operated, and the Python client between the two. |
+| [The MCP server](../mailbox-mcp/CONCEPT.md) | 8, 8.1 | The MCP server as a client of the API, and how it is operated. In the folder of its package. |
+| [The Python client](../mailbox-client/CONCEPT.md) | 8.2 | The client between the API and the MCP server. In the folder of its package. |
 
 Sections 9 to 12 follow below: the technology, the tests, the roadmap
 and the open questions.
@@ -36,7 +37,7 @@ and the open questions.
 - [5. Provider adapters and libraries](concept/providers.md#5-provider-adapters-and-libraries): [5.1 IMAP: IMAPClient for the protocol, imap-tools for parsing](concept/providers.md#51-imap-imapclient-for-the-protocol-imap-tools-for-parsing) · [5.2 POP3: yes, but reduced](concept/providers.md#52-pop3-yes-but-reduced) · [5.3 What each provider offers](concept/providers.md#53-what-each-provider-offers) · [5.4 Microsoft: Graph only, and the deadlines](concept/providers.md#54-microsoft-graph-only-and-the-deadlines) · [5.5 Google: the verification question](concept/providers.md#55-google-the-verification-question) · [5.6 JMAP as a second generic protocol](concept/providers.md#56-jmap-as-a-second-generic-protocol) · [5.7 Dates to watch](concept/providers.md#57-dates-to-watch) · [5.8 Autodiscovery](concept/connecting.md#58-autodiscovery) · [5.9 Being a good client](concept/connecting.md#59-being-a-good-client) · [5.10 Encodings and other traps](concept/connecting.md#510-encodings-and-other-traps) · [5.11 One way to operate every mailbox](concept/connecting.md#511-one-way-to-operate-every-mailbox)
 - [6. REST API](concept/api-mail.md#6-rest-api): [6.1 Accounts](concept/api-mail.md#61-accounts) · [6.2 Folders](concept/api-mail.md#62-folders) · [6.3 Messages](concept/api-mail.md#63-messages) · [6.4 Sending and drafts](concept/api-sending-and-changes.md#64-sending-and-drafts) · [6.5 Changes and webhooks](concept/api-sending-and-changes.md#65-changes-and-webhooks) · [6.6 Listing, search and pagination](concept/api-sending-and-changes.md#66-listing-search-and-pagination) · [6.7 Errors](concept/api-sending-and-changes.md#67-errors) · [6.8 OpenAPI](concept/api-sending-and-changes.md#68-openapi)
 - [7. Security](concept/security.md#7-security): [7.1 What has to be stored](concept/security.md#71-what-has-to-be-stored) · [7.2 Threat model](concept/security.md#72-threat-model) · [7.3 Design: envelope encryption](concept/security.md#73-design-envelope-encryption) · [7.4 Handling rules](concept/security.md#74-handling-rules) · [7.5 Users, permissions and authentication](concept/users.md#75-users-permissions-and-authentication) · [7.6 Other rules](concept/security.md#76-other-rules) · [7.7 Mail content is untrusted: prompt injection](concept/security.md#77-mail-content-is-untrusted-prompt-injection) · [7.8 Backup and restore](concept/security.md#78-backup-and-restore)
-- [8. MCP server](concept/mcp.md#8-mcp-server): [8.1 Operation](concept/mcp.md#81-operation) · [8.2 The Python client](concept/mcp.md#82-the-python-client)
+- [8. MCP server](../mailbox-mcp/CONCEPT.md#8-mcp-server): [8.1 Operation](../mailbox-mcp/CONCEPT.md#81-operation) · [8.2 The Python client](../mailbox-client/CONCEPT.md#82-the-python-client)
 - [9. Technology](#9-technology)
 - [10. Testing](#10-testing)
 - [11. Roadmap](#11-roadmap)
@@ -74,12 +75,12 @@ and the open questions.
   documentation of each API describes.
 - `live/` holds manual checks, outside `testpaths`, against confirmed
   test accounts only (golden rule 1 in CLAUDE.md). What each one does:
-  [LIVE.md](LIVE.md).
+  [LIVE.md](../LIVE.md).
 - The traps of 5.10 (folder names in modified UTF-7, localised special
   folders, broken charsets, IDN, SMTPUTF8) get fixtures of their own.
 - Contract tests: committed OpenAPI document, unique `operationId`s, bearer
   and error responses on every protected route. The tools of the MCP
-  server are committed as well, in `docs/mcp-tools.json`.
+  server are committed as well, in `docs/mailbox-mcp/mcp-tools.json`.
 - The configuration UI runs in Chrome, Firefox and WebKit through
   Playwright, a suite of its own in
   `packages/mailbox-service/tests/browser`. The default run leaves it
@@ -88,11 +89,11 @@ and the open questions.
 
 ## 11. Roadmap
 
-Moved to [ROADMAP.md](ROADMAP.md).
+Moved to [ROADMAP.md](../ROADMAP.md).
 
 ## 12. Open questions
 
-Undecided ideas are collected in [IDEAS.md](IDEAS.md).
+Undecided ideas are collected in [IDEAS.md](../IDEAS.md).
 
 
 1. **Deployment:** decided, see section 8.1. Still open is whether the

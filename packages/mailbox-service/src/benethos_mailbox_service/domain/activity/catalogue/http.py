@@ -1,5 +1,5 @@
 """What the web layer refuses before the domain sees a request, or
-before a route does its work (docs/LOGGING.md 5.9, rule 6.2)."""
+before a route does its work (docs/mailbox-service/LOGGING.md 5.9, rule 6.2)."""
 
 from __future__ import annotations
 

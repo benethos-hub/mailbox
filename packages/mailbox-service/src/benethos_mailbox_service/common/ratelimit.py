@@ -14,7 +14,8 @@ from collections.abc import Callable
 Clock = Callable[[], float]
 Sleep = Callable[[float], None]
 
-# DEBUG alone: the data layer decides nothing (docs/LOGGING.md rule 6.2).
+# DEBUG alone: the data layer decides nothing (docs/mailbox-service/LOGGING.md rule
+# 6.2).
 log = logging.getLogger(__name__)
 
 

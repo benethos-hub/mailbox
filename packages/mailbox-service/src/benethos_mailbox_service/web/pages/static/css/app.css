@@ -8,7 +8,7 @@
 :root {
   color-scheme: light dark;
 
-  /* Light and bluish (docs/UI.md, section 7). Every text colour keeps
+  /* Light and bluish (docs/mailbox-service/UI.md, section 7). Every text colour keeps
    * 4.5:1 against every background it is used on: a test checks it. */
   --bg: #f9fbfe;
   --surface: #ffffff;
@@ -247,7 +247,7 @@ footer {
 .danger-zone > header h2 { color: var(--bad); }
 .card .body.list-bar { border-bottom: 1px solid var(--border); }
 
-/* The form at a row of a list, or at its head (docs/UI.md 4.2): folded
+/* The form at a row of a list, or at its head (docs/mailbox-service/UI.md 4.2): folded
  * until its button opens it, shown at once where the script does not run. */
 tr.row-form > td { background: var(--surface-2); padding: 12px var(--pad) 14px; }
 tr.row-form:hover { background: none; }
@@ -302,7 +302,7 @@ details.card > summary.card-summary {
 details.card[open] > summary.card-summary { border-bottom: 1px solid var(--border); }
 details.card > summary.card-summary h2 { display: inline; margin: 0; font-size: 15px; font-weight: 600; }
 
-/* A workflow in steps, one under the other (docs/UI.md, 6.1). */
+/* A workflow in steps, one under the other (docs/mailbox-service/UI.md, 6.1). */
 .step-title { margin: 8px 0 0; font-size: 15px; font-weight: 600; }
 .card.way > header h2 { color: var(--accent); }
 
@@ -480,7 +480,7 @@ button.small, .btn.small { padding: 4px 9px; font-size: 13px; }
 button.danger.solid { background: var(--bad); border-color: var(--bad); color: var(--on-accent); }
 button.danger.solid:hover { filter: brightness(1.08); background: var(--bad); }
 
-/* An icon of the sprite (docs/UI.md 7), in the colour of the text around it. */
+/* An icon of the sprite (docs/mailbox-service/UI.md 7), in the colour of the text around it. */
 .i {
   width: 16px; height: 16px;
   fill: currentColor;

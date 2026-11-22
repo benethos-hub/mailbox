@@ -1,5 +1,5 @@
 """The repository of recovery codes: one contract, the same tests for the
-in-memory and the SQLite implementation (docs/AUTHENTICATION.md 6)."""
+in-memory and the SQLite implementation (docs/mailbox-service/AUTHENTICATION.md 6)."""
 
 from __future__ import annotations
 

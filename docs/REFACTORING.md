@@ -7,7 +7,7 @@ server in a package, the migrations as classes, and the client and
 Behaviour, the API and the OpenAPI document stayed as they were
 throughout.
 
-The rules that came out of it are [ARCHITECTURE.md](ARCHITECTURE.md),
+The rules that came out of it are [ARCHITECTURE.md](mailbox-service/ARCHITECTURE.md),
 and the modules as they are now stand in its section 3. This file keeps
 what was decided on the way, and the reasons that stand nowhere else.
 The sections keep the numbers the code and the other documents name
@@ -15,7 +15,7 @@ them by, so some numbers are missing.
 
 ## 2. Principles
 
-The principles became rules: [architecture/rules.md](architecture/rules.md),
+The principles became rules: [architecture/rules.md](mailbox-service/architecture/rules.md),
 sections 5 and 16. One stands only here.
 
 **The same shape for what is alike.** Activities and changes are both
@@ -261,7 +261,7 @@ built the same day. Decided by the user then:
 
 **12.3 The limits.** Decided by the user on 2026-10-07: hard limits,
 without exceptions and without `noqa`. What grows beyond one is split.
-The numbers are in [architecture/rules.md](architecture/rules.md),
+The numbers are in [architecture/rules.md](mailbox-service/architecture/rules.md),
 section 15. `formatTime` keeps its name, which `logging.Formatter` gives
 it.
 
@@ -310,7 +310,7 @@ install it with them. It sees neither of them, nor the client.
 - **The extra `paths`.** platformdirs is an extra named after its
   group.
 - **Named records.** `system_folders` returns `SystemFolders`, and
-  [architecture/rules.md](architecture/rules.md) section 9 names the
+  [architecture/rules.md](mailbox-service/architecture/rules.md) section 9 names the
   rule for every package boundary.
 - **Three more moves.** `addresses.readable` for an address as people
   read it, from four copies in the service and the MCP server.

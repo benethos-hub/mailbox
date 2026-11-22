@@ -1,6 +1,6 @@
 """The second factor as a whole: the person's own page with a card per
 method and the recovery codes, new recovery codes, and every method of
-another user removed from its page (docs/AUTHENTICATION.md 2, 6). What
+another user removed from its page (docs/mailbox-service/AUTHENTICATION.md 2, 6). What
 TOTP does on the page is in ``totp``, what passkeys do in ``passkeys``."""
 
 from __future__ import annotations

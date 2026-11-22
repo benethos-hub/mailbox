@@ -144,7 +144,7 @@ the browser), then `uv run python live/microsoft.py` checks the adapter
 against the Microsoft test account in `live/.env` with an app of your
 own, named there as well. With `--project` both use the project's app:
 `--connect` prints a code a person enters at Microsoft. How an app is
-set up: [MICROSOFT.md](MICROSOFT.md).
+set up: [MICROSOFT.md](mailbox-service/MICROSOFT.md).
 
 - It makes and removes a folder and a reply draft there, sends one mail
   with a file from it to the first test account and deletes it for good
@@ -173,7 +173,7 @@ set up: [MICROSOFT.md](MICROSOFT.md).
 `uv run python live/gmail.py --connect` once (a person signs in in the
 browser), then `uv run python live/gmail.py` checks the adapter against
 the Gmail test account in `live/.env` with the Google client of your
-own. How the client is set up: [GOOGLE.md](GOOGLE.md).
+own. How the client is set up: [GOOGLE.md](mailbox-service/GOOGLE.md).
 
 - It makes a label inside a label, renames the outer one and removes
   both, writes, replaces and deletes a draft, sends one mail from the

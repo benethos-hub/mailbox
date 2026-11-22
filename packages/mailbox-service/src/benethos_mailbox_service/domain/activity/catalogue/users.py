@@ -1,4 +1,4 @@
-"""Users, passwords, tokens, roles (docs/LOGGING.md 5.3)."""
+"""Users, passwords, tokens, roles (docs/mailbox-service/LOGGING.md 5.3)."""
 
 from __future__ import annotations
 

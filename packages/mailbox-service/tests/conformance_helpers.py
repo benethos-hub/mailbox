@@ -1,6 +1,6 @@
 """Every kind of mailbox through its fake, built alike: the adapter on its
 own, and an account of it in the real services. The conformance suites
-run the same expectations over all of them (docs/UNIFORM.md section 7).
+run the same expectations over all of them (docs/mailbox-service/UNIFORM.md section 7).
 
 Each mailbox has an inbox, a sent folder, drafts and a trash where its
 provider keeps them, and IMAP and POP3 send through a fake SMTP server.

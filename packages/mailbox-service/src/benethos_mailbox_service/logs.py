@@ -66,7 +66,7 @@ def _access_fields(record: logging.LogRecord) -> dict[str, object] | None:
 class WithoutQuery(logging.Filter):
     """An access line with the path of the request alone. Its query holds
     what a person typed, such as search terms, and the path of a link its
-    secret, which is masked (docs/LOGGING.md section 4)."""
+    secret, which is masked (docs/mailbox-service/LOGGING.md section 4)."""
 
     def filter(self, record: logging.LogRecord) -> bool:
         args = record.args

@@ -1,4 +1,4 @@
-"""The service log on a page (docs/UI.md 6.5): the newest lines of this
+"""The service log on a page (docs/mailbox-service/UI.md 6.5): the newest lines of this
 process. They name users, client addresses and accounts, so only
 ``admin`` on every account reads them."""
 

@@ -2,7 +2,7 @@
 
 How the configuration UI looks and behaves, and the rules every page
 follows. The rework it began with was decided on 2026-09-27 and is
-built ([roadmap](ROADMAP.md), phase 4b).
+built ([roadmap](../ROADMAP.md), phase 4b).
 
 The UI is the part of the service a person uses in the browser
 ([CONCEPT 1.1](concept/purpose-and-model.md#11-inside-the-service)). It runs in the same

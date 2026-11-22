@@ -1,5 +1,5 @@
 """Every kind of mailbox through the API, held to the same rules
-(docs/UNIFORM.md section 7): an operation does what the neutral model
+(docs/mailbox-service/UNIFORM.md section 7): an operation does what the neutral model
 says where the account has the capability that guards it, and answers
 `501 not_supported` where it lacks it. What falls short today is marked
 as an expected failure with its place in UNIFORM.md, strictly: once it

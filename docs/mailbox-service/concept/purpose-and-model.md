@@ -63,7 +63,7 @@ REST client can do too.
 ```
 
 **Decided 2026-09-28:** the domain is in packages by area
-([REFACTORING.md](../REFACTORING.md)). A package imports only packages on
+([REFACTORING.md](../../REFACTORING.md)). A package imports only packages on
 a lower line, through their `__init__.py`:
 
 ```

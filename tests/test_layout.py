@@ -1,7 +1,7 @@
 """The project layout of CLAUDE.md held to the disk.
 
-``test_module_tree.py`` holds the trees of docs/ARCHITECTURE.md to the code
-of the packages. The layout of CLAUDE.md names what lies around them: the
+``test_module_tree.py`` holds the trees of docs/mailbox-service/ARCHITECTURE.md to the
+code of the packages. The layout of CLAUDE.md names what lies around them: the
 files at the root, the workflows, the documents and the tests of the
 repository. Every path it names exists, and every file directly in
 ``docs/``, ``.github/workflows/`` and ``tests/`` is named there, but for

@@ -1,5 +1,5 @@
 """What an account names it can do, as each kind of server offers it
-(docs/UNIFORM.md section 3), and the check that it does."""
+(docs/mailbox-service/UNIFORM.md section 3), and the check that it does."""
 
 from __future__ import annotations
 

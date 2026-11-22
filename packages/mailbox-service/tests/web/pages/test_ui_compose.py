@@ -173,7 +173,7 @@ def test_delete_a_draft(ui: TestClient, account_id: str) -> None:
 
 def test_the_dialogs_name_their_button(ui: TestClient, account_id: str) -> None:
     """The question before a send and before a deletion carries the word
-    of its button, and the deletion is red (docs/ui/look.md)."""
+    of its button, and the deletion is red (docs/mailbox-service/ui/look.md)."""
     saved = post(
         ui,
         f"/ui/accounts/{account_id}/compose",

@@ -91,7 +91,7 @@ It is built for the packages of this repository. Its modules, groups
 and extras may change between versions without notice. It carries the
 version of the other packages, and the service and the MCP server pin
 it to their own. Its public interface is recorded in
-[`docs/common-interface.json`](https://github.com/benethos-hub/mailbox/blob/main/docs/common-interface.json),
+[`docs/mailbox-common/common-interface.json`](https://github.com/benethos-hub/mailbox/blob/main/docs/mailbox-common/common-interface.json),
 which a test holds to the code.
 
 ## Licence

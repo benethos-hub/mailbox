@@ -41,7 +41,7 @@ HELPER_LIBRARIES = {"anyio", "benethos_mailbox_common", "idna"}
 # may too.
 WEB_LIBRARIES = {"fastapi", "starlette"}
 
-# One library, one home (docs/ARCHITECTURE.md): the only module, or
+# One library, one home (docs/mailbox-service/ARCHITECTURE.md): the only module, or
 # package, allowed to import each.
 LIBRARY_HOMES = {
     "cryptography": f"{PACKAGE}.data.secrets.cipher",
@@ -172,7 +172,7 @@ def test_the_files_beside_a_database_are_named_in_sqlite_alone() -> None:
 
 def test_web_framework_stays_in_the_web_layer() -> None:
     """Under web/, and in assembly/web.py, which builds the app
-    (docs/ARCHITECTURE.md 7), not in the rest of what assembles."""
+    (docs/mailbox-service/ARCHITECTURE.md 7), not in the rest of what assembles."""
     violations = []
     for name, path in modules():
         if own_part(name) == "web" or name == f"{PACKAGE}.assembly.web":
@@ -211,7 +211,7 @@ def test_providers_are_reached_through_the_registry() -> None:
 
 
 def test_concurrency_is_written_with_anyio() -> None:
-    """The one concurrency library (docs/ARCHITECTURE.md 7, rule 4): no
+    """The one concurrency library (docs/mailbox-service/ARCHITECTURE.md 7, rule 4): no
     module imports asyncio, so every part runs on either event loop."""
     offenders = [
         f"{name}:{line}"

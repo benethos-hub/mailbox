@@ -1,5 +1,5 @@
 """What an account can do beyond reading, asked before its adapter is
-asked to do it (docs/UNIFORM.md, rule R3).
+asked to do it (docs/mailbox-service/UNIFORM.md, rule R3).
 
 ``NEEDS`` is the one table of what each operation needs, and
 ``lacking`` names what an account's stored abilities leave out.

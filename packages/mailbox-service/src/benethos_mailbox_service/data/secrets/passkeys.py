@@ -1,5 +1,5 @@
 """Passkeys, WebAuthn Level 2: the two ceremonies of a relying party
-(docs/AUTHENTICATION.md 4, 5).
+(docs/mailbox-service/AUTHENTICATION.md 4, 5).
 
 A registration hands the browser a challenge and keeps the public key it
 answers with. An authentication hands it a challenge for the keys a user

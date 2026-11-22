@@ -1,6 +1,6 @@
 """Not a test: the public interface of a published package as JSON, for
 the record in docs/ that test_interfaces.py holds to the code, as
-docs/openapi.json is held to the service. ``client`` and ``common`` for
+docs/mailbox-service/openapi.json is held to the service. ``client`` and ``common`` for
 ``benethos_mailbox_client`` and ``benethos_mailbox_common``:
 
     uv run python tests/interface.py PACKAGE > docs/<client|common>-interface.json

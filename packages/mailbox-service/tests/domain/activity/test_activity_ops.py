@@ -1,5 +1,5 @@
 """The activities of the running service: sync, sending, webhooks,
-discovery, the log page and the limits (docs/LOGGING.md 5.5 to 5.9)."""
+discovery, the log page and the limits (docs/mailbox-service/LOGGING.md 5.5 to 5.9)."""
 
 from __future__ import annotations
 

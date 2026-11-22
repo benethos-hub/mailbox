@@ -142,7 +142,7 @@ def build_catalogue(*, transport: str = "stdio") -> MCPServer:
 
 async def tools_json() -> str:
     """Every tool as a client lists it, as JSON: names, descriptions,
-    schemas and hints. ``docs/mcp-tools.json`` holds it, so a change to a
+    schemas and hints. ``docs/mailbox-mcp/mcp-tools.json`` holds it, so a change to a
     tool shows in the diff of a pull request."""
     listed = await build_catalogue().list_tools()
     dumped = [

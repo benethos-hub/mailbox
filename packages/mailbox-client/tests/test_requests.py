@@ -1,5 +1,5 @@
 """Each request the client builds is one the API takes: the method and the
-path of its operation in docs/openapi.json, its query parameters among
+path of its operation in docs/mailbox-service/openapi.json, its query parameters among
 the operation's, and every field of its body, nested ones too, among the
 fields of the request's schema. Each endpoint is called with every
 parameter given, so each optional one is checked as well.
@@ -22,7 +22,9 @@ import pytest
 from benethos_mailbox_client import Grant, Reference, endpoints, message_body
 from benethos_mailbox_client.calls import Call
 
-CONTRACT = Path(__file__).resolve().parents[3] / "docs" / "openapi.json"
+CONTRACT = (
+    Path(__file__).resolve().parents[3] / "docs" / "mailbox-service" / "openapi.json"
+)
 DOCUMENT = json.loads(CONTRACT.read_text("utf-8"))
 METHODS = {"get", "put", "post", "patch", "delete"}
 # Endpoints that send another operation: a shorthand of it.

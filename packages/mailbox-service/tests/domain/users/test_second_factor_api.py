@@ -1,5 +1,5 @@
 """The second factor through the API: its state on a user, its devices,
-and removing one or all (docs/AUTHENTICATION.md 6)."""
+and removing one or all (docs/mailbox-service/AUTHENTICATION.md 6)."""
 
 from __future__ import annotations
 

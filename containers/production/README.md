@@ -307,7 +307,7 @@ it anew. For a log collector, `MAILBOX_SERVICE_LOG_FORMAT=json` in
 The service hands its figures to Prometheus at `GET /v1/metrics`: the
 sync worker, every account by its id, provider and status, and the
 webhooks. Never an address or the text of an error. What each figure
-means: [CONCEPT 6.1](../../docs/concept/api-mail.md#61-accounts).
+means: [CONCEPT 6.1](../../docs/mailbox-service/concept/api-mail.md#61-accounts).
 
 The route is on unless `MAILBOX_SERVICE_METRICS=false` in `service.env`
 switches it off, then it answers `404`. Without a token with the right
@@ -360,4 +360,4 @@ The figures live in memory and start again after a restart. Each
 scrape counts against the token's limit like any request and writes a
 line to the access log. A wrong token counts as a failed sign-in of its
 address: ten in 15 minutes lock the address for 15 minutes
-([LIMITS.md](../../docs/LIMITS.md)).
+([LIMITS.md](../../docs/mailbox-service/LIMITS.md)).

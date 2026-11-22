@@ -1,7 +1,7 @@
 """How each kind of account is connected (``Connection``): the settings
 its adapter takes, in words a form shows, and where a person signs in
 instead. The UI draws its forms from these and knows no provider
-(docs/UNIFORM.md, U6)."""
+(docs/mailbox-service/UNIFORM.md, U6)."""
 
 from __future__ import annotations
 

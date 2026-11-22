@@ -193,7 +193,7 @@ def test_the_command_line_leaves_the_tools_to_the_server() -> None:
     assert not [name for name in imported if name.split(".")[0] == "tools"]
 
 
-# Hard limits (docs/ARCHITECTURE.md 15): what grows beyond them is split
+# Hard limits (docs/mailbox-service/ARCHITECTURE.md 15): what grows beyond them is split
 # by subject.
 MAX_LINES = 500
 MAX_METHODS = 30

@@ -1,4 +1,4 @@
-"""The change feed (docs/LOGGING.md 5.5). A change itself is no
+"""The change feed (docs/mailbox-service/LOGGING.md 5.5). A change itself is no
 activity: only what the service does to the feed."""
 
 from __future__ import annotations

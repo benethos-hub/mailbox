@@ -1,5 +1,5 @@
 """The repository of passkeys: one contract, the same tests for the
-in-memory and the SQLite implementation (docs/AUTHENTICATION.md 7)."""
+in-memory and the SQLite implementation (docs/mailbox-service/AUTHENTICATION.md 7)."""
 
 from __future__ import annotations
 

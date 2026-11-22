@@ -22,12 +22,12 @@ Part of the [roadmap](../ROADMAP.md): phase 5, in progress, and phase 5a, done.
   (5.5)**, built: the client in the settings, the sign-in in the
   browser only, labels as folders with "All Mail", flags, moves,
   trash and delete for good, drafts, sending, the search filter as a
-  Gmail query (`docs/GOOGLE.md`). Checked live against a Gmail account
+  Gmail query (`docs/mailbox-service/GOOGLE.md`). Checked live against a Gmail account
   (`live/gmail.py`)
 - **Gmail history in the worker**, built: `history.list` since a
   history id, polled
 - **A second factor for the UI sign-in, TOTP with recovery codes
-  ([AUTHENTICATION.md](../AUTHENTICATION.md))**, decided 2026-10-09, done:
+  ([AUTHENTICATION.md](../mailbox-service/AUTHENTICATION.md))**, decided 2026-10-09, done:
   schemas 18 and 19, the code after the password, up to ten named devices on
   the page Second factor with a QR code, added, renamed and removed by
   the owner, removed by a user with `users.manage` and all at once by
@@ -37,13 +37,13 @@ Part of the [roadmap](../ROADMAP.md): phase 5, in progress, and phase 5a, done.
   of recovery codes, the second factor a frame and TOTP its first
   method
 - **Passkeys, the second method of the second factor
-  ([AUTHENTICATION.md](../AUTHENTICATION.md) 3.2)**, decided 2026-11-18,
+  ([AUTHENTICATION.md](../mailbox-service/AUTHENTICATION.md) 3.2)**, decided 2026-11-18,
   done: schema 23, WebAuthn with `fido2` behind
   `data/secrets/passkeys.py`, a passkey after the password and in place
   of a code, the card Passkeys, `remove_passkey` in the API and both
   clients. Checked in Chromium by the browser suite, with its virtual
   authenticator
-- **The UI rework of 2026-10 ([UI.md](../UI.md) 10)**, decided 2026-10-09,
+- **The UI rework of 2026-10 ([UI.md](../mailbox-service/UI.md) 10)**, decided 2026-10-09,
   done: an icon sprite of its own, dialogs before a change, copy
   buttons beside every secret shown once, the sidebar folding to icons,
   the Status page gone into the overview and the Accounts list, actions
@@ -68,12 +68,12 @@ Part of the [roadmap](../ROADMAP.md): phase 5, in progress, and phase 5a, done.
   - **the service log: every line on stderr with time, level and source,
     each secret masked, the newest 1000 on a page for the admin (UI
     6.5, CONCEPT 7.4)**, done, live-checked in `live/ui.py`
-  - **the service log activity by activity ([LOGGING.md](../LOGGING.md))**,
+  - **the service log activity by activity ([LOGGING.md](../mailbox-service/LOGGING.md))**,
     done: every line an activity of `domain/activity/catalogue/`, one
     module per area, the MCP server's lines described in LOGGING.md as
     well, and the HTTP
-    request limit with every limit a setting ([LIMITS.md](../LIMITS.md))
-  - **the audit of administration of [AUDIT.md](../AUDIT.md)**, decided
+    request limit with every limit a setting ([LIMITS.md](../mailbox-service/LIMITS.md))
+  - **the audit of administration of [AUDIT.md](../mailbox-service/AUDIT.md)**, decided
     2026-10-05 (PERMISSIONS.md 8.6), done: the table `activity`,
     `GET /v1/audit` with `audit` in `service`, the Audit page and the
     Recent activity card
@@ -86,7 +86,7 @@ Part of the [roadmap](../ROADMAP.md): phase 5, in progress, and phase 5a, done.
   listed by conversations, the page of a conversation and the card of
   the others below a message. Threads across accounts come later
 - **Users, roles and rights: the changes of
-  [PERMISSIONS.md](../PERMISSIONS.md) section 8**, decided 2026-10-05,
+  [PERMISSIONS.md](../mailbox-service/PERMISSIONS.md) section 8**, decided 2026-10-05,
   done: the last administrator stays (8.3), service rights apart from
   grants and `users.read` (8.1, 8.2), sending limits in `/v1/me` and
   grants that expire (8.8, 8.4), role templates (8.7), the grant
@@ -115,7 +115,7 @@ Part of the [roadmap](../ROADMAP.md): phase 5, in progress, and phase 5a, done.
   their capabilities, the UI and the MCP server go by them. Discovery
   offers POP3 only where no IMAP is
 - **The layout of the code ([REFACTORING.md](../REFACTORING.md),
-  [ARCHITECTURE.md](../ARCHITECTURE.md))**, done: the domain and the data
+  [ARCHITECTURE.md](../mailbox-service/ARCHITECTURE.md))**, done: the domain and the data
   layer in packages by area, the change feed as typed classes like the
   activities, `assembly/` and `cli/`, the adapters in parts behind one
   protocol per ability, the code written twice merged into helpers,
@@ -151,7 +151,7 @@ Part of the [roadmap](../ROADMAP.md): phase 5, in progress, and phase 5a, done.
 - **The client covers the whole API**, decided 2026-10-09, done: the
   records in `models/` one module per resource
   ([REFACTORING.md](../REFACTORING.md) 14), each method one line made from
-  its endpoint, every operation of `docs/openapi.json` a method of both
+  its endpoint, every operation of `docs/mailbox-service/openapi.json` a method of both
   clients named like its `operationId`, held by a test. Only
   `get_linked_attachment` has none: its URL is the credential. A secret
   shown once comes as a `Secret`. The live checks administer through it
@@ -193,7 +193,7 @@ Part of the [roadmap](../ROADMAP.md): phase 5, in progress, and phase 5a, done.
   decided 2026-11-09, done: `MAILBOX_MCP_CATALOGUE=true` lists every
   tool and refuses every call but `server_status`, and `--list-tools`
   prints the tools as a client lists them, kept in
-  `docs/mcp-tools.json`
+  `docs/mailbox-mcp/mcp-tools.json`
 - **The sender check of a message (6.3)**, decided 2026-11-18, done:
   `sender_check` from the receiving server's `Authentication-Results`,
   in the API, the client, the MCP server and the UI, for every kind of
@@ -220,7 +220,7 @@ Open in this phase, each planned in CONCEPT.md:
 
 Decided 2026-10-12 (5.11). Every mailbox is operated the same way,
 and what an account cannot do answers `501`, announced by its
-capabilities ([UNIFORM.md](../UNIFORM.md)). Delivered: the finer
+capabilities ([UNIFORM.md](../mailbox-service/UNIFORM.md)). Delivered: the finer
 capabilities, read from the server and stored with the account. `date`
 and `received`. The inbox as the list without a folder, and the role
 `all`. Server notes out of `keywords`, and the two lists of marks. One

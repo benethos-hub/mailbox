@@ -153,7 +153,7 @@ body of a send or a draft, as in the example above.
 `request(method, path, ...)` sends any request and answers its JSON as
 it comes, e.g. for a field a record leaves out. The routes and their
 fields:
-[`docs/openapi.json`](https://github.com/benethos-hub/mailbox/blob/main/docs/openapi.json).
+[`docs/mailbox-service/openapi.json`](https://github.com/benethos-hub/mailbox/blob/main/docs/mailbox-service/openapi.json).
 
 The token travels in a header. Over http the client talks only to this
 machine. To another machine it needs https, or

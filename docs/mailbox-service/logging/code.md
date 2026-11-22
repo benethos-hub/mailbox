@@ -67,14 +67,14 @@ domain/
 
 A webhook's `events` and its five values keep their names, since they
 are part of the API. The code's names around them are `ChangeKind` and
-`ChangeRecord` ([REFACTORING.md](../REFACTORING.md) section 3).
+`ChangeRecord` ([REFACTORING.md](../../REFACTORING.md) section 3).
 
 ### 7.2 Names
 
 **Decided 2026-09-28:** each activity has a name, and it logs under
 `activity.<area>.<name>`.
 
-- **The area is a package of the domain** ([REFACTORING.md](../REFACTORING.md)
+- **The area is a package of the domain** ([REFACTORING.md](../../REFACTORING.md)
   section 4): `auth`, `users`, `accounts`, `discovery`, `mailbox`,
   `sync`, `changes`, `webhooks`, `system`. An activity belongs to the
   package whose code records it, so a reader finds the code of

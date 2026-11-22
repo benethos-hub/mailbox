@@ -1,4 +1,4 @@
-"""Accounts and OAuth (docs/LOGGING.md 5.4). An account is named by its
+"""Accounts and OAuth (docs/mailbox-service/LOGGING.md 5.4). An account is named by its
 address and its id. Never a credential, never the ``state`` or the code
 of a sign-in."""
 

@@ -11310,7 +11310,7 @@
           "detail"
         ],
         "title": "ActivityRecord",
-        "description": "One activity of administration someone caused (docs/AUDIT.md). It\nkeeps no reference to a user or an account, so it outlives both."
+        "description": "One activity of administration someone caused (docs/mailbox-service/AUDIT.md). It\nkeeps no reference to a user or an account, so it outlives both."
       },
       "Address": {
         "properties": {
@@ -11593,7 +11593,7 @@
           "sender_check"
         ],
         "title": "Capability",
-        "description": "What an account can do beyond reading its inbox, each guarding one\nthing (docs/UNIFORM.md section 3). Where one is missing, the operations\nthat need it answer `501 not_supported`. They follow from what the\naccount's server offers."
+        "description": "What an account can do beyond reading its inbox, each guarding one\nthing (docs/mailbox-service/UNIFORM.md section 3). Where one is missing, the\noperations that need it answer `501 not_supported`. They follow from what the\naccount's server offers."
       },
       "Change": {
         "properties": {

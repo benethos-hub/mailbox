@@ -1,5 +1,5 @@
-"""The audit of administration (docs/AUDIT.md): which activities it keeps,
-what a record says, who reads it, and how long it keeps it."""
+"""The audit of administration (docs/mailbox-service/AUDIT.md): which activities it
+keeps, what a record says, who reads it, and how long it keeps it."""
 
 from __future__ import annotations
 
@@ -46,7 +46,7 @@ from ...clocks import Clock
 from ...conftest import ADMIN, bearer_for
 from .activity_helpers import activities
 
-AUDIT_MD = Path(__file__).parents[5] / "docs" / "AUDIT.md"
+AUDIT_MD = Path(__file__).parents[5] / "docs" / "mailbox-service" / "AUDIT.md"
 NOW = datetime(2026, 10, 5, 12, 0, tzinfo=UTC)
 READER = Grant(accounts=["*"], allow=["mail.read"])
 

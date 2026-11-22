@@ -1,5 +1,5 @@
 """The recovery codes of a user's second factor: one set, standing in for
-any of its methods (docs/AUTHENTICATION.md 6).
+any of its methods (docs/mailbox-service/AUTHENTICATION.md 6).
 
 A code holds 75 bits. It is stored as a keyed hash, with the user's id
 in what is hashed. The hash comes from outside: the domain knows no key.

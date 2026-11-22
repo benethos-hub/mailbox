@@ -1,5 +1,5 @@
 """Passkeys, the second method of the second factor: a user's key pairs
-on its devices or in a password manager (docs/AUTHENTICATION.md 4, 5).
+on its devices or in a password manager (docs/mailbox-service/AUTHENTICATION.md 4, 5).
 
 This module begins and checks the ceremonies and keeps the passkeys. The
 frame they belong to is ``factors``, who may add or remove one

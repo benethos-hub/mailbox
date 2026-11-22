@@ -1,4 +1,4 @@
-"""The audit of administration (docs/AUDIT.md). It only stores. The
+"""The audit of administration (docs/mailbox-service/AUDIT.md). It only stores. The
 domain decides which activities it keeps and what a record says."""
 
 from __future__ import annotations

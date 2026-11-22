@@ -107,14 +107,14 @@ def or_missing(value: Any) -> Any:
 
 def own_keywords(values: Iterable[str]) -> list[str]:
     """The keywords a person sets, without those of the mail protocol
-    (docs/UI.md, 4.4)."""
+    (docs/mailbox-service/UI.md, 4.4)."""
     return marks.personal(values)
 
 
 def protocol_flags(values: Iterable[str]) -> list[str]:
     """The keywords of the mail protocol a person cares about, in words:
     a mark in the words of ``mailbox-common``, another as it is named
-    (docs/UI.md, 4.4)."""
+    (docs/mailbox-service/UI.md, 4.4)."""
     found = []
     for value in values:
         if not marks.protocol(value):

@@ -1,6 +1,6 @@
 """What the devices of every method of the second factor share: a name
 the person chose, unique among the devices of the method whatever the
-case, and a limit per user (docs/AUTHENTICATION.md 5)."""
+case, and a limit per user (docs/mailbox-service/AUTHENTICATION.md 5)."""
 
 from __future__ import annotations
 

@@ -1,6 +1,7 @@
 """Passkeys in the UI: made on the page Second factor, signing in after
-the password, standing in for a code, and removed (docs/AUTHENTICATION.md
-4, 5). The browser's part is a passkey in software."""
+the password, standing in for a code, and removed
+(docs/mailbox-service/AUTHENTICATION.md 4, 5). The browser's part is a passkey in
+software."""
 
 from __future__ import annotations
 

@@ -178,7 +178,7 @@ benethos-mailbox-service serve
   or CI job, in the log of that run. Clear these afterwards.
 - A lost second factor without a recovery code:
   `users reset-second-factor <name>`
-  on the host removes it ([AUTHENTICATION.md](https://github.com/benethos-hub/mailbox/blob/main/docs/AUTHENTICATION.md)).
+  on the host removes it ([AUTHENTICATION.md](https://github.com/benethos-hub/mailbox/blob/main/docs/mailbox-service/AUTHENTICATION.md)).
 - `serve` listens on `http://127.0.0.1:8080`:
   - `/ui`: the configuration UI (sign in with the user name and password)
   - `/docs`: the interactive API documentation
@@ -197,10 +197,10 @@ Then connect accounts in the UI (Accounts, Connect an account) or with
   project's app or one of your own. Away from `localhost` the project's
   app signs in with a code only. For the browser there, register an app
   of your own:
-  [docs/MICROSOFT.md](https://github.com/benethos-hub/mailbox/blob/main/docs/MICROSOFT.md).
+  [docs/mailbox-service/MICROSOFT.md](https://github.com/benethos-hub/mailbox/blob/main/docs/mailbox-service/MICROSOFT.md).
 - **Gmail:** Sign in with Google in the browser, through a Google
   client of your own, or over IMAP with an app password:
-  [docs/GOOGLE.md](https://github.com/benethos-hub/mailbox/blob/main/docs/GOOGLE.md).
+  [docs/mailbox-service/GOOGLE.md](https://github.com/benethos-hub/mailbox/blob/main/docs/mailbox-service/GOOGLE.md).
 
 ## Where things live
 
@@ -256,7 +256,7 @@ names the settings file it read and the database at start.
 | Setting | Default | Meaning |
 |---|---|---|
 | `MAILBOX_SERVICE_HOST`, `MAILBOX_SERVICE_PORT` | `127.0.0.1`, `8080` | where the service listens (`serve --host/--port` win) |
-| `MAILBOX_SERVICE_PUBLIC_URL` | from each request | the address people reach the service at, e.g. behind a proxy. The OAuth redirect address is built from it. It also fixes the origin and the RP ID of passkeys ([AUTHENTICATION.md](https://github.com/benethos-hub/mailbox/blob/main/docs/AUTHENTICATION.md)). |
+| `MAILBOX_SERVICE_PUBLIC_URL` | from each request | the address people reach the service at, e.g. behind a proxy. The OAuth redirect address is built from it. It also fixes the origin and the RP ID of passkeys ([AUTHENTICATION.md](https://github.com/benethos-hub/mailbox/blob/main/docs/mailbox-service/AUTHENTICATION.md)). |
 | `MAILBOX_SERVICE_FORWARDED_ALLOW_IPS` | | behind a reverse proxy: its address, whose `X-Forwarded-For` and `X-Forwarded-Proto` headers give the client address and the scheme. Empty: only a proxy on `127.0.0.1` is believed. Behind a proxy elsewhere that is not named, every visitor counts as the proxy's address. |
 | `MAILBOX_SERVICE_RATE_LIMIT_PER_MINUTE` | `120` | requests a minute per API token or UI session, a burst of half as many at once. `0` switches the limit off. |
 | `MAILBOX_SERVICE_RATE_LIMIT_ANONYMOUS_PER_MINUTE` | `30` | the same per client address, for requests without a credential |
@@ -347,7 +347,7 @@ people and the service do is one sentence per activity under
 `activity.<area>.<name>`, such as `activity.users.token_revoked`: who,
 what, to which record, from which address, and why. Sign-ins, users,
 roles, tokens, accounts, webhooks, sends, and each limit when it
-engages. `docs/LOGGING.md` lists them by name. A level for one name
+engages. `docs/mailbox-service/LOGGING.md` lists them by name. A level for one name
 alone quiets it. The log page names the source as the console does,
 without the package's name. A request is logged
 by its path, without its query. A mail's content, its recipients and
@@ -419,7 +419,7 @@ The service posts the events there as JSON, signed in
 `MAILBOX_SERVICE_WEBHOOK_*` settings say. The signing secret is in the
 answer to `POST`, the only time it is shown. A host in the local network
 is allowed. The format of a post is in
-[CONCEPT.md, section 6.5](https://github.com/benethos-hub/mailbox/blob/main/docs/concept/api-sending-and-changes.md#65-changes-and-webhooks).
+[CONCEPT.md, section 6.5](https://github.com/benethos-hub/mailbox/blob/main/docs/mailbox-service/concept/api-sending-and-changes.md#65-changes-and-webhooks).
 
 ## Container
 

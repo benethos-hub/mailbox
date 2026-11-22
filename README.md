@@ -161,14 +161,14 @@ What comes next, and in which order, is in
 | Provider | Connected via | Credential | State |
 |---|---|---|---|
 | GMX, web.de, T-Online, Yahoo, AOL, iCloud, Posteo, mailbox.org, IONOS, Strato, own mail servers | IMAP + SMTP | app password | available |
-| Microsoft 365, Outlook.com | Microsoft Graph | OAuth, through the project's app or your own ([setup](docs/MICROSOFT.md)) | available |
+| Microsoft 365, Outlook.com | Microsoft Graph | OAuth, through the project's app or your own ([setup](docs/mailbox-service/MICROSOFT.md)) | available |
 | Proton Mail | IMAP + SMTP through Proton Mail Bridge | Bridge password | IMAP, not tested |
-| Gmail / Google Workspace | Gmail API, or IMAP + SMTP | OAuth, with your own Google Cloud client ([setup](docs/GOOGLE.md)), or an app password | available |
+| Gmail / Google Workspace | Gmail API, or IMAP + SMTP | OAuth, with your own Google Cloud client ([setup](docs/mailbox-service/GOOGLE.md)), or an app password | available |
 | Fastmail, Stalwart, other JMAP servers | JMAP | API token or password | available |
 | legacy mailboxes without IMAP | POP3 + SMTP: the inbox only, no folders, no read state, no search | password | available |
 
 Not supportable: Tuta, which offers no IMAP and no API. Details per
-provider in [the concept, section 5.3](docs/concept/providers.md#53-what-each-provider-offers).
+provider in [the concept, section 5.3](docs/mailbox-service/concept/providers.md#53-what-each-provider-offers).
 
 ## The four packages
 
@@ -237,21 +237,23 @@ for clients: [packages/mailbox-mcp](packages/mailbox-mcp/README.md#tools).
 
 ## Documentation
 
-- [docs/CONCEPT.md](docs/CONCEPT.md): the design, the API, the security
+- [docs/README.md](docs/README.md): the documents of each package and of
+  the repository
+- [docs/mailbox-service/CONCEPT.md](docs/mailbox-service/CONCEPT.md): the design, the API, the security
   model
 - [docs/ROADMAP.md](docs/ROADMAP.md): the phases and what is done
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): the layers, the modules
+- [docs/mailbox-service/ARCHITECTURE.md](docs/mailbox-service/ARCHITECTURE.md): the layers, the modules
   and the rules for new code
-- [docs/LIMITS.md](docs/LIMITS.md): every rate limit and how they work
+- [docs/mailbox-service/LIMITS.md](docs/mailbox-service/LIMITS.md): every rate limit and how they work
   together
-- [docs/PERMISSIONS.md](docs/PERMISSIONS.md): users, roles and rights
-- [docs/AUTHENTICATION.md](docs/AUTHENTICATION.md): signing in to the
+- [docs/mailbox-service/PERMISSIONS.md](docs/mailbox-service/PERMISSIONS.md): users, roles and rights
+- [docs/mailbox-service/AUTHENTICATION.md](docs/mailbox-service/AUTHENTICATION.md): signing in to the
   configuration UI, the password and the second factor
-- [docs/LOGGING.md](docs/LOGGING.md) and [docs/AUDIT.md](docs/AUDIT.md):
+- [docs/mailbox-service/LOGGING.md](docs/mailbox-service/LOGGING.md) and [docs/mailbox-service/AUDIT.md](docs/mailbox-service/AUDIT.md):
   the service log and the audit of administration
-- [docs/UI.md](docs/UI.md): how the pages of the configuration UI look
+- [docs/mailbox-service/UI.md](docs/mailbox-service/UI.md): how the pages of the configuration UI look
   and behave
-- [docs/UNIFORM.md](docs/UNIFORM.md): one way to operate every mailbox,
+- [docs/mailbox-service/UNIFORM.md](docs/mailbox-service/UNIFORM.md): one way to operate every mailbox,
   whatever its provider
 - [docs/REFACTORING.md](docs/REFACTORING.md): how the layout of the code
   came to be
@@ -259,10 +261,10 @@ for clients: [packages/mailbox-mcp](packages/mailbox-mcp/README.md#tools).
   accounts
 - [docs/RELEASING.md](docs/RELEASING.md): the steps of a release
 - [docs/IDEAS.md](docs/IDEAS.md): collected, not decided
-- [docs/MICROSOFT.md](docs/MICROSOFT.md): connecting Microsoft accounts
-- [docs/GOOGLE.md](docs/GOOGLE.md): connecting Gmail accounts, the
+- [docs/mailbox-service/MICROSOFT.md](docs/mailbox-service/MICROSOFT.md): connecting Microsoft accounts
+- [docs/mailbox-service/GOOGLE.md](docs/mailbox-service/GOOGLE.md): connecting Gmail accounts, the
   Google client of your own
-- [docs/openapi.json](docs/openapi.json): the API contract. A running
+- [docs/mailbox-service/openapi.json](docs/mailbox-service/openapi.json): the API contract. A running
   service shows it at `/docs`
 - [CHANGELOG.md](CHANGELOG.md)
 - [SECURITY.md](SECURITY.md): how to report a vulnerability

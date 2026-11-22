@@ -1,6 +1,6 @@
 """Passkeys on the pages: a challenge offered where a code of the second
 factor is asked, and the browser's answer taken from the form that sends
-it (docs/AUTHENTICATION.md 4, 5). The script ``static/js/passkey.js``
+it (docs/mailbox-service/AUTHENTICATION.md 4, 5). The script ``static/js/passkey.js``
 asks the browser, a page without it takes a code alone.
 
 A challenge counts once: the next form that answers it takes it, right

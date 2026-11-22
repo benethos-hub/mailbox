@@ -4,7 +4,7 @@
 // this origin only.
 "use strict";
 
-// --- the question before a form (docs/UI.md 7) -------------------------------
+// --- the question before a form (docs/mailbox-service/UI.md 7) -------------------------------
 
 // <form data-confirm="Delete this? It cannot be undone."> asks before it
 // is sent; so does a <button data-confirm="..."> for the submit it makes.
@@ -62,7 +62,7 @@ document.addEventListener("submit", (event) => {
   });
 });
 
-// --- lists that act in the row (docs/UI.md 4.2) ----------------------------------
+// --- lists that act in the row (docs/mailbox-service/UI.md 4.2) ----------------------------------
 
 // <button data-toggle="id"> opens and closes the form at a row, or at the
 // head of a list, and puts the cursor in its first field.
@@ -203,7 +203,7 @@ document.addEventListener("click", (event) => {
   );
 });
 
-// --- the account menu and the folded sidebar (docs/UI.md 3) ---------------------
+// --- the account menu and the folded sidebar (docs/mailbox-service/UI.md 3) ---------------------
 
 // The menu is a <details>: it opens without a script, and closes here on
 // a click elsewhere and on Escape.

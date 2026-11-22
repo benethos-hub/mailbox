@@ -1,5 +1,5 @@
 """Sign-in and sessions, and the brakes on failed sign-ins
-(docs/LOGGING.md 5.2, 5.9)."""
+(docs/mailbox-service/LOGGING.md 5.2, 5.9)."""
 
 from __future__ import annotations
 

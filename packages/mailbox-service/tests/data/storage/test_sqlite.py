@@ -183,7 +183,7 @@ def test_nobody_loses_a_right_by_the_move(tmp_path: Path) -> None:
 
 def test_recovery_codes_of_schema_18_are_deleted(tmp_path: Path) -> None:
     """Their plain SHA-256 hashes cannot become keyed ones: a user makes
-    new codes (docs/AUTHENTICATION.md 6)."""
+    new codes (docs/mailbox-service/AUTHENTICATION.md 6)."""
     path = tmp_path / "old.db"
     Database(path).close()
     raw = sqlite3.connect(path)

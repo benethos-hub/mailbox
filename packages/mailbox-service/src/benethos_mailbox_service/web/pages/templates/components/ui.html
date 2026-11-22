@@ -1,10 +1,10 @@
-{# The parts every page is built from (docs/UI.md, section 7). A page has
+{# The parts every page is built from (docs/mailbox-service/UI.md, section 7). A page has
    no markup of its own for a button, a tag, a field, a card header, a
    pager or a filter bar. #}
 
 {% macro empty(text) %}<div class="empty">{{ text }}</div>{% endmacro %}
 
-{# An icon of the sprite, static/img/icons.svg (docs/UI.md 7), by its
+{# An icon of the sprite, static/img/icons.svg (docs/mailbox-service/UI.md 7), by its
    name in Bootstrap Icons. Without ``label`` a word or the control
    around it says what it is, so it is hidden from screen readers. With
    ``label`` it stands alone: read out, and shown as a tooltip. #}
@@ -83,7 +83,7 @@
 {% macro fact(label, value=None, cls="") %}<dt>{{ label }}</dt><dd{% if cls %} class="{{ cls }}"{% endif %}>{% if caller is defined %}{{ caller() }}{% else %}{{ value | or_missing }}{% endif %}</dd>{% endmacro %}
 
 {# A list that belongs to the record of a detail page, e.g. its tokens
-   (docs/UI.md 4.2). It creates at its head and acts on its rows. ``add``:
+   (docs/mailbox-service/UI.md 4.2). It creates at its head and acts on its rows. ``add``:
    the word of the plus in its header, which opens the form ``add_form``
    (an id, a ``row_form`` at the head of the table), or with
    ``add_dialog`` the ``form_dialog`` of that id. ``add_icon``: the icon

@@ -64,7 +64,7 @@ ActivityOutcome = Literal["done", "refused", "failed"]
 
 
 class ActivityRecord(BaseModel):
-    """One activity of administration someone caused (docs/AUDIT.md). It
+    """One activity of administration someone caused (docs/mailbox-service/AUDIT.md). It
     keeps no reference to a user or an account, so it outlives both."""
 
     id: str

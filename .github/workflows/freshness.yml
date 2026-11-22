@@ -17,7 +17,7 @@ name: Freshness
 #   into the tree and which no other tool here sees: npm-outdated and
 #   npm-audit read the lockfile in assets/vendor, tests/test_vendored.py holds
 #   it to the files. They only report. A new version of htmx is checked in a
-#   real browser (docs/UI.md 7).
+#   real browser (docs/mailbox-service/UI.md 7).
 #
 #   "Newest dependency versions break the server", this repository's
 #   question. uvx without a pin and pip install resolve the newest versions

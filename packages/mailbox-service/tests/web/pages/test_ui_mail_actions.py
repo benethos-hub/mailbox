@@ -1,5 +1,5 @@
 """What the accounts list and the mail pages offer in their rows and
-headers (docs/UI.md 4.1, 4.4): the account page's links per row, the
+headers (docs/mailbox-service/UI.md 4.1, 4.4): the account page's links per row, the
 batch bar of a mail list, and the actions of a message."""
 
 from __future__ import annotations

@@ -3,7 +3,7 @@
 {% block title %}{{ message.subject | or_missing }} · {{ APP_NAME }}{% endblock %}
 {% block heading %}{{ message.subject | or_missing }}{% endblock %}
 {% block subheading %}{{ breadcrumb(trail) }}{% endblock %}
-{# The header holds what can be done with the message (docs/UI.md 4.4):
+{# The header holds what can be done with the message (docs/mailbox-service/UI.md 4.4):
    Reply with its word, the rest as icons, the way back is the
    breadcrumb. #}
 {% block actions %}

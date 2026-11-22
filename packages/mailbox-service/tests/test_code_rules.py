@@ -11,7 +11,8 @@ from pathlib import Path
 
 from .source_helpers import HELPERS, PACKAGE, ROOT, modules, own_part
 
-# The calls that write a line at INFO or above (docs/LOGGING.md rule 6.2).
+# The calls that write a line at INFO or above (docs/mailbox-service/LOGGING.md rule
+# 6.2).
 LOUD = {"info", "warning", "error", "exception", "critical"}
 LOGGERS = {"log", "logger", "logging"}
 
@@ -123,7 +124,7 @@ def test_a_broad_handler_raises_or_records() -> None:
     assert silent == []
 
 
-# Hard limits (docs/ARCHITECTURE.md 15): what grows beyond them is split
+# Hard limits (docs/mailbox-service/ARCHITECTURE.md 15): what grows beyond them is split
 # by subject.
 MAX_LINES = 500
 MAX_METHODS = 30
@@ -152,7 +153,7 @@ def test_modules_and_classes_stay_small() -> None:
     assert not violations, "beyond the limits:\n  " + "\n  ".join(violations)
 
 
-# The copies the shared helpers replaced (docs/ARCHITECTURE.md 2), and
+# The copies the shared helpers replaced (docs/mailbox-service/ARCHITECTURE.md 2), and
 # the one module that holds each now. None may come back elsewhere, under
 # its name or with a leading underscore. A helper of mailbox-common, such
 # as plural, is held once by that package's own test.

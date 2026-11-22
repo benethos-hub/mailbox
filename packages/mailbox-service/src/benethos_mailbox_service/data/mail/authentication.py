@@ -102,7 +102,8 @@ class _UnreadableError(Exception):
 
 
 def _judged(results: list[_Result], sender: str) -> SenderCheck:
-    """The table of docs/CONCEPT.md, from the statements of the one entry."""
+    """The table of docs/mailbox-service/CONCEPT.md, from the statements of the one
+    entry."""
     try:
         dmarc = [
             r for r in results if r.method == "dmarc" and r.result in ("pass", "fail")

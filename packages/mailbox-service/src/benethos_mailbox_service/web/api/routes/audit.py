@@ -1,4 +1,4 @@
-"""The audit of administration (docs/AUDIT.md)."""
+"""The audit of administration (docs/mailbox-service/AUDIT.md)."""
 
 from __future__ import annotations
 
