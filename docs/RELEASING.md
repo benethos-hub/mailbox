@@ -20,7 +20,7 @@ common package to it, the service the common package.
    service's, then `uv lock` and `uv sync`. Set it as well in
    `.github/publish/mcp-registry/server.json`, there also in the
    bundle's address, in `.github/publish/mcpb/manifest.json` and in
-   `containers/production/.env.example`, and regenerate
+   `containers/production/mailbox-service/.env.example`, and regenerate
    `docs/mailbox-service/openapi.json`, which carries it. `test_packaging.py` names
    every such place and every version example in the documentation
    that still shows the old one.

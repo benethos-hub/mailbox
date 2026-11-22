@@ -130,7 +130,7 @@ Part of the [roadmap](../ROADMAP.md): phase 5, in progress, and phase 5a, done.
   file never in the data folder (7.3). The MCP server reads an optional
   `.env` alike
 - **Containers in operation (8.1)**, decided 2026-10-06, done:
-  `containers/production/` runs the published images with a fixed
+  `containers/production/mailbox-service/` runs the published images with a fixed
   version, Caddy for HTTPS as a profile, `setup.sh` for the first start.
   The MCP server runs with each client, an instance per client. `containers/` holds `images/`, and `development/`,
   `production/` and `test-mail-server/` each with its own `secrets/`

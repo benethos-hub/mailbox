@@ -5,7 +5,8 @@
 > data is carried forward by migrations.
 
 The images, and the places they run in, each in a folder of its own.
-Each place keeps its secrets in its own `secrets/`, never versioned.
+Under each place, a folder per package. Each keeps its secrets in its
+own `secrets/`, never versioned.
 
 **Contents**
 
@@ -18,10 +19,13 @@ containers/
     mailbox-service/Dockerfile   # build context: the repository root
     mailbox-mcp/Dockerfile       # the MCP server over streamable HTTP
   production/                    # in operation, the published images
-    README.md                    #   how to set it up and run it, and
+    mailbox-service/             #   the service, Caddy and the MCP
+                                 #   server instances, one compose project
+      README.md                  #   how to set it up and run it, and
                                  #   what each file is
   development/                   # for development, built from the repository
-    compose.yaml                 # the service, the MCP server with the
+    mailbox-service/
+      compose.yaml               # the service, the MCP server with the
                                  #   profile mcp, ports on 127.0.0.1 only
   test-mail-server/              # Stalwart as a mail server for tests
     compose.yaml                 #   ports on 127.0.0.1 only
@@ -31,8 +35,8 @@ containers/
 
 | Folder | For | Images |
 |---|---|---|
-| `production/` | running Mailbox, without a clone of the repository | from the GitHub container registry, the version named in `.env` |
-| `development/` | trying a change in a container | built from this repository |
+| `production/mailbox-service/` | running Mailbox, without a clone of the repository | from the GitHub container registry, the version named in `.env` |
+| `development/mailbox-service/` | trying a change in a container | built from this repository |
 | `test-mail-server/` | the adapters against a mail server of our own | Stalwart |
 
 How to start and run the service and the MCP server, with `docker run`
@@ -43,8 +47,8 @@ or with compose:
 
 ## For development
 
-`development/compose.yaml` builds both images from the repository. The
-first start, in `development/`:
+`development/mailbox-service/compose.yaml` builds both images from the
+repository. The first start, in `development/mailbox-service/`:
 
 ```sh
 docker compose build
@@ -57,7 +61,8 @@ docker compose run --rm mailbox-service users create-admin
 docker compose up -d
 ```
 
-The master key lives in `development/secrets/master_key`. The MCP server
+The master key lives in
+`development/mailbox-service/secrets/master_key`. The MCP server
 starts with `docker compose --profile mcp up -d`. It needs
 `MAILBOX_SERVICE_TOKEN` and `MAILBOX_MCP_BEARER_TOKEN` and does not
 start without them. Compose reads these variables from the environment

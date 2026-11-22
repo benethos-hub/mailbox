@@ -143,7 +143,7 @@ each place they run in has a folder of its own beside it, with its own
 which builds from the repository, and `test-mail-server/`, Stalwart for
 tests.
 
-**Decided 2026-10-06, operation:** `containers/production/` runs the
+**Decided 2026-10-06, operation:** `containers/production/mailbox-service/` runs the
 published images without a clone of the repository. `.env` names a fixed
 version, and an update changes it. Its `compose.yaml` holds no MCP server:
 it acts as one user with that user's token, so each client starts one

@@ -229,7 +229,7 @@ def test_the_readme_shows_the_diagram_light_and_dark(readme: str, prefix: str) -
 READMES = {
     "README.md": "",
     "containers/README.md": "../",
-    "containers/production/README.md": "../../",
+    "containers/production/mailbox-service/README.md": "../../../",
     "containers/test-mail-server/README.md": "../../",
     "docs/README.md": "../",
     "packages/mailbox-service/README.md": RAW,

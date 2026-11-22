@@ -151,7 +151,7 @@ some folders, such as the invoices, and end after a week.
   files for operation with HTTPS through Caddy and MCP server instances,
   and metrics for Prometheus at `GET /v1/metrics`, for a token with
   their right:
-  [monitoring](containers/production/README.md#monitoring-with-prometheus).
+  [monitoring](containers/production/mailbox-service/README.md#monitoring-with-prometheus).
 
 What comes next, and in which order, is in
 [docs/ROADMAP.md](docs/ROADMAP.md).
