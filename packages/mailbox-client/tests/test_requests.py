@@ -14,7 +14,6 @@ import inspect
 import json
 import re
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import Any
 
 import pytest
@@ -22,9 +21,9 @@ import pytest
 from benethos_mailbox_client import Grant, Reference, endpoints, message_body
 from benethos_mailbox_client.calls import Call
 
-CONTRACT = (
-    Path(__file__).resolve().parents[3] / "docs" / "mailbox-service" / "openapi.json"
-)
+from .repository_helpers import OPENAPI
+
+CONTRACT = OPENAPI
 DOCUMENT = json.loads(CONTRACT.read_text("utf-8"))
 METHODS = {"get", "put", "post", "patch", "delete"}
 # Endpoints that send another operation: a shorthand of it.

@@ -8,6 +8,7 @@ file holds a :class:`MessageRef` and fetches the rest again by it.
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal, get_args
 
 from pydantic import BaseModel, ConfigDict
 
@@ -17,6 +18,7 @@ __all__ = [
     "Address",
     "Attachment",
     "Event",
+    "EventType",
     "FolderRef",
     "MailMessage",
     "MessageRef",
@@ -37,15 +39,16 @@ class MessageRef(_Record):
 
 # The events of the change feed this package knows, and an agent may ask
 # for.
-EVENTS = frozenset(
-    {"message.created", "message.updated", "message.deleted", "message.sent"}
-)
+EventType = Literal[
+    "message.created", "message.updated", "message.deleted", "message.sent"
+]
+EVENTS: frozenset[str] = frozenset(get_args(EventType))
 
 
 class Event(_Record):
     """One entry of the change feed."""
 
-    type: str  # one of EVENTS
+    type: EventType
     ref: MessageRef
     at: datetime
 

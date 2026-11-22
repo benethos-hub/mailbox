@@ -220,8 +220,8 @@ tests/                    # what the repository holds, across the five
                           #   docs/mailbox-common/common-interface.json against the code
   test_code_rules.py      # the rules for the tests of all five
                           #   packages and for live/, no class in a
-                          #   package's entry, sizes here and in live/,
-                          #   how the others use mailbox-common
+                          #   package's entry, sizes here and in live/
+  test_common_use.py      # how the others use mailbox-common
   test_readmes.py         # the links of every README, of docs/ and of
                           #   every CLAUDE.md lead somewhere, and a README of
                           #   two sections or more lists them in its

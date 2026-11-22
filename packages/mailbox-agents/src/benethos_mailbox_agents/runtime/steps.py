@@ -32,7 +32,7 @@ from ..llm.gateway import Reply
 from ..logbook import messages, record
 from ..records import Decision, MailMessage, MessageRef, StepResult
 from ..settings import Settings
-from ..store import Store
+from ..store import State, Store
 from .items import StoredItems
 from .metrics import Metrics
 from .model import Asker, Calls, start_of_day
@@ -193,11 +193,11 @@ class StepRunner:
     def _state(
         self,
         ref: MessageRef,
-        state: str,
+        state: State,
         *,
         attempts: int | None = None,
         next_attempt: datetime | None = None,
-    ) -> str:
+    ) -> State:
         self._store.set_state(
             ref, state, self._now(), attempts=attempts, next_attempt=next_attempt
         )

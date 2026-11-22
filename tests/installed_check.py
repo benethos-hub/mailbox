@@ -237,7 +237,7 @@ class StandIn(BaseHTTPRequestHandler):
     version = ""
     trouble = False
 
-    def do_GET(self) -> None:  # noqa: N802 - the name http.server calls
+    def do_GET(self) -> None:  # the name http.server calls
         status, body = 404, {"error": {"code": "not_found", "message": "no"}}
         if self.path == "/health":
             status, body = 200, {"status": "ok", "version": self.version}
@@ -448,7 +448,7 @@ def main() -> int:
     for name in [package] if package else CHECKS:
         try:
             CHECKS[name]()
-        except Exception as exc:  # noqa: BLE001 - every failure is a finding
+        except Exception as exc:  # every failure is a finding
             traceback.print_exception(exc, file=sys.stderr)
             failures.extend(
                 f"{name}: {type(leaf).__name__}: {leaf}" for leaf in leaves(exc)

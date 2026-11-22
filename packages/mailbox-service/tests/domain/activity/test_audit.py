@@ -44,9 +44,10 @@ from benethos_mailbox_service.errors import (
 
 from ...clocks import Clock
 from ...conftest import ADMIN, bearer_for
+from ...source_helpers import REPOSITORY
 from .activity_helpers import activities
 
-AUDIT_MD = Path(__file__).parents[5] / "docs" / "mailbox-service" / "AUDIT.md"
+AUDIT_MD = REPOSITORY / "docs" / "mailbox-service" / "AUDIT.md"
 NOW = datetime(2026, 10, 5, 12, 0, tzinfo=UTC)
 READER = Grant(accounts=["*"], allow=["mail.read"])
 

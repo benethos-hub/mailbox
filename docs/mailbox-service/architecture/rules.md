@@ -228,7 +228,9 @@ fix that first, and say so.
   `clocks.py`. No test module imports another, every other module
   is named so and lies in the nearest common folder of the modules that
   import it, which `tests/test_code_rules.py` at the root checks in all
-  five packages.
+  five packages. The `conftest.py` at the top of a package's suite
+  keeps every setting of the developer's machine from a test with an
+  autouse fixture.
 - The tests of every package, the tests at the root and the live
   checks use the public names of `mailbox-common`, never one with a
   leading underscore.

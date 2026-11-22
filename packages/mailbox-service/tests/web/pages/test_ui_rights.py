@@ -4,7 +4,6 @@ editor that keeps what was typed, expiry and folders in the editor."""
 from __future__ import annotations
 
 import re
-from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -21,6 +20,7 @@ from benethos_mailbox_service.web.pages.grants import (
 )
 
 from ...conftest import ADMIN, browser_user
+from ...source_helpers import REPOSITORY
 from ...ui_helpers import post, sign_in
 
 # --- effective rights ------------------------------------------------------------
@@ -92,7 +92,7 @@ def test_the_user_page_shows_the_effective_rights(
     assert "to anyone, no daily limit" in section
 
 
-MCP_README = Path(__file__).resolve().parents[5] / "packages/mailbox-mcp/README.md"
+MCP_README = REPOSITORY / "packages/mailbox-mcp/README.md"
 
 
 def test_the_mcp_tools_shown_are_those_of_the_mcp_readme() -> None:

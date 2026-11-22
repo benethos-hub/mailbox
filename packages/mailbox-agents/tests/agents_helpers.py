@@ -1,5 +1,5 @@
 """What the tests share: the root of the repository and ``load_script``
-for a script outside the package, an agent for the tests, a clock, the
+for a script outside the package, an agent for the tests, the
 pieces wired over the fakes of ``agents_fake.py``, ``configure`` for the
 command line, and a look at what became of a message."""
 
@@ -10,7 +10,6 @@ import sys
 from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from types import ModuleType
 from typing import Any, Literal
@@ -42,6 +41,7 @@ from benethos_mailbox_agents.sources.mailbox import Mailbox, connect
 from benethos_mailbox_agents.store import Store
 
 from .agents_fake import ACCOUNT, FakeGateway, FakeService
+from .clocks import Clock
 
 # The root of the repository, the folder of this package in it, and the
 # folder of its documents: what the tests of files beside the code read.
@@ -76,22 +76,6 @@ def load_script(path: Path, name: str) -> Iterator[ModuleType]:
                 file and any(Path(file).is_relative_to(d) for d in added)
             ):
                 del sys.modules[key]
-
-
-START = datetime(2026, 11, 17, 9, 0, tzinfo=UTC)
-
-
-class Clock:
-    """A clock a test moves by hand."""
-
-    def __init__(self, start: datetime = START) -> None:
-        self.moment = start
-
-    def __call__(self) -> datetime:
-        return self.moment
-
-    def advance(self, **delta: float) -> None:
-        self.moment += timedelta(**delta)
 
 
 class EchoAnswer(BaseModel):

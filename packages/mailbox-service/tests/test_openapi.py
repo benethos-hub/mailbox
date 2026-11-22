@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import re
-from pathlib import Path
 from typing import Any
 
 import pytest
@@ -17,10 +16,9 @@ from benethos_mailbox_service.web import search
 from benethos_mailbox_service.web.api import PREFIX as API_PREFIX
 
 from .conftest import METHODS
+from .source_helpers import REPOSITORY
 
-COMMITTED = (
-    Path(__file__).resolve().parents[3] / "docs" / "mailbox-service" / "openapi.json"
-)
+COMMITTED = REPOSITORY / "docs" / "mailbox-service" / "openapi.json"
 
 
 def _operations() -> list[tuple[str, dict[str, Any]]]:

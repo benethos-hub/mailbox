@@ -6,15 +6,14 @@ from __future__ import annotations
 
 import dataclasses
 import json
-from pathlib import Path
 
 import pytest
 
 from benethos_mailbox_client import models
 
-CONTRACT = (
-    Path(__file__).resolve().parents[4] / "docs" / "mailbox-service" / "openapi.json"
-)
+from ..repository_helpers import OPENAPI
+
+CONTRACT = OPENAPI
 SCHEMAS = json.loads(CONTRACT.read_text("utf-8"))["components"]["schemas"]
 # A field named like a keyword of Python.
 RENAMED = {"from": "sender"}

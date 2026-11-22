@@ -8,7 +8,6 @@ import re
 import typing
 from dataclasses import dataclass, fields
 from datetime import UTC, datetime
-from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -35,6 +34,7 @@ from benethos_mailbox_service.domain.rights.access import Access
 from benethos_mailbox_service.errors import StorageError
 
 from ...conftest import ADMIN, admin_bearer, memory_of
+from ...source_helpers import REPOSITORY
 from ...ui_helpers import post
 from .activity_helpers import activities
 
@@ -73,13 +73,7 @@ AREAS = {
 }
 NAME = re.compile(r"[a-z][a-z0-9]*(_[a-z0-9]+)*")
 # Section 7 of docs/mailbox-service/LOGGING.md, which is a file of its own.
-LOGGING_MD = (
-    Path(__file__).resolve().parents[5]
-    / "docs"
-    / "mailbox-service"
-    / "logging"
-    / "code.md"
-)
+LOGGING_MD = REPOSITORY / "docs" / "mailbox-service" / "logging" / "code.md"
 
 
 def test_the_areas_are_the_packages_of_the_domain() -> None:
