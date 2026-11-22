@@ -27,7 +27,7 @@ def run(args: argparse.Namespace) -> None:
     # Before the app is built: building it may warn already.
     # The log page names a source as the console does.
     book = LogBook(source=source_of)
-    config = log_config(settings.log_level, book)
+    config = log_config(settings.log_level, book, form=settings.log_format)
     logging.config.dictConfig(config)
     # The log names the settings and the database once the app starts.
     app = assembly.create_app(

@@ -51,6 +51,17 @@ def _access(record: logging.LogRecord) -> str | None:
     return f"{method} {path} {colour}{status} {phrase}{reset} {dim}{client}{reset}"
 
 
+def _access_fields(record: logging.LogRecord) -> dict[str, object] | None:
+    """An access line of uvicorn as fields of a JSON line: method, path,
+    status, client. None for any other record."""
+    if record.name != "uvicorn.access" or not isinstance(record.args, tuple):
+        return None
+    if len(record.args) != _ACCESS_ARGS:
+        return None
+    client, method, path, _, status = record.args
+    return {"method": method, "path": path, "status": status, "client": client}
+
+
 class WithoutQuery(logging.Filter):
     """An access line with the path of the request alone. Its query holds
     what a person typed, such as search terms, and the path of a link its
@@ -67,21 +78,30 @@ class WithoutQuery(logging.Filter):
 
 
 def log_config(
-    level: str, book: logging.Handler | None = None, colours: bool | None = None
+    level: str,
+    book: logging.Handler | None = None,
+    colours: bool | None = None,
+    form: str = "text",
 ) -> dict[str, Any]:
     """The configuration for ``uvicorn.run(log_config=...)``, as
     ``logging.config.dictConfig`` takes it. ``book`` keeps the newest
     lines for the log page as well. ``colours`` gives the compact lines
     of ``Console``, by default on a terminal, with the access line of
     ``_access``. Elsewhere, in a container log or the journal, each line
-    is plain text."""
+    is plain text. ``form`` ``json`` writes each line on stderr as one
+    JSON object instead, an access line with its fields, and no colours.
+    The log page keeps its text."""
     number = lines.LEVELS[level.lower()]
-    line_format = {
-        "()": lines.formatter,
-        "package": PACKAGE,
-        "colours": colours,
-        "line_of": _access,
-    }
+    line_format: dict[str, Any] = (
+        {"()": lines.Json, "fields_of": _access_fields}
+        if form == "json"
+        else {
+            "()": lines.formatter,
+            "package": PACKAGE,
+            "colours": colours,
+            "line_of": _access,
+        }
+    )
     handlers: dict[str, Any] = {
         "stderr": {
             "class": "logging.StreamHandler",

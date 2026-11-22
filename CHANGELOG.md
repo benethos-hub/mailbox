@@ -16,6 +16,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   `prometheus-client`.
 - `benethos-mailbox-client`: `get_metrics()` of both clients answers
   the figures of `GET /v1/metrics` as text.
+- `MAILBOX_SERVICE_LOG_FORMAT=json` writes each line of the service's
+  log as one JSON object, for a log collector: `time`, `level`,
+  `source`, `message`, `traceback` where there is one, and for a
+  request `method`, `path`, `status` and `client`. `text` stays the
+  default. The log page shows text either way.
 - `benethos-mailbox-common`: `log.lines.Json` writes each line of a log
   as one JSON object, a noted secret masked in each field, with the
   fields a program adds through `fields_of`.

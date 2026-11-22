@@ -261,6 +261,7 @@ names the settings file it read and the database at start.
 | `MAILBOX_SERVICE_RATE_LIMIT_PER_MINUTE` | `120` | requests a minute per API token or UI session, a burst of half as many at once. `0` switches the limit off. |
 | `MAILBOX_SERVICE_RATE_LIMIT_ANONYMOUS_PER_MINUTE` | `30` | the same per client address, for requests without a credential |
 | `MAILBOX_SERVICE_LOG_LEVEL` | `INFO` | `critical`, `error`, `warning`, `info`, `debug` or `trace`, see [Logs](#logs) |
+| `MAILBOX_SERVICE_LOG_FORMAT` | `text` | or `json`, each line one JSON object for a log collector, see [Logs](#logs) |
 | `MAILBOX_SERVICE_DATA_DIR` | the data folder, see [Where things live](#where-things-live) | where the database lives |
 | `MAILBOX_SERVICE_STORAGE` | `sqlite` | or `memory`, which keeps nothing |
 | `MAILBOX_SERVICE_KEY_PROVIDER` | `keyring` | where the master key lives: `keyring`, `file` or `env` |
@@ -329,6 +330,15 @@ access log), and a request as method, path and status with its name:
 ```
 
 `NO_COLOR` set to any value keeps the plain lines at a terminal too.
+
+`MAILBOX_SERVICE_LOG_FORMAT=json` writes each line as one JSON object
+instead, for a log collector, with `time`, `level`, `source`, `message`
+and `traceback` where there is one. A request adds `method`, `path`,
+`status` and `client`:
+
+```
+{"time": "2026-09-28T10:14:03.418+02:00", "level": "INFO", "source": "uvicorn.access", "message": "127.0.0.1:52344 - \"POST /ui/login HTTP/1.1\" 303", "method": "POST", "path": "/ui/login", "status": 303, "client": "127.0.0.1:52344"}
+```
 
 `MAILBOX_SERVICE_LOG_LEVEL` sets the level of the service and of uvicorn.
 Libraries write from `warning` on at any level, so `debug` shows the
