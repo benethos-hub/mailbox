@@ -291,6 +291,10 @@
           "sends": "benethos_mailbox_client.endpoints.messages.get_message_raw",
           "async": true
         },
+        "get_metrics": {
+          "sends": "benethos_mailbox_client.endpoints.status.get_metrics",
+          "async": true
+        },
         "get_role": {
           "sends": "benethos_mailbox_client.endpoints.roles.get_role",
           "async": true
@@ -505,6 +509,7 @@
       "get_me",
       "get_message",
       "get_message_raw",
+      "get_metrics",
       "get_role",
       "get_second_factor",
       "get_status",
@@ -780,6 +785,9 @@
     }
   },
   "benethos_mailbox_client.endpoints.status": {
+    "get_metrics": {
+      "signature": "() -> 'Call[str]'"
+    },
     "get_status": {
       "signature": "() -> 'Call[Status]'"
     }
@@ -2527,6 +2535,9 @@
         },
         "get_message_raw": {
           "sends": "benethos_mailbox_client.endpoints.messages.get_message_raw"
+        },
+        "get_metrics": {
+          "sends": "benethos_mailbox_client.endpoints.status.get_metrics"
         },
         "get_role": {
           "sends": "benethos_mailbox_client.endpoints.roles.get_role"

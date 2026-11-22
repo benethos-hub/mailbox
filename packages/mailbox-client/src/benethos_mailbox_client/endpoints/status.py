@@ -1,4 +1,5 @@
-"""The state of the service, read into ``Status``."""
+"""The state of the service, read into ``Status``, and its figures for
+Prometheus as text."""
 
 from __future__ import annotations
 
@@ -13,6 +14,17 @@ def get_status() -> Call[Status]:
     """The sync worker and the accounts the caller may see the status of.
     Kept in memory: empty after a restart until the first pass."""
     return Call("GET", path("status"), _status)
+
+
+def get_metrics() -> Call[str]:
+    """The figures of the service for Prometheus, in its text format, as
+    the service wrote them. Needs the right `get_metrics`, and the
+    service answers 404 while its metrics are switched off."""
+    return Call("GET", path("metrics"), _text, raw=True)
+
+
+def _text(body: bytes) -> str:
+    return body.decode("utf-8")
 
 
 def _status(found: dict[str, Any]) -> Status:
