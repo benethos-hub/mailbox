@@ -60,7 +60,7 @@ services:
     volumes:
       - counting-data:/data
     ports:
-      - "127.0.0.1:${COUNTING_METRICS_PORT:-9480}:9464"
+      - "127.0.0.1:${MAILBOX_AGENTS_COUNTING_METRICS_PORT:-9480}:9464"
     healthcheck:
       test: ["CMD", "benethos-mailbox-agents", "health", "--agent", "counting"]
       interval: 30s
@@ -75,7 +75,7 @@ services:
     volumes:
       - invoices-data:/data
     ports:
-      - "127.0.0.1:${INVOICES_METRICS_PORT:-9481}:9464"
+      - "127.0.0.1:${MAILBOX_AGENTS_INVOICES_METRICS_PORT:-9481}:9464"
     healthcheck:
       test: ["CMD", "benethos-mailbox-agents", "health", "--agent", "invoices"]
       interval: 30s
@@ -95,7 +95,7 @@ services:
       - sorting-data:/data
       - ../../live/mailbox-agents/sorting.json:/config/sorting.json:ro
     ports:
-      - "127.0.0.1:${SORTING_METRICS_PORT:-9482}:9464"
+      - "127.0.0.1:${MAILBOX_AGENTS_SORTING_METRICS_PORT:-9482}:9464"
     healthcheck:
       test: ["CMD", "benethos-mailbox-agents", "health", "--agent", "sorting"]
       interval: 30s

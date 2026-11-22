@@ -56,7 +56,7 @@ services:
       - invoices-data:/data
       - ./secrets/invoices:/run/secrets:ro
     ports:
-      - "127.0.0.1:${INVOICES_METRICS_PORT:-9471}:9464"
+      - "127.0.0.1:${MAILBOX_AGENTS_INVOICES_METRICS_PORT:-9471}:9464"
     healthcheck:
       test: ["CMD", "benethos-mailbox-agents", "health", "--agent", "invoices"]
       interval: 60s
@@ -75,7 +75,7 @@ services:
       - awaiting-reply-data:/data
       - ./secrets/awaiting_reply:/run/secrets:ro
     ports:
-      - "127.0.0.1:${AWAITING_REPLY_METRICS_PORT:-9472}:9464"
+      - "127.0.0.1:${MAILBOX_AGENTS_AWAITING_REPLY_METRICS_PORT:-9472}:9464"
     healthcheck:
       test: ["CMD", "benethos-mailbox-agents", "health", "--agent", "awaiting_reply"]
       interval: 60s
@@ -96,7 +96,7 @@ services:
       - ./agents/inquiries:/config:ro
       - ./secrets/inquiries:/run/secrets:ro
     ports:
-      - "127.0.0.1:${INQUIRIES_METRICS_PORT:-9473}:9464"
+      - "127.0.0.1:${MAILBOX_AGENTS_INQUIRIES_METRICS_PORT:-9473}:9464"
     healthcheck:
       test: ["CMD", "benethos-mailbox-agents", "health", "--agent", "inquiries"]
       interval: 60s
@@ -118,7 +118,7 @@ services:
       - ./agents/sorting:/config:ro
       - ./secrets/sorting:/run/secrets:ro
     ports:
-      - "127.0.0.1:${SORTING_METRICS_PORT:-9474}:9464"
+      - "127.0.0.1:${MAILBOX_AGENTS_SORTING_METRICS_PORT:-9474}:9464"
     healthcheck:
       test: ["CMD", "benethos-mailbox-agents", "health", "--agent", "sorting"]
       interval: 60s
@@ -139,7 +139,7 @@ services:
       - counting-data:/data
       - ./secrets/counting:/run/secrets:ro
     ports:
-      - "127.0.0.1:${COUNTING_METRICS_PORT:-9470}:9464"
+      - "127.0.0.1:${MAILBOX_AGENTS_COUNTING_METRICS_PORT:-9470}:9464"
     healthcheck:
       test: ["CMD", "benethos-mailbox-agents", "health", "--agent", "counting"]
       interval: 60s

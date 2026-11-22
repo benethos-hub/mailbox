@@ -63,6 +63,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   report to `reports/mailbox-agents/` in the layout of the repository,
   and else to `reports/` in the data folder. Before, it wrote to
   `reports/` below the working directory.
+- The compose files of the agents take the host port of each agent's
+  metrics as `MAILBOX_AGENTS_<AGENT>_METRICS_PORT`, such as
+  `MAILBOX_AGENTS_INVOICES_METRICS_PORT`, in place of
+  `INVOICES_METRICS_PORT`, so every setting of Mailbox starts with
+  `MAILBOX_`.
 
 ### Fixed
 
