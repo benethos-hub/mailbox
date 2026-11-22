@@ -310,7 +310,8 @@ fix that first, and say so.
   `test_architecture.py` of the client and the MCP server checks both
   for its package and its tests, that of `mailbox-common` the length
   of its modules, `test_code_rules.py` of the service for the
-  service and its tests, `tests/test_code_rules.py` at the root for the
+  service and its tests, `test_code_rules.py` of the agents for the
+  agents and their tests, `tests/test_code_rules.py` at the root for the
   tests there and `live/`. Past that, the subject has
   parts, and each part is a module.
 - A package holds a handful of modules. Past that, it holds areas, and
