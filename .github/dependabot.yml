@@ -39,12 +39,13 @@ updates:
         patterns: ["*"]
         update-types: ["minor", "patch"]
 
-  # The base images of both Dockerfiles (python, uv). A stale base builds
-  # and runs without complaint, and ships unpatched packages.
+  # The base images of the three Dockerfiles (python, uv). A stale base
+  # builds and runs without complaint, and ships unpatched packages.
   - package-ecosystem: "docker"
     directories:
       - "/containers/images/mailbox-service"
       - "/containers/images/mailbox-mcp"
+      - "/containers/images/mailbox-agents"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
@@ -66,3 +67,16 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+
+  # The images of the agents' live setup: Stalwart, LiteLLM with Postgres
+  # and llama.cpp, each pinned by digest beside its tag. The mailbox
+  # service there is built from the checkout.
+  - package-ecosystem: "docker-compose"
+    directory: "/containers/live/mailbox-agents"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]

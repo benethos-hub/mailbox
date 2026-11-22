@@ -27,7 +27,7 @@ name: Freshness
 #   inside the runner, runs the suite on those versions and then
 #   tests/installed_check.py, the programs as real processes, without an
 #   account and without a mail server. index, a job of the organisation's
-#   workflow, installs each of the four published packages from PyPI into a
+#   workflow, installs each of the five published packages from PyPI into a
 #   fresh environment, the path uvx takes, and runs the same check with its
 #   interpreter for that package alone. A run that proves nothing, the check
 #   failing on the locked versions too or a step failing while nothing moved,
@@ -64,7 +64,7 @@ concurrency:
 
 jobs:
   # uv sync installs the dependency group dev, which holds the test tools and
-  # the four packages, so the action needs no extras. The check is what the
+  # the five packages, so the action needs no extras. The check is what the
   # suite cannot see: the service under its real server, the MCP SDK's
   # conversion of a result and an error on the way to a client.
   newest:
@@ -169,5 +169,5 @@ jobs:
       alarm-title: Newest dependency versions break the server
       alarm-resolved: The newest dependency versions work.
       index: true
-      index-packages: '["benethos-mailbox-service", "benethos-mailbox-client", "benethos-mailbox-mcp", "benethos-mailbox-common"]'
+      index-packages: '["benethos-mailbox-service", "benethos-mailbox-client", "benethos-mailbox-mcp", "benethos-mailbox-common", "benethos-mailbox-agents"]'
       index-check: $FRESHNESS_PYTHON tests/installed_check.py

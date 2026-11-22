@@ -41,10 +41,10 @@ client.
 5. After the squash merge: an annotated tag `vX.Y.Z` on `main`, pushed,
    then `gh release create vX.Y.Z --verify-tag --title X.Y.Z` with the
    changelog section as the notes. The published release starts `publish.yml`, which
-   uploads the four packages to PyPI and both images to GHCR, attaches
+   uploads the five packages to PyPI and three images to GHCR, attaches
    the Claude Desktop bundle to the release and sends the entry to the
    MCP Registry.
-6. Check what shipped: the four packages on PyPI, each image's tags
+6. Check what shipped: the five packages on PyPI, each image's tags
    `X.Y.Z`, `X.Y` and `latest` on the same revision, the bundle
    `benethos-mailbox-mcp-X.Y.Z.mcpb` and `benethos-mailbox-mcp.mcpb` on
    the GitHub release, and the version in the MCP Registry:

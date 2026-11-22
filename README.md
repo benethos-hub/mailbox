@@ -185,11 +185,11 @@ provider in [the concept, section 5.3](docs/mailbox-service/concept/providers.md
 | `mailbox-common` | what the service and the MCP server share | installed with them | [packages/mailbox-common](packages/mailbox-common/README.md) |
 | `mailbox-agents` | small AI agents that sort and mark mail, on top of `mailbox-client`, alpha | a process per agent | [packages/mailbox-agents](packages/mailbox-agents/README.md) |
 
-A release publishes all four to PyPI under the same version, as
+A release publishes all five to PyPI under the same version, as
 `benethos-mailbox-service`, `benethos-mailbox-client`,
-`benethos-mailbox-mcp` and `benethos-mailbox-common`, and the service
-and the MCP server as container
-images on ghcr.io. The MCP server is listed in the official MCP
+`benethos-mailbox-mcp`, `benethos-mailbox-common` and
+`benethos-mailbox-agents`, and the service, the MCP server and the
+agents as container images on ghcr.io. The MCP server is listed in the official MCP
 Registry as `io.github.benethos-hub/benethos-mailbox-mcp`, and every
 release carries it as a Claude Desktop extension,
 `benethos-mailbox-mcp.mcpb`. Each package has its own README. It

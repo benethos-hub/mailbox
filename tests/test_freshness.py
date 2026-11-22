@@ -14,7 +14,7 @@ import re
 import pytest
 
 from . import installed_check
-from .publish_helpers import PUBLISHED, project_of
+from .publish_helpers import PACKAGES, project_of
 from .repository_helpers import ORG, ROOT, job_of, read
 
 WORKFLOW = read("freshness.yml")
@@ -112,12 +112,12 @@ def test_the_index_job_checks_every_published_package() -> None:
     assert "index-check: $FRESHNESS_PYTHON tests/installed_check.py" in job
     found = re.search(r"index-packages: '(.+)'", job)
     assert found is not None
-    names = {str(project_of(package)["name"]) for package in PUBLISHED}
+    names = {str(project_of(package)["name"]) for package in PACKAGES}
     assert set(json.loads(found.group(1))) == names
 
 
 def test_the_check_knows_every_published_package() -> None:
-    names = {str(project_of(package)["name"]) for package in PUBLISHED}
+    names = {str(project_of(package)["name"]) for package in PACKAGES}
     assert set(installed_check.CHECKS) == names
 
 

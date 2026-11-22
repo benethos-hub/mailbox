@@ -28,7 +28,7 @@ jobs:
 
   # pytest on every supported Python against uv.lock, offline: providers are
   # faked and the MCP tests mock the REST API. The newest version measures
-  # the coverage of the four packages, as [tool.coverage.run] names them,
+  # the coverage of the five packages, as [tool.coverage.run] names them,
   # and its floor. The versions are named here although they equal the
   # defaults: test_packaging.py holds them to the classifiers,
   # requires-python, fresh-install and the documentation.
@@ -69,8 +69,8 @@ jobs:
 
   # Every other job installs from uv.lock. A user installs from PyPI, where
   # only the declared ranges in pyproject.toml count, and most of them have
-  # no upper bound. This job builds the four wheels and installs them into
-  # a clean environment without the lockfile, then checks that both commands
+  # no upper bound. This job builds the five wheels and installs them into
+  # a clean environment without the lockfile, then checks that the commands
   # start, the client imports, and the service still describes the same API.
   fresh-install:
     runs-on: ubuntu-latest
@@ -84,7 +84,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
 
-      - name: Build the four wheels
+      - name: Build the five wheels
         run: uv build --all-packages --wheel
 
       - name: Install them into a clean environment (no lockfile) and start them
@@ -94,10 +94,11 @@ jobs:
           uv pip install --python /tmp/fresh/bin/python dist/*.whl
           echo "--- resolved dependency versions ---"
           uv pip list --python /tmp/fresh/bin/python
-          echo "--- both commands start ---"
+          echo "--- the commands start ---"
           /tmp/fresh/bin/benethos-mailbox-service --version
           /tmp/fresh/bin/benethos-mailbox-mcp --version
           /tmp/fresh/bin/benethos-mailbox-mcp --help > /dev/null
+          /tmp/fresh/bin/benethos-mailbox-agents --version
           /tmp/fresh/bin/python -c "import benethos_mailbox_client as c; print(c.__version__)"
           echo "--- the service describes the checked-in API ---"
           /tmp/fresh/bin/benethos-mailbox-service openapi > /tmp/openapi.json
@@ -196,6 +197,21 @@ jobs:
       audit: true
 
   # The client alone needs httpx and nothing else.
+  # The agents alone, with the client they pin.
+  lowest-agents:
+    uses: benethos-hub/.github/.github/workflows/python-lowest-versions.yml@main
+    with:
+      python-version: "3.11"
+      editable: |
+        packages/mailbox-client
+        packages/mailbox-agents
+      requirements: |
+        pytest>=9.1.1
+        pytest-asyncio>=1.4
+        pytest-xdist>=3.8.0
+      pytest-args: packages/mailbox-agents/tests
+      audit: true
+
   lowest-client:
     uses: benethos-hub/.github/.github/workflows/python-lowest-versions.yml@main
     with:
@@ -250,7 +266,7 @@ jobs:
       files: containers/**/Dockerfile
       trusted-registries: docker.io ghcr.io
 
-  # Both images are built on every push, so a broken Dockerfile shows up
+  # The three images are built on every push, so a broken Dockerfile shows up
   # here and not first in a release.
   docker:
     runs-on: ubuntu-latest
@@ -258,11 +274,12 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Build both images
+      - name: Build the three images
         run: |
           set -euo pipefail
           docker build -t benethos-mailbox-service:ci -f containers/images/mailbox-service/Dockerfile .
           docker build -t benethos-mailbox-mcp:ci -f containers/images/mailbox-mcp/Dockerfile .
+          docker build -t benethos-mailbox-agents:ci -f containers/images/mailbox-agents/Dockerfile .
 
       # The compose files publish every port on the loopback address only
       # (CONCEPT 8.1). That is asserted here, so a change cannot drop it
@@ -312,6 +329,77 @@ jobs:
           PY
           done
 
+      # The agents' image runs as uid 10001, starts, and every agent is in
+      # it. The agents need a mailbox service to do more, which the live
+      # checks of live/mailbox-agents/ bring, by hand.
+      - name: The agents' image starts and holds every agent
+        run: |
+          set -euo pipefail
+          user=$(docker inspect -f '{{.Config.User}}' benethos-mailbox-agents:ci)
+          if [ "$user" != "10001" ]; then
+            echo "::error::the image runs as '$user', not as 10001"
+            exit 1
+          fi
+          docker run --rm --network none benethos-mailbox-agents:ci --help > /dev/null
+          docker run --rm --network none --entrypoint python benethos-mailbox-agents:ci -c "
+          from benethos_mailbox_agents.contract import discover
+          names = sorted(discover())
+          assert names == ['awaiting_reply', 'counting', 'inquiries', 'invoices', 'sorting'], names
+          print('OK: the image runs as 10001 and holds', ', '.join(names))
+          "
+
+      # The agents' compose files, read as compose resolves them with every
+      # profile: valid, every published port on the loopback address, as
+      # the metrics have no authentication, and each folder what its name
+      # says: development builds from the checkout, production pulls the
+      # published image, and both keep the root file system read-only and
+      # drop every capability. Empty files stand in for the settings
+      # compose reads, which are not versioned.
+      - name: The agents' compose files are valid, loopback only, and what their folder says
+        run: |
+          set -euo pipefail
+          mkdir -p containers/live/mailbox-agents/secrets
+          touch containers/live/mailbox-agents/secrets/agent.env
+          for agent in counting invoices awaiting_reply inquiries sorting; do
+            touch "containers/production/mailbox-agents/agents/$agent/.env"
+          done
+          docker compose -f containers/development/mailbox-agents/compose.yaml \
+            --profile invoices --profile sorting config --format json > /tmp/development.json
+          docker compose -f containers/production/mailbox-agents/compose.yaml \
+            --env-file containers/production/mailbox-agents/.env.example \
+            --profile counting --profile invoices --profile awaiting_reply \
+            --profile inquiries --profile sorting \
+            config --format json > /tmp/production.json
+          python3 - <<'PY'
+          import json
+
+          AGENTS = {"counting", "invoices", "awaiting_reply", "inquiries", "sorting"}
+          for folder in ("development", "production"):
+              services = json.load(open(f"/tmp/{folder}.json"))["services"]
+              assert services, f"the agents' {folder} compose file defines no services"
+              if folder == "production":
+                  assert set(services) == AGENTS, f"production runs {sorted(services)}"
+              for name, service in services.items():
+                  where = f"{folder}/mailbox-agents: {name}"
+                  for port in service.get("ports") or []:
+                      host_ip = port.get("host_ip")
+                      assert host_ip in ("127.0.0.1", "::1"), (
+                          f"{where} publishes port {port.get('published')} on "
+                          f"{host_ip or 'every interface'}, not on the loopback address"
+                      )
+                  assert service.get("read_only") is True, f"{where} is not read-only"
+                  assert service.get("cap_drop") == ["ALL"], f"{where} keeps capabilities"
+                  if folder == "development":
+                      assert "build" in service, f"{where} does not build from the checkout"
+                  else:
+                      assert "build" not in service, f"{where} builds instead of pulling"
+                      assert service["image"].startswith(
+                          "ghcr.io/benethos-hub/benethos-mailbox-agents:"
+                      ), f"{where} runs {service['image']}, not the published image"
+                  print(f"OK: {where} is loopback only, read-only and "
+                        f"{'builds' if folder == 'development' else 'pulls'}")
+          PY
+
       # The release publishes linux/arm64 as well. Build it here so that an
       # arm64-only break does not first surface in a release. Nothing is
       # loaded or pushed. Each cache scope is the image's name, which
@@ -341,6 +429,16 @@ jobs:
           push: false
           cache-from: type=gha,scope=benethos-mailbox-mcp
           cache-to: type=gha,mode=max,scope=benethos-mailbox-mcp
+
+      - name: Build the agents for arm64 as well
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: containers/images/mailbox-agents/Dockerfile
+          platforms: linux/arm64
+          push: false
+          cache-from: type=gha,scope=benethos-mailbox-agents
+          cache-to: type=gha,mode=max,scope=benethos-mailbox-agents
 
       # The service starts from its image with a new master key, answers on
       # /health, keeps running, and its own health check agrees.
