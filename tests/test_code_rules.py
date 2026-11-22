@@ -418,10 +418,14 @@ def test_the_shared_code_of_the_live_checks_names_each_module() -> None:
 def test_no_package_entry_defines_a_class() -> None:
     """The entry of a package offers, it does not implement
     (ARCHITECTURE 5.2): no __init__.py of the five packages defines a
-    class."""
+    class, nor one of the folders the live checks share."""
+    entries = [
+        *sorted((ROOT / "packages").glob("*/src/**/__init__.py")),
+        *(folder / "__init__.py" for folder in _live_shared()),
+    ]
     violations = [
         f"{path.relative_to(ROOT).as_posix()}: {node.name}"
-        for path in sorted((ROOT / "packages").glob("*/src/**/__init__.py"))
+        for path in entries
         for node in ast.parse(path.read_text("utf-8")).body
         if isinstance(node, ast.ClassDef)
     ]

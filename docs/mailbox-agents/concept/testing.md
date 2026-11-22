@@ -32,7 +32,7 @@ Part of the [concept](../CONCEPT.md).
   the labels of the invented mail into gold files, so `eval` can compare
   models on them.
 - A live check reads its settings from its file alone, through
-  `live/mailbox-agents/agents_common/__init__.py` (decided 2026-11-18). A `MAILBOX_AGENTS_` variable
+  `live/mailbox-agents/agents_common/settings.py` (decided 2026-11-18). A `MAILBOX_AGENTS_` variable
   exported in the shell, of a real deployment say, is not read. A mailbox
   service that is not on this machine, `127.0.0.1`, `localhost` or `::1`,
   at the port 38081 of `containers/live/mailbox-agents`, stops the check with exit code
