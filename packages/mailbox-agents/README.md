@@ -28,9 +28,8 @@
 > ran, in the stage `shadow`, and changed nothing. Names, settings and
 > the state file may still change from one version to the next. The
 > design is written down in
-> [docs/mailbox-agents/CONCEPT.md](https://github.com/benethos-hub/mailbox/blob/main/docs/mailbox-agents/CONCEPT.md),
-> and no agent acts on a real mailbox yet. Do not point it at a mailbox
-> you care about.
+> [docs/mailbox-agents/CONCEPT.md](https://github.com/benethos-hub/mailbox/blob/main/docs/mailbox-agents/CONCEPT.md).
+> Do not point it at a mailbox you care about.
 
 The AI agents of Mailbox, on PyPI as `benethos-mailbox-agents`. They
 work on a mailbox continuously. Each one looks at mail as it arrives or
@@ -65,10 +64,11 @@ back to the service.
 | [`mailbox-mcp`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-mcp) | The MCP server. It turns the REST API into tools for an AI assistant. The agents do not use it. | not needed here |
 | [`mailbox-common`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-common) | What the service and the MCP server share. The agents do not use it. | not needed here |
 
-> **The agents and the service must have the same minor version** to
-> work together. An agent stops at any other: the agents 0.10.x take the
-> service 0.10.x. The published agents 0.2.0 take the service 0.8 and 0.9
-> only.
+> **The agents take only a service of their own version:** before 1.0
+> the same minor version, from 1.0 the same major version and a minor
+> version no older than theirs. An agent stops at any other. The agents
+> 0.2.0, released before they joined this repository, take the service
+> 0.8 and 0.9 only.
 
 What the project is for: [the repository's README](https://github.com/benethos-hub/mailbox#readme).
 

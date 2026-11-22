@@ -1,4 +1,4 @@
-# Architecture
+# Architecture of Mailbox Agents
 
 ```
                  mail servers
@@ -6,7 +6,7 @@
                       |
         +----------------------------+
         | mailbox service            |   accounts, change feed,
-        | (not part of this project) |   one user per agent, audit
+        | (packages/mailbox-service) |   one user per agent, audit
         +-------------^--------------+
                       | REST, benethos-mailbox-client
         +-------------+--------------+
@@ -39,6 +39,22 @@ tick (clock)     this mine?       2. model, one call,       keyword
 
              every step is recorded in the agent's state file
 ```
+
+## Layers
+
+Each layer imports only the layers below it.
+`packages/mailbox-agents/tests/test_layers.py` holds the order, a row per
+top-level module.
+
+- `errors` and `records` import nothing of the package. `logbook` and
+  `settings` stand on `errors`.
+- `contract` and `store` stand on these. `sources` and `llm`, the two
+  upstreams, stand on `errors` and `records` alone.
+- `runtime` holds everything below it but `sources`.
+- `agents` see `contract`, `records`, `settings` and `errors`, never
+  `sources`, `llm`, `store` or `runtime`.
+- `evaluation` stands on `runtime` and `store`.
+- `cli` wires everything on top, and `__main__` calls it.
 
 ## Modules
 
@@ -80,34 +96,34 @@ packages/mailbox-agents/src/benethos_mailbox_agents/
                   # Markdown, each with a version
       ...         # modules of its own, such as sorting/groups.py,
                   # inquiries/patterns.py, awaiting_reply/text.py
-packages/mailbox-agents/tests/            # offline: REST and gateway through httpx.MockTransport
-live/             # run by hand, outside testpaths: smoke, sorting and
-                  # invoices against the test account, gold files from
-                  # its labels, common.py what they share: the settings
-                  # from the file, the mailbox, the gateway, sorting over
-                  # the test account, the run of the checks
+packages/mailbox-agents/tests/  # offline: REST and gateway through
+                                # httpx.MockTransport
+live/mailbox-agents/    # run by hand, outside testpaths, against the test
+                        # account of containers/live/mailbox-agents/:
+                        # agents_smoke.py read-only, sorting.py and
+                        # invoices.py, gold.py the gold files from its
+                        # labels, agents_common/ what they share
 containers/
   images/mailbox-agents/Dockerfile
-  production/     # the published image, one service per agent, each
-                  # behind a profile of its name, its example lists
-                  # copies of config/, held equal by packages/mailbox-agents/tests/test_examples.py
-  development/    # built from the checkout, against the test account
-  live/           # a mail server and a mailbox service of their own, with
-                  # a test account of invented mail
-config/           # .env.example and the example lists *.example.json
-                  # versioned, .env local
-docs/             # CONCEPT.md, the overview, and concept/, a file per
-                  # topic and per agent, ARCHITECTURE.md and
-                  # LOGGING.md
-data/             # state files and the gold set, never versioned
-reports/mailbox-agents/          # evaluation reports, numbers only, versioned
-assets/           # brand/: icon.svg and the PNGs build.py renders from it,
-                  # architecture/: the diagram of the README, a page
-                  # and its PNGs
-.github/          # workflows/: CI, CodeQL, freshness, publish, and
-                  # dependabot.yml
-.githooks/        # pre-commit: refuses staged secrets, state files and
-                  # the gold set
+  production/mailbox-agents/   # the published image, one service per
+                        # agent, each behind a profile of its name, its
+                        # example lists copies of config/, held equal by
+                        # packages/mailbox-agents/tests/test_examples.py
+  development/mailbox-agents/  # built from the checkout, against the
+                        # test account of live/mailbox-agents/
+  live/mailbox-agents/  # a mail server, a mailbox service and a model
+                        # gateway of their own, with a test account of
+                        # invented mail
+config/benethos-mailbox-agents/  # .env.example and the example lists
+                        # *.example.json versioned, .env local
+docs/mailbox-agents/    # CONCEPT.md, the overview, and concept/, a file
+                        # per topic and per agent, ARCHITECTURE.md and
+                        # LOGGING.md
+data/                   # state files and the gold set, never versioned
+reports/mailbox-agents/ # evaluation reports, numbers only, versioned
+assets/mailbox-agents/  # brand/icon.svg and architecture/architecture.html,
+                        # the diagram of the README, and the PNGs
+                        # build.py renders from them
 ```
 
 ## Design decisions
@@ -121,7 +137,7 @@ assets/           # brand/: icon.svg and the PNGs build.py renders from it,
   health and its own restart. They share code and nothing else.
 - **The mailbox service and the gateway each sit behind one module.**
   `sources/mailbox.py` and `llm/gateway.py` are the only places that know
-  them. A test in the suite holds the import order, as in a layered project.
+  them. The order of the layers below holds it.
 - **Agents are self-contained.** Prompt, schema and baseline belong to one
   agent and are never shared. What several agents need lives in `runtime/`,
   or in `contract/` and `records/` where an agent needs it.
@@ -135,7 +151,7 @@ assets/           # brand/: icon.svg and the PNGs build.py renders from it,
   process. Calls to SQLite are short and serialized.
 - **A state file can be read by another process.** It runs in WAL mode and
   its schema is part of the concept ([state](concept/state.md)), so a
-  later overview of what every agent did ([roadmap](../ROADMAP.md)) reads the
+  later overview of what every agent did ([roadmap](../roadmap/agents.md)) reads the
   files without the agents knowing of it. Another process of the same
   user, that is: the command line sets the umask to 077, so a state file
   is readable by its owner only (decided 2026-11-17).

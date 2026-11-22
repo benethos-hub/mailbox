@@ -1,4 +1,4 @@
-# The log
+# The log of the agents
 
 What an agent writes to its log, at which level, in which shape, and what
 never goes into a line. The code is `packages/mailbox-agents/src/benethos_mailbox_agents/logbook/`.
@@ -23,7 +23,9 @@ host may drop the log, the state file stays.
 One line on stderr is not the log's. When a command ends with an error
 of this package, the command line writes `benethos-mailbox-agents:` and
 the error's message, and exits with code 2 for a configuration to
-correct or 1 for an upstream that is away
+correct, a contract or a mailbox service of another version, and 1 for
+any other error, such as an upstream that is away or a state file that
+cannot be read
 ([concept/runtime.md](concept/runtime.md), the commands). That line has no time, level or
 source, and it is written also when the log was never set up, as for a
 setting that cannot be read. Its message may hold more than a log line
