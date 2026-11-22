@@ -50,13 +50,18 @@ def _readmes() -> list[Path]:
 
 
 def _documents() -> list[Path]:
-    """The READMEs, the documents in docs/ and its folders, and CLAUDE.md:
-    the files whose links are checked."""
-    return [*_readmes(), *sorted((ROOT / "docs").rglob("*.md")), ROOT / "CLAUDE.md"]
+    """The READMEs, the documents in docs/ and its folders, and CLAUDE.md
+    of the root and of each package: the files whose links are checked."""
+    return [
+        *_readmes(),
+        *sorted((ROOT / "docs").rglob("*.md")),
+        ROOT / "CLAUDE.md",
+        *sorted(PACKAGES.glob("*/CLAUDE.md")),
+    ]
 
 
 def _on_pypi(readme: Path) -> bool:
-    return readme.parent.parent == PACKAGES
+    return readme.name == "README.md" and readme.parent.parent == PACKAGES
 
 
 def _text(markdown: str) -> str:
@@ -169,6 +174,8 @@ def test_the_documents_are_found() -> None:
         "docs/mailbox-service/CONCEPT.md",
         "docs/mailbox-service/concept/security.md",
         "README.md",
+        "packages/mailbox-service/CLAUDE.md",
+        "packages/mailbox-mcp/CLAUDE.md",
     } <= names
 
 
