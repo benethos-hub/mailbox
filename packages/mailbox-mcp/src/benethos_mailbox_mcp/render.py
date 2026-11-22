@@ -51,11 +51,7 @@ DRAFTS_NOTE = (
 
 def body_text(message: Message) -> str:
     """The text body, else the visible text of the HTML body."""
-    if message.text_body:
-        return message.text_body.strip()
-    if message.html_body:
-        return plaintext.from_html(message.html_body)
-    return ""
+    return plaintext.mail_text(message.text_body, message.html_body).strip()
 
 
 def address(value: Address | None) -> str:

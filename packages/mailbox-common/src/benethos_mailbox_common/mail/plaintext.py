@@ -6,8 +6,9 @@ hidden by an attribute or by their inline style. Blocks go on lines of
 their own, list items get a dash, and a link keeps its address after its
 text.
 
-The mail page of the service shows it, and the model of the MCP server
-reads it, so the model reads what a person sees, no more.
+The mail page of the service shows it, the model of the MCP server and
+the agents read it (``mail_text``), so a model reads what a person
+sees, no more.
 """
 
 from __future__ import annotations
@@ -185,3 +186,15 @@ def from_html(html: str) -> str:
     parser.close()
     lines = [" ".join(line.split()) for line in "".join(parser.parts).splitlines()]
     return re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip()
+
+
+def mail_text(text: str | None, html: str | None) -> str:
+    """The text of a mail as a reader sees it: its text part as it is,
+    when that holds more than white space, else the visible text of its
+    HTML part, else nothing. A text part of white space only stands
+    beside the HTML in some mails and hides nothing."""
+    if text and text.strip():
+        return text
+    if html:
+        return from_html(html)
+    return ""

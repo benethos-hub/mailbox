@@ -102,6 +102,10 @@ def test_body_prefers_text() -> None:
     assert render.body_text(mail()) == ""
 
 
+def test_a_text_body_of_white_space_shows_the_html() -> None:
+    assert render.body_text(mail(text_body=" \n ", html_body="<p>x</p>")) == "x"
+
+
 def test_a_long_body_is_cut() -> None:
     text = render.message("acc_1", mail(text_body="x" * 5000), 1000)
     assert "note: body cut to 1000 characters" in text

@@ -52,6 +52,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   lost: an invoice marked in the inbox and moved into a folder `invoices`
   looks in was never filed, and a keyword taken off for `awaiting_reply`
   went unseen.
+- The mail page of the configuration UI and the MCP server show the text
+  of the HTML part of a mail whose text part holds white space only.
+  Before, the page showed nothing and the MCP server an empty body.
+  `benethos-mailbox-common`: `plaintext.mail_text` gives the text of a
+  mail as both read it.
 
 ### Security
 

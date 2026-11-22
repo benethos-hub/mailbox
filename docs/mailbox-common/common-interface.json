@@ -198,6 +198,9 @@
     },
     "hides": {
       "signature": "(style: 'str') -> 'bool'"
+    },
+    "mail_text": {
+      "signature": "(text: 'str | None', html: 'str | None') -> 'str'"
     }
   },
   "benethos_mailbox_common.paths": {

@@ -132,6 +132,17 @@ def test_an_html_only_message_is_shown_as_its_text(
     assert "tracker.example" not in page
 
 
+def test_a_text_body_of_white_space_shows_the_html_as_text(
+    ui: TestClient, account_id: str, services: Services
+) -> None:
+    adapter = services.adapters.get(account_id)
+    adapter.messages[3].text_body = " \r\n "
+    adapter.messages[3].html_body = "<p>Dear <b>you</b></p>"
+    page = ui.get(f"/ui/accounts/{account_id}/mail/m3").text
+    assert "Written as HTML, shown here as text." in page
+    assert "Dear you" in page
+
+
 def test_attachments_and_the_original_are_downloads(
     ui: TestClient, account_id: str, services: Services
 ) -> None:

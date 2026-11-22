@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import pytest
 
-from benethos_mailbox_common.mail.plaintext import from_html
+from benethos_mailbox_common.mail.plaintext import from_html, mail_text
 
 HTML = """
 <html><head><style>p { color: red }</style><title>t</title></head><body>
@@ -112,3 +112,19 @@ def test_a_stray_end_tag_does_not_end_a_hidden_element() -> None:
         "<p>a<b>b</p>c</b>d</p>e"
     )
     assert from_html(html) == "shown\nab\ncde"
+
+
+@pytest.mark.parametrize(
+    ("text", "html", "shown"),
+    [
+        (" Dear Bob,\n", "<p>x</p>", " Dear Bob,\n"),
+        (" \n\t ", '<p>Dear Bob</p><div style="display:none">x</div>', "Dear Bob"),
+        (None, '<p>Dear Bob</p><div style="display:none">x</div>', "Dear Bob"),
+        (None, None, ""),
+        ("", "", ""),
+    ],
+    ids=["text", "white-space-text", "html-only", "none", "both-empty"],
+)
+def test_the_text_of_a_mail(text: str | None, html: str | None, shown: str) -> None:
+    """The text part as it is, else the visible text of the HTML part."""
+    assert mail_text(text, html) == shown
