@@ -135,6 +135,53 @@ def test_a_clock_a_test_moves_is_in_clocks() -> None:
     assert not violations, "a clock outside clocks.py:\n  " + "\n  ".join(violations)
 
 
+# The fixture of each suite's conftest.py that keeps the settings of the
+# machine from a test. None for a package that reads no setting of its
+# own.
+ISOLATION = {
+    "mailbox-service": "no_configuration_from_this_machine",
+    "mailbox-client": "no_settings_from_this_machine",
+    "mailbox-mcp": "no_configuration_from_this_machine",
+    "mailbox-common": None,
+    "mailbox-agents": "no_configuration_from_this_machine",
+}
+
+
+def _autouse_fixtures(conftest: Path) -> set[str]:
+    """The fixtures a conftest.py makes autouse."""
+    if not conftest.exists():
+        return set()
+    found = set()
+    for node in ast.walk(ast.parse(conftest.read_text("utf-8"))):
+        if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+            continue
+        for decorator in node.decorator_list:
+            if isinstance(decorator, ast.Call) and any(
+                k.arg == "autouse"
+                and isinstance(k.value, ast.Constant)
+                and k.value.value is True
+                for k in decorator.keywords
+            ):
+                found.add(node.name)
+    return found
+
+
+def test_every_suite_keeps_the_settings_of_the_machine_out() -> None:
+    """The conftest.py at the top of each package's suite makes the
+    fixture of ``ISOLATION`` autouse, so no setting of the developer's
+    machine reaches a test."""
+    packages = sorted(p.name for p in (ROOT / "packages").iterdir() if p.is_dir())
+    assert sorted(ISOLATION) == packages
+    missing = [
+        f"{package}: {fixture}"
+        for package, fixture in ISOLATION.items()
+        if fixture is not None
+        and fixture
+        not in _autouse_fixtures(ROOT / "packages" / package / "tests" / "conftest.py")
+    ]
+    assert not missing, "no autouse fixture:\n  " + "\n  ".join(missing)
+
+
 def _helpers_imported(path: Path) -> Iterator[Path]:
     """The helpers of the tests a module imports by a relative import."""
     for node in ast.walk(ast.parse(path.read_text("utf-8"))):
