@@ -30,6 +30,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Should the sync worker or the delivery of webhooks end with an error,
+  the service stops, closes its connections, and `serve` ends with
+  exit code 1, so a supervisor starts it anew. Until now it went on
+  answering requests and `/health` without syncing or delivering. A
+  worker switched off with `MAILBOX_SERVICE_SYNC_INTERVAL=0` stops
+  nothing.
 - The service image installs publicsuffixlist 1.1.2.20261122 from the
   lockfile.
 

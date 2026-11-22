@@ -223,8 +223,12 @@ async def test_a_background_loop_that_ends_is_an_error(
         raise RuntimeError("the loop broke")
 
     with pytest.raises(RuntimeError):
-        await _loop(ActivityLog(), WORKER, run)
+        await _loop(ActivityLog(), WORKER, run, None)
     assert "ERROR" in caplog.text and "the worker ended: RuntimeError" in caplog.text
+    # With a way to stop the server, that comes instead of the error.
+    stops: list[bool] = []
+    await _loop(ActivityLog(), WORKER, run, lambda: stops.append(True))
+    assert stops == [True]
 
 
 def test_a_caller_with_a_token_is_named_with_it_and_its_address(

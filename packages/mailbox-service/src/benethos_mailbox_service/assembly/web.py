@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -25,16 +25,18 @@ def create_app(
     services: Services | None = None,
     logbook: LogBook | None = None,
     settings_file: Path | None = None,
+    stop: Callable[[], None] | None = None,
 ) -> FastAPI:
     """The app on ``services``, else on services built from ``settings``
     with ``logbook`` behind the log page. ``settings_file`` is where the
-    settings came from, for the log."""
+    settings came from, for the log. ``stop`` ends the server, should a
+    background loop end."""
     settings = settings or Settings()
     services = services or build_services(settings, logbook=logbook)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-        async with serving(services, settings, settings_file):
+        async with serving(services, settings, settings_file, stop):
             yield
 
     app = FastAPI(

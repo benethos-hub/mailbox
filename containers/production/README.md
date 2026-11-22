@@ -296,7 +296,9 @@ docker compose up -d
 ```
 
 Docker keeps at most 5 log files of 10 MB per container, the oldest
-dropped first. For a log collector, `MAILBOX_SERVICE_LOG_FORMAT=json` in
+dropped first. Should the sync or the delivery of webhooks end with an
+error, the service stops with it, and `restart: unless-stopped` starts
+it anew. For a log collector, `MAILBOX_SERVICE_LOG_FORMAT=json` in
 `service.env` writes each line as one JSON object.
 
 ## Monitoring with Prometheus
