@@ -1,0 +1,13 @@
+# Three alerts on the figures of GET /v1/metrics, for rule_files of
+# Prometheus. What each means: containers/production/README.md,
+# "Monitoring with Prometheus".
+groups:
+  - name: mailbox
+    rules:
+      - alert: MailboxAccountNeedsALook
+        expr: mailbox_accounts_attention > 0
+        for: 15m
+      - alert: MailboxSyncStalls
+        expr: time() - mailbox_worker_last_round_timestamp_seconds > 3 * mailbox_worker_interval_seconds
+      - alert: MailboxWebhookFails
+        expr: mailbox_webhooks_failing > 0

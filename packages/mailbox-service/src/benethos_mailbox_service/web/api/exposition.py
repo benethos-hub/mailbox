@@ -3,12 +3,14 @@
 
 An account is named by its id, its provider and its status, never by
 its address, and no text of an error goes out. A point in time that
-does not exist yet is no series at all, never 0.
+does not exist yet is no series at all, never 0. Beside it the alerts
+on these figures, for Prometheus to load (``alert_rules``).
 """
 
 from __future__ import annotations
 
 from collections.abc import Iterator
+from importlib import resources
 
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from prometheus_client.core import (
@@ -28,6 +30,12 @@ from ...domain.webhooks import WebhookCounts
 CONTENT_TYPE: str = CONTENT_TYPE_LATEST
 
 _ACCOUNT = ["account", "provider"]
+
+
+def alert_rules() -> str:
+    """The alerts on the figures as a file of rules of Prometheus, kept
+    beside this module so a renamed figure fails its test."""
+    return (resources.files(__package__) / "alert_rules.yml").read_text("utf-8")
 
 
 def exposition(figures: Figures, version: str) -> bytes:

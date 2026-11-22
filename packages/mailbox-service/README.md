@@ -369,6 +369,7 @@ holds is written as `***`, should a message or a traceback carry one.
 | `backup verify FILE [--recovery-key]` | checks a backup |
 | `restore FILE [--recovery-key [--replace-master-key]]` | replaces the database with a backup. Stop the service first. |
 | `openapi` | prints the OpenAPI document |
+| `alert-rules` | prints three alerts on the figures of `GET /v1/metrics`, a file for `rule_files` of Prometheus |
 | `paths` | names the settings file, the data folder, the database and where the master key is |
 
 A backup holds accounts, users, rights, token hashes and the encrypted

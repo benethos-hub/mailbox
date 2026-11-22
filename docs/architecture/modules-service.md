@@ -23,6 +23,7 @@ packages/mailbox-service/
                         #   recovery key
       serve.py          # the REST API and the UI, the log first
       openapi.py        # the OpenAPI document on stdout
+      alert_rules.py    # the alerts on the metrics on stdout
       paths.py          # where the settings and the data are
       users.py          # create-admin, set-password, reset-second-factor
       keys.py           # init, import, generate
@@ -83,7 +84,10 @@ packages/mailbox-service/
                         #   mail, users, tokens, status, errors
         errors.py       # the error envelope, the errors routes document
         exposition.py   # the figures of GET /v1/metrics in the text
-                        #   format of Prometheus (prometheus_client)
+                        #   format of Prometheus (prometheus_client),
+                        #   and alert_rules.yml, the alerts on them
+        alert_rules.yml # three alerts for Prometheus, printed by
+                        #   the command alert-rules
         routes/         # one router per resource. One account's mail:
                         #   folders.py, mailbox.py (its messages, in
                         #   two routers that keep the order of the

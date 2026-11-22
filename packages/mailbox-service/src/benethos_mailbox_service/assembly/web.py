@@ -14,6 +14,7 @@ from .. import __version__, web
 from ..config import Settings
 from ..data.logbook import LogBook
 from ..data.secrets import EnvKeyProvider
+from ..web.api import exposition
 from .domain import build_services
 from .lifecycle import serving
 from .services import Services
@@ -62,6 +63,12 @@ def _operation_id(route: APIRoute) -> str:
     and the MCP server maps its tools onto them.
     """
     return route.name
+
+
+def alert_rules() -> str:
+    """The alerts on the figures of ``GET /v1/metrics``, for Prometheus.
+    No key, no settings, nothing stored."""
+    return exposition.alert_rules()
 
 
 def openapi_json() -> str:

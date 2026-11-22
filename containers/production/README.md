@@ -331,31 +331,27 @@ switches it off, then it answers `404`. Without a token with the right
    `caddy.d/metrics.caddy.example` to `caddy.d/metrics.caddy`, then
    `docker compose up -d`. The token protects the figures either way.
 
-Three alerts to start from:
+Three alerts to start from come with the service, for `rule_files` of
+Prometheus. The service prints them, so they match the figures of its
+version:
 
-```yaml
-groups:
-  - name: mailbox
-    rules:
-      - alert: MailboxAccountNeedsALook
-        expr: mailbox_accounts_attention > 0
-        for: 15m
-      - alert: MailboxSyncStalls
-        expr: time() - mailbox_worker_last_round_timestamp_seconds > 3 * mailbox_worker_interval_seconds
-      - alert: MailboxWebhookFails
-        expr: mailbox_webhooks_failing > 0
+```sh
+docker compose exec -T mailbox-service benethos-mailbox-service alert-rules > mailbox.rules.yml
 ```
 
-- An account needs a look when it is not connected, the service cannot
-  use it, or its last pass failed. The 15 minutes let a short outage of
-  a mail server pass.
-- A round goes over the accounts one after another and takes longer
-  with an account that does not answer. Raise the factor 3 where rounds
-  are slow. After a restart the series is missing until the first round
+Prometheus loads the file through `rule_files: [mailbox.rules.yml]`.
+Print it again after an update of the service.
+
+- `MailboxAccountNeedsALook`: an account needs a look when it is not
+  connected, the service cannot use it, or its last pass failed. The 15
+  minutes let a short outage of a mail server pass.
+- `MailboxSyncStalls`: a round goes over the accounts one after
+  another and takes longer with an account that does not answer. Raise
+  the factor 3 in the file where rounds are slow. After a restart the series is missing until the first round
   ends, so the alert stays quiet then. An alert on `absent()` of it
   would fire after every restart.
-- A webhook fails when its last post did. The next post that succeeds
-  clears it.
+- `MailboxWebhookFails`: a webhook fails when its last post did. The
+  next post that succeeds clears it.
 
 The figures live in memory and start again after a restart. Each
 scrape counts against the token's limit like any request and writes a
