@@ -10,10 +10,10 @@
 #   sh containers/live/mailbox-agents/setup.sh
 #
 # Claude is used when its API key is in containers/live/mailbox-agents/secrets/anthropic_api_key
-# or in ANTHROPIC_API_KEY. Without one, or with LIVE_LOCAL=gpu or
-# LIVE_LOCAL=cpu, a local model under llama.cpp is started and the agents
+# or in ANTHROPIC_API_KEY. Without one, or with MAILBOX_LIVE_LOCAL=gpu or
+# MAILBOX_LIVE_LOCAL=cpu, a local model under llama.cpp is started and the agents
 # are set to it: on the graphics card when the host has NVIDIA's CDI spec
-# or LIVE_LOCAL=gpu, else on the CPU. Its model is fetched first.
+# or MAILBOX_LIVE_LOCAL=gpu, else on the CPU. Its model is fetched first.
 #
 # It removes the volumes of an earlier run. What it makes stays in
 # containers/live/mailbox-agents/secrets/, never versioned: the CA, the passwords, the
@@ -21,7 +21,7 @@
 # The Claude API key and the fetched models are kept across runs.
 #
 # The mailbox service is built from this checkout, the version of the
-# agents beside it. LIVE_SERVICE=published with MAILBOX_SERVICE_VERSION
+# agents beside it. MAILBOX_LIVE_SERVICE=published with MAILBOX_VERSION
 # pulls a published release instead (compose.published.yaml).
 
 set -eu
@@ -34,10 +34,10 @@ secrets="$here/secrets"
 # The compose file by the environment, not by -f: a path with a space
 # would split the command where $compose is used unquoted below.
 export COMPOSE_FILE="$here/compose.yaml"
-case "${LIVE_SERVICE:-checkout}" in
+case "${MAILBOX_LIVE_SERVICE:-checkout}" in
     checkout) ;;
     published) COMPOSE_FILE="$COMPOSE_FILE:$here/compose.published.yaml" ;;
-    *) echo "setup: LIVE_SERVICE is checkout or published, not $LIVE_SERVICE" >&2
+    *) echo "setup: MAILBOX_LIVE_SERVICE is checkout or published, not $MAILBOX_LIVE_SERVICE" >&2
        exit 2 ;;
 esac
 compose="docker compose"
@@ -49,7 +49,7 @@ if [ -z "$anthropic_key" ] && [ -f "$secrets/anthropic_api_key" ]; then
     anthropic_key=$(tr -d ' \r\n' < "$secrets/anthropic_api_key")
 fi
 
-backend="${LIVE_LOCAL:-}"
+backend="${MAILBOX_LIVE_LOCAL:-}"
 if [ -z "$anthropic_key" ] && [ -z "$backend" ]; then
     if ls /etc/cdi/nvidia*.yaml /var/run/cdi/nvidia*.yaml >/dev/null 2>&1; then
         backend=gpu
@@ -59,7 +59,7 @@ if [ -z "$anthropic_key" ] && [ -z "$backend" ]; then
 fi
 case "$backend" in
     "" | gpu | cpu) ;;
-    *) say "LIVE_LOCAL is gpu or cpu, not $backend"; exit 2 ;;
+    *) say "MAILBOX_LIVE_LOCAL is gpu or cpu, not $backend"; exit 2 ;;
 esac
 
 say "removing an earlier run"

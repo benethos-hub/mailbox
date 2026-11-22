@@ -39,8 +39,9 @@ x-agent: &agent
     # The test account, its token and the stage shadow, made by setup.sh.
     - path: ../../live/mailbox-agents/secrets/agent.env
       required: true
-    # The gateway, for an agent that asks a model: GATEWAY_URL, GATEWAY_KEY
-    # and MODEL. Not versioned, and not needed by counting.
+    # The gateway, for an agent that asks a model:
+    # MAILBOX_AGENTS_GATEWAY_URL, MAILBOX_AGENTS_GATEWAY_KEY and
+    # MAILBOX_AGENTS_MODEL. Not versioned, and not needed by counting.
     - path: ./.env
       required: false
   environment: &environment
@@ -60,7 +61,7 @@ services:
     volumes:
       - counting-data:/data
     ports:
-      - "127.0.0.1:${COUNTING_METRICS_PORT:-9480}:9464"
+      - "127.0.0.1:${MAILBOX_AGENTS_COUNTING_METRICS_PORT:-9480}:9464"
     healthcheck:
       test: ["CMD", "benethos-mailbox-agents", "health", "--agent", "counting"]
       interval: 30s
@@ -75,7 +76,7 @@ services:
     volumes:
       - invoices-data:/data
     ports:
-      - "127.0.0.1:${INVOICES_METRICS_PORT:-9481}:9464"
+      - "127.0.0.1:${MAILBOX_AGENTS_INVOICES_METRICS_PORT:-9481}:9464"
     healthcheck:
       test: ["CMD", "benethos-mailbox-agents", "health", "--agent", "invoices"]
       interval: 30s
@@ -95,7 +96,7 @@ services:
       - sorting-data:/data
       - ../../live/mailbox-agents/sorting.json:/config/sorting.json:ro
     ports:
-      - "127.0.0.1:${SORTING_METRICS_PORT:-9482}:9464"
+      - "127.0.0.1:${MAILBOX_AGENTS_SORTING_METRICS_PORT:-9482}:9464"
     healthcheck:
       test: ["CMD", "benethos-mailbox-agents", "health", "--agent", "sorting"]
       interval: 30s

@@ -50,7 +50,7 @@ containers/
 | `test-mail-server/` | the adapters against a mail server of our own | Stalwart |
 | `production/mailbox-agents/` | running the agents, without a clone of the repository | from the GitHub container registry, the version named in `.env` |
 | `development/mailbox-agents/` | trying a change of the agents in a container | built from this repository |
-| `live/mailbox-agents/` | the agents' test account | Stalwart, the mailbox service built from this repository (a published release with `LIVE_SERVICE=published`), LiteLLM with its database, llama.cpp |
+| `live/mailbox-agents/` | the agents' test account | Stalwart, the mailbox service built from this repository (a published release with `MAILBOX_LIVE_SERVICE=published`), LiteLLM with its database, llama.cpp |
 
 How to start and run the service and the MCP server, with `docker run`
 or with compose:

@@ -24,8 +24,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   service's version. The list of tested lines and `COMPATIBILITY.md` are
   gone. `status` says whether the service matches.
 - `benethos-mailbox-agents`: the live setup builds the mailbox service
-  from the checkout. `LIVE_SERVICE=published` with
-  `MAILBOX_SERVICE_VERSION` pulls a published release instead.
+  from the checkout. `MAILBOX_LIVE_SERVICE=published` with
+  `MAILBOX_VERSION` pulls a published release instead.
 - `benethos-mailbox-agents`: `report` says when the summary at its end
   counts only part of the messages: a line before it names how many of
   how many it counts and the `--limit` that counts all. Before, the 50
@@ -63,6 +63,14 @@ adheres to [Semantic Versioning](https://semver.org/).
   report to `reports/mailbox-agents/` in the layout of the repository,
   and else to `reports/` in the data folder. Before, it wrote to
   `reports/` below the working directory.
+- The compose files of the agents take the host port of each agent's
+  metrics as `MAILBOX_AGENTS_<AGENT>_METRICS_PORT`, such as
+  `MAILBOX_AGENTS_INVOICES_METRICS_PORT`, in place of
+  `INVOICES_METRICS_PORT`, so every setting of Mailbox starts with
+  `MAILBOX_`.
+- The compose file of the agents takes the version of its image as
+  `MAILBOX_VERSION`, as the service's does, in place of
+  `MAILBOX_AGENTS_VERSION`.
 
 ### Fixed
 
