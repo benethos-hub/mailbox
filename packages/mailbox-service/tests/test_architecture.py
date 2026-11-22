@@ -69,6 +69,7 @@ LIBRARY_HOMES = {
     # And the settings file.
     "pydantic_settings": "benethos_mailbox_common.settings.files",
     "segno": f"{PACKAGE}.web.pages.qr",
+    "prometheus_client": f"{PACKAGE}.web.api.exposition",
     # The server of the command serve.
     "uvicorn": f"{PACKAGE}.cli.serve",
 }
