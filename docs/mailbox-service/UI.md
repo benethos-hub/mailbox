@@ -93,7 +93,7 @@ These rules bind every page.
    sentence case, the record's name in the heading of its detail page.
 7. **Tests**: a page has at least one test in `tests/web/pages/test_ui_*.py` that
    opens it as a user with the right, one that shows it hidden without
-   the right, and one per form. `live/ui.py` walks every workflow of
+   the right, and one per form. `live/mailbox-service/ui.py` walks every workflow of
    section 6 against the test accounts. The browser suite,
    `tests/browser/`, opens every page reached by links from the
    overview in Chrome, Firefox and WebKit and fails on a violation of

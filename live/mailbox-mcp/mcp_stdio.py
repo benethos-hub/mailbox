@@ -1,6 +1,6 @@
 """Live check of the MCP server over stdio, the way Claude starts it.
 
-    uv run python live/mcp_stdio.py
+    uv run python live/mailbox-mcp/mcp_stdio.py
 
 Starts a service of its own on a free port, with a throwaway database and
 master key, adds the first two test accounts of ``live/.env`` through the
@@ -36,17 +36,17 @@ import sys
 from typing import Any
 
 import anyio
-from checks.accounts import accounts, read_env, register_all
-from checks.admin import user_token
-from checks.mcp_links import check_links, first_pdf
-from checks.mcp_rights import check_rights
-from checks.mcp_sending import check_constraints, check_sending
-from checks.mcp_session import READ_TOOLS, mcp_session, text_of
-from checks.mcp_status import check_status
-from checks.mcp_writing import check_writing
-from checks.run import Run
-from checks.service import throwaway_service
+from common.accounts import accounts, read_env, register_all
+from common.admin import user_token
+from common.run import Run
+from common.service import throwaway_service
 from mcp import ClientSession
+from mcp_common.mcp_links import check_links, first_pdf
+from mcp_common.mcp_rights import check_rights
+from mcp_common.mcp_sending import check_constraints, check_sending
+from mcp_common.mcp_session import READ_TOOLS, mcp_session, text_of
+from mcp_common.mcp_status import check_status
+from mcp_common.mcp_writing import check_writing
 
 from benethos_mailbox_client import SyncMailboxClient
 

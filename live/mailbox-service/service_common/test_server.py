@@ -11,12 +11,11 @@ from pathlib import Path
 from typing import Any
 
 import httpx
+from common.accounts import ENV_FILE, read_env
+from common.run import Run, polled
 from fastapi.testclient import TestClient
 
 from benethos_mailbox_client import SyncMailboxClient
-
-from .accounts import ENV_FILE, read_env
-from .run import Run, polled
 
 HOST = "127.0.0.1"
 IMAP_TLS, POP3_TLS, POP3_STARTTLS, SMTP_TLS, JMAP_PORT = (

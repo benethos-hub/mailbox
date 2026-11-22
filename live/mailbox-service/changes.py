@@ -1,7 +1,7 @@
 """Live check of sending, IDLE, changing a message, folders, and ids that
 survive moves.
 
-    uv run python live/changes.py [--keep]
+    uv run python live/mailbox-service/changes.py [--keep]
 
 Writes, on the first two test accounts in ``live/.env`` and nowhere else:
 
@@ -40,8 +40,11 @@ import sys
 from typing import Any
 
 import anyio
-from checks.accounts import accounts, read_env, register
-from checks.changes_stages import (
+from common.accounts import accounts, read_env, register
+from common.mail import feed_types
+from common.run import Run
+from common.service import in_process_service, mailbox_of
+from service_common.changes_stages import (
     batch,
     condstore,
     deleted,
@@ -51,22 +54,21 @@ from checks.changes_stages import (
     moved_back_by_another,
     reply_and_forward,
 )
-from checks.changes_trip import Trip, clean_up, find_by_subject
-from checks.imap import OtherClient
-from checks.mail import feed_types
-from checks.receiver import Receiver
-from checks.run import Run
-from checks.service import in_process_service, mailbox_of
+from service_common.changes_trip import Trip, clean_up, find_by_subject
+from service_common.imap import OtherClient
+from service_common.receiver import Receiver
 
 from benethos_mailbox_service.errors import MailboxServiceError
 
 IDLE_WAIT = 90.0
 TEXT = (
-    "Automatic test mail of live/changes.py in the mailbox-service repository.\n"
+    "Automatic test mail of live/mailbox-service/changes.py in the mailbox-service"
+    " repository.\n"
     "It deletes itself when the check is over.\n"
 )
 KEPT_TEXT = (
-    "Automatic test mail of live/changes.py in the mailbox-service repository.\n"
+    "Automatic test mail of live/mailbox-service/changes.py in the mailbox-service"
+    " repository.\n"
     "It was kept for inspection (--keep): delete it by hand.\n"
 )
 

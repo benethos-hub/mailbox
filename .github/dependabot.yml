@@ -22,7 +22,7 @@ updates:
         update-types: ["minor", "patch"]
         # Always alone, whatever the size of the bump: the suite mocks the
         # REST API and does not see what the SDK changes, so it needs the
-        # live check live/mcp_stdio.py.
+        # live check live/mailbox-mcp/mcp_stdio.py.
         exclude-patterns: ["mcp"]
 
   # The actions the workflows use, each pinned to a commit with its version

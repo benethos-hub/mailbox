@@ -260,7 +260,7 @@ API costs nothing extra in verification. That settles `gmail` over `imap`
 for Google accounts.
 
 **Built 2026-10-09** (`data/providers/gmail/`, docs/mailbox-service/GOOGLE.md), checked
-live against a Gmail account (`live/gmail.py`):
+live against a Gmail account (`live/mailbox-service/gmail.py`):
 
 - The client goes into the settings, `MAILBOX_SERVICE_OAUTH_GOOGLE_CLIENT_ID`
   with its secret, like an own Microsoft app. Without it, Gmail is not
@@ -299,7 +299,7 @@ built in.
   wrapper library would be one more dependency with its own licence to
   check.
 - Stalwart runs in a container as the test mail server, and
-  `live/jmap.py` checks the adapter against it (10).
+  `live/mailbox-service/jmap.py` checks the adapter against it (10).
 
 **Decided 2026-10-06, built:**
 

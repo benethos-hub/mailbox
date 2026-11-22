@@ -1,6 +1,6 @@
 """Live check of the MCP server over streamable HTTP, behind its bearer guard.
 
-    uv run python live/mcp_http.py
+    uv run python live/mailbox-mcp/mcp_http.py
 
 Starts a service of its own with a throwaway database, as mcp_stdio.py
 does, adds the first two test accounts and makes a user that may only read
@@ -21,15 +21,15 @@ import sys
 
 import anyio
 import httpx
-from checks.accounts import accounts, read_env, register_all
-from checks.admin import user_token
-from checks.mcp_session import READ_TOOLS
-from checks.mcp_status import check_status
-from checks.processes import free_port, program, started, stop
-from checks.run import Run
-from checks.service import throwaway_service
+from common.accounts import accounts, read_env, register_all
+from common.admin import user_token
+from common.processes import free_port, program, started, stop
+from common.run import Run
+from common.service import throwaway_service
 from mcp import ClientSession
 from mcp.client.streamable_http import create_mcp_http_client, streamable_http_client
+from mcp_common.mcp_session import READ_TOOLS
+from mcp_common.mcp_status import check_status
 
 
 def start_mcp(

@@ -1,8 +1,9 @@
 """Register the test accounts of ``live/.env`` in a running service, through
 its REST API, and check that they work.
 
-    MAILBOX_SERVICE_TOKEN=... uv run python live/register.py [--url URL] [--count N]
-    uv run python live/register.py --own-service [--count N]
+    MAILBOX_SERVICE_TOKEN=... uv run python live/mailbox-service/register.py
+        [--url URL] [--count N]
+    uv run python live/mailbox-service/register.py --own-service [--count N]
 
 For each of the first ``N`` test accounts (default 2): discovery for its
 address, ``POST /v1/accounts`` with IMAP and the SMTP server discovery
@@ -21,9 +22,9 @@ import argparse
 import os
 import sys
 
-from checks.accounts import accounts, read_env, register
-from checks.run import Run
-from checks.service import throwaway_service
+from common.accounts import accounts, read_env, register
+from common.run import Run
+from common.service import throwaway_service
 
 from benethos_mailbox_client import ApiError, SyncMailboxClient
 

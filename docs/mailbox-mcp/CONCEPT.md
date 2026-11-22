@@ -219,7 +219,7 @@ created: Graph dates each, Gmail and JMAP are asked for those received
 since then. The rest is known already. What was deleted in the gap is
 not reported.
 
-**Without a network hop**, for live checks only: `live/checks/service.py`
+**Without a network hop**, for live checks only: `live/common/service.py`
 runs the service app in the script's own process and carries the
 requests of the Python client into it through Starlette's test client.
 The REST contract stays the same. The MCP server's tests mock the REST

@@ -1,6 +1,6 @@
 """Live smoke run against the test accounts in ``live/.env``.
 
-    uv run python live/smoke.py [--show] [--wrong-password]
+    uv run python live/mailbox-service/smoke.py [--show] [--wrong-password]
 
 Read-only: discovers each address, connects it, lists folders and messages,
 reads one message, its sender check and its source, and checks that reading
@@ -11,8 +11,8 @@ the text.
 ``--wrong-password`` also tries one login with a wrong password, which the
 server may count against the account.
 
-Moves by another client and IDLE are checked by ``live/changes.py``, which
-writes to the test accounts.
+Moves by another client and IDLE are checked by
+``live/mailbox-service/changes.py``, which writes to the test accounts.
 
 Runs in-process with memory storage and a throwaway master key, so nothing
 is stored. Without ``--show`` it prints counts and sizes, never message
@@ -27,9 +27,9 @@ import sys
 from typing import Any
 
 import anyio
-from checks.accounts import accounts, imap_settings, read_env
-from checks.run import Run
-from checks.service import in_process_service
+from common.accounts import accounts, imap_settings, read_env
+from common.run import Run
+from common.service import in_process_service
 from fastapi.testclient import TestClient
 
 from benethos_mailbox_service.errors import MailboxServiceError

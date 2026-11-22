@@ -264,8 +264,11 @@ fix that first, and say so.
   a fake `IMAPClient` at the imapclient boundary. Nothing is patched
   deep inside a library.
 - No test reaches a mail server, and none skips itself without
-  credentials. What needs a server is a script in `live/`. What the
-  scripts share is in `live/checks/`, one module per subject. What a
+  credentials. What needs a server is a script in the folder of its
+  package under `live/`. What the scripts of every package share is in
+  `live/common/`, what those of one package share in a folder beside
+  them, such as `live/mailbox-service/service_common/`, one module per
+  subject. What a
   script does with mail on the way goes through the Python client. What
   it asks of the API itself, a status code or an error code, it asks
   with httpx, or with FastAPI's test client for a service it started in

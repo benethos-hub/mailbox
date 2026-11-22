@@ -12,7 +12,7 @@ Part of the [roadmap](../ROADMAP.md): phase 5, in progress, and phase 5a, done.
   default, a public client without a secret. An app of the deployment's
   own stays the option. A person signs in in the browser (UI) or with a
   code (UI and API). `MAILBOX_SERVICE_PROVIDERS` names the kinds of
-  account a deployment offers. Live-checked in `live/microsoft.py`
+  account a deployment offers. Live-checked in `live/mailbox-service/microsoft.py`
   - decided 2026-09-25: tenant `common` by default, the callback at
     `/ui/oauth/{provider}/callback` (CONCEPT 5.4)
   - decided 2026-10-06: one app per deployment, both ways to sign in
@@ -23,7 +23,7 @@ Part of the [roadmap](../ROADMAP.md): phase 5, in progress, and phase 5a, done.
   browser only, labels as folders with "All Mail", flags, moves,
   trash and delete for good, drafts, sending, the search filter as a
   Gmail query (`docs/mailbox-service/GOOGLE.md`). Checked live against a Gmail account
-  (`live/gmail.py`)
+  (`live/mailbox-service/gmail.py`)
 - **Gmail history in the worker**, built: `history.list` since a
   history id, polled
 - **A second factor for the UI sign-in, TOTP with recovery codes
@@ -32,7 +32,7 @@ Part of the [roadmap](../ROADMAP.md): phase 5, in progress, and phase 5a, done.
   the page Second factor with a QR code, added, renamed and removed by
   the owner, removed by a user with `users.manage` and all at once by
   `users reset-second-factor` on the host, the devices in the API.
-  Live-checked in `live/ui.py`. Decided 2026-10-09: several devices
+  Live-checked in `live/mailbox-service/ui.py`. Decided 2026-10-09: several devices
   per user, a further one and new recovery codes after a code, one set
   of recovery codes, the second factor a frame and TOTP its first
   method
@@ -49,12 +49,12 @@ Part of the [roadmap](../ROADMAP.md): phase 5, in progress, and phase 5a, done.
   the Status page gone into the overview and the Accounts list, actions
   in the row of a list, the user page in tabs with the grant editor in
   lines, and webhooks changeable (`update_webhook`,
-  `renew_webhook_secret`). Live-checked in `live/ui.py`
+  `renew_webhook_secret`). Live-checked in `live/mailbox-service/ui.py`
 - **`jmap` adapter for Fastmail and JMAP servers (5.6)**, decided
   2026-10-06, done: a password or an API token, sending through JMAP,
   changes since a state and push through the event source. Discovery
   asks `/.well-known/jmap` and SRV, JMAP before IMAP. Checked against
-  Stalwart (`live/jmap.py`)
+  Stalwart (`live/mailbox-service/jmap.py`)
 - Configuration UI under `/ui` (1.1), brought forward on 2026-09-24:
   - **frame: server-side session, CSRF, security headers, layout**, done
   - **accounts: connect through autodiscovery or by hand, change, verify,
@@ -67,7 +67,7 @@ Part of the [roadmap](../ROADMAP.md): phase 5, in progress, and phase 5a, done.
   - **the audit of sends**, done
   - **the service log: every line on stderr with time, level and source,
     each secret masked, the newest 1000 on a page for the admin (UI
-    6.5, CONCEPT 7.4)**, done, live-checked in `live/ui.py`
+    6.5, CONCEPT 7.4)**, done, live-checked in `live/mailbox-service/ui.py`
   - **the service log activity by activity ([LOGGING.md](../mailbox-service/LOGGING.md))**,
     done: every line an activity of `domain/activity/catalogue/`, one
     module per area, the MCP server's lines described in LOGGING.md as
@@ -155,7 +155,7 @@ Part of the [roadmap](../ROADMAP.md): phase 5, in progress, and phase 5a, done.
   clients named like its `operationId`, held by a test. Only
   `get_linked_attachment` has none: its URL is the credential. A secret
   shown once comes as a `Secret`. The live checks administer through it
-  (`live/checks/admin.py`, `accounts.py`, `live/register.py`)
+  (`live/common/admin.py`, `accounts.py`, `live/mailbox-service/register.py`)
 - **A fourth package, `mailbox-common` ([REFACTORING.md](../REFACTORING.md)
   15)**, decided 2026-10-09, done: what the service and the MCP server
   both need, held once. The MCP server's log is the service's, with
@@ -187,8 +187,8 @@ Part of the [roadmap](../ROADMAP.md): phase 5, in progress, and phase 5a, done.
 - **The MCP tool `server_status`, always offered (7.5, 8)**, decided
   2026-10-29, done: the server's version, transport, Python, MCP library
   and uptime, with `details` the service as the server last saw it, its
-  version from `/health`. Live-checked in `live/mcp_stdio.py` and
-  `live/mcp_http.py`
+  version from `/health`. Live-checked in `live/mailbox-mcp/mcp_stdio.py` and
+  `live/mailbox-mcp/mcp_http.py`
 - **A catalogue of the MCP server's tools without a service (8)**,
   decided 2026-11-09, done: `MAILBOX_MCP_CATALOGUE=true` lists every
   tool and refuses every call but `server_status`, and `--list-tools`
@@ -201,7 +201,7 @@ Part of the [roadmap](../ROADMAP.md): phase 5, in progress, and phase 5a, done.
   in `settings.authserv_id`. `GET /v1/accounts/{account_id}/server-names`
   and **Look in the mailbox** on the account page list the names of the
   newest ten mails, with how often each is on top. Live-checked in
-  `live/smoke.py`
+  `live/mailbox-service/smoke.py`
 
 Open in this phase, each planned in CONCEPT.md:
 

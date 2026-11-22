@@ -1,5 +1,5 @@
-"""The users of ``live/ui.py``: a role, a user and its token made through
-the pages, the user's own password, and all of it removed again."""
+"""The users of ``live/mailbox-service/ui.py``: a role, a user and its token
+made through the pages, the user's own password, and all of it removed again."""
 
 from __future__ import annotations
 
@@ -7,9 +7,8 @@ import re
 import secrets
 
 import httpx
-
-from .admin import csrf_of, ui_sign_in
-from .run import Run
+from common.admin import csrf_of, ui_sign_in
+from common.run import Run
 
 
 def check_users(run: Run, browser: httpx.Client, url: str, account_id: str) -> None:

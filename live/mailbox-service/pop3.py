@@ -1,7 +1,7 @@
 """Live check of the POP3 adapter against the test mail server of our own
 (containers/test-mail-server/, Stalwart), never against another server.
 
-    uv run python live/pop3.py
+    uv run python live/mailbox-service/pop3.py
 
 Both accounts of the test server connect over POP3, with SMTP for sending,
 in a service in this process. The first sends one mail to the second.
@@ -23,11 +23,13 @@ from collections.abc import Callable
 from typing import Any
 
 import anyio
-from checks import capabilities
-from checks.accounts import read_env
-from checks.run import Run, polled
-from checks.service import in_process_service, mailbox_of
-from checks.test_server import (
+from common.accounts import read_env
+from common.run import Run, polled
+from common.service import in_process_service, mailbox_of
+from fastapi.testclient import TestClient
+from pydantic import SecretStr
+from service_common import capabilities
+from service_common.test_server import (
     HOST,
     POP3_STARTTLS,
     POP3_TLS,
@@ -36,8 +38,6 @@ from checks.test_server import (
     connect,
     test_server_accounts,
 )
-from fastapi.testclient import TestClient
-from pydantic import SecretStr
 
 from benethos_mailbox_client import MessageSummary, SyncMailboxClient
 from benethos_mailbox_service.data.models import ProviderType
@@ -94,7 +94,7 @@ def send_one(
         json={
             "to": [{"email": receiver["email"]}],
             "subject": title,
-            "text": "Sent by live/pop3.py between the test accounts.",
+            "text": "Sent by live/mailbox-service/pop3.py between the test accounts.",
         },
     )
     run.check(
@@ -127,7 +127,7 @@ def check_handling(
     message = client.get(url).json()
     run.check(
         "it reads the whole mail",
-        "live/pop3.py" in (message.get("text_body") or ""),
+        "live/mailbox-service/pop3.py" in (message.get("text_body") or ""),
     )
     sync()
     changes = client.get(f"{base}/changes", params={"since": since}).json()

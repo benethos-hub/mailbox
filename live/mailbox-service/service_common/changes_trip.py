@@ -1,4 +1,4 @@
-"""One run of ``live/changes.py``: the test accounts, the test mail, the
+"""One run of ``live/mailbox-service/changes.py``: the test accounts, the test mail, the
 service and what the stages learn on the way. Finding the test mail, and
 removing it at the end."""
 
@@ -9,14 +9,14 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any
 
+from common.mail import messages_with_subject
+from common.run import Run
 from fastapi.testclient import TestClient
 
 from benethos_mailbox_client import MessageSummary, SyncMailboxClient
 
 from .imap import OtherClient
-from .mail import messages_with_subject
 from .receiver import Receiver
-from .run import Run
 
 # How long the mail may take from SMTP to the inbox.
 DELIVERY_TRIES = 10

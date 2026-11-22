@@ -6,8 +6,7 @@ from __future__ import annotations
 from typing import Any
 
 import httpx
-
-from .run import Run
+from common.run import Run
 
 # Gmail: no keywords, no push, refused recipients come back later as a
 # bounce mail. Gmail names its receiving server itself: the sender check

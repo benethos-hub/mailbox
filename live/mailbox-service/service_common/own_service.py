@@ -17,9 +17,8 @@ from pathlib import Path
 from typing import Any
 
 import httpx
-
-from .admin import Admin, bootstrap
-from .processes import new_master_key, service_env
+from common.admin import Admin, bootstrap
+from common.processes import new_master_key, service_env
 
 PORT = 8080
 URL = f"http://localhost:{PORT}"

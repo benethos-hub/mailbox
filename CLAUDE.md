@@ -83,22 +83,23 @@ done. Update the roadmap in the same commit that finishes an item.
   makes Stalwart in a container anew, with IMAP, POP3, SMTP and JMAP on
   `127.0.0.1:30xxx`, two accounts and a local test CA
   (`containers/test-mail-server/README.md`).
-- Live checks: manual scripts in `live/`, against the test accounts of
+- Live checks: manual scripts in a folder per package under `live/`,
+  against the test accounts of
   `live/.env` (not versioned, template `live/.env.example`). What each
   one reads, sends, changes and deletes: [docs/LIVE.md](docs/LIVE.md).
-  - `uv run python live/smoke.py [--show] [--wrong-password]`:
+  - `uv run python live/mailbox-service/smoke.py [--show] [--wrong-password]`:
     read-only.
-  - `uv run python live/changes.py [--keep]`: mail between the two test
+  - `uv run python live/mailbox-service/changes.py [--keep]`: mail between the two test
     accounts, the change feed and a webhook.
-  - `MAILBOX_SERVICE_TOKEN=... uv run python live/register.py
+  - `MAILBOX_SERVICE_TOKEN=... uv run python live/mailbox-service/register.py
     [--own-service]`: the test accounts in a running service.
-  - `uv run python live/mcp_stdio.py` and `live/mcp_http.py`: the MCP
+  - `uv run python live/mailbox-mcp/mcp_stdio.py` and `live/mailbox-mcp/mcp_http.py`: the MCP
     server over stdio and over streamable HTTP.
-  - `uv run python live/ui.py`: the configuration UI.
-  - `uv run python live/microsoft.py [--connect] [--project] [--large]
+  - `uv run python live/mailbox-service/ui.py`: the configuration UI.
+  - `uv run python live/mailbox-service/microsoft.py [--connect] [--project] [--large]
     [--marks]`: the Microsoft test account.
-  - `uv run python live/gmail.py [--connect]`: the Gmail test account.
-  - `uv run python live/pop3.py`, `live/jmap.py` and `live/imap.py`:
+  - `uv run python live/mailbox-service/gmail.py [--connect]`: the Gmail test account.
+  - `uv run python live/mailbox-service/pop3.py`, `live/mailbox-service/jmap.py` and `live/mailbox-service/imap.py`:
     the test mail server in a container.
 
 ## Project layout
@@ -137,9 +138,13 @@ assets/                   # brand/: the organisation's brand assets,
                           #   package-lock.json for the freshness
                           #   report, nothing installs from it
                           #   (test_vendored.py)
-live/                     # manual checks against the test accounts,
-                          #   what they share in live/checks/, one module
-                          #   per subject
+live/                     # manual checks against the test accounts, a
+                          #   folder per package (mailbox-service/,
+                          #   mailbox-mcp/) with what its scripts share
+                          #   beside them (service_common/, mcp_common/),
+                          #   what all share in common/, one module per
+                          #   subject. pyproject.toml installs common/
+                          #   into the development environment
 containers/               # images/ (one folder per image), and one folder
                           #   per place they run, with a folder per
                           #   package under it: production/ (the

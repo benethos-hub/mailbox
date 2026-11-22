@@ -9,10 +9,9 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
 
+from common.processes import program
 from mcp import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
-
-from .processes import program
 
 # The tools a token that may only read sees.
 READ_TOOLS = {
