@@ -68,6 +68,7 @@ The groups as `domain/rights/permissions.py` holds them:
 | `accounts.manage` | `update_account`, `delete_account`, `verify_account`, `list_server_names` | an account |
 | `accounts.connect` | `discover_account`, `start_device_oauth`, `poll_device_oauth`, `create_account` | the service |
 | `webhooks.manage` | `list_webhooks`, `get_webhook`, `create_webhook`, `update_webhook`, `renew_webhook_secret`, `delete_webhook` | the service |
+| `metrics` | `get_metrics`: the figures of the service for a monitor ([CONCEPT 6.1](concept/api-mail.md#61-accounts)) | the service |
 | `users.read` | `list_users`, `get_user`, `list_tokens`, `get_second_factor`, `list_roles`, `get_role` | the service |
 | `users.manage` | `users.read` and changes to users, tokens, passwords, second factors and roles: eighteen rights | the service |
 | `admin` | everything, and `show_recovery_key` and `read_service_log`, which nothing else gives | the service |
@@ -78,8 +79,8 @@ Two kinds of right, kept in two lists of a user or a role (8.1):
   `allow`, and names the accounts, `*` for every account, also those
   added later.
 - **Rights of the service** act on no account: `accounts.connect`,
-  `users.read`, `users.manage`, `webhooks.manage`, `audit` and `admin`,
-  or single operations of them. They are named in `service`. A name in
+  `users.read`, `users.manage`, `webhooks.manage`, `audit`, `metrics`
+  and `admin`, or single operations of them. They are named in `service`. A name in
   the wrong list answers `400`.
 - `audit` is in both lists. In a grant it reads the sends of the
   accounts, in `service` the audit of administration (8.6).
@@ -223,7 +224,8 @@ A user and a role have two lists.
 ```
 
 - `service` names service rights: `users.read` and `users.manage` (8.2),
-  `webhooks.manage`, `accounts.connect`, `audit` (8.6) and `admin`. No
+  `webhooks.manage`, `accounts.connect`, `audit` (8.6), `metrics` and
+  `admin`. No
   accounts, no constraints.
 - `grants` names account-bound rights. `accounts.manage` holds
   `update_account`, `delete_account`, `verify_account`,

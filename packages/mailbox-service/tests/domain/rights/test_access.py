@@ -64,6 +64,16 @@ def test_a_grant_gives_no_right_of_the_service() -> None:
     assert not a.is_admin()
 
 
+def test_the_metrics_are_a_right_of_the_service() -> None:
+    """Of every account, so no grant reaches them, not even on `*`."""
+    assert access(service=("metrics",)).allows("get_metrics")
+    assert access(service=("get_metrics",)).allows("get_metrics")
+    on_every_account = access(Grant(accounts=["*"], allow=["accounts.read"]))
+    assert not on_every_account.allows("get_metrics")
+    assert not access(service=("metrics",)).allows("get_status", "acc_a")
+    assert admin_access("usr_admin", "admin").allows("get_metrics")
+
+
 def test_a_service_list_gives_no_right_on_accounts() -> None:
     a = access(service=("users.manage", "mail.read"))
     assert a.allows("create_user")

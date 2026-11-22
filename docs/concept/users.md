@@ -106,6 +106,7 @@ with the role
   | `accounts.manage` | `update_account`, `delete_account`, `verify_account`, `list_server_names`, credentials of mail accounts |
   | `accounts.connect` | `discover_account`, `start_device_oauth`, `poll_device_oauth`, `create_account`. Of the service |
   | `webhooks.manage` | `list_webhooks`, `get_webhook`, `create_webhook`, `update_webhook`, `renew_webhook_secret`, `delete_webhook`. Of the service |
+  | `metrics` | `get_metrics`, the figures of the service for a monitor (6.1), of every account. Of the service |
   | `users.read` | `list_users`, `get_user`, `list_tokens`, `get_second_factor`, `list_roles`, `get_role`. Of the service |
   | `users.manage` | those of `users.read`, and `create_user`, `update_user`, `delete_user`, `create_token`, `revoke_token`, `set_password`, `remove_second_factor`, `remove_totp_device`, `remove_passkey`, `create_role`, `replace_role`, `delete_role`. Of the service |
   | `admin` | everything, and `show_recovery_key` (the recovery key in the UI) and `read_service_log` (the log page), [UI.md](../UI.md) 6.5, which nothing else gives. Of the service |

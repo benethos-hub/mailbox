@@ -70,6 +70,15 @@ def test_a_user_keeps_roles_the_editor_cannot_list(
     assert services.users.get_user(ADMIN, target.id).roles == ["hidden"]
 
 
+def test_the_editor_offers_the_metrics(ui: TestClient, services: Services) -> None:
+    assert 'name="service" value="metrics"' in ui.get("/ui/roles/new").text
+    post(ui, "/ui/roles", {"id": "monitor", "grants": "0", "service": "metrics"})
+    role = services.roles.get_role(ADMIN, "monitor")
+    assert role.service == ["metrics"] and role.grants == []
+    page = ui.get("/ui/roles/monitor").text
+    assert 'name="service" value="metrics" checked' in page
+
+
 def test_a_role_name_is_quoted_in_links(ui: TestClient, services: Services) -> None:
     services.roles.create_role(ADMIN, "team a&b", [])
     listed = ui.get("/ui/roles").text

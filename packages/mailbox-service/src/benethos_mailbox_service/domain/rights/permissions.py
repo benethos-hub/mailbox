@@ -123,6 +123,9 @@ GROUPS: dict[str, tuple[str, ...]] = {
         "renew_webhook_secret",
         "delete_webhook",
     ),
+    # The figures of the service for a monitor, of every account: never an
+    # address or the text of an error.
+    "metrics": ("get_metrics",),
 }
 
 # The groups of the service: named in ``service``. Never in a grant,
@@ -133,6 +136,7 @@ SERVICE_GROUPS: tuple[str, ...] = (
     "users.manage",
     "webhooks.manage",
     "audit",
+    "metrics",
 )
 # The groups in both lists: in a grant they give their operations on
 # accounts, in ``service`` those of the service.

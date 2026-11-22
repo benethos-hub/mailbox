@@ -101,7 +101,8 @@ def test_summarize_names_the_larger_group_alone() -> None:
 
 
 @pytest.mark.parametrize(
-    "name", ["admin", "users.manage", "accounts.connect", "create_user"]
+    "name",
+    ["admin", "users.manage", "accounts.connect", "create_user", "metrics"],
 )
 def test_a_grant_refuses_a_right_of_the_service(name: str) -> None:
     with pytest.raises(BadRequestError, match="name it in service"):
