@@ -24,12 +24,32 @@ Base path `/v1`, JSON, bearer authentication on everything except
 | GET | `/ui/oauth/{provider}/callback` | where the provider sends the browser back after the UI's sign-in in a browser: a UI page, not part of the API. The person is signed in to the UI as the user who started. The account is created or signed in again |
 | POST | `/v1/discovery` | autodiscovery from the email address alone: adapter, servers, credential kind, hints (5.8) |
 | GET | `/v1/status` | the sync worker and the accounts the caller may see the status of, as the UI's overview and Accounts list show them. Nothing is asked of a provider |
+| GET | `/v1/metrics` | the same state for Prometheus, in its text format, of every account, without an address or the text of an error. Needs `get_metrics` |
 
 **Decided 2026-10-06, the status at the API:** `get_status` in
 `accounts.read`, for the accounts the caller may list. The worker names
 how many accounts it watches, never which. Webhooks are not part of it:
 `GET /v1/webhooks?failing=true` names the failing ones. The MCP server
 has no tool for it.
+
+**The metrics.** `GET /v1/metrics` hands the same state to Prometheus,
+as figures: the worker, the accounts by status and how many need a
+look, each account with its status, whether it needs a look, whether a
+pass syncs it, its last pass that succeeded and how many did, and the
+webhooks of every user with how many fail. An account is named by its
+id, its provider and its status. Its address, its name and the text of
+an error never go out, nor the URL of a webhook. A point in time that
+does not exist yet, such as the last round before the first, is no
+series, never 0. A deleted account is gone from the next answer. The
+figures live in memory and start again after a restart. The route
+answers `404` until `MAILBOX_SERVICE_METRICS=true`. How to scrape it
+and three alerts: [containers/production/README.md](../../containers/production/README.md).
+
+**Decided 2026-11-22:** a right of its own, `get_metrics`, a right of
+the service, since `GET /v1/status` hands out the address and the text
+of the last error. The path is `/v1/metrics`. The count of failing
+webhooks is part of it. The format comes from `prometheus_client`. The
+MCP server gets no such endpoint.
 
 ### 6.2 Folders
 

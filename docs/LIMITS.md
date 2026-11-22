@@ -162,6 +162,11 @@ seconds, unless the setting is 0: then it asks only at start. Each
 counts against the token like any call. Past the limit
 the model reads "too many requests, try again in N seconds".
 
+**A monitor.** Prometheus asks `GET /v1/metrics` with one token, and
+each scrape counts against it like any call: one every 15 seconds takes
+4 of the 120 a minute. A wrong token of the monitor counts as a failed
+sign-in of its address, like any other.
+
 **Sending.** A send passes the limit on requests, then the grants: their
 recipients and their `max_sends_per_day`. A recipient no grant allows
 answers `403 recipient_not_allowed`. A refused or failed attempt
