@@ -11,7 +11,7 @@ from ..records import MessageRef
 from .rows import _Rows, _text
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class ActionRow:
     ref: MessageRef
     action: str

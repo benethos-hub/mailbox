@@ -11,7 +11,7 @@ from benethos_mailbox_common.values import text as text_values
 from ..activity import Activity
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class Read(Activity):
     name: ClassVar[str] = "read"
 
@@ -25,7 +25,7 @@ class Read(Activity):
         )
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class Expired(Activity):
     """The service no longer knows the stored cursor. The feed starts anew
     and a backfill covers the gap."""
@@ -37,7 +37,7 @@ class Expired(Activity):
         return "found its place in the feed expired and starts anew"
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class Backfilled(Activity):
     name: ClassVar[str] = "backfilled"
 

@@ -20,26 +20,17 @@ from types import TracebackType
 from typing import IO, TypeVar
 
 from ..errors import ConfigError, StateFileError
-from .actions import ActionRow, _Actions
+from .actions import _Actions
 from .calls import _Calls
 from .items import _Items
-from .messages import STATES, MessageRow, State, _Messages
+from .messages import _Messages
 from .migrations import MIGRATIONS, SCHEMA_VERSION
 from .rows import _sqlite, _text, _time
 from .steps import _Steps
 
 T = TypeVar("T")
 
-__all__ = [
-    "STATES",
-    "State",
-    "Migrated",
-    "ActionRow",
-    "MessageRow",
-    "Store",
-    "earlier_file",
-    "path_for",
-]
+__all__ = ["Migrated", "Store", "earlier_file", "path_for"]
 
 
 def path_for(data_dir: Path, agent: str) -> Path:
@@ -63,7 +54,7 @@ def earlier_file(data_dir: Path, agent: str) -> Path | None:
     return None if found.resolve() == now.resolve() else found
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Migrated:
     """What opening a state file did to its schema, for the caller to log:
     from ``before`` to ``after``, 0 for a new file, with the notes of the

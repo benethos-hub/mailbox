@@ -384,7 +384,7 @@ def test_a_wrong_list_stops_the_start(tmp_path: Path) -> None:
 
 
 def test_summarize_per_group_candidates_and_alike(tmp_path: Path) -> None:
-    from benethos_mailbox_agents.contract import Shown
+    from benethos_mailbox_agents.contract import Shown, ShownAction
     from benethos_mailbox_agents.records import Decision
 
     def group(name: str, **details: str) -> Decision:
@@ -398,8 +398,11 @@ def test_summarize_per_group_candidates_and_alike(tmp_path: Path) -> None:
         source="baseline",
         details={"match": "ambiguous", "groups": "TelcoA,TelcoB"},
     )
-    moved = ((Action.CREATE_FOLDER, True), (Action.MOVE_TO_FOLDER, True))
-    recorded = ((Action.MOVE_TO_FOLDER, False),)
+    moved = (
+        ShownAction(Action.CREATE_FOLDER, True),
+        ShownAction(Action.MOVE_TO_FOLDER, True),
+    )
+    recorded = (ShownAction(Action.MOVE_TO_FOLDER, False),)
 
     lines = agent(tmp_path).summarize(
         [

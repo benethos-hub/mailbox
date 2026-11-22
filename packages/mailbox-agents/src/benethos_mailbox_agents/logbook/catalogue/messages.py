@@ -10,7 +10,7 @@ from typing import ClassVar
 from ..activity import Activity, Failure
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class StateSet(Activity):
     name: ClassVar[str] = "state_set"
 
@@ -21,7 +21,7 @@ class StateSet(Activity):
         return f"set message {self.message_id} to {self.state}"
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class StepDone(Activity):
     name: ClassVar[str] = "step_done"
     level: ClassVar[int] = logging.DEBUG
@@ -34,7 +34,7 @@ class StepDone(Activity):
         return f"finished step {self.step} of message {self.message_id} in {self.ms}ms"
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class StepFailed(Failure):
     name: ClassVar[str] = "step_failed"
 
@@ -45,7 +45,7 @@ class StepFailed(Failure):
         return f"failed step {self.step} of message {self.message_id}"
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class AnswerRefused(Activity):
     """The model's answer failed the schema, or the gateway refused the
     request. ``reason`` is ``schema`` or ``request``."""
@@ -63,7 +63,7 @@ class AnswerRefused(Activity):
         return self.reason
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class QuoteMissing(Activity):
     """The model gave a quote for ``field`` that is not in the mail."""
 

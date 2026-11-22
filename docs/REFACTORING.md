@@ -300,7 +300,7 @@ Decided 2026-10-10.
   the agents' `Settings` extend it. A settings file does not change the environment
   of the process.
 - **The boundaries.** `tests/test_boundaries.py`, at the root of the
-  repository, checks every package but mailbox-agents: what a package hands on is a
+  repository, checks all five packages: what a package hands on is a
   named record, frozen and with slots, not a tuple or a dict. Each
   exception stands in `ALLOWED` with its reason, and an entry that no
   longer matches fails. The tuples of the domain became `IssuedToken`,

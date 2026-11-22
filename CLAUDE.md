@@ -213,7 +213,7 @@ containers/               # images/ (one folder per image), and one folder
 tests/                    # what the repository holds, across the five
                           #   packages
   test_boundaries.py      # records, not tuples, where a package hands
-                          #   values on, in all but mailbox-agents
+                          #   values on, in all five
   test_api_names.py       # names the MCP server takes from the API,
                           #   held to docs/mailbox-service/openapi.json
   test_interfaces.py      # docs/mailbox-client/client-interface.json and

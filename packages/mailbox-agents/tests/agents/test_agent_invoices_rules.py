@@ -260,15 +260,21 @@ async def test_the_report_names_invoices_marked_and_not_moved(
 
 
 def test_summarize_counts_invoices_left_where_they_lay() -> None:
-    from benethos_mailbox_agents.contract import Shown
+    from benethos_mailbox_agents.contract import Shown, ShownAction
     from benethos_mailbox_agents.records import Decision
 
     invoice = Decision(label="invoice", source="model")
     refused = invoice.model_copy(update={"refused": "evidence"})
     other = Decision(label="other", source="model")
-    marked = ((Action.ADD_KEYWORD, True),)
-    moved = ((Action.ADD_KEYWORD, True), (Action.MOVE_TO_FOLDER, True))
-    recorded = ((Action.ADD_KEYWORD, False), (Action.MOVE_TO_FOLDER, False))
+    marked = (ShownAction(Action.ADD_KEYWORD, True),)
+    moved = (
+        ShownAction(Action.ADD_KEYWORD, True),
+        ShownAction(Action.MOVE_TO_FOLDER, True),
+    )
+    recorded = (
+        ShownAction(Action.ADD_KEYWORD, False),
+        ShownAction(Action.MOVE_TO_FOLDER, False),
+    )
 
     lines = agent().summarize(
         [

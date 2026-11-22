@@ -55,7 +55,7 @@ def _version(groups: Groups) -> str:
 def _fate(item: Shown) -> str:
     """What became of a message of a group: moved, held, recorded, or not
     moved, when its move was refused or not asked for."""
-    moves = [done for action, done in item.actions if action is Action.MOVE_TO_FOLDER]
+    moves = [a.done for a in item.actions if a.action is Action.MOVE_TO_FOLDER]
     if not moves:
         return "not moved"
     if any(moves):

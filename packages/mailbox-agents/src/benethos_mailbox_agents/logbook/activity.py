@@ -20,7 +20,7 @@ from .output import PACKAGE
 __all__ = ["Activity", "Failure", "describe", "record"]
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class Activity:
     """One activity. ``name`` is set by each class and stays when the class
     is renamed: an operator's filters know it (docs/mailbox-agents/LOGGING.md section
@@ -39,7 +39,9 @@ class Activity:
     agent: str
 
     def __init_subclass__(cls, **kwargs: object) -> None:
-        super().__init_subclass__(**kwargs)
+        # Named, not super() alone: a slotted dataclass is made anew, and
+        # before Python 3.14 super() would still name the class before it.
+        super(Activity, cls).__init_subclass__(**kwargs)
         cls.area = cls.__module__.rpartition(".")[2]
 
     @classmethod
@@ -62,7 +64,7 @@ class Activity:
         return f"{text}: {why}" if why else text
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class Failure(Activity):
     """An activity that failed, with its error, at ``WARNING`` unless the
     class says otherwise. The line names the error by ``describe``."""

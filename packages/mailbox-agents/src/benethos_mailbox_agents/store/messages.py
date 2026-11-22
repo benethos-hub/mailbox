@@ -14,7 +14,7 @@ State = Literal["pending", "skipped", "decided", "done", "failed"]
 STATES: tuple[State, ...] = get_args(State)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class MessageRow:
     ref: MessageRef
     state: str
