@@ -49,8 +49,8 @@ each agent.
   read-only.
 - An evaluation run is manual too, against a gold set under `data/`, or the one
   `live/mailbox-agents/gold.py` writes for the test account. Its
-  report goes into `reports/mailbox-agents/`, as
-  `--reports reports/mailbox-agents`, and holds numbers only.
+  report goes into `reports/mailbox-agents/`, where `eval` puts it
+  without `--reports`, and holds numbers only.
 
 ## Conventions
 

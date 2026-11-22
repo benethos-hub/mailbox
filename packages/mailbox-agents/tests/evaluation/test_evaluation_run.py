@@ -192,9 +192,33 @@ def test_eval_on_the_command_line(
 
     out = capsys.readouterr().out
     assert "accuracy: model 50.0 %, rules 50.0 %" in out
-    written = list((tmp_path / "reports" / "counting").glob("*.json"))
+    written = list(
+        (tmp_path / "reports" / "mailbox-agents" / "counting").glob("*.json")
+    )
     assert len(written) == 1
     assert "no-prompt-no-model" in written[0].name
+
+
+def test_eval_outside_the_repository_reports_beside_the_state_files(
+    service: FakeService,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    configure(monkeypatch)
+    (tmp_path / "config" / "benethos-mailbox-agents").rmdir()
+    data = tmp_path / "state"
+    monkeypatch.setenv("MAILBOX_AGENTS_DATA_DIR", str(data))
+    service.add(wire_message("m1"), change=None)
+    path = tmp_path / "gold.jsonl"
+    path.write_text(
+        '{"account_id": "acc1", "message_id": "m1", "label": "counted"}\n',
+        encoding="utf-8",
+    )
+
+    assert main(["eval", "--agent", "counting", "--gold", str(path)]) == 0
+
+    assert len(list((data / "reports" / "counting").glob("*.json"))) == 1
+    assert not (tmp_path / "reports").exists()
 
 
 def test_eval_against_another_line_is_an_error_to_correct(

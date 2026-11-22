@@ -35,9 +35,9 @@ agent runs over it and the scoring counts where it agrees.
   kept (decided 2026-11-20).
 - **A report is versioned.** Each run writes one file,
   `<agent>/<date>-v<agent version>-<prompt version>-<model alias>.json`
-  below the folder `--reports` names, `reports/` by default. The
-  repository keeps them in `reports/mailbox-agents/`, so a run for it
-  names `--reports reports/mailbox-agents`. The file names the agent version, prompt version, model alias, the models the
+  below the folder `--reports` names. Without it, the report goes to
+  `reports/mailbox-agents/` in the layout of the repository, where it is
+  kept, and else to `reports/` in the data folder. The file names the agent version, prompt version, model alias, the models the
   gateway reported and the date, with numbers only: no id, no label of a
   single message and no content of any mail. A change to a prompt or a
   model is merged with its report.

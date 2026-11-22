@@ -59,6 +59,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   at `data/<agent>.db` stops a command that writes it, which names both
   places: move it, or set `MAILBOX_AGENTS_DATA_DIR` to its folder.
   Containers set the folder and are not touched.
+- `benethos-mailbox-agents`: `eval` without `--reports` writes its
+  report to `reports/mailbox-agents/` in the layout of the repository,
+  and else to `reports/` in the data folder. Before, it wrote to
+  `reports/` below the working directory.
 
 ### Fixed
 

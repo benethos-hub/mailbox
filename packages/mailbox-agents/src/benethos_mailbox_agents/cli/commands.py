@@ -295,8 +295,17 @@ def evaluate(args: argparse.Namespace, settings: Settings) -> int:
     built = asyncio.run(_evaluate(cls, items, settings))
     for line in render(built):
         print(line)
-    print(f"report: {write(built, args.reports)}")
+    print(f"report: {write(built, args.reports or _reports(args, settings))}")
     return 0
+
+
+def _reports(args: argparse.Namespace, settings: Settings) -> Path:
+    """Where a report goes when --reports names no folder: the
+    repository's folder for them in its layout, else beside the state
+    files."""
+    if folders(args.env_file).origin == "working directory":
+        return Path("reports") / "mailbox-agents"
+    return settings.data_dir / "reports"
 
 
 async def _evaluate(
