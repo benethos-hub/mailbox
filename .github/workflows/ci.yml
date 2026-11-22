@@ -134,7 +134,7 @@ jobs:
         run: uv run --frozen --group browser playwright install --with-deps chromium firefox webkit
 
       - name: The UI in the three browsers
-        run: uv run --frozen --group browser pytest packages/mailbox-service/tests/browser -p no:cacheprovider
+        run: uv run --frozen --group browser pytest packages/mailbox-service/tests/browser -p no:cacheprovider -n 0
 
   # The other side of fresh-install: the lowest versions pyproject.toml
   # allows, on the oldest supported Python, without the lockfile. An
@@ -157,6 +157,7 @@ jobs:
       requirements: |
         pytest>=9.1.1
         pytest-asyncio>=1.4
+        pytest-xdist>=3.8.0
       audit: true
 
   # Alone, the service may get older versions than beside the MCP server
@@ -171,6 +172,7 @@ jobs:
       requirements: |
         pytest>=9.1.1
         pytest-asyncio>=1.4
+        pytest-xdist>=3.8.0
       pytest-args: packages/mailbox-service/tests
       audit: true
 
@@ -188,6 +190,7 @@ jobs:
       requirements: |
         pytest>=9.1.1
         pytest-asyncio>=1.4
+        pytest-xdist>=3.8.0
       pytest-args: packages/mailbox-mcp/tests
       audit: true
 
@@ -200,6 +203,7 @@ jobs:
       requirements: |
         pytest>=9.1.1
         pytest-asyncio>=1.4
+        pytest-xdist>=3.8.0
       pytest-args: packages/mailbox-client/tests
       audit: true
 
@@ -209,7 +213,9 @@ jobs:
     with:
       python-version: "3.11"
       editable: packages/mailbox-common[all]
-      requirements: pytest>=9.1.1
+      requirements: |
+        pytest>=9.1.1
+        pytest-xdist>=3.8.0
       pytest-args: packages/mailbox-common/tests
       audit: true
 
@@ -220,7 +226,9 @@ jobs:
     with:
       python-version: "3.11"
       editable: packages/mailbox-common
-      requirements: pytest>=9.1.1
+      requirements: |
+        pytest>=9.1.1
+        pytest-xdist>=3.8.0
       pytest-args: >-
         --ignore=packages/mailbox-common/tests/paths
         --ignore=packages/mailbox-common/tests/settings
