@@ -148,7 +148,10 @@ some folders, such as the invoices, and end after a week.
   the status of accounts and sync, the audit of administration, the
   service log.
 - **Operation:** encrypted backup and restore, container images, compose
-  files for operation with HTTPS through Caddy and MCP server instances.
+  files for operation with HTTPS through Caddy and MCP server instances,
+  and metrics for Prometheus at `GET /v1/metrics`, for a token with
+  their right:
+  [monitoring](containers/production/README.md#monitoring-with-prometheus).
 
 What comes next, and in which order, is in
 [docs/ROADMAP.md](docs/ROADMAP.md).

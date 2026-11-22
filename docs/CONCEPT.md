@@ -48,7 +48,7 @@ and the open questions.
 |---|---|
 | Python | 3.11–3.15 |
 | Packaging | uv workspace with four distributions (service, client, MCP server, and what the service and the MCP server share), hatchling, `src/` layout |
-| Web | FastAPI, uvicorn, pydantic v2, pydantic-settings |
+| Web | FastAPI, uvicorn, pydantic v2, pydantic-settings, prometheus_client (metrics) |
 | UI | Jinja2, htmx and Bootstrap Icons (kept under `static/`), segno (QR codes), fido2 (passkeys) |
 | Storage | SQLite (stdlib `sqlite3`) |
 | Crypto | `cryptography` (AES-256-GCM), `keyring` |

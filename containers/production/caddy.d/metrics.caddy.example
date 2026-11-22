@@ -1,0 +1,10 @@
+# Keeps the metrics of the service from the outside: a request for
+# https://<MAILBOX_DOMAIN>/v1/metrics answers 404 at Caddy. Use it when
+# Prometheus reaches the service directly, e.g. on 127.0.0.1:8080 of
+# the host. Copy to metrics.caddy in this folder. Caddy reads every
+# *.caddy here.
+
+@metrics path /v1/metrics
+handle @metrics {
+	respond 404
+}

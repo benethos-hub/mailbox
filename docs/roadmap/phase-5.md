@@ -98,6 +98,11 @@ Part of the [roadmap](../ROADMAP.md): phase 5, in progress, and phase 5a, done.
   the same query names, a user's sign-in to the UI in `UserInfo`,
   keywords in the UI, and `GET /v1/status` with `get_status` in
   `accounts.read`
+- **Metrics for Prometheus (6.1)**, decided 2026-11-22, done:
+  `GET /v1/metrics` with `get_metrics`, a right of the service in the
+  group `metrics`, on unless `MAILBOX_SERVICE_METRICS=false`. An account
+  by its id, provider and status, never its address or the text of an
+  error. Not in the MCP server
 - **Paging for the lists that answered everything at once (6.6)**,
   decided 2026-10-06, done: accounts and users, in the API and the UI,
   with one generic pager for lists held whole. Roles, tokens, webhooks

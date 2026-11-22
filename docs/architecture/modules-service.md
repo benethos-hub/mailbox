@@ -82,6 +82,8 @@ packages/mailbox-service/
                         #   one module per subject: accounts, oauth,
                         #   mail, users, tokens, status, errors
         errors.py       # the error envelope, the errors routes document
+        exposition.py   # the figures of GET /v1/metrics in the text
+                        #   format of Prometheus (prometheus_client)
         routes/         # one router per resource. One account's mail:
                         #   folders.py, mailbox.py (its messages, in
                         #   two routers that keep the order of the

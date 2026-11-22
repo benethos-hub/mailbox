@@ -145,6 +145,12 @@ class AccountService:
             and (status is None or account.status is status)
         ]
 
+    def every(self, access: Access) -> builtins.list[Account]:
+        """Every account, for the figures of the service, whatever the
+        caller's grants reach."""
+        access.require("get_metrics")
+        return self._repository.list()
+
     def page(
         self,
         access: Access,

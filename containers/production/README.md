@@ -17,6 +17,7 @@ this folder is enough.
 - [HTTPS](#https)
 - [Settings](#settings)
 - [Operation](#operation)
+- [Monitoring with Prometheus](#monitoring-with-prometheus)
 
 | File | What it is |
 |---|---|
@@ -27,6 +28,7 @@ this folder is enough.
 | `mcp.yaml` | the template of an MCP server instance |
 | `compose.override.yaml.example` | template of `compose.override.yaml`: MCP server instances, profile `mcp` |
 | `caddy.d/mcp.caddy.example` | template of a route in Caddy to an instance |
+| `caddy.d/metrics.caddy.example` | keeps `/v1/metrics` from the outside at Caddy |
 | `setup.sh` | the first start in one run |
 | `secrets/` | made at the first start, never versioned: `master_key`, `mcp/` the tokens of the instances, `tls/` a certificate of your own |
 
@@ -295,3 +297,67 @@ docker compose up -d
 
 Docker keeps at most 5 log files of 10 MB per container, the oldest
 dropped first.
+
+## Monitoring with Prometheus
+
+The service hands its figures to Prometheus at `GET /v1/metrics`: the
+sync worker, every account by its id, provider and status, and the
+webhooks. Never an address or the text of an error. What each figure
+means: [CONCEPT 6.1](../../docs/concept/api-mail.md#61-accounts).
+
+The route is on unless `MAILBOX_SERVICE_METRICS=false` in `service.env`
+switches it off, then it answers `404`. Without a token with the right
+`metrics` it answers nothing either way.
+
+1. In the UI, a role `monitor` that holds only the right of the service
+   `metrics`, a user `monitor` with that role, and a token on that
+   user's page. The token reads the figures and nothing else.
+2. The token into a file Prometheus reads, readable by it alone, and the
+   scrape. `compose.yaml` publishes the service on `127.0.0.1:8080` of
+   the host, so Prometheus on the same host asks it past Caddy:
+
+   ```yaml
+   scrape_configs:
+     - job_name: mailbox
+       metrics_path: /v1/metrics
+       authorization:
+         credentials_file: /etc/prometheus/mailbox.token
+       static_configs:
+         - targets: ["127.0.0.1:8080"]
+   ```
+
+3. With the profile `https`, keep the path from the outside:
+   `caddy.d/metrics.caddy.example` to `caddy.d/metrics.caddy`, then
+   `docker compose up -d`. The token protects the figures either way.
+
+Three alerts to start from:
+
+```yaml
+groups:
+  - name: mailbox
+    rules:
+      - alert: MailboxAccountNeedsALook
+        expr: mailbox_accounts_attention > 0
+        for: 15m
+      - alert: MailboxSyncStalls
+        expr: time() - mailbox_worker_last_round_timestamp_seconds > 3 * mailbox_worker_interval_seconds
+      - alert: MailboxWebhookFails
+        expr: mailbox_webhooks_failing > 0
+```
+
+- An account needs a look when it is not connected, the service cannot
+  use it, or its last pass failed. The 15 minutes let a short outage of
+  a mail server pass.
+- A round goes over the accounts one after another and takes longer
+  with an account that does not answer. Raise the factor 3 where rounds
+  are slow. After a restart the series is missing until the first round
+  ends, so the alert stays quiet then. An alert on `absent()` of it
+  would fire after every restart.
+- A webhook fails when its last post did. The next post that succeeds
+  clears it.
+
+The figures live in memory and start again after a restart. Each
+scrape counts against the token's limit like any request and writes a
+line to the access log. A wrong token counts as a failed sign-in of its
+address: ten in 15 minutes lock the address for 15 minutes
+([LIMITS.md](../../docs/LIMITS.md)).

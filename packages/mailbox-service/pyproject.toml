@@ -101,6 +101,9 @@ dependencies = [
     # Passkeys (WebAuthn), a method of the second factor
     # (data/secrets/passkeys.py).
     "fido2>=2.2.1",
+    # The metrics of `GET /v1/metrics` in the text format of Prometheus
+    # (web/api/exposition.py).
+    "prometheus-client>=0.26",
 ]
 
 [project.urls]

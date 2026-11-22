@@ -13,7 +13,8 @@ RECIPIENT_PATTERN = r"^(\*|\*@[^\s@*]+|[^\s@*]+@[^\s@*]+)$"
 # Rights of the service, in the ``service`` list of a user or a role.
 SERVICE_DESCRIPTION = (
     "Rights of the service, bound to no account: `accounts.connect`, "
-    "`users.read`, `users.manage`, `webhooks.manage`, `audit`, `admin`, or "
+    "`users.read`, `users.manage`, `webhooks.manage`, `audit`, `metrics`, "
+    "`admin`, or "
     "single operations of them. `audit` here reads the audit of "
     "administration, in a grant the sends of accounts. `admin` is every right."
 )

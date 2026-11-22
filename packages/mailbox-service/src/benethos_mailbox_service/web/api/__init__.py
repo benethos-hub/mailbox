@@ -13,7 +13,7 @@ from fastapi.routing import APIRoute
 
 from ...domain.rights import permission_of
 from .deps import authenticate
-from .errors import ACCOUNT_ERRORS, CALLER_ERRORS, RECORD_ERRORS
+from .errors import ACCOUNT_ERRORS, CALLER_ERRORS, RECORD_ERRORS, SWITCHED_ERRORS
 from .routes import (
     accounts,
     audit,
@@ -25,6 +25,7 @@ from .routes import (
     links,
     mailbox,
     messages,
+    metrics,
     oauth,
     sending,
     status,
@@ -63,6 +64,7 @@ def install(app: FastAPI) -> None:
         (webhooks.router, RECORD_ERRORS),
         (audit.router, RECORD_ERRORS),
         (status.router, CALLER_ERRORS),
+        (metrics.router, SWITCHED_ERRORS),
     ):
         for route in router.routes:
             if isinstance(route, APIRoute):

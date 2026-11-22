@@ -10739,6 +10739,110 @@
         "x-permission": "accounts.read"
       }
     },
+    "/v1/metrics": {
+      "get": {
+        "tags": [
+          "status"
+        ],
+        "summary": "Get Metrics",
+        "description": "The sync worker, every account and the webhooks as figures for\nPrometheus, in its text format. Needs the right `get_metrics` of the\nservice, and shows every account, whatever the caller's grants reach.\nAn account is named by its id, its provider and its status, never by\nits address, and no text of an error goes out. Nothing is asked of a\nprovider. Kept in memory: the figures start again after a restart.\nAnswers `404` while `MAILBOX_SERVICE_METRICS` is off.",
+        "operationId": "get_metrics",
+        "responses": {
+          "200": {
+            "description": "Prometheus text format",
+            "content": {
+              "text/plain": {}
+            }
+          },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-permission": "metrics"
+      }
+    },
     "/v1/links/{secret}": {
       "get": {
         "tags": [
@@ -13693,7 +13797,7 @@
             },
             "type": "array",
             "title": "Service",
-            "description": "Rights of the service, bound to no account: `accounts.connect`, `users.read`, `users.manage`, `webhooks.manage`, `audit`, `admin`, or single operations of them. `audit` here reads the audit of administration, in a grant the sends of accounts. `admin` is every right."
+            "description": "Rights of the service, bound to no account: `accounts.connect`, `users.read`, `users.manage`, `webhooks.manage`, `audit`, `metrics`, `admin`, or single operations of them. `audit` here reads the audit of administration, in a grant the sends of accounts. `admin` is every right."
           },
           "grants": {
             "items": {
@@ -13722,7 +13826,7 @@
             },
             "type": "array",
             "title": "Service",
-            "description": "Rights of the service, bound to no account: `accounts.connect`, `users.read`, `users.manage`, `webhooks.manage`, `audit`, `admin`, or single operations of them. `audit` here reads the audit of administration, in a grant the sends of accounts. `admin` is every right."
+            "description": "Rights of the service, bound to no account: `accounts.connect`, `users.read`, `users.manage`, `webhooks.manage`, `audit`, `metrics`, `admin`, or single operations of them. `audit` here reads the audit of administration, in a grant the sends of accounts. `admin` is every right."
           },
           "grants": {
             "items": {
@@ -13746,7 +13850,7 @@
             },
             "type": "array",
             "title": "Service",
-            "description": "Rights of the service, bound to no account: `accounts.connect`, `users.read`, `users.manage`, `webhooks.manage`, `audit`, `admin`, or single operations of them. `audit` here reads the audit of administration, in a grant the sends of accounts. `admin` is every right."
+            "description": "Rights of the service, bound to no account: `accounts.connect`, `users.read`, `users.manage`, `webhooks.manage`, `audit`, `metrics`, `admin`, or single operations of them. `audit` here reads the audit of administration, in a grant the sends of accounts. `admin` is every right."
           },
           "grants": {
             "items": {
@@ -14585,7 +14689,7 @@
             },
             "type": "array",
             "title": "Service",
-            "description": "Rights of the service, bound to no account: `accounts.connect`, `users.read`, `users.manage`, `webhooks.manage`, `audit`, `admin`, or single operations of them. `audit` here reads the audit of administration, in a grant the sends of accounts. `admin` is every right."
+            "description": "Rights of the service, bound to no account: `accounts.connect`, `users.read`, `users.manage`, `webhooks.manage`, `audit`, `metrics`, `admin`, or single operations of them. `audit` here reads the audit of administration, in a grant the sends of accounts. `admin` is every right."
           },
           "grants": {
             "items": {
@@ -14630,7 +14734,7 @@
             },
             "type": "array",
             "title": "Service",
-            "description": "Rights of the service, bound to no account: `accounts.connect`, `users.read`, `users.manage`, `webhooks.manage`, `audit`, `admin`, or single operations of them. `audit` here reads the audit of administration, in a grant the sends of accounts. `admin` is every right."
+            "description": "Rights of the service, bound to no account: `accounts.connect`, `users.read`, `users.manage`, `webhooks.manage`, `audit`, `metrics`, `admin`, or single operations of them. `audit` here reads the audit of administration, in a grant the sends of accounts. `admin` is every right."
           },
           "grants": {
             "items": {
@@ -14731,7 +14835,7 @@
               }
             ],
             "title": "Service",
-            "description": "Rights of the service, bound to no account: `accounts.connect`, `users.read`, `users.manage`, `webhooks.manage`, `audit`, `admin`, or single operations of them. `audit` here reads the audit of administration, in a grant the sends of accounts. `admin` is every right."
+            "description": "Rights of the service, bound to no account: `accounts.connect`, `users.read`, `users.manage`, `webhooks.manage`, `audit`, `metrics`, `admin`, or single operations of them. `audit` here reads the audit of administration, in a grant the sends of accounts. `admin` is every right."
           },
           "grants": {
             "anyOf": [

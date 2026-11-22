@@ -6,10 +6,11 @@ post the changes of the feed to them (``WebhookDispatcher``)
 from __future__ import annotations
 
 from .delivery import Retries, WebhookDispatcher
-from .service import WebhookService
+from .service import WebhookCounts, WebhookService
 
 __all__ = [
     "Retries",
+    "WebhookCounts",
     "WebhookDispatcher",
     "WebhookService",
 ]

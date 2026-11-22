@@ -89,6 +89,9 @@ class Settings(files.FileSettings):
     # of its own while it waits in IDLE, outside the pool that answers
     # requests. Further accounts are polled only.
     sync_watchers: int = Field(default=50, ge=1)
+    # The figures of the service for Prometheus at GET /v1/metrics, for a
+    # token with the right get_metrics. Off, the route answers 404.
+    metrics: bool = True
     # Threads: the messages a thread lists at most, the newest.
     thread_messages: int = Field(default=500, ge=1)
     # Threads the service keeps itself (IMAP): of the References of a
