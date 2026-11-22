@@ -370,7 +370,7 @@ def test_a_client_secret_file_that_is_missing(
     def never(*args: object, **kwargs: object) -> None:
         raise AssertionError("the service must not start")
 
-    monkeypatch.setattr("uvicorn.run", never)
+    monkeypatch.setattr("uvicorn.Server.run", never)
     closed: list[Repositories] = []
     close = Repositories.close
 

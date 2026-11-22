@@ -15,7 +15,7 @@ the audit keeps as well are listed in [AUDIT.md](../AUDIT.md) section 2.
 | INFO | the service started: settings from X, database Y, schema N | env file, database path, schema version | "storage in memory" without a database |
 | INFO | the database schema was migrated from N to M, notes | versions, the migrations' notes | "created the database" for a new one |
 | INFO | the service stopped | | |
-| ERROR | a background loop ended | which, traceback | |
+| ERROR | a background loop ended | which, traceback | the service then stops, and `serve` ends with an error, for a supervisor to start it anew |
 | ERROR | a round of a background loop failed, the next one runs | which, traceback | |
 | WARNING | the master key comes from the environment | | |
 | WARNING | another service uses this database | | |

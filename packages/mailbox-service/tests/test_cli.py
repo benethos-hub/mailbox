@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import json
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -18,20 +19,42 @@ def test_version(capsys: pytest.CaptureFixture[str]) -> None:
     assert __version__ in capsys.readouterr().out
 
 
+def no_server(
+    monkeypatch: pytest.MonkeyPatch, seen: list[Any] | None = None, started: bool = True
+) -> None:
+    """``serve`` up to the server, whose run only notes its configuration
+    and returns as after a signal."""
+    import uvicorn
+
+    def run(self: uvicorn.Server, sockets: object = None) -> None:
+        if seen is not None:
+            seen.append(self.config)
+        self.started = started
+
+    monkeypatch.setattr(uvicorn.Server, "run", run)
+
+
 def test_serve_starts_uvicorn(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    calls: dict[str, object] = {}
-    import uvicorn
-
-    monkeypatch.setattr(uvicorn, "run", lambda app, **kw: calls.update(kw))
+    seen: list[Any] = []
+    no_server(monkeypatch, seen)
     assert main(["serve", "--port", "9999"]) == 0
-    assert calls["port"] == 9999
-    assert calls["host"] == "127.0.0.1"
+    [config] = seen
+    assert (config.port, config.host) == (9999, "127.0.0.1")
     # stderr, and the lines the log page shows.
-    assert calls["log_config"]["root"]["handlers"] == ["stderr", "book"]
+    assert config.log_config["root"]["handlers"] == ["stderr", "book"]
     # The log names where the settings came from, nothing is printed.
     assert "settings: " not in capsys.readouterr().err
+
+
+def test_a_server_that_never_started_ends_as_uvicorn_does(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    no_server(monkeypatch, started=False)
+    with pytest.raises(SystemExit) as ended:
+        main(["serve", "--port", "9999"])
+    assert ended.value.code == 3
 
 
 def test_the_start_names_the_settings_and_the_database(
@@ -135,7 +158,7 @@ def test_settings_that_cannot_work_are_named(
     def never(*args: object, **kwargs: object) -> None:
         raise AssertionError("the service must not start")
 
-    monkeypatch.setattr(uvicorn, "run", never)
+    monkeypatch.setattr(uvicorn.Server, "run", never)
     for name, value in settings.items():
         monkeypatch.setenv(name, value)
     assert main(["serve"]) == 1
@@ -362,12 +385,10 @@ def test_the_commands_keep_their_data_beside_a_named_file(
 def test_serve_names_the_settings_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    import uvicorn
-
     from benethos_mailbox_service import assembly
 
     made: list[dict[str, object]] = []
-    monkeypatch.setattr(uvicorn, "run", lambda app, **kw: None)
+    no_server(monkeypatch)
     monkeypatch.setattr(assembly, "create_app", lambda settings, **kw: made.append(kw))
     folder = settings_folder(tmp_path, monkeypatch)
     assert main(["serve", "--env-file", str(folder / "service.env")]) == 0

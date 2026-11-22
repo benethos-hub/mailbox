@@ -28,10 +28,15 @@ def opened(settings: Settings) -> Iterator[Services]:
 
 @asynccontextmanager
 async def serving(
-    services: Services, settings: Settings, settings_file: Path | None
+    services: Services,
+    settings: Settings,
+    settings_file: Path | None,
+    stop: Callable[[], None] | None = None,
 ) -> AsyncIterator[None]:
     """While the app serves: the database held, the start and the end in
-    the log, the background work running."""
+    the log, the background work running. Should a background loop end,
+    ``stop`` ends the server, and the service stops as it would at a
+    signal. Without ``stop`` the loop's error ends the background work."""
     with ExitStack() as held:
         store = services.store
         if store is not None and not held.enter_context(store.serving()):
@@ -46,7 +51,7 @@ async def serving(
         )
         _purge(services)
         try:
-            async with _running(services):
+            async with _running(services, stop):
                 yield
         finally:
             services.activity.record(said.ServiceStopped(by=SERVICE))
@@ -60,31 +65,45 @@ def _purge(services: Services) -> None:
 
 
 @asynccontextmanager
-async def _running(services: Services) -> AsyncIterator[None]:
+async def _running(
+    services: Services, stop: Callable[[], None] | None
+) -> AsyncIterator[None]:
     """The background work while the app serves, then every connection
-    closed."""
-    async with anyio.create_task_group() as background:
-        if services.worker is not None:
-            background.start_soon(_loop, services.activity, WORKER, services.worker.run)
-        background.start_soon(
-            _loop, services.activity, DISPATCHER, services.deliveries.run
-        )
-        try:
-            yield
-        finally:
-            # The worker first, so it opens nothing new while the
-            # adapters close.
-            background.cancel_scope.cancel()
-    await services.aclose()
+    closed, also when a loop ended with an error."""
+    activity = services.activity
+    try:
+        async with anyio.create_task_group() as background:
+            if services.worker is not None:
+                background.start_soon(
+                    _loop, activity, WORKER, services.worker.run, stop
+                )
+            background.start_soon(
+                _loop, activity, DISPATCHER, services.deliveries.run, stop
+            )
+            try:
+                yield
+            finally:
+                # The worker first, so it opens nothing new while the
+                # adapters close.
+                background.cancel_scope.cancel()
+    finally:
+        await services.aclose()
 
 
 async def _loop(
-    activity: ActivityLog, by: Actor, run: Callable[[], Awaitable[None]]
+    activity: ActivityLog,
+    by: Actor,
+    run: Callable[[], Awaitable[None]],
+    stop: Callable[[], None] | None,
 ) -> None:
     """A background loop, which runs until the service stops. Should it
-    end otherwise, the log says so."""
+    end otherwise, the log says so and ``stop`` ends the server: a
+    service that no longer syncs or delivers should not go on answering
+    as if it did. A switched off worker is no loop at all."""
     try:
         await run()
     except Exception as exc:
         activity.record(said.LoopEnded(by=by, error=exc))
-        raise
+        if stop is None:
+            raise
+        stop()
