@@ -1,5 +1,5 @@
 # Three alerts on the figures of GET /v1/metrics, for rule_files of
-# Prometheus. What each means: containers/production/README.md,
+# Prometheus. What each means: containers/production/mailbox-service/README.md,
 # "Monitoring with Prometheus".
 groups:
   - name: mailbox

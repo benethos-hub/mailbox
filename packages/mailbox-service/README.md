@@ -117,7 +117,7 @@ What the project is for: [the repository's README](https://github.com/benethos-h
   and compose files with HTTPS through Caddy: [Container](#container).
   Metrics for Prometheus at `GET /v1/metrics`, for a token with their
   right:
-  [monitoring](https://github.com/benethos-hub/mailbox/blob/main/containers/production/README.md#monitoring-with-prometheus).
+  [monitoring](https://github.com/benethos-hub/mailbox/blob/main/containers/production/mailbox-service/README.md#monitoring-with-prometheus).
 
 ## Getting started
 
@@ -458,7 +458,7 @@ has the credentials. Keep a copy apart from the host.
 
 ### With compose
 
-[containers/production/](https://github.com/benethos-hub/mailbox/tree/main/containers/production)
+[containers/production/mailbox-service/](https://github.com/benethos-hub/mailbox/tree/main/containers/production/mailbox-service)
 runs the published images with compose, without a clone of the
 repository: the service, and with the profile `https` Caddy in front
 with a certificate from Let's Encrypt, from its own CA or of your own.
@@ -472,7 +472,7 @@ sh setup.sh
 ```
 
 The version runs as named in its `.env`, `MAILBOX_VERSION=0.9.0`. Its
-[README](https://github.com/benethos-hub/mailbox/blob/main/containers/production/README.md)
+[README](https://github.com/benethos-hub/mailbox/blob/main/containers/production/mailbox-service/README.md)
 has the same steps by hand, the update, backup and restore, HTTPS
 with Caddy or a proxy of your own, and the MCP server instances.
 

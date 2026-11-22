@@ -58,10 +58,10 @@ updates:
   # brings each fix within the line, also to an operator who runs the
   # compose file. Dependabot raises the tag when a new line comes out,
   # such as caddy 3 or Stalwart v1.2. A new line of Caddy also changes
-  # setup.sh and the README of containers/production.
+  # setup.sh and the README of containers/production/mailbox-service.
   - package-ecosystem: "docker-compose"
     directories:
-      - "/containers/production"
+      - "/containers/production/mailbox-service"
       - "/containers/test-mail-server"
     schedule:
       interval: "weekly"

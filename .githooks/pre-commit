@@ -35,8 +35,8 @@ forbidden=$(
             config/* | data/* | backups/* | */backups/*)
                 printf '%s\n' "$file" ;;
             containers/*/secrets/*) printf '%s\n' "$file" ;;
-            containers/production/compose.override.yaml) printf '%s\n' "$file" ;;
-            containers/production/caddy.d/*.caddy) printf '%s\n' "$file" ;;
+            containers/production/mailbox-service/compose.override.yaml) printf '%s\n' "$file" ;;
+            containers/production/mailbox-service/caddy.d/*.caddy) printf '%s\n' "$file" ;;
             *.db | *.db-journal | *.db-wal | *.db-shm | *.sqlite | *.sqlite3)
                 printf '%s\n' "$file" ;;
             *.token.json | *.pem | *.key | *.p12 | *.pfx)

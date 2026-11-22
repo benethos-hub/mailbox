@@ -242,9 +242,9 @@ PATTERNS = {
 VERSION_EXAMPLES = [
     ("README.md", "status"),
     ("containers/README.md", "status"),
-    ("containers/production/README.md", "status"),
-    ("containers/production/.env.example", "env"),
-    ("containers/production/README.md", "image"),
+    ("containers/production/mailbox-service/README.md", "status"),
+    ("containers/production/mailbox-service/.env.example", "env"),
+    ("containers/production/mailbox-service/README.md", "image"),
     ("packages/mailbox-service/README.md", "env"),
     ("docs/mailbox-service/CONCEPT.md", "status"),
     ("docs/ROADMAP.md", "status"),

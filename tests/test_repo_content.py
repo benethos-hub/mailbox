@@ -70,7 +70,7 @@ def test_a_path_of_a_machine_is_found(line: str) -> None:
 @pytest.mark.parametrize(
     "line",
     [
-        "containers/production/secrets/master.key",
+        "containers/production/mailbox-service/secrets/master.key",
         r"C:\Program Files\Google\Chrome\Application\chrome.exe",
         "      - ./caddy.d:/etc/caddy/caddy.d:ro",
         r"re.compile(r'\d:\d')",

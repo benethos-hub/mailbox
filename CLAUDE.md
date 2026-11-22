@@ -141,7 +141,8 @@ live/                     # manual checks against the test accounts,
                           #   what they share in live/checks/, one module
                           #   per subject
 containers/               # images/ (one folder per image), and one folder
-                          #   per place they run: production/ (the
+                          #   per place they run, with a folder per
+                          #   package under it: production/ (the
                           #   published images, Caddy, MCP instances),
                           #   development/ (built from the repository),
                           #   test-mail-server/ (Stalwart for tests).

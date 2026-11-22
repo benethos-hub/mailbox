@@ -477,7 +477,7 @@ without `MAILBOX_MCP_BEARER_TOKEN`, the server does not start.
 
 ### Beside a service in operation
 
-[containers/production/](https://github.com/benethos-hub/mailbox/tree/main/containers/production)
+[containers/production/mailbox-service/](https://github.com/benethos-hub/mailbox/tree/main/containers/production/mailbox-service)
 runs the service. The MCP server acts as one user, with that user's
 token, so each client has one of its own. Usually the client starts it
 over stdio as above, with `MAILBOX_SERVICE_URL` set to the service's
@@ -486,10 +486,10 @@ client that connects over HTTP, instances of this image run beside the
 service with the profile `mcp`, one per token, from the template
 `mcp.yaml`. Caddy can route to each under a path of its own, such as
 `https://<MAILBOX_DOMAIN>/mcp/agent`. Its
-[README](https://github.com/benethos-hub/mailbox/blob/main/containers/production/README.md#mcp-server-instances)
+[README](https://github.com/benethos-hub/mailbox/blob/main/containers/production/mailbox-service/README.md#mcp-server-instances)
 has the steps, also for an instance on another host. For
 development,
-[containers/development/compose.yaml](https://github.com/benethos-hub/mailbox/blob/main/containers/development/compose.yaml)
+[containers/development/mailbox-service/compose.yaml](https://github.com/benethos-hub/mailbox/blob/main/containers/development/mailbox-service/compose.yaml)
 starts it beside a service built from the repository, with the profile
 `mcp`.
 

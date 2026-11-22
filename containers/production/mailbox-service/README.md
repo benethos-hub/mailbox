@@ -1,4 +1,4 @@
-# <img src="../../assets/brand/icon.svg" alt="" height="36" align="absmiddle"> Mailbox in operation
+# <img src="../../../assets/brand/icon.svg" alt="" height="36" align="absmiddle"> Mailbox in operation
 
 > **Beta, version 0.9.0.** Usable with real accounts. A breaking change
 > of the API or the configuration is announced in the changelog. Stored
@@ -38,14 +38,15 @@ Needs Docker with compose 2.24 or newer (`docker compose version`).
 
 Into an empty folder, from the repository. The files at a release tag
 fit that version, so put `v0.9.0` in place of `main` in the address
-below for 0.9.0. `main` holds the newest:
+below for 0.9.0. `main` holds the newest. Up to 0.9.0 the folder was
+`containers/production/`, without `mailbox-service/`:
 
 ```sh
 mkdir -p mailbox/caddy.d && cd mailbox
 for file in compose.yaml Caddyfile .env.example service.env.example setup.sh README.md \
     mcp.yaml compose.override.yaml.example caddy.d/mcp.caddy.example \
     caddy.d/metrics.caddy.example; do
-  curl -fsSL -o "$file" "https://raw.githubusercontent.com/benethos-hub/mailbox/main/containers/production/$file"
+  curl -fsSL -o "$file" "https://raw.githubusercontent.com/benethos-hub/mailbox/main/containers/production/mailbox-service/$file"
 done
 ```
 
@@ -127,7 +128,7 @@ The address is `https://<MAILBOX_DOMAIN>` with the profile `https`, or
 that of your own proxy. Without either, the service answers on this host
 alone, at `http://127.0.0.1:8080`. More, for Claude Desktop, Claude Code
 and over HTTP:
-[packages/mailbox-mcp/README.md](../../packages/mailbox-mcp/README.md).
+[packages/mailbox-mcp/README.md](../../../packages/mailbox-mcp/README.md).
 
 ## MCP server instances
 
@@ -269,7 +270,7 @@ service counts its request limits per client address from them.
 The compose variables go into `.env`, see `.env.example`. Every other
 setting of the service, `MAILBOX_SERVICE_*`, goes into `service.env`
 (template `service.env.example`). The list:
-[packages/mailbox-service/README.md](../../packages/mailbox-service/README.md#settings).
+[packages/mailbox-service/README.md](../../../packages/mailbox-service/README.md#settings).
 After a change: `docker compose up -d`.
 
 `MAILBOX_SERVICE_PORT` in `.env` is the service's port on the host. The
@@ -307,7 +308,7 @@ it anew. For a log collector, `MAILBOX_SERVICE_LOG_FORMAT=json` in
 The service hands its figures to Prometheus at `GET /v1/metrics`: the
 sync worker, every account by its id, provider and status, and the
 webhooks. Never an address or the text of an error. What each figure
-means: [CONCEPT 6.1](../../docs/mailbox-service/concept/api-mail.md#61-accounts).
+means: [CONCEPT 6.1](../../../docs/mailbox-service/concept/api-mail.md#61-accounts).
 
 The route is on unless `MAILBOX_SERVICE_METRICS=false` in `service.env`
 switches it off, then it answers `404`. Without a token with the right
@@ -360,4 +361,4 @@ The figures live in memory and start again after a restart. Each
 scrape counts against the token's limit like any request and writes a
 line to the access log. A wrong token counts as a failed sign-in of its
 address: ten in 15 minutes lock the address for 15 minutes
-([LIMITS.md](../../docs/mailbox-service/LIMITS.md)).
+([LIMITS.md](../../../docs/mailbox-service/LIMITS.md)).

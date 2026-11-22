@@ -200,7 +200,7 @@ as bearer token, the MCP server uses it for its REST calls and holds no
 token itself. The service still decides what each may do. It would need
 a REST client and a tool list per session, made from `/v1/me` of that
 token, instead of once at the start. The OAuth of the MCP specification
-could follow. `containers/production/` would then run it for everyone.
+could follow. `containers/production/mailbox-service/` would then run it for everyone.
 
 ## A framework for the assembly
 

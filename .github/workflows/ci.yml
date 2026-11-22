@@ -274,37 +274,40 @@ jobs:
         working-directory: containers
         run: |
           set -euo pipefail
-          for place in development production; do
-            mkdir -p "$place/secrets" && touch "$place/secrets/master_key"
-            if [ -e "$place/.env.example" ]; then cp "$place/.env.example" "$place/.env"; fi
-            if [ -e "$place/compose.override.yaml.example" ]; then
-              cp "$place/compose.override.yaml.example" "$place/compose.override.yaml"
-              echo "MAILBOX_DOMAIN=mailbox.example" >> "$place/.env"
-              mkdir -p "$place/secrets/mcp"
-              touch "$place/secrets/mcp/assistant.env" "$place/secrets/mcp/agent.env"
+          # A folder per place and package. The place decides who may
+          # listen on every address.
+          for folder in development/mailbox-service production/mailbox-service; do
+            place="${folder%%/*}"
+            mkdir -p "$folder/secrets" && touch "$folder/secrets/master_key"
+            if [ -e "$folder/.env.example" ]; then cp "$folder/.env.example" "$folder/.env"; fi
+            if [ -e "$folder/compose.override.yaml.example" ]; then
+              cp "$folder/compose.override.yaml.example" "$folder/compose.override.yaml"
+              echo "MAILBOX_DOMAIN=mailbox.example" >> "$folder/.env"
+              mkdir -p "$folder/secrets/mcp"
+              touch "$folder/secrets/mcp/assistant.env" "$folder/secrets/mcp/agent.env"
             fi
-            (cd "$place" && docker compose --profile mcp --profile https config -q)
-            (cd "$place" && docker compose --profile mcp --profile https config --format json) > "/tmp/$place.json"
-            python3 - "$place" <<'PY'
+            (cd "$folder" && docker compose --profile mcp --profile https config -q)
+            (cd "$folder" && docker compose --profile mcp --profile https config --format json) > "/tmp/compose.json"
+            python3 - "$place" "$folder" <<'PY'
           import json
           import sys
 
-          place = sys.argv[1]
+          place, folder = sys.argv[1], sys.argv[2]
           # Who may listen on every address, and on which ports.
           public = {("production", "caddy"): {"80", "443"}}
-          services = json.load(open(f"/tmp/{place}.json"))["services"]
-          assert services, f"{place}: the compose file defines no services"
+          services = json.load(open("/tmp/compose.json"))["services"]
+          assert services, f"{folder}: the compose file defines no services"
           for name, service in services.items():
               for port in service.get("ports") or []:
                   host_ip, published = port.get("host_ip"), str(port.get("published"))
                   if published in public.get((place, name), set()):
-                      print(f"OK: {place} {name} publishes {published} everywhere, as meant")
+                      print(f"OK: {folder} {name} publishes {published} everywhere, as meant")
                       continue
                   assert host_ip in ("127.0.0.1", "::1"), (
-                      f"{place}: {name} publishes port {published} on "
+                      f"{folder}: {name} publishes port {published} on "
                       f"{host_ip or 'every interface'}, not on the loopback address"
                   )
-                  print(f"OK: {place} {name} publishes {host_ip}:{published}")
+                  print(f"OK: {folder} {name} publishes {host_ip}:{published}")
           PY
           done
 

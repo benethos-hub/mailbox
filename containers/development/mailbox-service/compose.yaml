@@ -1,7 +1,8 @@
 # For development: the service, and the MCP server with the profile mcp,
 # built from this repository and bound to the loopback address of the host
-# (CONCEPT 8.1). To run the published images instead: ../production/.
-# The first start: ../README.md, "For development". The master key lives
+# (CONCEPT 8.1). To run the published images instead:
+# ../../production/mailbox-service/. The first start: ../../README.md,
+# "For development". The master key lives
 # in secrets/master_key here, not versioned.
 
 name: mailbox-dev
@@ -20,7 +21,7 @@ services:
     image: benethos-mailbox-service:local
     logging: *logging
     build:
-      context: ../..
+      context: ../../..
       dockerfile: containers/images/mailbox-service/Dockerfile
     restart: unless-stopped
     ports:
@@ -49,7 +50,7 @@ services:
     image: benethos-mailbox-mcp:local
     logging: *logging
     build:
-      context: ../..
+      context: ../../..
       dockerfile: containers/images/mailbox-mcp/Dockerfile
     restart: unless-stopped
     depends_on:
