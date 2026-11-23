@@ -262,11 +262,7 @@ async def message(
 ) -> HTMLResponse:
     account = account_of(request, caller, account_id)
     found = await mailbox.get_message(caller, account_id, message_id)
-    folders = (
-        await mailbox.list_folders(caller, account_id)
-        if caller.allows("list_folders", account_id)
-        else []
-    )
+    folders = await _folders(caller, account_id, mailbox)
     names = {f.id: f.name for f in folders}
     folder = found.folder_ids[0] if found.folder_ids else None
     trail = mail_trail(account, (folder, names.get(folder, folder)) if folder else None)
@@ -306,11 +302,7 @@ async def thread(
     breadcrumb leads back to the folder it was opened from."""
     account = account_of(request, caller, account_id)
     found = await mailbox.get_thread(caller, account_id, thread_id)
-    folders = (
-        await mailbox.list_folders(caller, account_id)
-        if caller.allows("list_folders", account_id)
-        else []
-    )
+    folders = await _folders(caller, account_id, mailbox)
     names = {f.id: f.name for f in folders}
     wanted = request.query_params.get("folder")
     trail = mail_trail(account, (wanted, names[wanted]) if wanted in names else None)
@@ -330,6 +322,16 @@ async def thread(
         pages=(None, None),
         fields={},
     )
+
+
+async def _folders(
+    caller: Access, account_id: str, mailbox: MailboxService
+) -> list[Folder]:
+    """The folders of the account, none where the caller may not list
+    them."""
+    if not caller.allows("list_folders", account_id):
+        return []
+    return await mailbox.list_folders(caller, account_id)
 
 
 async def _conversation(
