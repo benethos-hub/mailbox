@@ -87,7 +87,4 @@ class InMemorySendLogRepository:
         return sorted({r.account_id for r in self._records.list()})
 
     def purge(self, before: datetime) -> int:
-        gone = [r.id for r in self._records.list() if r.created_at < before]
-        for record_id in gone:
-            self._records.delete(record_id)
-        return len(gone)
+        return self._records.drop_where(lambda r: r.created_at < before)
