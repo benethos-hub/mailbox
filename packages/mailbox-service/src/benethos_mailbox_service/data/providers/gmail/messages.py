@@ -88,12 +88,9 @@ async def get_attachment(
 
 
 async def _with_source(api: GmailApi, message_id: str) -> GmailMessage:
-    if not reading.is_id(message_id):
-        raise missing_message(message_id)
-    try:
-        return await reading.with_source(api, message_id)
-    except NotFoundError:
-        raise missing_message(message_id) from None
+    with reading.by_id(message_id):
+        found = await reading.with_source(api, message_id)
+    return found
 
 
 # --- changing ---------------------------------------------------------------------
@@ -163,28 +160,20 @@ def _change(
 
 
 async def _labels(api: GmailApi, message_id: str) -> set[str]:
-    if not reading.is_id(message_id):
-        raise missing_message(message_id)
-    try:
+    with reading.by_id(message_id):
         found = await reading.get(api, message_id, {"format": "minimal"})
-    except NotFoundError:
-        raise missing_message(message_id) from None
     return set(found.label_ids)
 
 
 async def _modify(
     api: GmailApi, message_id: str, add: list[str], remove: list[str]
 ) -> None:
-    if not reading.is_id(message_id):
-        raise missing_message(message_id)
-    try:
+    with reading.by_id(message_id):
         await api.call(
             "POST",
             f"/messages/{path_part(message_id)}/modify",
             json_body={"addLabelIds": add, "removeLabelIds": remove},
         )
-    except NotFoundError:
-        raise missing_message(message_id) from None
 
 
 async def _summary(api: GmailApi, message_id: str) -> MessageSummary:
@@ -198,21 +187,15 @@ async def delete_messages(
     api: GmailApi, message_ids: list[str], permanent: bool
 ) -> dict[str, MessageSummary | None | MailboxServiceError]:
     async def for_good(message_id: str) -> MessageSummary | None:
-        if not reading.is_id(message_id):
-            raise missing_message(message_id)
-        try:
+        with reading.by_id(message_id):
             await api.call("DELETE", f"/messages/{path_part(message_id)}")
-        except NotFoundError:
-            raise missing_message(message_id) from None
         return None
 
     async def to_trash(message_id: str) -> MessageSummary | None:
         if mappers.TRASH in await _labels(api, message_id):
             raise rules.in_trash_already()
-        try:
+        with reading.by_id(message_id):
             await api.call("POST", f"/messages/{path_part(message_id)}/trash")
-        except NotFoundError:
-            raise missing_message(message_id) from None
         return await reading.summary(api, message_id)
 
     one = for_good if permanent else to_trash

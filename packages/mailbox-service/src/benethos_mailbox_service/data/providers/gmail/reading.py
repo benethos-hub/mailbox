@@ -10,13 +10,20 @@ instead, as many as ``AT_ONCE``.
 from __future__ import annotations
 
 import re
-from collections.abc import Awaitable, Callable, Iterable
+from collections.abc import Awaitable, Callable, Iterable, Iterator
+from contextlib import contextmanager
 from typing import TypeVar
 
 import anyio
 
 from ....common.opaque import from_base64
-from ....errors import MailboxServiceError, NotFoundError, ProviderError, missing
+from ....errors import (
+    MailboxServiceError,
+    NotFoundError,
+    ProviderError,
+    missing,
+    missing_message,
+)
 from ...models import MessageSummary
 from ...protocols import Params, path_part
 from . import mappers
@@ -38,6 +45,20 @@ def is_id(value: str) -> bool:
     """Whether ``value`` can be the id of a Gmail message. Any other is not
     found without a request."""
     return bool(_MESSAGE_ID.match(value))
+
+
+@contextmanager
+def by_id(
+    value: str, absent: Callable[[str], MailboxServiceError] = missing_message
+) -> Iterator[None]:
+    """A request whose only input is the id ``value``: an id of another
+    form, and Gmail's 404, are ``absent(value)``."""
+    if not is_id(value):
+        raise absent(value)
+    try:
+        yield
+    except NotFoundError:
+        raise absent(value) from None
 
 
 async def known_folders(api: GmailApi) -> set[str]:
