@@ -290,11 +290,17 @@ class Mailbox:
         found = await _call(self._client.get_me())
         return tuple(account.id for account in found.accounts)
 
+    def forget_folders(self) -> None:
+        """Read the folders anew when next asked. A folder renamed keeps
+        its id with Microsoft, Gmail and JMAP: a kept list would go on
+        naming its old path."""
+        self._folders.clear()
+
     async def folders(
         self, account_id: str, *, fresh: bool = False
     ) -> dict[str, FolderRef]:
         """The folders of an account by id, each with its path. Kept until
-        ``fresh`` asks for them again."""
+        ``fresh`` asks for them again, or until :meth:`forget_folders`."""
         if fresh or account_id not in self._folders:
             found = await _call(self._client.list_folders(account_id))
             self._folders[account_id] = _with_paths(found)

@@ -292,3 +292,23 @@ async def test_updates_are_observed_in_the_order_of_the_feed_with_progress(
         started + timedelta(minutes=10),
         started + timedelta(minutes=20),
     ]
+
+
+async def test_a_folder_renamed_between_two_passes_is_seen_by_its_new_path(
+    world: Wired,
+) -> None:
+    """A renamed folder keeps its id with Microsoft, Gmail and JMAP. Each
+    pass reads the folders anew, so a message names the path of now."""
+    world.service.add(wire_message("filed", folder_ids=["inv-hosting"]), change=None)
+    run = worker(world)
+    await run.run_pass()
+    before = await world.mailbox.message(ref("filed"))
+    for folder in world.service.folders[ACCOUNT]:
+        if folder["id"] == "inv-hosting":
+            folder["name"] = "Webhosting"
+
+    await run.run_pass()
+
+    after = await world.mailbox.message(ref("filed"))
+    assert [f.path for f in before.folders] == ["Invoices/Hosting"]
+    assert [f.path for f in after.folders] == ["Invoices/Webhosting"]

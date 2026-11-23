@@ -84,6 +84,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `benethos-mailbox-agents` read the folders of an account anew in
+  every pass. Where a renamed folder keeps its id, a worker named it by
+  its old path until it started again.
 - `benethos-mailbox-agents`: `awaiting_reply` no longer asks the service
   about an item on every tick for good. An item closed by a reply whose
   sent message was deleted or put into the trash, junk or spam before

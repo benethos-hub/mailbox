@@ -86,6 +86,9 @@ class Upstream(Reader, Writer, Protocol):
     async def ensure_matching(self) -> str:
         """The version of the service, once it matches the agents'."""
 
+    def forget_folders(self) -> None:
+        """Read the folders anew when next asked."""
+
 
 class Worker:
     """The loop of one agent over one state file."""
@@ -169,6 +172,9 @@ class Worker:
 
     async def _pass(self, started: float) -> float:
         await self._mailbox.ensure_matching()
+        # The folders as they are now, once per pass: the owner may have
+        # renamed one since the last.
+        self._mailbox.forget_folders()
         state, events = await self._read_feed()
         observe = self._record(events)
         for ref in observe:

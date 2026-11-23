@@ -11,7 +11,7 @@ Operation names below are the service's `operationId`s.
 | A message, its text and attachment list | `get_message` |
 | The conversation a message belongs to | `get_thread` |
 | Set or remove a keyword, move to a folder | `update_message` |
-| The folders of an account | `list_folders` |
+| The folders of an account, read anew in every pass: a renamed folder keeps its id with Microsoft, Gmail and JMAP **(to verify)** | `list_folders` |
 | Make a folder, below a parent or at the top | `create_folder` |
 | The messages received since a day, for `backfill` | `list_all_messages`, once for the inbox and once for sent mail |
 | The messages of one folder since a day, for `backfill` | `list_messages` of one account, the folder by its id |
