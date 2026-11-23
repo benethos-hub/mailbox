@@ -11,7 +11,6 @@ restart is refused, so its list starts again.
 
 from __future__ import annotations
 
-import hmac
 import secrets
 from typing import Any, TypeVar
 
@@ -45,12 +44,7 @@ class Cursors:
         if sealed is None:
             return None
         cursor, dot, mac = sealed.rpartition(".")
-        # As bytes: compare_digest refuses a str beyond ASCII.
-        held = (
-            dot
-            and cursor
-            and hmac.compare_digest(mac.encode(), self._mac(cursor).encode())
-        )
+        held = dot and cursor and secret_values.same(mac, self._mac(cursor))
         if not held:
             raise BadRequestError("invalid cursor")
         return cursor
