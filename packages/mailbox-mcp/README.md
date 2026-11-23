@@ -372,6 +372,9 @@ in the settings folder of the operating system:
 `~/.config/benethos-mailbox-mcp` on Linux,
 `~/Library/Application Support/benethos-mailbox-mcp/config` on macOS.
 It is read for `MAILBOX_MCP_*` and `MAILBOX_SERVICE_*` alone. A
+relative path of a token file counts from the folder of the settings
+file, when it was named or is the one of the operating system, and from
+the working directory otherwise. A
 wrong value stops the start and names the setting. The file holds the
 API token, so keep it readable by its owner alone. Template:
 [config/benethos-mailbox-mcp/.env.example](https://github.com/benethos-hub/mailbox/blob/main/config/benethos-mailbox-mcp/.env.example).

@@ -174,3 +174,28 @@ def test_a_token_file_with_the_mark_of_utf8_in_front(
     found = config.load_settings(None)
     assert found.service_token is not None
     assert found.service_token.get_secret_value() == "from-powershell"
+
+
+def test_a_relative_token_file_counts_from_the_settings_file(tmp_path: Path) -> None:
+    folder = tmp_path / "elsewhere"
+    write(folder / "token.txt", "token-beside-the-settings\n")
+    write(folder / "bearer.txt", "bearer-beside-the-settings\n")
+    named = write(
+        folder / "mcp.env",
+        "MAILBOX_SERVICE_TOKEN_FILE=token.txt\n"
+        "MAILBOX_MCP_BEARER_TOKEN_FILE=bearer.txt\n",
+    )
+    found = config.load_settings(config.settings_file(named))
+    assert found.service_token is not None and found.bearer_token is not None
+    assert found.service_token.get_secret_value() == "token-beside-the-settings"
+    assert found.bearer_token.get_secret_value() == "bearer-beside-the-settings"
+
+
+def test_an_absolute_token_file_stays_as_it_is(tmp_path: Path) -> None:
+    token = write(tmp_path / "secrets" / "token", "absolute-token\n")
+    named = write(
+        tmp_path / "conf" / "mcp.env", f"MAILBOX_SERVICE_TOKEN_FILE={token}\n"
+    )
+    found = config.load_settings(config.settings_file(named))
+    assert found.service_token is not None
+    assert found.service_token.get_secret_value() == "absolute-token"

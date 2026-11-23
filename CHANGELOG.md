@@ -23,6 +23,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `benethos-mailbox-mcp` counts a relative `MAILBOX_SERVICE_TOKEN_FILE`
+  or `MAILBOX_MCP_BEARER_TOKEN_FILE` from the folder of the settings
+  file, when the file was named or is the one of the operating system,
+  as the service and the agents count their paths. Before, it counted
+  from the working directory.
 - `sender_check` counts several entries under the receiving server's
   name when they come to the same result. Some servers write two for
   each mail, which made the result `unknown` (`several_entries`) for

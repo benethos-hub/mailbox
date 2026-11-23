@@ -136,7 +136,41 @@ def load_settings(env_file: Path | None, **given: object) -> Settings:
     """The settings, ``given`` on the command line first. A value of None
     in ``given`` was not given."""
     named = {name: value for name, value in given.items() if value is not None}
-    return files.load(Settings, env_file, **named)
+    return files.load(Settings, env_file, **_rebased(env_file, named))
+
+
+class _Paths(files.FileSettings):
+    """The settings that hold a path, read as they are written, so a
+    relative one can count from the settings file before the settings are
+    checked: a token's file is read while they are."""
+
+    model_config = {
+        "env_prefix": PREFIX,
+        "env_ignore_empty": True,
+        "populate_by_name": True,
+    }
+
+    bearer_token_file: str | None = None
+    service_token_file: str | None = Field(
+        default=None, alias="MAILBOX_SERVICE_TOKEN_FILE"
+    )
+
+
+def _rebased(env_file: Path | None, given: dict[str, object]) -> dict[str, object]:
+    """``given`` with each relative token file it does not name counted
+    from the folder of ``env_file``. Without a file, and in the layout of
+    the repository, paths count from the working directory and ``given``
+    stays as it is."""
+    if env_file is None or env_file.resolve() == Path(ENV_FILE).resolve():
+        return given
+    found = files.load(_Paths, env_file)
+    moved = dict(given)
+    for key in ("bearer_token_file", "service_token_file"):
+        value = getattr(found, key)
+        if key in given or not value or Path(value).is_absolute():
+            continue
+        moved[key] = env_file.parent / value
+    return moved
 
 
 def variable(name: str) -> str:
