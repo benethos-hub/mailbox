@@ -56,7 +56,4 @@ class InMemoryAuditRepository:
         return found[:limit]
 
     def purge(self, before: datetime) -> int:
-        gone = [r.id for r in self._records.list() if r.at < before]
-        for record_id in gone:
-            self._records.delete(record_id)
-        return len(gone)
+        return self._records.drop_where(lambda r: r.at < before)

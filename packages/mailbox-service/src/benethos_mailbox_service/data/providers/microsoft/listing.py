@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from urllib.parse import urlencode
 
-from ...models import MessageFilter, MessageSummary, Page
+from ...models import OUTSIDE_ALL, MessageFilter, MessageSummary, Page
 from ...protocols import path_part
 from .. import rules
 from . import mappers
@@ -60,7 +60,7 @@ async def list_messages(
 async def _outside_all(graph: Graph) -> set[str]:
     """The folders ``all`` leaves out: the trash and junk."""
     roles = await graph.folder_roles()
-    return {f for f, role in roles.items() if role in mappers.OUTSIDE_ALL}
+    return {f for f, role in roles.items() if role in OUTSIDE_ALL}
 
 
 async def _immutable(graph: Graph, items: list[GraphMessage]) -> list[GraphMessage]:

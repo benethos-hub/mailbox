@@ -15,10 +15,11 @@ mail's ``Message-ID``.
 from __future__ import annotations
 
 from ....common.opaque import to_base64
-from ....errors import MailboxServiceError, NotFoundError, ProviderError, missing
+from ....errors import MailboxServiceError, missing
 from ...mail import compose, parse
 from ...models import MessageSummary, Page, SentMessage
 from ...protocols import path_part
+from .. import rules
 from . import mappers, reading
 from .api import GmailApi
 from .messages import list_messages
@@ -35,12 +36,7 @@ async def send(
         api, raw, {"raw": to_base64(compose.with_bcc(raw, recipients))}
     )
     sent = await api.read(GmailMessage, "POST", "/messages/send", json_body=body)
-    # Sent: from here on nothing may fail, or a client would send again.
-    try:
-        copy = await reading.summary(api, sent.id)
-    except MailboxServiceError as exc:
-        return SentMessage(copy_error=exc.message)
-    return SentMessage(sent_copy=copy)
+    return await rules.sent(lambda: reading.summary(api, sent.id))
 
 
 async def list_drafts(
@@ -60,7 +56,7 @@ async def save_draft(api: GmailApi, raw: bytes, replaces: str | None) -> Message
         )
     stored = await reading.summary(api, draft.message.id) if draft.message else None
     if stored is None:
-        raise ProviderError("the draft was stored but cannot be found again")
+        raise rules.lost("draft")
     return stored
 
 
@@ -71,10 +67,8 @@ async def get_draft(api: GmailApi, draft_id: str) -> bytes:
 
 async def delete_draft(api: GmailApi, draft_id: str) -> None:
     gmail_id = await _draft_id(api, draft_id)
-    try:
+    with reading.by_id(draft_id, _missing_draft):
         await api.call("DELETE", f"/drafts/{path_part(gmail_id)}")
-    except NotFoundError:
-        raise missing("draft", draft_id) from None
 
 
 async def _in_thread(
@@ -98,12 +92,8 @@ async def _in_thread(
 async def _draft_message(api: GmailApi, draft_id: str) -> GmailMessage:
     """The message of a draft with its source. Only drafts: any other id
     is not found, so the draft operations reach no other mail."""
-    if not reading.is_id(draft_id):
-        raise missing("draft", draft_id)
-    try:
+    with reading.by_id(draft_id, _missing_draft):
         found = await reading.with_source(api, draft_id)
-    except NotFoundError:
-        raise missing("draft", draft_id) from None
     if mappers.DRAFT not in found.label_ids:
         raise missing("draft", draft_id)
     return found
@@ -112,16 +102,13 @@ async def _draft_message(api: GmailApi, draft_id: str) -> GmailMessage:
 async def _draft_id(api: GmailApi, draft_id: str) -> str:
     """Gmail's id of the draft whose message is ``draft_id``."""
     if reading.is_id(draft_id):
-        token: str | None = None
-        while True:
-            params = [("maxResults", str(reading.PAGE_SIZE))]
-            if token:
-                params.append(("pageToken", token))
-            page = await api.read(Drafts, "GET", "/drafts", params=params)
+        asked = [("maxResults", str(reading.PAGE_SIZE))]
+        async for page in api.pages(Drafts, "/drafts", asked):
             for draft in page.drafts:
                 if draft.message is not None and draft.message.id == draft_id:
                     return draft.id
-            token = page.next_page_token
-            if not token:
-                break
     raise missing("draft", draft_id)
+
+
+def _missing_draft(draft_id: str) -> MailboxServiceError:
+    return missing("draft", draft_id)

@@ -31,9 +31,6 @@ from .shapes import MailFolder, Recipient, Recipients
 from .shapes import Message as GraphMessage
 
 DRAFT_KEYWORD = "$draft"
-# The folder with the role ``all``, which Exchange does not have: every
-# folder but the trash and junk, as Gmail's All Mail (UNIFORM 6.5).
-OUTSIDE_ALL = frozenset({FolderRole.TRASH, FolderRole.JUNK})
 
 # Graph's well-known folder names, and the role each one has here.
 WELL_KNOWN: dict[str, FolderRole] = {
@@ -77,9 +74,9 @@ def folder(item: MailFolder, roles: dict[str, FolderRole], root: str) -> Folder:
 
 def _address(value: Recipient | None) -> Address | None:
     email = value.email_address if value is not None else None
-    if email is None or not email.address:
+    if email is None:
         return None
-    return Address(email=fields.unicode_address(email.address), name=email.name or None)
+    return fields.address(email.address, email.name)
 
 
 def _addresses(values: Recipients) -> list[Address]:

@@ -10,13 +10,20 @@ instead, as many as ``AT_ONCE``.
 from __future__ import annotations
 
 import re
-from collections.abc import Awaitable, Callable, Iterable
+from collections.abc import Awaitable, Callable, Iterable, Iterator
+from contextlib import contextmanager
 from typing import TypeVar
 
 import anyio
 
 from ....common.opaque import from_base64
-from ....errors import MailboxServiceError, NotFoundError, ProviderError
+from ....errors import (
+    MailboxServiceError,
+    NotFoundError,
+    ProviderError,
+    missing,
+    missing_message,
+)
 from ...models import MessageSummary
 from ...protocols import Params, path_part
 from . import mappers
@@ -40,6 +47,20 @@ def is_id(value: str) -> bool:
     return bool(_MESSAGE_ID.match(value))
 
 
+@contextmanager
+def by_id(
+    value: str, absent: Callable[[str], MailboxServiceError] = missing_message
+) -> Iterator[None]:
+    """A request whose only input is the id ``value``: an id of another
+    form, and Gmail's 404, are ``absent(value)``."""
+    if not is_id(value):
+        raise absent(value)
+    try:
+        yield
+    except NotFoundError:
+        raise absent(value) from None
+
+
 async def known_folders(api: GmailApi) -> set[str]:
     """The ids of the labels that are folders."""
     return {label.id for label in await api.labels() if mappers.is_folder(label)}
@@ -52,7 +73,7 @@ async def require_folder(api: GmailApi, folder_id: str) -> None:
 
 
 def _missing_folder(folder_id: str) -> NotFoundError:
-    return NotFoundError(f"folder {folder_id} not found")
+    return missing("folder", folder_id)
 
 
 async def get(api: GmailApi, message_id: str, params: Params) -> GmailMessage:
@@ -155,16 +176,10 @@ def source(message: GmailMessage) -> bytes:
 async def ids(api: GmailApi, params: list[tuple[str, str]]) -> list[str]:
     """Every id of a list, page by page."""
     found: list[str] = []
-    token: str | None = None
-    while True:
-        page = [("maxResults", str(PAGE_SIZE)), *params]
-        if token:
-            page.append(("pageToken", token))
-        answer = await api.read(Messages, "GET", "/messages", params=page)
-        found += [m.id for m in answer.messages]
-        token = answer.next_page_token
-        if not token:
-            return found
+    asked = [("maxResults", str(PAGE_SIZE)), *params]
+    async for page in api.pages(Messages, "/messages", asked):
+        found += [m.id for m in page.messages]
+    return found
 
 
 def folder_params(folder_id: str) -> list[tuple[str, str]]:

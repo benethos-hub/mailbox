@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import logging
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Any, TypeVar
 
 import anyio
@@ -29,7 +29,7 @@ from ...protocols import (
 )
 from ..base import TokenSource
 from ..tokenapi import TokenApi, signed
-from .shapes import Failure, Label, Labels
+from .shapes import Failure, Label, Labels, Page
 
 # DEBUG alone: the data layer decides nothing (docs/mailbox-service/LOGGING.md rule
 # 6.2).
@@ -52,9 +52,12 @@ FIRST_PAUSE = 1.0
 _SETS = ("/modify", "/batchModify", "/batchDelete", "/trash", "/untrash")
 
 S = TypeVar("S", bound=BaseModel)
+P = TypeVar("P", bound=Page)
 
 
 class GmailApi(TokenApi):
+    who = "gmail"
+
     def __init__(
         self,
         tokens: TokenSource,
@@ -113,10 +116,19 @@ class GmailApi(TokenApi):
 
         return await signed(self.tokens, send)
 
-    async def read(self, shape: type[S], method: str, path: str, **kwargs: Any) -> S:
-        """One request, its answer read as ``shape``."""
-        answer = await self.call(method, path, **kwargs)
-        return wire.parse(shape, answer.body, "gmail answered in a shape of its own")
+    async def pages(
+        self, shape: type[P], path: str, params: list[tuple[str, str]]
+    ) -> AsyncIterator[P]:
+        """Every page of a list read as ``shape``, each asked with
+        ``params`` and the token of the page before."""
+        token: str | None = None
+        while True:
+            asked = [*params, ("pageToken", token)] if token else params
+            page = await self.read(shape, "GET", path, params=asked)
+            yield page
+            token = page.next_page_token
+            if not token:
+                return
 
     async def labels(self) -> list[Label]:
         """Every label of the mailbox, without counts."""
@@ -134,9 +146,6 @@ class GmailApi(TokenApi):
         """The labels read again: they changed, or a new sign-in may see
         others."""
         self._labels = None
-
-    async def close(self) -> None:
-        await self._http.close()
 
 
 def _repeatable(method: str, path: str) -> bool:

@@ -63,6 +63,10 @@ class Table(Generic[T]):
         self.get(row_id)
         del self._rows[row_id]
 
+    def drop_where(self, pick: Callable[[T], bool]) -> int:
+        """Remove every row ``pick`` picks. Returns how many there were."""
+        return drop_where(self._rows, lambda _row_id, row: pick(row))
+
 
 class TableRepository(Generic[R]):
     """An in-memory repository of records kept by their ``id``: list, get,

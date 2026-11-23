@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from ....errors import BadRequestError, ConflictError, ProviderError, missing
+from ....errors import missing
 from ...models import Folder
 from ...protocols import jmap
+from .. import rules
 from . import mappers
 from .api import JmapAccount
 from .shapes import Mailbox
@@ -38,7 +39,7 @@ async def create_folder(
         )
         found = got.items
     if not found:
-        raise ProviderError("the folder was stored but cannot be found again")
+        raise rules.lost("folder")
     return mappers.folder(found[0])
 
 
@@ -77,7 +78,7 @@ async def update_folder(
         raise jmap.set_error(failed, "folder")
     found = jmap.read(answers, "get", jmap.Got[Mailbox]).items
     if not found:
-        raise ProviderError("the folder was stored but cannot be found again")
+        raise rules.lost("folder")
     return mappers.folder(found[0])
 
 
@@ -107,10 +108,10 @@ def _check_place(
         above: str | None = parent_id
         while above is not None:
             if above == folder_id:
-                raise BadRequestError("a folder cannot move into itself")
+                raise rules.into_itself()
             above = by_id[above].parent_id if above in by_id else None
     if any(
         f.parent_id == parent_id and f.name == name and f.id != folder_id
         for f in folders
     ):
-        raise ConflictError(f"a folder {name} exists there already")
+        raise rules.folder_exists(name)

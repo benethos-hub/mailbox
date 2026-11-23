@@ -16,6 +16,8 @@ from typing import Any
 from ....common import opaque
 from ...mail import authentication, convert, fields, parse
 from ...models import (
+    RESERVED_KEYWORDS,
+    Address,
     Folder,
     FolderRole,
     Message,
@@ -62,7 +64,6 @@ SUMMARY_PROPERTIES = [
 SEEN = "$seen"
 FLAGGED = "$flagged"
 DRAFT = "$draft"
-_NOT_KEYWORDS = {SEEN, FLAGGED, "$deleted", "$recent"}
 
 
 def is_id(value: str | None) -> bool:
@@ -85,11 +86,6 @@ def folder(mailbox: Mailbox) -> Folder:
     )
 
 
-# The folder with the role ``all`` where the server has none: every
-# mailbox but the trash and junk, which a query without a mailbox reads.
-OUTSIDE_ALL = frozenset({FolderRole.TRASH, FolderRole.JUNK})
-
-
 def emulates_all(folders: list[Folder]) -> bool:
     """Whether the adapter shows ``all``: the server has no mailbox of that
     role, and none of that id."""
@@ -103,7 +99,7 @@ def summary(email: Email, trust: authentication.Trust | None) -> MessageSummary:
     """``trust``: the account's receiving server, for the sender check."""
     flags = email.keywords
     sender = _addresses(email.sender)
-    sole = sender[0]["email"] if len(email.sender) == len(sender) == 1 else None
+    sole = sender[0].email if len(email.sender) == len(sender) == 1 else None
     return MessageSummary.model_validate(
         {
             "id": email.id,
@@ -161,7 +157,7 @@ def keywords(flags: Mapping[str, bool]) -> list[str]:
     the marks as RFC 8621 spells them, the others as the server does."""
     found: dict[str, str] = {}
     for flag, on in flags.items():
-        if not on or flag.lower() in _NOT_KEYWORDS:
+        if not on or flag.lower() in RESERVED_KEYWORDS:
             continue
         if (keyword := as_keyword(flag)) is not None:
             found.setdefault(keyword.lower(), keyword)
@@ -197,12 +193,9 @@ def _path(keyword: str) -> str:
     return "keywords/" + keyword.replace("~", "~0").replace("/", "~1")
 
 
-def _addresses(values: Addresses) -> list[dict[str, str | None]]:
-    return [
-        {"email": fields.unicode_address(v.email), "name": v.name or None}
-        for v in values
-        if v is not None and v.email
-    ]
+def _addresses(values: Addresses) -> list[Address]:
+    found = (fields.address(v.email, v.name) for v in values if v is not None)
+    return [a for a in found if a is not None]
 
 
 # --- lists ------------------------------------------------------------------------

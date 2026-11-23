@@ -6,10 +6,12 @@ from __future__ import annotations
 
 import time
 from collections.abc import Awaitable, Callable
+from typing import Any, ClassVar, TypeVar
 
 import anyio
+from pydantic import BaseModel
 
-from ..protocols import Answer, ApiClient
+from ..protocols import Answer, ApiClient, wire
 from . import rules
 from .base import TokenSource
 
@@ -27,8 +29,15 @@ async def signed(
     return await send((await tokens.access_token()).get_secret_value())
 
 
+S = TypeVar("S", bound=BaseModel)
+
+
 class TokenApi:
-    """An API of one account, called with its access token."""
+    """An API of one account, called with its access token. ``who`` names
+    the provider in an error, and ``call`` is each API's own request."""
+
+    who: ClassVar[str] = ""
+    call: Callable[..., Awaitable[Answer]]
 
     def __init__(
         self,
@@ -49,3 +58,13 @@ class TokenApi:
         wait = self._rest_until - self._clock()
         if wait > 0:
             raise rules.resting(f"{who} asked to wait", wait)
+
+    async def read(self, shape: type[S], method: str, path: str, **kwargs: Any) -> S:
+        """One request, its answer read as ``shape``."""
+        answer = await self.call(method, path, **kwargs)
+        return wire.parse(
+            shape, answer.body, f"{self.who} answered in a shape of its own"
+        )
+
+    async def close(self) -> None:
+        await self._http.close()

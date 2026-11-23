@@ -66,11 +66,16 @@ class GmailThread(wire.CamelShape):
     messages: list[GmailMessage] = []
 
 
-class Messages(wire.CamelShape):
+class Page(wire.CamelShape):
+    """A page of a list, and the token of the next one."""
+
+    next_page_token: Text = None
+
+
+class Messages(Page):
     """A page of message ids, newest first."""
 
     messages: list[GmailMessage] = []
-    next_page_token: Text = None
 
 
 class Draft(wire.CamelShape):
@@ -80,9 +85,8 @@ class Draft(wire.CamelShape):
     message: Annotated[GmailMessage | None, wire.OrNone] = None
 
 
-class Drafts(wire.CamelShape):
+class Drafts(Page):
     drafts: list[Draft] = []
-    next_page_token: Text = None
 
 
 class Profile(wire.CamelShape):
@@ -114,12 +118,11 @@ class History(wire.CamelShape):
     labels_removed: list[LabelChange] = []
 
 
-class Histories(wire.CamelShape):
+class Histories(Page):
     """A page of changes since a history id. ``history_id``: the mailbox's
     history id now, where the next question starts."""
 
     history: list[History] = []
-    next_page_token: Text = None
     history_id: Text = None
 
 

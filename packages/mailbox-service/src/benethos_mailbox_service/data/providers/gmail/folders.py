@@ -4,9 +4,10 @@ where they are. Gmail's own labels cannot be changed."""
 
 from __future__ import annotations
 
-from ....errors import BadRequestError, NotFoundError
+from ....errors import BadRequestError, missing
 from ...models import Folder
 from ...protocols import path_part
+from .. import rules
 from . import mappers
 from .api import GmailApi
 from .reading import at_once
@@ -48,7 +49,7 @@ async def update_folder(
     label = await _own(api, folder_id)
     parent = await _own(api, parent_id) if parent_id is not None else None
     if parent is not None and _inside(parent, label):
-        raise BadRequestError("a label cannot move into itself")
+        raise rules.into_itself()
     old = label.name or ""
     new = mappers.label_name(_name(name), parent)
     if new != old:
@@ -91,4 +92,4 @@ async def _own(api: GmailApi, folder_id: str) -> Label:
             return label
     if folder_id == mappers.ALL_MAIL:
         raise BadRequestError("gmail's own folder All Mail stays as it is")
-    raise NotFoundError(f"folder {folder_id} not found")
+    raise missing("folder", folder_id)
