@@ -34,9 +34,7 @@ class RecoveryKey:
         answer: Answer | None = None,
     ) -> str:
         access.require("show_recovery_key")
-        await self._auth.confirm(access, password)
-        if self.needs_code(access):
-            self._auth.confirm_code(access, code, answer)
+        await self._auth.reconfirm(access, password, code, answer)
         recovery = encode_recovery(self._vault.master_key())
         self._auth.activity.record(said.RecoveryKeyShown(by=Actor.of(access)))
         return recovery
