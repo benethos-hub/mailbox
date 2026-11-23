@@ -24,9 +24,9 @@ and `KEYWORD`.
 | `STAGE` | `shadow`, `keyword` or `full`, `shadow` when unset |
 | `KEYWORD` | the keyword the agent sets, the agent's own default when unset. Lower case letters, digits and dashes, such as `agent-invoice` (2026-11-19). It belongs in the env file of one agent: an agent whose keyword is another agent's default does not start, and `status` warns when it is set |
 | `POLL_SECONDS`, `TICK_SECONDS` | how often the feed is read and the clock asked, `60` and `900` when unset |
-| `MAX_ATTEMPTS` | refused answers before a message is `failed`, `5` when unset |
+| `MAX_ATTEMPTS` | failed attempts before a message is `failed`, a refused answer or a step the service refused among them, and the passes in a row that end at one message ([runtime](runtime.md)), `5` when unset |
 | `BACKOFF_CEILING_SECONDS` | the longest wait between two attempts, `3600` when unset |
-| `BACKFILL_DAYS` | the window `backfill` runs over after an expired feed state, `7` when unset |
+| `BACKFILL_DAYS` | the days the command `backfill` takes up without `--days`, and the window taken up after an expired feed state, `7` when unset |
 | `DATA_DIR` | where the state files live, one `<agent>.db` per agent. Unset: the data folder of where the settings come from, below |
 | `PROMPT_RETENTION_DAYS` | [state](state.md), `0` when unset |
 | `METRICS_PORT` | [operation](operation.md), `0` serves no endpoint |
