@@ -78,12 +78,6 @@ Before = Annotated[
     Query(description="Before this time: ISO 8601 with a zone"),
 ]
 
-# The accounts a list across accounts reads.
-AccountIds = Annotated[
-    list[str] | None,
-    Query(description="Account ids. Without: every account the caller may read"),
-]
-
 # A point in the change feed, from the ``state`` of an earlier answer.
 Since = Annotated[
     str | None,

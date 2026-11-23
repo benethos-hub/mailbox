@@ -7,8 +7,14 @@ from typing import Annotated
 from fastapi import APIRouter, Query
 
 from ....data.models import ChangePage, FolderRole, MessagePage, Page, SendRecord
-from ..deps import AccountIds, Caller, Limit, Mailbox, Search, SendSearch, Since
+from ..deps import Caller, Limit, Mailbox, Search, SendSearch, Since
 from ..errors import CHANGES_ERRORS
+
+# The accounts a list across accounts reads.
+AccountIds = Annotated[
+    list[str] | None,
+    Query(description="Account ids. Without: every account the caller may read"),
+]
 
 router = APIRouter(tags=["mailbox"])
 
