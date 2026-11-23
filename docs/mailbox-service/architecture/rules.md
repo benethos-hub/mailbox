@@ -88,8 +88,8 @@ noticing. Every change is measured against that.
    client nor the MCP package depends on or imports the service package.
    The MCP package's `tests/test_boundary.py` and the client's
    `tests/test_architecture.py` check it. `mailbox-common` lies below
-   the service and the MCP server and sees neither, so it is no way
-   from one to the other.
+   the service, the MCP server and the agents and sees none of them, so
+   it is no way from one to another.
 
 **The seams, and what sits behind each:**
 
