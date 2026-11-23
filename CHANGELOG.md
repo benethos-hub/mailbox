@@ -123,6 +123,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+- **Breaking:** `benethos-mailbox-agents` refuse a
+  `MAILBOX_AGENTS_GATEWAY_URL` with a user or a password in it, as the
+  client refuses one in `MAILBOX_SERVICE_URL`. The address is named in
+  errors, and a password in it would be named with it.
 - `benethos-mailbox-service`: a setting that does not validate is named
   with its rule on one line, as `error: wrong settings: NAME: rule`.
   Before, every command printed the error of pydantic, with the settings

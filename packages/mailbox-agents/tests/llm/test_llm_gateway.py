@@ -196,6 +196,20 @@ def test_http_to_another_machine_is_refused(url: str) -> None:
         Gateway(url, "k", "m", timeout=120.0)
 
 
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://user:secret@127.0.0.1:4000",  # pragma: allowlist secret
+        "https://user:secret@gateway.example",  # pragma: allowlist secret
+        "https://user@gateway.example",
+    ],
+)
+def test_a_user_or_password_in_the_gateway_url_is_refused(url: str) -> None:
+    with pytest.raises(ConfigError, match="user or password") as refused:
+        Gateway(url, "k", "m", timeout=120.0)
+    assert "secret" not in str(refused.value)
+
+
 async def test_the_alias_stands_in_when_no_model_is_reported(gateway: Gateway) -> None:
     transport = httpx.MockTransport(
         lambda request: httpx.Response(
