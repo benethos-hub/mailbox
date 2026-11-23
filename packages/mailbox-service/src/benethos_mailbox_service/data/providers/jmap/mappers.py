@@ -16,6 +16,7 @@ from typing import Any
 from ....common import opaque
 from ...mail import authentication, convert, fields, parse
 from ...models import (
+    RESERVED_KEYWORDS,
     Address,
     Folder,
     FolderRole,
@@ -63,7 +64,6 @@ SUMMARY_PROPERTIES = [
 SEEN = "$seen"
 FLAGGED = "$flagged"
 DRAFT = "$draft"
-_NOT_KEYWORDS = {SEEN, FLAGGED, "$deleted", "$recent"}
 
 
 def is_id(value: str | None) -> bool:
@@ -157,7 +157,7 @@ def keywords(flags: Mapping[str, bool]) -> list[str]:
     the marks as RFC 8621 spells them, the others as the server does."""
     found: dict[str, str] = {}
     for flag, on in flags.items():
-        if not on or flag.lower() in _NOT_KEYWORDS:
+        if not on or flag.lower() in RESERVED_KEYWORDS:
             continue
         if (keyword := as_keyword(flag)) is not None:
             found.setdefault(keyword.lower(), keyword)

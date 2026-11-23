@@ -48,6 +48,7 @@ from .discovery import (
 )
 from .folders import OUTSIDE_ALL, Folder, FolderCreate, FolderRole, FolderUpdate
 from .messages import (
+    RESERVED_KEYWORDS,
     SEARCH_TEXT_PATTERN,
     UNKNOWN_ACCOUNT,
     Address,
@@ -146,6 +147,7 @@ __all__ = [
     "received_or_written",
     "MessageUpdate",
     "OUTSIDE_ALL",
+    "RESERVED_KEYWORDS",
     "OutgoingAttachment",
     "OutgoingMessage",
     "Page",
