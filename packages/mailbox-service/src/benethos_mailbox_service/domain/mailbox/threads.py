@@ -32,11 +32,11 @@ from ...data.models import (
 from ...data.providers import Reads
 from ...errors import MailboxServiceError, NotFoundError, missing
 from .. import paging
-from ..accounts import NEEDS, summaries, threads
+from ..accounts import summaries, threads
 from ..rights import Access
 from .calls import Calls, public
 from .folders import Folders, holder, resolved
-from .reach import Reach, reach_of, require_folder
+from .reach import Reach, permitted, reach_of, require_folder
 
 # The messages a thread lists at most, the newest.
 THREAD_MESSAGES = 500
@@ -62,8 +62,7 @@ class Threads:
         self, access: Access, account_id: str, thread_id: str
     ) -> Thread:
         """The thread with the messages the caller may see, oldest first."""
-        access.require("get_thread", account_id)
-        await self._calls.require(account_id, NEEDS["get_thread"])
+        await permitted(self._calls, access, "get_thread", account_id)
         reach = await reach_of(self._calls, access, "get_thread", account_id)
         thread = await self._visible(account_id, thread_id, reach)
         if thread is None:
@@ -84,8 +83,7 @@ class Threads:
         snippet. A page is a page of the folder's
         messages, so it may hold fewer threads than ``limit``. ``folder_id``
         may also be a role such as ``inbox``."""
-        access.require("list_threads", account_id)
-        await self._calls.require(account_id, NEEDS["list_threads"])
+        await permitted(self._calls, access, "list_threads", account_id)
         folders = await self._folders.all(account_id)
         folder = resolved(folders, folder_id)
         reach = await reach_of(self._calls, access, "list_threads", account_id, folders)

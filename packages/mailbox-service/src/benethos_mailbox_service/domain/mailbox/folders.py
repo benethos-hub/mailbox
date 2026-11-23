@@ -25,10 +25,10 @@ from ...errors import (
     NotSupportedError,
     missing,
 )
-from ..accounts import NEEDS, writes
+from ..accounts import writes
 from ..rights import Access
 from .calls import Calls
-from .reach import Reach, outside, reach_of, require_folder
+from .reach import Reach, outside, permitted, reach_of, require_folder
 
 
 class Folders:
@@ -50,8 +50,7 @@ class Folders:
         self, access: Access, account_id: str, new: FolderCreate
     ) -> Folder:
         """Where the grants name folders, only inside one of them."""
-        access.require("create_folder", account_id)
-        await self._calls.require(account_id, NEEDS["create_folder"])
+        await permitted(self._calls, access, "create_folder", account_id)
         folders = None if new.parent_id is None else await self.all(account_id)
         parent = None if folders is None else _parent(folders, new.parent_id)
         reach = await reach_of(
@@ -71,8 +70,7 @@ class Folders:
         """Rename or move. Folders with a role stay where mail clients expect
         them. The messages inside keep their ids: a sync follows them. A
         move below the trash needs delete_message as well."""
-        access.require("update_folder", account_id)
-        await self._calls.require(account_id, NEEDS["update_folder"])
+        await permitted(self._calls, access, "update_folder", account_id)
         folder, folders, reach = await self._own_folder(
             access, "update_folder", account_id, folder_id
         )
@@ -103,8 +101,7 @@ class Folders:
     ) -> None:
         """Only an empty folder without subfolders: deleting a folder takes
         its messages with it on many servers, and they cannot be taken back."""
-        access.require("delete_folder", account_id)
-        await self._calls.require(account_id, NEEDS["delete_folder"])
+        await permitted(self._calls, access, "delete_folder", account_id)
         folder, folders, _ = await self._own_folder(
             access, "delete_folder", account_id, folder_id
         )

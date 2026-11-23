@@ -47,7 +47,7 @@ from .cursors import Cursors
 from .folders import Folders, require_listed, with_roles_resolved
 from .guards import Guards, Lookups
 from .outgoing import Idempotency, Outgoing, SendControl
-from .reach import of_the_account, reach_of
+from .reach import of_the_account, permitted, reach_of
 from .threads import THREAD_MESSAGES, Threads
 
 # The keyword of a draft, \Draft on IMAP.
@@ -144,8 +144,9 @@ class MailboxService:
     ) -> Page[MessageSummary]:
         """One account's messages, newest first. ``folder_id`` may also be a
         role such as ``inbox``. Without one: the inbox."""
-        access.require("list_messages", account_id)
-        await self._calls.require(account_id, for_list(search))
+        await permitted(
+            self._calls, access, "list_messages", account_id, for_list(search)
+        )
         folder, reach = await self._folders.listed(
             access, account_id, folder_id or FolderRole.INBOX
         )
@@ -207,8 +208,9 @@ class MailboxService:
         message_id: str,
         changes: MessageUpdate,
     ) -> MessageSummary:
-        access.require("update_message", account_id)
-        await self._calls.require(account_id, for_update(changes))
+        await permitted(
+            self._calls, access, "update_message", account_id, for_update(changes)
+        )
         looked = self._guards.looking(account_id, [message_id])
         changes = await _resolved(looked, changes)
         refused = await self._guards.outside(
