@@ -152,6 +152,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   server gets had the same fault and then no longer held requests back.
   `benethos-mailbox-common`:
   `pauses.doubled` gives a pause that doubles up to a ceiling.
+- `benethos-mailbox-mcp` over streamable HTTP ends a stream a client
+  holds open cleanly when it stops. Before, the client saw an answer cut
+  off, and the log named `ASGI callable returned without completing
+  response`. The image and the lockfile take sse-starlette 3.7.1.
 
 ### Security
 
