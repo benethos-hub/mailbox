@@ -9,7 +9,7 @@ name: mailbox-agents-live
 
 services:
   stalwart:
-    image: stalwartlabs/stalwart:v1.1.1@sha256:5ebdf474b237161742fe4309396af4ae8797c938e8e6eb7e2d4837332c4f9851
+    image: stalwartlabs/stalwart:v1.2.0@sha256:79ea09d25baad7e074d8df53db474571c5dc62621298e35e09e9cfd764333ed8
     init: true
     restart: unless-stopped
     environment:
@@ -97,7 +97,7 @@ services:
   # the volume, the gateway sets its tables up anew, and the agents get a
   # new key.
   gateway-db:
-    image: postgres:19.0-alpine@sha256:8b0ff4cdf221f0c53d7fcda681d3b461be725c492cd881c5ec9c0ad25023f188
+    image: postgres:19.0-alpine@sha256:cac45fb483caee3668946088a1c0532db89d5285c28dbfeac889b4068296e06f
     restart: unless-stopped
     env_file: ./secrets/gateway-db.env
     networks:
