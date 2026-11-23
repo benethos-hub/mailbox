@@ -101,6 +101,7 @@ CONFINED: dict[str, frozenset[str]] = {
             "settings/folders.py",
             "settings/model.py",
             "sources/mailbox.py",
+            "store/store.py",
             "agents/sorting/agent.py",
             "cli/__init__.py",
             "cli/commands.py",

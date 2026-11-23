@@ -11,13 +11,15 @@ and times, never the text of a mail. See docs/mailbox-agents/concept/state.md.
 from __future__ import annotations
 
 import sqlite3
-import sys
 from collections.abc import Callable
+from contextlib import ExitStack
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from types import TracebackType
-from typing import IO, TypeVar
+from typing import TypeVar
+
+from benethos_mailbox_common.paths import locks
 
 from ..errors import ConfigError, StateFileError
 from .actions import _Actions
@@ -65,26 +67,18 @@ class Migrated:
     notes: tuple[str, ...] = ()
 
 
-def _lock(path: Path) -> IO[bytes]:
-    """An exclusive lock on ``<path>.lock``, held while the handle is open:
-    one writer per state file. Another writer is refused at once."""
-    handle = _made(path, lambda: path.with_name(path.name + ".lock").open("a+b"))
+def _lock(path: Path) -> ExitStack:
+    """An exclusive lock on ``<path>.lock``, held until the stack is
+    closed: one writer per state file. Another writer is refused at once."""
+    held = ExitStack()
+    lock = locks.exclusive_lock(path.with_name(path.name + ".lock"))
     try:
-        if sys.platform == "win32":
-            import msvcrt
-
-            handle.seek(0)
-            msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
-        else:
-            import fcntl
-
-            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-    except OSError:
-        handle.close()
+        _made(path, lambda: held.enter_context(lock))
+    except locks.LockedError:
         raise ConfigError(
             f"{path.stem} is already running: one writer per state file"
         ) from None
-    return handle
+    return held
 
 
 def _made(path: Path, make: Callable[[], T]) -> T:
@@ -100,13 +94,8 @@ def _made(path: Path, make: Callable[[], T]) -> T:
         ) from None
 
 
-def _unlock(handle: IO[bytes]) -> None:
-    if sys.platform == "win32":
-        import msvcrt
-
-        handle.seek(0)
-        msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
-    handle.close()
+def _unlock(held: ExitStack) -> None:
+    held.close()
 
 
 class Store(_Messages, _Steps, _Actions, _Items, _Calls):
@@ -116,7 +105,7 @@ class Store(_Messages, _Steps, _Actions, _Items, _Calls):
         self,
         connection: sqlite3.Connection,
         read_only: bool,
-        lock: IO[bytes] | None = None,
+        lock: ExitStack | None = None,
         name: str = "",
     ) -> None:
         self._db = connection
