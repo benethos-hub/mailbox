@@ -128,3 +128,21 @@ def test_an_internal_host_matches_in_unicode_and_in_punycode() -> None:
     assert fetcher(["xn--bcher-kva.internal"]).connect_address(
         "bücher.internal", 993
     ) == ("10.0.0.6")
+
+
+def test_an_imap_client_whose_starttls_fails_is_closed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """As POP3 and SMTP close theirs."""
+
+    class Refusing(Library):
+        def starttls(self, context: Any = None, **kwargs: Any) -> None:
+            raise ssl.SSLError("handshake failed")
+
+        def shutdown(self) -> None:
+            self.made.append(("shutdown", 0, None))
+
+    monkeypatch.setattr(imap, "IMAPClient", Refusing)
+    with pytest.raises(ssl.SSLError):
+        imap.default_client(Server("imap.example.org", 143, "starttls"), 5.0)
+    assert Library.made[-1][0] == "shutdown"
