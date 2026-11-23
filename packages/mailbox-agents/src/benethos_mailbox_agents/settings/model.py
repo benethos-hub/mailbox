@@ -154,7 +154,7 @@ class Settings(files.FileSettings):
             if getattr(self, name) is None and path is not None:
                 setting += "_FILE"
                 try:
-                    text = path.read_text(encoding="utf-8-sig").strip()
+                    text = files.secret_file(path)
                 except (OSError, ValueError) as exc:
                     raise ValueError(
                         f"{setting} cannot be read ({type(exc).__name__})"
