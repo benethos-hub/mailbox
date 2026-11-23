@@ -141,7 +141,8 @@ registry. The master key reaches the container as a file secret.
 each place they run in has a folder of its own beside it, with its own
 `secrets/`: `production/`, `development/` (the name decided 2026-10-08),
 which builds from the repository, and `test-mail-server/`, Stalwart for
-tests.
+tests. Since 0.11.0 `live/` holds the agents' mail server, service and
+model gateway of their own, also with its own `secrets/`.
 
 **Decided 2026-10-06, operation:** `containers/production/mailbox-service/` runs the
 published images without a clone of the repository. `.env` names a fixed

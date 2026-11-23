@@ -133,7 +133,7 @@ Part of the [roadmap](../ROADMAP.md): phase 5, in progress, and phase 5a, done.
   `containers/production/mailbox-service/` runs the published images with a fixed
   version, Caddy for HTTPS as a profile, `setup.sh` for the first start.
   The MCP server runs with each client, an instance per client. `containers/` holds `images/`, and `development/`,
-  `production/` and `test-mail-server/` each with its own `secrets/`
+  `production/`, `live/` and `test-mail-server/` each with its own `secrets/`
 - **MCP server instances and certificates in operation (8.1)**, decided
   2026-10-06, done: instances beside the service from the template
   `mcp.yaml` with the profile `mcp`, reached on `127.0.0.1` or through a
