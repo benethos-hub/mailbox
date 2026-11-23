@@ -8,6 +8,7 @@ from typing import Any, TypeVar
 
 from fastapi.responses import Response
 from pydantic import BaseModel, ValidationError
+from starlette.datastructures import FormData
 
 from benethos_mailbox_common.log import redact
 
@@ -39,6 +40,12 @@ def text_of(form: Mapping[str, object], key: str, *, strip: bool = True) -> str:
     without the spaces around it unless ``strip`` is false."""
     value = str(form.get(key) or "")
     return value.strip() if strip else value
+
+
+def texts_of(form: FormData, key: str) -> list[str]:
+    """Every value of a field that a form sends several times, such as
+    ticked boxes, as text. Empty values are left out."""
+    return [str(value) for value in form.getlist(key) if value]
 
 
 M = TypeVar("M", bound=BaseModel)
