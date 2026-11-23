@@ -190,10 +190,7 @@ class AccountService:
         credential. ``signed_in``: the tokens of an OAuth sign-in, used for
         the check instead of a refresh."""
         access.require("create_account")
-        if not self.offers(provider):
-            raise NotSupportedError(
-                f"{provider} accounts cannot be connected in this deployment"
-            )
+        self.require_offered(provider)
         no_secrets_in(settings)
         settings = {**settings_defaults(provider, email), **(settings or {})}
         secrets = dict(credentials or {})
@@ -412,6 +409,13 @@ class AccountService:
     def _ready(self, account_id: str) -> None:
         if self._on_ready is not None:
             self._on_ready(account_id)
+
+    def require_offered(self, provider: ProviderType) -> None:
+        """Refuse a provider this deployment does not connect."""
+        if not self.offers(provider):
+            raise NotSupportedError(
+                f"{provider} accounts cannot be connected in this deployment"
+            )
 
     def offers(self, provider: ProviderType) -> bool:
         """Whether accounts of this kind can be connected here."""
