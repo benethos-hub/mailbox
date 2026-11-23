@@ -62,6 +62,9 @@ docker compose --profile invoices pull
 docker compose --profile invoices up -d
 ```
 
+Update the mailbox service to the same version at the same time: before
+1.0 an agent stops at a service of another minor version.
+
 A new version may bring a new migration of the state file. It runs on the
 first start and is never taken back, so keep a copy of the volume before
 an update you may want to undo.
