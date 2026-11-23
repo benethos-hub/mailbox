@@ -12,7 +12,7 @@ Part of the [concept](../CONCEPT.md): sections 7 to 7.4 and 7.6 to 7.8.
 | JMAP password or API token | the user | until changed |
 | OAuth refresh token (Gmail, Microsoft) | the OAuth callback | until revoked, may rotate on use |
 | OAuth access token | refreshed from the refresh token | about one hour, **memory only** |
-| OAuth client secret of our Google / Microsoft app | the operator | until rotated |
+| OAuth client secret of the deployment's own Google client or Microsoft app | the operator | until rotated |
 | API tokens of users | issued by the service, stored as hash only | until expired or revoked |
 | Password of a UI user | the user, stored as a scrypt hash only | until changed |
 | TOTP secret of a device | made by the service when the device is added | until the device is removed |
