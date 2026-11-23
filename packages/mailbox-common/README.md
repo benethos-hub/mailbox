@@ -28,16 +28,17 @@
 > data is carried forward by migrations.
 
 What
-[`mailbox-service`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-service)
-and
+[`mailbox-service`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-service),
 [`mailbox-mcp`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-mcp)
-of [Mailbox](https://github.com/benethos-hub/mailbox) both need, held
-once, on PyPI as `benethos-mailbox-common`. The MCP server cannot see
-the service, so what both use lives here.
+and
+[`mailbox-agents`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-agents)
+of [Mailbox](https://github.com/benethos-hub/mailbox) need alike, held
+once, on PyPI as `benethos-mailbox-common`. The MCP server and the
+agents cannot see the service, so what they all use lives here.
 
 Mailbox is self-hosted and has five packages. This one is installed
-with the service and with the MCP server and is not meant to be used on
-its own. To use Mailbox, start with the service:
+with the service, the MCP server and the agents and is not meant to be
+used on its own. To use Mailbox, start with the service:
 [Install](https://github.com/benethos-hub/mailbox/blob/main/packages/mailbox-service/README.md#install).
 
 | Package | Its part | How you get it |
@@ -65,20 +66,21 @@ only inside its group.
 | Group | What it holds | Needs |
 |---|---|---|
 | `mail` | Mail itself, nothing of Mailbox. The visible text of an HTML body, as the mail page of the service shows it and the model of the MCP server reads it. Addresses in a readable form. The marks a person sees on a message, and their words. | the standard library |
-| `log` | The line of a log: its format, its levels and its time, plain or in colour on a terminal. Secrets are noted once and masked in every text. | the standard library |
+| `log` | The line of a log: its format, its levels and its time, plain, in colour on a terminal or as JSON. Secrets are noted once and masked in every text. | the standard library |
 | `paths` | Where a program keeps its files: the folders of the operating system for settings and data. | the extra `paths`, which brings platformdirs |
 | `settings` | A program's settings, from the command line, the environment, a settings file and the defaults. | the extra `settings`, which brings pydantic-settings |
-| `values` | Values written one way: JSON compact to send and canonical to hash, sizes, ids, tokens and digests, and text on one line. | the standard library |
+| `values` | Values written one way: JSON compact to send and canonical to hash, sizes, a pause that doubles up to a ceiling, ids, tokens and digests, and text on one line. | the standard library |
 
-So the service and the MCP server turn an HTML mail into the same
-text, write the same log line and mask the same secrets.
+So the service, the MCP server and the agents turn an HTML mail into
+the same text, write the same log line and mask the same secrets.
 
-It sees neither the service, nor the MCP server, nor the client.
+It sees neither the service, nor the MCP server, nor the client, nor
+the agents.
 
 ## Install
 
-There is nothing to install. The service and the MCP server bring it,
-with the extras they need.
+There is nothing to install. The service, the MCP server and the
+agents bring it, with the extras they need.
 
 On its own it needs the standard library alone. An extra is named
 after its group, and `all` brings every extra:
@@ -93,8 +95,8 @@ A module of a group that misses its extra says which one.
 
 It is built for the packages of this repository. Its modules, groups
 and extras may change between versions without notice. It carries the
-version of the other packages, and the service and the MCP server pin
-it to their own. Its public interface is recorded in
+version of the other packages, and the service, the MCP server and the
+agents pin it to their own. Its public interface is recorded in
 [`docs/mailbox-common/common-interface.json`](https://github.com/benethos-hub/mailbox/blob/main/docs/mailbox-common/common-interface.json),
 which a test holds to the code.
 
