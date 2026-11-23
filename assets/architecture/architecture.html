@@ -196,6 +196,8 @@
       <line class="blue" x1="431" y1="201" x2="431" y2="225" marker-end="url(#b)"/>
       <!-- the client to the REST API -->
       <line class="blue" x1="567" y1="283" x2="615" y2="283" marker-start="url(#b)" marker-end="url(#b)"/>
+      <!-- the agents use the client -->
+      <line class="blue" x1="500" y1="448" x2="500" y2="342" marker-end="url(#b)"/>
       <!-- scripts and apps to the REST API without the client -->
       <path class="plain" stroke-dasharray="7 6" d="M 135 331 V 348 Q 135 358 145 358 H 580 Q 590 358 590 348 V 316 Q 590 306 600 306 H 615" marker-start="url(#p)" marker-end="url(#p)"/>
       <!-- people to /ui, webhooks out to your systems -->
@@ -211,6 +213,7 @@
     <text x="273" y="116">MCP</text>
     <text x="456" y="218">uses</text>
     <text x="591" y="272">REST</text>
+    <text x="528" y="402">uses</text>
   </svg>
   <div class="way" style="left:360px; top:358px">REST without the client</div>
   <div class="way" style="left:433px; top:425px">browser</div>
@@ -235,6 +238,7 @@
 
   <div class="card package" style="top:72px; height:124px"><div><b>Mailbox MCP</b><code>benethos-mailbox-mcp</code><small>MCP server, stdio or HTTP</small><small>PyPI, container image, MCP Registry</small><small>Claude Desktop extension</small></div></div>
   <div class="card package" style="top:230px; height:106px"><div><b>Mailbox Client</b><code>benethos-mailbox-client</code><small>Python client, async and sync</small><small>PyPI</small></div></div>
+  <div class="card package" style="top:448px; height:100px"><div><b>Mailbox Agents</b><code>benethos-mailbox-agents</code><small>small AI agents sort and tag mail</small><small>PyPI and container image, alpha</small></div></div>
 
   <div class="service">
     <div class="top">
