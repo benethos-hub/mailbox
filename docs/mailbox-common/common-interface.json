@@ -209,6 +209,29 @@
     ]
   },
   "benethos_mailbox_common.paths.folders": {
+    "Folders": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "origin": {
+          "type": "Origin"
+        },
+        "config": {
+          "type": "Path"
+        },
+        "env_file": {
+          "type": "Path"
+        },
+        "data": {
+          "type": "Path"
+        }
+      }
+    },
+    "Origin": {
+      "source": "Literal[\"named\", \"working directory\", \"system\"]"
+    },
     "SystemFolders": {
       "bases": [
         "builtins.object"
@@ -225,6 +248,9 @@
     },
     "named_file": {
       "signature": "(env_file: 'Path | None', variable: 'str') -> 'Path | None'"
+    },
+    "program_folders": {
+      "signature": "(app: 'str', env_file: 'Path | None', variable: 'str', local: 'Path', data: 'Path') -> 'Folders'"
     },
     "system_folders": {
       "signature": "(app: 'str') -> 'SystemFolders'"

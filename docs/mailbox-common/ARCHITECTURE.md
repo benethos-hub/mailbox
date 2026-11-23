@@ -31,6 +31,8 @@ packages/mailbox-common/
                         #   forget for tests
     paths/              # where a program keeps its files (platformdirs)
       folders.py        # named_file, system_folders: SystemFolders
+                        #   program_folders: Folders, where a
+                        #   program looks, first found first
     settings/           # a program's settings (pydantic-settings)
       files.py          # FileSettings, the base of a program's
                         #   Settings, and load: the command line, the
