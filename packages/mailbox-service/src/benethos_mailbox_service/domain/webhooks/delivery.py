@@ -26,14 +26,13 @@ from typing import Protocol
 
 import anyio
 
-from benethos_mailbox_common.values import canonical
+from benethos_mailbox_common.values import canonical, pauses
 
 # Named apart from a secret of its own.
 from benethos_mailbox_common.values import secret as secret_values
 
 from ... import __version__
 from ...common.clock import utc_now
-from ...common.ratelimit import backoff
 from ...data.models import ChangeRecord
 from ...data.secrets import CredentialVault
 from ...data.storage import (
@@ -82,14 +81,8 @@ class Retries:
     def pause(self, failed: int) -> timedelta:
         """How long to wait after the ``failed``-th failed attempt: the
         backoff, without jitter."""
-        seconds = backoff(
-            failed - 1, self.first_retry, self.longest_retry, jitter=_longest
-        )
+        seconds = pauses.doubled(self.first_retry, failed - 1, self.longest_retry)
         return timedelta(seconds=seconds)
-
-
-def _longest(_shortest: float, longest: float) -> float:
-    return longest
 
 
 DEFAULT_RETRIES = Retries()
