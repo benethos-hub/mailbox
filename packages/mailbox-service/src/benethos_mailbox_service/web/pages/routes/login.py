@@ -107,8 +107,7 @@ async def login(
             name, password, source=client_address(request)
         )
     except RateLimitedError as exc:
-        minutes = max(1, -(-exc.retry_after // 60))
-        return _to_login("throttled", minutes=minutes)
+        return _throttled(exc)
     except SetupRequiredError:
         return _to_login("setup")
     except UnauthorizedError:
@@ -196,13 +195,18 @@ async def sign_in_with_code(
         )
     except RateLimitedError as exc:
         store.drop_pending(pending_id)
-        return _to_login("throttled", minutes=max(1, -(-exc.retry_after // 60)))
+        return _throttled(exc)
     except UnauthorizedError:
         if store.missed(pending_id):
             return RedirectResponse(_wrong(code, passkey), status_code=303)
         return _to_login("code_tries")
     store.drop_pending(pending_id)
     return _session(request, store, signed, pending.next)
+
+
+def _throttled(exc: RateLimitedError) -> Response:
+    """Back to the sign-in, with the whole minutes to wait, at least one."""
+    return _to_login("throttled", minutes=max(1, -(-exc.retry_after // 60)))
 
 
 # The method a wrong code came by, shown first again on the code page,
