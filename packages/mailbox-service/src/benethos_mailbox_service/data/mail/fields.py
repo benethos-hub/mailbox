@@ -9,6 +9,7 @@ from dataclasses import dataclass
 
 from ...common.hosts import idna_ascii, idna_unicode
 from ...errors import BadRequestError
+from ..models import Address
 
 # The content type of an attachment that names none.
 OCTET_STREAM = "application/octet-stream"
@@ -87,3 +88,11 @@ def unicode_address(email: str) -> str:
         return f"{local}@{idna_unicode(domain)}"
     except UnicodeError:
         return email
+
+
+def address(email: str | None, name: str | None) -> Address | None:
+    """The address a provider gives, as the API shows it: None without an
+    email, an empty name as none, the domain in Unicode."""
+    if not email:
+        return None
+    return Address(email=unicode_address(email), name=name or None)

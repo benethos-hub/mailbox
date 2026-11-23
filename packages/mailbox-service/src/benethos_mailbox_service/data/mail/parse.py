@@ -26,11 +26,11 @@ from imap_tools.utils import decode_value, replace_html_ct_charset
 
 from ...common.hosts import ascii_host
 from ..models import Address
+from . import fields
 from .fields import (
     OCTET_STREAM,
     ThreadHeaders,
     thread_headers,
-    unicode_address,
 )
 
 
@@ -105,7 +105,7 @@ class ParsedMessage:
     @property
     def sender(self) -> Address | None:
         found = self._parsed.from_values
-        return _address(found) if found and found.email else None
+        return fields.address(found.email, found.name) if found else None
 
     @property
     def to(self) -> list[Address]:
@@ -320,9 +320,6 @@ def _comparable(address: str) -> str | None:
     return f"{local.lower()}@{written}" if written is not None else None
 
 
-def _address(value: Any) -> Address:
-    return Address(email=unicode_address(value.email), name=value.name or None)
-
-
 def _addresses(values: Any) -> list[Address]:
-    return [_address(v) for v in values or () if v.email]
+    found = (fields.address(v.email, v.name) for v in values or ())
+    return [a for a in found if a is not None]

@@ -16,6 +16,7 @@ from typing import Any
 from ....common import opaque
 from ...mail import authentication, convert, fields, parse
 from ...models import (
+    Address,
     Folder,
     FolderRole,
     Message,
@@ -103,7 +104,7 @@ def summary(email: Email, trust: authentication.Trust | None) -> MessageSummary:
     """``trust``: the account's receiving server, for the sender check."""
     flags = email.keywords
     sender = _addresses(email.sender)
-    sole = sender[0]["email"] if len(email.sender) == len(sender) == 1 else None
+    sole = sender[0].email if len(email.sender) == len(sender) == 1 else None
     return MessageSummary.model_validate(
         {
             "id": email.id,
@@ -197,12 +198,9 @@ def _path(keyword: str) -> str:
     return "keywords/" + keyword.replace("~", "~0").replace("/", "~1")
 
 
-def _addresses(values: Addresses) -> list[dict[str, str | None]]:
-    return [
-        {"email": fields.unicode_address(v.email), "name": v.name or None}
-        for v in values
-        if v is not None and v.email
-    ]
+def _addresses(values: Addresses) -> list[Address]:
+    found = (fields.address(v.email, v.name) for v in values if v is not None)
+    return [a for a in found if a is not None]
 
 
 # --- lists ------------------------------------------------------------------------
