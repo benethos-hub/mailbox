@@ -39,7 +39,7 @@ from ..domain.activity import http as said
 from ..domain.rights import Access
 from ..errors import RateLimitedError
 from .state import app_limits, app_services
-from .urls import logged_path
+from .urls import client_address, logged_path
 
 # The largest mail the service sends carries 25 MB of attachments, which
 # base64 in a JSON body makes about 34 MB.
@@ -258,7 +258,7 @@ class RequestLimit:
 
     @staticmethod
     def _count(request: Request) -> None:
-        address = request.client.host if request.client else "unknown"
+        address = client_address(request)
         anonymous = _limits(request.scope).anonymous
         _take(request.scope, anonymous, address, someone(address))
 
