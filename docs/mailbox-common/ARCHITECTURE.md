@@ -26,7 +26,8 @@ packages/mailbox-common/
     log/                # the lines of a log and the secrets kept out
       lines.py          # format, levels, log_time, plain or in colour
                         #   on a terminal, a program's own lines through
-                        #   line_of, the stderr handler
+                        #   line_of, the stderr handler, to_stream:
+                        #   the setup of a program's log
       redact.py         # secrets noted once, masked in every text,
                         #   forget for tests
     paths/              # where a program keeps its files (platformdirs)

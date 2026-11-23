@@ -23,6 +23,7 @@ from benethos_mailbox_common.log.lines import (
     log_time,
     short_source,
     stderr_handler,
+    to_stream,
 )
 
 PACKAGE = "benethos_x"
@@ -205,3 +206,25 @@ def test_a_json_line_masks_a_secret_in_the_arguments() -> None:
     record = _record(message="sent %s")
     record.args = ("an-argument-secret",)
     assert json.loads(Json().format(record))["message"] == "sent ***"
+
+
+def test_to_stream_holds_a_library_at_warning_and_replaces_itself() -> None:
+    root = logging.getLogger()
+    kept = (list(root.handlers), root.level, logging.getLogger(PACKAGE).level)
+    first, second = io.StringIO(), io.StringIO()
+    try:
+        to_stream(PACKAGE, "debug", stream=first, colours=False)
+        handler = to_stream(PACKAGE, "debug", stream=second, colours=False)
+        logging.getLogger(f"{PACKAGE}.server").debug("own line")
+        logging.getLogger("some_library").info("library line")
+        logging.getLogger("some_library").warning("library warning")
+        assert [h for h in root.handlers if h not in kept[0]] == [handler]
+        assert root.level == logging.WARNING
+    finally:
+        root.handlers[:] = kept[0]
+        root.setLevel(kept[1])
+        logging.getLogger(PACKAGE).setLevel(kept[2])
+    assert first.getvalue() == ""
+    written = second.getvalue()
+    assert "own line" in written and "library warning" in written
+    assert "library line" not in written
