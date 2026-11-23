@@ -7,8 +7,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from ....errors import BadRequestError, ConflictError, NotSupportedError, missing
+from ....errors import BadRequestError, NotSupportedError, missing
 from ...models import Folder
+from .. import rules
 from . import mappers
 from .mailbox import Mailbox, names
 
@@ -21,7 +22,7 @@ def create_folder(
     if full in names(raws):
         if retried:
             return box.folder(full)  # the first try made it
-        raise ConflictError(f"a folder {name} exists there already")
+        raise rules.folder_exists(name)
     box.session.folders.create_folder(full)
     return box.folder(full)
 
@@ -49,9 +50,9 @@ def update_folder(
     if new == old:
         return box.folder(old)
     if new in names(raws):
-        raise ConflictError(f"a folder {name} exists there already")
+        raise rules.folder_exists(name)
     if new.startswith(old + (delimiter(box, raws) or "\0")):
-        raise BadRequestError("a folder cannot move into itself")
+        raise rules.into_itself()
     box.session.folders.rename_folder(old, new)
     return box.folder(new)
 

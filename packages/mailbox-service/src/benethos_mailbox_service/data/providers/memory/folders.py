@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from ....errors import ConflictError
 from ...models import Folder
+from .. import rules
 from .store import Store, folder
 
 
@@ -11,7 +11,7 @@ def create_folder(store: Store, name: str, parent_id: str | None) -> Folder:
     if parent_id is not None:
         folder(store, parent_id)
     if any(f.name == name and f.parent_id == parent_id for f in store.folders):
-        raise ConflictError(f"a folder {name} exists there already")
+        raise rules.folder_exists(name)
     made = Folder(id=f"folder_{len(store.folders)}", name=name, parent_id=parent_id)
     store.folders.append(made)
     return made

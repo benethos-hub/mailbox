@@ -119,9 +119,7 @@ async def update_messages(
             (t for t in sorted(named) if t not in known | {mappers.ALL_MAIL}), None
         )
         if unknown is not None:
-            return dict.fromkeys(
-                message_ids, NotFoundError(f"folder {unknown} not found")
-            )
+            return dict.fromkeys(message_ids, missing("folder", unknown))
         if set(named) & mappers.NOT_TARGETS:
             failure = BadRequestError("gmail puts messages in sent and drafts itself")
             return dict.fromkeys(message_ids, failure)

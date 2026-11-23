@@ -16,7 +16,7 @@ from typing import TypeVar
 import anyio
 
 from ....common.opaque import from_base64
-from ....errors import MailboxServiceError, NotFoundError, ProviderError
+from ....errors import MailboxServiceError, NotFoundError, ProviderError, missing
 from ...models import MessageSummary
 from ...protocols import Params, path_part
 from . import mappers
@@ -52,7 +52,7 @@ async def require_folder(api: GmailApi, folder_id: str) -> None:
 
 
 def _missing_folder(folder_id: str) -> NotFoundError:
-    return NotFoundError(f"folder {folder_id} not found")
+    return missing("folder", folder_id)
 
 
 async def get(api: GmailApi, message_id: str, params: Params) -> GmailMessage:

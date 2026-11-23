@@ -34,6 +34,22 @@ from ..models import Folder, FolderRole, MessageFilter, MessageUpdate
 R = TypeVar("R")
 
 
+def lost(what: str) -> ProviderError:
+    """The server stored ``what``, a draft or a folder, and cannot find it
+    again: its fault, not the caller's."""
+    return ProviderError(f"the {what} was stored but cannot be found again")
+
+
+def folder_exists(name: str) -> ConflictError:
+    """A folder of that name stands there already."""
+    return ConflictError(f"a folder {name} exists there already")
+
+
+def into_itself() -> BadRequestError:
+    """A folder moved below itself or below one of its own."""
+    return BadRequestError("a folder cannot move into itself")
+
+
 def no_folder(role: FolderRole) -> NotSupportedError:
     """The account has no folder with this role: what needs it is not
     supported there (UNIFORM R2)."""

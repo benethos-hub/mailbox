@@ -8,7 +8,6 @@ from ....errors import (
     MailboxServiceError,
     NotFoundError,
     NotSupportedError,
-    ProviderError,
     missing,
 )
 from ...models import FolderRole, MessageSummary, Page
@@ -42,7 +41,7 @@ def save_draft(
             raise missing("draft", replaces)
     saved = append(box, drafts, raw, ["\\Draft", "\\Seen"])
     if saved is None:
-        raise ProviderError("the draft was stored but cannot be found again")
+        raise rules.lost("draft")
     if old is not None:
         _replaced(box, old, saved.id)
     return saved

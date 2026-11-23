@@ -4,7 +4,7 @@ stored: a replaced draft is a new email with a new id."""
 
 from __future__ import annotations
 
-from ....errors import ProviderError, missing
+from ....errors import missing
 from ...models import FolderRole, MessageSummary, Page
 from ...protocols import jmap
 from .. import rules
@@ -48,7 +48,7 @@ async def save_draft(
         found = await account.emails([made.id], mappers.SUMMARY_PROPERTIES)
         stored = found.get(made.id)
     if stored is None:
-        raise ProviderError("the draft was stored but cannot be found again")
+        raise rules.lost("draft")
     if replaces is not None:
         await rules.replaced(
             stored.id,
