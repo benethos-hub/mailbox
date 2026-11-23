@@ -14,7 +14,7 @@ from ....domain.auth import SETUP, Answer
 from ...services import PasskeyDevices
 from ..deps import Actor
 from ..forms import failing
-from ..passkeys import answered, first_way, passkey_party, passkeys_work
+from ..passkeys import Confirmed, passkey_party, passkeys_work
 from ..session import PendingPasskey, pending_passkey, session_of
 from ..templates import back
 from .factor import FACTOR_PAGE, SETUP_RAN_OUT, device_added, devices_removed
@@ -32,18 +32,17 @@ ELSEWHERE = (
 async def begin(
     request: Request,
     caller: Actor,
+    confirmed: Confirmed,
     passkeys: PasskeyDevices,
     name: Annotated[str, Form()] = "",
-    password: Annotated[str, Form()] = "",
-    code: Annotated[str, Form()] = "",
-    passkey: Annotated[str, Form()] = "",
 ) -> Response:
     party = passkey_party(request)
     if not passkeys_work(party):
         return back(request, FACTOR_PAGE, error=ELSEWHERE)
-    proof = answered(request, passkey)
-    with failing(FACTOR_PAGE, dialog="add-passkey", first=first_way(code, passkey)):
-        begun = await passkeys.begin(caller, name, password, party, code, proof)
+    with failing(FACTOR_PAGE, dialog="add-passkey", first=confirmed.first):
+        begun = await passkeys.begin(
+            caller, name, confirmed.password, party, confirmed.code, confirmed.proof
+        )
     session_of(request).passkey = PendingPasskey(
         begun.name, begun.begun.options, begun.begun.challenge, utc_now() + SETUP
     )
@@ -92,18 +91,17 @@ async def rename(
 async def remove_own(
     request: Request,
     caller: Actor,
+    confirmed: Confirmed,
     passkeys: PasskeyDevices,
     device: Annotated[list[str] | None, Form()] = None,
-    password: Annotated[str, Form()] = "",
-    code: Annotated[str, Form()] = "",
-    passkey: Annotated[str, Form()] = "",
 ) -> Response:
     """One passkey, or those ticked in the list, after one password and one
     code or passkey."""
-    proof = answered(request, passkey)
     dialog = f"remove-{device[0]}" if device and len(device) == 1 else None
-    with failing(FACTOR_PAGE, dialog=dialog, first=first_way(code, passkey)):
-        stamp = await passkeys.remove_own(caller, device or [], password, code, proof)
+    with failing(FACTOR_PAGE, dialog=dialog, first=confirmed.first):
+        stamp = await passkeys.remove_own(
+            caller, device or [], confirmed.password, confirmed.code, confirmed.proof
+        )
     return devices_removed(request, stamp, "Passkey removed.")
 
 

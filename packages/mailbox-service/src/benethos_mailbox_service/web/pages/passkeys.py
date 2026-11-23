@@ -14,14 +14,16 @@ from __future__ import annotations
 
 import ipaddress
 from dataclasses import dataclass
+from typing import Annotated
 from urllib.parse import urlsplit
 
-from fastapi import Request
+from fastapi import Depends, Form, Request
 
 from ...data.secrets import Begun, Party, totp
 from ...domain.auth import Answer
 from ..services import get_auth
 from ..urls import public_base
+from .deps import Actor
 from .session import session_of
 
 
@@ -117,3 +119,31 @@ def answered(request: Request, passkey: str) -> Answer | None:
     session = session_of(request)
     kept, session.challenge = session.challenge, None
     return answer(request, kept, passkey)
+
+
+@dataclass(frozen=True, slots=True)
+class Proven:
+    """What a form that confirms a step sends: the password once more, a
+    code or the answer to the passkey challenge of the session, and the
+    method to show first when the form comes back refused."""
+
+    password: str
+    code: str
+    proof: Answer | None
+    first: str | None
+
+
+def proven(
+    request: Request,
+    _: Actor,
+    password: Annotated[str, Form()] = "",
+    code: Annotated[str, Form()] = "",
+    passkey: Annotated[str, Form()] = "",
+) -> Proven:
+    """The proof of a form of the signed-in user. It depends on ``Actor``,
+    so a request without its CSRF token is refused before it takes the
+    challenge of the session."""
+    return Proven(password, code, answered(request, passkey), first_way(code, passkey))
+
+
+Confirmed = Annotated[Proven, Depends(proven)]

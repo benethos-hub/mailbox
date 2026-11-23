@@ -14,7 +14,7 @@ from ....domain.auth import SETUP
 from ...services import TotpDevices
 from ..deps import Actor
 from ..forms import failing
-from ..passkeys import answered, first_way
+from ..passkeys import Confirmed
 from ..session import PendingTotp, pending_totp, session_of
 from ..templates import back
 from .factor import FACTOR_PAGE, SETUP_RAN_OUT, device_added, devices_removed
@@ -27,15 +27,14 @@ router = APIRouter()
 async def begin(
     request: Request,
     caller: Actor,
+    confirmed: Confirmed,
     totp: TotpDevices,
     name: Annotated[str, Form()] = "",
-    password: Annotated[str, Form()] = "",
-    code: Annotated[str, Form()] = "",
-    passkey: Annotated[str, Form()] = "",
 ) -> Response:
-    proof = answered(request, passkey)
-    with failing(FACTOR_PAGE, dialog="add-device", first=first_way(code, passkey)):
-        begun = await totp.begin(caller, name, password, code, proof)
+    with failing(FACTOR_PAGE, dialog="add-device", first=confirmed.first):
+        begun = await totp.begin(
+            caller, name, confirmed.password, confirmed.code, confirmed.proof
+        )
     session_of(request).totp = PendingTotp(begun.name, begun.secret, utc_now() + SETUP)
     return back(request, FACTOR_PAGE)
 
@@ -80,17 +79,14 @@ async def rename(
 async def remove_own(
     request: Request,
     caller: Actor,
+    confirmed: Confirmed,
     totp: TotpDevices,
     device: Annotated[str, Form()] = "",
-    password: Annotated[str, Form()] = "",
-    code: Annotated[str, Form()] = "",
-    passkey: Annotated[str, Form()] = "",
 ) -> Response:
-    proof = answered(request, passkey)
-    with failing(
-        FACTOR_PAGE, dialog=f"remove-{device}", first=first_way(code, passkey)
-    ):
-        stamp = await totp.remove_own(caller, device, password, code, proof)
+    with failing(FACTOR_PAGE, dialog=f"remove-{device}", first=confirmed.first):
+        stamp = await totp.remove_own(
+            caller, device, confirmed.password, confirmed.code, confirmed.proof
+        )
     return devices_removed(request, stamp, "Device removed.")
 
 
@@ -108,17 +104,14 @@ async def remove_device(
 async def remove_ticked(
     request: Request,
     caller: Actor,
+    confirmed: Confirmed,
     totp: TotpDevices,
     device: Annotated[list[str] | None, Form()] = None,
-    password: Annotated[str, Form()] = "",
-    code: Annotated[str, Form()] = "",
-    passkey: Annotated[str, Form()] = "",
 ) -> Response:
     """The devices ticked in the list, after one password and one code or
     passkey."""
-    proof = answered(request, passkey)
-    with failing(FACTOR_PAGE, dialog="remove-ticked", first=first_way(code, passkey)):
+    with failing(FACTOR_PAGE, dialog="remove-ticked", first=confirmed.first):
         stamp = await totp.remove_own_devices(
-            caller, device or [], password, code, proof
+            caller, device or [], confirmed.password, confirmed.code, confirmed.proof
         )
     return devices_removed(request, stamp, "Devices removed.")

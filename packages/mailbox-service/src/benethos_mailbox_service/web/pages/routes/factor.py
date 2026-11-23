@@ -5,10 +5,9 @@ TOTP does on the page is in ``totp``, what passkeys do in ``passkeys``."""
 
 from __future__ import annotations
 
-from typing import Annotated
 from urllib.parse import quote
 
-from fastapi import APIRouter, Form, Request
+from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, Response
 
 from ....common.clock import utc_now
@@ -19,7 +18,7 @@ from ...services import Factors
 from ...urls import public_host
 from ..deps import Actor, Viewer
 from ..forms import failing
-from ..passkeys import answered, first_way, offered, passkey_party, passkeys_work
+from ..passkeys import Confirmed, offered, passkey_party, passkeys_work
 from ..qr import data_uri
 from ..session import (
     PendingTotp,
@@ -97,14 +96,13 @@ async def factor_page(
 async def renew_codes(
     request: Request,
     caller: Actor,
+    confirmed: Confirmed,
     factors: Factors,
-    password: Annotated[str, Form()] = "",
-    code: Annotated[str, Form()] = "",
-    passkey: Annotated[str, Form()] = "",
 ) -> Response:
-    proof = answered(request, passkey)
-    with failing(FACTOR_PAGE, dialog="new-codes", first=first_way(code, passkey)):
-        codes = await factors.renew_codes(caller, password, code, proof)
+    with failing(FACTOR_PAGE, dialog="new-codes", first=confirmed.first):
+        codes = await factors.renew_codes(
+            caller, confirmed.password, confirmed.code, confirmed.proof
+        )
     show_once(request, CODES, "\n".join(codes))
     return back(request, FACTOR_PAGE, "New recovery codes. The old ones stop working.")
 

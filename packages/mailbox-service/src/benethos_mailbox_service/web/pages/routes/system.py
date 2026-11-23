@@ -4,9 +4,7 @@ accounts list."""
 
 from __future__ import annotations
 
-from typing import Annotated
-
-from fastapi import APIRouter, Form, Request
+from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, Response
 
 from ....domain.system import LEVELS
@@ -14,7 +12,7 @@ from ...services import Log, Recovery
 from ..deps import Actor, Viewer
 from ..filters import Field, filter_bar
 from ..forms import failing
-from ..passkeys import answered, first_way, offered
+from ..passkeys import Confirmed, offered
 from ..session import show_once, take_once
 from ..templates import PAGE_SIZE, back, page_links, render
 
@@ -68,15 +66,14 @@ async def recovery_key(
 async def show_recovery_key(
     request: Request,
     caller: Actor,
+    confirmed: Confirmed,
     recovery: Recovery,
-    password: Annotated[str, Form()] = "",
-    code: Annotated[str, Form()] = "",
-    passkey: Annotated[str, Form()] = "",
 ) -> Response:
     """The key after the password once more, and a code or a passkey with
     a second factor. Kept for the next page only, never in the URL."""
-    proof = answered(request, passkey)
-    with failing(RECOVERY_PAGE, dialog="show-key", first=first_way(code, passkey)):
-        key = await recovery.show(caller, password, code, proof)
+    with failing(RECOVERY_PAGE, dialog="show-key", first=confirmed.first):
+        key = await recovery.show(
+            caller, confirmed.password, confirmed.code, confirmed.proof
+        )
     show_once(request, "recovery_key", key)
     return back(request, RECOVERY_PAGE)
