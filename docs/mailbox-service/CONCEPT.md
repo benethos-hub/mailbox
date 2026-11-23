@@ -104,10 +104,11 @@ Undecided ideas are collected in [IDEAS.md](../IDEAS.md).
 2. **Name:** decided 2026-09-24 and 2026-10-05: a descriptive name rather
    than a brand. The project is named Mailbox, the repository `mailbox`,
    its packages `mailbox-service`, `mailbox-client` (since 2026-10-07),
-   `mailbox-mcp` and `mailbox-common` (since 0.4.0). On PyPI they are
-   `benethos-mailbox-service`, `benethos-mailbox-client`,
-   `benethos-mailbox-mcp` and `benethos-mailbox-common`, on ghcr.io the
-   two images as well. The environment prefix of the service is
+   `mailbox-mcp`, `mailbox-common` (since 0.4.0) and `mailbox-agents`
+   (since 0.11.0). On PyPI they are `benethos-mailbox-service`,
+   `benethos-mailbox-client`, `benethos-mailbox-mcp`,
+   `benethos-mailbox-common` and `benethos-mailbox-agents`, on ghcr.io
+   the images of the service, the MCP server and the agents as well. The environment prefix of the service is
    `MAILBOX_SERVICE_`. "Mail gateway" was ruled out because it already
    names the filtering gateway in front of a mail server.
 3. **Gmail priority:** answered 2026-10-08: Gmail came after the beta,

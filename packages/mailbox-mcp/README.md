@@ -56,7 +56,7 @@ to the provider of the account.
 | **`mailbox-mcp`** | This package. It turns the REST API of the service into tools for an AI assistant. It holds no mail password and no mail library. | [Getting started](#getting-started) |
 | [`mailbox-client`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-client) | The Python client of the REST API. This server makes every request with it. | installed with this server |
 | [`mailbox-service`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-service) | It holds the connections to your accounts and their credentials, encrypted. It offers one REST API for every provider and decides what a token may do. It has to be running. | [Install](https://github.com/benethos-hub/mailbox/blob/main/packages/mailbox-service/README.md#install), before this server |
-| [`mailbox-common`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-common) | What the service and this server share. | installed with both |
+| [`mailbox-common`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-common) | What the service, this server and the agents share. | installed with each of them |
 | [`mailbox-agents`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-agents) | Small AI agents that sort and mark mail, on top of the client. They do not use this server. | not needed here |
 
 > **The MCP server and the service must have the same version** to work
