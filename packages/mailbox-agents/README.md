@@ -23,7 +23,7 @@
 
 [![benethos-mailbox-mcp on Glama](https://glama.ai/mcp/servers/benethos-hub/mailbox/badges/card.svg)](https://glama.ai/mcp/servers/benethos-hub/mailbox)
 
-> **Alpha, version 0.10.0.** Built, and run on a test account of
+> **Alpha, version 0.11.0.** Built, and run on a test account of
 > invented mail. On a real mailbox only an early version of `invoices`
 > ran, in the stage `shadow`, and changed nothing. Names, settings and
 > the state file may still change from one version to the next. The

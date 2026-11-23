@@ -7,7 +7,7 @@ alpha. Their concept is [docs/mailbox-agents/CONCEPT.md](../mailbox-agents/CONCE
 
 ### Built
 
-Version 0.10.0 holds the runtime and the agents `counting`,
+Version 0.11.0 holds the runtime and the agents `counting`,
 `invoices`, `awaiting_reply`, `inquiries` and `sorting`, each described in
 its file under [concept/](../mailbox-agents/concept/). All of it ran on the test account of
 invented mail. On a real mailbox only `invoices` version 3 ran, in

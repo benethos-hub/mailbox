@@ -151,7 +151,7 @@ wheels = [
 
 [[package]]
 name = "benethos-mailbox-agents"
-version = "0.10.0"
+version = "0.11.0"
 source = { editable = "packages/mailbox-agents" }
 dependencies = [
     { name = "benethos-mailbox-client" },
@@ -172,7 +172,7 @@ requires-dist = [
 
 [[package]]
 name = "benethos-mailbox-client"
-version = "0.10.0"
+version = "0.11.0"
 source = { editable = "packages/mailbox-client" }
 dependencies = [
     { name = "httpx" },
@@ -183,7 +183,7 @@ requires-dist = [{ name = "httpx", specifier = ">=0.28" }]
 
 [[package]]
 name = "benethos-mailbox-common"
-version = "0.10.0"
+version = "0.11.0"
 source = { editable = "packages/mailbox-common" }
 
 [package.optional-dependencies]
@@ -208,7 +208,7 @@ provides-extras = ["paths", "settings", "all"]
 
 [[package]]
 name = "benethos-mailbox-mcp"
-version = "0.10.0"
+version = "0.11.0"
 source = { editable = "packages/mailbox-mcp" }
 dependencies = [
     { name = "anyio" },
@@ -237,7 +237,7 @@ requires-dist = [
 
 [[package]]
 name = "benethos-mailbox-service"
-version = "0.10.0"
+version = "0.11.0"
 source = { editable = "packages/mailbox-service" }
 dependencies = [
     { name = "anyio" },
