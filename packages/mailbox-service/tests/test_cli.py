@@ -452,3 +452,15 @@ def test_wrong_settings_are_named_without_what_was_given(
     assert "client id" in err
     assert "invented-secret-value" not in err
     assert "input_value" not in err
+
+
+def test_a_secret_file_with_the_mark_of_utf8_in_front(tmp_path: Path) -> None:
+    """As PowerShell 5.1 writes a file with ``Out-File -Encoding utf8``."""
+    secret = tmp_path / "secret.txt"
+    secret.write_bytes(b"\xef\xbb\xbfclient-secret\r\n")
+    found = Settings(
+        _env_file=None,  # type: ignore[call-arg]
+        oauth_microsoft_client_id="client-1",
+        oauth_microsoft_client_secret_file=secret,
+    ).oauth_microsoft_secret()
+    assert found is not None and found.get_secret_value() == "client-secret"
