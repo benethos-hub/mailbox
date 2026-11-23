@@ -121,7 +121,7 @@ services:
   # Toolkit and its CDI spec on the host (README.md).
   llama-gpu:
     profiles: ["gpu"]
-    image: ghcr.io/ggml-org/llama.cpp:server-cuda-b12602@sha256:26f89ebd3bf17a5ecf6caee62bdabfa55abea3058150879f6f07b1fc786baa2d
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda-b12648@sha256:f8e7c336e3660804f6bc35a4147dbfdf1ddae9b7c3c50d412fab49b323e28fea
     restart: unless-stopped
     command: &llama-command
       - --models-preset
@@ -149,7 +149,7 @@ services:
   # On the CPU, with the profile cpu: what a server without a card would do.
   llama-cpu:
     profiles: ["cpu"]
-    image: ghcr.io/ggml-org/llama.cpp:server-b12602@sha256:ae28f5c2046de51dfd00c9116a36fe44b5e8703ef730d0aea69082781eecb1f7
+    image: ghcr.io/ggml-org/llama.cpp:server-b12648@sha256:20db01dc9a92bff54a5b9fe4078caa52be6a0c1fa73859c6449e25b9cb67f998
     restart: unless-stopped
     command: *llama-command
     networks:
