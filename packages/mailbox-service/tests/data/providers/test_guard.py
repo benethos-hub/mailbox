@@ -72,6 +72,27 @@ def test_after_the_last_attempt_the_server_rests_longer_each_time() -> None:
         watched.check()
 
 
+def test_the_pause_stays_the_longest_after_many_failures_in_a_row() -> None:
+    time = Seconds()
+    watched = Guard(
+        Pace(per_minute=6000, attempts=1, first_pause=30.0, longest_pause=900.0),
+        Timing(clock=time, sleep=time.sleep, jitter=lambda low, high: high),
+    )
+    for _ in range(1100):
+        steps = Steps(down())
+        with pytest.raises(ProviderUnavailableError):
+            watched.attempts(steps.step, steps.drop)
+        time.now += 900
+    steps = Steps(down())
+    with pytest.raises(ProviderUnavailableError):
+        watched.attempts(steps.step, steps.drop)
+    time.now += 899
+    with pytest.raises(ProviderUnavailableError, match="next attempt"):
+        watched.check()
+    time.now += 1
+    watched.check()
+
+
 def test_another_failure_is_not_tried_again() -> None:
     time = Seconds()
     steps = Steps(ProviderError("refused"))

@@ -15,6 +15,8 @@ from dataclasses import dataclass
 from functools import partial
 from typing import TypeVar
 
+from benethos_mailbox_common.values import pauses
+
 from ...common.ratelimit import Clock, Sleep, TokenBucket, backoff
 from ...errors import ProviderAuthError, ProviderError, ProviderUnavailableError
 from . import rules
@@ -168,7 +170,7 @@ class Guard:
     def _pause(self) -> None:
         with self._state:
             self._failures += 1
-            pause = min(
-                self._longest_pause, self._first_pause * 2 ** (self._failures - 1)
+            pause = pauses.doubled(
+                self._first_pause, self._failures - 1, self._longest_pause
             )
             self._paused_until = self._clock() + pause

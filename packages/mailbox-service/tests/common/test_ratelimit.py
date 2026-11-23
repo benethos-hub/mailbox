@@ -58,6 +58,13 @@ def test_backoff_grows_and_is_capped() -> None:
     assert 0.0 <= backoff(3) <= 4.0
 
 
+def test_backoff_stays_a_number_after_weeks_of_failures() -> None:
+    def top(low: float, high: float) -> float:
+        return high
+
+    assert backoff(5000, 60.0, 900.0, jitter=top) == 900.0
+
+
 def test_take_does_not_wait_and_says_how_long() -> None:
     t = Time()
     bucket = TokenBucket(per_minute=60, burst=2, clock=t.clock, sleep=t.sleep)

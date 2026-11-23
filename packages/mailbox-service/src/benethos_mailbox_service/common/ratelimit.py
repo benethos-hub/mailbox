@@ -11,6 +11,8 @@ import random
 import time
 from collections.abc import Callable
 
+from benethos_mailbox_common.values import pauses
+
 Clock = Callable[[], float]
 Sleep = Callable[[float], None]
 
@@ -74,4 +76,4 @@ def backoff(
 ) -> float:
     """Seconds to wait before retry ``attempt`` (0-based): exponential, with
     full jitter so that many accounts do not retry in step."""
-    return jitter(0.0, min(cap, base * 2**attempt))
+    return jitter(0.0, pauses.doubled(base, attempt, cap))

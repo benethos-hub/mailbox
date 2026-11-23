@@ -17,6 +17,8 @@ from typing import TypeVar
 
 from pydantic import BaseModel
 
+from benethos_mailbox_common.values import pauses
+
 from ..contract import ActionRequest, Agent, Context, Items, Limits, Reader
 from ..errors import (
     AnswerRefusedError,
@@ -54,14 +56,9 @@ Effects = Callable[[list[ActionRequest]], Awaitable[object]]
 
 def backoff(settings: Settings, attempts: int) -> float:
     """Seconds to wait after ``attempts`` failed tries: twice as long each
-    time, from the poll interval up to the ceiling. The exponent stops at
-    32, where any ceiling is reached, so a count of tries that grew over
-    weeks stays a number a float holds."""
-    return float(
-        min(
-            settings.poll_seconds * 2 ** min(max(attempts, 0), 32),
-            settings.backoff_ceiling_seconds,
-        )
+    time, from the poll interval up to the ceiling."""
+    return pauses.doubled(
+        settings.poll_seconds, attempts, settings.backoff_ceiling_seconds
     )
 
 
