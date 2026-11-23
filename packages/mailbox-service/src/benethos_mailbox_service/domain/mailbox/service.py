@@ -369,10 +369,7 @@ class MailboxService:
     ) -> ChangePage:
         """What changed in several accounts since a point in the change feed.
         Accounts the caller may not read are left out without a word."""
-        existing = self._calls.ids()
-        visible = access.filter(
-            "list_all_changes", (a for a in account_ids or existing if a in existing)
-        )
+        visible = access.among("list_all_changes", self._calls.ids(), account_ids)
         keep: Callable[[ChangeRecord], bool | None] | None = None
         if since:
             hearing = {a: await self.hearing_now(access, a) for a in visible}

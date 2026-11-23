@@ -96,10 +96,7 @@ class AcrossAccounts:
         """The accounts the caller may list, and the reach of those whose
         grants name folders. An account whose folders cannot be read now
         fails like any other."""
-        existing = self._calls.ids()
-        visible = access.filter(
-            OPERATION, (a for a in account_ids or existing if a in existing)
-        )
+        visible = access.among(OPERATION, self._calls.ids(), account_ids)
         narrowed = [a for a in visible if access.folder_scopes(OPERATION, a)]
         reaches = await merge.per_account(
             narrowed,
