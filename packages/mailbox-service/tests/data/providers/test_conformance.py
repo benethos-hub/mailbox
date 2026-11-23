@@ -152,7 +152,11 @@ async def test_the_sender_check_reads_the_own_entry_alone(kind: str) -> None:
     entry = f"{found.authserv_id}; dmarc=pass header.from=example.com"
     own = ("Authentication-Results", entry)
     found.put(mail("Passed", headers=[own]))
-    found.put(mail("Twice", headers=[own, own]))
+    other = (
+        "Authentication-Results",
+        f"{found.authserv_id}; dmarc=fail header.from=example.com",
+    )
+    found.put(mail("Twice", headers=[own, other]))
     adapter = found.make()
     page = await adapter.list_messages(await inbox_of(adapter), limit=10, cursor=None)
     listed = {m.subject: m for m in page.items}

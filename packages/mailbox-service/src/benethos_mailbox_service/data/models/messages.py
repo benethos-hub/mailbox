@@ -88,7 +88,7 @@ class SenderCheck(BaseModel):
         default=None,
         description="Why the result is `unknown`. `account`: the account "
         "cannot tell, see its `capabilities`. `no_entry`: no entry of the "
-        "receiving server. `several_entries`: more than one. `unreadable`: "
+        "receiving server. `several_entries`: several that disagree. `unreadable`: "
         "the entry or the sender cannot be read. `from_differs`: DMARC "
         "passed for another domain, or without naming one. `other_domain`: "
         "DKIM or SPF passed for another domain only. `error`: a check ended "

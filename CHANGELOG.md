@@ -16,6 +16,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `sender_check` counts several entries under the receiving server's
+  name when they come to the same result. Some servers write two for
+  each mail, which made the result `unknown` (`several_entries`) for
+  their mail. Entries that disagree still make it `unknown`.
+
 - **Breaking:** `benethos-mailbox-agents` take the mailbox service of
   their own version: before 1.0 the same minor version, such as the
   service 0.10.x for the agents 0.10.x, from 1.0 the same major version

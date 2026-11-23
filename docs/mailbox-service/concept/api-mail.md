@@ -204,8 +204,7 @@ the log or an error.
 
 - The strict line. `pass` means the account's own server confirmed the
   domain in `from`. In doubt the result is `unknown`.
-- Exactly one entry under the own server's name counts. Two make it
-  `unknown`. Entries under another name are passed over.
+- Entries under another name than the own server's are passed over.
 - Without a DMARC result, a DKIM or SPF pass counts where its domain
   equals the domain in `from`.
 - For IMAP, POP3 and JMAP a person names the server at the account.
@@ -213,17 +212,26 @@ the log or an error.
 - The field and the capability are named `sender_check`.
 - The service, the Python client, the MCP server and the UI show it.
 
+**Decided 2026-11-23:** several entries under the own server's name
+count when they agree. Some servers write two for each mail. Each entry
+is judged alone, and the result stands when all of them come to the
+same one, with the details of the first. Where they differ the result
+is `unknown`. An entry the sender forged under the own server's name
+so never turns a mail the server did not pass into a pass. A forged one
+that agrees with the server changes nothing.
+
 The fields: `result` is `pass`, `fail` or `unknown`. `domain` is the
 domain the server checked, `matches_from` whether it is the one in
 `from`, `method` one of `dmarc`, `dkim` and `spf`. `reason` says why
-the result is `unknown`. The first row that applies counts:
+the result is `unknown`. The first row that applies counts. From the
+fourth row on, the rows judge each entry of the own server alone:
 
 | Situation | `result` | `domain` | `matches_from` | `method` | `reason` |
 |---|---|---|---|---|---|
 | The account names no receiving server | `unknown` | | | | `account` |
 | No `Authentication-Results` under the own server's name | `unknown` | | | | `no_entry` |
-| More than one under that name | `unknown` | | | | `several_entries` |
-| The one cannot be read, or a domain in it is no host name | `unknown` | | | | `unreadable` |
+| Several under that name whose results differ | `unknown` | | | | `several_entries` |
+| The entry cannot be read, or a domain in it is no host name | `unknown` | | | | `unreadable` |
 | `dmarc=pass`, `header.from` equals the domain in `from` | `pass` | that domain | `true` | `dmarc` | |
 | `dmarc=pass`, `header.from` missing or another | `unknown` | `header.from` where given | `false` | `dmarc` | `from_differs` |
 | `dmarc=fail` | `fail` | `header.from` where given | the comparison | `dmarc` | |

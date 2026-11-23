@@ -27,8 +27,8 @@ _UNKNOWN = {
     "account": "This account does not name its receiving server, so the "
     "check cannot be read.",
     "no_entry": "The receiving server wrote no check into this mail.",
-    "several_entries": "The mail carries more than one check under the "
-    "receiving server's name, so none counts.",
+    "several_entries": "The mail carries several checks under the "
+    "receiving server's name that disagree, so none counts.",
     "unreadable": "The receiving server's check cannot be read.",
     "error": "The receiving server could not finish its check.",
     "no_proof": "The receiving server's check does not confirm the domain in From.",

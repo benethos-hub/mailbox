@@ -42,10 +42,36 @@ def test_mark_1_dmarc_pass_of_the_own_server_is_pass() -> None:
     assert check(entry) == PASSED
 
 
-def test_mark_2_a_forged_second_entry_of_the_own_server_spoils_it() -> None:
-    real = "mx.example.org; dmarc=pass header.from=example.com"
+def test_mark_2_a_forged_entry_never_turns_a_mail_into_a_pass() -> None:
+    """Mark 2 as it stands since 2026-11-23: an entry the sender forged
+    under the own server's name makes no pass of a mail the server did
+    not pass, whatever its place."""
     forged = "mx.example.org; dmarc=pass header.from=example.com"
-    assert check(forged, real) == unknown("several_entries")
+    for real in (
+        "mx.example.org; dmarc=fail header.from=example.com",
+        "mx.example.org; dkim=pass header.d=example.net",
+        "mx.example.org; none",
+    ):
+        assert check(forged, real) == unknown("several_entries"), real
+        assert check(real, forged) == unknown("several_entries"), real
+
+
+def test_several_entries_of_the_own_server_that_agree_count() -> None:
+    """Some servers write two entries, each with its checks: where they
+    come to the same result, it stands, with the details of the first."""
+    dkim = "mx.example.org; dkim=pass header.d=example.com"
+    dmarc = "mx.example.org; dmarc=pass header.from=example.com"
+    assert check(dmarc, dmarc) == PASSED
+    assert check(dmarc, dkim) == PASSED
+    assert check(dkim, dmarc).method == "dkim"
+    failed = "mx.example.org; dmarc=fail header.from=example.com"
+    assert check(failed, failed).result == "fail"
+
+
+def test_an_unreadable_entry_beside_a_pass_spoils_it() -> None:
+    passed = "mx.example.org; dmarc=pass header.from=example.com"
+    broken = "mx.example.org; dmarc=pass header.from=(unended"
+    assert check(passed, broken) == unknown("several_entries")
 
 
 def test_mark_3_an_account_that_cannot_tell_is_unknown() -> None:

@@ -172,7 +172,8 @@ async def test_the_sender_check_reads_gmails_own_entry(gmail: FakeGmail) -> None
     foreign = "mx.example.org; dmarc=fail header.from=example.com"
     head = f"Authentication-Results: {foreign}\r\nAuthentication-Results: {own}\r\n"
     checked = gmail.add_message(raw=head.encode() + source())
-    twice = f"Authentication-Results: {own}\r\n" * 2
+    failed = "mx.google.com; dmarc=fail header.from=example.com"
+    twice = f"Authentication-Results: {own}\r\nAuthentication-Results: {failed}\r\n"
     doubled = gmail.add_message(raw=twice.encode() + source())
     provider = adapter(gmail)
     page = await provider.list_messages("INBOX", limit=5, cursor=None)
