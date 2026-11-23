@@ -7,7 +7,7 @@ from typing import Annotated
 from fastapi import APIRouter, Query
 
 from ....data.models import ChangePage, FolderRole, MessagePage, Page, SendRecord
-from ..deps import Caller, Limit, Mailbox, Search, SendSearch, Since
+from ..deps import AccountIds, Caller, Limit, Mailbox, Search, SendSearch, Since
 from ..errors import CHANGES_ERRORS
 
 router = APIRouter(tags=["mailbox"])
@@ -18,10 +18,7 @@ async def list_all_messages(
     caller: Caller,
     mailbox: Mailbox,
     search: Search,
-    accounts: Annotated[
-        list[str] | None,
-        Query(description="Account ids. Without: every account the caller may read"),
-    ] = None,
+    accounts: AccountIds = None,
     folder: Annotated[
         FolderRole | None,
         Query(
@@ -46,10 +43,7 @@ async def list_all_messages(
 async def list_all_changes(
     caller: Caller,
     mailbox: Mailbox,
-    accounts: Annotated[
-        list[str] | None,
-        Query(description="Account ids. Without: every account the caller may read"),
-    ] = None,
+    accounts: AccountIds = None,
     since: Since = None,
     limit: Limit = 100,
 ) -> ChangePage:

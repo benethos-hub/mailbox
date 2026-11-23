@@ -5,11 +5,10 @@ from __future__ import annotations
 from typing import Annotated
 
 from fastapi import APIRouter, Query
-from pydantic import AwareDatetime
 
 from ....data.models import ActivityFilter, ActivityRecord, Page
 from ...services import Activities
-from ..deps import Caller, Limit
+from ..deps import After, Before, Caller, Limit
 
 router = APIRouter(prefix="/audit", tags=["audit"])
 
@@ -37,17 +36,8 @@ async def list_activity(
             )
         ),
     ] = None,
-    after: Annotated[
-        AwareDatetime | None,
-        Query(
-            description="At or after this time: ISO 8601 with a zone, "
-            "e.g. 2026-09-01T00:00:00+02:00"
-        ),
-    ] = None,
-    before: Annotated[
-        AwareDatetime | None,
-        Query(description="Before this time: ISO 8601 with a zone"),
-    ] = None,
+    after: After = None,
+    before: Before = None,
     limit: Limit = 50,
     cursor: str | None = None,
 ) -> Page[ActivityRecord]:

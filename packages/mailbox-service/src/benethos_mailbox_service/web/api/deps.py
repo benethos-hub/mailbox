@@ -65,6 +65,25 @@ __all__ = [
 # How many items a list answers with at most. The default is 50.
 Limit = Annotated[int, Query(ge=1, le=LARGEST)]
 
+# The start and the end of a span of time a list is narrowed to.
+After = Annotated[
+    AwareDatetime | None,
+    Query(
+        description="At or after this time: ISO 8601 with a zone, "
+        "e.g. 2026-09-01T00:00:00+02:00"
+    ),
+]
+Before = Annotated[
+    AwareDatetime | None,
+    Query(description="Before this time: ISO 8601 with a zone"),
+]
+
+# The accounts a list across accounts reads.
+AccountIds = Annotated[
+    list[str] | None,
+    Query(description="Account ids. Without: every account the caller may read"),
+]
+
 # A point in the change feed, from the ``state`` of an earlier answer.
 Since = Annotated[
     str | None,
@@ -192,17 +211,8 @@ def send_filter(
         str | None,
         Query(description="Part of a recipient's address, regardless of case"),
     ] = None,
-    after: Annotated[
-        AwareDatetime | None,
-        Query(
-            description="At or after this time: ISO 8601 with a zone, "
-            "e.g. 2026-09-01T00:00:00+02:00"
-        ),
-    ] = None,
-    before: Annotated[
-        AwareDatetime | None,
-        Query(description="Before this time: ISO 8601 with a zone"),
-    ] = None,
+    after: After = None,
+    before: Before = None,
 ) -> SendFilter | None:
     """None when nothing narrows the list."""
     wanted = {
