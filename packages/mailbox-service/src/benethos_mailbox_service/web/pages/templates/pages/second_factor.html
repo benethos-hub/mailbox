@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "components/ui.html" import ago, card, copy_button, csrf_field, dialog_button, dialog_buttons, empty, form_dialog, icon, related, row_form, tick, tick_all, toggle with context %}
-{% from "components/factor.html" import second_step with context %}
+{% from "components/factor.html" import confirm_fields, second_step with context %}
 {% block title %}Second factor · {{ APP_NAME }}{% endblock %}
 {% block heading %}Second factor{% endblock %}
 {% block subheading %}<div class="sub">{% if factor.totp or factor.passkeys %}<span class="tag ok">on</span> Signing in to this UI asks for your password and a second step.{% else %}<span class="tag warn">off</span> Your password alone signs you in to this UI. Add a device or a passkey to turn it on.{% endif %}</div>{% endblock %}
@@ -141,17 +141,6 @@
   </div>
 {% endcall %}
 
-{% macro confirm_fields(id, step=True) %}
-  <input type="hidden" name="username" value="{{ me.name }}" autocomplete="username" />
-  <div class="form-grid">
-    {% if caller is defined %}{{ caller() }}{% endif %}
-    <div class="field">
-      <label for="f-{{ id }}-password">Your password</label>
-      <input id="f-{{ id }}-password" name="password" type="password" autocomplete="current-password" required />
-    </div>
-    {% if step %}{{ second_step(id, ways) }}{% endif %}
-  </div>
-{% endmacro %}
 {% if can_add %}
 {% call form_dialog("add-device", "Add a device", "The next step shows its QR code." ~ ("" if on else " Then ten recovery codes, once.") ~ " Adding a device signs out your other sessions.") %}
   <form method="post" action="/ui/second-factor/totp/begin">
