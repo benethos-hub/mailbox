@@ -1,12 +1,12 @@
 # Concept of Mailbox Agents
 
-> **Status: alpha, 2026-11-19. The runtime and the agents `counting`, `invoices`,
+> **Status: alpha, 2026-11-23. The runtime and the agents `counting`, `invoices`,
 > `awaiting_reply`, `inquiries` and `sorting` are built and run against a
-> test account of invented mail. `invoices` version 3 ran in `shadow` on its
-> owner's real account, read-only, and changed nothing. Version 6, which
-> works beside `sorting` with the inbox folder as an end station, and
-> `sorting` itself have not run on a real mailbox. None acts on a real
-> mailbox yet.** A statement about another system that nobody has checked
+> test account of invented mail. On a real mailbox, read-only and in
+> `shadow`: `invoices` version 3 on 2026-11-18, `sorting` and `invoices`
+> on 2026-11-22, and `invoices`, `inquiries` and `awaiting_reply` in the
+> versions of 0.11.0 on 2026-11-23. None changed anything, and none acts
+> on a real mailbox yet.** A statement about another system that nobody has checked
 > yet is marked **(to verify)**, and a choice that is still open is listed
 > in [the agents' roadmap](../roadmap/agents.md#open-questions) rather than written as fact.
 

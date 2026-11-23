@@ -6,7 +6,8 @@ Part of the [concept](../CONCEPT.md).
 > invented mail of the test account and run there in `shadow` beside
 > [sorting](agent-sorting.md). Version 6 reads the text of an HTML-only
 > mail and was evaluated on the same invented mail on 2026-11-23,
-> through `mail-classifier`. Not run on a real mailbox in this version.
+> through `mail-classifier`. On a real mailbox it ran on 2026-11-23,
+> read-only and in `shadow`, and changed nothing.
 > A run on the owner's account is the owner's decision, in `shadow`
 > first.**
 

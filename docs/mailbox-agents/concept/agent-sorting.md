@@ -3,7 +3,8 @@
 Part of the [concept](../CONCEPT.md).
 
 > **Status: built, and run in `shadow` and in `full` on the test account.
-> Not run on a real mailbox. A run on the owner's account is the owner's
+> On a real mailbox it ran on 2026-11-22, read-only and in `shadow`, and
+> changed nothing. A run on the owner's account is the owner's
 > decision, in `shadow` first.** Its purpose: the mail of providers such
 > as a shop, a hoster or a bank goes into a folder of its own, and one
 > folder may take several, such as all banks.
