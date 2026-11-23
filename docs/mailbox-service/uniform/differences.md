@@ -53,8 +53,9 @@ it is.
 ### 4.4 Search and attachments
 
 - **How text matches is the provider's** (decision 6.7). IMAP matches
-  parts of words ("ail" finds "mail"), as IMAP `SEARCH` compares. Gmail
-  and Microsoft match whole words or prefixes, JMAP as its server does.
+  parts of words ("ail" finds "mail"), as IMAP `SEARCH` compares.
+  Microsoft matches whole words or prefixes, Gmail whole words only, JMAP
+  as its server does.
 - **On Microsoft, `q`, `from`, `to` or `subject` switch the list to
   Graph's `$search`.** `unread`, `starred` and `has_attachments=false`
   are then checked after each page, so a page can come back short or

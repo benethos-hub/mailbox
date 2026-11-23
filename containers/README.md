@@ -1,6 +1,6 @@
 # <img src="../assets/brand/icon.svg" alt="" height="36" align="absmiddle"> Containers
 
-> **Beta, version 0.10.0.** Usable with real accounts. A breaking change
+> **Beta, version 0.11.0.** Usable with real accounts. A breaking change
 > of the API or the configuration is announced in the changelog. Stored
 > data is carried forward by migrations.
 
@@ -107,13 +107,15 @@ version as the PyPI packages:
 
 - The service image holds the service and the common package, the MCP
   image the MCP server, the client and the common package, the agents'
-  image the agents and the client. Each is installed from `uv.lock`
-  without the development tools.
+  image the agents, the client and the common package. Each is installed
+  from `uv.lock` without the development tools.
 - All three build on `python:3.15-slim` and take `uv` from its image,
   each named by its tag and the digest of that tag. Dependabot raises
   them, also for a new build under the same tag.
-- They run as user `mailbox` (uid 10001), which the Dockerfiles name by
-  its id, so that a host or an orchestrator can see it is not root. The
+- They run as uid 10001, the user `mailbox` in the images of the service
+  and the MCP server and `agent` in the agents' image. The Dockerfiles
+  name it by its id, so that a host or an orchestrator can see it is not
+  root. The
   compose files of `development/` and `production/` add a read-only root
   file system, no capabilities and `no-new-privileges`, to Caddy as
   well, which keeps only `NET_BIND_SERVICE` for its ports 80 and 443.

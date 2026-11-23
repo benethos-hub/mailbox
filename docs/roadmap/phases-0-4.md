@@ -7,7 +7,7 @@ Part of the [roadmap](../ROADMAP.md): the phases that are done.
 **Done.**
 
 - uv workspace with two distributions: service and MCP server (four
-  since 0.4.0, CONCEPT 9)
+  since 0.4.0, five since 0.11.0, CONCEPT 9)
 - CI, ruff, mypy, pytest with an 80 % coverage floor
 - FastAPI app in three layers (`web` → `domain` → `data`, 1.1), checked by
   an architecture test

@@ -23,7 +23,7 @@
 
 [![benethos-mailbox-mcp on Glama](https://glama.ai/mcp/servers/benethos-hub/mailbox/badges/card.svg)](https://glama.ai/mcp/servers/benethos-hub/mailbox)
 
-> **Beta, version 0.10.0.** Usable with real accounts. A breaking change
+> **Beta, version 0.11.0.** Usable with real accounts. A breaking change
 > of the API or the configuration is announced in the changelog. Stored
 > data is carried forward by migrations.
 
@@ -40,13 +40,15 @@ mail through the Python client, AI assistants through the MCP server,
 the agents through the client as well, each with a token of its own. None of them holds a mail password.
 
 <picture>
-  <source srcset="https://raw.githubusercontent.com/benethos-hub/mailbox/main/assets/architecture/architecture-dark.png" media="(prefers-color-scheme: dark)">
-  <img src="https://raw.githubusercontent.com/benethos-hub/mailbox/main/assets/architecture/architecture.png" alt="AI agents reach mailbox-mcp over MCP, scripts and apps use mailbox-client or call the REST API themselves, and mailbox-mcp builds on mailbox-client. mailbox-client calls the REST API of mailbox-service, people use its configuration UI in the browser, and its signed webhooks report changes to your systems. mailbox-service, on your own server, connects to the mail accounts over IMAP and SMTP, Microsoft Graph, JMAP, POP3 and the Gmail API.">
+  <source srcset="https://raw.githubusercontent.com/benethos-hub/mailbox/main/assets/mailbox-service/architecture/architecture-dark.png" media="(prefers-color-scheme: dark)">
+  <img src="https://raw.githubusercontent.com/benethos-hub/mailbox/main/assets/mailbox-service/architecture/architecture.png" alt="mailbox-service on your own server with four doors: the REST API for the client, the MCP server, the agents and your scripts, the configuration UI for people in the browser, signed webhooks to your systems and metrics for Prometheus. Below them three layers, web, domain and data, on SQLite, the credentials encrypted under a master key outside the database. It reaches the mail accounts over IMAP and SMTP, Microsoft Graph, JMAP, POP3 and the Gmail API, Microsoft and Google accounts by an OAuth sign-in.">
 </picture>
 
-A request comes in over REST, from the client, from the MCP server on
-top of it, or from any program that speaks HTTP. The service checks the
-token and its rights, and goes to the provider of the account.
+A request comes in over REST, from the client, from the MCP server and
+the agents on top of it, or from any program that speaks HTTP. The
+service checks the token and its rights, and goes to the provider of the
+account. People use the configuration UI in the browser, your systems
+get a signed webhook for each change, and Prometheus reads the metrics.
 
 | Package | Its part | How you get it |
 |---|---|---|
@@ -436,13 +438,13 @@ from the environment only and sets `MAILBOX_SERVICE_HOST=0.0.0.0`,
 `MAILBOX_SERVICE_DATA_DIR=/data`, `MAILBOX_SERVICE_KEY_PROVIDER=file` and
 `MAILBOX_SERVICE_KEY_FILE=/run/secrets/master_key`. The database lives in the
 volume at `/data`. The master key is a file mounted at
-`/run/secrets/master_key`. Tags: the version (`0.10.0`), the minor version
-(`0.10`) and `latest`.
+`/run/secrets/master_key`. Tags: the version (`0.11.0`), the minor version
+(`0.11`) and `latest`.
 
 ### With docker run
 
 ```sh
-IMAGE=ghcr.io/benethos-hub/benethos-mailbox-service:0.10.0
+IMAGE=ghcr.io/benethos-hub/benethos-mailbox-service:0.11.0
 
 # once: a master key file, the keys in the database, the first user
 docker run --rm "$IMAGE" keys generate > master_key
@@ -477,7 +479,7 @@ does the first start in one run:
 sh setup.sh
 ```
 
-The version runs as named in its `.env`, `MAILBOX_VERSION=0.10.0`. Its
+The version runs as named in its `.env`, `MAILBOX_VERSION=0.11.0`. Its
 [README](https://github.com/benethos-hub/mailbox/blob/main/containers/production/mailbox-service/README.md)
 has the same steps by hand, the update, backup and restore, HTTPS
 with Caddy or a proxy of your own, and the MCP server instances.

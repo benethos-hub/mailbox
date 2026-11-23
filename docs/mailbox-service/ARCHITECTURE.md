@@ -58,7 +58,7 @@ Beside them, read by every layer and importing none: `config.py`,
 `errors.py` and `common/`. Above them, allowed to reach anywhere because
 they assemble the service: `assembly/`, `cli/`, `__main__.py`, `logs.py`.
 Below all of it, a package of its own: `mailbox-common`, what the
-service shares with the MCP server (section 3).
+service shares with the MCP server and the agents (section 3).
 
 Inside a layer, packages by area (`domain/accounts/`) or by kind
 (`data/storage/`). Packages stand in lines, and a package imports only
@@ -87,8 +87,8 @@ The three layers and what each may import:
   needs, but a helper of that kind may live there when one layer needs
   it, such as `trim` and `KeyedLocks`. It imports the standard library,
   anyio, idna (host names as IDNA 2008) and `mailbox-common`, nothing
-  else. What the MCP server needs as
-  well goes to `mailbox-common` (section 3).
+  else. What the MCP server or the agents need
+  as well goes to `mailbox-common` (section 3).
 - **A helper exists once.** No module outside `common/` defines a
   function of a name `common/` holds, with or without a leading
   underscore. `test_code_rules.py` also names the copies a shared
@@ -204,8 +204,8 @@ An import or a line that breaks a rule fails the suite.
 | a library | one wrapper module, in the layer that needs it, and nowhere else. The wrapper maps into our types and our errors |
 | an error | `errors.py`, a subclass of `MailboxServiceError`. `web/errors.py` gives it a status |
 | a setting | `config.py`, as `MAILBOX_SERVICE_<NAME>`, with its default and its line in `.env.example` |
-| a helper that knows no layer | `common/`, if it is on the standard library, anyio and idna, does no I/O and holds no state beyond what a caller holds. Else it is not a helper: it belongs to one layer |
-| a helper the MCP server needs as well | `mailbox-common`, in the group of its concern (section 3) |
+| a helper that knows no layer | `common/`, if it is on the standard library, anyio, idna and `mailbox-common`, does no I/O and holds no state beyond what a caller holds. Else it is not a helper: it belongs to one layer |
+| a helper the MCP server or the agents need as well | `mailbox-common`, in the group of its concern (section 3) |
 | a helper one layer needs | that layer, beside its caller |
 
 When none of these fits, the seam is missing. Add the seam first, then

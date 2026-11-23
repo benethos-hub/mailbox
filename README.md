@@ -25,16 +25,17 @@
 
 One REST API for all your mailboxes, whichever provider they are at, a
 Python client for it, an MCP server and small AI agents on top. Scripts,
-tools and AI agents work with your mail through one door you control.
+tools, AI assistants and the agents work with your mail through one door
+you control.
 
-> **Status: beta, version 0.10.0.** Usable with real accounts. A breaking
+> **Status: beta, version 0.11.0.** Usable with real accounts. A breaking
 > change of the API or the configuration is announced in the changelog.
 > Stored data is carried forward by migrations.
 
 **Contents**
 
 - [What it is for](#what-it-is-for)
-  - [Working with an AI agent in your mail](#working-with-an-ai-agent-in-your-mail)
+  - [Working with an AI assistant in your mail](#working-with-an-ai-assistant-in-your-mail)
   - [More uses](#more-uses)
 - [What it can do today](#what-it-can-do-today)
 - [Providers](#providers)
@@ -58,24 +59,24 @@ your own machine or server and holds the connections to all accounts.
 Everything else talks to that service only, through one REST API that
 looks the same for every provider. `mailbox-client` is the Python
 client of that API, for scripts and apps. `mailbox-mcp`, the MCP
-server, builds on the client and opens the service to AI agents.
-`mailbox-common` holds what the service, the MCP server and the agents share.
-`mailbox-agents`, still alpha, are small AI agents that work on a
-mailbox through the client, one narrow question each. The
-service decides who may do what. A script, an app or an AI agent gets
-a token of its own. That token opens exactly the accounts and
+server, builds on the client and opens the service to AI assistants
+such as Claude. `mailbox-agents`, still alpha, are small AI agents that
+work on a mailbox through the client, one narrow question each.
+`mailbox-common` holds what the service, the MCP server and the agents
+share. The service decides who may do what. A script, an app, an AI
+assistant or an agent gets a token of its own. That token opens exactly the accounts and
 operations it was given, nothing more.
 
 <picture>
   <source srcset="assets/architecture/architecture-dark.png" media="(prefers-color-scheme: dark)">
-  <img src="assets/architecture/architecture.png" alt="AI agents reach mailbox-mcp over MCP, scripts and apps use mailbox-client or call the REST API themselves, and mailbox-mcp builds on mailbox-client. mailbox-client calls the REST API of mailbox-service, people use its configuration UI in the browser, and its signed webhooks report changes to your systems. mailbox-service, on your own server, connects to the mail accounts over IMAP and SMTP, Microsoft Graph, JMAP, POP3 and the Gmail API.">
+  <img src="assets/architecture/architecture.png" alt="AI assistants reach mailbox-mcp over MCP, scripts and apps use mailbox-client or call the REST API themselves, and mailbox-mcp and mailbox-agents build on mailbox-client. mailbox-client calls the REST API of mailbox-service, people use its configuration UI in the browser, and its signed webhooks report changes to your systems. mailbox-service, on your own server, connects to the mail accounts over IMAP and SMTP, Microsoft Graph, JMAP, POP3 and the Gmail API.">
 </picture>
 
 That makes a few things simple that are hard otherwise.
 
-### Working with an AI agent in your mail
+### Working with an AI assistant in your mail
 
-Through the MCP server, Claude or another AI agent works with every
+Through the MCP server, Claude or another AI assistant works with every
 account you gave it. A few requests it handles today:
 
 - "What came in since last night?"
@@ -234,7 +235,7 @@ for clients: [packages/mailbox-mcp](packages/mailbox-mcp/README.md#tools).
 2. Open `http://127.0.0.1:8080/ui`, sign in as `admin` with the
    one-time password, choose a password of your own and connect your
    accounts.
-3. Give your scripts or your AI agent a user with the rights they need
+3. Give your scripts or your AI assistant a user with the rights they need
    and a token
    ([step by step](packages/mailbox-mcp/README.md#a-token-for-it)),
    and for an agent, add the MCP server to it. Claude Desktop installs

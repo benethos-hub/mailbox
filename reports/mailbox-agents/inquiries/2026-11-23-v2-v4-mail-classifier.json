@@ -1,0 +1,65 @@
+{
+  "agent": "inquiries",
+  "agent_version": "2",
+  "prompt_version": "v4",
+  "model_alias": "mail-classifier",
+  "models_reported": [
+    "mail-classifier"
+  ],
+  "date": "2026-11-23",
+  "gold_messages": 12,
+  "model": {
+    "messages": 12,
+    "agreed": 12,
+    "accuracy": 1.0,
+    "unanswered": 0,
+    "refused": 0,
+    "labels": {
+      "inquiry": {
+        "true_positive": 1,
+        "false_positive": 0,
+        "false_negative": 0,
+        "precision": 1.0,
+        "recall": 1.0
+      },
+      "other": {
+        "true_positive": 11,
+        "false_positive": 0,
+        "false_negative": 0,
+        "precision": 1.0,
+        "recall": 1.0
+      }
+    },
+    "fields": {}
+  },
+  "baseline": {
+    "messages": 12,
+    "agreed": 12,
+    "accuracy": 1.0,
+    "unanswered": 0,
+    "refused": 0,
+    "labels": {
+      "inquiry": {
+        "true_positive": 1,
+        "false_positive": 0,
+        "false_negative": 0,
+        "precision": 1.0,
+        "recall": 1.0
+      },
+      "other": {
+        "true_positive": 11,
+        "false_positive": 0,
+        "false_negative": 0,
+        "precision": 1.0,
+        "recall": 1.0
+      }
+    },
+    "fields": {}
+  },
+  "per_message": {
+    "tokens_in": 3770.0,
+    "tokens_out": 241.8,
+    "seconds": 2.362
+  },
+  "unanswered_because": {}
+}

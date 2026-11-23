@@ -7,9 +7,9 @@ to 17) are there.
 
 ## 3.4 What the service, the MCP server and the agents share
 
-What the service and the MCP server both need is a package of its own,
-`mailbox-common`, since the MCP server cannot see the service. It sees
-neither of them, nor the client. It is made of groups, one per concern,
+What the service, the MCP server and the agents need alike is a package
+of its own, `mailbox-common`, since the MCP server and the agents cannot
+see the service. It sees none of them, nor the client. It is made of groups, one per concern,
 so a group can be cut out as a package of its own later.
 
 ```
@@ -24,8 +24,8 @@ packages/mailbox-common/
       marks.py          # the marks of RFC 8621 and their words, as
                         #   the UI and the MCP server show them
     log/                # the lines of a log and the secrets kept out
-      lines.py          # format, levels, log_time, plain or in colour
-                        #   on a terminal, a program's own lines through
+      lines.py          # format, levels, log_time, plain, in colour
+                        #   on a terminal or as JSON, a program's own lines through
                         #   line_of, the stderr handler, to_stream:
                         #   the setup of a program's log
       redact.py         # secrets noted once, masked in every text,
@@ -73,8 +73,8 @@ packages/mailbox-common/
   extra is worth it when a user of the package does not need the group,
   or the library is heavy. Tests and CI install every extra, and CI
   runs the package once without any.
-- **The pin is exact.** The service and the MCP server depend on
-  `benethos-mailbox-common[paths,settings]==X.Y.Z`, the version of
+- **The pin is exact.** The service, the MCP server and the agents
+  depend on `benethos-mailbox-common[paths,settings]==X.Y.Z`, the version of
   the release.
   So groups, paths and extras may change inside a release, and an
   operator never types an extra.

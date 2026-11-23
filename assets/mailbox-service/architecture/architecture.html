@@ -1,0 +1,289 @@
+<!doctype html>
+<!--
+  The architecture diagram of the service's README.
+  In the look of the main diagram and the layout of the agents' diagram.
+  `uv run python assets/build.py --diagram` renders it to
+  architecture.png, and with #dark in the address to
+  architecture-dark.png, the image GitHub shows in dark mode.
+
+  The four parts stand at the heights of the four chips in the boxes at
+  the left and the right, 86 pixels apart, and an arrow joins a part with
+  the chip it serves. Whoever moves one moves the others.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mailbox Service architecture</title>
+<style>
+  :root {
+    --page:
+      radial-gradient(circle at 88% 18%, rgba(51,95,219,.16) 0, rgba(51,95,219,0) 38%),
+      radial-gradient(circle at 78% 92%, rgba(22,60,168,.12) 0, rgba(22,60,168,0) 42%),
+      linear-gradient(135deg, #FBFCFF 0%, #EEF3FD 55%, #E3ECFB 100%);
+    --dot: rgba(22,60,168,.13); --mark: .07;
+    --text: #0F172A; --muted: #5B6B8C; --ink: #163CA8; --accent: #335FDB;
+    --card: rgba(255,255,255,.74); --card-line: #DCE6F8;
+    --card-shadow: 0 10px 30px rgba(22,60,168,.08);
+    --tile: #EEF3FD;
+    --upstream: rgba(232,239,253,.92); --upstream-line: #B9CBF2; --name: #0F2A76;
+    --panel: rgba(255,255,255,.96); --panel-top: #EEF3FD;
+    --panel-shadow: 0 24px 60px rgba(15,42,118,.22), 0 4px 12px rgba(15,42,118,.10);
+    --door: #2A50D2; --door-small: rgba(255,255,255,.82);
+    --chip: rgba(255,255,255,.85); --chip-line: #C9D8F5;
+    --step: rgba(238,243,253,.70);
+    --arrow: #8493B4; --label: #F4F7FE;
+  }
+  :root.dark {
+    --page:
+      radial-gradient(circle at 88% 18%, rgba(74,120,240,.22) 0, rgba(74,120,240,0) 38%),
+      radial-gradient(circle at 78% 92%, rgba(42,80,210,.18) 0, rgba(42,80,210,0) 42%),
+      linear-gradient(135deg, #0A0F1E 0%, #0C1429 55%, #0F1B3A 100%);
+    --dot: rgba(122,162,255,.14); --mark: .09;
+    --text: #E8EEFA; --muted: #9AA9C7; --ink: #C3D4FF; --accent: #7AA2FF;
+    --card: rgba(255,255,255,.055); --card-line: #24345C;
+    --card-shadow: 0 10px 30px rgba(0,0,0,.30);
+    --tile: #17264F;
+    --upstream: rgba(42,80,210,.20); --upstream-line: #33498A; --name: #DBE6FF;
+    --panel: rgba(16,25,51,.96); --panel-top: #17264F;
+    --panel-shadow: 0 24px 60px rgba(0,0,0,.50), 0 4px 12px rgba(0,0,0,.30);
+    --door: #2A50D2; --door-small: rgba(255,255,255,.82);
+    --chip: rgba(255,255,255,.06); --chip-line: #2E4070;
+    --step: rgba(255,255,255,.03);
+    --arrow: #7686A8; --label: #101A35;
+  }
+  html, body { margin: 0; width: 1430px; height: 776px; overflow: hidden; }
+  body { background: var(--page); color: var(--text); position: relative;
+         font-family: "Segoe UI", "Inter", "Helvetica Neue", Arial, sans-serif; }
+  code { font-family: "Cascadia Code", Consolas, monospace; }
+
+  /* The ground of the main diagram: dots that come in from the right,
+     the 3D icon large and faint. */
+  .grid { position: absolute; inset: 0;
+          background-image: radial-gradient(var(--dot) 1.2px, transparent 1.2px);
+          background-size: 26px 26px;
+          -webkit-mask-image: linear-gradient(90deg, transparent 35%, #000 100%); }
+  .mark { position: absolute; right: -150px; top: 150px; width: 540px;
+          opacity: var(--mark); transform: rotate(-8deg); }
+  svg { position: absolute; left: 0; top: 0; }
+
+  .head { position: absolute; top: 26px; font-size: 14px; font-weight: 600;
+          letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+
+  /* A sign in a tile. */
+  .sign { flex: none; width: 42px; height: 42px; border-radius: 12px;
+          background: var(--tile); color: var(--accent);
+          display: flex; align-items: center; justify-content: center; }
+  .sign svg { position: static; }
+
+  /* A frosted card with a sign. */
+  .card { position: absolute; box-sizing: border-box; width: 300px; height: 86px;
+          padding: 0 16px; display: flex; align-items: center; gap: 13px;
+          background: var(--card); border: 1.5px solid var(--card-line);
+          border-radius: 18px; box-shadow: var(--card-shadow); }
+  .card div { display: flex; flex-direction: column; min-width: 0; }
+  .card b { font-size: 19px; font-weight: 600; white-space: nowrap; }
+  .card small { font-size: 14.5px; color: var(--muted); margin-top: 2px;
+                white-space: nowrap; }
+
+  /* A neighbour: what calls the package, or what it calls. */
+  .upstream { position: absolute; top: 72px; width: 300px; height: 488px;
+              box-sizing: border-box; overflow: hidden; background: var(--upstream);
+              border: 1.5px solid var(--upstream-line); border-radius: 22px;
+              box-shadow: var(--card-shadow); }
+  .upstream .top, .panel .top {
+              position: absolute; left: 0; right: 0; top: 0; height: 124px;
+              box-sizing: border-box; display: flex; align-items: center; }
+  .upstream .top { padding: 0 18px; gap: 14px;
+                   border-bottom: 1.5px solid var(--upstream-line); }
+  .top div { display: flex; flex-direction: column; min-width: 0; }
+  .top b { font-size: 21px; font-weight: 700; color: var(--name); white-space: nowrap; }
+  .top code { font-size: 13.5px; font-weight: 600; color: var(--accent);
+              white-space: nowrap; }
+  .top small { font-size: 14.5px; color: var(--muted); margin-top: 5px;
+               white-space: nowrap; }
+  .top small + small { font-size: 13.5px; opacity: .85; margin-top: 2px; }
+  .upstream li { position: absolute; left: 18px; right: 18px; height: 40px; }
+  ul { margin: 0; padding: 0; list-style: none; }
+  li { font-size: 15px; font-weight: 600; color: var(--ink);
+       background: var(--chip); border: 1.5px solid var(--chip-line);
+       border-radius: 999px; box-sizing: border-box; padding: 0 15px;
+       display: flex; align-items: center; white-space: nowrap; }
+  li code { font-size: 13.5px; font-weight: 700; }
+
+  /* The package, in front like the service of the main diagram. */
+  .panel { position: absolute; left: 430px; top: 72px; width: 570px; height: 628px;
+           box-sizing: border-box; overflow: hidden; background: var(--panel);
+           border: 2px solid var(--accent); border-radius: 24px;
+           box-shadow: var(--panel-shadow); }
+  .panel .top { padding: 0 22px; gap: 18px; background: var(--panel-top);
+                border-bottom: 1.5px solid var(--chip-line); }
+  .panel .top img { width: 64px; height: auto; }
+  .panel .top b { font-size: 25px; }
+  .panel .top code { font-size: 14.5px; }
+  .panel .top small { font-size: 15px; }
+  .panel .top small + small { font-size: 13.5px; }
+  .caption { position: absolute; left: 22px; font-size: 12.5px; font-weight: 700;
+             letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+
+  /* A part of the package: its name on the brand's colour, then what it
+     holds. */
+  .step { position: absolute; left: 20px; right: 20px; height: 74px;
+          box-sizing: border-box; display: flex; align-items: center; gap: 14px;
+          background: var(--step); border: 1.5px solid var(--chip-line);
+          border-radius: 17px; }
+  .door { flex: none; width: 152px; height: 74px; margin: -1.5px 0 -1.5px -1.5px;
+          box-sizing: border-box; padding: 0 16px; display: flex;
+          flex-direction: column; justify-content: center;
+          background: var(--door); color: #fff; border-radius: 16px 6px 6px 16px;
+          box-shadow: 0 6px 16px rgba(22,60,168,.22); }
+  .door b { font-size: 18px; font-weight: 600; }
+  .door small { font-size: 13.5px; color: var(--door-small); white-space: nowrap; }
+  .step ul { display: flex; gap: 6px; }
+  .step li { height: 34px; padding: 0 11px; font-size: 14.5px; }
+
+  .row { position: absolute; left: 20px; right: 20px; top: 532px;
+         display: flex; justify-content: space-between; }
+  .row li { height: 34px; padding: 0 13px; }
+  .state { position: absolute; left: 22px; right: 20px; top: 580px; height: 30px;
+           display: flex; align-items: center; gap: 9px; font-size: 14.5px;
+           color: var(--muted); white-space: nowrap; }
+  .state svg { position: static; flex: none; color: var(--accent); }
+  .state strong { color: var(--ink); font-weight: 600; }
+
+  .foot { position: absolute; left: 24px; top: 724px; font-size: 18px; color: var(--muted);
+          display: flex; align-items: center; gap: 10px; }
+  .foot svg { position: static; color: var(--accent); }
+  .foot strong { color: var(--ink); }
+  /* Where the project lives, as on the social preview. */
+  .address { position: absolute; right: 24px; top: 724px; font-size: 18px;
+             color: var(--muted); letter-spacing: .2px; display: flex;
+             align-items: center; gap: 8px; }
+  .address svg { position: static; color: var(--accent); }
+
+  .arrows text { font: 600 13px "Segoe UI", system-ui, sans-serif; fill: var(--muted);
+                 text-anchor: middle; }
+  .plain { stroke: var(--arrow); }
+  .blue { stroke: var(--accent); }
+  .tip-plain { fill: var(--arrow); }
+  .tip-blue { fill: var(--accent); }
+</style>
+<script>
+  if (location.hash === "#dark") document.documentElement.classList.add("dark");
+</script>
+</head>
+<body>
+  <div class="grid"></div>
+  <img class="mark" src="../../brand/icon.svg" alt="">
+
+  <div class="head" style="left:24px">Who calls it</div>
+  <div class="head" style="left:430px">Mailbox Service, on your own server</div>
+  <div class="head" style="left:1106px">Mail accounts</div>
+
+  <svg class="arrows" width="1430" height="776" viewBox="0 0 1430 776">
+    <defs>
+      <marker id="p" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path class="tip-plain" d="M0,0 L10,5 L0,10 z"/>
+      </marker>
+      <marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path class="tip-blue" d="M0,0 L10,5 L0,10 z"/>
+      </marker>
+    </defs>
+    <g stroke-width="2.5" fill="none" stroke-linecap="round">
+      <line class="blue" x1="330" y1="271" x2="424" y2="271" marker-start="url(#b)" marker-end="url(#b)"/>
+      <line class="blue" x1="330" y1="357" x2="424" y2="357" marker-start="url(#b)" marker-end="url(#b)"/>
+      <line class="blue" x1="424" y1="443" x2="330" y2="443" marker-end="url(#b)"/>
+      <line class="blue" x1="330" y1="529" x2="424" y2="529" marker-start="url(#b)" marker-end="url(#b)"/>
+      <line class="blue" x1="1006" y1="271" x2="1100" y2="271" marker-start="url(#b)" marker-end="url(#b)"/>
+      <line class="blue" x1="1006" y1="357" x2="1100" y2="357" marker-start="url(#b)" marker-end="url(#b)"/>
+      <line class="blue" x1="1006" y1="443" x2="1100" y2="443" marker-start="url(#b)" marker-end="url(#b)"/>
+      <line class="blue" x1="1006" y1="529" x2="1100" y2="529" marker-start="url(#b)" marker-end="url(#b)"/>
+      <line class="plain" x1="174" y1="566" x2="174" y2="608" marker-start="url(#p)" marker-end="url(#p)"/>
+      <line class="plain" x1="1256" y1="566" x2="1256" y2="608" marker-start="url(#p)" marker-end="url(#p)"/>
+    </g>
+    <text x="377" y="260">REST</text>
+    <text x="377" y="346">browser</text>
+    <text x="377" y="432">POST</text>
+    <text x="377" y="518">scrape</text>
+  </svg>
+
+  <div class="upstream" style="left:24px">
+    <div class="top">
+      <span class="sign"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5"/></svg></span>
+      <div><b>Its callers</b><code>REST and the browser</code><small>a token or a session each</small></div>
+    </div>
+    <ul>
+      <li style="top:179.5px">Client, MCP server, agents</li>
+      <li style="top:265.5px">People in the browser</li>
+      <li style="top:351.5px">Your systems</li>
+      <li style="top:437.5px">Prometheus</li>
+    </ul>
+  </div>
+  <div class="card" style="left:24px; top:614px">
+    <span class="sign"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5"/></svg></span>
+    <div><b>Scripts and apps</b><small>REST, with or without the client</small></div>
+  </div>
+
+  <div class="panel">
+    <div class="top">
+      <img src="../../brand/icon.svg" alt="">
+      <div><b>Mailbox Service</b><code>benethos-mailbox-service</code><small>one API for every provider</small><small>PyPI and container image</small></div>
+    </div>
+
+    <div class="caption" style="top:137px">Four doors</div>
+    <div class="step" style="top:162px">
+      <div class="door"><b>REST API</b><small>/v1, OpenAPI</small></div>
+      <ul><li>a token per tool</li><li>paged lists</li></ul>
+    </div>
+    <div class="step" style="top:248px">
+      <div class="door"><b>Config UI</b><small>/ui</small></div>
+      <ul><li>second factor</li><li>accounts</li><li>rights</li></ul>
+    </div>
+    <div class="step" style="top:334px">
+      <div class="door"><b>Webhooks</b><small>on every change</small></div>
+      <ul><li>signed</li><li>created, changed, deleted</li></ul>
+    </div>
+    <div class="step" style="top:420px">
+      <div class="door"><b>Metrics</b><small>/v1/metrics</small></div>
+      <ul><li>Prometheus text</li><li>a right of its own</li></ul>
+    </div>
+
+    <div class="caption" style="top:507px">Three layers, imports point down only</div>
+    <ul class="row">
+      <li><code>web/</code>&nbsp;HTTP</li>
+      <li><code>domain/</code>&nbsp;decides</li>
+      <li><code>data/</code>&nbsp;reads, writes</li>
+      <li>SQLite</li>
+    </ul>
+    <div class="state">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M14 9l2 2"/></svg>
+      <span><strong>Credentials:</strong> AES-256-GCM, under a master key outside the database.</span>
+    </div>
+  </div>
+
+  <div class="upstream" style="left:1106px">
+    <div class="top">
+      <span class="sign"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></span>
+      <div><b>Mail accounts</b><code>five ways in, one API</code><small>mail goes straight to your server</small></div>
+    </div>
+    <ul>
+      <li style="top:179.5px">IMAP + SMTP</li>
+      <li style="top:265.5px">Microsoft Graph</li>
+      <li style="top:351.5px">JMAP</li>
+      <li style="top:437.5px">POP3 and Gmail API</li>
+    </ul>
+  </div>
+  <div class="card" style="left:1106px; top:614px">
+    <span class="sign"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg></span>
+    <div><b>OAuth sign-in</b><small>Microsoft and Google accounts</small></div>
+  </div>
+
+  <div class="foot">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg>
+    <span><strong>Self-hosted.</strong> Mail goes straight from the provider to your server. No tool ever sees a mail password.</span>
+  </div>
+  <div class="address">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>
+    github.com/benethos-hub/mailbox
+  </div>
+</body>
+</html>

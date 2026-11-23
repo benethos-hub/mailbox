@@ -23,7 +23,7 @@
 
 [![benethos-mailbox-mcp on Glama](https://glama.ai/mcp/servers/benethos-hub/mailbox/badges/card.svg)](https://glama.ai/mcp/servers/benethos-hub/mailbox)
 
-> **Beta, version 0.10.0.** Usable with real accounts. A breaking change
+> **Beta, version 0.11.0.** Usable with real accounts. A breaking change
 > of the API or the configuration is announced in the changelog. Stored
 > data is carried forward by migrations.
 
@@ -43,8 +43,8 @@ and [First start](https://github.com/benethos-hub/mailbox/blob/main/packages/mai
 in its README, or as a [container](https://github.com/benethos-hub/mailbox/blob/main/packages/mailbox-service/README.md#container).
 
 <picture>
-  <source srcset="https://raw.githubusercontent.com/benethos-hub/mailbox/main/assets/architecture/architecture-dark.png" media="(prefers-color-scheme: dark)">
-  <img src="https://raw.githubusercontent.com/benethos-hub/mailbox/main/assets/architecture/architecture.png" alt="AI agents reach mailbox-mcp over MCP, scripts and apps use mailbox-client or call the REST API themselves, and mailbox-mcp builds on mailbox-client. mailbox-client calls the REST API of mailbox-service, people use its configuration UI in the browser, and its signed webhooks report changes to your systems. mailbox-service, on your own server, connects to the mail accounts over IMAP and SMTP, Microsoft Graph, JMAP, POP3 and the Gmail API.">
+  <source srcset="https://raw.githubusercontent.com/benethos-hub/mailbox/main/assets/mailbox-mcp/architecture/architecture-dark.png" media="(prefers-color-scheme: dark)">
+  <img src="https://raw.githubusercontent.com/benethos-hub/mailbox/main/assets/mailbox-mcp/architecture/architecture.png" alt="Claude Desktop, Claude Code and other MCP clients call the tools of mailbox-mcp. A tool call passes the transport, stdio or streamable HTTP with a bearer token, the rights the service grants, one of the tools that read, sort, draft and send, and mail handed to the model as data. Every tool goes through mailbox-client to the REST API of mailbox-service, with its rights, recipient lists, daily limits and audit, and the service reaches the mail accounts.">
 </picture>
 
 A request goes from the assistant over MCP to this server. From there
@@ -56,7 +56,7 @@ to the provider of the account.
 | **`mailbox-mcp`** | This package. It turns the REST API of the service into tools for an AI assistant. It holds no mail password and no mail library. | [Getting started](#getting-started) |
 | [`mailbox-client`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-client) | The Python client of the REST API. This server makes every request with it. | installed with this server |
 | [`mailbox-service`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-service) | It holds the connections to your accounts and their credentials, encrypted. It offers one REST API for every provider and decides what a token may do. It has to be running. | [Install](https://github.com/benethos-hub/mailbox/blob/main/packages/mailbox-service/README.md#install), before this server |
-| [`mailbox-common`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-common) | What the service and this server share. | installed with both |
+| [`mailbox-common`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-common) | What the service, this server and the agents share. | installed with each of them |
 | [`mailbox-agents`](https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-agents) | Small AI agents that sort and mark mail, on top of the client. They do not use this server. | not needed here |
 
 > **The MCP server and the service must have the same version** to work
@@ -458,7 +458,7 @@ The image `ghcr.io/benethos-hub/benethos-mailbox-mcp` serves over
 streamable HTTP on port 8000, as an unprivileged user, and the command
 below runs it on a read-only root file system. A client that starts
 the server over stdio needs no image.
-Tags: the version (`0.10.0`), the minor version (`0.10`) and `latest`.
+Tags: the version (`0.11.0`), the minor version (`0.11`) and `latest`.
 
 ### With docker run
 
@@ -476,7 +476,7 @@ docker run -d --name mailbox-mcp --restart unless-stopped --network mailbox \
   -e MAILBOX_SERVICE_TOKEN=<token> \
   -e MAILBOX_MCP_BEARER_TOKEN=<a long random token> \
   -e MAILBOX_MCP_ALLOWED_HOSTS=127.0.0.1:8000,localhost:8000 \
-  ghcr.io/benethos-hub/benethos-mailbox-mcp:0.10.0
+  ghcr.io/benethos-hub/benethos-mailbox-mcp:0.11.0
 ```
 
 Inside the container the server binds to `0.0.0.0`. So

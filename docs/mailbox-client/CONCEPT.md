@@ -9,8 +9,8 @@ every other section. The MCP server built on it, section 8, is in
 
 **Decided 2026-10-07:** a package of its own, `mailbox-client`
 (`benethos-mailbox-client` on PyPI, no image), released with the
-service and the MCP server under the same version. The MCP server is
-built on it and pins it to that version. It depends on httpx alone and
+other packages under the same version. The MCP server and the agents
+are built on it and pin it to that version. It depends on httpx alone and
 never on the service, so the REST-only rule holds for it as for the MCP
 server.
 

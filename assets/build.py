@@ -19,9 +19,11 @@ without it:
   the MCP Registry and the Claude Desktop bundle. ``--icon`` renders it
   the same way.
 - ``architecture/architecture.png`` and ``architecture-dark.png``, the
-  diagram of the READMEs, from ``architecture/architecture.html``.
-  ``--diagram`` renders both the same way, at twice the size for sharp
-  text.
+  diagram of the repository's README, from
+  ``architecture/architecture.html``, and the same three files in
+  ``mailbox-service/``, ``mailbox-client/`` and ``mailbox-mcp/`` for the
+  README of each. ``--diagram`` renders them the same way, at twice the
+  size for sharp text.
 """
 
 from __future__ import annotations
@@ -433,13 +435,35 @@ DIAGRAMS = {
 }
 
 
+# The diagram of a package's README, a page each in the package's folder,
+# as large as the agents' diagram. The agents render theirs themselves.
+PACKAGE_DIAGRAM_SIZE = (1430, 776)
+PACKAGE_DIAGRAM_SOURCES = tuple(
+    ASSETS / package / "architecture/architecture.html"
+    for package in ("mailbox-service", "mailbox-client", "mailbox-mcp")
+)
+
+
+def package_diagrams(source: Path) -> dict[Path, str]:
+    """The images of a package's diagram page and their fragments."""
+    return {
+        source.with_name("architecture.png"): "",
+        source.with_name("architecture-dark.png"): "#dark",
+    }
+
+
 def render_diagram() -> None:
-    """Render the architecture diagram as a PNG, light and dark."""
-    if not DIAGRAM_SOURCE.is_file():
-        raise SystemExit(f"no page of the diagram: {DIAGRAM_SOURCE}")
-    for target, fragment in DIAGRAMS.items():
-        address = DIAGRAM_SOURCE.as_uri() + fragment
-        _screenshot(address, target, DIAGRAM_SIZE, DIAGRAM_SCALE)
+    """Render the architecture diagrams as PNGs, light and dark."""
+    pages = {DIAGRAM_SOURCE: (DIAGRAMS, DIAGRAM_SIZE)} | {
+        source: (package_diagrams(source), PACKAGE_DIAGRAM_SIZE)
+        for source in PACKAGE_DIAGRAM_SOURCES
+    }
+    for source in pages:
+        if not source.is_file():
+            raise SystemExit(f"no page of the diagram: {source}")
+    for source, (images, size) in pages.items():
+        for target, fragment in images.items():
+            _screenshot(source.as_uri() + fragment, target, size, DIAGRAM_SCALE)
 
 
 def main(arguments: list[str]) -> int:

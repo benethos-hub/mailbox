@@ -214,23 +214,34 @@ def test_the_check_sees_what_is_broken(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    ("readme", "prefix"),
+    ("readme", "folder"),
     [
-        ("README.md", ""),
-        ("packages/mailbox-service/README.md", RAW),
-        ("packages/mailbox-client/README.md", RAW),
-        ("packages/mailbox-mcp/README.md", RAW),
+        ("README.md", "assets/architecture"),
+        (
+            "packages/mailbox-service/README.md",
+            f"{RAW}assets/mailbox-service/architecture",
+        ),
+        (
+            "packages/mailbox-client/README.md",
+            f"{RAW}assets/mailbox-client/architecture",
+        ),
+        ("packages/mailbox-mcp/README.md", f"{RAW}assets/mailbox-mcp/architecture"),
+        (
+            "packages/mailbox-agents/README.md",
+            f"{RAW}assets/mailbox-agents/architecture",
+        ),
     ],
 )
-def test_the_readme_shows_the_diagram_light_and_dark(readme: str, prefix: str) -> None:
-    """The repository README, the service's, the client's, and the MCP
-    server's, where a directory of MCP servers sends its visitors."""
+def test_the_readme_shows_its_diagram_light_and_dark(readme: str, folder: str) -> None:
+    """The repository README the diagram of the whole, each package README
+    but the common package's a diagram of its own. The MCP server's is
+    where a directory of MCP servers sends its visitors."""
     text = (ROOT / readme).read_text("utf-8")
     assert (
-        f'<source srcset="{prefix}assets/architecture/architecture-dark.png"'
+        f'<source srcset="{folder}/architecture-dark.png"'
         ' media="(prefers-color-scheme: dark)">' in text
     )
-    assert f'<img src="{prefix}assets/architecture/architecture.png" alt="' in text
+    assert f'<img src="{folder}/architecture.png" alt="' in text
 
 
 READMES = {
