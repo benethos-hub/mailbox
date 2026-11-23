@@ -13,7 +13,7 @@ from ....errors import (
     NotSupportedError,
     ProviderError,
 )
-from ...models import Folder, FolderRole, SentMessage
+from ...models import Folder, FolderRole, MessageSummary, SentMessage
 from ...protocols import jmap
 from .. import rules
 from . import mappers
@@ -86,11 +86,12 @@ async def _sent_copy(
     raised: the message is sent."""
     if sent is None:
         return SentMessage()
-    try:
-        copy = await account.email(email_id, mappers.SUMMARY_PROPERTIES)
-    except MailboxServiceError as exc:
-        return SentMessage(copy_error=exc.message)
-    return SentMessage(sent_copy=mappers.summary(copy, account.trust))
+
+    async def copy() -> MessageSummary:
+        found = await account.email(email_id, mappers.SUMMARY_PROPERTIES)
+        return mappers.summary(found, account.trust)
+
+    return await rules.sent(copy)
 
 
 def _submission(

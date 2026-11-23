@@ -36,12 +36,7 @@ async def send(
         api, raw, {"raw": to_base64(compose.with_bcc(raw, recipients))}
     )
     sent = await api.read(GmailMessage, "POST", "/messages/send", json_body=body)
-    # Sent: from here on nothing may fail, or a client would send again.
-    try:
-        copy = await reading.summary(api, sent.id)
-    except MailboxServiceError as exc:
-        return SentMessage(copy_error=exc.message)
-    return SentMessage(sent_copy=copy)
+    return await rules.sent(lambda: reading.summary(api, sent.id))
 
 
 async def list_drafts(

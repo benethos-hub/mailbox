@@ -197,12 +197,9 @@ class ImapProvider(MailServerAdapter):
 
     async def send(self, raw: bytes, sender: str, recipients: list[str]) -> SentMessage:
         refused = await self._send_smtp(raw, sender, recipients)
-        # Sent: from here on nothing may fail, or a client would send again.
-        try:
-            copy = await self._run(lambda box: messages.store_sent(box, raw))
-        except MailboxServiceError as exc:
-            return SentMessage(refused=refused, copy_error=exc.message)
-        return SentMessage(refused=refused, sent_copy=copy)
+        return await rules.sent(
+            lambda: self._run(lambda box: messages.store_sent(box, raw)), refused
+        )
 
     # --- Drafts -----------------------------------------------------------------------
 

@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import math
 import re
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, time
 from typing import TypeVar
@@ -29,9 +29,31 @@ from ...errors import (
     ProviderError,
     ProviderUnavailableError,
 )
-from ..models import Folder, FolderRole, MessageFilter, MessageUpdate
+from ..models import (
+    Folder,
+    FolderRole,
+    MessageFilter,
+    MessageSummary,
+    MessageUpdate,
+    SentMessage,
+)
 
 R = TypeVar("R")
+
+
+async def sent(
+    copy: Callable[[], Awaitable[MessageSummary | None]],
+    refused: Sequence[str] = (),
+) -> SentMessage:
+    """What a send reports once the message is out: the copy ``copy``
+    reads, with the recipients the server ``refused``. From here on
+    nothing may fail, or a client would send again: an error of reading
+    the copy is noted, never raised."""
+    try:
+        found = await copy()
+    except MailboxServiceError as exc:
+        return SentMessage(refused=list(refused), copy_error=exc.message)
+    return SentMessage(refused=list(refused), sent_copy=found)
 
 
 def lost(what: str) -> ProviderError:
