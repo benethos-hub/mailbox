@@ -145,15 +145,10 @@ class SendControl:
 
     def purge(self) -> None:
         """Removes the records older than the days to keep."""
-        if not self._retention.days:
-            return
-        now = self._clock()
-        before = self._retention.cutoff(now)
-        purged = self._store.purge(before)
-        self._retention.done(now)
+        purged = self._retention.purge(self._clock(), self._store.purge)
         if purged:
             self._activity.record(
-                said.SendsPurged(by=SERVICE, count=purged, before=before)
+                said.SendsPurged(by=SERVICE, count=purged.count, before=purged.before)
             )
 
     def _allow(

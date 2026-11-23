@@ -127,13 +127,10 @@ class ChangeFeed:
 
     def purge(self) -> None:
         """Removes the changes older than the days to keep."""
-        now = self._clock()
-        before = self._retention.cutoff(now)
-        purged = self._log.purge(before)
-        self._retention.done(now)
+        purged = self._retention.purge(self._clock(), self._log.purge)
         if purged:
             self._activity.record(
-                said.ChangesPurged(by=SERVICE, count=purged, before=before)
+                said.ChangesPurged(by=SERVICE, count=purged.count, before=purged.before)
             )
 
     def forget_account(self, account_id: str) -> None:
