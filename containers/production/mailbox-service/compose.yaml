@@ -29,7 +29,8 @@ services:
     logging: *logging
     restart: unless-stopped
     ports:
-      - "127.0.0.1:${MAILBOX_SERVICE_PORT:-8080}:8080"
+      # MAILBOX_SERVICE_PORT is the name of 0.10.0, read for one release.
+      - "127.0.0.1:${MAILBOX_SERVICE_HOST_PORT:-${MAILBOX_SERVICE_PORT:-8080}}:8080"
     volumes:
       - data:/data
     secrets:

@@ -83,9 +83,9 @@ or from an `.env` beside the file, not versioned:
 
 | Variable | Default | What it is |
 |---|---|---|
-| `MAILBOX_SERVICE_PORT` | `8080` | the service's port on the host, on `127.0.0.1` |
+| `MAILBOX_SERVICE_HOST_PORT` | `8080` | the service's port on the host, on `127.0.0.1` |
 | `MAILBOX_SERVICE_LOG_LEVEL`, `MAILBOX_SERVICE_SYNC_INTERVAL` | `INFO`, `300` | settings of the service |
-| `MAILBOX_MCP_PORT` | `8000` | the MCP server's port on the host, on `127.0.0.1` |
+| `MAILBOX_MCP_HOST_PORT` | `8000` | the MCP server's port on the host, on `127.0.0.1` |
 | `MAILBOX_SERVICE_TOKEN` | | the API token of the user the MCP server acts as, made in the UI. The MCP server reads it under the same name. |
 | `MAILBOX_MCP_BEARER_TOKEN` | | what the MCP server's own clients must send |
 | `MAILBOX_MCP_ALLOWED_HOSTS` | `127.0.0.1:<port>,localhost:<port>` | the Host values its clients use |
