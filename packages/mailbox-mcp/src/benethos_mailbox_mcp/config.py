@@ -142,7 +142,4 @@ def load_settings(env_file: Path | None, **given: object) -> Settings:
 def variable(name: str) -> str:
     """The name in the environment and the file of a setting, by its
     field or the name it is read by."""
-    field = Settings.model_fields.get(name)
-    if field is None:
-        return name
-    return field.alias or PREFIX + name.upper()
+    return files.env_name(Settings, name)

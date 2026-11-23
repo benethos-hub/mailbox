@@ -91,7 +91,9 @@ def test_the_options_read_their_defaults_from_the_file(
     named = write(tmp_path / "mcp.env", "MAILBOX_MCP_TRANSPORT=carrier-pigeon\n")
     with pytest.raises(SystemExit):
         cli.main(["--env-file", str(named)])
-    assert "not 'carrier-pigeon'" in capsys.readouterr().err
+    err = capsys.readouterr().err
+    assert "MAILBOX_MCP_TRANSPORT: " in err
+    assert "carrier-pigeon" not in err
 
 
 def test_an_option_is_checked_as_the_setting_is(
@@ -100,7 +102,7 @@ def test_an_option_is_checked_as_the_setting_is(
     with pytest.raises(SystemExit):
         cli.main(["--port", "0"])
     said = capsys.readouterr().err
-    assert "MAILBOX_MCP_PORT" in said and "not 0" in said
+    assert "MAILBOX_MCP_PORT: Input should be greater than or equal to 1" in said
 
 
 def test_both_tokens_are_read_from_their_files(
@@ -148,3 +150,15 @@ def test_a_token_file_that_holds_none_is_refused_by_its_name(
     err = capsys.readouterr().err
     assert "MAILBOX_SERVICE_TOKEN_FILE" in err and said in err
     assert "secret-in" not in err
+
+
+def test_a_wrong_setting_is_named_with_its_rule_and_not_its_value(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("MAILBOX_MCP_PORT", "70123")
+    with pytest.raises(SystemExit) as stopped:
+        cli.main([])
+    assert stopped.value.code == 2
+    err = capsys.readouterr().err
+    assert "MAILBOX_MCP_PORT: Input should be less than or equal to 65535" in err
+    assert "70123" not in err

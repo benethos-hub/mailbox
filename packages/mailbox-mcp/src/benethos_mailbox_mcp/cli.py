@@ -15,6 +15,7 @@ import anyio
 from pydantic import ValidationError
 
 from benethos_mailbox_common.log import lines, redact
+from benethos_mailbox_common.settings import files
 
 from . import __version__, config, server, transport
 from .client import Environment, connector, from_environment
@@ -87,12 +88,8 @@ def _settings(
             log_level=args.log_level,
         )
     except ValidationError as exc:
-        problems = []
-        for error in exc.errors():
-            name = config.variable(str(error["loc"][0]))
-            shown = "" if "TOKEN" in name else f", not {error['input']!r}"
-            problems.append(f"{name}: {error['msg']}{shown}")
-        parser.error("; ".join(problems))
+        # Each setting and its rule, never what was given.
+        parser.error("; ".join(files.problems(config.Settings, exc)))
 
 
 def _service(settings: config.Settings) -> Environment:

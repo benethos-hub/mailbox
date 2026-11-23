@@ -129,7 +129,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   as given: a client secret set without its client id was printed to
   stderr, and in a container to its log. `benethos-mailbox-common`:
   `files.problems` and `files.env_name` name a wrong setting without
-  what was given.
+  what was given. `benethos-mailbox-mcp` no longer names the value of a
+  wrong setting either: it left out only a setting with `TOKEN` in its
+  name.
 - `benethos-mailbox-agents`: a sender pattern of `sorting` is matched in
   time linear in the length of the address. Before, a pattern of several
   `*` took time that grew with a power of that length, and a mail from a
