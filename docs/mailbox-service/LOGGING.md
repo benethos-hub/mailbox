@@ -211,10 +211,12 @@ defence, not the first: a line is written as if there were no masking.
    message, such as the end of a purge. `log_time` in `log/lines.py` of
    `mailbox-common` writes it. **Decided 2026-09-30.**
 10. **An activity is one line.** A name or an address a caller chose may
-    hold a line break. The recorder writes each break and each other
-    control character as its escape, such as `\n` or `\u2028`, so no
-    value starts a line of its own. A traceback follows its line as
-    before.
+    hold a line break. The recorder writes each break, each other
+    control character, each mark that turns the direction of the text
+    and a lone surrogate as its escape, such as `\n` or `\u2028`, so no
+    value starts a line of its own, turns the line around or makes the
+    log drop it. `text.escaped` of `mailbox-common` does it. A traceback
+    follows its line as before.
 
 ## 9. Questions answered
 
