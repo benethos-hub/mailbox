@@ -28,7 +28,7 @@ from ...errors import (
 from ..accounts import writes
 from ..rights import Access
 from .calls import Calls
-from .reach import Reach, outside, permitted, reach_of, require_folder
+from .reach import Reach, outside, permitted, reach_of, require_folder, upwards
 
 
 class Folders:
@@ -210,14 +210,7 @@ def in_trash(folders: list[Folder]) -> frozenset[str]:
     by_id = {f.id: f for f in folders}
 
     def below_the_trash(folder: Folder) -> bool:
-        seen: set[str] = set()
-        current: Folder | None = folder
-        while current is not None and current.id not in seen:
-            if current.role is FolderRole.TRASH:
-                return True
-            seen.add(current.id)
-            current = by_id.get(current.parent_id) if current.parent_id else None
-        return False
+        return any(f.role is FolderRole.TRASH for f in upwards(folder, by_id))
 
     return frozenset(f.id for f in folders if below_the_trash(f))
 

@@ -15,7 +15,7 @@ of the provider.
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 
 from ...data.models import OUTSIDE_ALL, ChangeRecord, Folder, FolderRole
 from ...errors import ForbiddenError, missing
@@ -118,15 +118,20 @@ def _beside_all(reached: frozenset[str], folders: list[Folder]) -> frozenset[str
 
 def _within(folder: Folder, names: frozenset[str], by_id: dict[str, Folder]) -> bool:
     """Whether the folder or one above it is named: by id, name or role."""
+    return any(
+        current.id in names
+        or current.name in names
+        or (current.role is not None and current.role.value in names)
+        for current in upwards(folder, by_id)
+    )
+
+
+def upwards(folder: Folder, by_id: dict[str, Folder]) -> Iterator[Folder]:
+    """``folder``, then each folder above it. A circle among the parents
+    ends the walk."""
     seen: set[str] = set()
     current: Folder | None = folder
     while current is not None and current.id not in seen:
-        if (
-            current.id in names
-            or current.name in names
-            or (current.role is not None and current.role.value in names)
-        ):
-            return True
+        yield current
         seen.add(current.id)
         current = by_id.get(current.parent_id) if current.parent_id else None
-    return False
