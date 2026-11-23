@@ -18,7 +18,11 @@ from benethos_mailbox_service.data.models import (
 )
 from benethos_mailbox_service.data.providers import Deltas, rules
 from benethos_mailbox_service.data.providers.base import Capability
-from benethos_mailbox_service.data.providers.gmail import GmailProvider, mappers
+from benethos_mailbox_service.data.providers.gmail import (
+    GmailProvider,
+    mappers,
+    sending,
+)
 from benethos_mailbox_service.data.providers.gmail.shapes import Label
 from benethos_mailbox_service.errors import (
     BadRequestError,
@@ -26,6 +30,7 @@ from benethos_mailbox_service.errors import (
     MessageNotFoundError,
     NotFoundError,
     NotSupportedError,
+    ProviderError,
 )
 
 from ...gmail_fake import TOKEN, FakeGmail, source
@@ -383,6 +388,19 @@ async def test_a_draft_replaced_gets_a_new_id(gmail: FakeGmail) -> None:
     assert gmail.drafts == {}
     with pytest.raises(NotFoundError):
         await provider.delete_draft(second.id)
+
+
+async def test_a_draft_stored_but_not_found_again_is_the_servers_fault(
+    gmail: FakeGmail, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The draft is there: a 404 would tell the caller the wrong thing."""
+
+    async def gone(api: object, message_id: str) -> None:
+        return None
+
+    monkeypatch.setattr(sending.reading, "summary", gone)
+    with pytest.raises(ProviderError, match="cannot be found again"):
+        await adapter(gmail).save_draft(b"Subject: Lost\r\n\r\nx", None)
 
 
 async def test_only_a_draft_is_a_draft(gmail: FakeGmail) -> None:

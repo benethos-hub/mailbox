@@ -99,6 +99,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 - A batch that moves into the trash only messages the grants do not
   reach answers `404` for each message, as `PATCH` does for one. Before,
   a caller without `delete_message` got `403` for the whole batch.
+- A Gmail draft that was stored but cannot be read back answers `502`,
+  as with IMAP and JMAP. Before, it answered `404`, though the draft
+  was there.
 - `benethos-mailbox-service` reads a client secret, and
   `benethos-mailbox-mcp` a token, from a file that starts with the mark
   of UTF-8, as PowerShell 5.1 writes one with `Out-File -Encoding utf8`.
