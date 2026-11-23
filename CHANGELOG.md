@@ -91,10 +91,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
-- `benethos-mailbox-service` reads a client secret from a file that
-  starts with the mark of UTF-8, as PowerShell 5.1 writes one with
-  `Out-File -Encoding utf8`. Before, the mark stayed in front of the
-  secret. `benethos-mailbox-common`: `files.secret_file`.
+- `benethos-mailbox-service` reads a client secret, and
+  `benethos-mailbox-mcp` a token, from a file that starts with the mark
+  of UTF-8, as PowerShell 5.1 writes one with `Out-File -Encoding utf8`.
+  Before, the mark stayed in front of the secret. `benethos-mailbox-common`: `files.secret_file`.
 - `benethos-mailbox-agents` read the folders of an account anew in
   every pass. Where a renamed folder keeps its id, a worker named it by
   its old path until it started again.

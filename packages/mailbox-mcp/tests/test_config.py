@@ -162,3 +162,15 @@ def test_a_wrong_setting_is_named_with_its_rule_and_not_its_value(
     err = capsys.readouterr().err
     assert "MAILBOX_MCP_PORT: Input should be less than or equal to 65535" in err
     assert "70123" not in err
+
+
+def test_a_token_file_with_the_mark_of_utf8_in_front(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """As PowerShell 5.1 writes a file with ``Out-File -Encoding utf8``."""
+    service = tmp_path / "service_token"
+    service.write_bytes(b"\xef\xbb\xbffrom-powershell\r\n")
+    monkeypatch.setenv("MAILBOX_SERVICE_TOKEN_FILE", str(service))
+    found = config.load_settings(None)
+    assert found.service_token is not None
+    assert found.service_token.get_secret_value() == "from-powershell"

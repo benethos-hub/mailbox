@@ -103,7 +103,7 @@ class Settings(files.FileSettings):
 def _read(path: Path) -> str:
     """The token in the file at ``path``, without the blanks around it."""
     try:
-        found = path.read_text(encoding="utf-8").strip()
+        found = files.secret_file(path)
     except (OSError, UnicodeDecodeError):
         raise ValueError("the file cannot be read") from None
     if not found:
