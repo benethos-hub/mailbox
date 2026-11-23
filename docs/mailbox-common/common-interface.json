@@ -242,7 +242,8 @@
       "S",
       "env_name",
       "load",
-      "problems"
+      "problems",
+      "secret_file"
     ],
     "FileSettings": {
       "bases": [
@@ -260,6 +261,9 @@
     },
     "problems": {
       "signature": "(settings: 'type[FileSettings]', exc: 'Exception') -> 'list[str]'"
+    },
+    "secret_file": {
+      "signature": "(path: 'Path') -> 'str'"
     }
   },
   "benethos_mailbox_common.values": {

@@ -25,7 +25,15 @@ except ModuleNotFoundError as missing:
 # NoDecode marks a field whose value the program splits itself, such as a
 # list given as names between commas, so the environment does not read it
 # as JSON.
-__all__ = ["FileSettings", "NoDecode", "S", "env_name", "load", "problems"]
+__all__ = [
+    "FileSettings",
+    "NoDecode",
+    "S",
+    "env_name",
+    "load",
+    "problems",
+    "secret_file",
+]
 
 
 class FileSettings(BaseSettings):
@@ -44,6 +52,13 @@ def load(settings: type[S], env_file: Path | None, **given: Any) -> S:
     not exist, only the environment is read."""
     found = env_file if env_file is not None and env_file.is_file() else None
     return settings(_env_file=found, **given)
+
+
+def secret_file(path: Path) -> str:
+    """What the file holds, the blanks and the mark of UTF-8 an editor
+    puts in front taken off. An error of reading passes through: each
+    program says it in its own words."""
+    return path.read_text(encoding="utf-8-sig").strip()
 
 
 def env_name(settings: type[FileSettings], field: str) -> str:

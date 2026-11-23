@@ -269,13 +269,17 @@ class MailboxService:
             )
             rest = [i for i in batch.ids if i not in outcomes]
             if rest:
+                # Only for messages the grants reach: one that is out of
+                # reach answers 404, as the single route does.
                 await _listed(looked, changes)
-            outcomes.update(
-                await self._guards.trash_refused(access, looked, rest, changes)
-            )
-            rest = [i for i in rest if i not in outcomes]
-            outcomes.update(await self._guards.drafts_refused(looked, rest, changes))
-            rest = [i for i in rest if i not in outcomes]
+                outcomes.update(
+                    await self._guards.trash_refused(access, looked, rest, changes)
+                )
+                rest = [i for i in rest if i not in outcomes]
+                outcomes.update(
+                    await self._guards.drafts_refused(looked, rest, changes)
+                )
+                rest = [i for i in rest if i not in outcomes]
             if rest:
                 outcomes.update(await self._calls.update(account_id, rest, changes))
         else:

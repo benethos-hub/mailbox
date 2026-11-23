@@ -162,3 +162,40 @@ def test_a_wrong_setting_is_named_with_its_rule_and_not_its_value(
     err = capsys.readouterr().err
     assert "MAILBOX_MCP_PORT: Input should be less than or equal to 65535" in err
     assert "70123" not in err
+
+
+def test_a_token_file_with_the_mark_of_utf8_in_front(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """As PowerShell 5.1 writes a file with ``Out-File -Encoding utf8``."""
+    service = tmp_path / "service_token"
+    service.write_bytes(b"\xef\xbb\xbffrom-powershell\r\n")
+    monkeypatch.setenv("MAILBOX_SERVICE_TOKEN_FILE", str(service))
+    found = config.load_settings(None)
+    assert found.service_token is not None
+    assert found.service_token.get_secret_value() == "from-powershell"
+
+
+def test_a_relative_token_file_counts_from_the_settings_file(tmp_path: Path) -> None:
+    folder = tmp_path / "elsewhere"
+    write(folder / "token.txt", "token-beside-the-settings\n")
+    write(folder / "bearer.txt", "bearer-beside-the-settings\n")
+    named = write(
+        folder / "mcp.env",
+        "MAILBOX_SERVICE_TOKEN_FILE=token.txt\n"
+        "MAILBOX_MCP_BEARER_TOKEN_FILE=bearer.txt\n",
+    )
+    found = config.load_settings(config.settings_file(named))
+    assert found.service_token is not None and found.bearer_token is not None
+    assert found.service_token.get_secret_value() == "token-beside-the-settings"
+    assert found.bearer_token.get_secret_value() == "bearer-beside-the-settings"
+
+
+def test_an_absolute_token_file_stays_as_it_is(tmp_path: Path) -> None:
+    token = write(tmp_path / "secrets" / "token", "absolute-token\n")
+    named = write(
+        tmp_path / "conf" / "mcp.env", f"MAILBOX_SERVICE_TOKEN_FILE={token}\n"
+    )
+    found = config.load_settings(config.settings_file(named))
+    assert found.service_token is not None
+    assert found.service_token.get_secret_value() == "absolute-token"

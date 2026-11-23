@@ -15,6 +15,7 @@ from benethos_mailbox_common.settings.files import (
     env_name,
     load,
     problems,
+    secret_file,
 )
 
 
@@ -116,3 +117,13 @@ def test_the_name_of_a_setting_is_its_alias_or_prefixed() -> None:
     assert env_name(Guarded, "token") == "MAILBOX_TOKEN"
     assert env_name(Guarded, "client_id") == "MAILBOX_TEST_CLIENT_ID"
     assert env_name(Guarded, "MAILBOX_TOKEN") == "MAILBOX_TOKEN"
+
+
+def test_a_secret_file_loses_its_blanks_and_the_mark_of_utf8(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "secret"
+    path.write_bytes(b"\xef\xbb\xbf  token \r\n")
+    assert secret_file(path) == "token"
+    path.write_text("plain\n", encoding="utf-8")
+    assert secret_file(path) == "plain"

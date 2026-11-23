@@ -47,7 +47,13 @@ def default_client(server: Server, timeout: float) -> Any:
     address, context = server.endpoint()
     if server.security == "starttls":
         client = IMAPClient(address, server.port, ssl=False, timeout=timeout)
-        client.starttls(context)
+        try:
+            client.starttls(context)
+        except BaseException:
+            # The connection is open: close it, as POP3 and SMTP do.
+            with suppress(Exception):
+                client.shutdown()
+            raise
         return client
     return IMAPClient(
         address, server.port, ssl=True, ssl_context=context, timeout=timeout

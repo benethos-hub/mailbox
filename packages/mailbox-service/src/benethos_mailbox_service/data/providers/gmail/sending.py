@@ -15,7 +15,7 @@ mail's ``Message-ID``.
 from __future__ import annotations
 
 from ....common.opaque import to_base64
-from ....errors import MailboxServiceError, NotFoundError, missing
+from ....errors import MailboxServiceError, NotFoundError, ProviderError, missing
 from ...mail import compose, parse
 from ...models import MessageSummary, Page, SentMessage
 from ...protocols import path_part
@@ -60,7 +60,7 @@ async def save_draft(api: GmailApi, raw: bytes, replaces: str | None) -> Message
         )
     stored = await reading.summary(api, draft.message.id) if draft.message else None
     if stored is None:
-        raise NotFoundError("the draft was stored but cannot be found again")
+        raise ProviderError("the draft was stored but cannot be found again")
     return stored
 
 

@@ -14,7 +14,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from ....common import opaque
-from ...mail import authentication, convert, parse
+from ...mail import authentication, convert, fields, parse
 from ...models import (
     Folder,
     FolderRole,
@@ -199,7 +199,7 @@ def _path(keyword: str) -> str:
 
 def _addresses(values: Addresses) -> list[dict[str, str | None]]:
     return [
-        {"email": v.email, "name": v.name or None}
+        {"email": fields.unicode_address(v.email), "name": v.name or None}
         for v in values
         if v is not None and v.email
     ]

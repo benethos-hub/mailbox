@@ -262,3 +262,24 @@ def test_a_folder_below_the_trash_goes_only_where_delete_message_reaches(
     )
     assert answer.status_code == 403, answer.text
     assert "delete_message into the trash" in answer.json()["error"]["message"]
+
+
+def test_a_batch_that_reaches_no_message_answers_each_as_the_single_route(
+    app_client: TestClient, services: Services, trash_box: str
+) -> None:
+    """Without delete_message, a batch into the trash whose messages all
+    lie outside the grants answers 404 for each, as PATCH does for one,
+    not 403 for the whole batch."""
+    grant = Grant(accounts=[trash_box], allow=MARKS_AND_MOVES, folders=["Invoices"])
+    narrowed = TestClient(app_client.app, headers=bearer_for(services, grant))
+    base = f"/v1/accounts/{trash_box}/messages"
+    single = narrowed.patch(f"{base}/m0", json={"folder_ids": ["trash"]})
+    assert single.status_code == 404, single.text
+    answer = narrowed.post(
+        f"{base}/batch",
+        json={"action": "update", "ids": ["m0"], "changes": {"folder_ids": ["trash"]}},
+    )
+    assert answer.status_code == 200, answer.text
+    [result] = answer.json()["results"]
+    assert result["error"]["code"] == "not_found"
+    assert folders_of(services, trash_box, "m0") == ["inbox"]

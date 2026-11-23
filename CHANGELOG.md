@@ -23,6 +23,15 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `benethos-mailbox-agents`: `mailbox_agents_step_failures_total` also
+  counts an update that could not be observed and a message whose fetch
+  stayed stuck while the service was away. Before, both were logged as a
+  failed step and not counted.
+- `benethos-mailbox-mcp` counts a relative `MAILBOX_SERVICE_TOKEN_FILE`
+  or `MAILBOX_MCP_BEARER_TOKEN_FILE` from the folder of the settings
+  file, when the file was named or is the one of the operating system,
+  as the service and the agents count their paths. Before, it counted
+  from the working directory.
 - `sender_check` counts several entries under the receiving server's
   name when they come to the same result. Some servers write two for
   each mail, which made the result `unknown` (`several_entries`) for
@@ -91,6 +100,19 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- A batch that moves into the trash only messages the grants do not
+  reach answers `404` for each message, as `PATCH` does for one. Before,
+  a caller without `delete_message` got `403` for the whole batch.
+- A Gmail draft that was stored but cannot be read back answers `502`,
+  as with IMAP and JMAP. Before, it answered `404`, though the draft
+  was there.
+- A list of a JMAP account shows an address on an internationalised
+  domain in Unicode, as the opened message does. Before, it could show
+  the punycode (`xn--`).
+- `benethos-mailbox-service` reads a client secret, and
+  `benethos-mailbox-mcp` a token, from a file that starts with the mark
+  of UTF-8, as PowerShell 5.1 writes one with `Out-File -Encoding utf8`.
+  Before, the mark stayed in front of the secret. `benethos-mailbox-common`: `files.secret_file`.
 - `benethos-mailbox-agents` read the folders of an account anew in
   every pass. Where a renamed folder keeps its id, a worker named it by
   its old path until it started again.
@@ -123,6 +145,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+- **Breaking:** `benethos-mailbox-agents` refuse a
+  `MAILBOX_AGENTS_GATEWAY_URL` with a user or a password in it, as the
+  client refuses one in `MAILBOX_SERVICE_URL`. The address is named in
+  errors, and a password in it would be named with it.
 - `benethos-mailbox-service`: a setting that does not validate is named
   with its rule on one line, as `error: wrong settings: NAME: rule`.
   Before, every command printed the error of pydantic, with the settings

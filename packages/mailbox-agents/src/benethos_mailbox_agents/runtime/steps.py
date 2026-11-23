@@ -205,7 +205,7 @@ class StepRunner:
         )
         return state
 
-    def _failed(self, ref: MessageRef, step: str, exc: MailboxAgentError) -> None:
+    def failed(self, ref: MessageRef, step: str, exc: MailboxAgentError) -> None:
         """The line and the count of a step that failed."""
         record(
             messages.StepFailed(
@@ -253,13 +253,13 @@ class StepRunner:
             )
             return self.retry(ref, attempts)
         except LimitReachedError as exc:
-            self._failed(ref, "model", exc)
+            self.failed(ref, "model", exc)
             if not exc.per_day:
                 return self._state(ref, "failed", attempts=attempts + 1)
             tomorrow = start_of_day(self._now()) + timedelta(days=1)
             return self._state(ref, "pending", next_attempt=tomorrow)
         except MailboxRefusedError as exc:
-            self._failed(ref, "decide", exc)
+            self.failed(ref, "decide", exc)
             return self.retry(ref, attempts)
         if not decision.actionable:
             self.metrics.answer_refused(decision.refused or "")
@@ -291,7 +291,7 @@ class StepRunner:
         """A message the service refused in ``step``, to hand over or for
         what the agent read for its actions: skipped when it is gone, else
         an attempt counted."""
-        self._failed(ref, step, exc)
+        self.failed(ref, step, exc)
         if isinstance(exc, MessageGoneError):
             return self._state(ref, "skipped")
         return self.retry(ref, attempts)

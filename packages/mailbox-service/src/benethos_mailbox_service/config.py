@@ -234,7 +234,7 @@ def _named(secret: SecretStr | None, file: Path | None) -> bool:
 def _secret(secret: SecretStr | None, file: Path | None) -> SecretStr | None:
     """A secret, from its file if one is named, else from the environment."""
     if file is not None:
-        return SecretStr(file.read_text(encoding="utf-8").strip())
+        return SecretStr(files.secret_file(file))
     return secret if secret is not None and secret.get_secret_value() else None
 
 

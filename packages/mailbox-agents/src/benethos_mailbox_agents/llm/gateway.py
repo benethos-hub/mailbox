@@ -214,11 +214,16 @@ def _check(response: httpx.Response) -> None:
 
 def _check_url(url: str, allow_http: bool) -> None:
     """https anywhere, http to this machine, or anywhere when allowed: the
-    key and the mail would otherwise travel unencrypted."""
+    key and the mail would otherwise travel unencrypted. Never a user or
+    password in it: the address is named in errors."""
     try:
         parts = httpx.URL(url)
     except httpx.InvalidURL:
         raise ConfigError("MAILBOX_AGENTS_GATEWAY_URL is not a URL") from None
+    if parts.userinfo:
+        raise ConfigError(
+            "MAILBOX_AGENTS_GATEWAY_URL must not carry a user or password"
+        )
     if parts.scheme == "https" and parts.host:
         return
     if parts.scheme != "http" or not parts.host:
