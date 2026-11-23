@@ -1,11 +1,12 @@
 """The receiving server's statement about the sender of a message, read
 from its Authentication-Results entry (RFC 8601).
 
-Only the entry of the account's own server counts, known by its
-authserv-id, and only when the message carries exactly one such entry:
-a second one with the same name makes the result unknown, so an entry
-the sender brought can spoil it but never improve it. Entries of other
-servers, ``ARC-Authentication-Results`` and the like are never read.
+Only the entries of the account's own server count, known by their
+authserv-id. Some servers write two. Each is judged alone, and the
+result stands when all of them come to the same one: where they differ,
+it is unknown. So an entry the sender brought can spoil the result but
+never improve it. Entries of other servers,
+``ARC-Authentication-Results`` and the like are never read.
 
 The header is the sender's text as much as the server's. Nothing of it
 leaves this module but fixed values and a domain checked as a host
@@ -75,13 +76,22 @@ def sender_check(
     own = [e for e in entries if (i := _authserv_id(e)) and trust.trusts(i)]
     if not own:
         return _unknown("no_entry")
-    if len(own) > 1:
-        return _unknown("several_entries")
-    results = _results(own[0])
     sender_domain = _domain_of(sender)
-    if results is None or sender_domain is None:
+    judged = [_entry(entry, sender_domain) for entry in own]
+    # The first entry, the topmost, gives the details: several that agree
+    # may have checked by other methods.
+    first = judged[0]
+    if any(found.result != first.result for found in judged[1:]):
+        return _unknown("several_entries")
+    return first
+
+
+def _entry(entry: str, sender: str | None) -> SenderCheck:
+    """What one entry of the own server states about ``sender``."""
+    results = _results(entry)
+    if results is None or sender is None:
         return _unknown("unreadable")
-    return _judged(results, sender_domain)
+    return _judged(results, sender)
 
 
 def _unknown(reason: SenderCheckReason) -> SenderCheck:
@@ -102,7 +112,7 @@ class _UnreadableError(Exception):
 
 
 def _judged(results: list[_Result], sender: str) -> SenderCheck:
-    """The table of docs/mailbox-service/CONCEPT.md, from the statements of the one
+    """The table of docs/mailbox-service/CONCEPT.md, from the statements of one
     entry."""
     try:
         dmarc = [
