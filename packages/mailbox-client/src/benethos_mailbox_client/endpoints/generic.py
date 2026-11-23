@@ -10,7 +10,7 @@ from ..calls import Call, as_is, given
 
 def request(
     method: str,
-    where: str,
+    path: str,
     *,
     params: dict[str, Any] | None = None,
     json: dict[str, Any] | None = None,
@@ -20,7 +20,7 @@ def request(
     content. Parameters and fields that are None are left out."""
     return Call(
         method,
-        where,
+        path,
         as_is,
         params=given(params),
         json=given(json) if json is not None else None,
