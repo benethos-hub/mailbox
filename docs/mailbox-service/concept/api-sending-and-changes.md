@@ -181,7 +181,8 @@ Rules of the implementation (built before phase 3):
 
 - Text filters are case-insensitive. On IMAP they match parts of words,
   as IMAP `SEARCH` compares them. Gmail, Microsoft and JMAP search their
-  own index, which matches whole words or their beginnings (5.11).
+  own index: Microsoft matches whole words or their beginnings, Gmail
+  whole words only, a JMAP server as it indexes (5.11).
   They hold no control characters (`422`): IMAP clients quote search text
   but keep line breaks, which would end the command and start another.
 - `after` and `before` are days, as IMAP searches by day: `after` includes
