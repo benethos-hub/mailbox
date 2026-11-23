@@ -116,7 +116,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `benethos-mailbox-service` no longer stops when the server of an
   account with push fails to answer for days. After about 1025 failed
   watches in a row the pause before the next attempt became too large a
-  number, and the error ended the service. `benethos-mailbox-common`:
+  number, and the error ended the service. The pause an unreachable
+  server gets had the same fault and then no longer held requests back.
+  `benethos-mailbox-common`:
   `pauses.doubled` gives a pause that doubles up to a ceiling.
 
 ### Security
