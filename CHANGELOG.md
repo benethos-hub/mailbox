@@ -22,6 +22,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   still alpha. Up to 0.2.0 they had a repository and a changelog of their
   own, benethos-hub/mailbox-agents. They take the client of the same
   version.
+- `benethos-mailbox-common`: `paths.folders.program_folders` finds the
+  folders of a program as the service and the agents do,
+  `paths.locks.exclusive_lock` holds one writer per file across
+  processes, and `settings.files.Names` reads a list of names between
+  commas.
 
 ### Changed
 
