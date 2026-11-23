@@ -92,7 +92,7 @@ supported (`501`), sending goes through SMTP.
   webhooks report what arrived and what left. Its ids are not stable
   ids of a message, so the domain keeps the id mapping and the sync runs.
   The ids never move, so the mapping stays as it was.
-- **Discovery** offers POP3 only where it finds no IMAP. A POP3 account
+- **Discovery** offers POP3 only where it finds neither IMAP nor JMAP. A POP3 account
   can always be set up by hand, in the UI with the protocol to choose.
 - **A server without `UIDL`** is refused when the account connects:
   without it no message keeps an id.
