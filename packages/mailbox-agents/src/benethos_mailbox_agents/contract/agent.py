@@ -82,10 +82,16 @@ class Route(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class Trigger:
-    """The feed events an agent wants, and whether it wants the tick."""
+    """The feed events an agent wants, each with the route it takes, and
+    whether it wants the tick."""
 
-    events: frozenset[EventType]
+    routes: Mapping[EventType, Route]
     tick: bool = False
+
+    @property
+    def events(self) -> frozenset[EventType]:
+        """The feed events the agent wants."""
+        return frozenset(self.routes)
 
 
 @dataclass(frozen=True, slots=True)
@@ -181,9 +187,10 @@ class Agent(ABC):
 
     # -- to implement ---------------------------------------------------------
 
-    @abstractmethod
     def select(self, event: Event) -> Route | None:
-        """Whether this event concerns the agent, and how. Code only."""
+        """Whether this event concerns the agent, and how: the route its
+        triggers name for the type of the event. Code only."""
+        return self.triggers.routes.get(event.type)
 
     def admit(self, message: MailMessage) -> bool:
         """After the fetch: whether the message is one for this agent, such

@@ -37,7 +37,6 @@ from ...records import (
     MESSAGE_DISCARDED,
     MESSAGE_GONE,
     Decision,
-    Event,
     Evidence,
     MailMessage,
     OpenItem,
@@ -71,7 +70,11 @@ class AwaitingReply(Agent):
     version = "2"
     description = "Marks sent mail that still waits for an answer after its deadline."
     triggers = Trigger(
-        events=frozenset({"message.sent", "message.created", "message.updated"}),
+        routes={
+            "message.sent": Route.DECIDE,
+            "message.created": Route.DECIDE,
+            "message.updated": Route.OBSERVE,
+        },
         tick=True,
     )
     actions = frozenset({Action.ADD_KEYWORD, Action.REMOVE_KEYWORD})
@@ -85,13 +88,6 @@ class AwaitingReply(Agent):
         return load_prompt(__package__ or "", "system", self.prompt_version)
 
     # -- the contract -------------------------------------------------------------
-
-    def select(self, event: Event) -> Route | None:
-        if event.type in ("message.sent", "message.created"):
-            return Route.DECIDE
-        if event.type == "message.updated":
-            return Route.OBSERVE
-        return None
 
     def admit(self, message: MailMessage) -> bool:
         """A message sent, or one received into the inbox within a thread."""

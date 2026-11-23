@@ -35,7 +35,7 @@ from ...contract import (
     Trigger,
 )
 from ...errors import ConfigError
-from ...records import Decision, Event, FolderRef, MailMessage
+from ...records import Decision, FolderRef, MailMessage
 from ...settings import PREFIX
 from .groups import NONE, Group, Groups, Match, load_groups
 
@@ -70,7 +70,7 @@ class Sorting(Agent):
         "Moves mail of listed senders from the inbox into the folder of their "
         "group. No model."
     )
-    triggers = Trigger(events=frozenset({"message.created"}))
+    triggers = Trigger(routes={"message.created": Route.DECIDE})
     actions = frozenset(
         {Action.CREATE_FOLDER, Action.MOVE_TO_FOLDER, Action.ADD_KEYWORD}
     )
@@ -106,9 +106,6 @@ class Sorting(Agent):
         return self.groups.may_create(path)
 
     # -- the contract -------------------------------------------------------------
-
-    def select(self, event: Event) -> Route | None:
-        return Route.DECIDE if event.type == "message.created" else None
 
     def admit(self, message: MailMessage) -> bool:
         """A message in the inbox the agent has not sorted before: one that

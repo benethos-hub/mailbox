@@ -39,7 +39,7 @@ from ...contract import (
     Trigger,
     load_prompt,
 )
-from ...records import LABEL, Decision, Event, Evidence, FolderRef, MailMessage
+from ...records import LABEL, Decision, Evidence, FolderRef, MailMessage
 from .baseline import baseline
 from .folders import Places
 from .schema import Answer, parts, render
@@ -61,7 +61,9 @@ class Invoices(Agent):
     description = (
         "Marks invoices, and moves one into the subfolder of the folder it lies in."
     )
-    triggers = Trigger(events=frozenset({"message.created", "message.updated"}))
+    triggers = Trigger(
+        routes={"message.created": Route.DECIDE, "message.updated": Route.OBSERVE}
+    )
     actions = frozenset(
         {Action.ADD_KEYWORD, Action.MOVE_TO_FOLDER, Action.CREATE_FOLDER}
     )
@@ -106,13 +108,6 @@ class Invoices(Agent):
         return load_prompt(__package__ or "", "system", self.prompt_version)
 
     # -- the contract -------------------------------------------------------------
-
-    def select(self, event: Event) -> Route | None:
-        if event.type == "message.created":
-            return Route.DECIDE
-        if event.type == "message.updated":
-            return Route.OBSERVE
-        return None
 
     def admit(self, message: MailMessage) -> bool:
         return self._looked_in(message) is not None

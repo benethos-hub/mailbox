@@ -207,7 +207,7 @@ async def test_an_update_the_service_never_answers_lets_the_cursor_move(
     world: Wired,
 ) -> None:
     class Watcher(Echo):
-        triggers = Trigger(events=frozenset({"message.updated"}))
+        triggers = Trigger(routes={"message.updated": Route.DECIDE})
 
         def select(self, event: Event) -> Route | None:
             return Route.OBSERVE

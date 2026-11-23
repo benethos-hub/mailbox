@@ -17,7 +17,7 @@ from ...contract import (
     Route,
     Trigger,
 )
-from ...records import Decision, Event, MailMessage
+from ...records import Decision, MailMessage
 
 __all__ = ["Counting"]
 
@@ -26,14 +26,13 @@ class Counting(Agent):
     name = "counting"
     version = "1"
     description = "Counts the messages that arrive or are sent. No model, no action."
-    triggers = Trigger(events=frozenset({"message.created", "message.sent"}))
+    triggers = Trigger(
+        routes={"message.created": Route.DECIDE, "message.sent": Route.DECIDE}
+    )
     actions = frozenset[Action]()
     limits = Limits(model_calls_per_message=0, model_calls_per_day=0)
     default_keyword = "agent-counted"
     report_labels = frozenset({"counted"})
-
-    def select(self, event: Event) -> Route | None:
-        return Route.DECIDE if event.type in self.triggers.events else None
 
     def baseline(self, message: MailMessage) -> Decision:
         roles = sorted({f.role for f in message.folders if f.role})

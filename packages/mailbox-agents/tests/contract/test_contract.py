@@ -37,7 +37,7 @@ class Sample(Agent):
     name = "sample"
     version = "1"
     description = "an agent for the tests"
-    triggers = Trigger(events=frozenset({"message.created"}))
+    triggers = Trigger(routes={"message.created": Route.DECIDE})
     actions = frozenset({Action.ADD_KEYWORD})
     default_keyword = "sample"
 
@@ -93,8 +93,11 @@ async def test_the_defaults_of_the_optional_methods() -> None:
     [
         ({"name": "Not-Valid"}, "lowercase"),
         ({"version": ""}, "must not be empty"),
-        ({"triggers": Trigger(events=frozenset({"message.read"}))}, "unknown events"),
-        ({"triggers": Trigger(events=frozenset())}, "no event and no tick"),
+        (
+            {"triggers": Trigger(routes={"message.read": Route.DECIDE})},
+            "unknown events",
+        ),
+        ({"triggers": Trigger(routes={})}, "no event and no tick"),
         ({"actions": {Action.ADD_KEYWORD}}, "actions"),
         ({"actions": frozenset({"delete"})}, "actions"),
         ({"limits": Limits(model_calls_per_message=-1)}, "negative"),
@@ -157,7 +160,7 @@ class {cls}(Agent):
     name = "{name}"
     version = "1"
     description = "found by the registry"
-    triggers = Trigger(events=frozenset(), tick=True)
+    triggers = Trigger(routes={{}}, tick=True)
     actions = frozenset({{Action.ADD_KEYWORD}})
     default_keyword = "x"
 
