@@ -123,6 +123,13 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+- `benethos-mailbox-service`: a setting that does not validate is named
+  with its rule on one line, as `error: wrong settings: NAME: rule`.
+  Before, every command printed the error of pydantic, with the settings
+  as given: a client secret set without its client id was printed to
+  stderr, and in a container to its log. `benethos-mailbox-common`:
+  `files.problems` and `files.env_name` name a wrong setting without
+  what was given.
 - `benethos-mailbox-agents`: a sender pattern of `sorting` is matched in
   time linear in the length of the address. Before, a pattern of several
   `*` took time that grew with a power of that length, and a mail from a

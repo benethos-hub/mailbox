@@ -8,9 +8,14 @@ import sys
 from pathlib import Path
 
 import pytest
-from pydantic import Field, ValidationError
+from pydantic import Field, ValidationError, model_validator
 
-from benethos_mailbox_common.settings.files import FileSettings, load
+from benethos_mailbox_common.settings.files import (
+    FileSettings,
+    env_name,
+    load,
+    problems,
+)
 
 
 class Example(FileSettings):
@@ -65,3 +70,49 @@ def test_without_the_extra_the_import_names_it(monkeypatch: pytest.MonkeyPatch) 
         ModuleNotFoundError, match=r"benethos-mailbox-common\[settings\]"
     ):
         importlib.import_module("benethos_mailbox_common.settings.files")
+
+
+class Guarded(FileSettings):
+    model_config = {"env_prefix": "MAILBOX_TEST_"}
+
+    port: int = Field(default=8000, ge=1, le=65535)
+    token: str = Field(default="", alias="MAILBOX_TOKEN", max_length=10)
+    client_id: str = ""
+    client_secret: str = ""
+
+    @model_validator(mode="after")
+    def _together(self) -> Guarded:
+        if self.client_secret and not self.client_id:
+            raise ValueError("a client secret needs its client id")
+        return self
+
+
+def test_problems_name_each_setting_and_never_the_input(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("MAILBOX_TEST_PORT", "99999")
+    monkeypatch.setenv("MAILBOX_TOKEN", "x" * 5000)
+    with pytest.raises(ValidationError) as caught:
+        Guarded(_env_file=None)
+    found = problems(Guarded, caught.value)
+    assert [line.split(":")[0] for line in found] == [
+        "MAILBOX_TEST_PORT",
+        "MAILBOX_TOKEN",
+    ]
+    assert "xxxxx" not in str(found)
+    assert "99999" not in str(found)
+
+    monkeypatch.delenv("MAILBOX_TEST_PORT")
+    monkeypatch.delenv("MAILBOX_TOKEN")
+    monkeypatch.setenv("MAILBOX_TEST_CLIENT_SECRET", "secret-from-the-test")
+    with pytest.raises(ValidationError) as caught:
+        Guarded(_env_file=None)
+    found = problems(Guarded, caught.value)
+    assert found == ["Value error, a client secret needs its client id"]
+    assert "secret-from-the-test" not in str(found)
+
+
+def test_the_name_of_a_setting_is_its_alias_or_prefixed() -> None:
+    assert env_name(Guarded, "token") == "MAILBOX_TOKEN"
+    assert env_name(Guarded, "client_id") == "MAILBOX_TEST_CLIENT_ID"
+    assert env_name(Guarded, "MAILBOX_TOKEN") == "MAILBOX_TOKEN"

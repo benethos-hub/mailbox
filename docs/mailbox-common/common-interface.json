@@ -240,7 +240,9 @@
       "FileSettings",
       "NoDecode",
       "S",
-      "load"
+      "env_name",
+      "load",
+      "problems"
     ],
     "FileSettings": {
       "bases": [
@@ -250,8 +252,14 @@
     "S": {
       "source": "TypeVar(\"S\", bound=FileSettings)"
     },
+    "env_name": {
+      "signature": "(settings: 'type[FileSettings]', field: 'str') -> 'str'"
+    },
     "load": {
       "signature": "(settings: 'type[S]', env_file: 'Path | None', **given: 'Any') -> 'S'"
+    },
+    "problems": {
+      "signature": "(settings: 'type[FileSettings]', exc: 'Exception') -> 'list[str]'"
     }
   },
   "benethos_mailbox_common.values": {

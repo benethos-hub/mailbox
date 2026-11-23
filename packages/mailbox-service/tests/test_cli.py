@@ -123,9 +123,9 @@ def test_env_example_holds_the_defaults(monkeypatch: pytest.MonkeyPatch) -> None
 @pytest.mark.parametrize(
     ("settings", "named"),
     [
-        ({"MAILBOX_SERVICE_LOG_LEVEL": "verbose"}, "log_level"),
-        ({"MAILBOX_SERVICE_PORT": "70000"}, "port"),
-        ({"MAILBOX_SERVICE_PORT": "0"}, "port"),
+        ({"MAILBOX_SERVICE_LOG_LEVEL": "verbose"}, "MAILBOX_SERVICE_LOG_LEVEL"),
+        ({"MAILBOX_SERVICE_PORT": "70000"}, "MAILBOX_SERVICE_PORT"),
+        ({"MAILBOX_SERVICE_PORT": "0"}, "MAILBOX_SERVICE_PORT"),
         (
             {
                 "MAILBOX_SERVICE_WEBHOOK_FIRST_RETRY": "60",
@@ -140,8 +140,8 @@ def test_env_example_holds_the_defaults(monkeypatch: pytest.MonkeyPatch) -> None
             },
             "imap_longest_pause",
         ),
-        ({"MAILBOX_SERVICE_SIGN_IN_FAILURES": "0"}, "sign_in_failures"),
-        ({"MAILBOX_SERVICE_SYNC_WATCHERS": "0"}, "sync_watchers"),
+        ({"MAILBOX_SERVICE_SIGN_IN_FAILURES": "0"}, "MAILBOX_SERVICE_SIGN_IN_FAILURES"),
+        ({"MAILBOX_SERVICE_SYNC_WATCHERS": "0"}, "MAILBOX_SERVICE_SYNC_WATCHERS"),
     ],
 )
 def test_settings_that_cannot_work_are_named(
@@ -435,3 +435,20 @@ def test_say_to_stderr_emit_to_stdout(capsys: pytest.CaptureFixture[str]) -> Non
     say("Keys created.")
     emit("the-secret")
     assert capsys.readouterr() == ("the-secret\n", "Keys created.\n")
+
+
+def test_wrong_settings_are_named_without_what_was_given(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.delenv("MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_ID", raising=False)
+    monkeypatch.setenv(
+        "MAILBOX_SERVICE_OAUTH_MICROSOFT_CLIENT_SECRET",
+        "invented-secret-value",  # pragma: allowlist secret
+    )
+    assert main(["paths"]) == 1
+    err = capsys.readouterr().err
+    assert err.startswith("error: wrong settings: ")
+    assert err.count("\n") == 1
+    assert "client id" in err
+    assert "invented-secret-value" not in err
+    assert "input_value" not in err

@@ -8,6 +8,8 @@ import argparse
 import getpass
 import sys
 
+from benethos_mailbox_common.settings import files
+
 from ..config import ENV_FILE, Settings
 
 # The subparsers of the command line, as argparse hands them out.
@@ -79,6 +81,13 @@ def expected() -> tuple[type[BaseException], ...]:
 
 
 def message(exc: BaseException) -> str:
+    """What the person at the terminal reads. For settings that do not
+    validate each setting and its rule, never what was given, which may
+    be a secret."""
+    from pydantic import ValidationError
+
+    if isinstance(exc, ValidationError):
+        return "wrong settings: " + "; ".join(files.problems(Settings, exc))
     found = getattr(exc, "message", None)
     return str(found or exc)
 
