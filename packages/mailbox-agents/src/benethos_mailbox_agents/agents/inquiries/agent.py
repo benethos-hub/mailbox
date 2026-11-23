@@ -22,7 +22,7 @@ from ...contract import (
     Trigger,
     load_prompt,
 )
-from ...records import LABEL, Decision, Event, Evidence, MailMessage
+from ...records import LABEL, Decision, Evidence, MailMessage
 from .baseline import baseline
 from .patterns import Patterns, load_patterns
 from .schema import FIELDS, Inquiry, parts, render
@@ -34,7 +34,7 @@ class Inquiries(Agent):
     name = "inquiries"
     version = "2"
     description = "Marks project inquiries."
-    triggers = Trigger(events=frozenset({"message.created"}))
+    triggers = Trigger(routes={"message.created": Route.DECIDE})
     actions = frozenset({Action.ADD_KEYWORD})
     limits = Limits(model_calls_per_message=1, model_calls_per_day=2000)
     default_keyword = "agent-inquiry"
@@ -55,9 +55,6 @@ class Inquiries(Agent):
         return load_prompt(__package__ or "", "system", self.prompt_version).replace(
             "{fields}", fields
         )
-
-    def select(self, event: Event) -> Route | None:
-        return Route.DECIDE if event.type == "message.created" else None
 
     def admit(self, message: MailMessage) -> bool:
         return message.in_role("inbox")

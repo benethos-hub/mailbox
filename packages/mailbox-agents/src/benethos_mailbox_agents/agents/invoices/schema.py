@@ -8,15 +8,14 @@ lies in.
 
 from __future__ import annotations
 
-from typing import Annotated, Literal
+from typing import Literal
 
-from pydantic import AfterValidator, BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict
 
 from ...records import Attachment, MailMessage
 
 __all__ = [
     "MAX_ADDRESS",
-    "MAX_ANSWER_TEXT",
     "MAX_FILES",
     "MAX_FILES_TEXT",
     "MAX_NAME",
@@ -43,20 +42,6 @@ MAX_ADDRESS = 320
 MAX_FILES = 20
 MAX_FILES_TEXT = 1000
 
-# The longest quote or value an answer may hold. A longer one is refused as
-# not fitting the schema, so an answer cannot copy the mail into the state
-# file. Checked after parsing, the schema sent to the model is unchanged.
-MAX_ANSWER_TEXT = 300
-
-
-def _short(value: str) -> str:
-    if len(value) > MAX_ANSWER_TEXT:
-        raise ValueError(f"longer than {MAX_ANSWER_TEXT} characters")
-    return value
-
-
-Short = Annotated[str, AfterValidator(_short)]
-
 
 class Answer(BaseModel):
     """The answer of the model."""
@@ -67,7 +52,7 @@ class Answer(BaseModel):
     near_miss: Literal[
         "reminder", "quotation", "order_confirmation", "payment_receipt", "none"
     ]
-    quote: Short
+    quote: str
 
 
 def render(message: MailMessage) -> str:

@@ -100,7 +100,7 @@ class Echo(Agent):
     name = "echo"
     version = "1"
     description = "an agent for the runtime tests"
-    triggers = Trigger(events=frozenset({"message.created"}))
+    triggers = Trigger(routes={"message.created": Route.DECIDE})
     actions = frozenset({Action.ADD_KEYWORD, Action.MOVE_TO_FOLDER})
     default_keyword = "echo"
     prompt_version = "p1"

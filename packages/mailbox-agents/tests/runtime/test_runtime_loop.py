@@ -67,7 +67,7 @@ async def test_a_refused_write_blocks_nothing(world: Wired) -> None:
 
 async def test_select_sees_only_the_events_of_the_triggers(world: Wired) -> None:
     class Spy(Echo):
-        triggers = Trigger(events=frozenset({"message.sent"}))
+        triggers = Trigger(routes={"message.sent": Route.DECIDE})
         seen: list[str] = []
 
         def select(self, event: Event) -> Route | None:
@@ -191,7 +191,8 @@ class Ticking(Echo):
     """Observes updates, and on the tick asks for its keyword on m1."""
 
     triggers = Trigger(
-        events=frozenset({"message.created", "message.updated"}), tick=True
+        routes={"message.created": Route.DECIDE, "message.updated": Route.DECIDE},
+        tick=True,
     )
     ticks: list[datetime] = []
     observed: list[str] = []

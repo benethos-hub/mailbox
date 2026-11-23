@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Literal
+from typing import Literal
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, model_validator
 
 from ...records import MailMessage
 
@@ -53,24 +53,10 @@ MAX_NAME = 300
 # address a server delivers, and only blows up the call.
 MAX_ADDRESS = 320
 
-# The longest quote or value an answer may hold. A longer one is refused as
-# not fitting the schema, so an answer cannot copy the mail into the state
-# file. Checked after parsing, the schema sent to the model is unchanged.
-MAX_ANSWER_TEXT = 300
-
 # The most text a whole answer may hold, all its quotes and values
 # together: 29 strings of 300 characters would hold more than the model
 # was given (decided 2026-11-20). Checked after parsing as well.
 MAX_ANSWER_TOTAL = 2000
-
-
-def _short(value: str) -> str:
-    if len(value) > MAX_ANSWER_TEXT:
-        raise ValueError(f"longer than {MAX_ANSWER_TEXT} characters")
-    return value
-
-
-Short = Annotated[str, AfterValidator(_short)]
 
 
 class Label(BaseModel):
@@ -79,7 +65,7 @@ class Label(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     label: Literal["inquiry", "other"]
-    quote: Short
+    quote: str
 
 
 class Quoted(BaseModel):
@@ -87,8 +73,8 @@ class Quoted(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    value: Short
-    quote: Short
+    value: str
+    quote: str
 
 
 class Inquiry(Label):

@@ -82,10 +82,16 @@ class Route(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class Trigger:
-    """The feed events an agent wants, and whether it wants the tick."""
+    """The feed events an agent wants, each with the route it takes, and
+    whether it wants the tick."""
 
-    events: frozenset[EventType]
+    routes: Mapping[EventType, Route]
     tick: bool = False
+
+    @property
+    def events(self) -> frozenset[EventType]:
+        """The feed events the agent wants."""
+        return frozenset(self.routes)
 
 
 @dataclass(frozen=True, slots=True)
@@ -94,6 +100,11 @@ class Limits:
 
     model_calls_per_message: int = 1
     model_calls_per_day: int = 2000
+    # The longest quote or value an answer may hold. A longer one is
+    # refused as not fitting the schema, so an answer cannot copy the mail
+    # into the state file. Checked after parsing: the schema sent to the
+    # model does not change.
+    answer_text: int = 300
 
 
 @dataclass(frozen=True, slots=True)
@@ -181,9 +192,10 @@ class Agent(ABC):
 
     # -- to implement ---------------------------------------------------------
 
-    @abstractmethod
     def select(self, event: Event) -> Route | None:
-        """Whether this event concerns the agent, and how. Code only."""
+        """Whether this event concerns the agent, and how: the route its
+        triggers name for the type of the event. Code only."""
+        return self.triggers.routes.get(event.type)
 
     def admit(self, message: MailMessage) -> bool:
         """After the fetch: whether the message is one for this agent, such

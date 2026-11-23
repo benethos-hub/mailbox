@@ -86,6 +86,30 @@ async def test_a_pass_fills_the_metrics(world: Wired) -> None:
     assert b"mailbox_agents_last_pass_timestamp_seconds" in m.text()
 
 
+async def test_an_answer_past_the_text_limit_is_refused_and_counted(
+    world: Wired,
+) -> None:
+    """A quote longer than ``Limits.answer_text`` would copy the mail into
+    the state file: refused as not fitting the schema, as before."""
+    worker = Worker(
+        agent=Echo(settings(stage="keyword")),
+        store=world.store,
+        mailbox=world.mailbox,
+        gateway=world.gateway,
+        now=world.clock,
+    )
+    await worker.run_pass()
+    world.service.add(wire_message("m1", subject="Lunch"))
+    world.fake_gateway.answer({"label": "match", "quote": "x" * 301})
+
+    await worker.run_pass()
+
+    m = worker.metrics
+    assert sample(m, "mailbox_agents_answers_refused_total", reason="schema") == 1
+    assert sample(m, "mailbox_agents_model_calls_total") == 0
+    assert world.store.model_calls_since(world.clock() - timedelta(days=1)) == 1
+
+
 async def test_an_upstream_away_is_counted(world: Wired) -> None:
     worker = Worker(
         agent=Echo(settings()),
