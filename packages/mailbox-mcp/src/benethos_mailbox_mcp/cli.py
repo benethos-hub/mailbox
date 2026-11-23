@@ -103,10 +103,6 @@ def _service(settings: config.Settings) -> Environment:
     )
 
 
-def _csv(value: str) -> list[str]:
-    return [item.strip() for item in value.split(",") if item.strip()]
-
-
 def _unguarded(settings: config.Settings, bearer: str | None) -> str | None:
     """Why the server may not serve as set, else None: the rule of
     ``transport.unguarded``, asked before the service is. A catalogue
@@ -116,8 +112,8 @@ def _unguarded(settings: config.Settings, bearer: str | None) -> str | None:
     return transport.unguarded(
         settings.host,
         bearer,
-        _csv(settings.allowed_hosts),
-        _csv(settings.allowed_origins),
+        settings.allowed_hosts,
+        settings.allowed_origins,
     )
 
 
@@ -202,8 +198,8 @@ def main(argv: list[str] | None = None) -> None:
         host=settings.host,
         port=settings.port,
         path=settings.path,
-        allowed_hosts=_csv(settings.allowed_hosts),
-        allowed_origins=_csv(settings.allowed_origins),
+        allowed_hosts=settings.allowed_hosts,
+        allowed_origins=settings.allowed_origins,
         log_level=settings.log_level,
         token=token,
         catalogue=settings.catalogue,
