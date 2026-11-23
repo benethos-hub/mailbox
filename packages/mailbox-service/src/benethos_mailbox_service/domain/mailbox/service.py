@@ -211,26 +211,39 @@ class MailboxService:
         await permitted(
             self._calls, access, "update_message", account_id, for_update(changes)
         )
-        looked = self._guards.looking(account_id, [message_id])
+        changes, refused = await self._update_refused(
+            access, account_id, [message_id], changes
+        )
+        if refused:
+            raise refused[message_id]
+        return await self._calls.update_one(account_id, message_id, changes)
+
+    async def _update_refused(
+        self, access: Access, account_id: str, ids: list[str], changes: MessageUpdate
+    ) -> tuple[MessageUpdate, dict[str, MailboxServiceError]]:
+        """``changes`` with its folders resolved, and each message of
+        ``ids`` it may not change, with its error: out of reach, then for
+        those the grants reach a move into the trash without the right to
+        delete, then one into the drafts. A message out of reach answers
+        404 whatever the rest would say."""
+        looked = self._guards.looking(account_id, ids)
         changes = await _resolved(looked, changes)
         refused = await self._guards.outside(
             access,
             "update_message",
             looked,
-            [message_id],
+            ids,
             changes.named_folders(),
             changes.folder_ids,
         )
-        if not refused:
+        rest = [i for i in ids if i not in refused]
+        if rest:
             await _listed(looked, changes)
-        refused = (
-            refused
-            or await self._guards.trash_refused(access, looked, [message_id], changes)
-            or await self._guards.drafts_refused(looked, [message_id], changes)
-        )
-        if refused:
-            raise refused[message_id]
-        return await self._calls.update_one(account_id, message_id, changes)
+            refused |= await self._guards.trash_refused(access, looked, rest, changes)
+            rest = [i for i in rest if i not in refused]
+        if rest:
+            refused |= await self._guards.drafts_refused(looked, rest, changes)
+        return changes, refused
 
     async def delete_message(
         self, access: Access, account_id: str, message_id: str, permanent: bool
@@ -257,31 +270,11 @@ class MailboxService:
             if batch.changes is None:
                 raise BadRequestError("an update needs changes")
             await self._calls.require(account_id, for_update(batch.changes))
-            looked = self._guards.looking(account_id, batch.ids)
-            changes = await _resolved(looked, batch.changes)
-            outcomes = dict(
-                await self._guards.outside(
-                    access,
-                    "update_message",
-                    looked,
-                    batch.ids,
-                    changes.named_folders(),
-                    changes.folder_ids,
-                )
+            changes, refused = await self._update_refused(
+                access, account_id, batch.ids, batch.changes
             )
+            outcomes = dict(refused)
             rest = [i for i in batch.ids if i not in outcomes]
-            if rest:
-                # Only for messages the grants reach: one that is out of
-                # reach answers 404, as the single route does.
-                await _listed(looked, changes)
-                outcomes.update(
-                    await self._guards.trash_refused(access, looked, rest, changes)
-                )
-                rest = [i for i in rest if i not in outcomes]
-                outcomes.update(
-                    await self._guards.drafts_refused(looked, rest, changes)
-                )
-                rest = [i for i in rest if i not in outcomes]
             if rest:
                 outcomes.update(await self._calls.update(account_id, rest, changes))
         else:
