@@ -6,7 +6,7 @@ from __future__ import annotations
 import re
 import ssl
 from pathlib import Path
-from typing import Annotated, Any, Literal
+from typing import Any, Literal
 
 from pydantic import Field, SecretStr, ValidationError, field_validator, model_validator
 
@@ -57,7 +57,7 @@ class Settings(files.FileSettings):
     ca_file: Path | None = None
 
     # --- what the agent works on and how far it may go ----------------------
-    accounts: Annotated[list[str], files.NoDecode] = Field(default_factory=list)
+    accounts: files.Names = Field(default_factory=list)
     stage: Stage = "shadow"
     keyword: str | None = None
 
@@ -75,7 +75,7 @@ class Settings(files.FileSettings):
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
     # --- invoices, docs/mailbox-agents/concept/agent-invoices.md ----------------------
-    invoices_folders: Annotated[list[str], files.NoDecode] = Field(default_factory=list)
+    invoices_folders: files.Names = Field(default_factory=list)
     invoices_subfolder: str | None = None
     invoices_inbox_folder: str | None = None
 
@@ -87,14 +87,6 @@ class Settings(files.FileSettings):
 
     # --- sorting, docs/mailbox-agents/concept/agent-sorting.md ------------------------
     sorting_file: Path | None = None
-
-    @field_validator("accounts", "invoices_folders", mode="before")
-    @classmethod
-    def _split_list(cls, value: Any) -> Any:
-        """``a,b`` in the environment, a list when built in code."""
-        if isinstance(value, str):
-            return [part.strip() for part in value.split(",") if part.strip()]
-        return value
 
     @field_validator(
         "ca_file",
