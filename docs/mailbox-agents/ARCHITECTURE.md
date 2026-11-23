@@ -46,8 +46,8 @@ Each layer imports only the layers below it.
 `packages/mailbox-agents/tests/test_layers.py` holds the order, a row per
 top-level module.
 
-- `errors` and `records` import nothing of the package. `logbook` and
-  `settings` stand on `errors`.
+- `errors`, `records` and `logbook` import nothing of the package.
+  `settings` stands on `errors`.
 - `contract` and `store` stand on these. `sources` and `llm`, the two
   upstreams, stand on `errors` and `records` alone.
 - `runtime` holds everything below it but `sources`.
@@ -57,9 +57,10 @@ top-level module.
 - `cli` wires everything on top, and `__main__` calls it.
 
 Of the other packages of the repository, the agents take the client,
-in `sources/mailbox.py` alone, and `mailbox-common` with its group
-`settings`: the lines of the log, the masking of secrets, text and
-settings from a file, as the service and the MCP server have them. The
+in `sources/mailbox.py` alone, and `mailbox-common` with its extras
+`paths` and `settings`: the lines of the log, the masking of secrets,
+text, settings from a file and the folders of the operating system for
+settings and state files, as the service and the MCP server have them. The
 table `CONFINED` of `test_layers.py` names the modules that import each.
 
 ## The rules of the repository
