@@ -5,8 +5,9 @@
 # own on another host. README.md, "MCP server instances", says how.
 #
 # An instance acts as one user, with that user's API token, and admits
-# its clients with a bearer token of its own. Both go into an env_file
-# under secrets/mcp/, never into this file or the instance's block.
+# its clients with a bearer token of its own. Both are files under
+# secrets/mcp/<name>/, handed to it as container secrets, never in this
+# file or the instance's block.
 
 services:
   mailbox-mcp:

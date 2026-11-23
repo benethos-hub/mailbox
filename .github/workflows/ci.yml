@@ -302,8 +302,10 @@ jobs:
             if [ -e "$folder/compose.override.yaml.example" ]; then
               cp "$folder/compose.override.yaml.example" "$folder/compose.override.yaml"
               echo "MAILBOX_DOMAIN=mailbox.example" >> "$folder/.env"
-              mkdir -p "$folder/secrets/mcp"
-              touch "$folder/secrets/mcp/assistant.env" "$folder/secrets/mcp/agent.env"
+              for instance in assistant agent; do
+                mkdir -p "$folder/secrets/mcp/$instance"
+                touch "$folder/secrets/mcp/$instance/service_token" "$folder/secrets/mcp/$instance/bearer_token"
+              done
             fi
             (cd "$folder" && docker compose --profile mcp --profile https config -q)
             (cd "$folder" && docker compose --profile mcp --profile https config --format json) > "/tmp/compose.json"

@@ -101,3 +101,50 @@ def test_an_option_is_checked_as_the_setting_is(
         cli.main(["--port", "0"])
     said = capsys.readouterr().err
     assert "MAILBOX_MCP_PORT" in said and "not 0" in said
+
+
+def test_both_tokens_are_read_from_their_files(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A container secret: the file a ``_FILE`` setting names holds the
+    token, without the blanks around it."""
+    service = write(tmp_path / "service_token", " from-a-secret \n")
+    bearer = write(tmp_path / "bearer_token", "bearer-from-a-secret\n")
+    monkeypatch.setenv("MAILBOX_SERVICE_TOKEN_FILE", str(service))
+    monkeypatch.setenv("MAILBOX_MCP_BEARER_TOKEN_FILE", str(bearer))
+    found = config.load_settings(None)
+    assert found.service_token is not None and found.bearer_token is not None
+    assert found.service_token.get_secret_value() == "from-a-secret"
+    assert found.bearer_token.get_secret_value() == "bearer-from-a-secret"
+
+
+@pytest.mark.parametrize(
+    ("given", "said"),
+    [
+        ("empty", "holds no token"),
+        ("blanks", "holds no token"),
+        ("missing", "cannot be read"),
+        ("both", "set MAILBOX_SERVICE_TOKEN or this, not both"),
+    ],
+)
+def test_a_token_file_that_holds_none_is_refused_by_its_name(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    given: str,
+    said: str,
+) -> None:
+    """An empty file would leave the server without its token unseen. The
+    refusal names the setting and never what the file holds."""
+    texts = {"empty": "", "blanks": " \n", "both": "secret-in-the-file"}
+    path = tmp_path / "service_token"
+    if given in texts:
+        write(path, texts[given])
+    if given == "both":
+        monkeypatch.setenv("MAILBOX_SERVICE_TOKEN", "secret-in-the-environment")
+    monkeypatch.setenv("MAILBOX_SERVICE_TOKEN_FILE", str(path))
+    with pytest.raises(SystemExit):
+        cli.main([])
+    err = capsys.readouterr().err
+    assert "MAILBOX_SERVICE_TOKEN_FILE" in err and said in err
+    assert "secret-in" not in err
