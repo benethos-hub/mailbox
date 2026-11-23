@@ -10,14 +10,13 @@ they touched, and the outcome. ``audit`` in ``service`` reads it.
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
 from datetime import datetime
 
 from benethos_mailbox_common.log import redact
 from benethos_mailbox_common.values import secret
 
 from ...common.clock import utc_now
-from ...common.retention import Retention
+from ...common.retention import Purged, Retention
 from ...data.models import ActivityFilter, ActivityRecord, Page
 from ...data.storage import AuditRepository
 from .. import paging
@@ -28,14 +27,6 @@ from .base import Activity
 # every record.
 KEEP_DAYS = 90
 CURSOR = "a_"
-
-
-@dataclass(frozen=True)
-class Purged:
-    """What a purge removed: how many records, older than when."""
-
-    count: int
-    before: datetime
 
 
 class Audit:
@@ -80,13 +71,7 @@ class Audit:
 
     def purge(self) -> Purged | None:
         """Remove the records older than the days to keep."""
-        if not self._retention.days:
-            return None
-        now = self._clock()
-        before = self._retention.cutoff(now)
-        count = self._store.purge(before)
-        self._retention.done(now)
-        return Purged(count, before) if count else None
+        return self._retention.purge(self._clock(), self._store.purge)
 
     def list_activity(
         self,

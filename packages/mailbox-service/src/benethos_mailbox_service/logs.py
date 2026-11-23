@@ -33,14 +33,23 @@ def source_of(name: str) -> str:
     return lines.short_source(name, PACKAGE)
 
 
-def _access(record: logging.LogRecord) -> str | None:
-    """An access line of uvicorn on a terminal: method, path, the status
-    in colour, the client. None for any other record."""
+def _access_args(record: logging.LogRecord) -> tuple[object, ...] | None:
+    """The arguments of an access line of uvicorn: client, method, path,
+    version and status. None for any other record."""
     if record.name != "uvicorn.access" or not isinstance(record.args, tuple):
         return None
     if len(record.args) != _ACCESS_ARGS:
         return None
-    client, method, path, _, status = record.args
+    return record.args
+
+
+def _access(record: logging.LogRecord) -> str | None:
+    """An access line of uvicorn on a terminal: method, path, the status
+    in colour, the client. None for any other record."""
+    args = _access_args(record)
+    if args is None:
+        return None
+    client, method, path, _, status = args
     if not isinstance(status, int):
         return None
     try:
@@ -55,11 +64,10 @@ def _access(record: logging.LogRecord) -> str | None:
 def _access_fields(record: logging.LogRecord) -> dict[str, object] | None:
     """An access line of uvicorn as fields of a JSON line: method, path,
     status, client. None for any other record."""
-    if record.name != "uvicorn.access" or not isinstance(record.args, tuple):
+    args = _access_args(record)
+    if args is None:
         return None
-    if len(record.args) != _ACCESS_ARGS:
-        return None
-    client, method, path, _, status = record.args
+    client, method, path, _, status = args
     return {"method": method, "path": path, "status": status, "client": client}
 
 

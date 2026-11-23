@@ -100,10 +100,17 @@ def pop3_only_alone(candidates: list[Candidate]) -> list[Candidate]:
 
 def _key(candidate: Candidate) -> tuple[object, ...]:
     server = incoming(candidate)
-    found = (
-        (server.protocol, server.host, server.port, server.security) if server else None
-    )
-    return (candidate.provider, found)
+    return (candidate.provider, server_key(server) if server else None)
+
+
+# A server by what tells it from another: protocol, host, port, security.
+ServerKey = tuple[ServerProtocol, str, int, str]
+
+
+def server_key(server: MailServer) -> ServerKey:
+    """What tells ``server`` from another: protocol, host, port and the
+    security of the connection."""
+    return (server.protocol, server.host, server.port, server.security)
 
 
 def with_settings(candidate: Candidate, query: Query) -> Candidate:

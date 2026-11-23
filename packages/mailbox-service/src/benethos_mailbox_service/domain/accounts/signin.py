@@ -88,10 +88,7 @@ class SignIns:
         the caller may."""
         if account_id is None:
             access.require("create_account")
-            if not self._accounts.offers(provider):
-                raise NotSupportedError(
-                    f"{provider} accounts cannot be connected in this deployment"
-                )
+            self._accounts.require_offered(provider)
             return None
         access.require("update_account", account_id)
         account = self._adapters.record(account_id)

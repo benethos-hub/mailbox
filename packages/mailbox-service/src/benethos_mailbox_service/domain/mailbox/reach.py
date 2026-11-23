@@ -15,10 +15,11 @@ of the provider.
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 
 from ...data.models import OUTSIDE_ALL, ChangeRecord, Folder, FolderRole
 from ...errors import ForbiddenError, missing
+from ..accounts import NEEDS, Needs
 from ..rights import Access
 from .calls import Calls
 
@@ -64,6 +65,20 @@ def of_the_account(record: ChangeRecord) -> bool | None:
     return None if record.type.startswith("message.") else True
 
 
+async def permitted(
+    calls: Calls,
+    access: Access,
+    operation: str,
+    account_id: str,
+    needs: Needs | None = None,
+) -> None:
+    """The right to ``operation`` first, then what the account must be able
+    to do for it, ``needs`` or what the operation needs: a refusal is 403
+    or 404 before 501."""
+    access.require(operation, account_id)
+    await calls.require(account_id, NEEDS[operation] if needs is None else needs)
+
+
 async def reach_of(
     calls: Calls,
     access: Access,
@@ -103,15 +118,20 @@ def _beside_all(reached: frozenset[str], folders: list[Folder]) -> frozenset[str
 
 def _within(folder: Folder, names: frozenset[str], by_id: dict[str, Folder]) -> bool:
     """Whether the folder or one above it is named: by id, name or role."""
+    return any(
+        current.id in names
+        or current.name in names
+        or (current.role is not None and current.role.value in names)
+        for current in upwards(folder, by_id)
+    )
+
+
+def upwards(folder: Folder, by_id: dict[str, Folder]) -> Iterator[Folder]:
+    """``folder``, then each folder above it. A circle among the parents
+    ends the walk."""
     seen: set[str] = set()
     current: Folder | None = folder
     while current is not None and current.id not in seen:
-        if (
-            current.id in names
-            or current.name in names
-            or (current.role is not None and current.role.value in names)
-        ):
-            return True
+        yield current
         seen.add(current.id)
         current = by_id.get(current.parent_id) if current.parent_id else None
-    return False

@@ -7,7 +7,7 @@ JSON API and the configuration UI share one check.
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator, Mapping
+from collections.abc import Collection, Iterable, Iterator, Mapping
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -167,6 +167,17 @@ class Access:
         """The accounts of ``account_ids`` the operation is allowed on, each
         once, in their order."""
         return [a for a in dict.fromkeys(account_ids) if self.allows(operation, a)]
+
+    def among(
+        self,
+        operation: str,
+        existing: Collection[str],
+        wanted: Iterable[str] | None = None,
+    ) -> list[str]:
+        """The accounts of ``wanted`` that exist and the operation is
+        allowed on, each once, in their order. None or empty: every
+        account of ``existing``."""
+        return self.filter(operation, (a for a in wanted or existing if a in existing))
 
     def sees(self, account_id: str) -> bool:
         """Whether the account exists for this caller at all: some right on

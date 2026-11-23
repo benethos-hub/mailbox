@@ -57,11 +57,13 @@ from ..activity import ActivityLog, Actor
 from ..activity import discovery as said
 from ..rights import Access
 from .candidates import (
+    ServerKey,
     incoming,
     merge,
     pop3_only_alone,
     query_of,
     replace_incoming,
+    server_key,
     unreachable,
     with_settings,
 )
@@ -267,14 +269,14 @@ class DiscoveryService:
     async def _probed(self, candidates: list[Candidate]) -> list[Candidate]:
         servers = list(
             dict.fromkeys(
-                (s.protocol, s.host, s.port, s.security)
+                server_key(s)
                 for c in candidates
                 if (s := incoming(c)) is not None and s.protocol in _PROBED
             )
         )[:MAX_PROBES]
-        outcome: dict[tuple[ServerProtocol, str, int, str], MailServer | None] = {}
+        outcome: dict[ServerKey, MailServer | None] = {}
 
-        async def run(key: tuple[ServerProtocol, str, int, str]) -> None:
+        async def run(key: ServerKey) -> None:
             outcome[key] = await self._probe_one(*key)
 
         async with anyio.create_task_group() as group:
@@ -287,7 +289,7 @@ class DiscoveryService:
             if server is None:
                 kept.append(candidate)
                 continue
-            key = (server.protocol, server.host, server.port, server.security)
+            key = server_key(server)
             if key not in outcome:
                 kept.append(candidate)
             elif (probed := outcome[key]) is not None:

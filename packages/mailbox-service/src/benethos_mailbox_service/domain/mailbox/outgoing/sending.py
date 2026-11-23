@@ -145,15 +145,10 @@ class SendControl:
 
     def purge(self) -> None:
         """Removes the records older than the days to keep."""
-        if not self._retention.days:
-            return
-        now = self._clock()
-        before = self._retention.cutoff(now)
-        purged = self._store.purge(before)
-        self._retention.done(now)
+        purged = self._retention.purge(self._clock(), self._store.purge)
         if purged:
             self._activity.record(
-                said.SendsPurged(by=SERVICE, count=purged, before=before)
+                said.SendsPurged(by=SERVICE, count=purged.count, before=purged.before)
             )
 
     def _allow(
@@ -206,10 +201,7 @@ class SendControl:
         an account: a deleted one is still in it, for a caller whose grant
         names every account. An account the caller may not audit is left
         out without a word, as the lists of messages and changes do."""
-        existing = self._store.account_ids()
-        audited = access.filter(
-            "list_all_sends", (a for a in account_ids or existing if a in existing)
-        )
+        audited = access.among("list_all_sends", self._store.account_ids(), account_ids)
         return self._page(audited, limit, cursor, matching)
 
     def list_sends(

@@ -30,6 +30,7 @@ from ...activity import ActivityLog
 from ...rights import Access
 from ..calls import Calls
 from ..cursors import Cursors
+from ..reach import permitted
 from . import checks
 from .composing import Composer
 from .delivering import Delivery
@@ -144,8 +145,7 @@ class Outgoing:
     async def list_drafts(
         self, access: Access, account_id: str, *, limit: int, cursor: str | None
     ) -> Page[MessageSummary]:
-        access.require("list_drafts", account_id)
-        await self._calls.require(account_id, NEEDS["list_drafts"])
+        await permitted(self._calls, access, "list_drafts", account_id)
         opened = self._cursors.open(cursor)
         page = await self._calls.call(
             account_id, lambda p: drafts(p).list_drafts(limit=limit, cursor=opened)
@@ -216,8 +216,7 @@ class Outgoing:
         right, like ``send_message``. The draft was written by whoever may
         write drafts. With an ``idempotency_key`` a retry returns the first
         result."""
-        access.require("send_draft", account_id)
-        await self._calls.require(account_id, NEEDS["send_draft"])
+        await permitted(self._calls, access, "send_draft", account_id)
         return await self._idempotency.run(
             account_id,
             idempotency_key,
@@ -260,8 +259,7 @@ class Outgoing:
         self, access: Access, account_id: str, draft_id: str
     ) -> None:
         """For good: a draft is not kept in the trash."""
-        access.require("delete_draft", account_id)
-        await self._calls.require(account_id, NEEDS["delete_draft"])
+        await permitted(self._calls, access, "delete_draft", account_id)
         await self._calls.delete_draft(account_id, draft_id)
 
 
