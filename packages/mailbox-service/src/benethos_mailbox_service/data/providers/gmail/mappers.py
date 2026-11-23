@@ -119,16 +119,7 @@ def summary(message: GmailMessage, known: set[str]) -> MessageSummary:
     fields = convert.summary_fields(parsed, TRUST)
     if message.payload is not None:
         fields["has_attachments"] = parse.has_attachments(_shapes(message.payload))
-    return MessageSummary.model_validate(
-        {
-            "id": message.id,
-            "thread_id": message.thread_id,
-            **_labels(message, known),
-            "snippet": html.unescape(message.snippet) if message.snippet else None,
-            "received": received(message),
-            **fields,
-        }
-    )
+    return MessageSummary.model_validate({**_gmail_fields(message, known), **fields})
 
 
 def _shapes(part: Part) -> list[parse.PartShape]:
@@ -157,16 +148,19 @@ def message(meta: GmailMessage, raw: bytes, known: set[str]) -> Message:
         **convert.summary_fields(parsed, TRUST),
         **convert.message_fields(parsed),
     }
-    return Message.model_validate(
-        {
-            "id": meta.id,
-            "thread_id": meta.thread_id,
-            **_labels(meta, known),
-            "snippet": html.unescape(meta.snippet) if meta.snippet else None,
-            "received": received(meta),
-            **fields,
-        }
-    )
+    return Message.model_validate({**_gmail_fields(meta, known), **fields})
+
+
+def _gmail_fields(message: GmailMessage, known: set[str]) -> dict[str, Any]:
+    """What Gmail knows of a message beside its headers: its ids, its
+    labels as folders and marks, the snippet and when it arrived."""
+    return {
+        "id": message.id,
+        "thread_id": message.thread_id,
+        **_labels(message, known),
+        "snippet": html.unescape(message.snippet) if message.snippet else None,
+        "received": received(message),
+    }
 
 
 def _labels(message: GmailMessage, known: set[str]) -> dict[str, Any]:
