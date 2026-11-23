@@ -34,7 +34,9 @@ packages/mailbox-common/
     settings/           # a program's settings (pydantic-settings)
       files.py          # FileSettings, the base of a program's
                         #   Settings, and load: the command line, the
-                        #   environment, the file, the defaults
+                        #   environment, the file, the defaults.
+                        #   problems and env_name: a wrong setting
+                        #   named, never what was given
     values/             # values written one way
       canonical.py      # JSON: compact to send, canonical to hash
       pauses.py         # doubled: a pause that doubles up to a ceiling
