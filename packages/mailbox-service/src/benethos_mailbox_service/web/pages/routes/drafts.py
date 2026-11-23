@@ -14,8 +14,6 @@ from fastapi.responses import HTMLResponse, Response
 from starlette.datastructures import FormData
 
 from ....data.models import DraftMessage, Message
-from ....domain.mailbox import MailboxService
-from ....domain.rights import Access
 from ....errors import MailboxServiceError
 from ...services import Mailbox
 from ..deps import Actor, Viewer, account_of
@@ -24,6 +22,7 @@ from ..mailform import (
     ComposeError,
     addresses_text,
     build,
+    message_if_readable,
     original_of,
     read_fields,
     sent_text,
@@ -137,18 +136,8 @@ async def draft_submit(
     except (ComposeError, MailboxServiceError) as exc:
         if current != draft_id:
             # Saved under its new id, then not sent: the form goes on with it.
-            stored = await _stored_or_none(mailbox, caller, account_id, current)
+            stored = await message_if_readable(request, caller, account_id, current)
         return await show_again(
             request, caller, account, form, exc, draft_id=current, stored=stored
         )
     return back(request, mail_url(account_id), sent_text(result))
-
-
-async def _stored_or_none(
-    mailbox: MailboxService, caller: Access, account_id: str, draft_id: str
-) -> Message | None:
-    """The draft as stored now, None if it cannot be read."""
-    try:
-        return await mailbox.get_message(caller, account_id, draft_id)
-    except MailboxServiceError:
-        return None

@@ -15,6 +15,7 @@ is the empty one for adding and is left out.
 from __future__ import annotations
 
 import re
+from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any
 
@@ -24,7 +25,7 @@ from starlette.datastructures import FormData
 from ...common import clock
 from ...data.models import Account, Grant
 from ...domain.rights import permissions
-from .forms import FormError, first_problem
+from .forms import FormError, first_problem, text_of, texts_of
 
 # The groups a grant names, and the rights of the service.
 GROUP_NAMES = tuple(
@@ -193,7 +194,7 @@ def service_of(names: list[str]) -> ServiceRow:
 
 def read_service(form: FormData) -> list[str]:
     """The service rights a submitted editor holds."""
-    names = [str(v) for v in form.getlist("service") if v]
+    names = texts_of(form, "service")
     names += [v for v in _SPLIT.split(str(form.get("service_more") or "")) if v]
     return list(dict.fromkeys(names))
 
@@ -231,28 +232,34 @@ def rows_of(grants: list[Grant]) -> list[GrantRow]:
 def typed_rows(form: FormData) -> list[GrantRow]:
     """The rows as they were submitted, unchecked: a refused editor shows
     them again. Removed and empty rows are left out."""
-    rows = []
+    return [*(row for _, row in _typed(form)), EMPTY_ROW]
+
+
+def _typed(form: FormData) -> Iterator[tuple[int, GrantRow]]:
+    """Each row of the form as typed, with its index in the form, up to
+    ``MAX_ROWS``. Removed rows, and those with no account and no right,
+    are left out."""
     for index in range(min(_count(form), MAX_ROWS)):
         prefix = f"g{index}_"
         if form.get(prefix + "remove"):
             continue
-        accounts = [str(v) for v in form.getlist(prefix + "accounts") if v]
-        groups = [str(v) for v in form.getlist(prefix + "allow") if v]
-        more = str(form.get(prefix + "more") or "").strip()
+        accounts = texts_of(form, prefix + "accounts")
+        groups = texts_of(form, prefix + "allow")
+        more = text_of(form, prefix + "more")
         if not accounts and not groups and not more:
             continue
-        rows.append(
+        yield (
+            index,
             GrantRow(
                 accounts=accounts,
                 groups=groups,
                 more=more,
-                recipients=str(form.get(prefix + "recipients") or "").strip(),
-                max_per_day=str(form.get(prefix + "max") or "").strip(),
-                expires=str(form.get(prefix + "expires") or "").strip(),
-                folders=str(form.get(prefix + "folders") or "").strip(),
-            )
+                recipients=text_of(form, prefix + "recipients"),
+                max_per_day=text_of(form, prefix + "max"),
+                expires=text_of(form, prefix + "expires"),
+                folders=text_of(form, prefix + "folders"),
+            ),
         )
-    return [*rows, EMPTY_ROW]
 
 
 def _count(form: FormData) -> int:
@@ -280,30 +287,19 @@ def read_grants(form: FormData) -> list[Grant]:
     if count > MAX_ROWS:
         raise GrantFormError(f"an editor holds {MAX_ROWS} grants at most")
     grants = []
-    for index in range(count):
-        prefix = f"g{index}_"
-        if form.get(prefix + "remove"):
-            continue
-        accounts = [str(v) for v in form.getlist(prefix + "accounts") if v]
-        allow = [str(v) for v in form.getlist(prefix + "allow") if v]
-        allow += [v for v in _SPLIT.split(str(form.get(prefix + "more") or "")) if v]
+    for index, row in _typed(form):
+        accounts = row.accounts
+        allow = row.groups + [v for v in _SPLIT.split(row.more) if v]
         if not accounts and not allow:
             continue
-        recipients = [
-            v for v in _SPLIT.split(str(form.get(prefix + "recipients") or "")) if v
-        ]
-        limit = str(form.get(prefix + "max") or "").strip()
+        recipients = [v for v in _SPLIT.split(row.recipients) if v]
+        limit = row.max_per_day
         if limit and not limit.isdigit():
             raise GrantFormError(f"grant {index + 1}: sends per day must be a number")
         # A folder's name may hold spaces: one per line.
-        folders = [
-            line.strip()
-            for line in str(form.get(prefix + "folders") or "").splitlines()
-            if line.strip()
-        ]
-        expires = str(form.get(prefix + "expires") or "").strip()
+        folders = [line.strip() for line in row.folders.splitlines() if line.strip()]
         try:
-            expires_at = clock.parse_local(expires)
+            expires_at = clock.parse_local(row.expires)
         except ValueError:
             raise GrantFormError(
                 f"grant {index + 1}: valid until must be a date and a time"
