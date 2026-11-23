@@ -730,6 +730,9 @@
     "R": {
       "source": "TypeVar(\"R\")"
     },
+    "listed": {
+      "signature": "(read: 'Callable[[dict[str, Any]], R]') -> 'Callable[[Any], list[R]]'"
+    },
     "maybe_time": {
       "signature": "(value: 'Any') -> 'datetime | None'"
     },

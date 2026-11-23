@@ -8,13 +8,14 @@ from typing import Any
 
 from ..calls import Call, given, nothing, path
 from ..models import Folder
+from .readings import listed
 
 
 def list_folders(account_id: str) -> Call[list[Folder]]:
     return Call(
         "GET",
         path("accounts", account_id, "folders"),
-        lambda found: [_folder(item) for item in found],
+        listed(_folder),
     )
 
 

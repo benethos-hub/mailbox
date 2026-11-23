@@ -8,13 +8,11 @@ from typing import Any
 
 from ..calls import Call, given, nothing, path
 from ..models import NewToken, Secret, Token
-from .readings import maybe_time, time
+from .readings import listed, maybe_time, time
 
 
 def list_tokens(user_id: str) -> Call[list[Token]]:
-    return Call(
-        "GET", path("users", user_id, "tokens"), lambda found: [token(t) for t in found]
-    )
+    return Call("GET", path("users", user_id, "tokens"), listed(token))
 
 
 def create_token(
