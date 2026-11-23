@@ -21,7 +21,7 @@ from datetime import datetime
 
 from ....common import opaque
 from ....errors import BadRequestError
-from ...models import MessageFilter, MessageSummary, Page
+from ...models import OUTSIDE_ALL, MessageFilter, MessageSummary, Page
 from .. import rules
 from . import mappers
 from .mailbox import Mailbox
@@ -99,9 +99,7 @@ def _merged(streams: dict[str, list[_Hit]], limit: int) -> list[_Hit]:
 def _folders(box: Mailbox) -> list[str]:
     """The server's names of the folders ``all`` lists."""
     return [
-        mappers.folder_name(f.id)
-        for f in box.listed()
-        if f.role not in mappers.OUTSIDE_ALL
+        mappers.folder_name(f.id) for f in box.listed() if f.role not in OUTSIDE_ALL
     ]
 
 

@@ -86,11 +86,6 @@ def folder(mailbox: Mailbox) -> Folder:
     )
 
 
-# The folder with the role ``all`` where the server has none: every
-# mailbox but the trash and junk, which a query without a mailbox reads.
-OUTSIDE_ALL = frozenset({FolderRole.TRASH, FolderRole.JUNK})
-
-
 def emulates_all(folders: list[Folder]) -> bool:
     """Whether the adapter shows ``all``: the server has no mailbox of that
     role, and none of that id."""

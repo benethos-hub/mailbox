@@ -8,6 +8,7 @@ from typing import Any
 from ....errors import MailboxServiceError, missing, missing_message
 from ...mail import authentication, convert
 from ...models import (
+    OUTSIDE_ALL,
     AttachmentContent,
     FolderRole,
     Message,
@@ -39,7 +40,7 @@ async def list_messages(
     if folder_id == rules.ALL:
         folders = await account.folders()
         if mappers.emulates_all(folders):
-            outside = [f.id for f in folders if f.role in mappers.OUTSIDE_ALL]
+            outside = [f.id for f in folders if f.role in OUTSIDE_ALL]
     scope = rules.cursor_scope(folder_id, search)
     query: dict[str, Any] = {
         "filter": mappers.query_filter(folder_id, search, outside),
