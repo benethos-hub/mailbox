@@ -205,7 +205,8 @@
   },
   "benethos_mailbox_common.paths": {
     "__all__": [
-      "folders"
+      "folders",
+      "locks"
     ]
   },
   "benethos_mailbox_common.paths.folders": {
@@ -254,6 +255,16 @@
     },
     "system_folders": {
       "signature": "(app: 'str') -> 'SystemFolders'"
+    }
+  },
+  "benethos_mailbox_common.paths.locks": {
+    "LockedError": {
+      "bases": [
+        "builtins.Exception"
+      ]
+    },
+    "exclusive_lock": {
+      "signature": "(path: 'Path') -> 'Iterator[None]'"
     }
   },
   "benethos_mailbox_common.settings": {

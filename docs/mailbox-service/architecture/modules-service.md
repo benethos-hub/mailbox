@@ -317,9 +317,10 @@ packages/mailbox-service/
                         #   hashes, the vault of the credentials, TOTP,
                         #   passkeys (fido2)
       backup.py         # encrypted backups of the database, restore
-      files.py          # files for the owner alone (0600): database, backup, key,
-                        #   the lock that tells a running service
-                        #   from a stopped one
+      files.py          # files for the owner alone (0600): database, backup, key.
+                        #   The lock that tells a running service
+                        #   from a stopped one is paths.locks of
+                        #   mailbox-common
       logbook.py        # the newest log lines in memory, for the log page
       discovery/        # autodiscovery sources and their helpers:
                         #   base.py the protocol of a source, the

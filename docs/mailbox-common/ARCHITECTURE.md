@@ -33,6 +33,8 @@ packages/mailbox-common/
       folders.py        # named_file, system_folders: SystemFolders
                         #   program_folders: Folders, where a
                         #   program looks, first found first
+      locks.py          # exclusive_lock, LockedError: one writer
+                        #   at a time, the standard library alone
     settings/           # a program's settings (pydantic-settings)
       files.py          # FileSettings, the base of a program's
                         #   Settings, and load: the command line, the
