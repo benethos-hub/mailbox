@@ -88,6 +88,9 @@
     },
     "stderr_handler": {
       "signature": "(package: 'str', *, colours: 'bool | None' = None, line_of: 'LineOf | None' = None) -> 'logging.Handler'"
+    },
+    "to_stream": {
+      "signature": "(package: 'str', level: 'str | int', *, stream: 'TextIO | None' = None, colours: 'bool | None' = None, line_of: 'LineOf | None' = None) -> 'logging.Handler'"
     }
   },
   "benethos_mailbox_common.log.redact": {
@@ -205,10 +208,34 @@
   },
   "benethos_mailbox_common.paths": {
     "__all__": [
-      "folders"
+      "folders",
+      "locks"
     ]
   },
   "benethos_mailbox_common.paths.folders": {
+    "Folders": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "origin": {
+          "type": "Origin"
+        },
+        "config": {
+          "type": "Path"
+        },
+        "env_file": {
+          "type": "Path"
+        },
+        "data": {
+          "type": "Path"
+        }
+      }
+    },
+    "Origin": {
+      "source": "Literal[\"named\", \"working directory\", \"system\"]"
+    },
     "SystemFolders": {
       "bases": [
         "builtins.object"
@@ -226,8 +253,21 @@
     "named_file": {
       "signature": "(env_file: 'Path | None', variable: 'str') -> 'Path | None'"
     },
+    "program_folders": {
+      "signature": "(app: 'str', env_file: 'Path | None', variable: 'str', local: 'Path', data: 'Path') -> 'Folders'"
+    },
     "system_folders": {
       "signature": "(app: 'str') -> 'SystemFolders'"
+    }
+  },
+  "benethos_mailbox_common.paths.locks": {
+    "LockedError": {
+      "bases": [
+        "builtins.Exception"
+      ]
+    },
+    "exclusive_lock": {
+      "signature": "(path: 'Path') -> 'Iterator[None]'"
     }
   },
   "benethos_mailbox_common.settings": {
@@ -238,6 +278,7 @@
   "benethos_mailbox_common.settings.files": {
     "__all__": [
       "FileSettings",
+      "Names",
       "NoDecode",
       "S",
       "env_name",
@@ -249,6 +290,9 @@
       "bases": [
         "pydantic_settings.main.BaseSettings"
       ]
+    },
+    "Names": {
+      "source": "Annotated[list[str], NoDecode, BeforeValidator(_between_commas)]"
     },
     "S": {
       "source": "TypeVar(\"S\", bound=FileSettings)"

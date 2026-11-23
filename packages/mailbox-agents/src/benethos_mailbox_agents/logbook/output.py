@@ -13,7 +13,6 @@ the catalogue that has no field for a secret.
 from __future__ import annotations
 
 import logging
-import sys
 from typing import TextIO
 
 from benethos_mailbox_common.log import lines
@@ -27,10 +26,6 @@ PACKAGE = __name__.split(".")[0]
 # query parameters this package writes down only through its own lines.
 LIBRARIES = ("httpx", "httpcore")
 
-# Marks the handler this module installed, so configuring twice replaces it
-# rather than printing every line twice.
-_MARK = "_mailbox_agents_logbook"
-
 
 def configure(
     level: str = "INFO", stream: TextIO | None = None, *, colours: bool | None = None
@@ -38,17 +33,6 @@ def configure(
     """Send the package's lines at ``level`` and every other line at
     ``WARNING`` to ``stream``, stderr by default. ``colours`` defaults to
     whether the stream is a terminal."""
-    target = stream or sys.stderr
-    if colours is None:
-        colours = lines.colours_wanted(target)
-    handler = logging.StreamHandler(target)
-    handler.setFormatter(lines.formatter(PACKAGE, colours=colours))
-    setattr(handler, _MARK, True)
-    root = logging.getLogger()
-    for old in [h for h in root.handlers if getattr(h, _MARK, False)]:
-        root.removeHandler(old)
-    root.addHandler(handler)
-    root.setLevel(logging.WARNING)
-    logging.getLogger(PACKAGE).setLevel(level.upper())
+    lines.to_stream(PACKAGE, level, stream=stream, colours=colours)
     for name in LIBRARIES:
         logging.getLogger(name).setLevel(logging.WARNING)

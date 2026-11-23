@@ -168,3 +168,37 @@ def stderr_handler(
     handler = logging.StreamHandler(sys.stderr)
     handler.setFormatter(formatter(package, colours=colours, line_of=line_of))
     return handler
+
+
+# Marks the handler ``to_stream`` installed, so a second call replaces it
+# rather than printing every line twice.
+_MARK = "_mailbox_lines_to_stream"
+
+
+def to_stream(
+    package: str,
+    level: str | int,
+    *,
+    stream: TextIO | None = None,
+    colours: bool | None = None,
+    line_of: LineOf | None = None,
+) -> logging.Handler:
+    """One handler on ``stream``, stderr by default, the root at WARNING
+    and ``package`` at ``level``: the lines of a library from WARNING on,
+    whatever the level says. ``colours`` defaults to whether the stream
+    is a terminal. A second call replaces the handler of the first."""
+    target = stream or sys.stderr
+    if colours is None:
+        colours = colours_wanted(target)
+    handler = logging.StreamHandler(target)
+    handler.setFormatter(formatter(package, colours=colours, line_of=line_of))
+    setattr(handler, _MARK, True)
+    root = logging.getLogger()
+    for old in [h for h in root.handlers if getattr(h, _MARK, False)]:
+        root.removeHandler(old)
+    root.addHandler(handler)
+    root.setLevel(logging.WARNING)
+    logging.getLogger(package).setLevel(
+        level.upper() if isinstance(level, str) else level
+    )
+    return handler

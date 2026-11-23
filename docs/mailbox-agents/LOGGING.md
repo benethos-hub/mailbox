@@ -40,8 +40,10 @@ error by its class and code only.
 
 `MAILBOX_AGENTS_LOG_LEVEL` sets the level of the agent's own lines,
 `INFO` by default. Every other logger, a library's, writes at `WARNING`
-and above only. `httpx` and `httpcore` are held there whatever the level
-says, since they name each request with its whole URL.
+and above only, set up by `lines.to_stream` of mailbox-common, as the
+MCP server sets up its log. `httpx` and `httpcore` are held there
+whatever the level says, since they name each request with its whole
+URL.
 
 - **`ERROR`**: a pass of the loop failed with an error of the agent's
   own. The loop goes on with the next pass, but something needs a look.

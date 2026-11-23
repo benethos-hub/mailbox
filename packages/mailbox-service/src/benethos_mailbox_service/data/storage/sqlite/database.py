@@ -21,14 +21,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, TypeVar
 
+from benethos_mailbox_common.paths import locks
+
 from ....common.chunks import batched
 from ....common.clock import iso
 from ....errors import ConflictError, StorageError, missing
-from ...files import (
-    LockedError,
-    create_private,
-    exclusive_lock,
-)
+from ...files import create_private
 from .migrations import MIGRATIONS, SCHEMA_VERSION
 
 T = TypeVar("T")
@@ -270,8 +268,8 @@ class Database:
         with ExitStack() as held:
             if self._path is not None:
                 try:
-                    held.enter_context(exclusive_lock(service_lock(self._path)))
-                except LockedError:
+                    held.enter_context(locks.exclusive_lock(service_lock(self._path)))
+                except locks.LockedError:
                     yield False
                     return
             yield True
@@ -297,7 +295,7 @@ class Database:
             folder = None
             path = self._path.with_name(self._path.name + ".snapshot")
         try:
-            with exclusive_lock(path.with_name(path.name + ".lock")):
+            with locks.exclusive_lock(path.with_name(path.name + ".lock")):
                 remove_database_file(path)
                 create_private(path)
                 try:
@@ -310,7 +308,7 @@ class Database:
                     yield path
                 finally:
                     remove_database_file(path)
-        except LockedError:
+        except locks.LockedError:
             raise StorageError("another backup of this database is running") from None
         finally:
             if folder is not None:

@@ -25,14 +25,11 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import BinaryIO
 
+from benethos_mailbox_common.paths import locks
 from benethos_mailbox_common.values import sizes
 
 from ..common.clock import iso, utc_now
-from .files import (
-    LockedError,
-    create_private,
-    exclusive_lock,
-)
+from .files import create_private
 from .secrets import cipher
 from .storage import (
     SCHEMA_VERSION,
@@ -159,7 +156,7 @@ def restore_backup(source: Path, master_key: bytes, target: Path) -> Manifest:
     is kept beside it. The service must not be running."""
     staged = target.with_name(target.name + ".restoring")
     try:
-        with exclusive_lock(service_lock(target)):
+        with locks.exclusive_lock(service_lock(target)):
             remove_database_file(staged)  # from a restore that crashed
             manifest = read_backup(source, master_key, staged)
             if manifest.schema_version > SCHEMA_VERSION:
@@ -170,7 +167,7 @@ def restore_backup(source: Path, master_key: bytes, target: Path) -> Manifest:
                     "service first"
                 )
             _replace(target, staged)
-    except LockedError:
+    except locks.LockedError:
         raise BackupError(
             "the service is running on this database: stop it first"
         ) from None

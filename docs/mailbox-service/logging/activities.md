@@ -216,9 +216,12 @@ Its own process, its own log on stderr, its own rules, the same spirit:
   which the server does at start and before each time it asks what its
   token may do. `server_status` itself logs nothing.
 - Never a tool's arguments, never a search term, never mail content,
-  never the token. `httpx`, `httpcore`, their copies `httpx2` and
-  `httpcore2` that the MCP library brings, and the MCP library itself at
-  `WARNING`, so no request URL is written.
+  never the token. `MAILBOX_MCP_LOG_LEVEL` sets the level of the
+  server's own lines, every other logger writes at `WARNING` and above,
+  as with the agents (2026-11-23). `httpx`, `httpcore`, their copies
+  `httpx2` and `httpcore2` that the MCP library brings, and the MCP
+  library itself are held at `WARNING` whatever the level says, so no
+  request URL is written.
 - Each line is written as the service writes it, by the same code in
   `mailbox-common`: the time of rule 6.9, the level, the source and the
   message, short and in colour on a terminal, plain elsewhere. A noted

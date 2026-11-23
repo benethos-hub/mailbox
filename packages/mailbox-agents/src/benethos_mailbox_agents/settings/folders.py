@@ -5,9 +5,8 @@ working directory, else the folders of the operating system."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
 from benethos_mailbox_common.paths import folders as system
 from benethos_mailbox_common.settings import files
@@ -43,36 +42,21 @@ PATH_SETTINGS = (
     "gateway_key_file",
 )
 
-Origin = Literal["named", "working directory", "system"]
 
-
-@dataclass(frozen=True, slots=True)
-class Folders:
-    """Where a command reads its settings and keeps its state files.
-    ``env_file`` is read when it exists. ``data`` holds the state files
-    unless ``MAILBOX_AGENTS_DATA_DIR`` moves them."""
-
-    origin: Origin
-    config: Path
-    env_file: Path
-    data: Path
+# Where a command reads its settings and keeps its state files.
+Folders = system.Folders
+Origin = system.Origin
 
 
 def folders(env_file: Path | None = None) -> Folders:
     """The folders that apply, first found first: the settings file named
     on purpose, ``env_file`` or the one ``MAILBOX_AGENTS_ENV_FILE`` names,
     the repository's layout in the working directory where it has either
-    folder, else those of the operating system."""
-    named = system.named_file(env_file, ENV_FILE_VARIABLE)
-    if named is not None:
-        named = named.resolve()
-        return Folders("named", named.parent, named, named.parent / DATA_DIR)
-    if DEFAULT_ENV_FILE.parent.is_dir() or DATA_DIR.is_dir():
-        return Folders(
-            "working directory", DEFAULT_ENV_FILE.parent, DEFAULT_ENV_FILE, DATA_DIR
-        )
-    found = system.system_folders(APP)
-    return Folders("system", found.config, found.config / ".env", found.data)
+    folder, else those of the operating system. ``data`` holds the state
+    files unless ``MAILBOX_AGENTS_DATA_DIR`` moves them."""
+    return system.program_folders(
+        APP, env_file, ENV_FILE_VARIABLE, DEFAULT_ENV_FILE, DATA_DIR
+    )
 
 
 class _Paths(files.FileSettings):

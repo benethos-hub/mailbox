@@ -45,8 +45,8 @@ class Settings(files.FileSettings):
     port: int = Field(default=8000, ge=1, le=65535)
     path: str = "/mcp"
     # Comma-separated Host and Origin values, e.g. mcp.example.org:443.
-    allowed_hosts: str = ""
-    allowed_origins: str = ""
+    allowed_hosts: files.Names = Field(default_factory=list)
+    allowed_origins: files.Names = Field(default_factory=list)
     log_level: LogLevel = "INFO"
     # How often the server asks what its token may do. 0: only at start.
     rights_seconds: int = Field(default=60, ge=0)

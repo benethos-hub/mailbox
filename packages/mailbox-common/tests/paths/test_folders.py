@@ -10,8 +10,10 @@ import platformdirs
 import pytest
 
 from benethos_mailbox_common.paths.folders import (
+    Folders,
     SystemFolders,
     named_file,
+    program_folders,
     system_folders,
 )
 
@@ -67,3 +69,28 @@ def test_without_the_extra_the_import_names_it(monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.delitem(sys.modules, "benethos_mailbox_common.paths.folders")
     with pytest.raises(ModuleNotFoundError, match=r"benethos-mailbox-common\[paths\]"):
         importlib.import_module("benethos_mailbox_common.paths.folders")
+
+
+def test_the_folders_of_a_program_first_found_first(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv(VARIABLE, raising=False)
+    monkeypatch.setattr(platformdirs, "user_config_dir", lambda *a, **k: "/c")
+    monkeypatch.setattr(platformdirs, "user_data_dir", lambda *a, **k: "/d")
+    local, data = Path("config/app/.env"), Path("data/app")
+
+    named = program_folders("app", Path("x/s.env"), VARIABLE, local, data)
+    assert named == Folders(
+        "named",
+        (tmp_path / "x").resolve(),
+        (tmp_path / "x/s.env").resolve(),
+        (tmp_path / "x").resolve() / data,
+    )
+    assert program_folders("app", None, VARIABLE, local, data) == Folders(
+        "system", Path("/c"), Path("/c/.env"), Path("/d")
+    )
+    (tmp_path / "data/app").mkdir(parents=True)
+    assert program_folders("app", None, VARIABLE, local, data) == Folders(
+        "working directory", Path("config/app"), local, data
+    )

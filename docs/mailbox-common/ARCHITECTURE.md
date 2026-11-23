@@ -26,11 +26,16 @@ packages/mailbox-common/
     log/                # the lines of a log and the secrets kept out
       lines.py          # format, levels, log_time, plain or in colour
                         #   on a terminal, a program's own lines through
-                        #   line_of, the stderr handler
+                        #   line_of, the stderr handler, to_stream:
+                        #   the setup of a program's log
       redact.py         # secrets noted once, masked in every text,
                         #   forget for tests
     paths/              # where a program keeps its files (platformdirs)
       folders.py        # named_file, system_folders: SystemFolders
+                        #   program_folders: Folders, where a
+                        #   program looks, first found first
+      locks.py          # exclusive_lock, LockedError: one writer
+                        #   at a time, the standard library alone
     settings/           # a program's settings (pydantic-settings)
       files.py          # FileSettings, the base of a program's
                         #   Settings, and load: the command line, the
@@ -38,6 +43,7 @@ packages/mailbox-common/
                         #   problems and env_name: a wrong setting
                         #   named, never what was given
                         #   secret_file: a secret from a file
+                        #   Names: a list of names between commas
     values/             # values written one way
       canonical.py      # JSON: compact to send, canonical to hash
       pauses.py         # doubled: a pause that doubles up to a ceiling

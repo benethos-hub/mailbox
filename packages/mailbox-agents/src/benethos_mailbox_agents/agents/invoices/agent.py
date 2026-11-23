@@ -26,6 +26,8 @@ from collections.abc import Mapping
 from datetime import UTC, datetime
 from functools import cached_property
 
+from benethos_mailbox_common.values import text as text_values
+
 from ...contract import (
     Action,
     ActionRequest,
@@ -201,7 +203,7 @@ class Invoices(Agent):
         if not counted:
             return []
         return ["invoices marked and not moved, by sender:"] + [
-            f"  {sender} ({count} invoice{'s' if count > 1 else ''})"
+            f"  {sender} ({text_values.plural(count, 'invoice')})"
             for sender, count in counted.most_common()
         ]
 

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from benethos_mailbox_common.mail import addresses
 from benethos_mailbox_common.values import text as text_values
 
 from ..contract import Action, Agent, Reader, Shown, ShownAction
@@ -72,9 +73,7 @@ async def collect(
 def _sender(message: MailMessage) -> str:
     if message.sender is None:
         return "(no sender)"
-    if message.sender.name:
-        return f"{message.sender.name} <{message.sender.email}>"
-    return message.sender.email
+    return addresses.readable(message.sender.name, message.sender.email)
 
 
 def _decision(decision: Decision, model: str) -> str:

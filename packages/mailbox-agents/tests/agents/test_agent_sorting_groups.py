@@ -10,6 +10,7 @@ from typing import Any
 
 import pytest
 
+from benethos_mailbox_agents.agents.sorting.agent import _version
 from benethos_mailbox_agents.agents.sorting.groups import (
     MAX_ADDRESS,
     Groups,
@@ -389,3 +390,19 @@ def test_a_pattern_matches_as_its_regular_expression_did(
     matched = listed.match(f"{found}@shop.example") is not None
 
     assert matched is _by_regex(local, found)
+
+
+def test_the_version_of_a_list_stays_the_same_value() -> None:
+    """A new version would take every message of the list up again."""
+    listed = Groups.model_validate(
+        {
+            "groups": [
+                {
+                    "name": "Hosting",
+                    "folder": "Hosting",
+                    "senders": ["*@hosting.example"],
+                }
+            ]
+        }
+    )
+    assert _version(listed) == "list-9c732a913e57"

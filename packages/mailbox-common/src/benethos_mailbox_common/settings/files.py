@@ -4,16 +4,17 @@ else the environment, else a settings file, else the default (CONCEPT
 fields of pydantic and its prefix in ``model_config``, and loads them
 with ``load``. Where the file is, the program decides.
 
-The one module that imports pydantic-settings. It comes with the extra
-``settings``. Without it this module cannot be imported, and says which
-extra is missing."""
+The one module that imports pydantic-settings, and pydantic, which comes
+with it. It comes with the extra ``settings``. Without it this module
+cannot be imported, and says which extra is missing."""
 
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import Annotated, Any, TypeVar
 
 try:
+    from pydantic import BeforeValidator
     from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 except ModuleNotFoundError as missing:
     raise ModuleNotFoundError(
@@ -24,9 +25,10 @@ except ModuleNotFoundError as missing:
 
 # NoDecode marks a field whose value the program splits itself, such as a
 # list given as names between commas, so the environment does not read it
-# as JSON.
+# as JSON. Names is such a list.
 __all__ = [
     "FileSettings",
+    "Names",
     "NoDecode",
     "S",
     "env_name",
@@ -44,6 +46,19 @@ class FileSettings(BaseSettings):
 
 
 S = TypeVar("S", bound=FileSettings)
+
+
+def _between_commas(value: object) -> object:
+    """``a, b`` from the environment, a file or the command line, as
+    ``["a", "b"]``. A list given in code stays as it is."""
+    if isinstance(value, str):
+        return [part.strip() for part in value.split(",") if part.strip()]
+    return value
+
+
+# A list of names between commas, blanks around each taken off and an
+# empty one left out.
+Names = Annotated[list[str], NoDecode, BeforeValidator(_between_commas)]
 
 
 def load(settings: type[S], env_file: Path | None, **given: Any) -> S:

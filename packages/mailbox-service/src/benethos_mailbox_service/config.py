@@ -3,7 +3,6 @@ and the folders a command reads them from and keeps its data in."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, Self
 
@@ -238,36 +237,16 @@ def _secret(secret: SecretStr | None, file: Path | None) -> SecretStr | None:
     return secret if secret is not None and secret.get_secret_value() else None
 
 
-Origin = Literal["named", "working directory", "system"]
-
-
-@dataclass(frozen=True)
-class Folders:
-    """Where a command reads its settings and keeps its data (CONCEPT 7.4).
-    ``env_file`` is read when it exists. ``data`` holds the database unless
+def folders(env_file: Path | None = None) -> system.Folders:
+    """The folders that apply, first found first (CONCEPT 7.4): the
+    settings file named on purpose, ``env_file`` or the one
+    ``MAILBOX_SERVICE_ENV_FILE`` names, the repository's layout in the
+    working directory where it has either folder, else those of the
+    operating system. ``data`` holds the database unless
     ``MAILBOX_SERVICE_DATA_DIR`` moves it."""
-
-    origin: Origin
-    config: Path
-    env_file: Path
-    data: Path
-
-
-def folders(env_file: Path | None = None) -> Folders:
-    """The folders that apply, first found first: the settings file named
-    on purpose, the repository's layout in the working directory where it
-    has either folder, else those of the operating system. A file named
-    on purpose is ``env_file``, else the one ``MAILBOX_SERVICE_ENV_FILE``
-    names."""
-    named = system.named_file(env_file, ENV_FILE_VARIABLE)
-    if named is not None:
-        named = named.resolve()
-        return Folders("named", named.parent, named, named.parent / DATA_DIR)
-    local = Path(ENV_FILE)
-    if local.parent.is_dir() or DATA_DIR.is_dir():
-        return Folders("working directory", local.parent, local, DATA_DIR)
-    found = system.system_folders(APP)
-    return Folders("system", found.config, found.config / ".env", found.data)
+    return system.program_folders(
+        APP, env_file, ENV_FILE_VARIABLE, Path(ENV_FILE), DATA_DIR
+    )
 
 
 def settings_file(env_file: Path | None = None) -> Path | None:
