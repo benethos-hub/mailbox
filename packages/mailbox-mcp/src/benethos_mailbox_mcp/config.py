@@ -169,7 +169,9 @@ def _rebased(env_file: Path | None, given: dict[str, object]) -> dict[str, objec
         value = getattr(found, key)
         if key in given or not value or Path(value).is_absolute():
             continue
-        moved[key] = env_file.parent / value
+        # By the alias where there is one: given by the field's name, an
+        # older pydantic-settings lets the file's value under the alias win.
+        moved[Settings.model_fields[key].alias or key] = env_file.parent / value
     return moved
 
 
