@@ -40,6 +40,7 @@ packages/mailbox-common/
                         #   problems and env_name: a wrong setting
                         #   named, never what was given
                         #   secret_file: a secret from a file
+                        #   Names: a list of names between commas
     values/             # values written one way
       canonical.py      # JSON: compact to send, canonical to hash
       pauses.py         # doubled: a pause that doubles up to a ceiling

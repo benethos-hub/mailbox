@@ -12,6 +12,7 @@ from pydantic import Field, ValidationError, model_validator
 
 from benethos_mailbox_common.settings.files import (
     FileSettings,
+    Names,
     env_name,
     load,
     problems,
@@ -127,3 +128,18 @@ def test_a_secret_file_loses_its_blanks_and_the_mark_of_utf8(
     assert secret_file(path) == "token"
     path.write_text("plain\n", encoding="utf-8")
     assert secret_file(path) == "plain"
+
+
+class Listed(FileSettings):
+    model_config = {"env_prefix": "MAILBOX_TEST_"}
+
+    hosts: Names = Field(default_factory=list)
+
+
+def test_names_between_commas(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MAILBOX_TEST_HOSTS", " a.example , b.example:443,,")
+    assert Listed(_env_file=None).hosts == ["a.example", "b.example:443"]
+    assert Listed(_env_file=None, hosts="c.example").hosts == ["c.example"]
+    assert Listed(_env_file=None, hosts=["d", "e"]).hosts == ["d", "e"]
+    monkeypatch.delenv("MAILBOX_TEST_HOSTS")
+    assert Listed(_env_file=None).hosts == []

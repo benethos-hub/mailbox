@@ -264,6 +264,7 @@
   "benethos_mailbox_common.settings.files": {
     "__all__": [
       "FileSettings",
+      "Names",
       "NoDecode",
       "S",
       "env_name",
@@ -275,6 +276,9 @@
       "bases": [
         "pydantic_settings.main.BaseSettings"
       ]
+    },
+    "Names": {
+      "source": "Annotated[list[str], NoDecode, BeforeValidator(_between_commas)]"
     },
     "S": {
       "source": "TypeVar(\"S\", bound=FileSettings)"

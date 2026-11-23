@@ -16,6 +16,8 @@ ROOT = Path(__file__).resolve().parents[1] / "src" / PACKAGE
 # Where each library beyond the standard library may be imported.
 LIBRARY_HOMES: dict[str, set[str]] = {
     "platformdirs": {"paths.folders"},
+    # pydantic comes with pydantic-settings, for a validator of a field.
+    "pydantic": {"settings.files"},
     "pydantic_settings": {"settings.files"},
 }
 
