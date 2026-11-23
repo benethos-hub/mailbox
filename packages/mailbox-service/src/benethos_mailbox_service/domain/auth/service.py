@@ -84,16 +84,14 @@ class AuthService:
         self.lockouts.check_name(key)
         if len(password) > MAX_LENGTH or len(name) > MAX_NAME:
             # No password is that long: not worth a hash.
-            self.lockouts.failed(source)
-            self.lockouts.failed_name(key, None, someone(source))
+            self.lockouts.failed_sign_in(source, key, None)
             raise UnauthorizedError(WRONG)
         user = self.user_named(name)
         matched = await self.passwords.matches(user.id if user else None, password)
         stored = self.passwords.stored(user.id) if user is not None else None
         refused = _refused(user, matched, stored is not None)
         if user is None or stored is None or refused is not None:
-            self.lockouts.failed(source)
-            self.lockouts.failed_name(key, user, someone(source))
+            self.lockouts.failed_sign_in(source, key, user)
             # The name only when it is a user's: a password typed into the
             # name field must not end up in the log.
             self.activity.record(
@@ -128,8 +126,7 @@ class AuthService:
             else None
         )
         if taken is None:
-            self.lockouts.failed(source)
-            self.lockouts.failed_name(key, user, someone(source))
+            self.lockouts.failed_sign_in(source, key, user)
             self.activity.record(said.CodeFailed(by=someone(source), user=user))
             raise UnauthorizedError(WRONG_CODE)
         return self._signed_in(user, key, source, PASSWORD, taken)

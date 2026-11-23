@@ -84,6 +84,11 @@ class Lockouts:
             seconds = int(self._names.lockout.total_seconds())
             self._activity.record(said.NameBraked(by=by, user=user, seconds=seconds))
 
+    def failed_sign_in(self, source: str, key: str, user: User | None) -> None:
+        """A wrong sign-in, counted for the address and the name."""
+        self.failed(source)
+        self.failed_name(key, user, someone(source))
+
     def failed_caller(self, access: Access, key: str, user: User) -> None:
         """A wrong confirmation, counted for the address and the name."""
         if access.source is not None:
