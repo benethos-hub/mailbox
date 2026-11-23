@@ -70,7 +70,8 @@ A line holds the time, the level, the source and the message:
   terminal the line is in colour and the source stands without the
   package's name, in a column of 32 characters. Elsewhere, in a container
   log or the journal, the line is plain text with the whole name. A
-  terminal gets no colour when `NO_COLOR` is set.
+  terminal gets no colour when `NO_COLOR` is set to a value that is not
+  empty.
 - **The message** is one sentence in the past tense, in this order:
 
 ```
