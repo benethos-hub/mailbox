@@ -31,7 +31,9 @@ Part of the [concept](../CONCEPT.md).
   version and stage, `mailbox_agents_messages` per state,
   `mailbox_agents_oldest_pending_age_seconds`,
   `mailbox_agents_last_pass_timestamp_seconds`,
-  `mailbox_agents_step_failures_total` by kind,
+  `mailbox_agents_step_failures_total` by kind, for every step whose
+  failure the log names, an update that cannot be observed and a message
+  the service no longer hands out among them (2026-11-23),
   `mailbox_agents_answers_refused_total` by reason (schema, request,
   evidence), `mailbox_agents_model_calls_total`,
   `mailbox_agents_model_tokens_total` by direction,

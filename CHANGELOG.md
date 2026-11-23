@@ -23,6 +23,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `benethos-mailbox-agents`: `mailbox_agents_step_failures_total` also
+  counts an update that could not be observed and a message whose fetch
+  stayed stuck while the service was away. Before, both were logged as a
+  failed step and not counted.
 - `benethos-mailbox-mcp` counts a relative `MAILBOX_SERVICE_TOKEN_FILE`
   or `MAILBOX_MCP_BEARER_TOKEN_FILE` from the folder of the settings
   file, when the file was named or is the one of the operating system,

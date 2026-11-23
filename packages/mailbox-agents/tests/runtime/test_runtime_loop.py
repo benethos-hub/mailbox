@@ -16,6 +16,7 @@ from benethos_mailbox_agents.contract import (
 )
 from benethos_mailbox_agents.errors import MailboxUnavailableError
 from benethos_mailbox_agents.records import Event, MailMessage
+from benethos_mailbox_agents.runtime.loop import Worker
 from benethos_mailbox_agents.runtime.model import Calls
 
 from ..agents_fake import ACCOUNT, wire_message
@@ -312,3 +313,31 @@ async def test_a_folder_renamed_between_two_passes_is_seen_by_its_new_path(
     after = await world.mailbox.message(ref("filed"))
     assert [f.path for f in before.folders] == ["Invoices/Hosting"]
     assert [f.path for f in after.folders] == ["Invoices/Webhosting"]
+
+
+def failures(run: Worker, kind: str) -> float:
+    found = run.metrics.registry.get_sample_value(
+        "mailbox_agents_step_failures_total", {"kind": kind}
+    )
+    return found or 0.0
+
+
+async def test_an_observe_that_fails_is_counted(world: Wired) -> None:
+    run = worker(world)
+    await run.run_pass()
+
+    await run._observe(ref("gone"))
+
+    assert failures(run, "mailbox_refused") == 1
+
+
+async def test_a_fetch_stuck_on_a_message_is_counted(world: Wired) -> None:
+    run = worker(world)
+    await run.run_pass()
+    world.store.enqueue(ref("m1"), world.clock())
+    world.service.down = True
+    run._stuck_at = lambda _ref: True  # type: ignore[method-assign]
+
+    assert await run.process_due() == 1
+
+    assert failures(run, "mailbox_unavailable") == 1

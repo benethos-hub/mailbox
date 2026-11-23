@@ -31,7 +31,7 @@ from ..errors import (
     StateFileError,
     UnavailableError,
 )
-from ..logbook import feed, messages, record, worker
+from ..logbook import feed, record, worker
 from ..records import (
     MESSAGE_DISCARDED,
     MESSAGE_GONE,
@@ -264,14 +264,7 @@ class Worker:
             # then its update is left, as a refused one is.
             if isinstance(exc, MailboxUnavailableError) and not self._stuck_at(ref):
                 raise
-            record(
-                messages.StepFailed(
-                    agent=self.agent.name,
-                    message_id=ref.message_id,
-                    step="observe",
-                    error=exc,
-                )
-            )
+            self.runner.failed(ref, "observe", exc)
             if isinstance(exc, MessageGoneError):
                 self.store.close_item(ref, MESSAGE_GONE, self._now())
 
@@ -310,14 +303,7 @@ class Worker:
                 if not self._stuck_at(row.ref):
                     raise
                 self.runner.retry(row.ref, row.attempts)
-                record(
-                    messages.StepFailed(
-                        agent=self.agent.name,
-                        message_id=row.ref.message_id,
-                        step="fetch",
-                        error=exc,
-                    )
-                )
+                self.runner.failed(row.ref, "fetch", exc)
             self.store.set_progress(self._now())
         return len(rows)
 
