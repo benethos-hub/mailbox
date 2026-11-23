@@ -5,7 +5,8 @@ Part of the [concept](../CONCEPT.md).
 > **Status: version 6, prompt `v5`. Version 5 was evaluated on the
 > invented mail of the test account and run there in `shadow` beside
 > [sorting](agent-sorting.md). Version 6 reads the text of an HTML-only
-> mail and is not evaluated yet. Not run on a real mailbox in this version.
+> mail and was evaluated on the same invented mail on 2026-11-23,
+> through `mail-classifier`. Not run on a real mailbox in this version.
 > A run on the owner's account is the owner's decision, in `shadow`
 > first.**
 
@@ -107,7 +108,7 @@ shows before it is missed. Folder names are no content of a mail, and
 `status` prints to standard output, not to the log.
 
 ```
-invoices 5: ready
+invoices 6: ready
   folders in acc_1:
     INBOX: looked in, an invoice moves to Invoices/Telco
     Invoices/Hosting: looked in, an invoice moves to Invoices/Hosting/Rechnungen
@@ -237,7 +238,10 @@ only by the visible text of its HTML part (2026-11-22). Before, such a
 mail reached the model with an empty text, the evidence check found no
 quote and the decision was refused. The prompt `v5` is `v4` unchanged,
 under a new version so every message is decided anew. Version 6 starts
-in `shadow`, and its evaluation report is still to make.
+in `shadow`. Its report of 2026-11-23,
+`reports/mailbox-agents/invoices/2026-11-23-v6-v5-mail-classifier.json`,
+has 12 of 12 right through `mail-classifier`, the rules alone 11 of 12,
+as with version 5.
 
 ## Checked live, version 5
 

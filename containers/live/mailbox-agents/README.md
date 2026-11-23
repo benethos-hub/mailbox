@@ -158,9 +158,11 @@ A report to keep goes into the repository with
 Measured on 2026-11-20 with llama.cpp build 12464 behind LiteLLM 1.110.2,
 an RTX 4070 with 12 GB and a 12th generation Core i9 with 24 threads, and
 Claude through the Claude API, its seconds including the way over the
-internet. Each agent ran with the prompt it has today: `invoices`
+internet. Each agent ran with the prompt it had then: `invoices`
 version 5 with its prompt `v4`, `inquiries` with `v3`, `awaiting_reply`
-with `v1`. The labels agreed with the gold set, out of the 12 invented
+with `v1`. The versions of 0.11.0 ask with the same words, and their
+runs of 2026-11-23 through `mail-classifier` are in
+`reports/mailbox-agents/`. The labels agreed with the gold set, out of the 12 invented
 messages for `invoices` and `inquiries` and 3 for `awaiting_reply`. An
 answer the evidence check refused counts as not agreed. The fields are
 the near miss `invoices` names for a message that is no invoice, such as
