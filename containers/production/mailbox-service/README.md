@@ -273,9 +273,12 @@ setting of the service, `MAILBOX_SERVICE_*`, goes into `service.env`
 [packages/mailbox-service/README.md](../../../packages/mailbox-service/README.md#settings).
 After a change: `docker compose up -d`.
 
-`MAILBOX_SERVICE_PORT` in `.env` is the service's port on the host. The
-same variable in `service.env` would move the port the service listens
-on in its container, which the compose file and Caddy expect at 8080.
+`MAILBOX_SERVICE_HOST_PORT` in `.env` is the service's port on the host.
+`MAILBOX_SERVICE_PORT` is the port the service listens on in its
+container, which the compose file and Caddy expect at 8080: leave it
+out of `service.env`. Up to 0.10.0 the port on the host was
+`MAILBOX_SERVICE_PORT` in `.env`. The compose file still reads that
+name when the new one is not set, for one release.
 
 ## Operation
 

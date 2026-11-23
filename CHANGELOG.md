@@ -20,7 +20,12 @@ adheres to [Semantic Versioning](https://semver.org/).
   name when they come to the same result. Some servers write two for
   each mail, which made the result `unknown` (`several_entries`) for
   their mail. Entries that disagree still make it `unknown`.
-
+- The compose files name the port on the host `MAILBOX_SERVICE_HOST_PORT`,
+  and in development `MAILBOX_MCP_HOST_PORT`. `MAILBOX_SERVICE_PORT` and
+  `MAILBOX_MCP_PORT` are the ports the service and the MCP server listen
+  on in their containers. The production compose file still reads
+  `MAILBOX_SERVICE_PORT` from `.env` when the new name is not set, for
+  one release.
 - **Breaking:** `benethos-mailbox-agents` take the mailbox service of
   their own version: before 1.0 the same minor version, such as the
   service 0.10.x for the agents 0.10.x, from 1.0 the same major version

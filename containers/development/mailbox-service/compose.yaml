@@ -25,7 +25,7 @@ services:
       dockerfile: containers/images/mailbox-service/Dockerfile
     restart: unless-stopped
     ports:
-      - "127.0.0.1:${MAILBOX_SERVICE_PORT:-8080}:8080"
+      - "127.0.0.1:${MAILBOX_SERVICE_HOST_PORT:-8080}:8080"
     volumes:
       - data:/data
     secrets:
@@ -57,7 +57,7 @@ services:
       mailbox-service:
         condition: service_healthy
     ports:
-      - "127.0.0.1:${MAILBOX_MCP_PORT:-8000}:8000"
+      - "127.0.0.1:${MAILBOX_MCP_HOST_PORT:-8000}:8000"
     environment:
       MAILBOX_SERVICE_URL: http://mailbox-service:8080
       # Plain http inside the compose network, which only the two join.
@@ -65,7 +65,7 @@ services:
       MAILBOX_SERVICE_TOKEN: ${MAILBOX_SERVICE_TOKEN:-}
       MAILBOX_MCP_BEARER_TOKEN: ${MAILBOX_MCP_BEARER_TOKEN:-}
       # The Host values clients use: the port as published on the host.
-      MAILBOX_MCP_ALLOWED_HOSTS: ${MAILBOX_MCP_ALLOWED_HOSTS:-127.0.0.1:${MAILBOX_MCP_PORT:-8000},localhost:${MAILBOX_MCP_PORT:-8000}}
+      MAILBOX_MCP_ALLOWED_HOSTS: ${MAILBOX_MCP_ALLOWED_HOSTS:-127.0.0.1:${MAILBOX_MCP_HOST_PORT:-8000},localhost:${MAILBOX_MCP_HOST_PORT:-8000}}
       MAILBOX_MCP_LOG_LEVEL: ${MAILBOX_MCP_LOG_LEVEL:-INFO}
     read_only: true
     tmpfs:

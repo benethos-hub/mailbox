@@ -65,6 +65,8 @@ fi
 
 docker compose up -d --wait
 
-port=$(sed -n 's/^MAILBOX_SERVICE_PORT=//p' .env)
+port=$(sed -n 's/^MAILBOX_SERVICE_HOST_PORT=//p' .env)
+# The name of 0.10.0, read for one release.
+[ -n "$port" ] || port=$(sed -n 's/^MAILBOX_SERVICE_PORT=//p' .env)
 say ""
 say "Running. The UI: http://127.0.0.1:${port:-8080}/ui, sign in as admin."
