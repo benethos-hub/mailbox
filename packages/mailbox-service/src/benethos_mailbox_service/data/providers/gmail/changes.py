@@ -81,23 +81,14 @@ class Changes:
         """Every change since ``start``, and the history id now."""
         records: list[History] = []
         latest = start
-        page_token: str | None = None
-        while True:
-            params = [
-                ("startHistoryId", start),
-                ("maxResults", str(reading.PAGE_SIZE)),
-            ]
-            if page_token:
-                params.append(("pageToken", page_token))
-            try:
-                page = await self._api.read(Histories, "GET", "/history", params=params)
-            except NotFoundError:
-                raise ChangesExpiredError("gmail keeps no history this old") from None
-            records += page.history
-            latest = page.history_id or latest
-            page_token = page.next_page_token
-            if not page_token:
-                return records, latest
+        asked = [("startHistoryId", start), ("maxResults", str(reading.PAGE_SIZE))]
+        try:
+            async for page in self._api.pages(Histories, "/history", asked):
+                records += page.history
+                latest = page.history_id or latest
+        except NotFoundError:
+            raise ChangesExpiredError("gmail keeps no history this old") from None
+        return records, latest
 
 
 def _in_folder(

@@ -113,16 +113,9 @@ async def _draft_message(api: GmailApi, draft_id: str) -> GmailMessage:
 async def _draft_id(api: GmailApi, draft_id: str) -> str:
     """Gmail's id of the draft whose message is ``draft_id``."""
     if reading.is_id(draft_id):
-        token: str | None = None
-        while True:
-            params = [("maxResults", str(reading.PAGE_SIZE))]
-            if token:
-                params.append(("pageToken", token))
-            page = await api.read(Drafts, "GET", "/drafts", params=params)
+        asked = [("maxResults", str(reading.PAGE_SIZE))]
+        async for page in api.pages(Drafts, "/drafts", asked):
             for draft in page.drafts:
                 if draft.message is not None and draft.message.id == draft_id:
                     return draft.id
-            token = page.next_page_token
-            if not token:
-                break
     raise missing("draft", draft_id)

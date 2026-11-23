@@ -155,16 +155,10 @@ def source(message: GmailMessage) -> bytes:
 async def ids(api: GmailApi, params: list[tuple[str, str]]) -> list[str]:
     """Every id of a list, page by page."""
     found: list[str] = []
-    token: str | None = None
-    while True:
-        page = [("maxResults", str(PAGE_SIZE)), *params]
-        if token:
-            page.append(("pageToken", token))
-        answer = await api.read(Messages, "GET", "/messages", params=page)
-        found += [m.id for m in answer.messages]
-        token = answer.next_page_token
-        if not token:
-            return found
+    asked = [("maxResults", str(PAGE_SIZE)), *params]
+    async for page in api.pages(Messages, "/messages", asked):
+        found += [m.id for m in page.messages]
+    return found
 
 
 def folder_params(folder_id: str) -> list[tuple[str, str]]:
