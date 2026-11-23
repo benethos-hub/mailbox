@@ -407,6 +407,21 @@ def test_what_is_odd_in_an_email_is_left_out() -> None:
     assert mappers.summary(email, None).sender is not None
 
 
+def test_an_internationalised_domain_is_shown_in_unicode() -> None:
+    """As the opened message shows it: JMAP may send the punycode."""
+    email = Email.model_validate(
+        {
+            "id": "e",
+            "from": [{"email": "anna@xn--bcher-kva.example", "name": "Anna"}],
+            "to": [{"email": "bo@xn--bcher-kva.example"}],
+        }
+    )
+    found = mappers.summary(email, None)
+    assert found.sender is not None
+    assert found.sender.email == "anna@bücher.example"
+    assert [a.email for a in found.to] == ["bo@bücher.example"]
+
+
 def test_a_folder_with_a_role_the_api_lacks() -> None:
     folder = mappers.folder(Mailbox(id="f", name="Imp", role="important"))
     assert folder.role is None

@@ -102,6 +102,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 - A Gmail draft that was stored but cannot be read back answers `502`,
   as with IMAP and JMAP. Before, it answered `404`, though the draft
   was there.
+- A list of a JMAP account shows an address on an internationalised
+  domain in Unicode, as the opened message does. Before, it could show
+  the punycode (`xn--`).
 - `benethos-mailbox-service` reads a client secret, and
   `benethos-mailbox-mcp` a token, from a file that starts with the mark
   of UTF-8, as PowerShell 5.1 writes one with `Out-File -Encoding utf8`.
