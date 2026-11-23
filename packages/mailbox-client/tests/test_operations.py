@@ -64,7 +64,7 @@ def _endpoints() -> list[str]:
 ENDPOINTS = _endpoints()
 # Written out in both clients: it reads the answer as a stream, up to a
 # limit, and the generic request takes a path.
-WRITTEN_OUT = {"get_attachment", "request"}
+WRITTEN_OUT = {"get_attachment"}
 
 
 def test_every_operation_has_its_endpoint() -> None:

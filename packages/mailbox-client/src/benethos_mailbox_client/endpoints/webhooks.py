@@ -16,7 +16,7 @@ from ..models import (
     WebhookPost,
     WebhookSecret,
 )
-from .readings import maybe_time, time
+from .readings import listed, maybe_time, time
 
 
 def list_webhooks(
@@ -31,7 +31,7 @@ def list_webhooks(
     return Call(
         "GET",
         path("webhooks"),
-        lambda found: [webhook(w) for w in found],
+        listed(webhook),
         params=given({"url": url, "account": account, "failing": failing}),
     )
 

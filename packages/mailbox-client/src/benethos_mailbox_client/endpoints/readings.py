@@ -22,6 +22,15 @@ def maybe_time(value: Any) -> datetime | None:
     return time(value) if value else None
 
 
+def listed(read: Callable[[dict[str, Any]], R]) -> Callable[[Any], list[R]]:
+    """The reading of a list of records, each read by ``read``."""
+
+    def reading(found: Any) -> list[R]:
+        return [read(item) for item in found]
+
+    return reading
+
+
 def paged(read: Callable[[dict[str, Any]], R]) -> Callable[[dict[str, Any]], Paged[R]]:
     """The reading of a page of records, each read by ``read``."""
 

@@ -416,7 +416,7 @@
           "async": true
         },
         "request": {
-          "signature": "(self, method: 'str', path: 'str', *, params: 'dict[str, Any] | None' = None, json: 'dict[str, Any] | None' = None, headers: 'dict[str, str] | None' = None) -> 'Any'",
+          "sends": "benethos_mailbox_client.endpoints.generic.request",
           "async": true
         },
         "revoke_token": {
@@ -669,7 +669,7 @@
   },
   "benethos_mailbox_client.endpoints.generic": {
     "request": {
-      "signature": "(method: 'str', where: 'str', *, params: 'dict[str, Any] | None' = None, json: 'dict[str, Any] | None' = None, headers: 'dict[str, str] | None' = None) -> 'Call[Any]'"
+      "signature": "(method: 'str', path: 'str', *, params: 'dict[str, Any] | None' = None, json: 'dict[str, Any] | None' = None, headers: 'dict[str, str] | None' = None) -> 'Call[Any]'"
     }
   },
   "benethos_mailbox_client.endpoints.health": {
@@ -729,6 +729,9 @@
   "benethos_mailbox_client.endpoints.readings": {
     "R": {
       "source": "TypeVar(\"R\")"
+    },
+    "listed": {
+      "signature": "(read: 'Callable[[dict[str, Any]], R]') -> 'Callable[[Any], list[R]]'"
     },
     "maybe_time": {
       "signature": "(value: 'Any') -> 'datetime | None'"
@@ -2630,7 +2633,7 @@
           "sends": "benethos_mailbox_client.endpoints.roles.replace_role"
         },
         "request": {
-          "signature": "(self, method: 'str', path: 'str', *, params: 'dict[str, Any] | None' = None, json: 'dict[str, Any] | None' = None, headers: 'dict[str, str] | None' = None) -> 'Any'"
+          "sends": "benethos_mailbox_client.endpoints.generic.request"
         },
         "revoke_token": {
           "sends": "benethos_mailbox_client.endpoints.tokens.revoke_token"

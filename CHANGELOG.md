@@ -23,6 +23,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `benethos-mailbox-client`: `endpoints.request` names its second
+  parameter `path`, as `MailboxClient.request` and
+  `SyncMailboxClient.request` do, which now send it as every other
+  method sends its endpoint. A call that named it `where=` names it
+  `path=`. A call by position works as before.
 - `benethos-mailbox-mcp` writes the lines of a library from `WARNING` on
   only, whatever `MAILBOX_MCP_LOG_LEVEL` says, as the agents do. The
   level sets its own lines. The lines of uvicorn stay. Before, at

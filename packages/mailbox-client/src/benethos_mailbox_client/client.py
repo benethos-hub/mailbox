@@ -5,7 +5,6 @@ it asks and what it answers is described in ``endpoints``."""
 from __future__ import annotations
 
 from types import TracebackType
-from typing import Any
 
 import httpx
 
@@ -70,21 +69,7 @@ class MailboxClient:
             )
         return read(call, response)
 
-    async def request(
-        self,
-        method: str,
-        path: str,
-        *,
-        params: dict[str, Any] | None = None,
-        json: dict[str, Any] | None = None,
-        headers: dict[str, str] | None = None,
-    ) -> Any:
-        """Any request: the JSON the API answers, None for no content.
-        Parameters and fields that are None are left out."""
-        call = endpoints.request(
-            method, path, params=params, json=json, headers=headers
-        )
-        return await self.send(call)
+    request = awaiting(endpoints.request)
 
     # --- the caller -------------------------------------------------------------------
 

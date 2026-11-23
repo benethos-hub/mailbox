@@ -8,11 +8,12 @@ from typing import Any
 
 from ..calls import Call, given, nothing, path
 from ..models import Grant, Role
+from .readings import listed
 from .rights import grant, grants_body
 
 
 def list_roles() -> Call[list[Role]]:
-    return Call("GET", path("roles"), lambda found: [role(r) for r in found])
+    return Call("GET", path("roles"), listed(role))
 
 
 def create_role(
