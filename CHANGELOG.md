@@ -8,6 +8,13 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- The MCP server reads its tokens from files as well:
+  `MAILBOX_SERVICE_TOKEN_FILE` and `MAILBOX_MCP_BEARER_TOKEN_FILE`, each
+  in place of its token, never beside it. A file that cannot be read or
+  holds no token stops the start. The example of the MCP server
+  instances in production hands both to each instance as container
+  secrets. A block that reads them through `env_file`, as up to 0.10.0,
+  keeps working.
 - `benethos-mailbox-agents`, small AI agents that work on a mailbox
   through the client, released with the other packages from now on and
   still alpha. Up to 0.2.0 they had a repository and a changelog of their

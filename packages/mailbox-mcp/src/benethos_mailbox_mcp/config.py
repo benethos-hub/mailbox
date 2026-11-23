@@ -5,9 +5,15 @@ the file is, and the settings read with it."""
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import Field, SecretStr, field_validator
+from pydantic import (
+    Field,
+    SecretStr,
+    ValidationInfo,
+    field_validator,
+    model_validator,
+)
 
 from benethos_mailbox_common.paths import folders
 from benethos_mailbox_common.settings import files
@@ -47,11 +53,16 @@ class Settings(files.FileSettings):
     # Lists every tool and runs none, without a service or a token: for a
     # directory that reads the tool list in a sandbox. Never with a token.
     catalogue: bool = False
-    # The one token callers over HTTP bring. None: no guard.
+    # The one token callers over HTTP bring. None: no guard. Or from a
+    # file, a container secret, never both.
     bearer_token: SecretStr | None = None
+    bearer_token_file: Path | None = None
     # None: the client's default address.
     service_url: str | None = Field(default=None, alias="MAILBOX_SERVICE_URL")
     service_token: SecretStr | None = Field(default=None, alias="MAILBOX_SERVICE_TOKEN")
+    service_token_file: Path | None = Field(
+        default=None, alias="MAILBOX_SERVICE_TOKEN_FILE"
+    )
     service_allow_http: bool = Field(default=False, alias="MAILBOX_SERVICE_ALLOW_HTTP")
 
     @field_validator("log_level", mode="before")
@@ -66,6 +77,38 @@ class Settings(files.FileSettings):
         if isinstance(value, str):
             return value.strip() or None
         return value
+
+    @field_validator("bearer_token_file", "service_token_file")
+    @classmethod
+    def _one_way(cls, value: Path | None, info: ValidationInfo) -> Path | None:
+        """A token from a file that can be read and holds one, and not
+        beside the token itself. The error names the setting, never what
+        the file holds."""
+        token = (info.field_name or "").removesuffix("_file")
+        if value is not None:
+            if info.data.get(token) is not None:
+                raise ValueError(f"set {variable(token)} or this, not both")
+            _read(value)
+        return value
+
+    @model_validator(mode="after")
+    def _from_files(self) -> Self:
+        if self.bearer_token_file is not None:
+            self.bearer_token = SecretStr(_read(self.bearer_token_file))
+        if self.service_token_file is not None:
+            self.service_token = SecretStr(_read(self.service_token_file))
+        return self
+
+
+def _read(path: Path) -> str:
+    """The token in the file at ``path``, without the blanks around it."""
+    try:
+        found = path.read_text(encoding="utf-8").strip()
+    except (OSError, UnicodeDecodeError):
+        raise ValueError("the file cannot be read") from None
+    if not found:
+        raise ValueError("the file holds no token")
+    return found
 
 
 def config_folder() -> Path:

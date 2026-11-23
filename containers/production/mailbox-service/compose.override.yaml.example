@@ -3,9 +3,10 @@
 # They start with the profile mcp in COMPOSE_PROFILES, never without it.
 # README.md, "MCP server instances", has the steps.
 #
-# Each instance names an env_file under secrets/mcp/ with its two tokens:
-#   MAILBOX_SERVICE_TOKEN=<the API token of the user it acts as>
-#   MAILBOX_MCP_BEARER_TOKEN=<what its clients send, openssl rand -hex 32>
+# Each instance reads its two tokens from files in secrets/mcp/<name>/,
+# handed to it as container secrets, readable by the container user:
+#   service_token  the API token of the user it acts as
+#   bearer_token   what its clients send, openssl rand -hex 32
 
 # What every instance on this host shares: the template, the profile, the
 # network of the service, and the start after the service.
@@ -24,10 +25,12 @@ services:
   # For a client on this host: http://127.0.0.1:8101/mcp
   mcp-assistant:
     <<: *instance
-    env_file: secrets/mcp/assistant.env
+    secrets: [assistant_service_token, assistant_bearer_token]
     ports:
       - "127.0.0.1:8101:8000"
     environment:
+      MAILBOX_SERVICE_TOKEN_FILE: /run/secrets/assistant_service_token
+      MAILBOX_MCP_BEARER_TOKEN_FILE: /run/secrets/assistant_bearer_token
       MAILBOX_MCP_ALLOWED_HOSTS: 127.0.0.1:8101,localhost:8101
 
   # For clients elsewhere, through Caddy of the profile https:
@@ -35,7 +38,19 @@ services:
   # (template caddy.d/mcp.caddy.example). It needs no port on the host.
   mcp-agent:
     <<: *instance
-    env_file: secrets/mcp/agent.env
+    secrets: [agent_service_token, agent_bearer_token]
     environment:
+      MAILBOX_SERVICE_TOKEN_FILE: /run/secrets/agent_service_token
+      MAILBOX_MCP_BEARER_TOKEN_FILE: /run/secrets/agent_bearer_token
       MAILBOX_MCP_PATH: /mcp/agent
       MAILBOX_MCP_ALLOWED_HOSTS: ${MAILBOX_DOMAIN:?set MAILBOX_DOMAIN in .env}
+
+secrets:
+  assistant_service_token:
+    file: ./secrets/mcp/assistant/service_token
+  assistant_bearer_token:
+    file: ./secrets/mcp/assistant/bearer_token
+  agent_service_token:
+    file: ./secrets/mcp/agent/service_token
+  agent_bearer_token:
+    file: ./secrets/mcp/agent/bearer_token

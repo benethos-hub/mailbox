@@ -346,6 +346,7 @@ exits. It needs no service and no token.
 |---|---|---|
 | – | `MAILBOX_SERVICE_URL` | `http://127.0.0.1:8080`, where the service answers |
 | – | `MAILBOX_SERVICE_TOKEN` | none and required, the token of the user it acts as |
+| – | `MAILBOX_SERVICE_TOKEN_FILE` | none, a file that holds that token, such as a container secret, in place of `MAILBOX_SERVICE_TOKEN` |
 | – | `MAILBOX_SERVICE_ALLOW_HTTP` | off. `1` allows `http` to a host other than this machine |
 | `--transport` | `MAILBOX_MCP_TRANSPORT` | `stdio`, or `streamable-http` |
 | `--host` | `MAILBOX_MCP_HOST` | `127.0.0.1` |
@@ -356,6 +357,7 @@ exits. It needs no service and no token.
 | `--log-level` | `MAILBOX_MCP_LOG_LEVEL` | `INFO` |
 | – | `MAILBOX_MCP_RIGHTS_SECONDS` | `60`, how often it asks what its token may do. `0` asks only at start |
 | – | `MAILBOX_MCP_BEARER_TOKEN` | none, what HTTP clients must send |
+| – | `MAILBOX_MCP_BEARER_TOKEN_FILE` | none, a file that holds that token, in place of `MAILBOX_MCP_BEARER_TOKEN` |
 | – | `MAILBOX_MCP_CATALOGUE` | off. `true` lists every tool and runs none, see below |
 | `--env-file` | `MAILBOX_MCP_ENV_FILE` | a settings file, see below |
 

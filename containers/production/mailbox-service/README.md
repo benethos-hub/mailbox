@@ -156,18 +156,23 @@ names no domain, remove it, or every `docker compose` command stops
 with `set MAILBOX_DOMAIN in .env`. For each instance:
 
 1. In the UI, a user with the rights of the instance, and a token.
-2. Its tokens in `secrets/mcp/<name>.env`, readable by you alone:
+2. Its two tokens as files in `secrets/mcp/<name>/`, which only the
+   container user reads:
 
    ```sh
    umask 077
-   cat > secrets/mcp/agent.env <<EOF
-   MAILBOX_SERVICE_TOKEN=<the user's token>
-   MAILBOX_MCP_BEARER_TOKEN=$(openssl rand -hex 32)
-   EOF
+   mkdir -p secrets/mcp/agent
+   printf '%s\n' '<token of the user>' > secrets/mcp/agent/service_token
+   openssl rand -hex 32 > secrets/mcp/agent/bearer_token
+   sudo chown -R 10001 secrets/mcp/agent   # Linux: the container user reads them
    ```
 
-3. Its block in `compose.override.yaml`, with a name of its own and its
-   `env_file`. For a client on this host, a port on `127.0.0.1` and that
+   The clients send the bearer token: `sudo cat secrets/mcp/agent/bearer_token`.
+   Up to 0.10.0 the example read both tokens from `secrets/mcp/<name>.env`
+   through `env_file`. A block that still does keeps working.
+
+3. Its block in `compose.override.yaml`, with a name of its own, its two
+   secrets and their entries under `secrets:`. For a client on this host, a port on `127.0.0.1` and that
    port in `MAILBOX_MCP_ALLOWED_HOSTS`. For clients elsewhere, no port
    but a route in Caddy (step 4).
 4. Only for clients elsewhere, with the profile `https`: a route in
@@ -190,7 +195,7 @@ claude mcp add --transport http mailbox https://mail.example.org/mcp/agent \
   --header "Authorization: Bearer <bearer token>"
 ```
 
-To remove an instance: delete its block, its `env_file` and its route,
+To remove an instance: delete its block, its secrets and its route,
 run `docker compose up -d --remove-orphans` and reload Caddy. Revoke its
 token in the UI.
 
@@ -206,12 +211,20 @@ services:
     extends:
       file: mcp.yaml
       service: mailbox-mcp
-    env_file: secrets/mcp/agent.env
+    secrets: [agent_service_token, agent_bearer_token]
     ports:
       - "127.0.0.1:8101:8000"
     environment:
       MAILBOX_SERVICE_URL: https://mail.example.org
+      MAILBOX_SERVICE_TOKEN_FILE: /run/secrets/agent_service_token
+      MAILBOX_MCP_BEARER_TOKEN_FILE: /run/secrets/agent_bearer_token
       MAILBOX_MCP_ALLOWED_HOSTS: 127.0.0.1:8101,localhost:8101
+
+secrets:
+  agent_service_token:
+    file: ./secrets/mcp/agent/service_token
+  agent_bearer_token:
+    file: ./secrets/mcp/agent/bearer_token
 ```
 
 With an `.env` naming `MAILBOX_VERSION`. The service must be reachable
