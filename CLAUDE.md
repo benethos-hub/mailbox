@@ -133,13 +133,16 @@ assets/                   # brand/: the organisation's brand assets,
                           #   to 0.4.1 still link to, icon-3d.svg from
                           #   the PyPI pages, icon.png from the MCP
                           #   Registry entry of 0.4.1. architecture/:
-                          #   the READMEs' diagram as HTML and PNG,
-                          #   light and dark. build.py makes the
-                          #   shipped copies in the service's
+                          #   the repository README's diagram as HTML
+                          #   and PNG, light and dark. build.py makes
+                          #   the shipped copies in the service's
                           #   static/img/, with --social the social
-                          #   preview, with --diagram the diagram,
+                          #   preview, with --diagram the diagrams,
                           #   with --icon brand/icon.png for the MCP
                           #   Registry and the Claude Desktop bundle.
+                          #   mailbox-service/, mailbox-client/,
+                          #   mailbox-mcp/: architecture/, the diagram
+                          #   of each package's README.
                           #   mailbox-service/: icons.py makes the UI's
                           #   icon sprite from a pinned Bootstrap Icons
                           #   package. vendor/: the versions of the

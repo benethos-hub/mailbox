@@ -40,8 +40,8 @@ mail through the Python client, AI assistants through the MCP server,
 the agents through the client as well, each with a token of its own. None of them holds a mail password.
 
 <picture>
-  <source srcset="https://raw.githubusercontent.com/benethos-hub/mailbox/main/assets/architecture/architecture-dark.png" media="(prefers-color-scheme: dark)">
-  <img src="https://raw.githubusercontent.com/benethos-hub/mailbox/main/assets/architecture/architecture.png" alt="AI agents reach mailbox-mcp over MCP, scripts and apps use mailbox-client or call the REST API themselves, and mailbox-mcp builds on mailbox-client. mailbox-client calls the REST API of mailbox-service, people use its configuration UI in the browser, and its signed webhooks report changes to your systems. mailbox-service, on your own server, connects to the mail accounts over IMAP and SMTP, Microsoft Graph, JMAP, POP3 and the Gmail API.">
+  <source srcset="https://raw.githubusercontent.com/benethos-hub/mailbox/main/assets/mailbox-service/architecture/architecture-dark.png" media="(prefers-color-scheme: dark)">
+  <img src="https://raw.githubusercontent.com/benethos-hub/mailbox/main/assets/mailbox-service/architecture/architecture.png" alt="mailbox-service on your own server with four doors: the REST API for the client, the MCP server, the agents and your scripts, the configuration UI for people in the browser, signed webhooks to your systems and metrics for Prometheus. Below them three layers, web, domain and data, on SQLite, the credentials encrypted under a master key outside the database. It reaches the mail accounts over IMAP and SMTP, Microsoft Graph, JMAP, POP3 and the Gmail API, Microsoft and Google accounts by an OAuth sign-in.">
 </picture>
 
 A request comes in over REST, from the client, from the MCP server on

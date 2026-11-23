@@ -49,8 +49,8 @@ and [First start](https://github.com/benethos-hub/mailbox/blob/main/packages/mai
 in its README.
 
 <picture>
-  <source srcset="https://raw.githubusercontent.com/benethos-hub/mailbox/main/assets/architecture/architecture-dark.png" media="(prefers-color-scheme: dark)">
-  <img src="https://raw.githubusercontent.com/benethos-hub/mailbox/main/assets/architecture/architecture.png" alt="AI agents reach mailbox-mcp over MCP, scripts and apps use mailbox-client or call the REST API themselves, and mailbox-mcp builds on mailbox-client. mailbox-client calls the REST API of mailbox-service, people use its configuration UI in the browser, and its signed webhooks report changes to your systems. mailbox-service, on your own server, connects to the mail accounts over IMAP and SMTP, Microsoft Graph, JMAP, POP3 and the Gmail API.">
+  <source srcset="https://raw.githubusercontent.com/benethos-hub/mailbox/main/assets/mailbox-client/architecture/architecture-dark.png" media="(prefers-color-scheme: dark)">
+  <img src="https://raw.githubusercontent.com/benethos-hub/mailbox/main/assets/mailbox-client/architecture/architecture.png" alt="Your Python code uses MailboxClient or SyncMailboxClient, as the MCP server and the agents do. A request has four parts in the client: the endpoints, the two clients on httpx, typed records and errors, and tests hold it to the OpenAPI document. It calls the REST API of mailbox-service over HTTP with the service's address and a token, and the service reaches the mail accounts.">
 </picture>
 
 A request goes from your code with the client over REST to the

@@ -141,6 +141,34 @@ def test_the_architecture_diagram_has_the_size_of_its_page() -> None:
         assert size == (width * build.DIAGRAM_SCALE, height * build.DIAGRAM_SCALE)
 
 
+def test_each_package_diagram_has_the_size_of_its_page() -> None:
+    # After a change of a diagram: uv run python assets/build.py --diagram
+    build = _build()
+    width, height = build.PACKAGE_DIAGRAM_SIZE
+    for source in build.PACKAGE_DIAGRAM_SOURCES:
+        page = source.read_text("utf-8")
+        assert f"width: {width}px; height: {height}px;" in page, source
+        assert f'viewBox="0 0 {width} {height}"' in page, source
+        for image in build.package_diagrams(source):
+            png = image.read_bytes()
+            assert png.startswith(b"\x89PNG\r\n\x1a\n"), image
+            size = tuple(int.from_bytes(png[at : at + 4], "big") for at in (16, 20))
+            assert size == (width * build.DIAGRAM_SCALE, height * build.DIAGRAM_SCALE)
+
+
+def test_no_diagram_is_rendered_while_a_package_page_is_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    build = _build()
+    shot: list[str] = []
+    sources = (*build.PACKAGE_DIAGRAM_SOURCES[:-1], tmp_path / "gone.html")
+    monkeypatch.setattr(build, "PACKAGE_DIAGRAM_SOURCES", sources)
+    monkeypatch.setattr(build, "_screenshot", lambda *args, **kw: shot.append("x"))
+    with pytest.raises(SystemExit, match="no page of the diagram"):
+        build.render_diagram()
+    assert shot == []
+
+
 def test_the_diagram_without_its_page_is_not_rendered(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

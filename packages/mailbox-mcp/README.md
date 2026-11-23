@@ -43,8 +43,8 @@ and [First start](https://github.com/benethos-hub/mailbox/blob/main/packages/mai
 in its README, or as a [container](https://github.com/benethos-hub/mailbox/blob/main/packages/mailbox-service/README.md#container).
 
 <picture>
-  <source srcset="https://raw.githubusercontent.com/benethos-hub/mailbox/main/assets/architecture/architecture-dark.png" media="(prefers-color-scheme: dark)">
-  <img src="https://raw.githubusercontent.com/benethos-hub/mailbox/main/assets/architecture/architecture.png" alt="AI agents reach mailbox-mcp over MCP, scripts and apps use mailbox-client or call the REST API themselves, and mailbox-mcp builds on mailbox-client. mailbox-client calls the REST API of mailbox-service, people use its configuration UI in the browser, and its signed webhooks report changes to your systems. mailbox-service, on your own server, connects to the mail accounts over IMAP and SMTP, Microsoft Graph, JMAP, POP3 and the Gmail API.">
+  <source srcset="https://raw.githubusercontent.com/benethos-hub/mailbox/main/assets/mailbox-mcp/architecture/architecture-dark.png" media="(prefers-color-scheme: dark)">
+  <img src="https://raw.githubusercontent.com/benethos-hub/mailbox/main/assets/mailbox-mcp/architecture/architecture.png" alt="Claude Desktop, Claude Code and other MCP clients call the tools of mailbox-mcp. A tool call passes the transport, stdio or streamable HTTP with a bearer token, the rights the service grants, one of the tools that read, sort, draft and send, and mail handed to the model as data. Every tool goes through mailbox-client to the REST API of mailbox-service, with its rights, recipient lists, daily limits and audit, and the service reaches the mail accounts.">
 </picture>
 
 A request goes from the assistant over MCP to this server. From there
