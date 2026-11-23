@@ -44,9 +44,11 @@ the agents through the client as well, each with a token of its own. None of the
   <img src="https://raw.githubusercontent.com/benethos-hub/mailbox/main/assets/mailbox-service/architecture/architecture.png" alt="mailbox-service on your own server with four doors: the REST API for the client, the MCP server, the agents and your scripts, the configuration UI for people in the browser, signed webhooks to your systems and metrics for Prometheus. Below them three layers, web, domain and data, on SQLite, the credentials encrypted under a master key outside the database. It reaches the mail accounts over IMAP and SMTP, Microsoft Graph, JMAP, POP3 and the Gmail API, Microsoft and Google accounts by an OAuth sign-in.">
 </picture>
 
-A request comes in over REST, from the client, from the MCP server on
-top of it, or from any program that speaks HTTP. The service checks the
-token and its rights, and goes to the provider of the account.
+A request comes in over REST, from the client, from the MCP server and
+the agents on top of it, or from any program that speaks HTTP. The
+service checks the token and its rights, and goes to the provider of the
+account. People use the configuration UI in the browser, your systems
+get a signed webhook for each change, and Prometheus reads the metrics.
 
 | Package | Its part | How you get it |
 |---|---|---|

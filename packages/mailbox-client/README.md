@@ -54,7 +54,9 @@ in its README.
 </picture>
 
 A request goes from your code with the client over REST to the
-service, and from the service to the provider of the account.
+service, and from the service to the provider of the account. In the
+client it has four parts: its endpoint, one of the two clients, the
+records of the answer and the errors ([Inside](#inside)).
 
 | Package | Its part | How you get it |
 |---|---|---|
