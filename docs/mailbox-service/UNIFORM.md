@@ -62,7 +62,9 @@ method or filter the server does not know, and on Microsoft a `$`
 keyword other than `$answered` and `$forwarded`.
 
 **R4. Capabilities follow the server.** An IMAP or JMAP server is asked
-what it offers when the account connects and when it is verified: IDLE,
+what it offers when the account connects, when it is verified, when the
+sync sees a folder come or go, and when the server refuses what was
+stored, at most once a minute: IDLE,
 MOVE, UIDPLUS, CONDSTORE, PERMANENTFLAGS, the special folders, JMAP
 submission and event source. The capabilities follow from the answer,
 not from the adapter's class.
