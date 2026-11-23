@@ -205,6 +205,20 @@ class AuthService:
             self.activity.record(said.ConfirmFailed(by=Actor.of(access)))
             raise BadRequestError("the password is not right")
 
+    async def reconfirm(
+        self,
+        access: Access,
+        password: str,
+        code: str = "",
+        answer: Answer | None = None,
+    ) -> None:
+        """The password once more, then a code or a passkey where the user
+        has a second factor: before a step that hands out much or takes a
+        factor away."""
+        await self.confirm(access, password)
+        if self.has_second_factor(access.user_id):
+            self.confirm_code(access, code, answer)
+
     def confirm_code(
         self, access: Access, code: str, answer: Answer | None = None
     ) -> None:

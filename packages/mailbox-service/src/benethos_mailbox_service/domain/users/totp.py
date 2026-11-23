@@ -63,9 +63,7 @@ class TotpService:
         the secret. Nothing is stored before ``confirm``."""
         user = self._users.get(access.user_id)
         name = self._totp.checked_name(user.id, name)
-        await self._auth.confirm(access, password)
-        if self._factors.has(user.id):
-            self._auth.confirm_code(access, code, answer)
+        await self._auth.reconfirm(access, password, code, answer)
         return TotpSetup(name, totp.new_secret())
 
     def confirm(
@@ -133,8 +131,7 @@ class TotpService:
             raise BadRequestError("tick at least one device")
         for device_id in device_ids:
             self._own_device(access, device_id)
-        await self._auth.confirm(access, password)
-        self._auth.confirm_code(access, code, answer)
+        await self._auth.reconfirm(access, password, code, answer)
         user = self._users.get(access.user_id)
         for device_id in dict.fromkeys(device_ids):
             self._remove(user, device_id, Actor.of(access))

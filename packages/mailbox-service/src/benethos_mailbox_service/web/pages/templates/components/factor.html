@@ -45,3 +45,18 @@
   </div>
 </fieldset>
 {% endmacro %}
+
+{#- The fields of a form that confirms a step: the name for a password
+    manager, the password once more, and the second step where ``step``.
+    What a ``call`` block holds comes first. #}
+{% macro confirm_fields(id, step=True, focus=False) %}
+  <input type="hidden" name="username" value="{{ me.name }}" autocomplete="username" />
+  <div class="form-grid">
+    {% if caller is defined %}{{ caller() }}{% endif %}
+    <div class="field">
+      <label for="f-{{ id }}-password">Your password</label>
+      <input id="f-{{ id }}-password" name="password" type="password" autocomplete="current-password" required{% if focus %} autofocus{% endif %} />
+    </div>
+    {% if step %}{{ second_step(id, ways) }}{% endif %}
+  </div>
+{% endmacro %}

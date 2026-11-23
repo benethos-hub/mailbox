@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "components/ui.html" import card, csrf_field, dialog_button, dialog_buttons, form_dialog, icon, secret_card with context %}
-{% from "components/factor.html" import second_step with context %}
+{% from "components/factor.html" import confirm_fields with context %}
 {% block title %}Recovery key · {{ APP_NAME }}{% endblock %}
 {% block heading %}Recovery key{% endblock %}
 {% block subheading %}<div class="sub">The master key written out: it opens every stored secret</div>{% endblock %}
@@ -15,14 +15,7 @@
 {% call form_dialog("show-key", "Show the recovery key?", "Enter your password to show it.") %}
   <form method="post" action="/ui/recovery-key">
     {{ csrf_field() }}
-    <input type="hidden" name="name" value="{{ me.name }}" autocomplete="username" />
-    <div class="form-grid">
-      <div class="field">
-        <label for="f-password">Your password</label>
-        <input id="f-password" name="password" type="password" autocomplete="current-password" required autofocus />
-      </div>
-      {% if needs_code %}{{ second_step("key", ways) }}{% endif %}
-    </div>
+    {{ confirm_fields("key", step=needs_code, focus=True) }}
     {{ dialog_buttons("Show", icon="check-lg", danger=False) }}
   </form>
 {% endcall %}

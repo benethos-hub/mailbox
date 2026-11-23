@@ -67,8 +67,7 @@ class SecondFactorService:
         user = self._users.get(access.user_id)
         if not self._factors.has(user.id):
             raise ConflictError("you have no second factor")
-        await self._auth.confirm(access, password)
-        self._auth.confirm_code(access, code, answer)
+        await self._auth.reconfirm(access, password, code, answer)
         with self._activity.atomic():
             codes = self._factors.renew_codes(user.id)
             self._activity.record(said.RecoveryCodesRenewed(by=Actor.of(access)))

@@ -64,9 +64,7 @@ class PasskeyService:
         a code or a passkey. Nothing is stored before ``confirm``."""
         user = self._users.get(access.user_id)
         name = self._passkeys.checked_name(user.id, name)
-        await self._auth.confirm(access, password)
-        if self._factors.has(user.id):
-            self._auth.confirm_code(access, code, answer)
+        await self._auth.reconfirm(access, password, code, answer)
         return PasskeySetup(name, self._passkeys.registration(user, party))
 
     def confirm(self, access: Access, name: str, answer: Answer) -> DeviceAdded:
@@ -115,8 +113,7 @@ class PasskeyService:
             raise BadRequestError("tick at least one passkey")
         for passkey_id in passkey_ids:
             self._own(access, passkey_id)
-        await self._auth.confirm(access, password)
-        self._auth.confirm_code(access, code, answer)
+        await self._auth.reconfirm(access, password, code, answer)
         user = self._users.get(access.user_id)
         for passkey_id in dict.fromkeys(passkey_ids):
             self._remove(user, passkey_id, Actor.of(access))
