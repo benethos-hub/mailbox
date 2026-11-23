@@ -110,6 +110,13 @@ class Calls:
             reply = await self._gateway.ask(
                 system=system, content=content, schema=schema
             )
+            longest = max(map(len, _texts(reply.value.model_dump())), default=0)
+            if longest > self._limits.answer_text:
+                raise AnswerRefusedError(
+                    f"a text of the answer is longer than "
+                    f"{self._limits.answer_text} characters",
+                    reason="schema",
+                )
         except AnswerRefusedError as exc:
             self._record({"refused": exc.reason}, "", 0, 0, 0)
             self._metrics.answer_refused(exc.reason)
@@ -153,3 +160,14 @@ class Calls:
             ),
             self._gateway.model,
         )
+
+
+def _texts(value: object) -> list[str]:
+    """Every string in ``value``, nested ones among them."""
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, dict):
+        return [text for item in value.values() for text in _texts(item)]
+    if isinstance(value, list):
+        return [text for item in value for text in _texts(item)]
+    return []

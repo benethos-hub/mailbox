@@ -100,6 +100,11 @@ class Limits:
 
     model_calls_per_message: int = 1
     model_calls_per_day: int = 2000
+    # The longest quote or value an answer may hold. A longer one is
+    # refused as not fitting the schema, so an answer cannot copy the mail
+    # into the state file. Checked after parsing: the schema sent to the
+    # model does not change.
+    answer_text: int = 300
 
 
 @dataclass(frozen=True, slots=True)

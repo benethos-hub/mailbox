@@ -11,7 +11,7 @@ The class attributes are validated on instantiation.
 | `name`, `version`, `description` | identity. `name` equals the package name |
 | `triggers` | the feed events it wants, each with its route, `decide` or `observe`, and whether it wants the tick |
 | `actions` | the actions it may take, from the list below |
-| `limits` | model calls per message and per day |
+| `limits` | model calls per message and per day, and the longest quote or value an answer may hold, 300 characters |
 | `requires` | settings that must be present before it starts |
 | `default_keyword` | the keyword it sets when `MAILBOX_AGENTS_KEYWORD` is unset |
 | `prompt_version` | the version of the prompt its model step runs under. Read from the instance: `sorting` sets it from its list |

@@ -3,16 +3,18 @@ a model: found by discovery, so a new agent gets the checks too."""
 
 from __future__ import annotations
 
+import hashlib
 import importlib
 import importlib.util
 import inspect
+import json
 import re
 from typing import Any
 
 import pytest
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel
 
-from benethos_mailbox_agents.contract import discover
+from benethos_mailbox_agents.contract import Limits, discover
 from benethos_mailbox_agents.llm import evidence
 from benethos_mailbox_agents.llm.gateway import strict_schema
 from benethos_mailbox_agents.records import (
@@ -21,6 +23,7 @@ from benethos_mailbox_agents.records import (
     MailMessage,
     MessageRef,
 )
+from benethos_mailbox_agents.runtime.model import _texts
 from benethos_mailbox_agents.runtime.readiness import uses_model
 
 # The Claude API compiles a schema of structured output with at most this
@@ -29,7 +32,7 @@ from benethos_mailbox_agents.runtime.readiness import uses_model
 UNION_PARAMETERS = 16
 
 # An answer each agent's model could give, but with a value longer than
-# the 300 characters a quote or value may hold.
+# the 300 characters a quote or value may hold (``Limits.answer_text``).
 LONG = "x" * 301
 
 
@@ -138,8 +141,32 @@ def test_a_quote_with_the_word_of_its_frame_is_found() -> None:
 
 
 @pytest.mark.parametrize("name", ASKING)
-def test_an_answer_that_copies_the_mail_does_not_fit(name: str) -> None:
+def test_an_answer_that_copies_the_mail_goes_past_the_runtime_limit(
+    name: str,
+) -> None:
+    """The schema reads it, the runtime refuses it (``Calls.ask``)."""
     schema, answer = _too_long(name)
 
-    with pytest.raises(ValidationError, match="longer than 300"):
-        schema.model_validate(answer)
+    value = schema.model_validate(answer)
+
+    assert max(map(len, _texts(value.model_dump()))) > Limits().answer_text
+
+
+# The schema each agent sends to the model, as a digest of its canonical
+# JSON. A change here is a change of what the model reads: a new prompt
+# version, never a refactoring.
+SENT = {
+    "invoices": "7c4a889d07ed6a1b8a0b28cbe99f38616df041104ce16cdaddbf4a726acb2b9d",
+    "inquiries": "e791dfc941671cf4253830c1053f6a4ce295b90ff2c9fe080137970e8ea7d7e8",
+    "awaiting_reply": (
+        "f2fe71ce95925f3725756ac7b2a75576d1d50a3e17b3bec638c75788b4019186"
+    ),
+}
+
+
+@pytest.mark.parametrize("name", sorted(SENT))
+def test_the_schema_sent_to_the_model_stays(name: str) -> None:
+    schema = _schema_modules()[name]
+    answer = schema.Inquiry if name == "inquiries" else schema.Answer
+    text = json.dumps(strict_schema(answer), sort_keys=True, separators=(",", ":"))
+    assert hashlib.sha256(text.encode()).hexdigest() == SENT[name]
