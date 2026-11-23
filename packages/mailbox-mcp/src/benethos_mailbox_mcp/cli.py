@@ -119,10 +119,11 @@ def _unguarded(settings: config.Settings, bearer: str | None) -> str | None:
 
 def configure_logging(level: str) -> None:
     """The lines of the service's log (``benethos_mailbox_common.log.lines``):
-    short and in colour on a terminal, else plain, a noted secret masked."""
+    short and in colour on a terminal, else plain, a noted secret masked.
+    The server's own lines at ``level``, those of a library from WARNING
+    on."""
     # stderr only: on stdio, stdout carries the JSON-RPC stream.
-    package = __name__.rpartition(".")[0]
-    logging.basicConfig(level=level, handlers=[lines.stderr_handler(package)])
+    lines.to_stream(__name__.rpartition(".")[0], level)
     for name in HELD_AT_WARNING:
         logging.getLogger(name).setLevel(logging.WARNING)
 

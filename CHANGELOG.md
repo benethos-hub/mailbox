@@ -23,6 +23,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `benethos-mailbox-mcp` writes the lines of a library from `WARNING` on
+  only, whatever `MAILBOX_MCP_LOG_LEVEL` says, as the agents do. The
+  level sets its own lines. The lines of uvicorn stay. Before, at
+  `DEBUG` every library wrote its debug lines. `benethos-mailbox-common`:
+  `lines.to_stream` sets up the log of a program.
 - `benethos-mailbox-agents`: `mailbox_agents_step_failures_total` also
   counts an update that could not be observed and a message whose fetch
   stayed stuck while the service was away. Before, both were logged as a
