@@ -257,6 +257,7 @@
   "benethos_mailbox_common.values": {
     "__all__": [
       "canonical",
+      "pauses",
       "secret",
       "sizes",
       "text"
@@ -268,6 +269,11 @@
     },
     "compact": {
       "signature": "(value: 'object') -> 'str'"
+    }
+  },
+  "benethos_mailbox_common.values.pauses": {
+    "doubled": {
+      "signature": "(first: 'float', times: 'int', ceiling: 'float') -> 'float'"
     }
   },
   "benethos_mailbox_common.values.secret": {

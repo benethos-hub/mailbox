@@ -113,6 +113,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   Before, the page showed nothing and the MCP server an empty body.
   `benethos-mailbox-common`: `plaintext.mail_text` gives the text of a
   mail as both read it.
+- `benethos-mailbox-service` no longer stops when the server of an
+  account with push fails to answer for days. After about 1025 failed
+  watches in a row the pause before the next attempt became too large a
+  number, and the error ended the service. `benethos-mailbox-common`:
+  `pauses.doubled` gives a pause that doubles up to a ceiling.
 
 ### Security
 

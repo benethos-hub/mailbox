@@ -37,6 +37,7 @@ packages/mailbox-common/
                         #   environment, the file, the defaults
     values/             # values written one way
       canonical.py      # JSON: compact to send, canonical to hash
+      pauses.py         # doubled: a pause that doubles up to a ceiling
       sizes.py          # MIB, and a size in megabytes for a message
       secret.py         # new_id, token, digest, hmac_hex, same. Every
                         #   length with its reason
