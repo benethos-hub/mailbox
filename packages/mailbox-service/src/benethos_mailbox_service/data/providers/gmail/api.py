@@ -56,6 +56,8 @@ P = TypeVar("P", bound=Page)
 
 
 class GmailApi(TokenApi):
+    who = "gmail"
+
     def __init__(
         self,
         tokens: TokenSource,
@@ -114,11 +116,6 @@ class GmailApi(TokenApi):
 
         return await signed(self.tokens, send)
 
-    async def read(self, shape: type[S], method: str, path: str, **kwargs: Any) -> S:
-        """One request, its answer read as ``shape``."""
-        answer = await self.call(method, path, **kwargs)
-        return wire.parse(shape, answer.body, "gmail answered in a shape of its own")
-
     async def pages(
         self, shape: type[P], path: str, params: list[tuple[str, str]]
     ) -> AsyncIterator[P]:
@@ -149,9 +146,6 @@ class GmailApi(TokenApi):
         """The labels read again: they changed, or a new sign-in may see
         others."""
         self._labels = None
-
-    async def close(self) -> None:
-        await self._http.close()
 
 
 def _repeatable(method: str, path: str) -> bool:

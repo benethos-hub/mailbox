@@ -64,6 +64,8 @@ L = TypeVar("L", bound=Listing[Any])
 
 
 class Graph(TokenApi):
+    who = "microsoft"
+
     def __init__(
         self,
         tokens: TokenSource,
@@ -133,13 +135,6 @@ class Graph(TokenApi):
             )
 
         return await signed(self.tokens, send)
-
-    async def read(self, shape: type[S], method: str, path: str, **kwargs: Any) -> S:
-        """One Graph request, its answer read as ``shape``."""
-        answer = await self.call(method, path, **kwargs)
-        return wire.parse(
-            shape, answer.body, "microsoft answered in a shape of its own"
-        )
 
     async def pages(self, first: L) -> AsyncIterator[L]:
         """``first`` and every page after it, as Graph links them."""
@@ -249,9 +244,6 @@ class Graph(TokenApi):
     def forget(self) -> None:
         """The folders read again: after a new sign-in they may differ."""
         self._roles = None
-
-    async def close(self) -> None:
-        await self._http.close()
 
 
 def own_path(link: str) -> str:
