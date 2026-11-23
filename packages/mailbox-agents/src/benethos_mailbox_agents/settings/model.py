@@ -13,7 +13,7 @@ from pydantic import Field, SecretStr, ValidationError, field_validator, model_v
 from benethos_mailbox_common.log import redact
 from benethos_mailbox_common.settings import files
 
-from ..errors import ConfigError, describe_invalid
+from ..errors import ConfigError
 from .folders import DATA_DIR, folders, rebased
 
 # The form a keyword must have, MAILBOX_AGENTS_KEYWORD and an agent's
@@ -204,7 +204,5 @@ def load_settings(env_file: Path | None = None, **overrides: Any) -> Settings:
     try:
         return files.load(Settings, where.env_file, **rebased(where, overrides))
     except ValidationError as exc:
-        problems = describe_invalid(
-            exc, lambda place: f"{PREFIX}{place.upper() or 'SETTINGS'}"
-        )
+        problems = ", ".join(files.problems(Settings, exc))
         raise ConfigError(f"wrong settings: {problems}") from None
