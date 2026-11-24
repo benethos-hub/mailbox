@@ -137,7 +137,7 @@ def test_status_reads_the_sorting_list_once(
 
     assert main(["status"]) == 0
 
-    assert "sorting 1: ready" in capsys.readouterr().out
+    assert "sorting 2: ready" in capsys.readouterr().out
     assert reads == [listed]
 
 
