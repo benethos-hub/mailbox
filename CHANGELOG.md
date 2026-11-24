@@ -6,6 +6,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- The images build on the build of `python:3.15-slim` from 2026-11-24,
+  still Python 3.15.2. It brings the Debian updates of OpenSSL 3.5.9,
+  glibc and zlib.
+
 ## [0.11.0] - 2026-11-23
 
 ### Added
