@@ -248,4 +248,4 @@ machine. How they fit into the tests of the agents:
 | `live/mailbox-agents/agents_smoke.py` | the agents' test account | nothing |
 | `live/mailbox-agents/sorting.py` | the agents' test account | moves and keywords of `sorting`, put back. The folders `Providers`, `Providers/CloudHost` and `Providers/Telco` stay, and `Projects` and `Projects/Harbor` when the model chose that group. One model call per message no sender rule settles, in each of its two runs |
 | `live/mailbox-agents/invoices.py` | the agents' test account | as `sorting.py`, and the keyword `agent-invoice` and a move into `Invoices/Telco`, all put back. One model call per message and run |
-| `live/mailbox-agents/gold.py` | the agents' test account | nothing there. It writes `containers/live/mailbox-agents/secrets/gold-<agent>.jsonl` |
+| `live/mailbox-agents/gold.py` | the agents' test account | nothing there. It writes `gold-<agent>.jsonl` beside the settings file it reads, `containers/live/mailbox-agents/secrets/` by default, or into the folder `--out` names |

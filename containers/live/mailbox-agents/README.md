@@ -29,7 +29,7 @@ or in WSL. From the repository:
 sh containers/live/mailbox-agents/setup.sh
 ```
 
-The mailbox service is built from the checkout, since the agents take
+The mailbox service is built anew from the checkout each time, since the agents take
 the service of their own minor version only, and on a branch before a
 release no published image has it. To pull a published release
 instead:
@@ -39,7 +39,11 @@ MAILBOX_LIVE_SERVICE=published MAILBOX_VERSION=0.11.1 sh containers/live/mailbox
 ```
 
 The script makes everything anew each time. It removes the volumes of an
-earlier run, then, not in this order:
+earlier run and what it made in `secrets/` before, through
+`clear-secrets.sh`, which keeps the Claude API key. When `secrets/` holds
+anything the setup does not make, such as the state files of a run on a
+real account, it names each, stops and changes nothing: move it first.
+Then, not in this order:
 
 - makes a test CA and a certificate for `mail.agents.test`,
 - starts Stalwart in its bootstrap mode, sets host name and domain
@@ -140,7 +144,8 @@ docker compose -f containers/live/mailbox-agents/compose.yaml --profile gpu up -
 
 ### Comparing models
 
-`live/mailbox-agents/gold.py` writes the labels of the invented mail as gold files, and
+`live/mailbox-agents/gold.py` writes the labels of the invented mail as gold files,
+beside the settings file it reads or into the folder `--out` names, and
 `eval` runs an agent against them with any alias of the gateway. The key
 of `agent.env` reaches the `mail-classifier` aliases only, so another
 alias needs the master key of `secrets/gateway.env`:

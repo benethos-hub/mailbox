@@ -62,9 +62,19 @@ case "$backend" in
     *) say "MAILBOX_LIVE_LOCAL is gpu or cpu, not $backend"; exit 2 ;;
 esac
 
+# Before anything is removed: secrets/ may hold what the setup does not
+# make, such as the state files of a run on a real account, and then the
+# setup stops and changes nothing.
+sh "$here/clear-secrets.sh" "$secrets"
+
 say "removing an earlier run"
 $compose --profile gpu --profile cpu down --volumes --remove-orphans >/dev/null 2>&1 || true
-rm -rf "$secrets"
+if [ "${MAILBOX_LIVE_SERVICE:-checkout}" = checkout ]; then
+    # Built anew each time: compose takes an image of the same name as it
+    # is, so an earlier build would run an older version of the service.
+    say "the mailbox service built from the checkout"
+    $compose build mailbox-service >/dev/null
+fi
 mkdir -p "$secrets/tls"
 (umask 022 && mkdir -p "$here/models")
 if [ -n "$anthropic_key" ]; then
