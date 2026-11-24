@@ -65,17 +65,27 @@ of it is versioned as `config/benethos-mailbox-agents/sorting.example.json`.
      "senders": ["*@bank-one.example", "service@bank-two.example"],
      "hold": true},
     {"name": "CloudHost", "folder": "CloudHost",
-     "senders": ["*@cloudhost.example"]}
+     "senders": ["*@cloudhost.example"]},
+    {"name": "Project Alpha", "folder": "Projects/Alpha",
+     "senders": ["*@client.example"],
+     "topic": "Mail about the project Alpha: the offer, the weekly status, the acceptance",
+     "by_topic": "act"},
+    {"name": "Applications", "folder": "Applications",
+     "topic": "Applications and CVs of people who want to work with the owner"}
   ]
 }
 ```
 
 | Field | Meaning | Rule |
 |---|---|---|
-| `name` | what `report` and the decision call the group | unique, case aside, no space at its ends, not `none` in any case |
+| `name` | what `report` and the decision call the group | unique, case aside, no space at its ends, not `none` in any case. For a group with a topic one line, without control characters |
 | `folder` | where its mail goes, `/` between the names | unique, case aside. No name empty, `.` or `..`, nor with a space at its ends. A folder above it that another group's path shares is written alike in both |
-| `senders` | who belongs to it | at least one. A rule belongs to one group |
+| `senders` | who belongs to it | optional. A rule belongs to one group, or to several that each have a topic |
+| `topic` | one line on the mail that belongs to the group, which the model is given (2026-11-24) | optional. 1 to 300 characters, no space at its ends, no line break, no control character. At most 50 groups have one |
+| `by_topic` | how far a choice by the topic goes: `record` or `act` (2026-11-24) | only with a topic. `record` when left out |
 | `hold` | section 5 | optional, `false` when left out |
+
+A group names senders, a topic or both.
 
 The folder is chosen freely (decided 2026-11-18): one folder for several
 senders, such as all banks in `Bank`, one per sender, or a folder below
@@ -87,7 +97,10 @@ never get the second, as the runtime makes no folder whose name exists in
 another case. A group named `none` would share the label of a message in
 no group, and `report` would leave it out. A domain with an empty name,
 such as `*@.shop.example`, `*@shop..example` or `a@b.example.`, matches no
-sender. Each is named by its group, and a rule by its place too.
+sender. A group with neither senders nor a topic, `by_topic` without a
+topic, one rule in two groups when one of them has no topic, and more than
+50 groups with a topic are refused as well (2026-11-24). Each is named by
+its group, and a rule by its place too. A message never quotes a topic.
 
 ### Sender rules
 

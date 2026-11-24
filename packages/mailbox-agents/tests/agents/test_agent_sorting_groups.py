@@ -19,9 +19,7 @@ from benethos_mailbox_agents.agents.sorting.groups import (
 )
 from benethos_mailbox_agents.errors import ConfigError
 
-
-def groups(*entries: dict[str, Any]) -> Groups:
-    return Groups.model_validate({"groups": list(entries)})
+from .sorting_helpers import groups, refused
 
 
 @pytest.fixture
@@ -216,16 +214,7 @@ def test_a_group_is_moved_unless_it_is_held(listed: Groups) -> None:
 def test_a_wrong_list_says_what_is_wrong(
     tmp_path: Path, entries: list[dict[str, Any]], says: str
 ) -> None:
-    path = tmp_path / "sorting.json"
-    path.write_text(json.dumps({"groups": entries}), encoding="utf-8")
-
-    with pytest.raises(ConfigError, match="sorting.json") as raised:
-        load_groups(path)
-
-    assert says in raised.value.message
-    for entry in entries:
-        for rule in entry["senders"]:
-            assert rule not in raised.value.message
+    refused(tmp_path, entries, says)
 
 
 def test_groups_may_share_a_folder_above_theirs_spelt_alike() -> None:

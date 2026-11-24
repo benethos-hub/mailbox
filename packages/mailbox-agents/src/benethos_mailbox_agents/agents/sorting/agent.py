@@ -47,8 +47,16 @@ CANDIDATES = 10
 
 def _version(groups: Groups) -> str:
     """The version of a list: a digest of the groups as read, in JSON with
-    sorted keys, so the same list gives the same version."""
-    normal = json.dumps(groups.model_dump(mode="json"), sort_keys=True)
+    sorted keys, so the same list gives the same version. A group without
+    a topic is read without ``topic`` and ``by_topic``, so a list written
+    before either existed keeps its version."""
+    found = []
+    for group in groups.groups:
+        read = group.model_dump(mode="json")
+        if group.topic is None:
+            del read["topic"], read["by_topic"]
+        found.append(read)
+    normal = json.dumps({"groups": found}, sort_keys=True)
     return "list-" + secret.digest(normal)[:12]
 
 
