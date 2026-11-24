@@ -84,3 +84,11 @@ def test_setup_clears_through_it_before_it_removes_anything() -> None:
 
     assert 'rm -rf "$secrets"' not in text
     assert text.index("clear-secrets.sh") < text.index("down --volumes")
+
+
+def test_setup_builds_the_service_from_the_checkout_before_it_runs_it() -> None:
+    """compose takes an image of the same name as it is: without the
+    build an earlier one would run an older service."""
+    text = SETUP.read_text(encoding="utf-8")
+
+    assert text.index("build mailbox-service") < text.index("keys generate")

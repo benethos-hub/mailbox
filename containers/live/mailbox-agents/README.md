@@ -29,7 +29,7 @@ or in WSL. From the repository:
 sh containers/live/mailbox-agents/setup.sh
 ```
 
-The mailbox service is built from the checkout, since the agents take
+The mailbox service is built anew from the checkout each time, since the agents take
 the service of their own minor version only, and on a branch before a
 release no published image has it. To pull a published release
 instead:
