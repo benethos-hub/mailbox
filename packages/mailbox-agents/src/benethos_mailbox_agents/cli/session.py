@@ -18,7 +18,7 @@ from ..llm.gateway import Gateway
 from ..logbook import process, record
 from ..runtime.loop import Worker
 from ..runtime.model import NoModel
-from ..runtime.readiness import start, uses_model
+from ..runtime.readiness import start
 from ..settings import PREFIX, Settings
 from ..sources.mailbox import Mailbox, connect
 from ..store import Store, earlier_file, path_for
@@ -67,11 +67,12 @@ def mailbox_for(settings: Settings) -> AbstractAsyncContextManager[Mailbox]:
 async def upstreams(
     agent: Agent, settings: Settings
 ) -> AsyncIterator[tuple[Mailbox, Gateway | NoModel]]:
-    """The mailbox service, and the gateway for an agent that asks a model."""
+    """The mailbox service, and the gateway for an agent that asks a model,
+    as it is configured."""
     async with AsyncExitStack() as stack:
         mailbox = await stack.enter_async_context(mailbox_for(settings))
         gateway: Gateway | NoModel = NoModel()
-        if uses_model(type(agent)):
+        if agent.asks_model():
             gateway = await stack.enter_async_context(
                 Gateway(
                     settings.gateway_url or "",

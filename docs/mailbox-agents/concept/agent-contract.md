@@ -71,6 +71,7 @@ that is not lower case letters, digits and dashes, the same form
 | `observe(message, context)` | for an event routed to `observe`: the actions it calls for, no model |
 | `tick(now, context)` | for agents with deadlines: what is due |
 | `prepare()` | reads what the agent needs beyond its settings, such as a list in a file |
+| `asks_model()` | whether the agent, as configured, asks a model and needs the gateway. Asked after `prepare()`. By default whether its limits allow a call. `sorting` asks one only when a group of its list has a topic (2026-11-24) |
 | `backfill_folder(folder)` | whether `backfill` takes up the messages of this folder besides the inbox and sent mail. No folder by default |
 | `folders_needed()` | the folders its configuration names and expects to be there, which `status` looks up. None by default |
 | `describe_folders(folders)` | for `status`: a line for each folder of an account that matters to it, such as one it looks in and what it does there. `folders` are the account's folders by path. Folder names only. Asked of an agent whose `folders_needed()` names one, nothing by default |
@@ -159,7 +160,10 @@ whatever the stage and compares no stage. This holds for an effect, for
 message.
 
 `status` reports for each agent whether it is ready and which required
-setting is missing, without starting it. For a ready agent that names
+setting is missing, without starting it. The settings of the gateway are
+required of an agent whose `asks_model()` says so once it is prepared,
+and an agent that cannot be prepared yet, as a setting of its own is
+missing, is not asked. For a ready agent that names
 folders it expects, it looks them up in the mailbox service, in each
 account the settings name or else in each account the user is granted,
 lists the lines `describe_folders` gives per account, and names each one

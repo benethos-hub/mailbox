@@ -36,13 +36,38 @@ MODEL_SETTINGS = ("gateway_url", "gateway_key", "model")
 
 
 def uses_model(agent: type[Agent]) -> bool:
+    """Whether the limits of ``agent`` allow a model call: whether it may
+    ask a model in some configuration."""
     return agent.limits.model_calls_per_message > 0
 
 
-def required(agent: type[Agent]) -> tuple[str, ...]:
-    """The settings ``agent`` needs before it starts."""
-    found = MAILBOX_SETTINGS + (MODEL_SETTINGS if uses_model(agent) else ())
+def required(agent: type[Agent], asks_model: bool) -> tuple[str, ...]:
+    """The settings ``agent`` needs before it starts, those of the gateway
+    when it asks a model."""
+    found = MAILBOX_SETTINGS + (MODEL_SETTINGS if asks_model else ())
     return found + tuple(n for n in agent.requires.settings if n not in found)
+
+
+def _prepared(cls: type[Agent], settings: Settings) -> Agent | ConfigError | None:
+    """The agent built and prepared, or what its preparation found wrong.
+    None while a setting it requires of its own is missing, as it cannot be
+    prepared then. Whether it asks a model is known only once it is."""
+    if settings.missing(cls.requires.settings):
+        return None
+    try:
+        _own_keyword(cls, settings)
+        agent = cls(settings)
+        agent.prepare()
+    except (ConfigError, ContractError) as exc:
+        return ConfigError(exc.message)
+    return agent
+
+
+def _missing(
+    cls: type[Agent], settings: Settings, prepared: Agent | ConfigError | None
+) -> list[str]:
+    asks = isinstance(prepared, Agent) and prepared.asks_model()
+    return settings.missing(required(cls, asks))
 
 
 @dataclass(frozen=True)
@@ -80,32 +105,29 @@ def _own_keyword(agent: type[Agent], settings: Settings) -> None:
 def readiness(agent: type[Agent], settings: Settings) -> Readiness:
     """Whether ``agent`` could start with ``settings``: the settings it
     misses, or what its preparation found wrong, or else the agent
-    prepared."""
-    missing = tuple(settings.missing(required(agent)))
+    prepared. The settings of the gateway are missing only for an agent
+    that, prepared, asks a model."""
+    prepared = _prepared(agent, settings)
+    missing = tuple(_missing(agent, settings, prepared))
     if missing:
         return Readiness(agent.name, agent.version, missing, None)
-    try:
-        _own_keyword(agent, settings)
-        prepared = agent(settings)
-        prepared.prepare()
-    except (ConfigError, ContractError) as exc:
-        return Readiness(agent.name, agent.version, missing, exc.message)
+    if isinstance(prepared, ConfigError):
+        return Readiness(agent.name, agent.version, missing, prepared.message)
     return Readiness(agent.name, agent.version, missing, None, prepared)
 
 
 def start(cls: type[Agent], settings: Settings) -> Agent:
     """The agent, once its settings and its preparation are found ready.
     It is built and prepared once, what it reads besides read once."""
-    missing = settings.missing(required(cls))
+    prepared = _prepared(cls, settings)
+    missing = _missing(cls, settings, prepared)
     if missing:
         raise ConfigError(f"{cls.name} misses settings: {', '.join(missing)}")
-    try:
-        _own_keyword(cls, settings)
-        agent = cls(settings)
-        agent.prepare()
-    except (ConfigError, ContractError) as exc:
-        raise ConfigError(f"{cls.name} is not ready: {exc.message}") from None
-    return agent
+    if isinstance(prepared, Agent):
+        return prepared
+    # Not None: a setting of its own missing is among those missing.
+    problem = prepared.message if prepared is not None else "not prepared"
+    raise ConfigError(f"{cls.name} is not ready: {problem}")
 
 
 class Folders(Protocol):

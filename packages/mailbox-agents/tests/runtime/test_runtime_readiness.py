@@ -10,9 +10,15 @@ import pytest
 
 from benethos_mailbox_agents.agents.invoices.agent import Invoices
 from benethos_mailbox_agents.contract import Action, ActionRequest
+from benethos_mailbox_agents.errors import ConfigError
 from benethos_mailbox_agents.records import FolderRef, MessageRef
 from benethos_mailbox_agents.runtime.actions import Executor, Outcome
-from benethos_mailbox_agents.runtime.readiness import accounts_of, folder_lines
+from benethos_mailbox_agents.runtime.readiness import (
+    accounts_of,
+    folder_lines,
+    readiness,
+    start,
+)
 
 from ..agents_fake import ACCOUNT, wire_message
 from ..agents_helpers import Echo, Wired, settings, wired
@@ -85,3 +91,55 @@ async def test_status_says_another_case_where_the_executor_refuses_it(
 
     assert (f"folder in another case in {ACCOUNT}: {path}" in said) is another_case
     assert (done == [Outcome.REFUSED]) is another_case
+
+
+class Configured(Echo):
+    """Asks a model or not, as its configuration says once prepared."""
+
+    asks = False
+    prepared = False
+
+    def prepare(self) -> None:
+        self.prepared = True
+
+    def asks_model(self) -> bool:
+        assert self.prepared, "asked before it was prepared"
+        return self.asks
+
+
+MAILBOX = {"service_url": "https://mailbox.example.test", "service_token": "t"}
+# The model alias the helper sets: the gateway's URL and key are missing.
+GATEWAY = ("MAILBOX_AGENTS_GATEWAY_URL", "MAILBOX_AGENTS_GATEWAY_KEY")
+
+
+def test_an_agent_that_asks_no_model_starts_without_the_gateway() -> None:
+    Configured.asks = False
+
+    found = readiness(Configured, settings(**MAILBOX))
+
+    assert found.ready and found.agent is not None
+    assert not start(Configured, settings(**MAILBOX)).asks_model()
+
+
+def test_an_agent_that_asks_a_model_misses_the_gateway() -> None:
+    Configured.asks = True
+
+    found = readiness(Configured, settings(**MAILBOX))
+
+    assert found.missing == GATEWAY
+    with pytest.raises(
+        ConfigError, match="echo misses settings: MAILBOX_AGENTS_GATEWAY"
+    ):
+        start(Configured, settings(**MAILBOX))
+
+
+def test_the_gateway_is_named_with_the_mailbox_service() -> None:
+    Configured.asks = True
+
+    found = readiness(Configured, settings())
+
+    assert found.missing == (
+        "MAILBOX_AGENTS_SERVICE_URL",
+        "MAILBOX_AGENTS_SERVICE_TOKEN",
+        *GATEWAY,
+    )

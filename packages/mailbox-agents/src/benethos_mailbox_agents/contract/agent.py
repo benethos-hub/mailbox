@@ -270,6 +270,12 @@ class Agent(ABC):
         before the agent starts, and by ``status``."""
         return None
 
+    def asks_model(self) -> bool:
+        """Whether this agent, as configured, asks a model, so it needs the
+        gateway. Asked after :meth:`prepare`. By default whether its limits
+        allow a call."""
+        return self.limits.model_calls_per_message > 0
+
     # -- provided -------------------------------------------------------------
 
     @classmethod
