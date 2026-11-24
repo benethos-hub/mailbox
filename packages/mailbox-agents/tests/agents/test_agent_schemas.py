@@ -71,6 +71,8 @@ def _too_long(name: str) -> tuple[type[BaseModel], dict[str, Any]]:
         fields: dict[str, Any] = dict.fromkeys(schema.FIELDS)
         fields["role"] = {"value": LONG, "quote": "Python"}
         return schema.Inquiry, {"label": "inquiry", "quote": "Projektanfrage", **fields}
+    if name == "sorting":
+        return schema.answer_for(("A",)), {"group": "A", "quote": LONG}
     raise AssertionError(f"give {name} an answer here that copies the mail")
 
 
@@ -161,12 +163,23 @@ SENT = {
     "awaiting_reply": (
         "f2fe71ce95925f3725756ac7b2a75576d1d50a3e17b3bec638c75788b4019186"
     ),
+    # Made for the groups to choose from: here for two of them.
+    "sorting": "0e46e2bdc657fde262bc22e39881071e97c15c3980516656266b65839744b44d",
 }
+
+
+def _sent(name: str) -> type[BaseModel]:
+    """The answer model of agent ``name``, for sorting the one for two
+    groups."""
+    schema = _schema_modules()[name]
+    if name == "sorting":
+        return schema.answer_for(("Project Alpha", "Project Beta"))
+    return schema.Inquiry if name == "inquiries" else schema.Answer
 
 
 @pytest.mark.parametrize("name", sorted(SENT))
 def test_the_schema_sent_to_the_model_stays(name: str) -> None:
-    schema = _schema_modules()[name]
-    answer = schema.Inquiry if name == "inquiries" else schema.Answer
-    text = json.dumps(strict_schema(answer), sort_keys=True, separators=(",", ":"))
+    found = strict_schema(_sent(name))
+    text = json.dumps(found, sort_keys=True, separators=(",", ":"))
+    assert _unions(found, found.get("$defs", {})) <= UNION_PARAMETERS
     assert hashlib.sha256(text.encode()).hexdigest() == SENT[name]

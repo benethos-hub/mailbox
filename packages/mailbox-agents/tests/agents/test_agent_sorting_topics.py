@@ -7,9 +7,13 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from pydantic import ValidationError
 
+from benethos_mailbox_agents.agents import sorting as sorting_agent
 from benethos_mailbox_agents.agents.sorting.agent import _version
 from benethos_mailbox_agents.agents.sorting.groups import Group, Groups
+from benethos_mailbox_agents.agents.sorting.schema import answer_for, system_for
+from benethos_mailbox_agents.contract import load_prompt
 
 from .sorting_helpers import groups, refused
 
@@ -207,3 +211,33 @@ def test_a_group_is_found_by_its_name(mixed: Groups) -> None:
     assert found is not None and found.topic == BETA
     assert mixed.named("beta") is None
     assert mixed.named("none") is None
+
+
+def test_the_system_text_names_each_group_to_choose_from_in_a_line(
+    mixed: Groups,
+) -> None:
+    prompt = load_prompt(sorting_agent.__name__, "system", "v1")
+    choice = mixed.candidates("office@client.example")
+
+    text = system_for(prompt, choice)
+
+    assert text.startswith(prompt.rstrip("\n"))
+    tail = text[len(prompt.rstrip("\n")) :].strip().splitlines()
+    assert tail == [f"- Alpha: {TOPIC}", f"- Beta: {BETA}"]
+    for other in ("Hosting Two", "Applications", "Bank"):
+        assert other not in text
+
+
+def test_the_answer_names_a_group_to_choose_from_or_none() -> None:
+    answer = answer_for(("Alpha", "Beta"))
+
+    assert answer.model_validate({"group": "Beta", "quote": "q"}).model_dump() == {
+        "group": "Beta",
+        "quote": "q",
+    }
+    assert answer.model_validate({"group": "none", "quote": ""})
+    for wrong in ({"group": "Bank", "quote": "q"}, {"group": "Beta"}):
+        with pytest.raises(ValidationError):
+            answer.model_validate(wrong)
+    with pytest.raises(ValidationError):
+        answer.model_validate({"group": "Beta", "quote": "q", "folder": "Bank"})
