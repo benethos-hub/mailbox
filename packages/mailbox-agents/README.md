@@ -38,7 +38,8 @@ work on a mailbox continuously. Each one looks at mail as it arrives or
 leaves, decides one narrow question about it and takes one
 reversible action: a keyword, or a move to a folder. The first ones sort
 invoices, track sent mail that still waits for a reply, recognise project
-inquiries and file the mail of listed senders into folders.
+inquiries and file mail into folders, by its sender or by the topic
+of a group.
 
 Mailbox is self-hosted and has five packages. The agents do not work
 alone. They need the service, which runs on your own machine or server

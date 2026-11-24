@@ -137,7 +137,8 @@ packages/mailbox-agents/src/benethos_mailbox_agents/
                   # rules, patterns.py the domains and phrases it knows
     awaiting_reply/  # schema.py, prompts/, text.py what its rules read
                   # in a mail
-    sorting/      # groups.py the list of groups of senders, no model
+    sorting/      # groups.py the list of groups, by senders and
+                  # topics, schema.py, prompts/ the choice by a topic
 packages/mailbox-agents/tests/  # offline: REST and gateway through
                                 # httpx.MockTransport
 live/mailbox-agents/    # run by hand, outside testpaths, against the test

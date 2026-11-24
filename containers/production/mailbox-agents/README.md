@@ -18,8 +18,10 @@ This folder is all it needs, no clone of the repository.
    `agents/sorting/sorting.json`, its groups, made after
    `sorting.example.json`, and `inquiries` needs
    `agents/inquiries/inquiries.json`, its sender domains and phrases, made
-   after `inquiries.example.json`. `sorting` and `counting` ask no model
-   and have no `gateway_key`.
+   after `inquiries.example.json`. `counting` asks no model and has no
+   `gateway_key`. `sorting` asks one only when a group of its list has a
+   topic: then it needs the gateway settings in its `.env`, as
+   `agents/sorting/.env.example` shows, and a `gateway_key`.
 3. Put the agent's secrets into `secrets/<name>/`, one file each,
    readable by the container's user (uid 10001) and nobody else:
 

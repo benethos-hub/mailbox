@@ -15,6 +15,11 @@ version 3 on 2026-11-18, `sorting` and `invoices` on 2026-11-22, and
 `invoices`, `inquiries` and `awaiting_reply` in the versions of 0.11.0
 on 2026-11-23. None changed anything.
 
+Since 2026-11-24 `sorting` version 2 also assigns a message by the topic
+of a group, a line of the owner that a model is given, where no sender
+rule settles it. Its choice is recorded only, unless the group acts on
+it ([sorting](../mailbox-agents/concept/agent-sorting.md)).
+
 ### Next
 
 | Step | Content |

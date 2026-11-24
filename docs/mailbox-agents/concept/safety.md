@@ -30,7 +30,14 @@ Further rules:
   Unset, an invoice in the inbox is marked and stays. So in `full` a
   forged invoice that lies in such a folder is filed beside the real
   ones. The folder it lies in was chosen by a rule or by hand, never by
-  the model ([invoices](agent-invoices.md)).
+  the model ([invoices](agent-invoices.md)). `sorting` from version 2 is
+  the second exception (2026-11-24): it moves a message into the folder
+  of the group its model chose by the group's topic, but only where the
+  owner set `"by_topic": "act"` for that group, and only with a quote
+  found in the mail, not in the topics. The model chooses among the
+  groups of the list it is given and names no folder. A held group stays
+  held. So a message that only names a project can land in the project's
+  folder ([sorting](agent-sorting.md)).
 - **A value needs evidence.** A label and every extracted field carry a
   quote. The code looks for the quote in the parts of the mail the model
   was given, each on its own: sender, subject, attachment names, text.
