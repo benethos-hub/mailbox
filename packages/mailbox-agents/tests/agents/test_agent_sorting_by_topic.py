@@ -207,7 +207,7 @@ async def test_a_quote_not_in_the_mail_is_not_acted_on(
 ) -> None:
     topic_world.fake_gateway.answer(said("Applications", quote))
 
-    await run(topic_world, "stranger", agent(tmp_path))
+    assert await run(topic_world, "stranger", agent(tmp_path)) == "decided"
 
     found = decision(topic_world, "stranger")
     assert found["refused"] == "evidence"

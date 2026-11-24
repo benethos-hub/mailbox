@@ -2,30 +2,36 @@
 
 Part of the [concept](../CONCEPT.md).
 
-> **Status: built, and run in `shadow` and in `full` on the test account.
-> On a real mailbox it ran on 2026-11-22, read-only and in `shadow`, and
-> changed nothing. A run on the owner's account is the owner's
-> decision, in `shadow` first.** Its purpose: the mail of providers such
-> as a shop, a hoster or a bank goes into a folder of its own, and one
-> folder may take several, such as all banks.
+> **Status: version 2 built, the choice by a topic not yet measured on
+> the test account. Version 1, by the sender alone, ran in `shadow` and in
+> `full` on the test account, and on a real mailbox on 2026-11-22,
+> read-only and in `shadow`, and changed nothing. Version 2 has not run on
+> a real mailbox. A run on the owner's account is the owner's decision,
+> in `shadow` first.** Its purpose: the mail of providers such as a shop,
+> a hoster or a bank goes into a folder of its own, and one folder may
+> take several, such as all banks. With a topic, mail of a project, a
+> customer or a kind, such as applications, finds its folder by what it
+> says.
 
-**Question:** is the sender of this message in the inbox one of a listed
-group, and which folder is the group's?
+**Question:** does this message in the inbox belong to a listed group, by
+its sender or by what it says, and which folder is the group's?
 
 | | |
 |---|---|
 | Triggers | `message.created` in the inbox, and `backfill` for older mail |
-| Baseline | the sender rules of the list. They are the whole agent |
-| Model | none |
+| Baseline | the sender rules of the list |
+| Model | one call for a message no sender rule settles, when a group has a topic: the group or `none`, one quote |
 | Actions | `move_to_folder`, `create_folder`, and `add_keyword` with the move |
 | Keyword | `agent-sorted`, set with each move, see section 3 |
 
 ## 1. Two stages, two agents (decided 2026-11-18)
 
-`sorting` moves by the sender alone, from the inbox into the group's
-folder. Whether a message is an invoice is asked afterwards, by
-[invoices](agent-invoices.md), which moves it on within the folder it lies in. No
-agent does both.
+`sorting` moves by the sender, or by the topic of a group, from the inbox
+into the group's folder. Whether a message is an invoice is asked
+afterwards, by [invoices](agent-invoices.md), which moves it on within the
+folder it lies in. No agent does both. `invoices` stays an agent of its
+own: a topic chooses a folder, it does not tell an invoice from a
+reminder.
 
 Each agent works without the other. `sorting` knows nothing of invoices.
 `invoices` knows nothing of groups: it is told at its start which folders
@@ -131,6 +137,40 @@ its group, and a rule by its place too. A message never quotes a topic.
   as too broad. Whether two names are a registered domain, such as
   `co.uk`, is not checked.
 
+### A topic (decided 2026-11-24)
+
+A topic is one sentence of the owner on the mail that belongs to the
+group, such as `Mail about the project Alpha: the offer, the weekly
+status, the acceptance`. It is part of the prompt: the fixed text of the
+prompt is versioned in the agent (`prompts/system.v1.md`), and under it
+stand the name and the topic of each group to choose from. So the
+sentence is configuration, and how well the agent chooses depends on how
+it is written. The repository measures the fixed text on invented mail
+(section 9). How a list of the owner works, the owner measures, in
+`shadow` first.
+
+- One line, at most 300 characters, and at most 50 groups have one, as
+  every topic to choose from goes into each call.
+- The name and the topic of each group to choose from go to the model
+  with every call. With a hosted model they leave the machine: write
+  nothing into them that should not.
+- A changed topic changes the list, and with it the version of every
+  decision (section 3): the messages are decided anew. For the group it
+  means `record` again, as a changed sentence is a changed prompt, and
+  setting `by_topic` back to `act` is the owner's step.
+
+### Senders and topic together (decided 2026-11-24)
+
+The sender rules come first, in code. The model is asked only where they
+do not settle it.
+
+| The sender matches | Who decides |
+|---|---|
+| a rule of one group | the code: that group, no call, whether the group has a topic or not |
+| rules of several groups alike, each with a topic | the model, among these groups |
+| rules of several groups alike, one without a topic | nobody: no group, as with version 1, no call |
+| no rule | the model, among every group with a topic. No group has one: no group, no call |
+
 **A domain rule is refused (decided 2026-11-18).** `sorting` sets no keyword a domain could mark with, so such a rule would
 do nothing. The message says to
 write `*@domain` or `*@*.domain`.
@@ -157,6 +197,12 @@ write `*@domain` or `*@*.domain`.
 | is in the inbox, one group matches, the folder exists | a move to the folder | `done`, label the group |
 | the same, the folder is missing | `create_folder`, then the move | `done`, label the group |
 | the same, the group is held | the move is recorded, not made | `done`, label the group |
+| is in the inbox, the model chooses a group with `"by_topic": "act"` and its quote is found | as for one group by its sender: folder, move, keyword | `done`, label the group |
+| the same, the group records its topic, `record` or no `by_topic` | the folder, the move and the keyword are recorded, not made | `done`, label the group |
+| the same, the group is held | recorded, not made | `done`, label the group |
+| is in the inbox, the model chooses a group and its quote is not found in the mail | nothing | `decided`, the decision refused for its evidence |
+| is in the inbox, the model answers `none` | nothing. `report` counts the sender when no rule matched it | `done`, label `none` |
+| is in the inbox, a call is due and the gateway is away | nothing yet. A message a sender rule settles goes on | `pending` |
 | is in the trash, junk or spam | nothing, as it is not in the inbox. The runtime would refuse a move of it anyway | `skipped` |
 
 A message already in another folder is the owner's choice and stays.
@@ -184,30 +230,43 @@ another.
 |---|---|---|---|
 | `shadow` | recorded | recorded | recorded |
 | `keyword` | recorded | recorded | recorded. It goes with the move, so the stage acts like `shadow` |
-| `full` | made | made, but for a held group | set, but for a held group |
+| `full` | made | made, but for a held group and for a group chosen by its topic that does not act on it | set, but for a held group and for a group chosen by its topic that does not act on it |
+
+`by_topic` adds to the stage, it does not replace it: below `full`
+nothing is made, whatever a group says. In `full` a group chosen by its
+topic is acted on only with `"by_topic": "act"`, and only when it is not
+held.
 
 Below `full` a folder recorded as to be made counts as there for the
 folder and the move below it in the same effect, so both are recorded.
 
 ### What is stored
 
-- The decision: the label is the name of the group or `none`, its source is
-  `baseline`, its details say whether one group, none or two alike matched,
-  the kind of rule, and whether the group is held. No quote and no sender
-  is stored.
-- No model step. The decision is stored under an empty model alias.
-- **The version of the decision is the list (decided 2026-11-18).** It is
-  `list-` and the first 12 hex digits of the SHA-256 of the list as read,
-  in JSON with sorted keys. A changed list, a sender, a folder or `hold`,
-  gives a new version, and a message taken up again, as by `backfill`, is
-  decided anew under it. So the label, the details and `report` follow the
+- The decision by a sender rule: the label is the name of the group or
+  `none`, its source is `baseline`, its details say whether one group,
+  none or two alike matched, the kind of rule, and whether the group is
+  held. No quote and no sender is stored. It is stored under an empty
+  model alias when no group has a topic.
+- The decision by the model: its source is `model`, the label the name
+  of the group or `none`, the quote its evidence, as the
+  [state](state.md) keeps quotes. Its details say `match` `topic` or
+  `none`, `among` `senders` or `all`, for a group its `by_topic`, and
+  whether it is held. `none` carries no quote.
+- **The version of the decision is the prompt and the list (decided
+  2026-11-18, the prompt since 2026-11-24).** It is `v1-list-` and the
+  first 12 hex digits of the SHA-256 of the list as read, in JSON with
+  sorted keys. A group without a topic is read without `topic` and
+  `by_topic`, so a list of version 1 keeps its digest. A changed list, a
+  sender, a folder, `hold`, a topic or `by_topic`, gives a new version,
+  and a message taken up again, as by `backfill`, is decided anew under
+  it. So the label, the details and `report` follow the
   list the message was acted on with, and a message decided `none` before
   a sender was added counts as moved once it is. The rules of the
   baseline run anew under the new version too, so `report` shows the
   baseline of the same list as the decision.
 - The group is looked up again when the agent acts, against the list as it
-  is then. So a sender added to the list reaches older mail through
-  `backfill`.
+  is then: by the sender, so a sender added to the list reaches older
+  mail through `backfill`, or by its name, for a group the model chose.
 
 ## 4. The action `create_folder` (decided 2026-11-18)
 
@@ -258,11 +317,22 @@ Left out, a group is not held.
 What is planned on top of it: a switch for a group that moves only mail
 whose sender was verified ([roadmap](../../roadmap/agents.md#next)).
 
+**What the model chooses is not proof either (2026-11-24).** As a rule an
+agent only marks on the choice of a model ([safety](safety.md)). `sorting`
+is the second exception, after `invoices`: it acts on the model's choice
+where the owner set `"by_topic": "act"` for the group. The model names
+a group of the list, never a folder, and only a group among those to
+choose from. Its quote must be found in the mail, not in the topics. A
+held group stays held. The risk that remains: a message that only names
+a project, such as a stranger's offer that mentions it, lands in the
+project's folder when its group acts.
+
 ## 6. Settings
 
 | Setting | Meaning |
 |---|---|
 | `MAILBOX_AGENTS_SORTING_FILE` | the list of section 2. Required |
+| `MAILBOX_AGENTS_GATEWAY_URL`, `MAILBOX_AGENTS_GATEWAY_KEY`, `MAILBOX_AGENTS_MODEL` | required once a group of the list has a topic, else not read (2026-11-24) |
 
 The stage, the accounts and the rest are the settings of every agent
 ([configuration](configuration.md)).
@@ -274,20 +344,27 @@ New mail as it arrives, and older mail only through `backfill --days N`, in
 
 ## 8. Report
 
-- Per group: how many messages were moved, recorded, held, or not moved,
-  when the move was refused.
+- Per group: how many messages were moved, recorded, recorded by topic,
+  when the model chose a group that does not act on it, held, or not
+  moved, when the move was refused.
 - The senders in no group that wrote most often, as candidates for the
-  list.
+  list. A sender the list names in several groups with a topic, whose
+  message the model left in `none`, is no candidate.
 - The messages left alone because two groups matched.
 
 ## 9. Evaluation
 
-`sorting` asks no model. Its rules are the whole decision, and the tests on
-invented mail cover them. A gold set is optional. Where one is kept, its
-label is the name of the group or `none`, in the existing gold format, and
-the existing scoring serves. The report names `none` and nothing else: each
-group becomes `label-<n>` there, as a group's name is the owner's own text
-and a report is versioned (decided 2026-11-19).
+The sender rules are code, and the tests on invented mail cover them.
+The choice by a topic is measured as the other agents are: a gold set
+whose label is the name of the group or `none`, in the existing gold
+format, the model and the rules side by side, the existing scoring. The
+rules alone, the baseline, are the sender rules, so the report shows what
+the topics add. The report names `none` and nothing else: each group
+becomes `label-<n>` there, as a group's name is the owner's own text and
+a report is versioned (decided 2026-11-19). The repository measures the
+fixed text of the prompt on the invented mail of the test account
+([testing](testing.md)). A list of the owner is measured on the owner's
+mailbox, in `shadow`.
 
 ## 10. Tests, all on invented mail
 
@@ -300,8 +377,21 @@ and a report is versioned (decided 2026-11-19).
    refused, one below the trash is refused, a folder that exists is not
    made again, a nested folder is made from the top.
 6. A sender added to the list reaches a message decided before.
-7. No model call is made and no call is counted.
+7. No model call is made and no call is counted for a list without a
+   topic, nor for a sender one rule settles.
 8. A held group in `full` moves nothing.
+9. A topic: each rule of section 2 broken once, and the groups to choose
+   from in each row of the table "Senders and topic together".
+10. A group chosen by its topic: moved with `act` in `full`, recorded in
+    `shadow`, recorded with `record` or without `by_topic`, recorded when
+    held.
+11. A quote not in the mail, or only in a topic, is not acted on. `none`
+    needs no quote and does nothing.
+12. The schema sent names only the groups to choose from and `none`, the
+    prompt a line for each of them and no other.
+13. A gateway that is away leaves the message that needs it `pending`,
+    and a message a sender rule settles goes on in the same pass.
+14. No log line names a group or a topic.
 
 On the live setup, `live/mailbox-agents/sorting.py` runs the agent in `shadow` and in
 `full` on the test account: folders made, mail moved and put back
@@ -312,18 +402,34 @@ another, was measured there first
 
 ## 11. What was decided against
 
-- **Categories inside `sorting`, one agent that sorts and recognises
-  invoices.** Two agents it is (decided 2026-11-18), for three reasons. An
-  agent has one stage: a changed prompt puts it back into `shadow`, and
-  with it the moves by sender that no model takes part in. A gateway that
-  is away would hold back mail that needs no model. And a category is not
-  configuration: it is a prompt, rules and a gold set, so a list cannot add
-  one.
+- **Categories inside `sorting` as on 2026-11-18, one agent that sorts
+  and recognises invoices.** Two agents it stayed then, for three
+  reasons: an agent has one stage, a gateway that is away would hold back
+  mail that needs no model, and a category is a prompt, rules and a gold
+  set, not configuration. On 2026-11-24 it was decided that `sorting`
+  assigns by what a message says too, through a topic per group, and
+  `invoices` stays an agent of its own. The three reasons are answered
+  so: how far a choice by the topic goes stands at the group, `record`
+  by default, beside the one stage of the agent. A message a sender rule
+  settles needs no call and goes on while the gateway is away. And with
+  the fixed text of the prompt versioned in the agent, the sentence is
+  configuration, measured per list.
+- **Rules by words in the subject or the text, without a model.** A list
+  of words is a weaker topic, and a stranger writes them as easily.
+- **A group that forwards a message, or hands it to another agent
+  without a folder.** Not built (2026-11-24). The list keeps apart which
+  mail belongs to a group, by `senders` and `topic`, and what the group
+  sets off, today its folder, so either can be added. A hand-over works
+  today through the folder another agent looks in, as with `invoices`.
+  One without a move would need a keyword per group or the mailbox
+  service. A forward is an action that cannot be taken back: it would
+  come into the [agent contract](agent-contract.md) first, with a fixed
+  recipient from the list and never from the model.
 - **`invoices` and `sorting` side by side with a waiting time.** A message
   whose model call waits for a gateway that is away would be moved by
   `sorting` in the meantime, and `invoices` would then skip it.
 - **A keyword per group.** The runtime lets an agent set one keyword, its
-  own.
+  own. It stayed so on 2026-11-24.
 - **A gold item that names a folder.** The folder follows from the group
   and the list, and the gold format has no place for it.
 - **One list for both agents.** `invoices` must work without `sorting`
