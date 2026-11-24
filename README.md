@@ -28,7 +28,7 @@ Python client for it, an MCP server and small AI agents on top. Scripts,
 tools, AI assistants and the agents work with your mail through one door
 you control.
 
-> **Status: beta, version 0.11.0.** Usable with real accounts. A breaking
+> **Status: beta, version 0.11.1.** Usable with real accounts. A breaking
 > change of the API or the configuration is announced in the changelog.
 > Stored data is carried forward by migrations.
 

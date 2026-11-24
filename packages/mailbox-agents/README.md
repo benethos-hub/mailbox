@@ -23,7 +23,7 @@
 
 [![benethos-mailbox-mcp on Glama](https://glama.ai/mcp/servers/benethos-hub/mailbox/badges/card.svg)](https://glama.ai/mcp/servers/benethos-hub/mailbox)
 
-> **Alpha, version 0.11.0.** Built, and run on a test account of
+> **Alpha, version 0.11.1.** Built, and run on a test account of
 > invented mail. On a real mailbox, read-only and in the stage `shadow`:
 > `invoices` version 3 on 2026-11-18, `sorting` and `invoices` on
 > 2026-11-22, and `invoices`, `inquiries` and `awaiting_reply` in the

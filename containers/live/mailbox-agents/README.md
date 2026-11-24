@@ -35,7 +35,7 @@ release no published image has it. To pull a published release
 instead:
 
 ```
-MAILBOX_LIVE_SERVICE=published MAILBOX_VERSION=0.11.0 sh containers/live/mailbox-agents/setup.sh
+MAILBOX_LIVE_SERVICE=published MAILBOX_VERSION=0.11.1 sh containers/live/mailbox-agents/setup.sh
 ```
 
 The script makes everything anew each time. It removes the volumes of an
