@@ -6,6 +6,29 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `benethos-mailbox-agents`: a group of the list of `sorting` may name a
+  `topic`, one line on the mail that belongs to it, and with it
+  `by_topic`, `record` or `act`. For a message in the inbox that no
+  sender rule settles, a model chooses among the groups with a topic,
+  with a quote that must be found in the mail, or answers `none`. Its
+  choice is recorded only, unless the group says `"by_topic": "act"`. A
+  group may name a topic without senders, and one sender rule may stand
+  in several groups that each have a topic: the model then chooses
+  among them. A sender rule of one group decides as before, with no
+  model call.
+
+### Changed
+
+- `benethos-mailbox-agents`: `sorting` is version 2 and stores its
+  decision under the version `v1-list-` and the digest of its list, so
+  every message is decided anew. Run it in `shadow` again before a
+  higher stage.
+- `benethos-mailbox-agents`: `sorting` needs the gateway settings once a
+  group of its list has a topic. A list without a topic runs without a
+  gateway, as before.
+
 ## [0.11.1] - 2026-11-24
 
 ### Changed

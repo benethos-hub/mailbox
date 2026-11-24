@@ -38,7 +38,7 @@ code.
 | `invoices` | is this an invoice? It moves one into the subfolder of the folder it lies in | built, version 6, prompt `v5` | [agent-invoices.md](concept/agent-invoices.md) |
 | `awaiting_reply` | does this sent message wait for an answer? | built, version 2, prompt `v2` | [agent-awaiting-reply.md](concept/agent-awaiting-reply.md) |
 | `inquiries` | is this a project inquiry, and what does it say? | built, version 2, prompt `v4` | [agent-inquiries.md](concept/agent-inquiries.md) |
-| `sorting` | is the sender one of a listed group, and which folder is the group's? | built, no model. `invoices` then files an invoice within the folder `sorting` put it in | [agent-sorting.md](concept/agent-sorting.md) |
+| `sorting` | does the message belong to a listed group, by its sender or by what it says, and which folder is the group's? | built, version 2: the sender rules in code, a model only for a message they do not settle and only where a group has a topic (2026-11-24). `invoices` then files an invoice within the folder `sorting` put it in | [agent-sorting.md](concept/agent-sorting.md) |
 
 ## Beside the concept
 
@@ -129,7 +129,12 @@ on one runtime, and each process runs one of them.
   exception since 2026-11-18: `invoices` moves a message its model takes
   for an invoice, into the subfolder of a folder it looks in, and out of
   the inbox only into the inbox folder the owner set. The model names no
-  folder ([invoices](concept/agent-invoices.md)).
+  folder ([invoices](concept/agent-invoices.md)). A second since
+  2026-11-24: `sorting` acts on the group its model chose by the group's
+  topic where the owner set `"by_topic": "act"` for it, with a quote
+  found in the mail. The model names a group of the list, never a
+  folder, and a held group stays held
+  ([sorting](concept/agent-sorting.md)).
 - **Reversible only.** Every action records what was there before.
 - **Nothing of a mail in a log line, secrets never travel**
   ([safety](concept/safety.md), [LOGGING.md](LOGGING.md)).

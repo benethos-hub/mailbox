@@ -23,6 +23,20 @@
         "*@shop.example",
         "*@*.shop.example"
       ]
+    },
+    {
+      "name": "Project Alpha",
+      "folder": "Projects/Alpha",
+      "senders": [
+        "*@client.example"
+      ],
+      "topic": "Mail about the project Alpha: the offer, the weekly status, the acceptance",
+      "by_topic": "act"
+    },
+    {
+      "name": "Applications",
+      "folder": "Applications",
+      "topic": "Applications and CVs of people who want to work with the owner"
     }
   ]
 }

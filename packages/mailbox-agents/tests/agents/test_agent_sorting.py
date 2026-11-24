@@ -321,8 +321,8 @@ def test_the_version_is_the_list_read(tmp_path: Path) -> None:
     other.prepare()
 
     assert one.prompt_version == other.prompt_version
-    assert one.prompt_version.startswith("list-")
-    assert len(one.prompt_version) == len("list-") + 12
+    assert one.prompt_version.startswith("v1-list-")
+    assert len(one.prompt_version) == len("v1-list-") + 12
     assert Sorting.prompt_version == ""
 
     released = [{**g, "hold": False} for g in GROUPS]
