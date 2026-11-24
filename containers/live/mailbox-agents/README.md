@@ -39,7 +39,11 @@ MAILBOX_LIVE_SERVICE=published MAILBOX_VERSION=0.11.1 sh containers/live/mailbox
 ```
 
 The script makes everything anew each time. It removes the volumes of an
-earlier run, then, not in this order:
+earlier run and what it made in `secrets/` before, through
+`clear-secrets.sh`, which keeps the Claude API key. When `secrets/` holds
+anything the setup does not make, such as the state files of a run on a
+real account, it names each, stops and changes nothing: move it first.
+Then, not in this order:
 
 - makes a test CA and a certificate for `mail.agents.test`,
 - starts Stalwart in its bootstrap mode, sets host name and domain
