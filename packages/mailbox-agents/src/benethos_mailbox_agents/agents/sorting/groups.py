@@ -343,6 +343,34 @@ class Groups(BaseModel):
         top = {group.name: group for group, kind in hits if kind == best}
         return Match(groups=tuple(top.values()), kind=best)
 
+    def candidates(self, address: str | None) -> tuple[Group, ...]:
+        """The groups a model chooses among for a message from ``address``.
+
+        None when one group matches the sender: the code decides. The
+        groups that match it alike when each has a topic. None when one of
+        them has no topic, as before. Every group with a topic, in the
+        order of the list, when no rule matches."""
+        found = self.match(address)
+        if found is None:
+            return self.topical
+        if len(found.groups) > 1 and all(g.topic is not None for g in found.groups):
+            return found.groups
+        return ()
+
+    @property
+    def topical(self) -> tuple[Group, ...]:
+        """The groups with a topic, in the order of the list."""
+        return tuple(group for group in self.groups if group.topic is not None)
+
+    @property
+    def asks_model(self) -> bool:
+        """Whether a group has a topic, so a model may be asked."""
+        return bool(self.topical)
+
+    def named(self, name: str) -> Group | None:
+        """The group called ``name``, or None."""
+        return next((group for group in self.groups if group.name == name), None)
+
     def may_create(self, path: str) -> bool:
         """Whether ``path`` is the folder of a group or one above it."""
         return any(path in group.folders for group in self.groups)

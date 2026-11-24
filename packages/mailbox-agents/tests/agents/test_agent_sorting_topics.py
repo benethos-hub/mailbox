@@ -9,6 +9,7 @@ from typing import Any
 import pytest
 
 from benethos_mailbox_agents.agents.sorting.agent import _version
+from benethos_mailbox_agents.agents.sorting.groups import Group, Groups
 
 from .sorting_helpers import groups, refused
 
@@ -126,3 +127,83 @@ def test_a_topic_and_how_far_it_goes_change_the_version() -> None:
     }
 
     assert len(versions) == 4
+
+
+BETA = "Mail about the project Beta: the migration of the shop"
+
+
+@pytest.fixture
+def mixed() -> Groups:
+    return groups(
+        {"name": "Bank", "folder": "Bank", "senders": ["*@bank-one.example"]},
+        _topical(senders=["*@client.example"], by_topic="act"),
+        {
+            "name": "Beta",
+            "folder": "Projects/Beta",
+            "senders": ["*@client.example"],
+            "topic": BETA,
+        },
+        {"name": "Hosting", "folder": "Hosting", "senders": ["*@host.example"]},
+        {
+            "name": "Hosting Two",
+            "folder": "Hosting Two",
+            "senders": ["bill*@host.example"],
+            "topic": "Mail about the second hosting contract",
+        },
+        {"name": "Applications", "folder": "Applications", "topic": "Applications"},
+    )
+
+
+def _names(found: tuple[Group, ...]) -> list[str]:
+    return [group.name for group in found]
+
+
+def test_one_group_by_its_sender_leaves_the_choice_to_the_code(mixed: Groups) -> None:
+    assert mixed.candidates("service@bank-one.example") == ()
+
+
+def test_groups_alike_by_their_sender_each_with_a_topic_are_the_choice(
+    mixed: Groups,
+) -> None:
+    assert _names(mixed.candidates("office@client.example")) == ["Alpha", "Beta"]
+
+
+def test_groups_alike_one_without_a_topic_leave_no_choice(mixed: Groups) -> None:
+    assert mixed.candidates("billing@host.example") == ()
+
+
+@pytest.mark.parametrize(
+    "address", ["stranger@elsewhere.example", "", None, "a" * 330 + "@client.example"]
+)
+def test_no_group_by_the_sender_leaves_every_group_with_a_topic(
+    mixed: Groups, address: str | None
+) -> None:
+    assert _names(mixed.candidates(address)) == [
+        "Alpha",
+        "Beta",
+        "Hosting Two",
+        "Applications",
+    ]
+
+
+def test_a_list_without_a_topic_never_asks_a_model() -> None:
+    listed = groups(
+        {"name": "A", "folder": "A", "senders": ["*@a.example"]},
+        {"name": "B", "folder": "B", "senders": ["x*@a.example", "x@b.example"]},
+    )
+
+    assert not listed.asks_model
+    for address in ("x@a.example", "x@b.example", "x@c.example", None):
+        assert listed.candidates(address) == ()
+
+
+def test_a_list_with_a_topic_may_ask_a_model(mixed: Groups) -> None:
+    assert mixed.asks_model
+
+
+def test_a_group_is_found_by_its_name(mixed: Groups) -> None:
+    found = mixed.named("Beta")
+
+    assert found is not None and found.topic == BETA
+    assert mixed.named("beta") is None
+    assert mixed.named("none") is None
