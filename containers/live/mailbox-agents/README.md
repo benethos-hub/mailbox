@@ -49,7 +49,10 @@ earlier run, then, not in this order:
   without a PDF, a receipt that carries its invoice, near misses (a
   reminder, a quotation, an order confirmation, a payment receipt), a
   project inquiry, a newsletter, sent mail that waits for a reply and some
-  that does not, a reply and an automatic answer,
+  that does not, a reply and an automatic answer, and for the topics of
+  `sorting` mail of two projects of one customer, applications, mail of
+  that customer about neither project, strangers who name a project in
+  passing and a message that tells the model which group to choose,
 - makes the mailbox service's keys and administrator, signs in to its UI
   once for the first token, connects the account, and creates the user
   `agents` with `mail.read` and `mail.write` on it and that user's token,
