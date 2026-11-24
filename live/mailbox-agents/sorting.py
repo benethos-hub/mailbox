@@ -14,6 +14,14 @@ message back to where it was and takes the keyword off. The folders it
 made stay: no agent may delete a folder, and a second run finds them
 there. Each check says ok or FAILED, and the exit code is 1 if one
 failed. Never point it at an account that is not a test account.
+
+The list has groups with a topic, so each run asks the model of the
+settings once for every message no sender rule settles. The moves by a
+sender rule are code and checked exactly. What the model chooses is
+not: in ``full`` a message may move by its topic only into the folder
+of the group that acts on it, never into that of a group that records
+it, and the check says how many it moved against the gold labels of
+mail.py. How well the model chooses is measured by ``eval``.
 """
 
 from __future__ import annotations
@@ -30,6 +38,7 @@ from agents_common import (  # beside this script
     Snapshot,
     connect_mailbox,
     inbox_snapshot,
+    mail,
     parse_settings,
     put_back,
     run_checks,
@@ -43,10 +52,19 @@ from benethos_mailbox_agents.settings import Settings
 from benethos_mailbox_agents.sources.mailbox import Mailbox
 from benethos_mailbox_agents.store import ActionRow
 
-# What the list makes of the invented mail of containers/live/mailbox-agents/mail.py.
+# What the sender rules of the list make of the invented mail of
+# containers/live/mailbox-agents/mail.py.
 MOVED = {"CloudHost": 3, "Telco": 1}
 HELD = {"Paperworks": 2}
 FOLDERS = ("Providers", "Providers/CloudHost", "Providers/Telco")
+# The groups chosen by their topic: the one that acts and its folder, and
+# the folders of those that record it, never made.
+ACTS = ("Project Harbor", "Projects/Harbor")
+RECORDS = ("Projects/Lighthouse", "Applications")
+# How many messages of mail.py belong to the group that acts.
+TO_ACT = sum(
+    1 for labels in mail.GOLD.values() if labels.get("sorting", ("",))[0] == ACTS[0]
+)
 
 
 @dataclass
@@ -91,6 +109,11 @@ async def shadow(live: Live) -> str:
     for name, count in {**MOVED, **HELD}.items():
         if labels[name] != count:
             raise AssertionError(f"{labels[name]} messages of {name}, {count} expected")
+    by_topic = {
+        name: count
+        for name, count in labels.items()
+        if name not in MOVED and name not in HELD and name != "none"
+    }
     if any(a.executed for a in actions):
         raise AssertionError("an action was carried out in shadow")
     after = await inbox_snapshot(live.mailbox, live.settings)
@@ -101,8 +124,8 @@ async def shadow(live: Live) -> str:
         {a.argument for a in actions if a.action == Action.CREATE_FOLDER.value}
     )
     return (
-        f"{sum(labels.values())} decided, {moves} moves and the folders "
-        f"{made or 'none'} recorded, nothing changed"
+        f"{sum(labels.values())} decided, by topic {by_topic or 'none'}, "
+        f"{moves} moves and the folders {made or 'none'} recorded, nothing changed"
     )
 
 
@@ -118,7 +141,13 @@ async def full(live: Live) -> str:
         raise AssertionError(f"the folders {missing} were not made")
     if "Paperworks" in folders - live.folders_before:
         raise AssertionError("the folder of a held group was made")
+    recorded = sorted(set(RECORDS) & (folders - live.folders_before))
+    if recorded:
+        raise AssertionError(
+            f"the folders {recorded} of a group that records were made"
+        )
     by_folder = Counter(a.argument for a in live.moved)
+    by_topic = by_folder.pop(ACTS[1], 0)
     expected = {f"Providers/{name}": count for name, count in MOVED.items()}
     if dict(by_folder) != expected:
         raise AssertionError(f"moved {dict(by_folder)}, {expected} expected")
@@ -128,10 +157,11 @@ async def full(live: Live) -> str:
             raise AssertionError("a message is not in the folder it was moved to")
         if live.keyword.casefold() not in {k.casefold() for k in message.keywords}:
             raise AssertionError("a moved message lacks the keyword")
-    made = sorted((folders - live.folders_before) & set(FOLDERS))
+    made = sorted((folders - live.folders_before) & {*FOLDERS, "Projects", ACTS[1]})
     return (
-        f"{sum(by_folder.values())} moved, {sum(HELD.values())} held, folders "
-        f"made {made or 'none, there from an earlier run'}"
+        f"{sum(by_folder.values())} moved by sender, {by_topic} by topic into "
+        f"{ACTS[1]} ({TO_ACT} by the gold labels), {sum(HELD.values())} held, "
+        f"folders made {made or 'none, there from an earlier run'}"
     )
 
 
