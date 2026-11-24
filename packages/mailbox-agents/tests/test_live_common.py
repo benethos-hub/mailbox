@@ -196,3 +196,45 @@ async def test_a_put_back_cut_off_is_done_again_on_the_way_out(
         monkeypatch.setattr(module, "snapshot", same, raising=False)
         await module.put_back_check(live)
         assert live.put_back_done is True
+
+
+# -- where gold.py writes ---------------------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def gold() -> Iterator[ModuleType]:
+    with _live_script("gold") as module:
+        yield module
+
+
+def test_the_gold_files_go_beside_the_settings_file(
+    gold: ModuleType, tmp_path: Path
+) -> None:
+    env = tmp_path / "setup" / "secrets" / "agent.env"
+
+    assert gold.target(env, None) == env.resolve().parent
+
+
+def test_the_gold_files_go_to_the_secrets_of_the_live_setup_by_default(
+    gold: ModuleType,
+) -> None:
+    secrets = ROOT / "containers" / "live" / "mailbox-agents" / "secrets"
+
+    assert gold.target(gold.ENV, None) == secrets.resolve()
+
+
+def test_out_names_another_folder_for_the_gold_files(
+    gold: ModuleType, tmp_path: Path
+) -> None:
+    assert gold.target(tmp_path / "agent.env", tmp_path / "gold") == tmp_path / "gold"
+
+
+def test_each_agent_gets_a_gold_file_of_its_lines(
+    gold: ModuleType, tmp_path: Path
+) -> None:
+    folder = tmp_path / "made" / "here"
+
+    written = gold.save({"sorting": ["{}", "[]"], "invoices": ["{}"]}, folder)
+
+    assert [p.name for p in written] == ["gold-invoices.jsonl", "gold-sorting.jsonl"]
+    assert (folder / "gold-sorting.jsonl").read_text(encoding="utf-8") == "{}\n[]\n"

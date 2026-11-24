@@ -140,7 +140,8 @@ docker compose -f containers/live/mailbox-agents/compose.yaml --profile gpu up -
 
 ### Comparing models
 
-`live/mailbox-agents/gold.py` writes the labels of the invented mail as gold files, and
+`live/mailbox-agents/gold.py` writes the labels of the invented mail as gold files,
+beside the settings file it reads or into the folder `--out` names, and
 `eval` runs an agent against them with any alias of the gateway. The key
 of `agent.env` reaches the `mail-classifier` aliases only, so another
 alias needs the master key of `secrets/gateway.env`:
