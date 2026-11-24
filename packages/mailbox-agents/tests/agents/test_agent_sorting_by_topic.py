@@ -280,10 +280,9 @@ async def test_a_gateway_away_holds_only_the_mail_that_needs_it(
             MessageRef(account_id=ACCOUNT, message_id=message_id), topic_world.clock()
         )
 
-    try:
-        await sorter.process_due()
-    except GatewayUnavailableError:
-        pass
+    await sorter.process_due()
+
+    assert isinstance(sorter.runner.gateway_away, GatewayUnavailableError)
 
     states = {
         m: topic_world.store.message(MessageRef(account_id=ACCOUNT, message_id=m))
