@@ -2,8 +2,10 @@
 
 Part of the [concept](../CONCEPT.md).
 
-> **Status: version 2 built, the choice by a topic not yet measured on
-> the test account. Version 1, by the sender alone, ran in `shadow` and in
+> **Status: version 2 built, and run in `shadow` and in `full` on the
+> test account, its choice by a topic measured there on 2026-11-24
+> against the invented mail of the live setup
+> (`reports/mailbox-agents/sorting/`). Version 1, by the sender alone, ran in `shadow` and in
 > `full` on the test account, and on a real mailbox on 2026-11-22,
 > read-only and in `shadow`, and changed nothing. Version 2 has not run on
 > a real mailbox. A run on the owner's account is the owner's decision,

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from collections import Counter
 from collections.abc import Awaitable, Callable, Sequence
+from contextlib import AsyncExitStack
 from pathlib import Path
 from typing import TypeVar
 
@@ -14,7 +15,7 @@ from benethos_mailbox_agents.sources.mailbox import Mailbox
 from benethos_mailbox_agents.store import ActionRow, Store
 
 from .settings import DAYS, LIST
-from .upstreams import worker
+from .upstreams import open_gateway, worker
 
 Live = TypeVar("Live")
 
@@ -39,18 +40,25 @@ async def sort_test_account(
 ) -> tuple[list[ActionRow], Counter[str]]:
     """The agent ``sorting`` with the list containers/live/mailbox-agents/sorting.json,
     in ``stage``, over the mail of the last :data:`DAYS` days, with its state
-    file in ``folder``. Answers its actions and how many messages it
+    file in ``folder``, through the gateway of the settings when a group
+    of the list has a topic. Answers its actions and how many messages it
     decided for each label."""
     found = settings.model_copy(
         update={"stage": stage, "sorting_file": LIST, "data_dir": folder}
     )
     agent = Sorting(found)
     agent.prepare()
-    with Store.open(folder / "sorting.db") as store:
-        sorting = worker(agent, store, mailbox)
-        await sorting.backfill(DAYS)
-        await sorting.drain()
-        return store.actions(), labels(store)
+    async with AsyncExitStack() as stack:
+        gateway = (
+            await stack.enter_async_context(open_gateway(found))
+            if agent.asks_model()
+            else None
+        )
+        with Store.open(folder / "sorting.db") as store:
+            sorting = worker(agent, store, mailbox, gateway)
+            await sorting.backfill(DAYS)
+            await sorting.drain()
+            return store.actions(), labels(store)
 
 
 async def run_checks(

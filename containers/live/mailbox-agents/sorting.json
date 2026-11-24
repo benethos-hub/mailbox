@@ -28,6 +28,28 @@
       "senders": [
         "*@*.shop.example"
       ]
+    },
+    {
+      "name": "Project Harbor",
+      "folder": "Projects/Harbor",
+      "senders": [
+        "*@northwind.example"
+      ],
+      "topic": "Mail about the project Harbor: the warehouse app for Northwind, its offer, its weekly status and its acceptance",
+      "by_topic": "act"
+    },
+    {
+      "name": "Project Lighthouse",
+      "folder": "Projects/Lighthouse",
+      "senders": [
+        "*@northwind.example"
+      ],
+      "topic": "Mail about the project Lighthouse: the move of the Northwind customer portal to a new host"
+    },
+    {
+      "name": "Applications",
+      "folder": "Applications",
+      "topic": "Applications and CVs of people who want to work for the owner"
     }
   ]
 }

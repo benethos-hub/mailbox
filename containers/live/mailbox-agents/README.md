@@ -49,7 +49,10 @@ earlier run, then, not in this order:
   without a PDF, a receipt that carries its invoice, near misses (a
   reminder, a quotation, an order confirmation, a payment receipt), a
   project inquiry, a newsletter, sent mail that waits for a reply and some
-  that does not, a reply and an automatic answer,
+  that does not, a reply and an automatic answer, and for the topics of
+  `sorting` mail of two projects of one customer, applications, mail of
+  that customer about neither project, strangers who name a project in
+  passing and a message that tells the model which group to choose,
 - makes the mailbox service's keys and administrator, signs in to its UI
   once for the first token, connects the account, and creates the user
   `agents` with `mail.read` and `mail.write` on it and that user's token,
@@ -288,8 +291,11 @@ at another port, such as its default 8080, may be a real one.
 `live/mailbox-agents/sorting.py` writes to the account: it runs `sorting` with
 `sorting.json` beside this file in `shadow`, then in `full`, and puts every
 message back where it was, as the inbox was before the checks, also after
-a check that failed or a run cut short. The folders it made, `Providers` and two below
-it, stay, as no agent may delete a folder. `setup.sh` makes the account
+a check that failed or a run cut short. The list has groups with a
+topic, so it asks the model of `agent.env` once for each message no
+sender rule settles, in each run. The folders it made, `Providers` and
+two below it, and `Projects/Harbor` when the model chose that group,
+stay, as no agent may delete a folder. `setup.sh` makes the account
 anew without them. `live/mailbox-agents/invoices.py` runs `invoices` in `shadow` beside
 `sorting` in `full`, in both orders, and puts the mail back. Then two
 checks of version 5, each with a new state file: an invoice moved by hand
