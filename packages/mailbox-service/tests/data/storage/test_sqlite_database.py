@@ -35,6 +35,8 @@ from benethos_mailbox_service.errors import (
 )
 
 from ...conftest import CHEAP, create_account, set_master_key
+from ...schema_helpers import run, run_many, select, value
+from .disk_helpers import Disk
 
 NOW = datetime(2026, 9, 24, 12, 0, tzinfo=UTC)
 
@@ -68,51 +70,35 @@ def test_the_key_added_last_is_active_whatever_the_clock(db: Database) -> None:
     keys.add(WrappedKey("key_1", b"n1", b"c1"))
     keys.add(WrappedKey("key_2", b"n2", b"c2"))
     # The clock was set back between the two.
-    db.execute("UPDATE keys SET created_at = '2000-01-01' WHERE key_id = 'key_2'")
+    run(db, "UPDATE keys SET created_at = '2000-01-01' WHERE key_id = 'key_2'")
     assert keys.active() == WrappedKey("key_2", b"n2", b"c2")
 
 
 def test_a_failed_transaction_rolls_back(db: Database) -> None:
-    with pytest.raises(RuntimeError), db.transaction() as conn:
-        conn.execute("INSERT INTO roles (id, grants) VALUES ('r', '[]')")
+    with pytest.raises(RuntimeError), db.transaction():
+        run(db, "INSERT INTO roles (id, grants) VALUES ('r', '[]')")
         raise RuntimeError("abort")
-    assert db.query("SELECT COUNT(*) FROM roles")[0][0] == 0
+    assert select(db, "SELECT COUNT(*) FROM roles")[0][0] == 0
 
 
-def test_a_failed_commit_leaves_no_open_transaction(
-    db: Database, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    class Failing:
-        """The connection, whose COMMIT fails."""
-
-        def __init__(self, real: sqlite3.Connection) -> None:
-            self._real = real
-
-        def execute(self, sql: str, *args: object) -> object:
-            if sql == "COMMIT":
-                raise sqlite3.OperationalError("disk I/O error")
-            return self._real.execute(sql, *args)
-
-        def __getattr__(self, name: str) -> object:
-            return getattr(self._real, name)
-
-    monkeypatch.setattr(db, "_connection", Failing(db._connection))
-    with pytest.raises(StorageError, match="disk I/O error"), db.transaction() as c:
-        c.execute("INSERT INTO roles (id, grants) VALUES ('r', '[]')")
-    monkeypatch.undo()
-    assert not db._connection.in_transaction
-    assert db.query("SELECT COUNT(*) FROM roles")[0][0] == 0
+def test_a_failed_commit_leaves_no_open_transaction(db: Database, disk: Disk) -> None:
+    disk.fail_commit(db)
+    with pytest.raises(StorageError, match="disk I/O error"), db.transaction():
+        run(db, "INSERT INTO roles (id, grants) VALUES ('r', '[]')")
+    disk.mend()
+    assert not disk.in_transaction(db)
+    assert select(db, "SELECT COUNT(*) FROM roles")[0][0] == 0
 
 
 def test_a_transaction_inside_another_is_a_savepoint(db: Database) -> None:
-    with db.transaction() as outer:
-        outer.execute("INSERT INTO roles (id, grants) VALUES ('kept', '[]')")
-        with pytest.raises(RuntimeError), db.transaction() as inner:
-            inner.execute("INSERT INTO roles (id, grants) VALUES ('undone', '[]')")
+    with db.transaction():
+        run(db, "INSERT INTO roles (id, grants) VALUES ('kept', '[]')")
+        with pytest.raises(RuntimeError), db.transaction():
+            run(db, "INSERT INTO roles (id, grants) VALUES ('undone', '[]')")
             raise RuntimeError("abort")
-        with db.transaction() as inner:
-            inner.execute("INSERT INTO roles (id, grants) VALUES ('also', '[]')")
-    assert [r[0] for r in db.query("SELECT id FROM roles ORDER BY id")] == [
+        with db.transaction():
+            run(db, "INSERT INTO roles (id, grants) VALUES ('also', '[]')")
+    assert [r[0] for r in select(db, "SELECT id FROM roles ORDER BY id")] == [
         "also",
         "kept",
     ]
@@ -120,19 +106,20 @@ def test_a_transaction_inside_another_is_a_savepoint(db: Database) -> None:
 
 def test_sqlite_failures_are_translated(db: Database) -> None:
     with pytest.raises(StorageError, match="no such table"):
-        db.query("SELECT * FROM nope")
+        select(db, "SELECT * FROM nope")
     with pytest.raises(StorageError, match="no such table"):
-        db.one("SELECT * FROM nope")
+        value(db, "SELECT * FROM nope")
     with pytest.raises(StorageError, match="no such table"):
-        db.execute("DELETE FROM nope")
+        run(db, "DELETE FROM nope")
     with pytest.raises(ConflictError, match="FOREIGN KEY"):
-        db.execute(
+        run(
+            db,
             "INSERT INTO tokens (id, user_id, name, token_hash, created_at)"
-            " VALUES ('t', 'nobody', 'n', 'h', 'now')"
+            " VALUES ('t', 'nobody', 'n', 'h', 'now')",
         )
     with pytest.raises(ConflictError, match="UNIQUE"):
         for _ in range(2):
-            db.execute("INSERT INTO roles (id, grants) VALUES ('r', '[]')")
+            run(db, "INSERT INTO roles (id, grants) VALUES ('r', '[]')")
 
 
 def test_the_index_of_a_deleted_account_is_a_conflict(db: Database) -> None:
@@ -319,10 +306,9 @@ def test_times_are_stored_in_utc() -> None:
 
 def _pages(db: Database) -> tuple[int, int]:
     """Pages in the file, and pages on its free list."""
-    count = db.one("PRAGMA page_count")
-    free = db.one("PRAGMA freelist_count")
-    assert count is not None and free is not None
-    return int(count[0]), int(free[0])
+    count = value(db, "PRAGMA page_count")
+    free = value(db, "PRAGMA freelist_count")
+    return int(count), int(free)
 
 
 def test_a_new_database_shrinks_after_a_deletion(tmp_path: Path) -> None:
@@ -331,12 +317,10 @@ def test_a_new_database_shrinks_after_a_deletion(tmp_path: Path) -> None:
     try:
         assert db.migrated is not None and db.migrated.before == 0
         assert "rewritten" not in " ".join(db.migrated.notes)
-        with db.transaction() as conn:
-            conn.execute("CREATE TABLE bulk (payload BLOB)")
-            conn.executemany("INSERT INTO bulk VALUES (?)", [(b"x" * 4096,)] * 500)
+        run(db, "CREATE TABLE bulk (payload BLOB)")
+        run_many(db, "INSERT INTO bulk VALUES (?)", [(b"x" * 4096,)] * 500)
         full, _ = _pages(db)
-        with db.transaction() as conn:
-            conn.execute("DELETE FROM bulk")
+        run(db, "DELETE FROM bulk")
         db.shrink()
         after, free = _pages(db)
         assert free == 0
@@ -357,7 +341,7 @@ def test_an_older_database_is_rewritten_once_to_shrink(tmp_path: Path) -> None:
     plain.close()
     db = Database(path)
     try:
-        assert db.one("PRAGMA auto_vacuum")[0] == 2  # type: ignore[index]
+        assert value(db, "PRAGMA auto_vacuum") == 2
         assert db.migrated is not None
         assert db.migrated.before == db.migrated.after == SCHEMA_VERSION
         assert any("rewritten once" in note for note in db.migrated.notes)

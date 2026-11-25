@@ -15,7 +15,7 @@ from benethos_mailbox_service.data.export import ExportError, read_export, write
 from benethos_mailbox_service.data.models import ChangeRecord
 from benethos_mailbox_service.data.storage import Database, repositories_on
 
-from ..schema_helpers import at_schema
+from ..schema_helpers import at_schema, run
 
 SEED = Path(__file__).parent / "storage" / "seeds" / "schema_25.sql"
 MARK = "a-value-never-in-a-message"
@@ -118,7 +118,7 @@ def test_a_purged_feed_counts_on_after_an_export(source: Database) -> None:
     )
     feed = repositories_on(source).changes
     feed.append([record, record])
-    source.execute("DELETE FROM changes WHERE seq > 7")
+    run(source, "DELETE FROM changes WHERE seq > 7")
     target = Database()
     read_export(io.BytesIO(_exported(source)), target)
     repositories_on(target).changes.append([record])

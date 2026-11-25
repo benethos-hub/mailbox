@@ -10,6 +10,7 @@ from benethos_mailbox_service.data.storage import (
     Repositories,
 )
 
+from .disk_helpers import Disk
 from .index_helpers import ACC
 
 
@@ -20,3 +21,8 @@ def index(repositories: Repositories) -> MessageIndexRepository:
             Account(id=account_id, provider=ProviderType.IMAP, email="a@example.com")
         )
     return repositories.index
+
+
+@pytest.fixture
+def disk(monkeypatch: pytest.MonkeyPatch) -> Disk:
+    return Disk(monkeypatch)

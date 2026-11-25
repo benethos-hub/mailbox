@@ -33,7 +33,7 @@ from benethos_mailbox_service.data.storage.sqlite.migrations import (
 from benethos_mailbox_service.domain.rights import Access
 from benethos_mailbox_service.errors import StorageError
 
-from ...schema_helpers import at_schema
+from ...schema_helpers import at_schema, select
 
 
 def test_webhooks_of_users_deleted_before_are_dropped(tmp_path: Path) -> None:
@@ -73,7 +73,7 @@ def test_webhooks_of_users_deleted_before_are_dropped(tmp_path: Path) -> None:
         raw.execute("UPDATE meta SET value = '12' WHERE key = 'schema_version'")
     raw.close()
     db = Database(path)
-    assert [r[0] for r in db.query("SELECT id FROM webhooks")] == ["whk_1"]
+    assert [r[0] for r in select(db, "SELECT id FROM webhooks")] == ["whk_1"]
     db.close()
 
 
@@ -212,8 +212,8 @@ def test_recovery_codes_of_schema_18_are_deleted(tmp_path: Path) -> None:
         raw.execute("UPDATE meta SET value = '18' WHERE key = 'schema_version'")
     raw.close()
     db = Database(path)
-    assert db.query("SELECT * FROM recovery_codes") == []
-    columns = [r[1] for r in db.query("PRAGMA table_info(recovery_codes)")]
+    assert select(db, "SELECT * FROM recovery_codes") == []
+    columns = [r[1] for r in select(db, "PRAGMA table_info(recovery_codes)")]
     assert columns == ["user_id", "key_id", "hash", "used_at"]
     codes = repositories_on(db).recovery_codes
     assert codes.left("usr_1") == 0
