@@ -9,11 +9,12 @@ text and sorts by ids, which must come out the same on both.
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator, Sequence
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from typing import Any, TypeVar
 
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql, sqlite
+from sqlalchemy.pool import StaticPool
 
 T = TypeVar("T")
 # An INSERT that knows what to do about a row already there.
@@ -107,3 +108,17 @@ def _insert(table: sa.Table, dialect: sa.Dialect) -> Insert:
     if dialect.name == POSTGRESQL:
         return postgresql.insert(table)
     return sqlite.insert(table)
+
+
+def sqlite_engine(connect: Callable[[], Any]) -> sa.Engine:
+    """An engine on the one SQLite connection ``connect`` gives, for the
+    whole process. A transaction begins as ``begin`` says. No value of a
+    statement reaches the text of an error."""
+    engine = sa.create_engine(
+        f"{SQLITE}://",
+        creator=connect,
+        poolclass=StaticPool,
+        hide_parameters=True,
+    )
+    sa.event.listen(engine, "begin", begin)
+    return engine

@@ -4,10 +4,14 @@ from __future__ import annotations
 
 import sqlite3
 from collections.abc import Callable, Iterable
+from typing import TYPE_CHECKING
 
 from ....common.chunks import batched
 from ..index import IndexChanges, IndexEntry, ThreadChain
-from .database import IN_CHUNK, Database
+from ..sql.dialect import IN_CHUNK
+
+if TYPE_CHECKING:
+    from ..sql.database import Database
 
 
 class SqliteMessageIndexRepository:

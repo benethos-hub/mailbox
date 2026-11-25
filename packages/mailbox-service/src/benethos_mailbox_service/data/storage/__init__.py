@@ -37,9 +37,9 @@ from .passwords import InMemoryPasswordRepository, PasswordRepository, StoredPas
 from .recovery_codes import InMemoryRecoveryCodeRepository, RecoveryCodeRepository
 from .repositories import Repositories, Store, open_repositories, repositories_on
 from .sends import InMemorySendLogRepository, SendLogRepository
+from .sql.database import Database
 from .sqlite import (
     SCHEMA_VERSION,
-    Database,
     SqliteAccountRepository,
     SqliteAuditRepository,
     SqliteChangeLogRepository,

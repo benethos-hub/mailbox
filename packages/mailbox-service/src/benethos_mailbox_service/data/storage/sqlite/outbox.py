@@ -6,11 +6,14 @@ import builtins
 import json
 import sqlite3
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from ....common.clock import iso, parse_iso
 from ....errors import missing
 from ...models import OPEN_STATES, Before, OutboxJob, OutboxState
-from .database import Database
+
+if TYPE_CHECKING:
+    from ..sql.database import Database
 
 _COLUMNS = (
     "id, account_id, user_id, credential_id, operation, draft_id, digest,"

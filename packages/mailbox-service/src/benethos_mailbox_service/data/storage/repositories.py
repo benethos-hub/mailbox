@@ -28,8 +28,8 @@ from .passkeys import InMemoryPasskeyRepository, PasskeyRepository
 from .passwords import InMemoryPasswordRepository, PasswordRepository
 from .recovery_codes import InMemoryRecoveryCodeRepository, RecoveryCodeRepository
 from .sends import InMemorySendLogRepository, SendLogRepository
+from .sql.database import Database
 from .sqlite import (
-    Database,
     Migrated,
     SqliteAccountRepository,
     SqliteAuditRepository,

@@ -7,10 +7,13 @@ import json
 import sqlite3
 from collections.abc import Iterable
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from ....common.clock import iso, parse_iso
 from ...models import Before, SendFilter, SendOutcome, SendRecord
-from .database import Database
+
+if TYPE_CHECKING:
+    from ..sql.database import Database
 
 
 class SqliteSendLogRepository:

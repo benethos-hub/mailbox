@@ -6,11 +6,14 @@ import json
 import sqlite3
 import string
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from ....common.clock import iso, parse_iso
 from ...models import ApiToken, Grant, Role, User
-from .database import Database
 from .rows import SqliteRows, next_position
+
+if TYPE_CHECKING:
+    from ..sql.database import Database
 
 
 class SqliteUserRepository(SqliteRows[User]):

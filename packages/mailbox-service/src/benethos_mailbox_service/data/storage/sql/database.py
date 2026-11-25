@@ -1,14 +1,21 @@
-"""The database the repositories use: one connection per process,
-guarded by a lock, since every call is short, its transactions and its
-queries. What hangs on the file, its schema and ``sqlite3`` itself is in
-``file``. Every failure of sqlite3 leaves this module as a
-MailboxServiceError: a constraint as ConflictError, anything else as
-StorageError.
+"""The database the repositories use: an engine of SQLAlchemy on the one
+connection of the process, guarded by a lock, since every call is short.
+
+The file, its schema and the connection itself come from ``sqlite/file``,
+the one place under ``sql/`` that reaches into ``sqlite/``. Transactions
+are SQLAlchemy's: one begins as ``dialect.begin`` says, and one inside
+another is a savepoint. A failure of the database leaves this module as a
+MailboxServiceError, a constraint as ConflictError, anything else as
+StorageError, with the text of the driver and never one of SQLAlchemy,
+which would hold the statement and its values.
+
+For the time of the move to SQLAlchemy the old repositories still hand
+SQL as text to ``query``, ``execute`` and the methods beside them, and
+``transaction`` gives them the connection of the driver.
 """
 
 from __future__ import annotations
 
-import sqlite3
 import threading
 from collections.abc import Callable, Iterable, Iterator, Sequence
 from contextlib import AbstractContextManager, contextmanager, suppress
@@ -16,13 +23,14 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, TypeVar
 
-from ....common.chunks import batched
+import sqlalchemy as sa
+
 from ....common.clock import iso
-from ....errors import StorageError, missing
-from . import file
-from .file import Migrated, translated
-from .migrations import SCHEMA_VERSION
-from .tables import (
+from ....errors import ConflictError, StorageError, missing
+from ..sqlite import file
+from ..sqlite.file import Migrated
+from ..sqlite.migrations import SCHEMA_VERSION
+from ..sqlite.tables import (
     Table,
     align_changes,
     fill_table,
@@ -30,10 +38,9 @@ from .tables import (
     read_chunk,
     read_tables,
 )
+from .dialect import in_chunks, sqlite_engine
 
 T = TypeVar("T")
-# Stays below SQLite's limit of host parameters in one statement.
-IN_CHUNK = 500
 # The rows of a table read or written at once by an export.
 ROWS_CHUNK = 500
 
@@ -53,16 +60,55 @@ class Database:
         schema: int | None = None,
     ) -> None:
         self._path = path
-        self._connection, migrated = file.open_file(
+        self._driver, migrated = file.open_file(
             path,
             keep_copy=keep_copy,
             schema=SCHEMA_VERSION if schema is None else schema,
         )
         self._lock = threading.RLock()
-        self._depth = 0  # of savepoints inside the open transaction
+        try:
+            driver = self._driver
+            self._engine = sqlite_engine(lambda: driver)
+            self._connection = self._engine.connect()
+        except BaseException:
+            self._driver.close()
+            raise
         # Set when opening migrated the schema. The data layer logs
         # nothing: the service logs it at start.
         self.migrated: Migrated | None = migrated
+
+    @contextmanager
+    def connected(self) -> Iterator[sa.Connection]:
+        """The connection of SQLAlchemy in one transaction, for reading as
+        for writing: a read too ends its transaction, or the next could not
+        begin. Inside another one, a savepoint: it is released into the
+        outer transaction, or rolled back alone."""
+        with self._lock, translated():
+            if self._connection.in_transaction():
+                with self._connection.begin_nested():
+                    yield self._connection
+                return
+            try:
+                with self._connection.begin():
+                    yield self._connection
+            except BaseException:
+                self._undo()
+                raise
+
+    def _undo(self) -> None:
+        """No transaction left open after one failed, also not after a
+        failed COMMIT, which SQLAlchemy forgets without telling the
+        database. A failure here would only hide the one being raised."""
+        with suppress(Exception):
+            if self._driver.in_transaction:
+                self._driver.rollback()
+
+    @contextmanager
+    def transaction(self) -> Iterator[Any]:
+        """One transaction, as ``connected``. Gives the connection of the
+        driver, for the repositories that still hand it SQL as text."""
+        with self.connected():
+            yield self._driver
 
     def purge(self, table: str, column: str, before: datetime) -> int:
         """The rows of ``table`` whose time in ``column`` lies before
@@ -80,56 +126,14 @@ class Database:
         file follows what it holds. Cheap when there is nothing to give
         back. Inside a transaction it waits for the next call."""
         with self._lock:
-            if self._connection.in_transaction:
+            if self._connection.in_transaction():
                 return
-            file.shrink(self._connection)
+            file.shrink(self._driver)
 
-    @contextmanager
-    def transaction(self) -> Iterator[sqlite3.Connection]:
-        """One transaction. Inside another one, a savepoint: it is released
-        into the outer transaction, or rolled back alone."""
-        with self._lock:
-            if self._connection.in_transaction:
-                with self._savepoint():
-                    yield self._connection
-                return
-            with translated():
-                self._connection.execute("BEGIN IMMEDIATE")
-            try:
-                with translated():
-                    yield self._connection
-                    self._connection.execute("COMMIT")
-            except BaseException:
-                self._rollback("ROLLBACK")
-                raise
-
-    @contextmanager
-    def _savepoint(self) -> Iterator[None]:
-        self._depth += 1
-        name = f"sp{self._depth}"
-        try:
-            with translated():
-                self._connection.execute(f"SAVEPOINT {name}")
-            try:
-                with translated():
-                    yield
-                    self._connection.execute(f"RELEASE {name}")
-            except BaseException:
-                self._rollback(f"ROLLBACK TO {name}")
-                self._rollback(f"RELEASE {name}")
-                raise
-        finally:
-            self._depth -= 1
-
-    def _rollback(self, statement: str) -> None:
-        """Undo as far as possible. A failure here would only hide the
-        one being raised."""
-        with suppress(sqlite3.Error):
-            self._connection.execute(statement)
-
-    def query(self, sql: str, params: tuple[Any, ...] = ()) -> list[sqlite3.Row]:
+    def query(self, sql: str, params: tuple[Any, ...] = ()) -> list[Any]:
         with self._lock, translated():
-            return self._connection.execute(sql, params).fetchall()
+            rows: list[Any] = self._driver.execute(sql, params).fetchall()
+            return rows
 
     def query_in(
         self,
@@ -137,35 +141,34 @@ class Database:
         values: Iterable[Any],
         before: tuple[Any, ...] = (),
         after: tuple[Any, ...] = (),
-    ) -> list[sqlite3.Row]:
+    ) -> list[Any]:
         """The rows of ``sql`` for every value, each once. ``{in}`` in
         ``sql`` stands for ``IN (...)`` of the values, ``before`` and
-        ``after`` are the parameters around them. In chunks of
-        ``IN_CHUNK``, since SQLite caps the parameters of one statement:
-        the rows come chunk by chunk, not in the order of one query."""
-        rows: list[sqlite3.Row] = []
-        for chunk in batched(list(dict.fromkeys(values)), IN_CHUNK):
+        ``after`` are the parameters around them. In chunks, since a
+        database caps the parameters of one statement: the rows come
+        chunk by chunk, not in the order of one query."""
+        rows: list[Any] = []
+        for chunk in in_chunks(values):
             marks = ", ".join("?" * len(chunk))
             rows += self.query(
                 sql.replace("{in}", f"IN ({marks})"), (*before, *chunk, *after)
             )
         return rows
 
-    def one(self, sql: str, params: tuple[Any, ...] = ()) -> sqlite3.Row | None:
+    def one(self, sql: str, params: tuple[Any, ...] = ()) -> Any:
         """The first row, or None."""
         with self._lock, translated():
-            row: sqlite3.Row | None = self._connection.execute(sql, params).fetchone()
-            return row
+            return self._driver.execute(sql, params).fetchone()
 
     def one_as(
-        self, read: Callable[[sqlite3.Row], T], sql: str, params: tuple[Any, ...] = ()
+        self, read: Callable[[Any], T], sql: str, params: tuple[Any, ...] = ()
     ) -> T | None:
         """The first row as ``read`` makes it a record, or None."""
         row = self.one(sql, params)
         return None if row is None else read(row)
 
     def query_as(
-        self, read: Callable[[sqlite3.Row], T], sql: str, params: tuple[Any, ...] = ()
+        self, read: Callable[[Any], T], sql: str, params: tuple[Any, ...] = ()
     ) -> list[T]:
         """Every row as ``read`` makes it a record."""
         return [read(row) for row in self.query(sql, params)]
@@ -178,7 +181,7 @@ class Database:
 
     def must_find(
         self, sql: str, params: tuple[Any, ...], what: str, row_id: str
-    ) -> sqlite3.Row:
+    ) -> Any:
         """``one`` for a row that must be there: NotFoundError when not."""
         row = self.one(sql, params)
         if row is None:
@@ -188,7 +191,8 @@ class Database:
     def execute(self, sql: str, params: tuple[Any, ...] = ()) -> int:
         """One statement in a transaction of its own. Returns the rows it changed."""
         with self.transaction() as db:
-            return db.execute(sql, params).rowcount
+            changed: int = db.execute(sql, params).rowcount
+            return changed
 
     def must_change(
         self, sql: str, params: tuple[Any, ...], what: str, row_id: str
@@ -208,7 +212,7 @@ class Database:
         """Every table of the schema with its columns and key, each after
         the tables it refers to."""
         with self._lock, translated():
-            return read_tables(self._connection)
+            return read_tables(self._driver)
 
     def rows(self, table: str) -> Iterator[tuple[Any, ...]]:
         """The rows of ``table``, a table of ``tables``, as tuples of its
@@ -218,7 +222,7 @@ class Database:
         after: tuple[Any, ...] | None = None
         while True:
             with self._lock, translated():
-                part = read_chunk(self._connection, shape, after, ROWS_CHUNK)
+                part = read_chunk(self._driver, shape, after, ROWS_CHUNK)
             yield from part
             if len(part) < ROWS_CHUNK:
                 return
@@ -244,15 +248,32 @@ class Database:
 
     def schema_version(self) -> int:
         with self._lock:
-            return file.schema_version(self._connection)
+            return file.schema_version(self._driver)
 
     def close(self) -> None:
         with self._lock:
             self._connection.close()
+            self._engine.dispose()
+            self._driver.close()
 
     def snapshot_file(self) -> AbstractContextManager[Path]:
         """A consistent copy of the whole database, taken while it is in
         use, as a file beside it, readable by its owner alone. It is gone
         when the block ends. A copy left by a crash is replaced. Another
         process making one at the same time is refused."""
-        return file.snapshot(self._connection, self._path, self._lock)
+        return file.snapshot(self._driver, self._path, self._lock)
+
+
+@contextmanager
+def translated() -> Iterator[None]:
+    """The failures of the database as this project's errors, with the
+    text of the driver: the one of SQLAlchemy holds the statement and its
+    values. The driver's own errors, from the connection used directly,
+    are translated by ``file``."""
+    try:
+        with file.translated():
+            yield
+    except sa.exc.IntegrityError as exc:
+        raise ConflictError(f"conflicts with a stored record: {exc.orig}") from None
+    except sa.exc.DBAPIError as exc:
+        raise StorageError(f"the database failed: {exc.orig}") from None

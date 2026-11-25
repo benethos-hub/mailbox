@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import sqlite3
+from typing import TYPE_CHECKING
 
 from ....common.clock import iso, parse_iso
 from ..credentials import EncryptedCredential, WrappedKey
-from .database import Database
+
+if TYPE_CHECKING:
+    from ..sql.database import Database
 
 _ACTIVE = "active_key"
 

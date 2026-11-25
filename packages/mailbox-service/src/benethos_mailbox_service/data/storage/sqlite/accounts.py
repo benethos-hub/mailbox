@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from typing import TYPE_CHECKING
 
 from ...models import Abilities, Account, AccountStatus
 from ..accounts import SettingsDict
-from .database import Database
 from .rows import SqliteRows, next_position
+
+if TYPE_CHECKING:
+    from ..sql.database import Database
 
 
 class SqliteAccountRepository:

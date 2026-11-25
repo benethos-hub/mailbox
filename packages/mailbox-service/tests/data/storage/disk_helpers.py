@@ -4,39 +4,40 @@ from __future__ import annotations
 
 import sqlite3
 
-import pytest
+import sqlalchemy as sa
 
 from benethos_mailbox_service.data.storage import Database
 
 
 class Disk:
     """A disk under a database that fails a COMMIT, as a full one does:
-    the one place that knows where the connection of a database sits."""
+    the one place that knows where the engine and the connection of a
+    database sit."""
 
-    def __init__(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        self._monkeypatch = monkeypatch
+    def __init__(self) -> None:
+        self._failing: list[sa.Engine] = []
 
     def fail_commit(self, db: Database) -> None:
-        self._monkeypatch.setattr(db, "_connection", _FailingCommit(db._connection))
+        engine = db._engine
+        sa.event.listen(engine, "commit", _fail)
+        self._failing.append(engine)
 
     def mend(self) -> None:
-        self._monkeypatch.undo()
+        while self._failing:
+            sa.event.remove(self._failing.pop(), "commit", _fail)
 
     @staticmethod
     def in_transaction(db: Database) -> bool:
-        return db._connection.in_transaction
+        return bool(db._driver.in_transaction)
 
 
-class _FailingCommit:
-    """A connection whose COMMIT fails."""
+def _fail(connection: sa.Connection) -> None:
+    raise sqlite3.OperationalError("disk I/O error")
 
-    def __init__(self, real: sqlite3.Connection) -> None:
-        self._real = real
 
-    def execute(self, sql: str, *args: object) -> object:
-        if sql == "COMMIT":
-            raise sqlite3.OperationalError("disk I/O error")
-        return self._real.execute(sql, *args)
-
-    def __getattr__(self, name: str) -> object:
-        return getattr(self._real, name)
+def traced(db: Database) -> list[str]:
+    """Every statement the database runs from now on, as the driver sees
+    it."""
+    said: list[str] = []
+    db._driver.set_trace_callback(said.append)
+    return said
