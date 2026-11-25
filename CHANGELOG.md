@@ -121,6 +121,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   Its model calls count against the agent's limits. A2A 1.0 and 0.3 on
   one endpoint, the agent card at `/.well-known/agent-card.json`, every
   request with `Authorization: Bearer`. Off unless the port is set.
+- The live checks of the agents: `live/mailbox-agents/peers.py` asks the
+  entrance for peers over A2A directly and through the A2A gateway of
+  LiteLLM in the live setup, which it enters the agent in and deletes it
+  from again. It changes no mail.
 
 ### Changed
 

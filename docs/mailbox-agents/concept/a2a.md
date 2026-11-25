@@ -3,7 +3,8 @@
 Part of the [concept](../CONCEPT.md).
 
 > **Status: built (2026-11-25), off unless a port is set. Checked
-> offline, never on a real mailbox.**
+> offline and behind LiteLLM 1.110.3 on the test account of the live
+> setup, never on a real mailbox.**
 
 Another agent, a peer, may want to know how an agent classifies a
 message, such as whether it is an invoice and from which partner. The
@@ -91,11 +92,26 @@ message that names `A2A_PORT`.
 ## Behind LiteLLM
 
 LiteLLM lists A2A agents beside its models and passes a question on at
-`/a2a/<agent>`, with a key of its own. An agent is entered with its URL
-and the header to send it, the token of the entrance as
-`static_headers` **(to verify)**: [the live setup](../../../containers/live/mailbox-agents/README.md)
-says how. LiteLLM logs what passes through it, the categories it is
-told among them.
+`/a2a/<agent_id>`, with a key of its own. An agent is entered with
+`POST /v1/agents`: its card with the URL of the entrance,
+`a2a_protocol_version` `1.0`, and the token of the entrance as the
+header `Authorization` in `static_headers`
+([the live setup](../../../containers/live/mailbox-agents/README.md#peers-over-a2a)).
+
+Measured 2026-11-25 with LiteLLM 1.110.3 on the test account of the live
+setup (`live/mailbox-agents/peers.py`):
+
+- A question through LiteLLM, in A2A 1.0 and in 0.3, was told what the
+  entrance tells directly. LiteLLM answered both in 1.0, and its copy
+  of the card names LiteLLM as the address.
+- An agent entered without the token was answered with an error, and
+  the classifier was not asked.
+- A key of LiteLLM that reaches some model aliases only reached the
+  entered agent as well. The token of the entrance keeps out who should
+  not ask, whatever the keys of the gateway allow.
+
+LiteLLM logs what passes through it, the categories it is told among
+them.
 
 ## The pieces
 

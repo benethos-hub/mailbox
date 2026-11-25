@@ -19,6 +19,7 @@ is a manual aid, never part of `uv run pytest`.
 - [Ports](#ports)
 - [Use it](#use-it)
 - [Spans](#spans)
+- [Peers over A2A](#peers-over-a2a)
 - [Take it down](#take-it-down)
 
 ## Set it up
@@ -333,6 +334,31 @@ file named in `MAILBOX_AGENTS_OTLP_HEADERS_FILE` holds the line
 `Authorization=Basic ` and the base64 of its public and secret key,
 joined by a colon. What a span holds:
 [operation](../../../docs/mailbox-agents/concept/operation.md).
+
+## Peers over A2A
+
+`live/mailbox-agents/peers.py --host ADDRESS` checks the entrance for
+peers over A2A behind the gateway
+([peers over A2A](../../../docs/mailbox-agents/concept/a2a.md)). It
+serves `sorting` with the example list `beleg` on this machine at port
+38470, with a token made for the run, and enters it in LiteLLM with the
+master key of `secrets/gateway.env`:
+
+```
+POST /v1/agents
+{"agent_name": "...", "agent_card_params": {"url": "http://ADDRESS:38470/", ...},
+ "litellm_params": {"a2a_protocol_version": "1.0"},
+ "static_headers": {"Authorization": "Bearer <the token>"}}
+```
+
+The gateway's container reaches the entrance at `ADDRESS`: under WSL the
+address of the Windows side, the default route of the distro
+(`ip route show default`). A peer then asks at `/a2a/<agent_id>` with a
+key of the gateway. The check reads mail of the account and changes
+none, and deletes the agents it entered at the end. Measured
+2026-11-25 with LiteLLM 1.110.3: the key of `agent.env`, which reaches
+the `mail-classifier` aliases only, reached the entered agent as well.
+The token of the entrance is what keeps a key out that should not ask.
 
 ## Take it down
 
