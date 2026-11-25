@@ -56,7 +56,7 @@ Then, not in this order:
   reminder, a quotation, an order confirmation, a payment receipt), a
   project inquiry, a newsletter, sent mail that waits for a reply and some
   that does not, a reply and an automatic answer, and for the topics of
-  `sorting` mail of two projects of one customer, applications, mail of
+  `categorization` mail of two projects of one customer, applications, mail of
   that customer about neither project, strangers who name a project in
   passing and a message that tells the model which group to choose,
 - makes the mailbox service's keys and administrator, signs in to its UI
@@ -281,7 +281,7 @@ prompt and no answer.
 
 ```
 uv run python live/mailbox-agents/agents_smoke.py
-uv run python live/mailbox-agents/sorting.py
+uv run python live/mailbox-agents/categorization.py
 uv run python live/mailbox-agents/invoices.py
 uv run benethos-mailbox-agents --env-file containers/live/mailbox-agents/secrets/agent.env status
 uv run benethos-mailbox-agents --env-file containers/live/mailbox-agents/secrets/agent.env run --agent counting
@@ -295,8 +295,8 @@ mailbox service is not the one of this setup, on this machine at port
 38081, and print the account first. A mailbox service on this machine
 at another port, such as its default 8080, may be a real one.
 
-`live/mailbox-agents/sorting.py` writes to the account: it runs `sorting` with
-`sorting.json` beside this file in `shadow`, then in `full`, and puts every
+`live/mailbox-agents/categorization.py` writes to the account: it runs `categorization` with
+`categorization.json` beside this file in `shadow`, then in `full`, and puts every
 message back where it was, as the inbox was before the checks, also after
 a check that failed or a run cut short. The list has two dimensions:
 the first with groups, some with a topic, so it asks the model of
@@ -306,16 +306,16 @@ the mail of two groups, taken off again. The folders it made, `Providers` and
 two below it, and `Projects/Harbor` when the model chose that group,
 stay, as no agent may delete a folder. `setup.sh` makes the account
 anew without them. `live/mailbox-agents/invoices.py` runs `invoices` in `shadow` beside
-`sorting` in `full`, in both orders, and puts the mail back. Then two
+`categorization` in `full`, in both orders, and puts the mail back. Then two
 checks of version 5, each with a new state file: an invoice moved by hand
 into the inbox folder `Invoices/Telco`, and an invoice marked beforehand.
 Every message goes back without either keyword. It asks the model of
 `agent.env`, one call per message and run.
 
-`chain/` holds three example lists of instances of `sorting` that hand a
+`chain/` holds three example lists of instances of `categorization` that hand a
 message on by keywords, `partner`, `beleg` and `ablage`
-([the chain of sorting](../../../docs/mailbox-agents/concept/sorting-chain.md#8-instances-that-hand-a-message-on)).
-`uv run benethos-mailbox-agents check --agent sorting partner=... beleg=...
+([the chain of categorization](../../../docs/mailbox-agents/concept/categorization-chain.md#8-instances-that-hand-a-message-on)).
+`uv run benethos-mailbox-agents check --agent categorization partner=... beleg=...
 ablage=...` reads them together.
 
 ## Spans
@@ -340,7 +340,7 @@ joined by a colon. What a span holds:
 `live/mailbox-agents/peers.py --host ADDRESS` checks the entrance for
 peers over A2A behind the gateway
 ([peers over A2A](../../../docs/mailbox-agents/concept/a2a.md)). It
-serves `sorting` with the example list `beleg` on this machine at port
+serves `categorization` with the example list `beleg` on this machine at port
 38470, with a token made for the run, and enters it in LiteLLM with the
 master key of `secrets/gateway.env`:
 

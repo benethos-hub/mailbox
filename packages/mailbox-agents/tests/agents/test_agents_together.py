@@ -1,4 +1,4 @@
-"""invoices beside sorting, each with a state file of its own: an invoice
+"""invoices beside categorization, each with a state file of its own: an invoice
 reaches the subfolder of its group in either order."""
 
 from __future__ import annotations
@@ -9,8 +9,8 @@ from typing import Any
 
 import pytest
 
+from benethos_mailbox_agents.agents.categorization.agent import Categorization
 from benethos_mailbox_agents.agents.invoices.agent import Invoices
-from benethos_mailbox_agents.agents.sorting.agent import Sorting
 from benethos_mailbox_agents.errors import MailboxUnavailableError
 from benethos_mailbox_agents.records import MessageRef
 from benethos_mailbox_agents.runtime.loop import Worker
@@ -46,18 +46,18 @@ async def together_world(tmp_path: Path) -> AsyncIterator[Wired]:
 
 
 async def sort(together_world: Wired, tmp_path: Path, message_id: str) -> None:
-    """The agent sorting, with a state file of its own, moves the mail of
+    """The agent categorization, with a state file of its own, moves the mail of
     accounts@paperworks.example into Invoices/Hosting."""
-    listed = tmp_path / "sorting.json"
+    listed = tmp_path / "categorization.json"
     listed.write_text(
         '{"groups": [{"name": "Paperworks", "folder": "Invoices/Hosting",'
         ' "senders": ["*@paperworks.example"]}]}',
         encoding="utf-8",
     )
-    sorting = Sorting(settings(stage="full", sorting_file=listed))
-    with Store.open(tmp_path / "sorting.db") as store:
+    categorization = Categorization(settings(stage="full", categorization_file=listed))
+    with Store.open(tmp_path / "categorization.db") as store:
         moving = Worker(
-            agent=sorting,
+            agent=categorization,
             store=store,
             mailbox=together_world.mailbox,
             gateway=NoModel(),
@@ -70,7 +70,7 @@ async def sort(together_world: Wired, tmp_path: Path, message_id: str) -> None:
         await moving.process_due()
 
 
-async def test_invoices_first_then_sorting_moves_it_on(
+async def test_invoices_first_then_categorization_moves_it_on(
     together_world: Wired, tmp_path: Path
 ) -> None:
     together_world.fake_gateway.answer(answer())
@@ -87,8 +87,8 @@ async def test_invoices_first_then_sorting_moves_it_on(
         "inv-hosting/Rechnungen"
     ]
     assert sorted(mail(together_world, "inv-unlisted")["keywords"]) == [
+        "agent-categorized",
         "agent-invoice",
-        "agent-sorted",
     ]
     found = item(together_world, "inv-unlisted")
     assert found is not None and (found.is_open, found.reason) == (False, "filed")
@@ -140,7 +140,7 @@ async def test_a_filing_cut_short_by_the_service_is_done_on_the_next_pass(
     assert found is not None and (found.is_open, found.reason) == (False, "filed")
 
 
-async def test_sorting_first_then_invoices_moves_it_on(
+async def test_categorization_first_then_invoices_moves_it_on(
     together_world: Wired, tmp_path: Path
 ) -> None:
     await sort(together_world, tmp_path, "inv-unlisted")
@@ -154,18 +154,18 @@ async def test_sorting_first_then_invoices_moves_it_on(
     assert item(together_world, "inv-unlisted") is None
 
 
-async def test_an_invoice_sorting_moves_while_the_model_answers_is_filed_there(
+async def test_an_invoice_categorization_moves_while_the_model_answers_is_filed_there(
     together_world: Wired,
 ) -> None:
-    """sorting moves the invoice out of the inbox while invoices asks the
+    """categorization moves the invoice out of the inbox while invoices asks the
     model about it: invoices files it where it lies when it acts, not into
     the inbox folder."""
 
-    def sorting_moves_it() -> None:
+    def categorization_moves_it() -> None:
         mail(together_world, "inv-unlisted")["folder_ids"] = ["inv-hosting"]
 
     together_world.fake_gateway.answer(answer())
-    together_world.fake_gateway.during = sorting_moves_it
+    together_world.fake_gateway.during = categorization_moves_it
 
     assert (
         await run(

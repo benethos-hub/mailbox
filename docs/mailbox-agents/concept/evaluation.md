@@ -44,7 +44,7 @@ agent runs over it and the scoring counts where it agrees.
 - **A report names only the agent's own labels and fields** (decided
   2026-11-19). An agent declares its fixed labels and field names
   (`report_labels`, `report_fields`). Any other name in the gold set or a
-  decision, such as the name of a group of `sorting`, which is the owner's
+  decision, such as the name of a group of `categorization`, which is the owner's
   own text and often a person's name, becomes `label-<n>` or `field-<n>`,
   numbered in the sorted order of the names within the report. The
   numbers stay.

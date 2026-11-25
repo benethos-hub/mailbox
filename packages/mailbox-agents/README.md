@@ -25,7 +25,7 @@
 
 > **Alpha, version 0.11.1.** Built, and run on a test account of
 > invented mail. On a real mailbox, read-only and in the stage `shadow`:
-> `invoices` version 3 on 2026-11-18, `sorting` and `invoices` on
+> `invoices` version 3 on 2026-11-18, `categorization` and `invoices` on
 > 2026-11-22, and `invoices`, `inquiries` and `awaiting_reply` in the
 > versions of 0.11.0 on 2026-11-23. None changed anything. Names, settings and
 > the state file may still change from one version to the next. The

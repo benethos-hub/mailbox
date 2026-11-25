@@ -14,7 +14,7 @@ account and the service are printed before the check reads or writes.
 - ``snapshots``: how the messages of the test account lie, and their mail
   put back after a check.
 - ``checks``: the run of the checks, a check skipped, the agent
-  ``sorting`` over the test account and the keywords it sets, and the
+  ``categorization`` over the test account and the keywords it sets, and the
   labels a state file holds.
 
 The live scripts import this package beside them, as ``agents_common``,
@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import sys
 
-from .checks import Skip, labels, run_checks, sort_test_account, sorting_keywords
+from .checks import Skip, categorization_keywords, labels, run_checks, sort_test_account
 from .settings import (
     DAYS,
     ENV,
@@ -66,6 +66,6 @@ __all__ = [
     "run_checks",
     "snapshot",
     "sort_test_account",
-    "sorting_keywords",
+    "categorization_keywords",
     "worker",
 ]

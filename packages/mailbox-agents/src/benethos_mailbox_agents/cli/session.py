@@ -10,9 +10,10 @@ from contextlib import (
     asynccontextmanager,
 )
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
-from ..contract import Agent
+from ..contract import Agent, state_name
 from ..errors import ConfigError
 from ..llm.gateway import Gateway
 from ..logbook import process, record
@@ -27,6 +28,7 @@ from ..telemetry import open_spans
 __all__ = [
     "TRANSPORTS",
     "Session",
+    "former_file",
     "now",
     "session",
     "upstreams",
@@ -57,6 +59,19 @@ class Session:
         self.mailbox = mailbox
         self.gateway = gateway
         self.worker = worker
+
+
+def former_file(data_dir: Path, cls: type[Agent], instance: str | None) -> Path | None:
+    """The state file of the agent under a former name of it, when there
+    is one and none under its name: a writer does not start anew beside
+    it, as the cursor and every decision are in it."""
+    if path_for(data_dir, state_name(cls.name, instance)).is_file():
+        return None
+    for name in cls.former_names:
+        found = path_for(data_dir, state_name(name, instance))
+        if found.is_file():
+            return found
+    return None
 
 
 def mailbox_for(settings: Settings) -> AbstractAsyncContextManager[Mailbox]:
@@ -106,6 +121,12 @@ async def session(cls: type[Agent], settings: Settings) -> AsyncIterator[Session
                 f"the state file of {agent.label} lies at {earlier.resolve()}, "
                 f"the agents keep it at {path.resolve()} now: move it there, "
                 f"or set {PREFIX}DATA_DIR to its folder"
+            )
+        former = former_file(settings.data_dir, type(agent), settings.instance)
+        if former is not None:
+            raise ConfigError(
+                f"the state file of {agent.label} lies at {former.resolve()}, "
+                f"under a former name of the agent: rename it to {path.resolve()}"
             )
         store = stack.enter_context(Store.open(path))
         if store.migrated is not None:

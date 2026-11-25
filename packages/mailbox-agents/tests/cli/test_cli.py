@@ -124,7 +124,13 @@ def test_a_broken_state_file_is_named_and_the_others_still_listed(
     out = capsys.readouterr().out
     assert "state file unreadable: the state file awaiting_reply.db" in out
     starts = [line.split(" ")[0] for line in out.splitlines()]
-    for name in ("awaiting_reply", "counting", "inquiries", "invoices", "sorting"):
+    for name in (
+        "awaiting_reply",
+        "counting",
+        "inquiries",
+        "invoices",
+        "categorization",
+    ):
         assert name in starts
     assert "last progress: 20" in out
 
@@ -168,7 +174,13 @@ def test_a_state_file_of_a_newer_schema_is_named_and_unhealthy(
     out = capsys.readouterr().out
     assert "state file unreadable: the state file is at schema version 99" in out
     starts = [line.split(" ")[0] for line in out.splitlines()]
-    for name in ("awaiting_reply", "counting", "inquiries", "invoices", "sorting"):
+    for name in (
+        "awaiting_reply",
+        "counting",
+        "inquiries",
+        "invoices",
+        "categorization",
+    ):
         assert name in starts
 
     assert main(["health", "--agent", "counting"]) == 1

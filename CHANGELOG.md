@@ -38,7 +38,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   `list_outbox`, `get_outbox_job` and `cancel_send` read and cancel the
   jobs. `send_message` and `send_draft` are unchanged. `SendRecord`
   names the job of an attempt in `outbox_job_id`.
-- `benethos-mailbox-agents`: a group of the list of `sorting` may name a
+- `benethos-mailbox-agents`: a group of the list of `categorization` may name a
   `topic`, one line on the mail that belongs to it, and with it
   `by_topic`, `record` or `act`. For a message in the inbox that no
   sender rule settles, a model chooses among the groups with a topic,
@@ -48,7 +48,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   in several groups that each have a topic: the model then chooses
   among them. A sender rule of one group decides as before, with no
   model call.
-- `benethos-mailbox-agents`: the list of `sorting` may name
+- `benethos-mailbox-agents`: the list of `categorization` may name
   `dimensions` in place of `groups`, such as the partner of a mail and
   its kind, run one after another. A dimension names its categories, and
   with `when` the categories of an earlier dimension it runs after. A
@@ -68,7 +68,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   recorded, only sorted.
 - `benethos-mailbox-agents`: spans over OpenTelemetry. With
   `MAILBOX_AGENTS_OTLP_ENDPOINT` set, each agent exports a span per
-  message, below it the decision with a span per dimension of `sorting`,
+  message, below it the decision with a span per dimension of `categorization`,
   and a span per action, over OTLP and HTTP to `<endpoint>/v1/traces`: a
   collector, Tempo or Langfuse. `MAILBOX_AGENTS_OTLP_HEADERS_FILE` names a
   file of headers such as a key, never logged. A span holds ids, states,
@@ -82,35 +82,35 @@ adheres to [Semantic Versioning](https://semver.org/).
   the agent's keyword with `-<instance>` after it by default, and is
   named `<agent>/<instance>` in the log, `status` and `report`, its
   metrics with the label `instance`. Unset, everything stays as it was.
-- `benethos-mailbox-agents`: a category of `sorting` may name `keywords`:
+- `benethos-mailbox-agents`: a category of `categorization` may name `keywords`:
   it holds for a message that carries all of them, set by an earlier
   instance or by a person, found by code without a model. A list with
   `"mark_done": true` sets the agent's keyword after every decision,
   `none` included, as a sign for a later instance that this one is done.
-- `benethos-mailbox-agents`: a list of `sorting` may wait for keywords,
+- `benethos-mailbox-agents`: a list of `categorization` may wait for keywords,
   `"on": {"keywords": ["agent-partner-*"]}`, beside or in place of the
   arrival: a message given such a keyword, by an earlier instance or by
   a person, is decided again. What code decides is worked out anew, what
   the model answered is taken as stored, with no new call. A move is
   taken once, a keyword already there not again. A list that waits for
   a keyword it sets itself is refused.
-- `benethos-mailbox-agents`: the command `check --agent sorting
+- `benethos-mailbox-agents`: the command `check --agent categorization
   partner=partner.json beleg=beleg.json ...` reads the lists of several
   instances together and names each circle of lists that set each other
   off, exit code 1, else 0.
 - The live setup of the agents: three example lists of instances of
-  `sorting` that hand a message on, in `containers/live/mailbox-agents/chain/`.
-- `benethos-mailbox-agents`: the recognizer `invoice` of `sorting`. A
+  `categorization` that hand a message on, in `containers/live/mailbox-agents/chain/`.
+- `benethos-mailbox-agents`: the recognizer `invoice` of `categorization`. A
   category with `"recognize": "invoice"` holds for an invoice, asked of
   the model with a copy of the prompt `v5` of `invoices`, the near miss
   of one that is not in the details. A category the model chose this
   way may name `by_topic` as one with a topic does.
-- `benethos-mailbox-agents`: `eval --agent sorting --recognizer invoice`
+- `benethos-mailbox-agents`: `eval --agent categorization --recognizer invoice`
   scores the recognizer alone, its rules beside the model, in the space
   of `invoices`: the gold set of `invoices` serves unchanged. The report
   names the recognizer in its file name.
 - The live checks of the agents: `live/mailbox-agents/chain.py` runs the
-  three example instances of `sorting` on the test account and puts the
+  three example instances of `categorization` on the test account and puts the
   mail back, and the example list `beleg` asks the recognizer `invoice`.
 - `benethos-mailbox-agents`: an entrance for peers over A2A. With
   `MAILBOX_AGENTS_A2A_PORT` and a token (`MAILBOX_AGENTS_A2A_TOKEN` or
@@ -128,19 +128,35 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- `benethos-mailbox-agents`: `sorting` is version 3 and stores its
+- `benethos-mailbox-agents`: the agent `sorting` is named
+  `categorization`. To move over:
+  - `--agent sorting` becomes `--agent categorization`, and so does the
+    service of the compose file.
+  - `MAILBOX_AGENTS_SORTING_FILE` becomes
+    `MAILBOX_AGENTS_CATEGORIZATION_FILE`. The old setting is no longer read.
+  - The state file `sorting.db` becomes `categorization.db`, with an
+    instance `sorting-<instance>.db` becomes
+    `categorization-<instance>.db`. Rename it: the agent does not start
+    beside a state file of its former name, and `status` names one.
+  - The default keyword `agent-sorted` becomes `agent-categorized`, with
+    an instance `agent-categorized-<instance>`. To keep marking with the
+    old one, set `MAILBOX_AGENTS_KEYWORD=agent-sorted`, and change a list
+    that waits for the sign of an instance.
+  - Its metrics, log lines and reports name `categorization`, and its
+    reports go to `reports/mailbox-agents/categorization/`.
+- `benethos-mailbox-agents`: `categorization` is version 3 and stores its
   decision under the version `v1-list-` and the digest of its list, so
   every message is decided anew. Run it in `shadow` again before a
   higher stage. A list of `groups` keeps its digest from version 2.
 - `benethos-mailbox-agents`: the runtime sets and takes off a keyword an
-  agent names in its configuration, not only its own: for `sorting` the
+  agent names in its configuration, not only its own: for `categorization` the
   keywords of its list, each `agent-` and lower case letters, digits and
   dashes. Any other keyword is refused as before.
-- The live setup of the agents: its list of `sorting` names two
+- The live setup of the agents: its list of `categorization` names two
   dimensions, the second by sender alone setting the keyword
-  `agent-billing`, and `live/mailbox-agents/sorting.py` checks it and takes
+  `agent-billing`, and `live/mailbox-agents/categorization.py` checks it and takes
   it off again.
-- `benethos-mailbox-agents`: `sorting` needs the gateway settings once a
+- `benethos-mailbox-agents`: `categorization` needs the gateway settings once a
   group of its list has a topic. A list without a topic runs without a
   gateway, as before.
 

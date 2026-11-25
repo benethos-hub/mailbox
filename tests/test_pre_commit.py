@@ -106,10 +106,10 @@ def test_the_hook_is_executable_in_the_repository() -> None:
         "account.token.json",
         "somewhere/server.pem",
         "config/x/schlüssel.key",
-        "config/benethos-mailbox-agents/sorting.json",
+        "config/benethos-mailbox-agents/categorization.json",
         "packages/mailbox-agents/tests/data/other.pem",
         "sicherung/März.db",
-        "containers/production/mailbox-agents/agents/sorting/sorting.json",
+        "containers/production/mailbox-agents/agents/categorization/categorization.json",
         "containers/production/mailbox-agents/agents/inquiries/inquiries.json",
     ],
 )
@@ -126,7 +126,7 @@ def test_refuses_files_that_never_belong(repo: Path, name: str) -> None:
     "name",
     [
         "config/benethos-mailbox-service/.env.example",
-        "config/benethos-mailbox-agents/sorting.example.json",
+        "config/benethos-mailbox-agents/categorization.example.json",
         "packages/mailbox-agents/tests/data/test-ca.pem",
         "live/.env.example",
         "data/benethos-mailbox-service/.gitkeep",
@@ -136,7 +136,7 @@ def test_refuses_files_that_never_belong(repo: Path, name: str) -> None:
         "containers/production/mailbox-service/compose.yaml",
         "packages/mailbox-service/src/benethos_mailbox_service/data/secrets/keys.py",
         "packages/mailbox-service/src/benethos_mailbox_service/data/models/x.py",
-        "containers/production/mailbox-agents/agents/sorting/sorting.example.json",
+        "containers/production/mailbox-agents/agents/categorization/categorization.example.json",
         "containers/production/mailbox-agents/agents/invoices/.env.example",
     ],
 )

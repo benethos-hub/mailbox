@@ -35,7 +35,14 @@ from ..settings import PREFIX, Settings, folders
 from ..sources.versions import matches, shown, taken
 from ..store import STATES, Store, earlier_file, path_for
 from .report import report as make_report
-from .session import Session, mailbox_for, now, session, upstreams
+from .session import (
+    Session,
+    former_file,
+    mailbox_for,
+    now,
+    session,
+    upstreams,
+)
 
 __all__ = [
     "backfill",
@@ -237,6 +244,12 @@ def status(args: argparse.Namespace, settings: Settings) -> int:
                 _say(f"  {line}")
         for line in _state(cls.name, settings):
             _say(f"  {line}")
+        former = former_file(settings.data_dir, cls, settings.instance)
+        if former is not None:
+            _say(
+                f"  a state file lies at {former.resolve()} under a former name: "
+                "rename it to the agent's name"
+            )
     return 0
 
 

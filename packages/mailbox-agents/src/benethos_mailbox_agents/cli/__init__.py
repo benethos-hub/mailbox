@@ -98,7 +98,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--recognizer",
         default=None,
         help="one recognizer of the agent alone, in its own space, such as "
-        "invoice of sorting",
+        "invoice of categorization",
     )
     found.add_argument(
         "--reports",

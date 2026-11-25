@@ -87,7 +87,7 @@ A line holds the time, the level, the source and the message:
   `MailboxRefusedError(mailbox_refused)`, the reason an answer was
   refused, or the agent's short code for an action, such as `due`. Only
   when there is one. A code is fixed in the agent's code, never text of
-  the owner's configuration: `sorting` writes `group`, `topic`, `held` or
+  the owner's configuration: `categorization` writes `group`, `topic`, `held` or
   `keyword`, never the name of the group or category, which often names
   a person (decided 2026-11-18), nor its topic or the keyword of its list.
 

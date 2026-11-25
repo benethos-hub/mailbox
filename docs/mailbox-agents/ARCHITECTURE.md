@@ -11,7 +11,7 @@
                       | REST, benethos-mailbox-client
         +-------------+--------------+
         | mailbox-agents             |   one image,
-        |   sorting         + SQLite |   one process per agent,
+        |   categorization         + SQLite |   one process per agent,
         |   invoices        + SQLite |   one state file per agent
         |   awaiting_reply  + SQLite |
         |   inquiries       + SQLite |
@@ -150,7 +150,7 @@ packages/mailbox-agents/src/benethos_mailbox_agents/
                   # rules, patterns.py the domains and phrases it knows
     awaiting_reply/  # schema.py, prompts/, text.py what its rules read
                   # in a mail
-    sorting/      # groups.py the list of groups, by senders and
+    categorization/      # groups.py the list of groups, by senders and
                   # topics, dimensions.py and lists.py the list of the
                   # chain, recognizers.py and actions.py its registers,
                   # plan.py one message through the chain, summary.py
@@ -159,7 +159,7 @@ packages/mailbox-agents/tests/  # offline: REST and gateway through
                                 # httpx.MockTransport
 live/mailbox-agents/    # run by hand, outside testpaths, against the test
                         # account of containers/live/mailbox-agents/:
-                        # agents_smoke.py read-only, sorting.py and
+                        # agents_smoke.py read-only, categorization.py and
                         # invoices.py, gold.py the gold files from its
                         # labels, agents_common/ what they share
 containers/

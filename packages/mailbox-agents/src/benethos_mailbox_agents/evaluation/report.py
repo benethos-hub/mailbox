@@ -6,7 +6,7 @@ the model and of the rules, what a message cost, and why messages went
 unanswered. No id, no label of a single message, nothing of a mail, so a
 report can be versioned beside the change it measures. A label or field
 name the agent does not declare as its own, such as the name of a group
-of sorting, is replaced by ``label-<n>`` or ``field-<n>``. See
+of categorization, is replaced by ``label-<n>`` or ``field-<n>``. See
 docs/mailbox-agents/concept/evaluation.md.
 """
 

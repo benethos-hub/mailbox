@@ -1,20 +1,20 @@
-"""The live check of invoices beside sorting, against the test account of
-containers/live/mailbox-agents/. sorting WRITES to that account, and the mail is put
-back.
+"""The live check of invoices beside categorization, against the test
+account of containers/live/mailbox-agents/. categorization WRITES to that
+account, and the mail is put back.
 
     sh containers/live/mailbox-agents/setup.sh          # once, in a shell with Docker
     uv run python live/mailbox-agents/invoices.py
         [--env-file containers/live/mailbox-agents/secrets/agent.env]
 
 ``invoices`` runs in ``shadow`` with the folders ``Providers/*`` and the
-subfolder ``{folder}/Rechnungen``, beside ``sorting`` in ``full`` with the
-list containers/live/mailbox-agents/sorting.json, in both orders:
+subfolder ``{folder}/Rechnungen``, beside ``categorization`` in ``full`` with the
+list containers/live/mailbox-agents/categorization.json, in both orders:
 
 1. ``invoices`` first: it marks the invoices in the inbox and opens an
-   item for each. ``sorting`` then moves the mail of its groups, and the
+   item for each. ``categorization`` then moves the mail of its groups, and the
    updates reach ``invoices`` through the feed, which records the move of
    each invoice into its subfolder, with no model call.
-2. ``sorting`` first: the mail lies in the folders of the groups, and
+2. ``categorization`` first: the mail lies in the folders of the groups, and
    ``invoices`` finds it there through ``backfill``.
 
 The mail goes back to where it was, and two checks of version 5 follow,
@@ -50,6 +50,7 @@ from agents_common import (  # beside this script
     DAYS,
     LIST,
     Snapshot,
+    categorization_keywords,
     connect_mailbox,
     inbox_snapshot,
     labels,
@@ -59,13 +60,12 @@ from agents_common import (  # beside this script
     put_back,
     run_checks,
     sort_test_account,
-    sorting_keywords,
     worker,
 )
 
+from benethos_mailbox_agents.agents.categorization.agent import Categorization
+from benethos_mailbox_agents.agents.categorization.lists import load_chain
 from benethos_mailbox_agents.agents.invoices.agent import Invoices
-from benethos_mailbox_agents.agents.sorting.agent import Sorting
-from benethos_mailbox_agents.agents.sorting.lists import load_chain
 from benethos_mailbox_agents.contract import Action
 from benethos_mailbox_agents.llm.gateway import Gateway
 from benethos_mailbox_agents.records import MessageRef
@@ -86,7 +86,7 @@ MARKED = "inv-cloudhost-1"
 def _invoices() -> tuple[int, set[str]]:
     """What the list and the labels make of the invented mail of mail.py:
     how many invoices lie in the inbox, and the subfolders of those that
-    sorting moves. The invoice of a held group or of a sender in no group
+    categorization moves. The invoice of a held group or of a sender in no group
     stays in the inbox."""
     # The first dimension of the list holds the moves by sender.
     partner = load_chain(LIST).chain.first
@@ -120,13 +120,13 @@ class Live:
 
     @property
     def keyword(self) -> str:
-        """The keyword sorting sets with these settings."""
-        return Sorting(self.settings).keyword
+        """The keyword categorization sets with these settings."""
+        return Categorization(self.settings).keyword
 
     @property
     def keywords(self) -> tuple[str, ...]:
-        """Every keyword sorting sets with the list of the live setup."""
-        return sorting_keywords(self.settings)
+        """Every keyword categorization sets with the list of the live setup."""
+        return categorization_keywords(self.settings)
 
     def invoices(self, name: str, **values: object) -> tuple[Worker, Store]:
         settings = self.settings.model_copy(
@@ -227,13 +227,14 @@ async def invoices_first(live: Live) -> str:
             raise AssertionError("invoices carried an action out in shadow")
         later = len(store.actions()) - steps
     return (
-        f"{INVOICES} invoices marked, {len(filed)} filed after sorting moved them "
+        f"{INVOICES} invoices marked, {len(filed)} filed after categorization "
+        "moved them "
         f"({time.monotonic() - started:.0f} s through the feed), "
         f"{later} actions recorded then, {calls} decisions"
     )
 
 
-async def sorting_first(live: Live) -> str:
+async def categorization_first(live: Live) -> str:
     marking, store = live.invoices("second")
     with store:
         taken = await marking.backfill(DAYS)
@@ -256,7 +257,7 @@ async def sorting_first(live: Live) -> str:
 
 async def put_back_between(live: Live) -> str:
     """The mail back, compared by Message-ID: the service may name a
-    message moved by sorting and back under another id afterwards, which
+    message moved by categorization and back under another id afterwards, which
     docs/mailbox-agents/concept/mailbox-service.md records. The checks after this one
     work on the inbox as it is then."""
     was = await by_header(live, live.before)
@@ -346,9 +347,9 @@ async def put_back_check(live: Live) -> str:
 
 CHECKS: list[tuple[str, Callable[[Live], Awaitable[str]]]] = [
     ("the inbox before", before),
-    ("invoices first, then sorting", invoices_first),
-    ("sorting first, then invoices", sorting_first),
-    ("the mail put back after sorting", put_back_between),
+    ("invoices first, then categorization", invoices_first),
+    ("categorization first, then invoices", categorization_first),
+    ("the mail put back after categorization", put_back_between),
     ("an invoice put into the end station by hand", end_station),
     ("a marked invoice under a state file made anew", marked_before),
     ("the mail put back", put_back_check),

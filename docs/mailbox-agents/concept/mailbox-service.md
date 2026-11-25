@@ -45,12 +45,12 @@ What the agents rely on:
   before an agent is switched to the keyword stage)**. At Stalwart over
   IMAP they are: measured 2026-11-17 against 0.7.5, a keyword set and
   taken off again, and 2026-11-20 against 0.8.0 and 2026-11-21 against
-  0.9.0, where `live/mailbox-agents/sorting.py` and `live/mailbox-agents/invoices.py` set an agent's
+  0.9.0, where `live/mailbox-agents/categorization.py` and `live/mailbox-agents/invoices.py` set an agent's
   keyword, find it on the message and take it off when they put the mail
   back.
 
-A keyword as a signal between agents, for the instances of `sorting`
-that wait for one ([the chain](sorting-chain.md)), measured 2026-11-25
+A keyword as a signal between agents, for the instances of `categorization`
+that wait for one ([the chain](categorization-chain.md)), measured 2026-11-25
 against 0.11.1 with IMAP at Stalwart, on the test account: a keyword set
 through `update_message`, a second one set, the first taken off, the
 second taken off. Each change came as one `message.updated` of the same
@@ -133,7 +133,7 @@ Rights. Each agent has a user of its own in the service:
 | `invoices` | `mail.read`, `mail.write` | `drafts`, send, `mail.delete` |
 | `awaiting_reply` | `mail.read`, `mail.write` | `drafts`, send, `mail.delete` |
 | `inquiries` | `mail.read`, `mail.write` | `drafts`, send, `mail.delete` |
-| `sorting` | `mail.read`, `mail.write` | `drafts`, send, `mail.delete` |
+| `categorization` | `mail.read`, `mail.write` | `drafts`, send, `mail.delete` |
 | `counting` | `mail.read` | `mail.write`, `drafts`, send, `mail.delete` |
 
 `counting` changes nothing, so `mail.read` is all it needs. Measured
@@ -156,7 +156,7 @@ A move into the drafts folder is refused by the service since 0.9.0,
 2026-11-21 against 0.9.0 with IMAP at Stalwart, one message of the inbox
 of the test account. The runtime refuses only the trash, junk and spam as
 a target by itself, so an agent moves a message into drafts only where
-its settings name that folder: a target of the sorting list, or
+its settings name that folder: a target of the categorization list, or
 `MAILBOX_AGENTS_INVOICES_INBOX_FOLDER`. In the stage `full` such a move
 meets the `400` and is logged as refused and not recorded, as any refused
 action. In `shadow` and `keyword` it is recorded and the service is not

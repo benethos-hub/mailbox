@@ -1,4 +1,4 @@
-"""One recognizer of sorting scored alone, in the space of the agent
+"""One recognizer of categorization scored alone, in the space of the agent
 invoices, and the command eval with --recognizer."""
 
 from __future__ import annotations
@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from benethos_mailbox_agents.agents.sorting.agent import Sorting
+from benethos_mailbox_agents.agents.categorization.agent import Categorization
 from benethos_mailbox_agents.cli import main
 from benethos_mailbox_agents.evaluation.gold import GoldItem
 from benethos_mailbox_agents.evaluation.report import build, write
@@ -25,7 +25,7 @@ LIST = {"groups": [{"name": "Hosting", "folder": "H", "senders": ["*@h.example"]
 
 
 def listed(tmp_path: Path) -> Path:
-    path = tmp_path / "sorting.json"
+    path = tmp_path / "categorization.json"
     path.write_text(json.dumps(LIST), encoding="utf-8")
     return path
 
@@ -33,7 +33,7 @@ def listed(tmp_path: Path) -> Path:
 async def test_the_recognizer_invoice_alone_in_the_space_of_invoices(
     tmp_path: Path,
 ) -> None:
-    agent = Sorting(settings(sorting_file=listed(tmp_path)))
+    agent = Categorization(settings(categorization_file=listed(tmp_path)))
     agent.prepare()
     alone = agent.alone("invoice")
     async with wired(tmp_path) as world:
@@ -71,7 +71,10 @@ async def test_the_recognizer_invoice_alone_in_the_space_of_invoices(
         )
         report = build(alone, "alias", outcomes, WHEN)
 
-    assert (report["agent"], report["prompt_version"]) == ("sorting", "invoice-v5")
+    assert (report["agent"], report["prompt_version"]) == (
+        "categorization",
+        "invoice-v5",
+    )
     assert report["model"]["agreed"] == 2
     assert report["baseline"]["agreed"] == 2
     assert set(report["model"]["labels"]) == {"invoice", "other"}
@@ -87,7 +90,7 @@ def test_a_recognizer_that_cannot_be_scored_alone_is_an_error_to_correct(
     tmp_path: Path,
 ) -> None:
     configure(monkeypatch)
-    monkeypatch.setenv(f"{PREFIX}SORTING_FILE", str(listed(tmp_path)))
+    monkeypatch.setenv(f"{PREFIX}CATEGORIZATION_FILE", str(listed(tmp_path)))
     path = tmp_path / "gold.jsonl"
     path.write_text(
         '{"account_id": "acc1", "message_id": "m1", "label": "invoice"}\n',
@@ -95,7 +98,15 @@ def test_a_recognizer_that_cannot_be_scored_alone_is_an_error_to_correct(
     )
 
     code = main(
-        ["eval", "--agent", "sorting", "--recognizer", "topic", "--gold", str(path)]
+        [
+            "eval",
+            "--agent",
+            "categorization",
+            "--recognizer",
+            "topic",
+            "--gold",
+            str(path),
+        ]
     )
 
     assert code == 2

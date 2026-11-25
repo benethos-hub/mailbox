@@ -57,7 +57,7 @@ Part of the [concept](../CONCEPT.md).
   `message` with the agent and its instance, the account and message ids, the attempt and
   the state the message is left in, below it `decision` with its source,
   its model calls and why it was refused, below that a span per part the
-  agent names, for `sorting` a `dimension` with its name, how its category
+  agent names, for `categorization` a `dimension` with its name, how its category
   was found, the category as `label-<n>` by its place in the list and
   whether its quote was found, and a span `action` per action with its
   name, its code, the stage, whether it was held and what became of it.

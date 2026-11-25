@@ -208,7 +208,7 @@ async def test_backfill_reads_the_inbox_once(invoices_world: Wired) -> None:
 async def test_backfill_without_accounts_asks_every_account_for_its_folders(
     tmp_path: Path,
 ) -> None:
-    """An account whose inbox and sent mail are empty, as sorting leaves
+    """An account whose inbox and sent mail are empty, as categorization leaves
     one, still has its folders looked in when no account is named."""
     async with wired(tmp_path) as found:
         found.service.add(
@@ -267,7 +267,7 @@ async def test_a_marked_inbox_invoice_moved_later_is_still_filed(
     invoices_world: Wired,
 ) -> None:
     """The update route is untouched: an invoice marked in the inbox and
-    moved by sorting into a folder it looks in moves on."""
+    moved by categorization into a folder it looks in moves on."""
     invoices_world.fake_gateway.answer(
         answer("invoice", "please find attached invoice INV-77")
     )

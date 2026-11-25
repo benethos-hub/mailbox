@@ -129,14 +129,16 @@ async def test_put_back_takes_off_each_keyword_and_moves_back_once(
         refs = [MessageRef(account_id=ACCOUNT, message_id=m) for m in ("m1", "m2")]
         before = await common.snapshot(mailbox, refs)
         service.messages[(ACCOUNT, "m1")]["folder_ids"] = ["inv-hosting"]
-        service.messages[(ACCOUNT, "m1")]["keywords"] = ["agent-sorted"]
+        service.messages[(ACCOUNT, "m1")]["keywords"] = ["agent-categorized"]
         service.messages[(ACCOUNT, "m2")]["keywords"] = [
             "mine",
-            "agent-sorted",
+            "agent-categorized",
             "agent-invoice",
         ]
 
-        moved = await common.put_back(mailbox, before, "agent-sorted", "agent-invoice")
+        moved = await common.put_back(
+            mailbox, before, "agent-categorized", "agent-invoice"
+        )
 
     assert moved == 1
     assert service.messages[(ACCOUNT, "m1")]["folder_ids"] == ["inbox"]
@@ -169,7 +171,7 @@ def _live_script(name: str) -> Iterator[ModuleType]:
 
 @pytest.mark.parametrize(
     ("script", "step"),
-    [("sorting", "put_back"), ("invoices", "put_back_between")],
+    [("categorization", "put_back"), ("invoices", "put_back_between")],
 )
 async def test_a_put_back_cut_off_is_done_again_on_the_way_out(
     monkeypatch: pytest.MonkeyPatch, script: str, step: str
@@ -187,8 +189,8 @@ async def test_a_put_back_cut_off_is_done_again_on_the_way_out(
         live = SimpleNamespace(
             mailbox=None,
             before={},
-            keyword="agent-sorted",
-            keywords=("agent-sorted",),
+            keyword="agent-categorized",
+            keywords=("agent-categorized",),
             put_back_done=False,
         )
         monkeypatch.setattr(module, step, cut_off)
@@ -238,7 +240,12 @@ def test_each_agent_gets_a_gold_file_of_its_lines(
 ) -> None:
     folder = tmp_path / "made" / "here"
 
-    written = gold.save({"sorting": ["{}", "[]"], "invoices": ["{}"]}, folder)
+    written = gold.save({"categorization": ["{}", "[]"], "invoices": ["{}"]}, folder)
 
-    assert [p.name for p in written] == ["gold-invoices.jsonl", "gold-sorting.jsonl"]
-    assert (folder / "gold-sorting.jsonl").read_text(encoding="utf-8") == "{}\n[]\n"
+    assert [p.name for p in written] == [
+        "gold-categorization.jsonl",
+        "gold-invoices.jsonl",
+    ]
+    assert (folder / "gold-categorization.jsonl").read_text(
+        encoding="utf-8"
+    ) == "{}\n[]\n"

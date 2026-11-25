@@ -71,7 +71,7 @@ def _too_long(name: str) -> tuple[type[BaseModel], dict[str, Any]]:
         fields: dict[str, Any] = dict.fromkeys(schema.FIELDS)
         fields["role"] = {"value": LONG, "quote": "Python"}
         return schema.Inquiry, {"label": "inquiry", "quote": "Projektanfrage", **fields}
-    if name == "sorting":
+    if name == "categorization":
         return schema.answer_for(("A",)), {"group": "A", "quote": LONG}
     raise AssertionError(f"give {name} an answer here that copies the mail")
 
@@ -164,15 +164,17 @@ SENT = {
         "f2fe71ce95925f3725756ac7b2a75576d1d50a3e17b3bec638c75788b4019186"
     ),
     # Made for the groups to choose from: here for two of them.
-    "sorting": "0e46e2bdc657fde262bc22e39881071e97c15c3980516656266b65839744b44d",
+    "categorization": (
+        "0e46e2bdc657fde262bc22e39881071e97c15c3980516656266b65839744b44d"
+    ),
 }
 
 
 def _sent(name: str) -> type[BaseModel]:
-    """The answer model of agent ``name``, for sorting the one for two
+    """The answer model of agent ``name``, for categorization the one for two
     groups."""
     schema = _schema_modules()[name]
-    if name == "sorting":
+    if name == "categorization":
         return schema.answer_for(("Project Alpha", "Project Beta"))
     return schema.Inquiry if name == "inquiries" else schema.Answer
 

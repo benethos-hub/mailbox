@@ -13,7 +13,7 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
     InMemorySpanExporter,
 )
 
-from benethos_mailbox_agents.agents.sorting.agent import Sorting
+from benethos_mailbox_agents.agents.categorization.agent import Categorization
 from benethos_mailbox_agents.errors import ConfigError
 from benethos_mailbox_agents.records import Decision, MessageRef
 from benethos_mailbox_agents.runtime.loop import Worker
@@ -75,9 +75,9 @@ SECRET = [
 async def test_a_message_through_two_dimensions_and_its_actions_in_spans(
     tmp_path: Path,
 ) -> None:
-    path = tmp_path / "sorting.json"
+    path = tmp_path / "categorization.json"
     path.write_text(json.dumps(CHAIN), encoding="utf-8")
-    agent = Sorting(settings(stage="full", sorting_file=path))
+    agent = Categorization(settings(stage="full", categorization_file=path))
     exporter = InMemorySpanExporter()
     async with wired(tmp_path) as world:
         world.service.add(
@@ -141,7 +141,7 @@ async def test_a_message_through_two_dimensions_and_its_actions_in_spans(
 
 
 def test_without_an_endpoint_no_spans_go_out() -> None:
-    with open_spans(settings(), "sorting") as spans:
+    with open_spans(settings(), "categorization") as spans:
         assert spans is NO_SPANS
         with spans.span("message", message_id="m1") as span:
             span.set("state", "done")
@@ -183,9 +183,9 @@ def test_the_headers_come_from_their_file_and_a_wrong_line_names_its_number(
 
 
 def test_a_none_of_the_model_is_named_as_the_model_s(tmp_path: Path) -> None:
-    path = tmp_path / "sorting.json"
+    path = tmp_path / "categorization.json"
     path.write_text(json.dumps(CHAIN), encoding="utf-8")
-    agent = Sorting(settings(sorting_file=path))
+    agent = Categorization(settings(categorization_file=path))
     agent.prepare()
     decision = Decision(
         label="Hosting",

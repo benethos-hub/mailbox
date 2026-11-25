@@ -20,13 +20,13 @@ Part of the [concept](../CONCEPT.md).
   built from the checkout (since 2026-11-22, the version of the agents
   beside it). `setup.sh` makes it in one run, and
   `live/mailbox-agents/agents_smoke.py` reads it through the package without writing to it.
-  `live/mailbox-agents/sorting.py` runs `sorting` on it in `shadow` and in `full`, makes
+  `live/mailbox-agents/categorization.py` runs `categorization` on it in `shadow` and in `full`, makes
   its folders, moves the mail and puts it back. `live/mailbox-agents/invoices.py` runs
-  `invoices` in `shadow` beside `sorting` in `full`, in both orders. Then
+  `invoices` in `shadow` beside `categorization` in `full`, in both orders. Then
   two checks of version 5, each with a new state file: an invoice moved
   by hand into the inbox folder `Invoices/Telco`, and an invoice marked
   beforehand. Every message goes back without either keyword.
-  `live/mailbox-agents/chain.py` runs three instances of `sorting` that
+  `live/mailbox-agents/chain.py` runs three instances of `categorization` that
   hand a message on by keywords through the feed, a partner keyword set
   by hand among it, and puts every message back without their keywords.
   `live/mailbox-agents/peers.py` asks the entrance for peers over A2A,
