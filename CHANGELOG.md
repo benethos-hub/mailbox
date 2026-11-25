@@ -60,6 +60,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   version. Two recognizers of a list may ask the model, each once per
   message. An entry of `then` may name a `stage`, `shadow`, `keyword` or
   `full`: below the stage of the agent it is recorded only.
+  `"on": {"arrival": "folders"}` takes up mail that arrives in a
+  folder without a role as well, such as one a rule of the mail server
+  files into: it is not moved out of it, only below it by `move_below`.
 
 ### Changed
 

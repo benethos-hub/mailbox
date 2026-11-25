@@ -274,7 +274,18 @@ def requests_for(
         return requests
     move = ACTIONS[Move.name]
     params = move.params.model_validate({"target": path})
-    requests += move.requests(params, placed, held=held, why=_why(lead, held))
+    moving = move.requests(params, placed, held=held, why=_why(lead, held))
+    if winner is None:
+        # Below the folder it lies in: that one and those above it are
+        # there, only the folders of the move_below are made.
+        own = placed.own_folder or ""
+        moving = [
+            r
+            for r in moving
+            if r.action is not Action.CREATE_FOLDER
+            or (r.folder or "").startswith(f"{own}/")
+        ]
+    requests += moving
     # The keyword says the message was moved, so it is asked for after the
     # move. The executor takes nothing after a refused move, and records
     # only what follows a move recorded only: the keyword never stands

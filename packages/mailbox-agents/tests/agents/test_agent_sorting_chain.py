@@ -303,7 +303,6 @@ async def test_a_message_outside_the_inbox_is_not_moved_out(
     assert plain(requests) == [
         ("add_keyword", "agent-bank", False),
         ("add_keyword", "agent-invoice", False),
-        ("create_folder", "Mine", False),
         ("create_folder", "Mine/Invoices", False),
         ("move_to_folder", "Mine/Invoices", False),
         ("add_keyword", "agent-sorted", False),
