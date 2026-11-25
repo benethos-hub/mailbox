@@ -65,7 +65,7 @@ services:
   # secrets/gateway.env, made by setup.sh. The image with the database
   # client built in: the web interface signs in only with a database.
   gateway:
-    image: ghcr.io/berriai/litellm-database:1.110.3@sha256:d1ad6e7074cb4059c52af933138eb2c79839dc99b642dba81b0ffeba38e71d28
+    image: ghcr.io/berriai/litellm-database:1.110.4@sha256:d8cd8c5b8bde7e3959b22f5adbd5492d5a12be143173ebb1c7a4f30d07028005
     restart: unless-stopped
     command: ["--config", "/etc/litellm/config.yaml", "--port", "4000"]
     env_file: ./secrets/gateway.env
@@ -121,7 +121,7 @@ services:
   # Toolkit and its CDI spec on the host (README.md).
   llama-gpu:
     profiles: ["gpu"]
-    image: ghcr.io/ggml-org/llama.cpp:server-cuda-b12679@sha256:fbd1c7239e4a14fdb973aa114add9ab7057f10ff632f6147890ff1843a607f3b
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda-b12723@sha256:2855fd7d0f5781e289a8108c3abd0744d19621314641b97421c038be836ed373
     restart: unless-stopped
     command: &llama-command
       - --models-preset
@@ -149,7 +149,7 @@ services:
   # On the CPU, with the profile cpu: what a server without a card would do.
   llama-cpu:
     profiles: ["cpu"]
-    image: ghcr.io/ggml-org/llama.cpp:server-b12679@sha256:6fab63852916c294cc8a2f1515079c4ca40248193eea8868ae742134335b989b
+    image: ghcr.io/ggml-org/llama.cpp:server-b12723@sha256:b0cd5490eefff30b40dcd47f7249a7d7211136908f73fe440a2a86b35a22b23b
     restart: unless-stopped
     command: *llama-command
     networks:
