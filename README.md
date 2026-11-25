@@ -224,8 +224,10 @@ for clients: [packages/mailbox-mcp](packages/mailbox-mcp/README.md#tools).
 | `create_draft` | `drafts` | a draft, also as a reply or a forward |
 | `update_draft` | `drafts` | replaces a draft |
 | `delete_draft` | `drafts` | deletes a draft |
-| `send_message` | `send` | sends a mail at once |
+| `send_message` | `send` | sends a mail at once, or through the outbox |
 | `send_draft` | `send` | sends a stored draft |
+| `list_outbox` | `send` | the sends of the outbox and how they stand |
+| `cancel_send` | `send` | cancels a send that still waits in the outbox |
 | `server_status` | – | what runs, and whether the service answers |
 
 ## Getting started

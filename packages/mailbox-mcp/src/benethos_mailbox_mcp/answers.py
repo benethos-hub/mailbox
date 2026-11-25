@@ -140,10 +140,40 @@ class Drafts(TypedDict):
 
 
 class Sent(TypedDict):
-    """A mail sent: its Message-ID, the copy in Sent, who refused it."""
+    """A mail sent: its Message-ID, the copy in Sent, who refused it. Or
+    one put into the outbox, not sent yet: ``queued`` with its job."""
 
     sent: bool
     message_id_header: str
     sent_copy_id: NotRequired[str]
     refused: NotRequired[list[str]]
     original_marked: NotRequired[bool]
+    queued: NotRequired[bool]
+    job_id: NotRequired[str]
+    state: NotRequired[str]
+    due_at: NotRequired[str]
+    send_at: NotRequired[str]
+    draft_id: NotRequired[str]
+    note: NotRequired[str]
+
+
+class OutboxJob(TypedDict):
+    """A send of the outbox and how it stands."""
+
+    job_id: str
+    state: str
+    recipients: list[str]
+    due_at: str
+    attempts: int
+    draft_id: str
+    message_id_header: str
+    last_error: NotRequired[str]
+    finished_at: NotRequired[str]
+
+
+class Outbox(TypedDict):
+    """A page of the outbox."""
+
+    jobs: list[OutboxJob]
+    next_cursor: str | None
+    note: str

@@ -2075,7 +2075,7 @@
   {
     "name": "send_message",
     "title": "Send a mail",
-    "description": "Send a mail at once. It cannot be taken back. With original_id it\nanswers or forwards that message, and a reply without recipients goes\nwhere the original asks answers to go, its Reply-To, else its sender.\nThe same call repeated within 24 hours sends nothing and\nanswers the first result. It answers the id of the copy in the sent\nfolder where the account keeps one. refused lists recipients the\nserver did not take. When a person should look at the mail first, use\ncreate_draft instead.",
+    "description": "Send a mail at once. It cannot be taken back. With original_id it\nanswers or forwards that message, and a reply without recipients goes\nwhere the original asks answers to go, its Reply-To, else its sender.\nThe same call repeated within 24 hours sends nothing and\nanswers the first result. It answers the id of the copy in the sent\nfolder where the account keeps one. refused lists recipients the\nserver did not take. With outbox or send_at it is queued instead and\ngoes out in the background: use it when the mail must not be lost to\na mail server that is away, or to send it later. When a person should\nlook at the mail first, use create_draft instead.",
     "inputSchema": {
       "$defs": {
         "FromMessage": {
@@ -2301,6 +2301,26 @@
           "default": null,
           "description": "Attachments of other mail of this account, attached as they are, before attachments. Needs the right to read that mail",
           "title": "Attach From"
+        },
+        "outbox": {
+          "default": false,
+          "description": "Put it into the outbox instead of sending at once: the service keeps it as a draft and sends it in the background, trying again while the mail server is away, so it is not lost. The answer says it is queued, not sent",
+          "title": "Outbox",
+          "type": "boolean"
+        },
+        "send_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "When to send it, ISO 8601 with a time zone, at most 30 days ahead. Puts it into the outbox",
+          "title": "Send At"
         }
       },
       "required": [
@@ -2310,7 +2330,7 @@
       "type": "object"
     },
     "outputSchema": {
-      "description": "A mail sent: its Message-ID, the copy in Sent, who refused it.",
+      "description": "A mail sent: its Message-ID, the copy in Sent, who refused it. Or\none put into the outbox, not sent yet: ``queued`` with its job.",
       "properties": {
         "sent": {
           "title": "Sent",
@@ -2334,6 +2354,34 @@
         "original_marked": {
           "title": "Original Marked",
           "type": "boolean"
+        },
+        "queued": {
+          "title": "Queued",
+          "type": "boolean"
+        },
+        "job_id": {
+          "title": "Job Id",
+          "type": "string"
+        },
+        "state": {
+          "title": "State",
+          "type": "string"
+        },
+        "due_at": {
+          "title": "Due At",
+          "type": "string"
+        },
+        "send_at": {
+          "title": "Send At",
+          "type": "string"
+        },
+        "draft_id": {
+          "title": "Draft Id",
+          "type": "string"
+        },
+        "note": {
+          "title": "Note",
+          "type": "string"
         }
       },
       "required": [
@@ -2354,7 +2402,7 @@
   {
     "name": "send_draft",
     "title": "Send a draft",
-    "description": "Send a draft as it is stored. It cannot be taken back. Afterwards the\ndraft is gone. It answers the id of the copy in the sent folder where\nthe account keeps one. Use it once a draft from create_draft or\nupdate_draft is right. The same call repeated within 24 hours sends\nnothing and answers the first result.",
+    "description": "Send a draft as it is stored. It cannot be taken back. Afterwards the\ndraft is gone. It answers the id of the copy in the sent folder where\nthe account keeps one. Use it once a draft from create_draft or\nupdate_draft is right. The same call repeated within 24 hours sends\nnothing and answers the first result. With outbox or send_at it is\nqueued instead and goes out in the background. A draft changed before\nthen is not sent.",
     "inputSchema": {
       "properties": {
         "account_id": {
@@ -2366,6 +2414,26 @@
           "description": "A draft of that account, by the id list_drafts or create_draft answers",
           "title": "Draft Id",
           "type": "string"
+        },
+        "outbox": {
+          "default": false,
+          "description": "Put it into the outbox instead of sending at once: the service keeps it as a draft and sends it in the background, trying again while the mail server is away, so it is not lost. The answer says it is queued, not sent",
+          "title": "Outbox",
+          "type": "boolean"
+        },
+        "send_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "When to send it, ISO 8601 with a time zone, at most 30 days ahead. Puts it into the outbox",
+          "title": "Send At"
         }
       },
       "required": [
@@ -2376,7 +2444,7 @@
       "type": "object"
     },
     "outputSchema": {
-      "description": "A mail sent: its Message-ID, the copy in Sent, who refused it.",
+      "description": "A mail sent: its Message-ID, the copy in Sent, who refused it. Or\none put into the outbox, not sent yet: ``queued`` with its job.",
       "properties": {
         "sent": {
           "title": "Sent",
@@ -2400,6 +2468,34 @@
         "original_marked": {
           "title": "Original Marked",
           "type": "boolean"
+        },
+        "queued": {
+          "title": "Queued",
+          "type": "boolean"
+        },
+        "job_id": {
+          "title": "Job Id",
+          "type": "string"
+        },
+        "state": {
+          "title": "State",
+          "type": "string"
+        },
+        "due_at": {
+          "title": "Due At",
+          "type": "string"
+        },
+        "send_at": {
+          "title": "Send At",
+          "type": "string"
+        },
+        "draft_id": {
+          "title": "Draft Id",
+          "type": "string"
+        },
+        "note": {
+          "title": "Note",
+          "type": "string"
         }
       },
       "required": [
@@ -2414,6 +2510,251 @@
       "readOnlyHint": false,
       "destructiveHint": true,
       "idempotentHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "list_outbox",
+    "title": "List the outbox",
+    "description": "The sends of the outbox of an account, newest first: those waiting\nand those that ended, with their state. It reads only. Use it to learn\nwhether a queued send went out, or to find one for cancel_send.",
+    "inputSchema": {
+      "properties": {
+        "account_id": {
+          "description": "The account, by the id list_accounts names",
+          "title": "Account Id",
+          "type": "string"
+        },
+        "state": {
+          "anyOf": [
+            {
+              "enum": [
+                "queued",
+                "sending",
+                "copying",
+                "sent",
+                "failed",
+                "unknown",
+                "cancelled"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Only the sends in this state",
+          "title": "State"
+        },
+        "limit": {
+          "default": 20,
+          "description": "At most this many in one answer",
+          "maximum": 50,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        },
+        "cursor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "next_cursor of the previous call, for more",
+          "title": "Cursor"
+        }
+      },
+      "required": [
+        "account_id"
+      ],
+      "title": "list_outboxArguments",
+      "type": "object"
+    },
+    "outputSchema": {
+      "$defs": {
+        "OutboxJob": {
+          "description": "A send of the outbox and how it stands.",
+          "properties": {
+            "job_id": {
+              "title": "Job Id",
+              "type": "string"
+            },
+            "state": {
+              "title": "State",
+              "type": "string"
+            },
+            "recipients": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Recipients",
+              "type": "array"
+            },
+            "due_at": {
+              "title": "Due At",
+              "type": "string"
+            },
+            "attempts": {
+              "title": "Attempts",
+              "type": "integer"
+            },
+            "draft_id": {
+              "title": "Draft Id",
+              "type": "string"
+            },
+            "message_id_header": {
+              "title": "Message Id Header",
+              "type": "string"
+            },
+            "last_error": {
+              "title": "Last Error",
+              "type": "string"
+            },
+            "finished_at": {
+              "title": "Finished At",
+              "type": "string"
+            }
+          },
+          "required": [
+            "job_id",
+            "state",
+            "recipients",
+            "due_at",
+            "attempts",
+            "draft_id",
+            "message_id_header"
+          ],
+          "title": "OutboxJob",
+          "type": "object"
+        }
+      },
+      "description": "A page of the outbox.",
+      "properties": {
+        "jobs": {
+          "items": {
+            "$ref": "#/$defs/OutboxJob"
+          },
+          "title": "Jobs",
+          "type": "array"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Next Cursor"
+        },
+        "note": {
+          "title": "Note",
+          "type": "string"
+        }
+      },
+      "required": [
+        "jobs",
+        "next_cursor",
+        "note"
+      ],
+      "title": "Outbox",
+      "type": "object"
+    },
+    "annotations": {
+      "title": "List the outbox",
+      "readOnlyHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "cancel_send",
+    "title": "Cancel a queued send",
+    "description": "Cancel a send of the outbox that still waits. Its draft stays in the\ndrafts folder. One that is being sent or ended cannot be cancelled.",
+    "inputSchema": {
+      "properties": {
+        "account_id": {
+          "description": "The account, by the id list_accounts names",
+          "title": "Account Id",
+          "type": "string"
+        },
+        "job_id": {
+          "description": "A send of the outbox, by its job_id",
+          "title": "Job Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "account_id",
+        "job_id"
+      ],
+      "title": "cancel_sendArguments",
+      "type": "object"
+    },
+    "outputSchema": {
+      "description": "A send of the outbox and how it stands.",
+      "properties": {
+        "job_id": {
+          "title": "Job Id",
+          "type": "string"
+        },
+        "state": {
+          "title": "State",
+          "type": "string"
+        },
+        "recipients": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Recipients",
+          "type": "array"
+        },
+        "due_at": {
+          "title": "Due At",
+          "type": "string"
+        },
+        "attempts": {
+          "title": "Attempts",
+          "type": "integer"
+        },
+        "draft_id": {
+          "title": "Draft Id",
+          "type": "string"
+        },
+        "message_id_header": {
+          "title": "Message Id Header",
+          "type": "string"
+        },
+        "last_error": {
+          "title": "Last Error",
+          "type": "string"
+        },
+        "finished_at": {
+          "title": "Finished At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "job_id",
+        "state",
+        "recipients",
+        "due_at",
+        "attempts",
+        "draft_id",
+        "message_id_header"
+      ],
+      "title": "OutboxJob",
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Cancel a queued send",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
       "openWorldHint": true
     }
   },
