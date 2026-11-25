@@ -87,7 +87,8 @@ What the project is for: [the repository's README](https://github.com/benethos-h
 - Mail is reached only through the REST API of the service, with its
   Python client `benethos-mailbox-client`.
 - A language model is reached only through an OpenAI-compatible gateway,
-  with one call per message, a JSON schema for the answer and no tools.
+  with one call per message, two at most for `categorization`, a JSON
+  schema for the answer and no tools.
 - Everything else is deterministic code: which messages an agent looks at,
   what a rule says, whether a quote from the model is really in the mail,
   and which action follows.

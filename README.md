@@ -92,7 +92,7 @@ account you gave it. A few requests it handles today:
 Its rights decide whether it may send on its own or only leave drafts
 for a person to send. A grant can also name the recipients it may write
 to, such as the tax advisor's address alone, and how many mails it may
-send a day. A mail to anyone else is refused. It can keep the agent to
+send a day. A mail to anyone else is refused. It can keep the assistant to
 some folders, such as the invoices, and end after a week.
 
 ### More uses
@@ -133,7 +133,9 @@ some folders, such as the invoices, and end after a week.
   attachment lets another service fetch the file once, without a token.
 - **Writing:** read state, stars and keywords, moving, deleting,
   folders, drafts, and sending with reply, reply to all and forward. A retried send is not sent twice
-  (`Idempotency-Key`).
+  (`Idempotency-Key`). A send may go through an outbox instead, now or
+  at a time (`send_at`), sent in the background and tried again while
+  the provider is away.
 - **Changes:** a change feed names each message created, changed or
   deleted since a point you keep, in IMAP, JMAP, POP3, Microsoft and
   Gmail accounts, flags set in other mail clients included where the IMAP
@@ -149,8 +151,13 @@ some folders, such as the invoices, and end after a week.
   token may use, `server_status` always, and following its rights while
   it runs. Mail content reaches
   the model marked as foreign text.
+- **Agents (alpha):** small processes that count mail, mark invoices,
+  inquiries and mail awaiting a reply, and categorize and file mail by
+  sender, topic or recognizer. Each starts in `shadow`, and a model it
+  asks has no tools: [packages/mailbox-agents](packages/mailbox-agents/README.md).
 - **Configuration UI** in the browser under `/ui`: accounts, users,
-  rights, tokens, reading and writing mail, the send audit, webhooks,
+  rights, tokens, reading and writing mail, the send audit, the outbox,
+  webhooks,
   the status of accounts and sync, the audit of administration, the
   service log.
 - **Operation:** encrypted backup and restore, container images, compose
@@ -184,7 +191,7 @@ provider in [the concept, section 5.3](docs/mailbox-service/concept/providers.md
 | `mailbox-client` | the Python client of the REST API, async and sync | inside your own code | [packages/mailbox-client](packages/mailbox-client/README.md) |
 | `mailbox-mcp` | the MCP server, on top of `mailbox-client` | per client over stdio, or as a server over HTTP | [packages/mailbox-mcp](packages/mailbox-mcp/README.md) |
 | `mailbox-common` | what the service, the MCP server and the agents share | installed with them | [packages/mailbox-common](packages/mailbox-common/README.md) |
-| `mailbox-agents` | small AI agents that sort and mark mail, on top of `mailbox-client`, alpha | a process per agent | [packages/mailbox-agents](packages/mailbox-agents/README.md) |
+| `mailbox-agents` | small AI agents that sort and mark mail, on top of `mailbox-client`, alpha | a process per agent or instance | [packages/mailbox-agents](packages/mailbox-agents/README.md) |
 
 A release publishes all five to PyPI under the same version, as
 `benethos-mailbox-service`, `benethos-mailbox-client`,
@@ -240,7 +247,7 @@ for clients: [packages/mailbox-mcp](packages/mailbox-mcp/README.md#tools).
 3. Give your scripts or your AI assistant a user with the rights they need
    and a token
    ([step by step](packages/mailbox-mcp/README.md#a-token-for-it)),
-   and for an agent, add the MCP server to it. Claude Desktop installs
+   and for an AI assistant, add the MCP server to it. Claude Desktop installs
    it as an extension from the release, other clients start it with
    `uvx`: [packages/mailbox-mcp](packages/mailbox-mcp/README.md).
 

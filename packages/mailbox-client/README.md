@@ -150,12 +150,14 @@ it. A list of messages or drafts answers a `Page` of summaries, with
 for those that did not answer, as text, and `incomplete`, the same
 accounts as `NotAnswering` records with the error's `code` and
 `message`. The other lists that page, of accounts,
-threads, users, sends and the audit, answer `Paged`, with `next_cursor`
+threads, users, sends, the outbox and the audit, answer `Paged`, with `next_cursor`
 as well.
 
 Beside the operations, `update_messages` and `trash_messages` are
-`batch_messages` for one kind of change, and `message_body` builds the
-body of a send or a draft, as in the example above.
+`batch_messages` for one kind of change, `queue_message` and
+`queue_draft` are `send_message` and `send_draft` through the outbox and
+answer the job, an `OutboxEntry`, and `message_body` builds the body of
+a send or a draft, as in the example above.
 
 `request(method, path, ...)` sends any request and answers its JSON as
 it comes, e.g. for a field a record leaves out. The routes and their

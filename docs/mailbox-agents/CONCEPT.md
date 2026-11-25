@@ -40,7 +40,7 @@ code.
 | `invoices` | is this an invoice? It moves one into the subfolder of the folder it lies in | built, version 6, prompt `v5` | [agent-invoices.md](concept/agent-invoices.md) |
 | `awaiting_reply` | does this sent message wait for an answer? | built, version 2, prompt `v2` | [agent-awaiting-reply.md](concept/agent-awaiting-reply.md) |
 | `inquiries` | is this a project inquiry, and what does it say? | built, version 2, prompt `v4` | [agent-inquiries.md](concept/agent-inquiries.md) |
-| `categorization` | which category of its list does the message belong to, in each dimension of the list, and what follows from it? | built, version 3: dimensions run in order, the sender rules in code, a model only for a message they do not settle and only where a category has a topic (2026-11-24), what follows from a category named in its list (2026-11-25). `invoices` then files an invoice within the folder `categorization` put it in | [agent-categorization.md](concept/agent-categorization.md) |
+| `categorization` | which category of its list does the message belong to, in each dimension of the list, and what follows from it? | built, version 3: dimensions run in order, the sender rules in code, a model only for a message they do not settle and only where a category has a topic (2026-11-24), what follows from a category named in its list, the recognizer `invoice`, and instances that hand a message on by keywords (2026-11-25). `invoices` then files an invoice within the folder `categorization` put it in | [agent-categorization.md](concept/agent-categorization.md) |
 
 ## Beside the concept
 
@@ -73,7 +73,7 @@ against labelled mail, not an impression.
 
 **In scope:** reading the change feed of the mailbox service, selecting the
 messages an agent cares about, classifying a message with rules and with one
-model call, extracting fields from it, setting and removing a keyword, moving
+model call, two at most for `categorization`, extracting fields from it, setting and removing a keyword, moving
 a message to a folder, keeping per-agent state in SQLite, measuring every
 agent against a labelled set of mail, and exposing health and metrics.
 
@@ -133,7 +133,8 @@ on one runtime, and each process runs one of them.
   the inbox only into the inbox folder the owner set. The model names no
   folder ([invoices](concept/agent-invoices.md)). A second since
   2026-11-24: `categorization` acts on the group its model chose by the group's
-  topic where the owner set `"by_topic": "act"` for it, with a quote
+  topic, or since 2026-11-25 by a recognizer such as `invoice`, where
+  the owner set `"by_topic": "act"` for it, with a quote
   found in the mail. The model names a group of the list, never a
   folder, and a held group stays held
   ([categorization](concept/agent-categorization.md)).

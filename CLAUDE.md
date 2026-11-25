@@ -103,7 +103,7 @@ alone. Before a change in a package, read its file as well as this one:
     server over stdio and over streamable HTTP.
   - `uv run python live/mailbox-service/ui.py`: the configuration UI.
   - `uv run python live/mailbox-service/microsoft.py [--connect] [--project] [--large]
-    [--marks]`: the Microsoft test account.
+    [--marks] [--outbox-draft]`: the Microsoft test account.
   - `uv run python live/mailbox-service/gmail.py [--connect]`: the Gmail test account.
   - `uv run python live/mailbox-service/pop3.py`, `live/mailbox-service/jmap.py` and `live/mailbox-service/imap.py`:
     the test mail server in a container.
@@ -124,6 +124,7 @@ glama.json                # the GitHub accounts that maintain the MCP
                           #   server's listing on Glama, at the root
                           #   where Glama looks for it
 config/                   # one folder per package: .env.example versioned,
+                          #   for the agents their example lists too,
                           #   .env and key files local
 data/                     # one folder per package, created when missing,
                           #   only .gitkeep is versioned

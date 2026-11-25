@@ -53,7 +53,8 @@ packages/mailbox-mcp/
       writing.py        # change messages, create, rename or move a
                         #   folder
       drafts.py         # list, write, replace, delete drafts
-      sending.py        # send a mail, send a draft
+      sending.py        # send a mail, send a draft, at once or through
+                        #   the outbox, the outbox listed, a send cancelled
       status.py         # server_status: what runs, from memory, and
                         #   the service as the server last saw it
                         #   (Running, Seen), which saw and

@@ -8,14 +8,14 @@ through `FileSettings` of `mailbox-common`, as the service and the MCP
 server read theirs.
 A process runs one agent, so one environment describes one agent. A secret
 may be given as a file with the suffix `_FILE`. An empty line, such as
-`MAILBOX_AGENTS_CATEGORIZATION_FILE=`, counts as not set for a secret, a file
-and `KEYWORD`.
+`MAILBOX_AGENTS_CATEGORIZATION_FILE=`, counts as not set for a secret, a file,
+`KEYWORD`, `INSTANCE`, `OTLP_ENDPOINT` and `A2A_URL`.
 
 | Setting | Meaning |
 |---|---|
 | `SERVICE_URL`, `SERVICE_TOKEN` | the mailbox service and this agent's token |
 | `SERVICE_ALLOW_HTTP` | allow http to another machine, as between two containers, `false` when unset |
-| `GATEWAY_URL`, `GATEWAY_KEY` | the model gateway and this agent's key, required of an agent that asks a model, `categorization` only when a group of its list has a topic (2026-11-24). The URL carries no user or password (2026-11-23) |
+| `GATEWAY_URL`, `GATEWAY_KEY` | the model gateway and this agent's key, required of an agent that asks a model, `categorization` only when a recognizer of its list asks one, a topic or `invoice` (2026-11-25). The URL carries no user or password (2026-11-23) |
 | `GATEWAY_ALLOW_HTTP` | allow http to another machine for the gateway, as between two containers, `false` when unset. https or http to this machine otherwise |
 | `GATEWAY_TIMEOUT_SECONDS` | how long one model call may take, `120` when unset |
 | `MODEL` | the alias the gateway resolves |
@@ -23,7 +23,7 @@ and `KEYWORD`.
 | `ACCOUNTS` | the accounts to work on, comma separated, all the user may read when unset |
 | `STAGE` | `shadow`, `keyword` or `full`, `shadow` when unset |
 | `KEYWORD` | the keyword the agent sets, the agent's own default when unset. Lower case letters, digits and dashes, such as `agent-invoice` (2026-11-19). It belongs in the env file of one agent: an agent whose keyword is another agent's default does not start, and `status` warns when it is set |
-| `INSTANCE` | one of several processes of one agent, each with a list of its own, such as `partner` for `categorization` (2026-11-25). Its state file is `<agent>-<instance>.db`, its default keyword the agent's with `-<instance>` after it, its log lines, `status` and `report` name it `<agent>/<instance>`, its metrics carry the label `instance`. Lower case letters, digits and dashes, a letter first, at most 40. Unset: the agent alone, as before |
+| `INSTANCE` | one of several processes of one agent, each with a list of its own, such as `partner` for `categorization` (2026-11-25). Its state file is `<agent>-<instance>.db`, its default keyword the agent's with `-<instance>` after it, its log lines, `status` and `report` name it `<agent>/<instance>`, its metrics name it in `mailbox_agents_info`. Lower case letters, digits and dashes, a letter first, at most 40. Unset: the agent alone, as before |
 | `POLL_SECONDS`, `TICK_SECONDS` | how often the feed is read and the clock asked, `60` and `900` when unset |
 | `MAX_ATTEMPTS` | failed attempts before a message is `failed`, a refused answer or a step the service refused among them, and the passes in a row that end at one message ([runtime](runtime.md)), `5` when unset |
 | `BACKOFF_CEILING_SECONDS` | the longest wait between two attempts, `3600` when unset |

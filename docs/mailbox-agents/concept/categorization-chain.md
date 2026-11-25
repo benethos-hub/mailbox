@@ -30,6 +30,7 @@ mail says. The executor of the runtime stays the lock on what is done
 | `sender` | the sender rules of the categories, as in [categorization](agent-categorization.md#sender-rules) | no |
 | `keyword` | the keywords a message carries: the category whose `keywords` it all carries, the one that names most when several do | no |
 | `topic` | the topics of the categories the sender rules leave open | once per dimension |
+| `invoice` | whether the message is an invoice, with a copy of the prompt `v5` of `invoices` | once, for a dimension with a category that names it |
 
 | Action | Value | Primitives | On a choice of the model |
 |---|---|---|---|
@@ -40,11 +41,13 @@ mail says. The executor of the runtime stays the lock on what is done
 ### Adding one in code
 
 Both kinds are registers in the agent's package (decided 2026-11-25).
-Another recognizer is a subclass of `Recognizer` in
-`agents/categorization/recognizers.py` with a `name`, a `version`,
+Another recognizer is a subclass of `Recognizer` of
+`agents/categorization/choice.py`, in `recognizers.py` or a module of its
+own as `invoice.py`, with a `name`, a `version`,
 `asks_model(dimension)`, `applies(dimension)`, and `baseline` or
 `decide`, which answer a `Choice`: the category or `none`, the details to
-record, the quote when the model chose. It goes into `RECOGNIZERS`, and a
+record, the quote when the model chose. It goes into `RECOGNIZERS` of
+`recognizers.py`, and a
 category names it in `recognize`. Its version becomes part of the version
 of the decision, so a new one is new work. Another action is a subclass of
 `ChainAction` in `agents/categorization/actions.py` with a `name`, a pydantic
@@ -171,7 +174,9 @@ a role as well, such as one a rule of the mail server files into, and
 `backfill` reads those folders (decided 2026-11-25). Such a message is not
 moved out of its folder. A `move_below` goes below it, and only the
 folders of the `move_below` are made. A move by hand still sets nothing
-off: the agent is asked on `message.created` alone, and a move keeps the
+off: the agent decides on `message.created` alone, a list with
+`on.keywords` looks at a change only for a keyword it waits for
+(section 8), and a move keeps the
 message's id ([mailbox service](mailbox-service.md)). The trash, junk and
 spam and the folders below them are never touched.
 
@@ -180,7 +185,8 @@ spam and the folders below them are never touched.
 What kept a message moved by hand where the owner put it before the chain
 keeps it there now: the runtime moves a message at most once for an
 agent, `admit` refuses a message that carries the agent's keyword, and a
-move by hand comes as `message.updated`, which the agent does not ask for
+move by hand comes as `message.updated`, which the agent does not decide
+on
 ([categorization](agent-categorization.md#3-what-happens-to-a-message)). A changed
 list, a new `move_below` among it, does not move such a message again,
 and no folder is made for a move that is not taken.
@@ -206,7 +212,7 @@ and may correct (decided 2026-11-25). The example of the live setup,
 | Instance | Waits for | Decides | Sets |
 |---|---|---|---|
 | `partner` | the arrival in the inbox | the partner by the sender | `agent-partner-<partner>`, and its sign |
-| `beleg` | the arrival, and `agent-partner-*` | the partner by its keyword, the kind by its topic | `agent-invoice`, and its sign |
+| `beleg` | the arrival, and `agent-partner-*` | the partner by its keyword, the kind by the recognizer `invoice` | `agent-invoice`, and its sign |
 | `ablage` | `agent-categorized-beleg`, the sign of `beleg` | the partner and the kind by their keywords, no model | the move to `Providers/<partner>/Rechnungen`, and its own keyword |
 
 - **Waiting for a keyword.** A list with `on.keywords` is asked about

@@ -39,7 +39,7 @@ domain/
 
 - **`Activity`** is a frozen dataclass. Every activity carries who acted and
   from where, taken from `Access` (the user, its token, `Access.source`),
-  or the worker, the dispatcher or the host, and when. The class says
+  or the worker, the dispatcher, the outbox or the host, and when. The class says
   its `level` and whether the audit keeps it (`audited`, AUDIT.md
   section 2). `line()` writes the sentence of section 3.
 - **An activity is one class** in the module of its area, named for what

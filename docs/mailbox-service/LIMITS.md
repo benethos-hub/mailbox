@@ -24,6 +24,7 @@ Towards the callers of the service:
 | Recipients of a mail | per send and per draft, each address once | 100 | `400 bad_request` | fixed |
 | Attachments of a mail | per send and per draft, together | 25 MiB | `400 bad_request` | fixed |
 | Lifetime of an API token | per token, `expires_at` | 3650 days ahead | `400 bad_request` | fixed |
+| A send at a set time | per send, `send_at` | at most 30 days ahead, a minute in the past at most, with a time zone | `400 bad_request` | fixed |
 | Failed sign-ins per address | wrong API tokens, wrong UI passwords, wrong codes of a second factor, the password or code asked again before a step such as the recovery key, and links to attachments that do not hold, alike | 10 in 15 minutes lock the address for 15 minutes | `429 rate_limited` for a wrong credential, the UI names the minutes. A valid token passes. A link answers `404`, a valid one too | `MAILBOX_SERVICE_SIGN_IN_FAILURES`, `MAILBOX_SERVICE_SIGN_IN_LOCKOUT_MINUTES` |
 | A link to an attachment | per link | once, for 120 seconds | `404`, the same for every refusal. `502` where the mail server failed: the link holds | `MAILBOX_SERVICE_LINK_SECONDS`, fewer with `expires_in` |
 | Failed sign-ins per name | UI password, the code of a second factor, the password or code asked again before a step such as the recovery key | 10 in 15 minutes, from any address, make the name wait 1 minute | `429 rate_limited` | the same failures, `MAILBOX_SERVICE_SIGN_IN_NAME_WAIT` |
@@ -174,7 +175,9 @@ answers `403 recipient_not_allowed`. A refused or failed attempt
 sent nothing and does not count. A repeated request with the same
 `Idempotency-Key` within 24 hours answers the first result and sends
 nothing again. Its SMTP connection passes the account's pace like any
-IMAP command.
+IMAP command. A send through the outbox is checked with the rights of
+the user who queued it at each attempt, and a reached send limit makes
+it wait for its next attempt.
 
 **Discovery.** It counts per user, 10 in any minute. A domain looked up
 within the last day is answered from the cache, and no source is asked

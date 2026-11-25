@@ -81,7 +81,8 @@ packages/mailbox-service/
         deps.py         # bearer authentication, services per request
         schemas/        # shapes that exist only at the HTTP boundary,
                         #   one module per subject: accounts, oauth,
-                        #   mail, users, tokens, status, errors
+                        #   mail, users, tokens, status, errors,
+                        #   outbox
         errors.py       # the error envelope, the errors routes document
         exposition.py   # the figures of GET /v1/metrics in the text
                         #   format of Prometheus (prometheus_client),
@@ -91,8 +92,8 @@ packages/mailbox-service/
         routes/         # one router per resource. One account's mail:
                         #   folders.py, mailbox.py (its messages, in
                         #   two routers that keep the order of the
-                        #   OpenAPI document), sending.py, changes.py,
-                        #   drafts.py. messages.py across accounts,
+                        #   OpenAPI document), sending.py, outbox.py,
+                        #   changes.py, drafts.py. messages.py across accounts,
                         #   links.py a link to an attachment used,
                         #   the one route under /v1 without a token
       pages/            # the configuration UI under /ui, not in OpenAPI
@@ -220,7 +221,7 @@ packages/mailbox-service/
                         #   package is imported through its __init__.py
       models/           # provider-neutral types, one module per subject:
                         #   accounts, users, folders, messages, batch,
-                        #   sending, paging, discovery, audit,
+                        #   sending, outbox, paging, discovery, audit,
                         #   changes, webhooks, threads, connections
       mail/             # messages in RFC 5322, whatever protocol carries
                         #   them. __init__.py offers the modules

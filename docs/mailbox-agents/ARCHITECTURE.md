@@ -11,7 +11,7 @@
                       | REST, benethos-mailbox-client
         +-------------+--------------+
         | mailbox-agents             |   one image,
-        |   categorization         + SQLite |   one process per agent,
+        |   categorization  + SQLite |   one process per agent,
         |   invoices        + SQLite |   one state file per agent
         |   awaiting_reply  + SQLite |
         |   inquiries       + SQLite |
@@ -97,7 +97,8 @@ for the tests (13).
 ```
 packages/mailbox-agents/src/benethos_mailbox_agents/
   cli/            # the console script: worker, run, backfill, report, eval,
-                  # status, paths, health, and the wiring of one session
+                  # check, status, paths, health, and the wiring of one
+                  # session
   __main__.py     # enables `python -m benethos_mailbox_agents`
   errors/         # the error hierarchy, one module per error, its texts
                   #   masked with redact of mailbox-common
@@ -150,17 +151,22 @@ packages/mailbox-agents/src/benethos_mailbox_agents/
                   # rules, patterns.py the domains and phrases it knows
     awaiting_reply/  # schema.py, prompts/, text.py what its rules read
                   # in a mail
-    categorization/      # groups.py the list of groups, by senders and
+    categorization/  # groups.py the list of groups, by senders and
                   # topics, dimensions.py and lists.py the list of the
-                  # chain, recognizers.py and actions.py its registers,
-                  # plan.py one message through the chain, summary.py
-                  # its report, schema.py, prompts/ the choice by a topic
+                  # chain, choice.py the base of a recognizer,
+                  # recognizers.py and actions.py its registers,
+                  # invoice.py and invoice_rules.py the recognizer
+                  # invoice, alone.py a part scored alone, plan.py one
+                  # message through the chain, summary.py its report,
+                  # schema.py, prompts/ the choice by a topic and the
+                  # recognizer invoice
 packages/mailbox-agents/tests/  # offline: REST and gateway through
                                 # httpx.MockTransport
 live/mailbox-agents/    # run by hand, outside testpaths, against the test
                         # account of containers/live/mailbox-agents/:
-                        # agents_smoke.py read-only, categorization.py and
-                        # invoices.py, gold.py the gold files from its
+                        # agents_smoke.py read-only, categorization.py,
+                        # invoices.py, chain.py the instances, peers.py
+                        # the entrance over A2A, gold.py the gold files from its
                         # labels, agents_common/ what they share
 containers/
   images/mailbox-agents/Dockerfile

@@ -125,7 +125,7 @@ extension after the PyPI upload and publishes the entry last.
           │ HTTP 127.0.0.1:8080, bearer token
  benethos-mailbox-service serve             permanent service
    ├─ REST API
-   ├─ background worker (sync, IDLE, change feed, webhooks)
+   ├─ background worker (sync, IDLE, change feed, webhooks, outbox)
    └─ SQLite: accounts, credentials, id mapping, sync state
 ```
 

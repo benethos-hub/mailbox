@@ -78,6 +78,10 @@ it is.
   larger one through an upload session.
 - **An account that keeps no sent copy lacks `sent_copy`**: POP3, and
   JMAP without a sent folder. One that cannot send lacks `send`.
+- **An outbox send of unclear outcome is looked for where the account
+  can look.** Gmail, Microsoft and JMAP search the sent mail for its
+  Message-ID before an attempt again. IMAP cannot and ends such a send
+  as `unknown`. POP3 keeps no drafts and has no outbox.
 - **`refused` says whether a send names the recipients it refuses**, as
   SMTP does. Gmail, Microsoft and JMAP report them later, as a bounce
   mail.

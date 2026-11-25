@@ -549,8 +549,8 @@ can use them to decide when to ask the person before a call.
 - **Destructive:** `update_messages`, `update_folder`, `update_draft`,
   `delete_draft` and both send tools. They can move mail to the trash,
   rename a folder, overwrite or delete a draft, or send mail.
-- **Idempotent:** `update_messages`, `update_folder`, `update_draft` and
-  `delete_draft`. The same call again changes nothing more. The send tools are not marked
+- **Idempotent:** `update_messages`, `update_folder`, `update_draft`,
+  `delete_draft` and `cancel_send`. The same call again changes nothing more. The send tools are not marked
   idempotent, although a repeat within 24 hours sends nothing.
 - **Open world:** every tool except `list_accounts` and `server_status`,
   since they reach mail from and to anyone.

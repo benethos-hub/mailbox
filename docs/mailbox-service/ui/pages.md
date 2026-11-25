@@ -32,7 +32,8 @@ choice is the viewer's own, kept in the browser (`localStorage`). Under
 account menu is the avatar at its end.
 
 A **dot** beside Accounts says an account the person may see the
-status of needs a new sign-in, cannot be reached or fails to sync. One
+status of needs a new sign-in, cannot be reached, fails to sync or has
+a send of the outbox whose outcome is unknown. One
 beside Webhooks says a webhook of theirs fails. The page brings them
 along, nothing is polled. Changes, if built, is a tab of the account
 page, not a sidebar entry.
@@ -249,7 +250,8 @@ The first page after signing in. Its cards, in order:
    and what you may do there. Its Mail button opens the account's mail,
    the address opens the account.
 3. **Service**: only for those with `accounts.read`: accounts that need
-   attention (needs_reauth, unreachable, sync failing), webhooks failing.
+   attention (needs_reauth, unreachable, sync failing, a send of
+   unknown outcome), webhooks failing.
    Each line links to the page that fixes it. When all is well, it says
    so in one line. Under it the sync worker: running and its interval,
    or switched off and why, push with how many accounts it watches of

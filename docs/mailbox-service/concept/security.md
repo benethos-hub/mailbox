@@ -265,7 +265,7 @@ tools.
 **Decided 2026-09-24: required.** The service holds no mail, the providers
 do. What it holds is everything needed to reach that mail: accounts, users,
 rights, token hashes, encrypted credentials, the wrapped data key, id
-mappings, sync state and the audit log. Losing it means reconnecting every
+mappings, sync state, the jobs of the outbox and the audit log. Losing it means reconnecting every
 account and re-issuing every token.
 
 - **`benethos-mailbox-service backup <file>`** takes a consistent snapshot while

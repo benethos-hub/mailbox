@@ -96,7 +96,9 @@ What the project is for: [the repository's README](https://github.com/benethos-h
   moves.
 - **Writing.** Read state, stars and keywords, moving, deleting,
   folders, drafts, and sending with reply, reply to all and forward. A
-  retried send is not sent twice (`Idempotency-Key`).
+  retried send is not sent twice (`Idempotency-Key`). A send can go
+  through an outbox instead: kept as a draft, sent in the background or
+  at a set time, and tried again for 48 hours while the provider is away.
 - **Changes.** A change feed names each message created, changed or
   deleted since a point you keep. Signed webhooks post the same events
   to a URL of your choice:
@@ -282,7 +284,7 @@ names the settings file it read and the database at start.
 | `MAILBOX_SERVICE_THREAD_REFERENCES` | `20` | IMAP accounts, which the service threads itself: how many of the last `References` of a message count |
 | `MAILBOX_SERVICE_CHANGES_DAYS` | `7` | days the change feed keeps a change |
 | `MAILBOX_SERVICE_LINK_SECONDS` | `120` | seconds a link to an attachment holds at most, any value from 1 on. 60 to 300 is the range to keep to: whoever holds the URL fetches the file, and the URL stands in access logs, such as a reverse proxy's |
-| `MAILBOX_SERVICE_AUDIT_DAYS` | `90` | days the audits of sends and of administration keep a record. `0` keeps every record. |
+| `MAILBOX_SERVICE_AUDIT_DAYS` | `90` | days the audits of sends and of administration, and the ended sends of the outbox, keep a record. `0` keeps every record. |
 | `MAILBOX_SERVICE_OUTBOX_RETRY_HOURS` | `48` | hours the attempts of a send in the outbox go on after it is due. Then it fails, and its draft stays |
 | `MAILBOX_SERVICE_WEBHOOK_ATTEMPTS` | `8` | tries of a webhook post before its events are dropped |
 | `MAILBOX_SERVICE_WEBHOOK_FIRST_RETRY` | `30` | seconds before the second try, doubled for each further one |
@@ -378,7 +380,7 @@ holds is written as `***`, should a message or a traceback carry one.
 | `backup verify FILE [--recovery-key]` | checks a backup |
 | `restore FILE [--recovery-key [--replace-master-key]]` | replaces the database with a backup. Stop the service first. |
 | `openapi` | prints the OpenAPI document |
-| `alert-rules` | prints three alerts on the figures of `GET /v1/metrics`, a file for `rule_files` of Prometheus |
+| `alert-rules` | prints four alerts on the figures of `GET /v1/metrics`, a file for `rule_files` of Prometheus |
 | `paths` | names the settings file, the data folder, the database and where the master key is |
 
 A backup holds accounts, users, rights, token hashes and the encrypted

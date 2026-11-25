@@ -20,7 +20,8 @@ packages/mailbox-common/
       plaintext.py      # the visible text of an HTML body, and the text
                         #   of a mail: the mail page shows it, the
                         #   model of the MCP server reads it
-      addresses.py      # readable: Name <email>, quoted for a form
+      addresses.py      # readable: Name <email>, quoted for a form,
+                        #   and parsed from a header (Parsed)
       marks.py          # the marks of RFC 8621 and their words, as
                         #   the UI and the MCP server show them
     log/                # the lines of a log and the secrets kept out

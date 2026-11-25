@@ -78,7 +78,8 @@ A line holds the time, the level, the source and the message:
 <agent> <did what> <to which>[: <why>]
 ```
 
-- **agent**: the agent's name, such as `invoices`.
+- **agent**: the agent's name, such as `invoices`, with its instance
+  after a slash when it has one, such as `categorization/partner`.
 - **did what**: the verb, such as started, read, set, failed, carried
   out, recorded.
 - **to which**: a message by its id, never by its subject or sender. A
@@ -87,8 +88,8 @@ A line holds the time, the level, the source and the message:
   `MailboxRefusedError(mailbox_refused)`, the reason an answer was
   refused, or the agent's short code for an action, such as `due`. Only
   when there is one. A code is fixed in the agent's code, never text of
-  the owner's configuration: `categorization` writes `group`, `topic`, `held` or
-  `keyword`, never the name of the group or category, which often names
+  the owner's configuration: `categorization` writes `group`, `topic`,
+  `held`, `keyword`, `sorted` or `done`, never the name of the group or category, which often names
   a person (decided 2026-11-18), nor its topic or the keyword of its list.
 
 No key-value pairs and no JSON: a person reads the line, and a search for

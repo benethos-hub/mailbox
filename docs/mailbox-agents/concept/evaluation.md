@@ -33,6 +33,10 @@ agent runs over it and the scoring counts where it agrees.
   its version first and refuses one of another version with exit
   code 2, as a pass does, since it reads mail and writes a report that is
   kept (decided 2026-11-20).
+- **One part alone.** `eval --recognizer <name>` scores one part of an
+  agent in its own space, such as the recognizer `invoice` of
+  `categorization` against the gold set of `invoices`, its rules beside
+  the model. The report names the part in its file name (2026-11-25).
 - **A report is versioned.** Each run writes one file,
   `<agent>/<date>-v<agent version>-<prompt version>-<model alias>.json`
   below the folder `--reports` names. Without it, the report goes to

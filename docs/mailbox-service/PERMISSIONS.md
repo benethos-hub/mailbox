@@ -88,6 +88,10 @@ Two kinds of right, kept in two lists of a user or a role (8.1):
   holds that there already.
 - `list_server_names` reads the newest mails of the inbox for choosing a
   setting, and needs `update_account` as well.
+- The outbox of an account: whoever may send from it sees and cancels
+  the sends they queued there, whoever may audit its sends
+  (`list_sends`) sees every one, and whoever may change the account
+  (`update_account`) sees and cancels every one.
 
 Two operations are open to every user: `get_me` and `list_permissions`.
 A third takes no token at all: `get_linked_attachment`, whose secret is

@@ -8,7 +8,8 @@ alpha. Their concept is [docs/mailbox-agents/CONCEPT.md](../mailbox-agents/CONCE
 ### Built
 
 Version 0.11.0 holds the runtime and the agents `counting`,
-`invoices`, `awaiting_reply`, `inquiries` and `categorization`, each described in
+`invoices`, `awaiting_reply`, `inquiries` and `categorization` (named
+`sorting` until 2026-11-25), each described in
 its file under [concept/](../mailbox-agents/concept/). All of it ran on the test account of
 invented mail. On a real mailbox, read-only and in `shadow`: `invoices`
 version 3 on 2026-11-18, `categorization` and `invoices` on 2026-11-22, and
@@ -26,6 +27,13 @@ a recognizer of a register, and what follows from it named beside it, a
 keyword, a move, a folder below, by priority and with a stage per entry
 ([the chain of categorization](../mailbox-agents/concept/categorization-chain.md)).
 
+Since 2026-11-25 several instances of `categorization` hand a message
+on by keywords, each with a list and a state file of its own, and the
+command `check` names lists that set each other off
+([the chain](../mailbox-agents/concept/categorization-chain.md#8-instances-that-hand-a-message-on)).
+Each agent can export spans over OpenTelemetry
+([operation](../mailbox-agents/concept/operation.md)).
+
 Since 2026-11-25 an agent answers another agent over A2A how it
 classifies a message, read only, behind a token
 ([peers over A2A](../mailbox-agents/concept/a2a.md)).
@@ -36,6 +44,7 @@ classifies a message, read only, behind a token
 |---|---|
 | On a real mailbox | Each agent in `shadow` on its owner's account, measured against a gold set of labelled mail ([evaluation](../mailbox-agents/concept/evaluation.md)), then `keyword`, then `full`. Each change of stage is the owner's decision |
 | Verified senders | A switch for a group of `categorization` that moves only mail whose sender the receiving server verified. The mailbox service names that result per message since 0.8.0, and the agents do not read it yet ([categorization](../mailbox-agents/concept/agent-categorization.md)) |
+| `invoices` replaced | The recognizer `invoice` of `categorization` in place of the agent `invoices`. `invoices` goes once a run of the recognizer in `shadow` on the owner's mailbox fits as well ([the chain](../mailbox-agents/concept/categorization-chain.md)) |
 | Embeddings | Recognising a repeated inquiry by embeddings, stored in the state file |
 | External agent server | Handing a message to an external agent server over HTTP, and reply drafts |
 | Daily overview | A daily overview of what every agent did, read from the state files by a process of its own, with no model involved |

@@ -28,11 +28,11 @@ that message:
 ```json
 {
   "agent": "categorization/beleg",
-  "version": "v1-list-0123456789ab",
-  "label": "Invoice",
+  "version": "v1-list-0123456789ab-invoice-v5",
+  "label": "Telco",
   "source": "model",
-  "fields": {"partner": "Telco"},
-  "found": {"label": true, "partner": true},
+  "fields": {"kind": "Invoice"},
+  "found": {"label": true, "kind": true},
   "refused": null
 }
 ```
