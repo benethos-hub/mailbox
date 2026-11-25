@@ -15,7 +15,7 @@ from ..domain.activity import ActivityLog, Audit
 from ..domain.auth import AuthService
 from ..domain.changes import ChangeFeed
 from ..domain.discovery import DiscoveryService
-from ..domain.mailbox import AttachmentLinks, MailboxService
+from ..domain.mailbox import AttachmentLinks, MailboxService, OutboxRunner
 from ..domain.sync import SyncService, SyncWorker
 from ..domain.system import RecoveryKey, ServiceLog, StatusService
 from ..domain.users import (
@@ -61,6 +61,8 @@ class Services:
     repositories: Repositories
     activity: ActivityLog = field(default_factory=ActivityLog)
     worker: SyncWorker | None = None
+    # Sends what waits in the outbox, while the app serves.
+    outbox: OutboxRunner | None = None
     oauth_clients: Mapping[ProviderType, OAuthClient] = field(default_factory=dict)
     # What removes records older than the days to keep: the audit, the
     # change feed, the audit of sends, and the links used or ended. Each

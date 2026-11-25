@@ -172,6 +172,8 @@ and that each is listed here.
 | `mailbox.sent_but` | a step after a send failed |
 | `mailbox.not_in_audit` | a send not recorded in the audit of sends |
 | `mailbox.send_limit` | a user reached the send limit |
+| `mailbox.outbox_retry` | an outbox job waits for its next attempt |
+| `mailbox.outbox_ended` | an outbox job ended without a send, or sent without its copy |
 | `mailbox.replayed` | a result given again for an Idempotency-Key |
 | `mailbox.sends_purged` | old records purged from the audit of sends |
 | `mailbox.result_not_kept` | a result not kept for its Idempotency-Key |

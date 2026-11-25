@@ -69,6 +69,7 @@ SERVICE = Actor("the service")
 HOST = Actor("the host", credential="host")
 WORKER = Actor("the worker")
 DISPATCHER = Actor("the dispatcher")
+OUTBOX = Actor("the outbox")
 
 
 def someone(source: str | None) -> Actor:

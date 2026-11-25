@@ -16,7 +16,7 @@ from .links import (
     AttachmentLinks,
     SharedLink,
 )
-from .outgoing import Idempotency, SendControl
+from .outgoing import Idempotency, OutboxRunner, SendControl
 from .service import MailboxService
 
 __all__ = [
@@ -24,6 +24,7 @@ __all__ = [
     "LINK_SECONDS",
     "SECRET_LENGTH",
     "AttachmentLinks",
+    "OutboxRunner",
     "Idempotency",
     "MailboxService",
     "SendControl",

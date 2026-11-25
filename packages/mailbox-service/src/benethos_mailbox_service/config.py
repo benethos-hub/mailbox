@@ -112,6 +112,9 @@ class Settings(files.FileSettings):
     # The audits of sends and of administration: days a record is kept.
     # 0 keeps every record.
     audit_days: int = Field(default=90, ge=0)
+    # The outbox: hours its attempts go on after a job is due. Then it
+    # fails, and its draft stays.
+    outbox_retry_hours: int = Field(default=48, ge=1)
     # Seconds a link to an attachment holds, at most: share_attachment may
     # ask for fewer.
     link_seconds: int = Field(default=120, ge=1)

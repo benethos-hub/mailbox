@@ -28,6 +28,7 @@ from ...data.providers import (
     Deletes,
     Deltas,
     Drafts,
+    KeepsSent,
     Reads,
     Sends,
     Summaries,
@@ -216,6 +217,12 @@ def sends(adapter: Reads) -> Sends:
     if isinstance(adapter, Sends):
         return adapter
     raise NotSupportedError("this account cannot send")
+
+
+def keeps_sent(adapter: Reads) -> KeepsSent:
+    if isinstance(adapter, KeepsSent):
+        return adapter
+    raise NotSupportedError("this account keeps no copy of what it sends itself")
 
 
 def watches(adapter: Reads) -> Watches:

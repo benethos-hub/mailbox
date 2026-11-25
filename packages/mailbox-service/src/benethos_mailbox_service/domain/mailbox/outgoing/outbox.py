@@ -1,7 +1,7 @@
 """The outbox: a send put into the account's drafts folder now and handed
 to the provider later, at once or at the time asked for. The service
 keeps a job that names the draft and a digest of it, never the mail.
-The runner in ``runner`` sends what is due."""
+The runner in ``runner`` sends what is due, ``queued`` how."""
 
 from __future__ import annotations
 
@@ -52,8 +52,6 @@ class Outbox:
         self._jobs = jobs
         self._clock = clock
         self._retry = timedelta(hours=retry_hours)
-        # Called once a job is queued: the runner looks again.
-        self.wake: Callable[[], None] = lambda: None
 
     @property
     def jobs(self) -> OutboxRepository:
@@ -183,7 +181,6 @@ class Outbox:
             update={"draft_id": draft_id, "digest": draft_digest(stored)}
         )
         self._jobs.add(job)
-        self.wake()
         return job
 
     def _due(self, send_at: datetime | None, now: datetime) -> datetime:

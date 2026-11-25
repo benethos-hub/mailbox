@@ -12,18 +12,34 @@ from .store import Store, role_folder
 
 def send(store: Store, raw: bytes, sender: str, recipients: list[str]) -> SentMessage:
     store.outbox.append((sender, list(recipients), raw))
+    return SentMessage(sent_copy=keep_sent(store, raw))
+
+
+def keep_sent(store: Store, raw: bytes) -> MessageSummary | None:
+    """A copy in the sent folder, the one there is with its Message-ID."""
     sent = next((f.id for f in store.folders if f.role is FolderRole.SENT), None)
     if sent is None:
-        return SentMessage()
+        return None
     parsed = parse.ParsedMessage(raw)
-    copy = Message(
-        id=f"sent_{len(store.outbox)}",
-        folder_ids=[sent],
-        subject=parsed.subject,
-        message_id_header=parsed.message_id,
+    found = next(
+        (
+            m
+            for m in store.messages
+            if sent in m.folder_ids
+            and parsed.message_id
+            and m.message_id_header == parsed.message_id
+        ),
+        None,
     )
-    store.messages.append(copy)
-    return SentMessage(sent_copy=MessageSummary.model_validate(copy.model_dump()))
+    if found is None:
+        found = Message(
+            id=f"sent_{len(store.messages)}",
+            folder_ids=[sent],
+            subject=parsed.subject,
+            message_id_header=parsed.message_id,
+        )
+        store.messages.append(found)
+    return MessageSummary.model_validate(found.model_dump())
 
 
 def list_drafts(store: Store, limit: int, cursor: str | None) -> Page[MessageSummary]:

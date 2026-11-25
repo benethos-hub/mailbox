@@ -46,6 +46,23 @@ class Delivery:
     ) -> SendResult:
         """Hand a composed message to the provider, under the grants'
         constraints and recorded in the audit."""
+        result, _ = await self.deliver_job(
+            access, operation, account, raw, recipients, message_id, None
+        )
+        return result
+
+    async def deliver_job(
+        self,
+        access: Access,
+        operation: Operation,
+        account: Account,
+        raw: bytes,
+        recipients: list[str],
+        message_id: str,
+        job_id: str | None,
+    ) -> tuple[SendResult, str | None]:
+        """``deliver``, as an attempt of the outbox job ``job_id``, and why
+        no copy is in the sent folder, None when it is."""
         account_id = account.id
         sent = await self._sends.send(
             access,
@@ -56,6 +73,7 @@ class Delivery:
                 account_id, lambda p: sends(p).send(raw, account.email, recipients)
             ),
             message_id,
+            job_id,
         )
         result = await self._result(access, account, message_id, sent)
         self._activity.record(
@@ -66,7 +84,7 @@ class Delivery:
                 message=result.sent_copy_id or message_id,
             )
         )
-        return result
+        return result, sent.copy_error
 
     def after_sending(
         self, access: Access, account: Account, what: str

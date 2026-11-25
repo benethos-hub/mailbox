@@ -201,6 +201,9 @@ class ImapProvider(MailServerAdapter):
             lambda: self._run(lambda box: messages.store_sent(box, raw)), refused
         )
 
+    async def keep_sent(self, raw: bytes) -> MessageSummary | None:
+        return await self._run(lambda box: messages.store_sent(box, raw))
+
     # --- Drafts -----------------------------------------------------------------------
 
     async def list_drafts(

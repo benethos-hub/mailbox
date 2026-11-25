@@ -10,7 +10,14 @@ from pathlib import Path
 import anyio
 
 from ..config import Settings
-from ..domain.activity import DISPATCHER, SERVICE, WORKER, ActivityLog, Actor
+from ..domain.activity import (
+    DISPATCHER,
+    OUTBOX,
+    SERVICE,
+    WORKER,
+    ActivityLog,
+    Actor,
+)
 from ..domain.activity import system as said
 from .domain import build_services
 from .services import Services
@@ -80,6 +87,10 @@ async def _running(
             background.start_soon(
                 _loop, activity, DISPATCHER, services.deliveries.run, stop
             )
+            if services.outbox is not None:
+                background.start_soon(
+                    _loop, activity, OUTBOX, services.outbox.run, stop
+                )
             try:
                 yield
             finally:

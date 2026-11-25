@@ -156,6 +156,9 @@ class MemoryProvider:
         folder."""
         return drafts.send(self, raw, sender, recipients)
 
+    async def keep_sent(self, raw: bytes) -> MessageSummary | None:
+        return drafts.keep_sent(self, raw)
+
     async def list_drafts(
         self, *, limit: int, cursor: str | None
     ) -> Page[MessageSummary]:

@@ -239,6 +239,18 @@ class Sends(Protocol):
 
 
 @runtime_checkable
+class KeepsSent(Protocol):
+    """Keeps the copy of a sent message where the provider does not, as
+    ``Sends.send`` does, for a copy that failed after the message went
+    out. IMAP, whose sends go over SMTP."""
+
+    async def keep_sent(self, raw: bytes) -> MessageSummary | None:
+        """A read copy of ``raw`` in the sent folder, None without one. A
+        copy with its Message-ID that is there already is that copy."""
+        ...
+
+
+@runtime_checkable
 class Watches(Protocol):
     """Hears of changes as the server reports them, without polling."""
 
