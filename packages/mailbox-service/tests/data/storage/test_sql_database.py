@@ -1,18 +1,22 @@
 """The database on an engine of SQLAlchemy: a read ends its transaction,
-writers come one after another, a savepoint is undone alone."""
+writers come one after another, a savepoint is undone alone, and no
+value of a row reaches the text of an error."""
 
 from __future__ import annotations
 
 import threading
 import time
 from collections.abc import Iterator
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 import sqlalchemy as sa
 
-from benethos_mailbox_service.data.storage import Database
+from benethos_mailbox_service.data.models import ApiToken, User
+from benethos_mailbox_service.data.storage import Database, repositories_on
 from benethos_mailbox_service.data.storage.sql.schema import roles
+from benethos_mailbox_service.errors import ConflictError, StorageError
 
 from ...schema_helpers import select
 from .disk_helpers import traced
@@ -80,3 +84,56 @@ def test_a_savepoint_is_undone_alone(engine_db: Database) -> None:
         "also",
         "kept",
     ]
+
+
+# What SQLAlchemy writes into the text of its errors: the statement and
+# its values.
+SQLALCHEMY_TEXT = ("[SQL:", "[parameters:", "INSERT", "SELECT")
+
+
+def _plain(message: str, *values: str) -> None:
+    for part in (*SQLALCHEMY_TEXT, *values):
+        assert part not in message
+
+
+def test_a_conflict_names_the_column_and_no_value(engine_db: Database) -> None:
+    stores = repositories_on(engine_db)
+    stores.users.save(User(id="usr_1", name="Someone"))
+    with pytest.raises(ConflictError) as user:
+        stores.users.save(User(id="usr_2", name="someone"))
+    assert str(user.value) == (
+        "conflicts with a stored record: UNIQUE constraint failed: users.name_lower"
+    )
+    _plain(str(user.value), "Someone", "someone")
+    now = datetime(2026, 9, 24, 12, 0, tzinfo=UTC)
+    first = ApiToken(
+        id="tok_1", user_id="usr_1", name="t", token_hash="hash-1", created_at=now
+    )
+    stores.tokens.save(first)
+    with pytest.raises(ConflictError) as token:
+        stores.tokens.save(first.model_copy(update={"id": "tok_2"}))
+    assert str(token.value) == (
+        "conflicts with a stored record: UNIQUE constraint failed: tokens.token_hash"
+    )
+    _plain(str(token.value), "hash-1")
+
+
+def test_a_conflict_through_sqlalchemy_names_no_value(engine_db: Database) -> None:
+    with pytest.raises(ConflictError) as caught, engine_db.connected() as conn:
+        conn.execute(_role("role-value"))
+        conn.execute(_role("role-value"))
+    assert str(caught.value) == (
+        "conflicts with a stored record: UNIQUE constraint failed: roles.id"
+    )
+    _plain(str(caught.value), "role-value")
+
+
+def test_a_failure_of_the_database_names_no_statement(engine_db: Database) -> None:
+    with pytest.raises(StorageError) as helper:
+        select(engine_db, "SELECT id FROM nowhere WHERE id = ?", ("looked-for",))
+    assert str(helper.value) == "the database failed: no such table: nowhere"
+    nowhere = sa.table("nowhere", sa.column("id"))
+    with pytest.raises(StorageError) as caught, engine_db.connected() as conn:
+        conn.execute(sa.select(nowhere).where(nowhere.c.id == "looked-for"))
+    assert str(caught.value) == "the database failed: no such table: nowhere"
+    _plain(str(caught.value), "looked-for")
