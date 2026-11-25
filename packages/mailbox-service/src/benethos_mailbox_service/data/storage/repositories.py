@@ -44,13 +44,13 @@ from .sql import (
     SqlTokenRepository,
     SqlTotpRepository,
     SqlUserRepository,
+    SqlWebhookRepository,
 )
 from .sql.database import Database
 from .sqlite import (
     Migrated,
     SqliteChangeLogRepository,
     SqliteMessageIndexRepository,
-    SqliteWebhookRepository,
     Table,
 )
 from .totp import InMemoryTotpRepository, TotpRepository
@@ -187,7 +187,7 @@ def repositories_on(db: Database) -> Repositories:
         idempotency=SqlIdempotencyRepository(db),
         sends=SqlSendLogRepository(db),
         changes=SqliteChangeLogRepository(db),
-        webhooks=SqliteWebhookRepository(db),
+        webhooks=SqlWebhookRepository(db),
         audit=SqlAuditRepository(db),
         links=SqlLinkRepository(db),
         outbox=SqlOutboxRepository(db),

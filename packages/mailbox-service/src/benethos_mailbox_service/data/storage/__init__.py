@@ -51,13 +51,13 @@ from .sql import (
     SqlTokenRepository,
     SqlTotpRepository,
     SqlUserRepository,
+    SqlWebhookRepository,
 )
 from .sql.database import Database
 from .sqlite import (
     SCHEMA_VERSION,
     SqliteChangeLogRepository,
     SqliteMessageIndexRepository,
-    SqliteWebhookRepository,
     Table,
     inspect_file,
     migrate_file,
@@ -141,7 +141,7 @@ __all__ = [
     "SqlSendLogRepository",
     "SqlTokenRepository",
     "SqlUserRepository",
-    "SqliteWebhookRepository",
+    "SqlWebhookRepository",
     "Table",
     "Store",
     "StoredPasskey",

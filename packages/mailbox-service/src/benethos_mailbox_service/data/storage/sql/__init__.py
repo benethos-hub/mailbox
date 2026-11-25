@@ -18,6 +18,7 @@ from .recovery_codes import SqlRecoveryCodeRepository
 from .sends import SqlSendLogRepository
 from .totp import SqlTotpRepository
 from .users import SqlRoleRepository, SqlTokenRepository, SqlUserRepository
+from .webhooks import SqlWebhookRepository
 
 __all__ = [
     "SqlAccountRepository",
@@ -35,4 +36,5 @@ __all__ = [
     "SqlTokenRepository",
     "SqlTotpRepository",
     "SqlUserRepository",
+    "SqlWebhookRepository",
 ]

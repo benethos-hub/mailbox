@@ -15,14 +15,12 @@ from .file import (
 from .index import SqliteMessageIndexRepository
 from .migrations import SCHEMA_VERSION
 from .tables import Table
-from .webhooks import SqliteWebhookRepository
 
 __all__ = [
     "SCHEMA_VERSION",
     "Migrated",
     "SqliteChangeLogRepository",
     "SqliteMessageIndexRepository",
-    "SqliteWebhookRepository",
     "Table",
     "inspect_file",
     "migrate_file",
