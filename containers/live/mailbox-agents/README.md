@@ -6,7 +6,9 @@ live checks in `live/mailbox-agents/`. Nothing here reaches a real mailbox:
 `agents@agents.test`, filled with invented mail, and the mailbox service is
 built from this checkout, the version of the agents beside it. The
 gateway is [LiteLLM](https://docs.litellm.ai) in front of Claude and of
-local models under [llama.cpp](https://github.com/ggml-org/llama.cpp). It
+local models under [llama.cpp](https://github.com/ggml-org/llama.cpp).
+[Jaeger](https://www.jaegertracing.io), [Prometheus](https://prometheus.io)
+and [Grafana](https://grafana.com) show what the agents do. It
 is a manual aid, never part of `uv run pytest`.
 
 **Contents**
@@ -18,7 +20,7 @@ is a manual aid, never part of `uv run pytest`.
   - [What a model costs](#what-a-model-costs)
 - [Ports](#ports)
 - [Use it](#use-it)
-- [Spans](#spans)
+- [Spans and metrics](#spans-and-metrics)
 - [Peers over A2A](#peers-over-a2a)
 - [Take it down](#take-it-down)
 
@@ -67,7 +69,9 @@ Then, not in this order:
 - makes a key of the gateway for the agents that reaches the three
   `mail-classifier` aliases only, with a budget of 5 USD, so the lock of
   the gateway that the safety concept counts on is used here too. The
-  master key stays in `secrets/gateway.env`.
+  master key stays in `secrets/gateway.env`,
+- starts Jaeger, Prometheus and Grafana for the agents' spans and
+  metrics ([Spans and metrics](#spans-and-metrics)).
 
 ### Which model the agents use
 
@@ -272,6 +276,10 @@ On `127.0.0.1` only:
 | 38993 | Stalwart's IMAP over TLS |
 | 38465 | Stalwart's SMTP submission over TLS |
 | 38400 | the model gateway, with the master key in `secrets/gateway.env`, and its web interface at `/ui/`: the user `admin`, the master key its password |
+| 38686 | Jaeger's web interface, the agents' spans |
+| 38318 | Jaeger's receiver of OTLP over HTTP |
+| 38090 | Prometheus |
+| 38300 | Grafana, the user `admin`, its password in `secrets/grafana.env` |
 
 The gateway keeps its keys and what each spent in a database of its
 own, `gateway-db`, which the web interface needs to sign in. It keeps no
@@ -325,16 +333,48 @@ hand. It puts every message back. The folders made stay. Run it with
 `python -u` and without a short timeout: a check cut off puts nothing
 back.
 
-## Spans
+## Spans and metrics
 
-The setup runs no target for spans, and the agents send none unless
-`MAILBOX_AGENTS_OTLP_ENDPOINT` names one. To look at the spans of a run,
-start a receiver of OTLP over HTTP on this machine, such as a collector
-or Jaeger, and add to `agent.env`:
+The setup runs Jaeger, and `agent.env` sends the spans of every run
+there:
 
 ```
-MAILBOX_AGENTS_OTLP_ENDPOINT=http://127.0.0.1:4318
+MAILBOX_AGENTS_OTLP_ENDPOINT=http://127.0.0.1:38318
 ```
+
+Its web interface is at `http://127.0.0.1:38686`: the service
+`benethos-mailbox-agents`, one trace per message and process, the agent
+in the tag `mailbox_agents.agent` of the process. Jaeger keeps the traces
+in memory, so a restart of its container empties it. An `agent.env` made
+before Jaeger was part of the setup lacks the line: add it, or run
+`setup.sh`. Without the line the agents send no span.
+
+Prometheus scrapes the metrics of a `worker`, which serves them at the
+port `MAILBOX_AGENTS_METRICS_PORT` names, 38900 in `agent.env`, on every
+address of this machine. `run` and `backfill` serve none: they end
+before a scrape. A second worker at the same time takes the next port,
+up to 38904, set in the shell:
+
+```
+MAILBOX_AGENTS_METRICS_PORT=38901 uv run benethos-mailbox-agents --env-file containers/live/mailbox-agents/secrets/agent.env worker --agent counting
+```
+
+The workers run on this machine, Prometheus in a container:
+`metrics-targets.sh` writes the address the containers reach this
+machine at into `prometheus/targets/`, in WSL the Windows host.
+`setup.sh` runs it. After a restart of WSL the address may differ: run
+`sh containers/live/mailbox-agents/metrics-targets.sh` again. A firewall
+of the host may have to let the port in from WSL.
+
+Grafana at `http://127.0.0.1:38300` has Prometheus as its data source
+and the dashboard Mailbox agents: messages per state, the
+oldest pending, the last pass, actions, model calls with their
+duration and tokens, failed steps and refused answers, per agent. It
+reports nothing home and installs no plugin. Prometheus and Grafana
+keep their data in the container, so a new container starts empty.
+Metrics hold counts, no mail and no name of a list. The traces stay in
+Jaeger's own web interface: Grafana's data source for Jaeger asks
+`/api/services`, which Jaeger 2 no longer serves.
 
 For Langfuse, the endpoint is its `/api/public/otel` over https, and a
 file named in `MAILBOX_AGENTS_OTLP_HEADERS_FILE` holds the line

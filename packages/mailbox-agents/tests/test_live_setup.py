@@ -21,6 +21,7 @@ MADE = [
     "master_key",
     "gateway.env",
     "gateway-db.env",
+    "grafana.env",
     "gold-invoices.jsonl",
     "gold-categorization.jsonl",
 ]

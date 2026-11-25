@@ -19,7 +19,7 @@ secrets="${1:?the secrets folder}"
 # that agent.env names, the reports of README.md, and the gold files of
 # live/mailbox-agents/gold.py.
 made="agent.env service-token service-admin stalwart-admin master_key
-gateway.env gateway-db.env tls data reports"
+gateway.env gateway-db.env grafana.env tls data reports"
 
 ours() {
     case "$1" in

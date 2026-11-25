@@ -374,6 +374,10 @@ def service(password: str, gateway_key: str) -> None:
                 f"MAILBOX_AGENTS_MODEL={os.environ['GATEWAY_MODEL']}",
                 # A local model on the CPU takes its time.
                 "MAILBOX_AGENTS_GATEWAY_TIMEOUT_SECONDS=600",
+                # The spans to Jaeger of compose.yaml.
+                "MAILBOX_AGENTS_OTLP_ENDPOINT=http://127.0.0.1:38318",
+                # The metrics of a worker for Prometheus of compose.yaml.
+                "MAILBOX_AGENTS_METRICS_PORT=38900",
                 "",
             ]
         ),

@@ -1,0 +1,13 @@
+# Prometheus of the live setup: the metrics of the agents' workers.
+# A worker serves them only with MAILBOX_AGENTS_METRICS_PORT, which the
+# agent.env of provision.py sets to 38900. The workers run on this
+# machine, outside the containers: metrics-targets.sh writes their
+# address into targets/, read anew when it changes.
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: agents
+    file_sd_configs:
+      - files:
+          - /etc/prometheus/targets/*.json
