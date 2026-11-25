@@ -237,7 +237,7 @@ class StepRunner:
         """
         with self.spans.span(
             "message",
-            agent=self.agent.name,
+            agent=self.agent.label,
             account_id=ref.account_id,
             message_id=ref.message_id,
             attempt=attempts + 1,
@@ -366,7 +366,7 @@ class StepRunner:
         """The decision of the model with its evidence checked, stored once
         per prompt version and model alias, in a span with a span below it
         for each part the agent names."""
-        with self.spans.span("decision", agent=self.agent.name) as span:
+        with self.spans.span("decision", agent=self.agent.label) as span:
             decided = await self._decided(message, calls)
             span.set("source", decided.source)
             span.set("model_calls", calls.count)
