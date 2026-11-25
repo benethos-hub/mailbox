@@ -2242,6 +2242,18 @@
         },
         "attention": {
           "type": "bool"
+        },
+        "outbox_queued": {
+          "type": "int",
+          "default": "0"
+        },
+        "outbox_failed": {
+          "type": "int",
+          "default": "0"
+        },
+        "outbox_unknown": {
+          "type": "int",
+          "default": "0"
         }
       }
     },

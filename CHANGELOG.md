@@ -21,6 +21,12 @@ adheres to [Semantic Versioning](https://semver.org/).
   and `message.send_cancelled`, the audit of sends of `queued`,
   `cancelled` and `unknown` with the job in `outbox_job_id`. Without
   `outbox` and `send_at` a send is as before.
+- The outbox in `GET /v1/status` and `GET /v1/metrics`: each account
+  names its sends waiting (`outbox_queued`) and those of the last 24
+  hours that failed or whose outcome is unknown (`outbox_failed`,
+  `outbox_unknown`, series `mailbox_account_outbox`). One of unknown
+  outcome makes the account need a look. A fourth alert,
+  `MailboxSendUnknown`, fires on `mailbox_outbox_unknown`.
 - `benethos-mailbox-client`: `queue_message` and `queue_draft` put a
   send into the outbox and answer its job, an `OutboxEntry`.
   `list_outbox`, `get_outbox_job` and `cancel_send` read and cancel the

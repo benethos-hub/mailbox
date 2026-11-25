@@ -351,7 +351,7 @@ switches it off, then it answers `404`. Without a token with the right
    `caddy.d/metrics.caddy.example` to `caddy.d/metrics.caddy`, then
    `docker compose up -d`. The token protects the figures either way.
 
-Three alerts to start from come with the service, for `rule_files` of
+Four alerts to start from come with the service, for `rule_files` of
 Prometheus. The service prints them, so they match the figures of its
 version:
 
@@ -363,7 +363,8 @@ Prometheus loads the file through `rule_files: [mailbox.rules.yml]`.
 Print it again after an update of the service.
 
 - `MailboxAccountNeedsALook`: an account needs a look when it is not
-  connected, the service cannot use it, or its last pass failed. The 15
+  connected, the service cannot use it, its last pass failed, or a send
+  of its outbox in the last 24 hours has an unknown outcome. The 15
   minutes let a short outage of a mail server pass.
 - `MailboxSyncStalls`: a round goes over the accounts one after
   another and takes longer with an account that does not answer. Raise
@@ -372,6 +373,10 @@ Print it again after an update of the service.
   would fire after every restart.
 - `MailboxWebhookFails`: a webhook fails when its last post did. The
   next post that succeeds clears it.
+- `MailboxSendUnknown`: a send of an outbox in the last 24 hours whose
+  outcome cannot be told. The service does not send it again, and its
+  draft stays: a person looks whether it arrived. It clears after 24
+  hours.
 
 The figures live in memory and start again after a restart. Each
 scrape counts against the token's limit like any request and writes a

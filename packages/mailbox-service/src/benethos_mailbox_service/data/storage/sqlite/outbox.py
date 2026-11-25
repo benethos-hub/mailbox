@@ -82,6 +82,20 @@ class SqliteOutboxRepository:
             (*params, limit),
         )
 
+    def count(
+        self, account_id: str, state: OutboxState, *, since: datetime | None = None
+    ) -> int:
+        if since is None:
+            return self._db.scalar(
+                "SELECT COUNT(*) FROM outbox WHERE account_id = ? AND state = ?",
+                (account_id, state),
+            )
+        return self._db.scalar(
+            "SELECT COUNT(*) FROM outbox WHERE account_id = ? AND state = ?"
+            " AND finished_at >= ?",
+            (account_id, state, iso(since)),
+        )
+
     def purge(self, before: datetime) -> int:
         removed = self._db.execute(
             f"DELETE FROM outbox WHERE state NOT IN ({_OPEN})"

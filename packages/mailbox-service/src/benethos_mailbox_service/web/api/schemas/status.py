@@ -48,7 +48,18 @@ class AccountSync(BaseModel):
     attention: bool = Field(
         description=(
             "Whether a person should look: the account is not connected, "
-            "the service cannot use it, or its last pass failed"
+            "the service cannot use it, its last pass failed, or a send of "
+            "its outbox in the last 24 hours has an unknown outcome"
+        )
+    )
+    outbox_queued: int = Field(description="Sends waiting in its outbox")
+    outbox_failed: int = Field(
+        description="Sends of its outbox that failed in the last 24 hours"
+    )
+    outbox_unknown: int = Field(
+        description=(
+            "Sends of its outbox in the last 24 hours whose outcome is "
+            "unknown: they are not sent again, a person looks"
         )
     )
 
@@ -66,6 +77,9 @@ class AccountSync(BaseModel):
             last_error=sync.last_error,
             last_error_at=sync.last_error_at,
             attention=health.attention,
+            outbox_queued=health.outbox.queued,
+            outbox_failed=health.outbox.failed,
+            outbox_unknown=health.outbox.unknown,
         )
 
 

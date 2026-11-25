@@ -23,7 +23,9 @@ class Worker:
 class AccountHealth:
     """How an account fares: ``synced`` whether a pass does anything for
     it, ``watching`` whether a watcher waits for its server, ``attention``
-    whether a person should look at it."""
+    whether a person should look at it. ``outbox_queued`` counts the sends
+    waiting in its outbox, ``outbox_failed`` and ``outbox_unknown`` those
+    of the last 24 hours that failed or whose outcome is unknown."""
 
     id: str
     email: str
@@ -35,6 +37,9 @@ class AccountHealth:
     last_error: str | None
     last_error_at: datetime | None
     attention: bool
+    outbox_queued: int = 0
+    outbox_failed: int = 0
+    outbox_unknown: int = 0
 
 
 @dataclass(frozen=True, slots=True)

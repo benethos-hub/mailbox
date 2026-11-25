@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 
 from benethos_mailbox_service.data.models import Account, AccountStatus, ProviderType
 from benethos_mailbox_service.domain.sync import SyncState, WorkerState
-from benethos_mailbox_service.domain.system import AccountHealth, Figures
+from benethos_mailbox_service.domain.system import AccountHealth, Figures, OutboxCounts
 from benethos_mailbox_service.domain.webhooks import WebhookCounts
 from benethos_mailbox_service.web.api.exposition import (
     CONTENT_TYPE,
@@ -65,7 +65,11 @@ def lines(f: Figures) -> dict[str, float]:
 
 def test_every_series_with_its_value() -> None:
     synced = AccountHealth(
-        IMAP, SyncState(last_sync_at=AT, passes=3), synced=True, watching=True
+        IMAP,
+        SyncState(last_sync_at=AT, passes=3),
+        synced=True,
+        watching=True,
+        outbox=OutboxCounts(queued=2, failed=1),
     )
     failing = AccountHealth(
         GMAIL,
@@ -96,6 +100,13 @@ def test_every_series_with_its_value() -> None:
         f"mailbox_account_last_sync_timestamp_seconds{{{imap}}}": SECONDS,
         f"mailbox_account_sync_passes_total{{{imap}}}": 3,
         f"mailbox_account_sync_passes_total{{{gmail}}}": 1,
+        f'mailbox_account_outbox{{{imap},state="queued"}}': 2,
+        f'mailbox_account_outbox{{{imap},state="failed"}}': 1,
+        f'mailbox_account_outbox{{{imap},state="unknown"}}': 0,
+        f'mailbox_account_outbox{{{gmail},state="queued"}}': 0,
+        f'mailbox_account_outbox{{{gmail},state="failed"}}': 0,
+        f'mailbox_account_outbox{{{gmail},state="unknown"}}': 0,
+        "mailbox_outbox_unknown": 0,
         "mailbox_webhooks": 2,
         "mailbox_webhooks_failing": 1,
     } | {name: value for name, value in found.items() if name.startswith("process_")}
@@ -157,5 +168,18 @@ def test_every_figure_an_alert_names_is_written() -> None:
     written = {name.partition("{")[0] for name in lines(figures(every))}
     expressions = re.findall(r"^\s*expr: (.+)$", alert_rules(), re.M)
     named = {n for e in expressions for n in re.findall(r"\bmailbox_\w+", e)}
-    assert len(expressions) == 3 and named
+    assert len(expressions) == 4 and named
     assert named <= written, named - written
+
+
+def test_a_send_of_unknown_outcome_needs_a_look() -> None:
+    unclear = AccountHealth(
+        IMAP,
+        SyncState(last_sync_at=AT, passes=1),
+        synced=True,
+        watching=True,
+        outbox=OutboxCounts(unknown=1),
+    )
+    found = lines(figures(unclear))
+    assert found["mailbox_outbox_unknown"] == 1
+    assert found['mailbox_account_attention{account="acc_1",provider="imap"}'] == 1

@@ -131,6 +131,12 @@ def _accounts(healths: list[AccountHealth]) -> Iterator[Metric]:
         "When the last pass of the account succeeded, since the start",
         labels=_ACCOUNT,
     )
+    outbox = GaugeMetricFamily(
+        "mailbox_account_outbox",
+        "Sends of the account's outbox: waiting, and failed or of unknown "
+        "outcome in the last 24 hours",
+        labels=[*_ACCOUNT, "state"],
+    )
     passes = CounterMetricFamily(
         "mailbox_account_sync_passes",
         "Passes of the account that succeeded, since the start",
@@ -146,7 +152,19 @@ def _accounts(healths: list[AccountHealth]) -> Iterator[Metric]:
             last_sync.add_metric(names, health.sync.last_sync_at.timestamp())
         if health.synced:
             passes.add_metric(names, health.sync.passes)
-    yield from (status, attention, synced, last_sync, passes)
+        held = health.outbox
+        for state, count in (
+            ("queued", held.queued),
+            ("failed", held.failed),
+            ("unknown", held.unknown),
+        ):
+            outbox.add_metric([*names, state], count)
+    yield from (status, attention, synced, last_sync, passes, outbox)
+    yield _gauge(
+        "mailbox_outbox_unknown",
+        "Sends of the last 24 hours whose outcome is unknown",
+        sum(h.outbox.unknown for h in healths),
+    )
 
 
 def _webhooks(counts: WebhookCounts) -> Iterator[Metric]:

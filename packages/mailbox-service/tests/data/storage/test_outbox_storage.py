@@ -143,3 +143,15 @@ def test_the_purge_removes_finished_jobs_only(outbox: OutboxRepository) -> None:
         "obx_new_sent",
         "obx_old_open",
     }
+
+
+def test_jobs_are_counted_by_state_and_since(outbox: OutboxRepository) -> None:
+    outbox.add(job("a"))
+    outbox.add(job("b"))
+    outbox.add(job("old", state="failed", finished_at=NOW - timedelta(days=2)))
+    outbox.add(job("new", state="failed", finished_at=NOW))
+    outbox.add(job("other", account_id="acc_2"))
+    assert outbox.count("acc_1", "queued") == 2
+    assert outbox.count("acc_1", "failed") == 2
+    assert outbox.count("acc_1", "failed", since=NOW - timedelta(hours=24)) == 1
+    assert outbox.count("acc_1", "unknown") == 0

@@ -86,7 +86,7 @@ packages/mailbox-service/
         exposition.py   # the figures of GET /v1/metrics in the text
                         #   format of Prometheus (prometheus_client),
                         #   and alert_rules.yml, the alerts on them
-        alert_rules.yml # three alerts for Prometheus, printed by
+        alert_rules.yml # four alerts for Prometheus, printed by
                         #   the command alert-rules
         routes/         # one router per resource. One account's mail:
                         #   folders.py, mailbox.py (its messages, in

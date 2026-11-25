@@ -149,3 +149,10 @@ def test_the_same_key_queues_once(client: TestClient, account_id: str) -> None:
     assert again.status_code == 202 and again.json()["id"] == first["id"]
     page = client.get(outbox_url(account_id)).json()
     assert len(page["items"]) == 1
+
+
+def test_the_status_counts_the_outbox(client: TestClient, account_id: str) -> None:
+    client.post(send_url(account_id), json={**MAIL, "outbox": True})
+    status = client.get("/v1/status").json()
+    [account] = [a for a in status["accounts"] if a["id"] == account_id]
+    assert (account["outbox_queued"], account["outbox_unknown"]) == (1, 0)

@@ -41,6 +41,13 @@ class OutboxRepository(Protocol):
         ``user_id`` and in ``state`` if given."""
         ...
 
+    def count(
+        self, account_id: str, state: OutboxState, *, since: datetime | None = None
+    ) -> int:
+        """The account's jobs in ``state``, those that ended at ``since`` or
+        later if given."""
+        ...
+
     def purge(self, before: datetime) -> int:
         """Remove the finished jobs that finished before ``before``. How many."""
         ...
@@ -91,6 +98,20 @@ class InMemoryOutboxRepository:
         if before is not None:
             found = [job for job in found if Before(job.created_at, job.id) < before]
         return found[:limit]
+
+    def count(
+        self, account_id: str, state: OutboxState, *, since: datetime | None = None
+    ) -> int:
+        return sum(
+            1
+            for job in self._jobs.list()
+            if job.account_id == account_id
+            and job.state == state
+            and (
+                since is None
+                or (job.finished_at is not None and job.finished_at >= since)
+            )
+        )
 
     def purge(self, before: datetime) -> int:
         return self._jobs.drop_where(

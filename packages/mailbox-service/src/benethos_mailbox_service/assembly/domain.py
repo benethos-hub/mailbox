@@ -142,6 +142,8 @@ def build_services(
                 services.sync,
                 services.worker,
                 services.webhooks,
+                outbox=repositories.outbox,
+                clock=clock,
             ),
             recovery=RecoveryKey(services.auth, vault),
             log=ServiceLog(logbook or LogBook(), records.activity),
