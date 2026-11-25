@@ -322,6 +322,8 @@ packages/mailbox-service/
                         #   hashes, the vault of the credentials, TOTP,
                         #   passkeys (fido2)
       backup.py         # encrypted backups of the database, restore
+      export.py         # the records of a store as lines of JSON and
+                        #   back, the logical export
       files.py          # files for the owner alone (0600): database, backup, key.
                         #   The lock that tells a running service
                         #   from a stopped one is paths.locks of
