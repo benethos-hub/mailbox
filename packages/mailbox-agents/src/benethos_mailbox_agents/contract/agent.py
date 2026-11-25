@@ -255,6 +255,18 @@ class Agent(ABC):
         """For an event routed to ``observe``: the actions it calls for."""
         return []
 
+    def decide_again(self, message: MailMessage) -> bool:
+        """After ``observe``: whether the message is to be decided again,
+        taken up anew as ``backfill`` does, such as one given a keyword the
+        agent waits for. Code only. No by default."""
+        return False
+
+    def refresh(self, stored: Decision, message: MailMessage) -> Decision:
+        """A decision stored before, as it holds for ``message`` now: an
+        agent may work out anew what code decides, never what the model
+        did. Unchanged by default."""
+        return stored
+
     async def tick(self, now: datetime, context: Context) -> list[ActionRequest]:
         """For agents with deadlines: the actions that are due."""
         return []

@@ -382,7 +382,7 @@ class StepRunner:
             ref, "decision", self.agent.prompt_version, self.model_alias
         )
         if stored is not None:
-            return Decision.model_validate(stored.result)
+            return self.agent.refresh(Decision.model_validate(stored.result), message)
         started = time.monotonic()
         decided = await decide_checked(self.agent, message, self.context(calls), calls)
         for item in decided.evidence:

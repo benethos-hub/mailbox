@@ -98,6 +98,64 @@ async def classify(
     return found
 
 
+def _stored(decision: Decision, index: int, dimension: Dimension) -> Choice | None:
+    """The answer the model gave for ``dimension`` in ``decision``, None
+    when the model did not answer it or the check dropped it."""
+    name = decision.label if index == 0 else decision.fields.get(dimension.name)
+    if name is None:
+        return None
+    if index == 0:
+        details = {k: v for k, v in decision.details.items() if "." not in k}
+    else:
+        prefix = f"{dimension.name}."
+        details = {
+            k.removeprefix(prefix): v
+            for k, v in decision.details.items()
+            if k.startswith(prefix)
+        }
+    field = LABEL if index == 0 else dimension.name
+    quote = next((e.quote for e in decision.evidence if e.field == field), None)
+    return Choice(name, details, quote=quote or None, by_model=True)
+
+
+def refreshed(chain: Chain, stored: Decision, message: MailMessage) -> Decision:
+    """``stored`` as it holds for ``message`` now: the dimensions code
+    decides worked out anew, such as a keyword a person set since, those
+    the model answered taken as stored, with no new call. A dimension the
+    model did not answer before and that runs now stays without a
+    category. A refused decision stays as it was (decided 2026-11-25)."""
+    if not stored.actionable:
+        return stored
+    chosen: dict[str, str] = {}
+    choices: list[Choice | None] = []
+    for index, dimension in enumerate(chain.dimensions):
+        if not _runs(dimension, chosen):
+            choices.append(None)
+            continue
+        match = stored.details.get(key(index, dimension, "match"))
+        by_model = match is not None and (
+            match not in BY_CODE or key(index, dimension, "among") in stored.details
+        )
+        found = (
+            _stored(stored, index, dimension)
+            if by_model
+            else classify_rules(dimension, message)
+        )
+        if found is None and not by_model:
+            found = classify_rules(dimension, message)
+        if found is not None:
+            chosen[dimension.name] = found.category
+        choices.append(found)
+    fresh = to_decision(chain, choices)
+    # A quote of the model was found by the check before: it stays found.
+    checked = {e.field: e.found for e in stored.evidence}
+    evidence = tuple(
+        e.model_copy(update={"found": checked.get(e.field, e.found)})
+        for e in fresh.evidence
+    )
+    return fresh.model_copy(update={"evidence": evidence})
+
+
 def to_decision(chain: Chain, choices: list[Choice | None]) -> Decision:
     """The decision of the chain from the answer of each dimension, None
     for one that did not run."""

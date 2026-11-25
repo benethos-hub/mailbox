@@ -87,6 +87,13 @@ adheres to [Semantic Versioning](https://semver.org/).
   instance or by a person, found by code without a model. A list with
   `"mark_done": true` sets the agent's keyword after every decision,
   `none` included, as a sign for a later instance that this one is done.
+- `benethos-mailbox-agents`: a list of `sorting` may wait for keywords,
+  `"on": {"keywords": ["agent-partner-*"]}`, beside or in place of the
+  arrival: a message given such a keyword, by an earlier instance or by
+  a person, is decided again. What code decides is worked out anew, what
+  the model answered is taken as stored, with no new call. A move is
+  taken once, a keyword already there not again. A list that waits for
+  a keyword it sets itself is refused.
 
 ### Changed
 

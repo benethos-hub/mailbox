@@ -45,14 +45,21 @@ from ...contract import (
     Trigger,
 )
 from ...errors import ConfigError
-from ...records import Decision, FolderRef, MailMessage
+from ...records import Decision, Event, FolderRef, MailMessage
 from ...settings import PREFIX
 from .actions import Placed
 from .dimensions import Chain
 from .groups import NONE
 from .lists import Listed, load_chain, used
 from .lists import list_digest as _version
-from .plan import classify, classify_rules, found_in, requests_for, to_decision
+from .plan import (
+    classify,
+    classify_rules,
+    found_in,
+    refreshed,
+    requests_for,
+    to_decision,
+)
 from .recognizers import PROMPT, Choice
 from .summary import fates, parts_of
 
@@ -75,7 +82,10 @@ class Sorting(Agent):
         "another, by its sender or by what it says, and marks or files it as "
         "each category says."
     )
-    triggers = Trigger(routes={"message.created": Route.DECIDE})
+    # message.updated only for a list that waits for a keyword: select.
+    triggers = Trigger(
+        routes={"message.created": Route.DECIDE, "message.updated": Route.OBSERVE}
+    )
     actions = frozenset(
         {Action.CREATE_FOLDER, Action.MOVE_TO_FOLDER, Action.ADD_KEYWORD}
     )
@@ -92,8 +102,13 @@ class Sorting(Agent):
 
     def prepare(self) -> None:
         """Read the list now, so a wrong one stops the start, and with it
-        the version the decision is stored under."""
-        _ = self.listed
+        the version the decision is stored under. A list that waits for
+        the agent's own keyword is refused: it would set itself off."""
+        if self.chain.on.waits_for(self.keyword):
+            raise ConfigError(
+                "the sorting list: on.keywords names the agent's own keyword: "
+                "it would set itself off"
+            )
 
     @cached_property
     def listed(self) -> Listed:
@@ -153,11 +168,41 @@ class Sorting(Agent):
 
     # -- the contract -------------------------------------------------------------
 
+    def select(self, event: Event) -> Route | None:
+        """A new message on arrival, and an update for a list that waits
+        for a keyword, as one to observe. A list that waits for a keyword
+        alone observes a new message too."""
+        on = self.chain.on
+        if event.type == "message.created":
+            return Route.DECIDE if on.arrival else Route.OBSERVE
+        if event.type == "message.updated" and on.keywords:
+            return Route.OBSERVE
+        return None
+
+    def decide_again(self, message: MailMessage) -> bool:
+        """A message that carries a keyword the list waits for: decided
+        again, as a keyword set or corrected since may change what follows.
+        The executor takes only what is not there yet, and a message moved
+        once is not moved again (decided 2026-11-25)."""
+        return self._waited_for(message) and self.admit(message)
+
+    def refresh(self, stored: Decision, message: MailMessage) -> Decision:
+        """What code decides worked out anew, what the model answered as
+        stored."""
+        return refreshed(self.chain, stored, message)
+
+    def _waited_for(self, message: MailMessage) -> bool:
+        return any(self.chain.on.waits_for(k) for k in message.keywords)
+
     def admit(self, message: MailMessage) -> bool:
         """A message in the inbox the agent has not sorted before: one that
         carries its keyword was put back there by a person. With
-        ``on.arrival`` ``folders`` also one in a folder without a role."""
-        if message.has_keyword(self.keyword):
+        ``on.arrival`` ``folders`` also one in a folder without a role.
+        With ``on.keywords`` one that carries a keyword the list waits for,
+        its own keyword or not, but none in the trash, junk or spam."""
+        if self._waited_for(message):
+            return not any(message.in_role(r) for r in ("trash", "junk", "spam"))
+        if self.chain.on.arrival is None or message.has_keyword(self.keyword):
             return False
         if message.in_role("inbox"):
             return True

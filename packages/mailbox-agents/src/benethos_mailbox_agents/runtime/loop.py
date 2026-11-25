@@ -271,6 +271,8 @@ class Worker:
             message = await self._mailbox.message(ref)
             await self.executor(await self.agent.observe(message, self.context()))
             self._look_again(message)
+            if self.agent.decide_again(message):
+                self.store.enqueue(message.ref, self._now(), again=True)
         except (MailboxUnavailableError, MailboxRefusedError) as exc:
             # A service away is waited for, unless the message is stuck:
             # then its update is left, as a refused one is.
