@@ -139,6 +139,10 @@ def test_where_the_account_cannot_look_it_is_never_sent_again(
     assert (ended.state, ended.last_error) == ("unknown", "provider_unavailable")
     assert box.drafts() == [job.draft_id]
     assert ("unknown", "provider_unavailable") in box.outcomes()
+    changes = box.services.changes.after([box.account_id], 0, limit=50)
+    assert ("message.send_unknown", job.id) in [
+        (e.record.type, e.record.id) for e in changes
+    ]
     box.clock.tick(hours=1)
     box.round()
     assert box.sent() == []

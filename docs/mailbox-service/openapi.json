@@ -11686,6 +11686,9 @@
                 "message.updated",
                 "message.deleted",
                 "message.sent",
+                "message.send_failed",
+                "message.send_unknown",
+                "message.send_cancelled",
                 "account.needs_reauth"
               ]
             },
@@ -14958,6 +14961,9 @@
                 "message.updated",
                 "message.deleted",
                 "message.sent",
+                "message.send_failed",
+                "message.send_unknown",
+                "message.send_cancelled",
                 "account.needs_reauth"
               ]
             },
@@ -15041,6 +15047,9 @@
                 "message.updated",
                 "message.deleted",
                 "message.sent",
+                "message.send_failed",
+                "message.send_unknown",
+                "message.send_cancelled",
                 "account.needs_reauth"
               ]
             },
@@ -15090,6 +15099,9 @@
                 "message.updated",
                 "message.deleted",
                 "message.sent",
+                "message.send_failed",
+                "message.send_unknown",
+                "message.send_cancelled",
                 "account.needs_reauth"
               ]
             },
@@ -15264,6 +15276,9 @@
                     "message.updated",
                     "message.deleted",
                     "message.sent",
+                    "message.send_failed",
+                    "message.send_unknown",
+                    "message.send_cancelled",
                     "account.needs_reauth"
                   ]
                 },

@@ -13,6 +13,9 @@ CHANGE_KINDS: tuple[ChangeKind, ...] = (
     "message.updated",
     "message.deleted",
     "message.sent",
+    "message.send_failed",
+    "message.send_unknown",
+    "message.send_cancelled",
     "account.needs_reauth",
 )
 

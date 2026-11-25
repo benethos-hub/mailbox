@@ -101,7 +101,8 @@ adds. `accounts` set to `null` is every account the owner may
 read.
 
 Events: `message.created`, `message.updated`, `message.deleted`,
-`message.sent`, `account.needs_reauth`. Payloads carry ids only, signed with
+`message.sent`, `message.send_failed`, `message.send_unknown`,
+`message.send_cancelled`, `account.needs_reauth`. Payloads carry ids only, signed with
 HMAC-SHA256 in a header. The source is IMAP IDLE / polling, POP3
 polling, JMAP `Email/changes`, Gmail `history.list` and Graph delta
 queries, all normalized into the change feed.
@@ -139,7 +140,10 @@ renewed, and is
 kept sealed with the data key. A new webhook hears of what happens from
 then on. The events come from the same log as the change feed, which also
 holds `message.sent` (the copy in the sent folder, or else the Message-ID
-header) and `account.needs_reauth` (the account id).
+header), the three ends of a send from the outbox that did not go out,
+`message.send_failed`, `message.send_unknown` and
+`message.send_cancelled` (the outbox job id), and
+`account.needs_reauth` (the account id).
 
 The service posts a webhook's events as JSON, up to 100 in one post:
 `{"webhook_id", "delivery_id", "events": [{type, id, account_id, at}],

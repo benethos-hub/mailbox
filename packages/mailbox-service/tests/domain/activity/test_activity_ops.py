@@ -198,7 +198,8 @@ async def test_a_webhook_from_creation_to_removal(
     found = lines(caplog)
     assert found[0].endswith(
         f"created webhook {webhook} to hooks.example.com for message.created, "
-        "message.updated, message.deleted, message.sent, account.needs_reauth of "
+        "message.updated, message.deleted, message.sent, message.send_failed, "
+        "message.send_unknown, message.send_cancelled, account.needs_reauth of "
         "every account from testclient"
     )
     assert found[1:3] == [

@@ -169,3 +169,31 @@ def test_a_draft_changed_since_cancels_the_job_and_stays(box: Outbox) -> None:
     assert (ended.state, ended.last_error) == ("cancelled", "draft_changed")
     assert box.sent() == []
     assert box.drafts() == [changed]
+
+
+def events(box: Outbox) -> list[tuple[str, str]]:
+    found = box.services.changes.after([box.account_id], 0, limit=50)
+    return [
+        (e.record.type, e.record.id)
+        for e in found
+        if e.record.type.startswith("message.sen")
+    ]
+
+
+def test_each_end_without_a_send_is_an_event(box: Outbox) -> None:
+    box.failing(BadRequestError("no"))
+    refused = box.queue()
+    box.round()
+    gone = box.queue()
+    asyncio.run(
+        box.services.mailbox.outgoing.delete_draft(ADMIN, box.account_id, gone.draft_id)
+    )
+    box.round()
+    box.queue()
+    box.round()
+    found = events(box)
+    assert found[:2] == [
+        ("message.send_failed", refused.id),
+        ("message.send_cancelled", gone.id),
+    ]
+    assert [kind for kind, _ in found[2:]] == ["message.sent"]

@@ -26,6 +26,9 @@ from benethos_mailbox_service.domain.changes import (
     MessagesDeleted,
     MessageSent,
     MessagesUpdated,
+    SendCancelled,
+    SendFailed,
+    SendUnknown,
 )
 
 from ...conftest import ADMIN
@@ -342,6 +345,9 @@ CATALOGUE: list[type[MailboxChange]] = [
     MessagesUpdated,
     MessagesDeleted,
     MessageSent,
+    SendFailed,
+    SendUnknown,
+    SendCancelled,
     AccountNeedsSignIn,
 ]
 

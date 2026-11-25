@@ -17,6 +17,13 @@ from . import checks
 from .delivering import Delivery
 from .outbox import draft_digest
 
+# The change each end of a job without a send makes.
+ENDED: dict[str, type[changes.SendEnded]] = {
+    "failed": changes.SendFailed,
+    "unknown": changes.SendUnknown,
+    "cancelled": changes.SendCancelled,
+}
+
 
 @dataclass(frozen=True, slots=True)
 class Prepared:
@@ -98,6 +105,12 @@ class QueuedSend:
         change feed hears of the send."""
         await self._calls.delete_draft(job.account_id, job.draft_id)
         self._calls.changed(changes.MessageSent(job.account_id, job.message_id_header))
+
+    def ended(self, job: OutboxJob) -> None:
+        """The change feed hears of a job that ended without going out."""
+        change = ENDED.get(job.state)
+        if change is not None:
+            self._calls.changed(change(job.account_id, job.id))
 
     async def keep_copy(self, job: OutboxJob, sent_at: datetime) -> None:
         """The copy in the sent folder made again from the draft, as it

@@ -324,6 +324,7 @@ class OutboxRunner:
             return
         if note and state in NOTED:
             self._sends.note(ended, NOTED[state], code)
+        self._queued.ended(ended)
         if state != "sent" or told:
             self._activity.record(
                 said.OutboxEnded(
