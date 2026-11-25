@@ -74,10 +74,15 @@ def test_the_key_added_last_is_active_whatever_the_clock(db: Database) -> None:
     assert keys.active() == WrappedKey("key_2", b"n2", b"c2")
 
 
+def _abort() -> None:
+    """Ends a block with an error, as a failing step would."""
+    raise RuntimeError("abort")
+
+
 def test_a_failed_transaction_rolls_back(db: Database) -> None:
     with pytest.raises(RuntimeError), db.transaction():
         run(db, "INSERT INTO roles (id, grants) VALUES ('r', '[]')")
-        raise RuntimeError("abort")
+        _abort()
     assert select(db, "SELECT COUNT(*) FROM roles")[0][0] == 0
 
 
@@ -95,7 +100,7 @@ def test_a_transaction_inside_another_is_a_savepoint(db: Database) -> None:
         run(db, "INSERT INTO roles (id, grants) VALUES ('kept', '[]')")
         with pytest.raises(RuntimeError), db.transaction():
             run(db, "INSERT INTO roles (id, grants) VALUES ('undone', '[]')")
-            raise RuntimeError("abort")
+            _abort()
         with db.transaction():
             run(db, "INSERT INTO roles (id, grants) VALUES ('also', '[]')")
     assert [r[0] for r in select(db, "SELECT id FROM roles ORDER BY id")] == [
