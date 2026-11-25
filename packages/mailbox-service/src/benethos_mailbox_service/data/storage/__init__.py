@@ -39,6 +39,7 @@ from .repositories import Repositories, Store, open_repositories, repositories_o
 from .sends import InMemorySendLogRepository, SendLogRepository
 from .sql import (
     SqlAccountRepository,
+    SqlPasswordRepository,
     SqlRoleRepository,
     SqlTokenRepository,
     SqlUserRepository,
@@ -53,7 +54,6 @@ from .sqlite import (
     SqliteMessageIndexRepository,
     SqliteOutboxRepository,
     SqlitePasskeyRepository,
-    SqlitePasswordRepository,
     SqliteRecoveryCodeRepository,
     SqliteSendLogRepository,
     SqliteTotpRepository,
@@ -133,7 +133,7 @@ __all__ = [
     "SqliteLinkRepository",
     "SqliteMessageIndexRepository",
     "SqliteOutboxRepository",
-    "SqlitePasswordRepository",
+    "SqlPasswordRepository",
     "SqlRoleRepository",
     "SqliteRecoveryCodeRepository",
     "SqlitePasskeyRepository",

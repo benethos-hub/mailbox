@@ -30,6 +30,7 @@ from .recovery_codes import InMemoryRecoveryCodeRepository, RecoveryCodeReposito
 from .sends import InMemorySendLogRepository, SendLogRepository
 from .sql import (
     SqlAccountRepository,
+    SqlPasswordRepository,
     SqlRoleRepository,
     SqlTokenRepository,
     SqlUserRepository,
@@ -46,7 +47,6 @@ from .sqlite import (
     SqliteMessageIndexRepository,
     SqliteOutboxRepository,
     SqlitePasskeyRepository,
-    SqlitePasswordRepository,
     SqliteRecoveryCodeRepository,
     SqliteSendLogRepository,
     SqliteTotpRepository,
@@ -177,7 +177,7 @@ def repositories_on(db: Database) -> Repositories:
         users=SqlUserRepository(db),
         roles=SqlRoleRepository(db),
         tokens=SqlTokenRepository(db),
-        passwords=SqlitePasswordRepository(db),
+        passwords=SqlPasswordRepository(db),
         totp=SqliteTotpRepository(db),
         passkeys=SqlitePasskeyRepository(db),
         recovery_codes=SqliteRecoveryCodeRepository(db),
