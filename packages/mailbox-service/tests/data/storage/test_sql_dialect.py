@@ -4,6 +4,7 @@ to SQL without a connection."""
 from __future__ import annotations
 
 from collections.abc import Iterator
+from typing import Any
 
 import pytest
 import sqlalchemy as sa
@@ -20,6 +21,7 @@ from benethos_mailbox_service.data.storage.sql.dialect import (
     counter,
     greater,
     in_chunks,
+    insert_or_set,
     insert_or_skip,
     insert_or_update,
 )
@@ -99,6 +101,19 @@ def test_insert_or_update(engine: sa.Engine) -> None:
         assert _rows(conn) == [("a", "y", "3", 2)]
     made = str(insert_or_update(ROWS, ["k"], ["value"], PG).compile(dialect=PG))
     assert "ON CONFLICT (k) DO UPDATE SET value = excluded.value" in made
+
+
+def test_insert_or_set_reads_the_row_it_would_have_added(engine: sa.Engine) -> None:
+    def added(excluded: Any) -> dict[str, Any]:
+        return {"count": ROWS.c.count + excluded.count}
+
+    with engine.begin() as conn:
+        summed = insert_or_set(ROWS, ["k"], added, conn.dialect)
+        conn.execute(summed, {"k": "a", "other": "x", "value": "1", "count": 2})
+        conn.execute(summed, {"k": "a", "other": "y", "value": "2", "count": 3})
+        assert _rows(conn) == [("a", "x", "1", 5)]
+    made = str(insert_or_set(ROWS, ["k"], added, PG).compile(dialect=PG))
+    assert "DO UPDATE SET count = (rows.count + excluded.count)" in made
 
 
 def test_insert_or_skip_minds_every_unique_condition(engine: sa.Engine) -> None:

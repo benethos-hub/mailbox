@@ -31,6 +31,7 @@ from .sends import InMemorySendLogRepository, SendLogRepository
 from .sql import (
     SqlAccountRepository,
     SqlAuditRepository,
+    SqlChangeLogRepository,
     SqlCredentialRepository,
     SqlIdempotencyRepository,
     SqlKeyRepository,
@@ -49,7 +50,6 @@ from .sql import (
 from .sql.database import Database
 from .sqlite import (
     Migrated,
-    SqliteChangeLogRepository,
     SqliteMessageIndexRepository,
     Table,
 )
@@ -186,7 +186,7 @@ def repositories_on(db: Database) -> Repositories:
         index=SqliteMessageIndexRepository(db),
         idempotency=SqlIdempotencyRepository(db),
         sends=SqlSendLogRepository(db),
-        changes=SqliteChangeLogRepository(db),
+        changes=SqlChangeLogRepository(db),
         webhooks=SqlWebhookRepository(db),
         audit=SqlAuditRepository(db),
         links=SqlLinkRepository(db),

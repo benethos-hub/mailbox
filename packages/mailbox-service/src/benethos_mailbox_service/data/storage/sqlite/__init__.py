@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-from .changes import SqliteChangeLogRepository
 from .file import (
     Migrated,
     inspect_file,
@@ -19,7 +18,6 @@ from .tables import Table
 __all__ = [
     "SCHEMA_VERSION",
     "Migrated",
-    "SqliteChangeLogRepository",
     "SqliteMessageIndexRepository",
     "Table",
     "inspect_file",

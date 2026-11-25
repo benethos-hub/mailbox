@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from .accounts import SqlAccountRepository
 from .audit import SqlAuditRepository
+from .changes import SqlChangeLogRepository
 from .credentials import SqlCredentialRepository, SqlKeyRepository
 from .idempotency import SqlIdempotencyRepository
 from .links import SqlLinkRepository
@@ -23,6 +24,7 @@ from .webhooks import SqlWebhookRepository
 __all__ = [
     "SqlAccountRepository",
     "SqlAuditRepository",
+    "SqlChangeLogRepository",
     "SqlCredentialRepository",
     "SqlIdempotencyRepository",
     "SqlKeyRepository",

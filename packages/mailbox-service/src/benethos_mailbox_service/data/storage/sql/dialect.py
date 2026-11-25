@@ -9,7 +9,7 @@ text and sorts by ids, which must come out the same on both.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable, Iterator, Sequence
+from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from typing import Any, TypeVar
 
 import sqlalchemy as sa
@@ -60,15 +60,31 @@ def insert_or_update(
     """INSERT that, where a row of the same ``key`` is there, sets its
     columns ``update`` to the new values instead. ``None``: every column
     outside the key."""
-    statement = _insert(table, dialect)
     columns = (
         [c.name for c in table.columns if c.name not in key]
         if update is None
         else list(update)
     )
+    return insert_or_set(
+        table,
+        key,
+        lambda excluded: {name: excluded[name] for name in columns},
+        dialect,
+    )
+
+
+def insert_or_set(
+    table: sa.Table,
+    key: Sequence[str],
+    values: Callable[[Any], Mapping[str, Any]],
+    dialect: sa.Dialect,
+) -> Insert:
+    """INSERT that, where a row of the same ``key`` is there, sets what
+    ``values`` makes of the row the INSERT would have added instead: its
+    columns are those of the argument, ``excluded`` in both databases."""
+    statement = _insert(table, dialect)
     return statement.on_conflict_do_update(
-        index_elements=list(key),
-        set_={name: statement.excluded[name] for name in columns},
+        index_elements=list(key), set_=dict(values(statement.excluded))
     )
 
 
