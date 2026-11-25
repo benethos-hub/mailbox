@@ -1,0 +1,5 @@
+"""The storage spoken through SQLAlchemy Core: the types and what differs
+between databases (``dialect``), the tables of the schema (``schema``).
+The only package that imports ``sqlalchemy``."""
+
+from __future__ import annotations

@@ -317,7 +317,11 @@ packages/mailbox-service/
                         #   (rows.py), its tables as stored for an
                         #   export (tables.py), sqlite/migrations/ the base, the registry,
                         #   versions/ one class per schema version,
-                        #   repositories.py opens one of them
+                        #   sql/ what is spoken through SQLAlchemy
+                        #   Core: the types and what differs between
+                        #   databases (dialect.py), the tables of
+                        #   schema 26 (schema.py), repositories.py
+                        #   opens one of them
       secrets/          # envelope encryption, key providers, password
                         #   hashes, the vault of the credentials, TOTP,
                         #   passkeys (fido2)

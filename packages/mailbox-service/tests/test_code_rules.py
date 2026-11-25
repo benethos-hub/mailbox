@@ -313,3 +313,39 @@ def test_no_test_imports_a_class_of_the_database() -> None:
     assert found == [], "a test imports a class of the database:\n  " + "\n  ".join(
         found
     )
+
+
+# The one module under data/storage/sql/ that names a database.
+DIALECT_HOME = "dialect.py"
+DIALECTS = {"sqlite", "postgresql"}
+
+
+def test_only_the_dialect_module_names_a_database() -> None:
+    sql = ROOT / "data" / "storage" / "sql"
+    found = []
+    for path in sorted(sql.rglob("*.py")):
+        if path.name == DIALECT_HOME and path.parent == sql:
+            continue
+        for node in ast.walk(ast.parse(path.read_text("utf-8"))):
+            named = (
+                (
+                    isinstance(node, ast.Constant)
+                    and isinstance(node.value, str)
+                    and node.value in DIALECTS
+                )
+                or (
+                    isinstance(node, ast.ImportFrom)
+                    and (node.module or "").startswith("sqlalchemy.dialects")
+                )
+                or (
+                    isinstance(node, ast.Import)
+                    and any(
+                        a.name.startswith("sqlalchemy.dialects") for a in node.names
+                    )
+                )
+            )
+            if named:
+                found.append(f"{path.relative_to(ROOT).as_posix()}:{node.lineno}")
+    assert found == [], "a database named outside sql/dialect.py:\n  " + "\n  ".join(
+        found
+    )
