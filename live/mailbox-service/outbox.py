@@ -37,6 +37,7 @@ import socket
 import threading
 import time
 from collections.abc import Callable
+from contextlib import suppress
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -103,17 +104,14 @@ class Relay:
 
 
 def _pipe(source: socket.socket, sink: socket.socket) -> None:
-    try:
+    """The bytes of ``source`` into ``sink`` until either side ends, then
+    both ends shut. A connection the other side dropped ends it too."""
+    with suppress(OSError):
         while data := source.recv(65536):
             sink.sendall(data)
-    except OSError:
-        pass
-    finally:
-        for end in (source, sink):
-            try:
-                end.shutdown(socket.SHUT_RDWR)
-            except OSError:
-                pass
+    for end in (source, sink):
+        with suppress(OSError):
+            end.shutdown(socket.SHUT_RDWR)
 
 
 def job_in(
