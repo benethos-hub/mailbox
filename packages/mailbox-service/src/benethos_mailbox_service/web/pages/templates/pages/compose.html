@@ -89,8 +89,16 @@
         <input id="f-attachments" name="attachments" type="file" multiple />
         <span class="hint">Up to 25 MB together.{% if error %} Files chosen before must be chosen again.{% endif %}</span>
       </div>
+      {% if can_queue %}
+      <div class="field">
+        <label for="f-send_at">Send at</label>
+        <input id="f-send_at" name="send_at" type="datetime-local" value="{{ values.get('send_at', '') }}" />
+        <span class="hint">UTC, at most 30 days ahead. For <strong>Put in outbox</strong>: empty sends it as soon as it can.</span>
+      </div>
+      {% endif %}
       <div class="form-actions">
         {% if can_send %}<button class="primary" type="submit" name="do" value="send" data-confirm="Send this message now? It cannot be taken back." data-confirm-label="Send">{{ icon("send") }} Send</button>{% endif %}
+        {% if can_queue %}<button type="submit" name="do" value="queue" data-confirm="Put this message into the outbox? It goes out in the background, also when the mail server is away now." data-confirm-label="Put in outbox">{{ icon("send") }} Put in outbox</button>{% endif %}
         {% if can_save %}<button type="submit" name="do" value="save">{{ "Save" if draft_id else "Save as draft" }}</button>{% endif %}
         {% if can_delete %}<button class="danger" type="submit" name="do" value="delete" formnovalidate data-confirm="Delete this draft for good?" data-confirm-label="Delete draft" data-confirm-danger>Delete draft</button>{% endif %}
         <a class="btn" href="{{ trail[-1][1] }}">Cancel</a>

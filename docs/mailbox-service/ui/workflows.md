@@ -232,6 +232,17 @@ click on Send answers the first result. A refused form comes back with
 what was typed, its files to be chosen again: a browser cannot be handed
 files.
 
+**Put in outbox** asks first and puts the message, or the draft, into
+the account's outbox: it is kept as a draft and goes out in the
+background, also while the mail server is away. **Send at** names when,
+in UTC, at most 30 days ahead. The person lands on **Outbox**, reached
+from Drafts too: each send with its recipients, when it is due, its
+state and its tries, filtered by state. A send that waits has **Cancel
+send**, for whoever queued it and whoever manages the account. A send
+whose outcome is unknown says so: it is not sent again, and its draft
+stays for the person to look whether it arrived. Sends lists the
+outcomes of the outbox too, each with a link to it.
+
 ### 6.7 Changes, optional
 
 A list of the change feed per account, newest first: event, message,

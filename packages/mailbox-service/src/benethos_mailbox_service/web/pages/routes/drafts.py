@@ -24,12 +24,14 @@ from ..mailform import (
     build,
     message_if_readable,
     original_of,
+    queued_text,
     read_fields,
+    send_at_of,
     sent_text,
     show,
     show_again,
 )
-from ..navigation import mail_trail, mail_url
+from ..navigation import mail_trail, mail_url, outbox_url
 from ..rights import mail_rights
 from ..templates import PAGE_SIZE, back, page_links, render
 
@@ -123,6 +125,15 @@ async def draft_submit(
             keep_attachments=_kept(stored, form),
         )
         current = saved.id
+        if doing == "queue":
+            job = await mailbox.outgoing.queue_draft(
+                caller,
+                account_id,
+                current,
+                send_at_of(form),
+                text_of(form, "idempotency_key", strip=False) or None,
+            )
+            return back(request, outbox_url(account_id), queued_text(job))
         if doing != "send":
             return back(
                 request, f"/ui/accounts/{account_id}/drafts/{current}", "Draft saved."

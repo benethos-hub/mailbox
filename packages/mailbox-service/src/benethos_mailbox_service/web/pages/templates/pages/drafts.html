@@ -4,6 +4,7 @@
 {% block heading %}Drafts{% endblock %}
 {% block subheading %}{{ breadcrumb(trail) }}{% endblock %}
 {% block actions %}
+{{ link_button("/ui/accounts/" ~ account.id ~ "/outbox", "Outbox", "send") }}
 {% if can_write %}{{ link_button("/ui/accounts/" ~ account.id ~ "/compose", "Write", "pencil", cls="primary") }}{% endif %}
 {% endblock %}
 {% block content %}

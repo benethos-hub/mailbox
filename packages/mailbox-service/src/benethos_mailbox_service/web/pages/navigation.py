@@ -96,6 +96,11 @@ def message_url(account_id: str, message_id: str) -> str:
     return f"/ui/accounts/{account_id}/mail/{message_id}"
 
 
+def outbox_url(account_id: str) -> str:
+    """The outbox page of an account."""
+    return f"/ui/accounts/{account_id}/outbox"
+
+
 def mail_trail(account: Account, folder: tuple[str, str] | None = None) -> Trail:
     """Mail search › the account's mail › a folder, for the pages below them.
     ``folder``: its id and name."""

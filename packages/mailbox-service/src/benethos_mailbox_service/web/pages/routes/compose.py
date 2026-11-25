@@ -16,13 +16,15 @@ from ..mailform import (
     MESSAGE_FIELDS,
     ComposeError,
     build,
+    queued_text,
     read_fields,
     reference_of,
+    send_at_of,
     sent_text,
     show,
     show_again,
 )
-from ..navigation import mail_url
+from ..navigation import mail_url, outbox_url
 from ..templates import back
 
 router = APIRouter()
@@ -51,6 +53,15 @@ async def compose_submit(
     account = account_of(request, caller, account_id)
     try:
         fields = {**await read_fields(form), "reference": reference_of(form)}
+        if form.get("do") == "queue":
+            job = await mailbox.outgoing.queue_message(
+                caller,
+                account_id,
+                build(OutgoingMessage, fields),
+                send_at_of(form),
+                text_of(form, "idempotency_key", strip=False) or None,
+            )
+            return back(request, outbox_url(account_id), queued_text(job))
         if form.get("do") == "send":
             result = await mailbox.outgoing.send_message(
                 caller,
