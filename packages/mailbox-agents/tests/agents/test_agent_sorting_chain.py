@@ -22,8 +22,8 @@ from benethos_mailbox_agents.agents.sorting.actions import (
 from benethos_mailbox_agents.agents.sorting.dimensions import Dimension
 from benethos_mailbox_agents.agents.sorting.plan import DISPLACED
 from benethos_mailbox_agents.agents.sorting.recognizers import Choice, Recognizer
-from benethos_mailbox_agents.contract import Action, ActionRequest
-from benethos_mailbox_agents.records import FolderRef, MailMessage
+from benethos_mailbox_agents.contract import Action, ActionRequest, Shown, ShownAction
+from benethos_mailbox_agents.records import Decision, FolderRef, MailMessage
 
 from .sorting_chain_helpers import (
     CHAIN,
@@ -306,4 +306,69 @@ async def test_a_message_outside_the_inbox_is_not_moved_out(
         ("create_folder", "Mine/Invoices", False),
         ("move_to_folder", "Mine/Invoices", False),
         ("add_keyword", "agent-sorted", False),
+    ]
+
+
+# -- finding 8: the report -----------------------------------------------------------
+
+
+def test_the_report_names_each_dimension_and_what_became_of_its_categories(
+    tmp_path: Path,
+) -> None:
+    def shown(
+        label: str, kind: str | None, *done: tuple[Action, bool], **details: str
+    ) -> Shown:
+        fields = {} if kind is None else {"kind": kind}
+        decision = Decision(
+            label=label, source="baseline", fields=fields, details=details
+        )
+        return Shown(
+            sender=None,
+            decision=decision,
+            actions=tuple(ShownAction(action, flag) for action, flag in done),
+        )
+
+    move = (Action.MOVE_TO_FOLDER, True)
+    keyword = (Action.ADD_KEYWORD, True)
+    items = [
+        shown("Bank", "Invoice", keyword, move),
+        shown("Bank", "Notice", keyword, move),
+        shown("Hosting", "Notice", (Action.ADD_KEYWORD, False)),
+        shown("none", None),
+    ]
+
+    lines = sorting(tmp_path).summarize(items)
+
+    assert lines[:6] == [
+        "partner:",
+        "  Bank: 2 moved",
+        "  Hosting: 1 not moved",
+        "kind:",
+        "  Invoice: 1 moved",
+        "  Notice: 1 keyword set, 1 keyword recorded",
+    ]
+
+
+def test_the_report_counts_a_move_lost_to_the_priority_of_another(
+    tmp_path: Path,
+) -> None:
+    decision = Decision(
+        label="Bank",
+        source="baseline",
+        fields={"project": "Alpha"},
+        details={DISPLACED: "partner"},
+    )
+    item = Shown(
+        sender=None,
+        decision=decision,
+        actions=(ShownAction(Action.MOVE_TO_FOLDER, True),),
+    )
+
+    lines = sorting(tmp_path, two_moves()).summarize([item])
+
+    assert lines == [
+        "partner:",
+        "  Bank: 1 displaced by priority",
+        "project:",
+        "  Alpha: 1 moved",
     ]

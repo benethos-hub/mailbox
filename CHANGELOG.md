@@ -63,6 +63,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   `"on": {"arrival": "folders"}` takes up mail that arrives in a
   folder without a role as well, such as one a rule of the mail server
   files into: it is not moved out of it, only below it by `move_below`.
+  `report` names each dimension and what became of the mail of each
+  category: moved, recorded, held, displaced by priority, keyword set or
+  recorded, only sorted.
 
 ### Changed
 

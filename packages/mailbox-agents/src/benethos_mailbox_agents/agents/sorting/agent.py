@@ -53,6 +53,7 @@ from .lists import Listed, load_chain, used
 from .lists import digest as _version
 from .plan import classify, classify_rules, found_in, requests_for, to_decision
 from .recognizers import PROMPT, Choice
+from .summary import fates
 
 __all__ = ["NONE", "PROMPT", "Sorting", "_version"]
 
@@ -63,23 +64,6 @@ CANDIDATES = 10
 def _runs(when: Mapping[str, tuple[str, ...]], chosen: Mapping[str, str]) -> bool:
     """Whether ``when`` holds for the categories ``chosen`` so far."""
     return all(chosen.get(name) in allowed for name, allowed in when.items())
-
-
-def _fate(item: Shown) -> str:
-    """What became of a message of a group: moved, held, recorded, recorded
-    by topic, when the model chose a group that only records, or not moved,
-    when its move was refused or not asked for."""
-    moves = [a.done for a in item.actions if a.action is Action.MOVE_TO_FOLDER]
-    if not moves:
-        return "not moved"
-    if any(moves):
-        return "moved"
-    details = item.decision.details
-    if details.get("hold") == "yes":
-        return "held"
-    if details.get("match") == "topic" and details.get("by_topic") == "record":
-        return "recorded by topic"
-    return "recorded"
 
 
 class Sorting(Agent):
@@ -209,30 +193,11 @@ class Sorting(Agent):
         return requests_for(found, Placed.of(message), self.keyword)
 
     def summarize(self, shown: list[Shown]) -> list[str]:
-        """Per group what became of its messages, the senders in no group
-        that wrote most often, as candidates for the list, and the senders
-        left alone because two groups name them alike."""
-        lines: list[str] = []
-        fates: dict[str, Counter[str]] = {}
-        for item in shown:
-            if item.decision.label != NONE:
-                fates.setdefault(item.decision.label, Counter())[_fate(item)] += 1
-        if fates:
-            lines.append("groups:")
-            for name in sorted(fates):
-                counted = fates[name]
-                said = ", ".join(
-                    f"{counted[fate]} {fate}"
-                    for fate in (
-                        "moved",
-                        "recorded",
-                        "recorded by topic",
-                        "held",
-                        "not moved",
-                    )
-                    if counted[fate]
-                )
-                lines.append(f"  {name}: {said}")
+        """Per dimension and category what became of its messages, the
+        senders in no category of the first dimension that wrote most often,
+        as candidates for the list, and the senders left alone because two
+        categories name them alike."""
+        lines = fates(self.chain, shown)
         # A sender two groups with a topic name, which the model left in
         # none, is in the list already: no candidate.
         unknown = Counter(
