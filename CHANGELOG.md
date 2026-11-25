@@ -121,6 +121,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   Its model calls count against the agent's limits. A2A 1.0 and 0.3 on
   one endpoint, the agent card at `/.well-known/agent-card.json`, every
   request with `Authorization: Bearer`. Off unless the port is set.
+- The live setup of the agents runs Jaeger, Prometheus and Grafana, on
+  127.0.0.1 only. The `agent.env` it makes sends the agents' spans to
+  Jaeger and opens the metrics of a worker at port 38900 for
+  Prometheus. Grafana shows the metrics in a dashboard of the agents.
 - The live checks of the agents: `live/mailbox-agents/peers.py` asks the
   entrance for peers over A2A directly and through the A2A gateway of
   LiteLLM in the live setup, which it enters the agent in and deletes it

@@ -1,0 +1,14 @@
+# The data sources of the live setup's Grafana. Not Jaeger: its data
+# source asks the API Jaeger 2 no longer serves, /api/services, where
+# Jaeger answers /api/v3 alone (measured 2026-11-25 with 2.22 and 2.23).
+# Its traces are in Jaeger's own web interface.
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false

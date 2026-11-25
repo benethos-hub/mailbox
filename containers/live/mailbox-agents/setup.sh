@@ -109,6 +109,9 @@ printf 'POSTGRES_USER=litellm\nPOSTGRES_PASSWORD=%s\nPOSTGRES_DB=litellm\n' \
         printf 'ANTHROPIC_API_KEY=%s\n' "$anthropic_key"
     fi
 } > "$secrets/gateway.env"
+printf 'GF_SECURITY_ADMIN_USER=admin
+GF_SECURITY_ADMIN_PASSWORD=%s
+' "$(rand)" \n    > "$secrets/grafana.env"
 
 say "the master key of the mailbox service"
 $compose run --rm --no-deps -T mailbox-service keys generate > "$secrets/master_key"
@@ -120,8 +123,9 @@ one_time=$($compose run --rm --no-deps -T mailbox-service users create-admin 2>/
 say "Stalwart in bootstrap mode"
 STALWART_RECOVERY_ADMIN="admin:$stalwart_admin" $compose up -d stalwart >/dev/null 2>&1
 
-say "the mailbox service and the gateway"
-$compose up -d mailbox-service gateway >/dev/null 2>&1
+say "the mailbox service, the gateway, Jaeger, Prometheus and Grafana"
+sh "$here/metrics-targets.sh"
+$compose up -d mailbox-service gateway jaeger prometheus grafana >/dev/null 2>&1
 
 model=mail-classifier
 if [ -n "$backend" ]; then

@@ -1,0 +1,10 @@
+# The dashboards of the live setup's Grafana, from grafana/dashboards/.
+apiVersion: 1
+
+providers:
+  - name: live
+    type: file
+    disableDeletion: true
+    allowUiUpdates: false
+    options:
+      path: /var/lib/grafana/dashboards

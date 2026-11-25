@@ -1,5 +1,5 @@
 # A mail server, a mailbox service and a model gateway of their own, for
-# the live checks.
+# the live checks, and Jaeger, Prometheus and Grafana to look at the agents.
 # Nothing here reaches a real mailbox: Stalwart holds one account made for
 # the agents, filled with invented mail, and the service is built from
 # this checkout. setup.sh makes it, README.md says how to use it, and
@@ -159,8 +159,64 @@ services:
       - ./llama/presets-cpu.ini:/etc/llama/presets.ini:ro
     healthcheck: *llama-health
 
+  # A target for the agents' spans and a web interface to look at them:
+  # Jaeger, all in one, its traces in memory only, so a restart empties
+  # it. The agents send their spans over OTLP and HTTP to port 38318 when
+  # agent.env names it, as provision.py writes it.
+  jaeger:
+    image: jaegertracing/jaeger:2.23.0@sha256:3823829974ccfc2485d2e48b165579091f32295022ae80ca49704e2f4834116e
+    restart: unless-stopped
+    networks:
+      - observability
+    ports:
+      - "127.0.0.1:38686:16686"
+      - "127.0.0.1:38318:4318"
+
+  # The agents' metrics: Prometheus scrapes a worker on this machine, as
+  # metrics-targets.sh names its address, every 15 seconds. Its data
+  # lies in the container, so a new container starts empty.
+  prometheus:
+    image: prom/prometheus:v3.16.0@sha256:e04987641b57704f408e31f6373ba4138ecf27cb4a165d24aabb6c38fddd0f06
+    restart: unless-stopped
+    networks:
+      - observability
+    ports:
+      - "127.0.0.1:38090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/targets:/etc/prometheus/targets:ro
+
+  # Dashboards over Prometheus, entered by the files in grafana/, with
+  # the dashboard of the agents. The password of the user
+  # admin in secrets/grafana.env, made by setup.sh. Nothing reports home:
+  # no usage statistics, no check for updates, no news, no plugin
+  # installed from the internet.
+  grafana:
+    image: grafana/grafana:13.3.2@sha256:81556409ba48b2b922e0adb69a2511337d8ba7578f11962eefa6149a2d815101
+    restart: unless-stopped
+    env_file: ./secrets/grafana.env
+    environment:
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: "false"
+      GF_NEWS_NEWS_FEED_ENABLED: "false"
+      GF_PLUGINS_PREINSTALL_DISABLED: "true"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    depends_on:
+      - prometheus
+    networks:
+      - observability
+    ports:
+      - "127.0.0.1:38300:3000"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+
 networks:
   live:
+  # Jaeger, Prometheus and Grafana. A network with no way out would
+  # publish no port, and Prometheus reaches the worker on this machine.
+  observability:
   # Shared by the gateway and the llama services only, with no way out.
   models:
     internal: true

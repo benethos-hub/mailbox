@@ -48,7 +48,8 @@ Part of the [concept](../CONCEPT.md).
   (decided 2026-11-25). Then each process exports over OTLP and HTTP to
   `<endpoint>/v1/traces`, so the target is a setting and any that takes
   OTLP works: a collector, Tempo in Grafana, Langfuse, which takes OTLP at
-  `/api/public/otel`. `OTLP_HEADERS_FILE` names a file of headers, one
+  `/api/public/otel`. The live setup runs Jaeger for them, and
+  Prometheus and Grafana for the metrics (decided 2026-11-25). `OTLP_HEADERS_FILE` names a file of headers, one
   `name=value` per line, such as `Authorization=Basic ...` for the key of
   Langfuse: its values are secrets, masked in every error text and never
   logged. The endpoint is https, or http to this machine, or anywhere

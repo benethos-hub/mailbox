@@ -51,6 +51,8 @@ containers/*/mailbox-agents/agents/**
 !containers/*/mailbox-agents/agents/**/*.example.json
 # The local models of the agents' live setup, fetched by fetch-models.sh
 containers/live/mailbox-agents/models/
+# The address of the agents' workers for Prometheus, by metrics-targets.sh
+containers/live/mailbox-agents/prometheus/targets/
 
 # Service data: the database holds encrypted credentials, backups the same.
 # data/: per package, only the folders are versioned (.gitkeep)
