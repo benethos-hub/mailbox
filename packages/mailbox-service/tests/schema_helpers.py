@@ -49,3 +49,44 @@ def run_many(db: Database, sql: str, rows: Iterable[Sequence[Any]]) -> None:
     """``sql`` once for each of ``rows``, in one transaction."""
     with db.transaction() as conn:
         conn.executemany(sql, rows)
+
+
+def shape(conn: sqlite3.Connection) -> dict[str, Any]:
+    """The form of the tables of a SQLite database, without its rows:
+    per table its columns (name, type, NOT NULL, default, place in the
+    key), its references with ON DELETE, its indexes and whether it
+    counts with AUTOINCREMENT. An index SQLite made for a key or a
+    UNIQUE is named by where it comes from and its columns, never by
+    its name, whose number follows the order in CREATE TABLE."""
+    found: dict[str, Any] = {}
+    tables = conn.execute(
+        "SELECT name, sql FROM sqlite_master WHERE type = 'table'"
+        " AND name NOT LIKE 'sqlite_%'"
+    ).fetchall()
+    for name, sql in tables:
+        columns = [
+            (r[1], r[2], r[3], r[4], r[5])
+            for r in conn.execute("SELECT * FROM pragma_table_info(?)", (name,))
+        ]
+        refers = sorted(
+            (r[3], r[2], r[4], r[6])
+            for r in conn.execute("SELECT * FROM pragma_foreign_key_list(?)", (name,))
+        )
+        indexes = set()
+        for r in conn.execute("SELECT * FROM pragma_index_list(?)", (name,)):
+            index, unique, origin, partial = r[1], r[2], r[3], r[4]
+            cols = tuple(
+                c[2]
+                for c in conn.execute(
+                    "SELECT * FROM pragma_index_info(?) ORDER BY seqno", (index,)
+                )
+            )
+            named = index if origin == "c" else origin
+            indexes.add((named, unique, cols, partial))
+        found[name] = {
+            "columns": columns,
+            "refers": refers,
+            "indexes": sorted(indexes),
+            "counted": "AUTOINCREMENT" in sql.upper(),
+        }
+    return found
