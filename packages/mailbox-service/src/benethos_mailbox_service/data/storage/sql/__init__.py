@@ -7,6 +7,7 @@ The only package that imports ``sqlalchemy``."""
 from __future__ import annotations
 
 from .accounts import SqlAccountRepository
+from .links import SqlLinkRepository
 from .passkeys import SqlPasskeyRepository
 from .passwords import SqlPasswordRepository
 from .recovery_codes import SqlRecoveryCodeRepository
@@ -15,6 +16,7 @@ from .users import SqlRoleRepository, SqlTokenRepository, SqlUserRepository
 
 __all__ = [
     "SqlAccountRepository",
+    "SqlLinkRepository",
     "SqlPasskeyRepository",
     "SqlPasswordRepository",
     "SqlRecoveryCodeRepository",

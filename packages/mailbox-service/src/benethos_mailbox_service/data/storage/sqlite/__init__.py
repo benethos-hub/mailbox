@@ -16,7 +16,6 @@ from .file import (
 )
 from .idempotency import SqliteIdempotencyRepository
 from .index import SqliteMessageIndexRepository
-from .links import SqliteLinkRepository
 from .migrations import SCHEMA_VERSION
 from .outbox import SqliteOutboxRepository
 from .sends import SqliteSendLogRepository
@@ -30,7 +29,6 @@ __all__ = [
     "SqliteCredentialRepository",
     "SqliteIdempotencyRepository",
     "SqliteKeyRepository",
-    "SqliteLinkRepository",
     "SqliteMessageIndexRepository",
     "SqliteOutboxRepository",
     "SqliteAuditRepository",
