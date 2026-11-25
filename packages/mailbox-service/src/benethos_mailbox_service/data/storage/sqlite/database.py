@@ -93,10 +93,6 @@ class Database:
             self._connection.execute("PRAGMA foreign_keys = ON")
             # Freed pages are overwritten, so deleted secrets do not linger.
             self._connection.execute("PRAGMA secure_delete = ON")
-            # Case folded as Python folds it, beyond ASCII too.
-            self._connection.create_function(
-                "casefold", 1, _casefold, deterministic=True
-            )
         try:
             rewritten = self._shrinkable()
             self._migrate(rewritten)
@@ -347,10 +343,6 @@ def translated() -> Iterator[None]:
         raise ConflictError(f"conflicts with a stored record: {exc}") from None
     except sqlite3.Error as exc:
         raise StorageError(f"the database failed: {exc}") from None
-
-
-def _casefold(value: str | None) -> str | None:
-    return value.casefold() if isinstance(value, str) else value
 
 
 def migrate_file(path: Path) -> None:

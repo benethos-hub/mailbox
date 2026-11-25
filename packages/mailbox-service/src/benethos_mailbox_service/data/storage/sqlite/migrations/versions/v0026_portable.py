@@ -20,9 +20,18 @@ A column ``name_lower`` holds the name with its ASCII letters in lower
 case, which is what ``lower()`` and ``NOCASE`` fold, with the unique
 index on it. So no name is renamed. The domain compares names with
 ``casefold()`` and refuses a second one beyond ASCII, as before.
+
+The audit of sends was searched by recipient through ``json_each`` and
+a function ``casefold`` the service gave SQLite. A column
+``recipients_folded`` holds the addresses, each folded by
+``str.casefold()``, one per line. ``before`` folds them into a table of
+its own for this step, since SQL cannot.
 """
 
 from __future__ import annotations
+
+import json
+import sqlite3
 
 from ..migration import Migration
 
@@ -92,4 +101,23 @@ class V0026Portable(Migration):
         "UPDATE users SET name_lower = lower(name)",
         "DROP INDEX users_name",
         "CREATE UNIQUE INDEX users_name_lower ON users (name_lower)",
+        "ALTER TABLE sends ADD COLUMN recipients_folded TEXT NOT NULL DEFAULT ''",
+        """
+        UPDATE sends SET recipients_folded = COALESCE(
+            (SELECT value FROM temp.sends_folded WHERE id = sends.id), '')
+        """,
+        "DROP TABLE temp.sends_folded",
     )
+
+    def before(self, db: sqlite3.Connection) -> list[str]:
+        """The recipients of every send, folded, for the statements."""
+        db.execute("CREATE TEMP TABLE sends_folded (id TEXT PRIMARY KEY, value TEXT)")
+        rows = db.execute("SELECT id, recipients FROM sends").fetchall()
+        db.executemany(
+            "INSERT INTO temp.sends_folded (id, value) VALUES (?, ?)",
+            [
+                (row[0], "\n".join(a.casefold() for a in json.loads(row[1])))
+                for row in rows
+            ],
+        )
+        return []

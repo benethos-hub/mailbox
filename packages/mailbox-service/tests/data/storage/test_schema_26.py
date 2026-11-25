@@ -4,18 +4,21 @@ the migrations, keeps what it held."""
 
 from __future__ import annotations
 
+import json
 import sqlite3
 from contextlib import closing
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 
-from benethos_mailbox_service.data.models import User
+from benethos_mailbox_service.data.models import SendFilter, SendRecord, User
 from benethos_mailbox_service.data.storage import (
     Database,
     SqliteChangeLogRepository,
     SqliteMessageIndexRepository,
     SqliteRoleRepository,
+    SqliteSendLogRepository,
     SqliteUserRepository,
     ThreadChain,
 )
@@ -167,4 +170,61 @@ def test_names_are_unique_by_their_ascii_letters(tmp_path: Path) -> None:
     users.save(User(id="usr_1", name="Anna Maria"))
     users.save(User(id="usr_5", name="anna"))
     assert [u.name for u in users.list()] == ["Anna Maria", "Ärger", "ärger", "anna"]
+    db.close()
+
+
+def _send(n: int, *recipients: str) -> SendRecord:
+    return SendRecord(
+        id=f"snd_{n}",
+        created_at=datetime(2026, 11, 25, 12, n, tzinfo=UTC),
+        user_id="usr_1",
+        credential_id=None,
+        account_id="acc_1",
+        operation="send_message",
+        recipients=list(recipients),
+        outcome="sent",
+    )
+
+
+def test_the_recipient_search_takes_the_part_as_it_is() -> None:
+    db = Database()
+    sends = SqliteSendLogRepository(db)
+    sends.add(_send(0, "a_b@example.org"))
+    sends.add(_send(1, "axb@example.org"))
+    sends.add(_send(2, "100%@example.org"))
+    sends.add(_send(3, "one@example.org", "two@example.org"))
+    sends.add(_send(4, r"back\slash@example.org"))
+
+    def ids(part: str) -> list[str]:
+        found = sends.list(
+            "acc_1", limit=10, before=None, matching=SendFilter(recipient=part)
+        )
+        return sorted(r.id for r in found)
+
+    assert ids("a_b") == ["snd_0"]
+    assert ids("0%") == ["snd_2"]
+    assert ids(r"k\s") == ["snd_4"]
+    assert ids("TWO@") == ["snd_3"]
+    assert ids("org\ntwo") == []  # across two addresses
+    assert ids("orgtwo") == []
+    db.close()
+
+
+def test_sends_of_schema_25_are_found_by_recipient(tmp_path: Path) -> None:
+    path = tmp_path / "old.db"
+    raw = at_schema(path, 25)
+    raw.execute(
+        "INSERT INTO sends (id, created_at, user_id, account_id, operation,"
+        " recipients, outcome, refused) VALUES ('snd_1', '2026-11-25T12:00:00Z',"
+        " 'usr_1', 'acc_1', 'send_message', ?, 'sent', '[]')",
+        (json.dumps(["Jörg@Example.org", "Ann@example.org"]),),
+    )
+    raw.close()
+    db = Database(path)
+    stored = db.query("SELECT recipients_folded FROM sends")[0][0]
+    assert stored == "jörg@example.org\nann@example.org"
+    found = SqliteSendLogRepository(db).list(
+        "acc_1", limit=10, before=None, matching=SendFilter(recipient="JÖRG")
+    )
+    assert [r.id for r in found] == ["snd_1"]
     db.close()
