@@ -23,8 +23,12 @@ from benethos_mailbox_service.data.storage import (
     Database,
     SqliteTokenRepository,
     SqliteUserRepository,
+    WrappedKey,
 )
-from benethos_mailbox_service.data.storage.sqlite import SCHEMA_VERSION
+from benethos_mailbox_service.data.storage.sqlite import (
+    SCHEMA_VERSION,
+    SqliteKeyRepository,
+)
 from benethos_mailbox_service.errors import (
     ConflictError,
     NotFoundError,
@@ -58,6 +62,16 @@ def test_deleting_a_user_cascades_to_its_tokens(db: Database) -> None:
     assert repo.list_for_user("usr_1") == []
     with pytest.raises(NotFoundError):
         repo.get("tok_1")
+
+
+def test_the_key_added_last_is_active_whatever_the_clock(db: Database) -> None:
+    keys = SqliteKeyRepository(db)
+    assert keys.active() is None
+    keys.add(WrappedKey("key_1", b"n1", b"c1"))
+    keys.add(WrappedKey("key_2", b"n2", b"c2"))
+    # The clock was set back between the two.
+    db.execute("UPDATE keys SET created_at = '2000-01-01' WHERE key_id = 'key_2'")
+    assert keys.active() == WrappedKey("key_2", b"n2", b"c2")
 
 
 def test_a_failed_transaction_rolls_back(db: Database) -> None:

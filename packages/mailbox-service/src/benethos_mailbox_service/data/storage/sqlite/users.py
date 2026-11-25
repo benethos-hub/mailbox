@@ -84,7 +84,7 @@ class SqliteTokenRepository:
     def list_for_user(self, user_id: str) -> list[ApiToken]:
         return self._db.query_as(
             _api_token,
-            "SELECT * FROM tokens WHERE user_id = ? ORDER BY rowid",
+            "SELECT * FROM tokens WHERE user_id = ? ORDER BY created_at, id",
             (user_id,),
         )
 

@@ -8,6 +8,12 @@ of the size of the index once.
 
 Accounts, users and roles were listed in the order of their ``rowid``
 as well. Each gets a column ``position``, filled from it.
+
+The active key was the last row of ``keys`` by ``rowid``, the last
+number of the change feed was read from ``sqlite_sequence``. Both are
+written to ``meta`` now, as ``active_key`` and ``changes_last``. Not
+the newest ``created_at``: a clock set back would make an old key the
+active one.
 """
 
 from __future__ import annotations
@@ -68,4 +74,12 @@ class V0026Portable(Migration):
         "ALTER TABLE roles ADD COLUMN position INTEGER",
         "UPDATE roles SET position = rowid",
         "CREATE UNIQUE INDEX roles_position ON roles (position)",
+        """
+        INSERT INTO meta (key, value)
+            SELECT 'active_key', key_id FROM keys ORDER BY rowid DESC LIMIT 1
+        """,
+        """
+        INSERT INTO meta (key, value) VALUES ('changes_last', CAST(COALESCE(
+            (SELECT seq FROM sqlite_sequence WHERE name = 'changes'), 0) AS TEXT))
+        """,
     )

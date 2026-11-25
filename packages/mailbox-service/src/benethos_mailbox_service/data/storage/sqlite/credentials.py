@@ -8,22 +8,36 @@ from ....common.clock import iso, parse_iso
 from ..credentials import EncryptedCredential, WrappedKey
 from .database import Database
 
+_ACTIVE = "active_key"
+
 
 class SqliteKeyRepository:
+    """The key added last is the active one, named in ``meta``."""
+
     def __init__(self, db: Database) -> None:
         self._db = db
 
     def active(self) -> WrappedKey | None:
-        row = self._db.one("SELECT * FROM keys ORDER BY rowid DESC LIMIT 1")
+        row = self._db.one(
+            "SELECT keys.* FROM keys JOIN meta"
+            " ON meta.key = ? AND keys.key_id = meta.value",
+            (_ACTIVE,),
+        )
         if row is None:
             return None
         return WrappedKey(row["key_id"], bytes(row["nonce"]), bytes(row["ciphertext"]))
 
     def add(self, key: WrappedKey) -> None:
-        self._db.execute(
-            "INSERT INTO keys (key_id, nonce, ciphertext) VALUES (?, ?, ?)",
-            (key.key_id, key.nonce, key.ciphertext),
-        )
+        with self._db.transaction() as conn:
+            conn.execute(
+                "INSERT INTO keys (key_id, nonce, ciphertext) VALUES (?, ?, ?)",
+                (key.key_id, key.nonce, key.ciphertext),
+            )
+            conn.execute(
+                "INSERT INTO meta (key, value) VALUES (?, ?)"
+                " ON CONFLICT (key) DO UPDATE SET value = excluded.value",
+                (_ACTIVE, key.key_id),
+            )
 
 
 class SqliteCredentialRepository:

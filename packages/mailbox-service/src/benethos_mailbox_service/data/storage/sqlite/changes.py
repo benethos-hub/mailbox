@@ -1,5 +1,6 @@
 """The change log in SQLite. The sequence is the table's AUTOINCREMENT key,
-which never hands out a number twice, not even after a purge."""
+which never hands out a number twice, not even after a purge. The last
+number handed out is kept in ``meta``, beside the horizon."""
 
 from __future__ import annotations
 
@@ -13,6 +14,7 @@ from ..changes import LoggedChange
 from .database import Database
 
 _HORIZON = "changes_horizon"
+_LAST = "changes_last"
 
 
 class SqliteChangeLogRepository:
@@ -25,6 +27,13 @@ class SqliteChangeLogRepository:
                 "INSERT INTO changes (account_id, message_id, type, at, folder_id)"
                 " VALUES (?, ?, ?, ?, ?)",
                 [(e.account_id, e.id, e.type, iso(e.at), e.folder_id) for e in records],
+            )
+            conn.execute(
+                "INSERT INTO meta (key, value)"
+                " VALUES (?, (SELECT COALESCE(MAX(seq), 0) FROM changes))"
+                " ON CONFLICT (key) DO UPDATE SET value ="
+                " MAX(CAST(value AS INTEGER), CAST(excluded.value AS INTEGER))",
+                (_LAST,),
             )
 
     def after(
@@ -51,7 +60,7 @@ class SqliteChangeLogRepository:
         return sorted(map(_logged, rows), key=lambda e: e.seq)[:limit]
 
     def last(self) -> int:
-        return self._db.scalar("SELECT seq FROM sqlite_sequence WHERE name = 'changes'")
+        return self._db.scalar("SELECT value FROM meta WHERE key = ?", (_LAST,))
 
     def horizon(self) -> int:
         return self._db.scalar("SELECT value FROM meta WHERE key = ?", (_HORIZON,))

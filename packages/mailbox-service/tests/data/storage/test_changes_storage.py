@@ -132,6 +132,16 @@ def test_the_last_number_survives_a_purge_of_everything(
     assert log.horizon() == 2
 
 
+def test_after_a_purge_of_everything_the_numbers_go_on(
+    log: ChangeLogRepository,
+) -> None:
+    log.append([change(1), change(2)])
+    log.purge(T0 + timedelta(days=1))
+    log.append([change(3, minutes=60 * 48)])
+    assert [e.seq for e in log.after(["acc_1"], 0, limit=10)] == [3]
+    assert log.last() == 3
+
+
 def test_forget_account(log: ChangeLogRepository) -> None:
     log.append([change(1), change(2, "acc_2")])
     log.forget_account("acc_1")
