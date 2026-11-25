@@ -281,8 +281,6 @@ all along.
 
 ## Further
 
-- **Outbox with scheduled sending** (`send_at`): sending is queued,
-  delivered later, and reported by event.
 - **A marker on mail sent through the API**, for example a header naming
   the user, so it can be traced later which mail a script or an assistant
   sent.

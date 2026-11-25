@@ -202,6 +202,13 @@ Part of the [roadmap](../ROADMAP.md): phase 5, in progress, and phase 5a, done.
   and **Look in the mailbox** on the account page list the names of the
   newest ten mails, with how often each is on top. Live-checked in
   `live/mailbox-service/smoke.py`
+- **The outbox (6.4)**, decided 2026-11-25, in progress: a send put in
+  with `outbox` or `send_at` waits as a draft in the drafts folder and is
+  sent in the background, tried again for 48 hours, never twice when its
+  outcome is unclear, not at all when its draft changed. Done in the
+  service and the client: the API, the runner, the audit of sends, the
+  webhooks, status and metrics. Open: the MCP server, the UI and a live
+  check
 
 Open in this phase, each planned in CONCEPT.md:
 
