@@ -119,7 +119,11 @@ def parts_of(chain: Chain, decision: Decision) -> list[TracePart]:
         attributes: dict[str, str | bool | int] = {
             "dimension": dimension.name,
             "recognizer": match,
-            "source": "code" if match in BY_CODE else "model",
+            # The model answered none where it was given a choice.
+            "source": "code"
+            if match in BY_CODE
+            and key(index, dimension, "among") not in decision.details
+            else "model",
             "category": _label(dimension, name),
         }
         if quotes.get(field) is not None:

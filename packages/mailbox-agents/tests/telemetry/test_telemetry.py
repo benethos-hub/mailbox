@@ -15,7 +15,7 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
 
 from benethos_mailbox_agents.agents.sorting.agent import Sorting
 from benethos_mailbox_agents.errors import ConfigError
-from benethos_mailbox_agents.records import MessageRef
+from benethos_mailbox_agents.records import Decision, MessageRef
 from benethos_mailbox_agents.runtime.loop import Worker
 from benethos_mailbox_agents.telemetry import NO_SPANS, open_spans
 from benethos_mailbox_agents.telemetry.otlp import _check_url, _headers
@@ -180,3 +180,21 @@ def test_the_headers_come_from_their_file_and_a_wrong_line_names_its_number(
     with pytest.raises(ConfigError, match="line 1 is not name=value") as raised:
         _headers(wrong)
     assert "c2VjcmV0" not in raised.value.message
+
+
+def test_a_none_of_the_model_is_named_as_the_model_s(tmp_path: Path) -> None:
+    path = tmp_path / "sorting.json"
+    path.write_text(json.dumps(CHAIN), encoding="utf-8")
+    agent = Sorting(settings(sorting_file=path))
+    agent.prepare()
+    decision = Decision(
+        label="Hosting",
+        source="model",
+        fields={"kind": "none"},
+        details={"match": "group", "kind.match": "none", "kind.among": "all"},
+    )
+
+    parts = agent.trace_parts(decision)
+
+    assert [dict(p.attributes)["source"] for p in parts] == ["code", "model"]
+    assert dict(parts[1].attributes)["category"] == "none"
