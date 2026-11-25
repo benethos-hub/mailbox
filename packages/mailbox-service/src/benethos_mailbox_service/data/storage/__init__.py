@@ -56,9 +56,9 @@ from .sql import (
     SqlWebhookRepository,
 )
 from .sql.database import Database
+from .sql.tables import Table
 from .sqlite import (
     SCHEMA_VERSION,
-    Table,
     inspect_file,
     migrate_file,
     move_sidecars,

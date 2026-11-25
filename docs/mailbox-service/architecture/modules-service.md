@@ -314,18 +314,18 @@ packages/mailbox-service/
                         #   for the in-memory ones, sqlite/ the file of
                         #   the database, its connection, the steps of
                         #   its schema and the files SQLite keeps beside
-                        #   it (file.py), its tables as stored for an
-                        #   export (tables.py), sqlite/migrations/ the base, the registry,
+                        #   it (file.py), sqlite/migrations/ the base, the registry,
                         #   versions/ one class per schema version,
                         #   sql/ what is spoken through SQLAlchemy
                         #   Core: the types and what differs between
                         #   databases (dialect.py), the tables of
                         #   schema 26 (schema.py), the database the
                         #   repositories use, an engine on the one
-                        #   connection (database.py), the rows of a
+                        #   connection (database.py), the tables for
+                        #   an export (tables.py), the rows of a
                         #   table keyed by id (rows.py) and the
-                        #   repositories moved so far, one module per
-                        #   subject. repositories.py opens one of them
+                        #   repositories, one module per subject.
+                        #   repositories.py opens one of them
       secrets/          # envelope encryption, key providers, password
                         #   hashes, the vault of the credentials, TOTP,
                         #   passkeys (fido2)

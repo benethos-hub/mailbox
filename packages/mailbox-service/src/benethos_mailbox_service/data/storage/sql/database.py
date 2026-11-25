@@ -30,7 +30,8 @@ from ....errors import ConflictError, StorageError, missing
 from ..sqlite import file
 from ..sqlite.file import Migrated
 from ..sqlite.migrations import SCHEMA_VERSION
-from ..sqlite.tables import (
+from .dialect import in_chunks, sqlite_engine
+from .tables import (
     Table,
     align_changes,
     fill_table,
@@ -38,7 +39,6 @@ from ..sqlite.tables import (
     read_chunk,
     read_tables,
 )
-from .dialect import in_chunks, sqlite_engine
 
 T = TypeVar("T")
 # The rows of a table read or written at once by an export.
@@ -211,8 +211,8 @@ class Database:
     def tables(self) -> list[Table]:
         """Every table of the schema with its columns and key, each after
         the tables it refers to."""
-        with self._lock, translated():
-            return read_tables(self._driver)
+        with self.connected() as conn:
+            return read_tables(conn)
 
     def rows(self, table: str) -> Iterator[tuple[Any, ...]]:
         """The rows of ``table``, a table of ``tables``, as tuples of its
@@ -221,8 +221,8 @@ class Database:
         shape = self._table(table)
         after: tuple[Any, ...] | None = None
         while True:
-            with self._lock, translated():
-                part = read_chunk(self._driver, shape, after, ROWS_CHUNK)
+            with self.connected() as conn:
+                part = read_chunk(conn, shape, after, ROWS_CHUNK)
             yield from part
             if len(part) < ROWS_CHUNK:
                 return
@@ -235,9 +235,9 @@ class Database:
         transaction. The change feed then counts on from the last number
         it handed out. Answers how many rows."""
         shape = self._table(table)
-        with self.transaction() as db:
-            count = fill_table(db, shape, columns, rows, ROWS_CHUNK)
-            align_changes(db)
+        with self.connected() as conn:
+            count = fill_table(conn, shape, columns, rows, ROWS_CHUNK)
+            align_changes(conn)
         return count
 
     def _table(self, name: str) -> Table:

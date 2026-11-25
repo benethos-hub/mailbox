@@ -18,6 +18,10 @@ from benethos_mailbox_service.data.storage import Database, repositories_on
 from ..schema_helpers import at_schema, run
 
 SEED = Path(__file__).parent / "storage" / "seeds" / "schema_25.sql"
+# The export of that seed at schema 26, written once by the version
+# before the export read its tables from the definitions, and never
+# changed: every table holds rows.
+EXPORTED = Path(__file__).parent / "exports" / "schema_26.jsonl"
 MARK = "a-value-never-in-a-message"
 
 
@@ -49,6 +53,31 @@ def test_an_export_is_read_back_table_for_table(source: Database) -> None:
         assert list(target.rows(table.name)) == list(source.rows(table.name)), table
     assert _exported(target) == data
     source.close()
+    target.close()
+
+
+def _by_table(data: bytes) -> dict[str, list[object]]:
+    tables: dict[str, list[object]] = {}
+    rows: list[object] = []
+    for line in data.splitlines():
+        value = json.loads(line)
+        if isinstance(value, dict) and "table" in value:
+            rows = tables.setdefault(value["table"], [value["columns"]])
+        elif isinstance(value, list):
+            rows.append(value)
+    return tables
+
+
+def test_an_export_of_the_version_before_is_read_back() -> None:
+    data = EXPORTED.read_bytes()
+    target = Database()
+    counts = read_export(io.BytesIO(data), target)
+    assert all(counts.values()), "a table left empty"
+    written = _by_table(data)
+    again = _by_table(_exported(target))
+    assert again.keys() == written.keys()
+    for table, rows in written.items():
+        assert again[table] == rows, table
     target.close()
 
 

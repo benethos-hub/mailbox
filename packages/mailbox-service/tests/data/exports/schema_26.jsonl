@@ -1,0 +1,93 @@
+{"export":1,"schema":26}
+{"table":"accounts","columns":["id","provider","email","display_name","status","settings","abilities","position"]}
+["acc_seed1","microsoft","one@example.org",null,"needs_reauth","{}",null,2]
+["acc_seed2","imap","two@example.org","Two","connected","{\"host\": \"imap.example.org\", \"port\": 993, \"tls\": true}","{\"capabilities\": [], \"marks\": {\"read\": [], \"written\": []}}",1]
+{"end":"accounts","rows":2}
+{"table":"activity","columns":["id","at","activity","user_id","user_name","credential","record","source","outcome","detail"]}
+["act_seed1","2026-01-03T10:00:00Z","user.created","usr_seed2","Admin","password","usr_seed1","ui","done","{}"]
+["act_seed2","2026-01-03T11:00:00Z","token.created",null,"cli",null,"tok_seed1","cli","refused","{\"reason\": \"seed\"}"]
+{"end":"activity","rows":2}
+{"table":"keys","columns":["key_id","nonce","ciphertext","created_at"]}
+["key_seed_a",{"b":"AwMDAwMDAwMDAwMD"},{"b":"BAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE"},"2026-01-01 10:00:00"]
+["key_seed_b",{"b":"AQEBAQEBAQEBAQEB"},{"b":"AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIC"},"2026-01-02 10:00:00"]
+{"end":"keys","rows":2}
+{"table":"meta","columns":["key","value"]}
+["active_key","key_seed_a"]
+["changes_horizon","3"]
+["changes_last","9"]
+["schema_version","26"]
+{"end":"meta","rows":4}
+{"table":"roles","columns":["id","grants","service","position"]}
+["auditor","[]","[\"audit.read\"]",2]
+["reader","[{\"accounts\": [\"*\"], \"allow\": [\"mail.read\"]}]","[]",1]
+{"end":"roles","rows":2}
+{"table":"sends","columns":["id","created_at","user_id","credential_id","account_id","operation","recipients","outcome","error","refused","message_id_header","outbox_job_id","recipients_folded"]}
+["snd_seed1","2026-01-03T10:00:00Z","usr_seed2","tok_seed2","acc_seed2","send_message","[\"J\\u00f6rg.Recipient@Example.org\", \"carol@example.org\"]","sent",null,"[]","<s1@example.org>",null,"jörg.recipient@example.org\ncarol@example.org"]
+["snd_seed2","2026-01-03T11:00:00Z","usr_seed1",null,"acc_seed2","send_draft","[\"dave@example.org\"]","denied","not allowed","[\"dave@example.org\"]",null,"obx_seed1","dave@example.org"]
+{"end":"sends","rows":2}
+{"table":"users","columns":["id","name","roles","grants","disabled","ui_sign_in","service","position","name_lower"]}
+["usr_seed1","dashboard","[]","[{\"accounts\": [\"acc_seed2\"], \"allow\": [\"mail.read\", \"send\"]}]",1,0,"[]",2,"dashboard"]
+["usr_seed2","Admin","[\"reader\"]","[{\"accounts\": [\"*\"], \"allow\": [\"mail.read\"]}]",0,1,"[\"users.read\"]",1,"admin"]
+{"end":"users","rows":2}
+{"table":"changes","columns":["seq","account_id","message_id","type","at","folder_id"]}
+[5,"acc_seed2","msg_seed_c","message.created","2026-01-03T10:00:00Z","f_inbox"]
+[7,"acc_seed2","msg_seed_b","message.updated","2026-01-03T11:00:00Z",null]
+{"end":"changes","rows":2}
+{"table":"credentials","columns":["account_id","field","key_id","nonce","ciphertext","updated_at"]}
+["acc_seed1","refresh_token","key_seed_a",{"b":"BwcHBwcHBwcHBwcH"},{"b":"CAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg="},"2026-01-03T11:00:00Z"]
+["acc_seed2","password","key_seed_b",{"b":"BQUFBQUFBQUFBQUF"},{"b":"BgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgY="},"2026-01-03T10:00:00Z"]
+{"end":"credentials","rows":2}
+{"table":"folder_states","columns":["account_id","folder_id","state"]}
+["acc_seed2","f_inbox","{\"uidvalidity\": 7, \"uidnext\": 42}"]
+["acc_seed2","f_sent","{\"uidvalidity\": 8, \"uidnext\": 3}"]
+{"end":"folder_states","rows":2}
+{"table":"idempotency","columns":["account_id","user_id","key","operation","request_hash","result","created_at"]}
+["acc_seed2","usr_seed1","idem-2","create_draft","rh-2","{\"id\": \"drf_1\"}","2026-01-03T11:00:00Z"]
+["acc_seed2","usr_seed2","idem-1","send_message","rh-1","{\"message_id\": \"<s1@example.org>\"}","2026-01-03T10:00:00Z"]
+{"end":"idempotency","rows":2}
+{"table":"message_index","columns":["seq","account_id","id","native_id","folder_id","header","thread_id"]}
+[1,"acc_seed2","msg_seed_c","n-c","f_inbox","<c@example.org>","thr_seed_z"]
+[3,"acc_seed2","msg_seed_d","n-d","f_inbox",null,null]
+[4,"acc_seed2","msg_seed_b","n-b","f_inbox","<b@example.org>","thr_seed_a"]
+{"end":"message_index","rows":3}
+{"table":"outbox","columns":["id","account_id","user_id","credential_id","operation","draft_id","digest","message_id_header","recipients","state","attempts","due_at","expires_at","send_at","last_error","unclear_since","created_at","finished_at"]}
+["obx_seed1","acc_seed2","usr_seed1",null,"send_draft","drf_1","d-1","<o1@example.org>","[\"dave@example.org\"]","failed",3,"2026-01-03T11:00:00Z","2026-01-05T11:00:00Z",null,"refused",null,"2026-01-03T10:00:00Z","2026-01-03T11:00:00Z"]
+["obx_seed2","acc_seed2","usr_seed2","tok_seed2","send_message","drf_2","d-2","<o2@example.org>","[\"erin@example.org\"]","queued",0,"2026-01-04T10:00:00Z","2026-01-06T10:00:00Z","2026-01-04T10:00:00Z",null,null,"2026-01-03T12:00:00Z",null]
+{"end":"outbox","rows":2}
+{"table":"passkeys","columns":["id","user_id","name","credential_id","credential","sign_count","created_at","last_used_at"]}
+["pky_seed1","usr_seed2","laptop","cred-1","AAEC",3,"2026-01-03T10:00:00Z",null]
+["pky_seed2","usr_seed2","key","cred-2","AwQF",0,"2026-01-03T11:00:00Z","2026-01-03T12:00:00Z"]
+{"end":"passkeys","rows":2}
+{"table":"passwords","columns":["user_id","hash","must_change","updated_at","last_sign_in_at"]}
+["usr_seed1","scrypt$seed$1",1,"2026-01-02T10:00:00Z",null]
+["usr_seed2","scrypt$seed$2",0,"2026-01-03T10:00:00Z","2026-01-04T10:00:00Z"]
+{"end":"passwords","rows":2}
+{"table":"recovery_codes","columns":["user_id","key_id","hash","used_at"]}
+["usr_seed2","key_seed_b","rc-hash-1",null]
+["usr_seed2","key_seed_b","rc-hash-2","2026-01-03T12:00:00Z"]
+{"end":"recovery_codes","rows":2}
+{"table":"thread_links","columns":["seq","account_id","header","thread_id"]}
+[1,"acc_seed2","<c@example.org>","thr_seed_z"]
+[2,"acc_seed2","<b@example.org>","thr_seed_a"]
+{"end":"thread_links","rows":2}
+{"table":"tokens","columns":["id","user_id","name","token_hash","created_at","expires_at","last_used_at","revoked_at"]}
+["tok_seed1","usr_seed1","second","hash-seed-1","2026-01-02T10:00:00Z","2027-01-02T10:00:00Z",null,"2026-01-05T10:00:00Z"]
+["tok_seed2","usr_seed2","first","hash-seed-2","2026-01-03T10:00:00Z",null,"2026-01-04T10:00:00Z",null]
+{"end":"tokens","rows":2}
+{"table":"totp_devices","columns":["id","user_id","name","key_id","nonce","ciphertext","created_at","last_step","last_used_at"]}
+["otp_seed1","usr_seed2","phone","key_seed_b",{"b":"DQ0NDQ0NDQ0NDQ0N"},{"b":"Dg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4="},"2026-01-03T10:00:00Z",1000,"2026-01-03T10:05:00Z"]
+["otp_seed2","usr_seed2","tablet","key_seed_a",{"b":"Dw8PDw8PDw8PDw8P"},{"b":"EBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBA="},"2026-01-03T11:00:00Z",null,null]
+{"end":"totp_devices","rows":2}
+{"table":"webhooks","columns":["id","user_id","url","events","accounts","created_at","key_id","nonce","ciphertext","cursor","attempts","next_attempt_at","last_delivery_at","last_error"]}
+["whk_seed1","usr_seed2","https://hooks.example.org/a","[\"message.created\"]","[\"acc_seed2\"]","2026-01-03T10:00:00Z","key_seed_b",{"b":"CQkJCQkJCQkJCQkJ"},{"b":"CgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgo="},5,0,null,"2026-01-03T10:01:00Z",null]
+["whk_seed2","usr_seed1","https://hooks.example.org/b","[\"message.deleted\"]",null,"2026-01-03T11:00:00Z","key_seed_a",{"b":"CwsLCwsLCwsLCwsL"},{"b":"DAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAw="},0,2,"2026-01-03T12:00:00Z",null,"timeout"]
+{"end":"webhooks","rows":2}
+{"table":"attachment_links","columns":["id","secret_hash","account_id","message_id","attachment_id","token_id","expires_at","redeemed_at","redeemed_by"]}
+["lnk_seed1","sh-1","acc_seed2","msg_seed_c","att_1","tok_seed2","2026-01-04T10:00:00Z",null,null]
+["lnk_seed2","sh-2","acc_seed2","msg_seed_b","att_2","tok_seed2","2026-01-04T11:00:00Z","2026-01-03T12:00:00Z","usr_seed2"]
+{"end":"attachment_links","rows":2}
+{"table":"webhook_attempts","columns":["seq","webhook_id","delivery_id","at","events","status","error"]}
+[3,"whk_seed1","dlv_1","2026-01-03T10:01:00Z","[5]",200,null]
+[4,"whk_seed2","dlv_2","2026-01-03T11:30:00Z","[9]",null,"timeout"]
+{"end":"webhook_attempts","rows":2}
+{"tables":22}
