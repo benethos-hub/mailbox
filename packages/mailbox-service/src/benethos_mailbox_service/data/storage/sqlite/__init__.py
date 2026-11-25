@@ -19,7 +19,6 @@ from .index import SqliteMessageIndexRepository
 from .links import SqliteLinkRepository
 from .migrations import SCHEMA_VERSION
 from .outbox import SqliteOutboxRepository
-from .passkeys import SqlitePasskeyRepository
 from .recovery_codes import SqliteRecoveryCodeRepository
 from .sends import SqliteSendLogRepository
 from .tables import Table
@@ -37,7 +36,6 @@ __all__ = [
     "SqliteOutboxRepository",
     "SqliteAuditRepository",
     "SqliteRecoveryCodeRepository",
-    "SqlitePasskeyRepository",
     "SqliteSendLogRepository",
     "SqliteWebhookRepository",
     "Table",
