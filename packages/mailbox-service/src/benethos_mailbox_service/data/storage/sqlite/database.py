@@ -75,10 +75,12 @@ _INCREMENTAL = 2
 
 class Database:
     """The database at ``path``, readable by its owner alone. Without a
-    path it lives in memory, for tests."""
+    path it lives in memory, for tests. ``keep_copy``: a file of a schema
+    before ``COPY_BEFORE`` is copied before it is migrated."""
 
-    def __init__(self, path: Path | None = None) -> None:
+    def __init__(self, path: Path | None = None, *, keep_copy: bool = True) -> None:
         self._path = path
+        self._keep = keep_copy
         if path is not None:
             path.parent.mkdir(parents=True, exist_ok=True)
             _owner_only(path)
@@ -326,7 +328,7 @@ class Database:
                 f"({SCHEMA_VERSION}): run a newer version of the service"
             )
         kept = None
-        if self._path is not None and 0 < current < COPY_BEFORE:
+        if self._keep and self._path is not None and 0 < current < COPY_BEFORE:
             kept = self._keep_copy(self._path, current)
         notes: list[str] = []
         for migration in MIGRATIONS.pending(current):
@@ -387,8 +389,9 @@ def translated() -> Iterator[None]:
 
 
 def migrate_file(path: Path) -> None:
-    """Bring the database file at ``path`` to this version's schema."""
-    Database(path).close()
+    """Bring the database file at ``path`` to this version's schema. It
+    comes from a backup, which is its copy: none is kept beside it."""
+    Database(path, keep_copy=False).close()
 
 
 def service_lock(path: Path) -> Path:
