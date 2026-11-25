@@ -233,7 +233,7 @@ def test_every_setting_of_the_configuration_spec_exists() -> None:
 
 def test_the_env_example_names_every_setting() -> None:
     example = ROOT / "config" / "benethos-mailbox-agents" / ".env.example"
-    named = set(re.findall(r"MAILBOX_AGENTS_([A-Z_]+)=", example.read_text("utf-8")))
+    named = set(re.findall(r"MAILBOX_AGENTS_([A-Z0-9_]+)=", example.read_text("utf-8")))
 
     assert {name.lower() for name in named} == set(Settings.model_fields)
 

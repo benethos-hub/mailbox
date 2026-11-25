@@ -3,6 +3,7 @@ what reads a field."""
 
 from __future__ import annotations
 
+from .classified import Classified, NotClassified, NotClassifiedReason
 from .decisions import LABEL, Decision, Evidence, Step, StepResult
 from .items import KEYWORD_REMOVED, MESSAGE_DISCARDED, MESSAGE_GONE, OpenItem
 from .mail import (
@@ -27,6 +28,7 @@ __all__ = [
     "MESSAGE_GONE",
     "Address",
     "Attachment",
+    "Classified",
     "Decision",
     "Event",
     "EventType",
@@ -34,6 +36,8 @@ __all__ = [
     "FolderRef",
     "MailMessage",
     "MessageRef",
+    "NotClassified",
+    "NotClassifiedReason",
     "OpenItem",
     "Step",
     "StepResult",

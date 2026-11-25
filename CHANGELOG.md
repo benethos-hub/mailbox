@@ -112,6 +112,19 @@ adheres to [Semantic Versioning](https://semver.org/).
 - The live checks of the agents: `live/mailbox-agents/chain.py` runs the
   three example instances of `sorting` on the test account and puts the
   mail back, and the example list `beleg` asks the recognizer `invoice`.
+- `benethos-mailbox-agents`: an entrance for peers over A2A. With
+  `MAILBOX_AGENTS_A2A_PORT` and a token (`MAILBOX_AGENTS_A2A_TOKEN` or
+  `_FILE`) the worker serves the skill `classify`: another agent, or the
+  A2A gateway of LiteLLM, sends the ids of a message and is told the
+  categories of the agent's decision and whether a quote backs each,
+  never anything of the mail. It acts on nothing and stores no decision.
+  Its model calls count against the agent's limits. A2A 1.0 and 0.3 on
+  one endpoint, the agent card at `/.well-known/agent-card.json`, every
+  request with `Authorization: Bearer`. Off unless the port is set.
+- The live checks of the agents: `live/mailbox-agents/peers.py` asks the
+  entrance for peers over A2A directly and through the A2A gateway of
+  LiteLLM in the live setup, which it enters the agent in and deletes it
+  from again. It changes no mail.
 
 ### Changed
 

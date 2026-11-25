@@ -45,11 +45,17 @@ class Session:
     """What one command works with."""
 
     def __init__(
-        self, agent: Agent, store: Store, mailbox: Mailbox, worker: Worker
+        self,
+        agent: Agent,
+        store: Store,
+        mailbox: Mailbox,
+        gateway: Gateway | NoModel,
+        worker: Worker,
     ) -> None:
         self.agent = agent
         self.store = store
         self.mailbox = mailbox
+        self.gateway = gateway
         self.worker = worker
 
 
@@ -121,4 +127,4 @@ async def session(cls: type[Agent], settings: Settings) -> AsyncIterator[Session
             now=now,
             spans=spans,
         )
-        yield Session(agent, store, mailbox, worker)
+        yield Session(agent, store, mailbox, gateway, worker)

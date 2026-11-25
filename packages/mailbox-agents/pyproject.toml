@@ -58,12 +58,15 @@ dependencies = [
     # folders of the system, as the other programs of Mailbox have them.
     # Released with this package under the same version.
     "benethos-mailbox-common[paths,settings]==0.11.1",
+    # The entrance for peers over A2A, served only when a port is set.
+    "a2a-sdk[http-server]>=1.3.1",
     "httpx>=0.28.1",
     # Spans over OTLP and HTTP, exported only when an endpoint is set.
     "opentelemetry-exporter-otlp-proto-http>=1.45.2",
     "opentelemetry-sdk>=1.45.2",
     "prometheus-client>=0.26.0",
     "pydantic>=2.14.3",
+    "uvicorn>=0.54.0",
 ]
 
 [project.urls]

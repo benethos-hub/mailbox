@@ -56,7 +56,11 @@ through `update_message`, a second one set, the first taken off, the
 second taken off. Each change came as one `message.updated` of the same
 id, about 9 seconds later, and `get_message` showed the keywords as set.
 A keyword a person sets or takes off in a mail client over IMAP reaches
-the feed through CONDSTORE, as a flag does **(to verify for keywords)**.
+the feed as well, measured 2026-11-25 against Stalwart 1.2 with a
+service whose worker waits in IDLE: a second IMAP client set a keyword
+with `STORE +FLAGS` and took it off with `STORE -FLAGS`. Each change
+came as one `message.updated` of the same id, within two seconds, and
+`get_message` showed the keyword set and then gone.
 
 Folders and moves, measured 2026-11-18 against 0.7.5 with IMAP at
 Stalwart, on the test account:

@@ -85,6 +85,13 @@ class Settings(files.FileSettings):
     otlp_endpoint: str | None = None
     otlp_headers_file: Path | None = None
     otlp_allow_http: bool = False
+    # The entrance for peers over A2A, docs/mailbox-agents/concept/a2a.md:
+    # off unless a port is set, and then only with a token.
+    a2a_port: int = Field(default=0, ge=0, le=65535)
+    a2a_host: str = "127.0.0.1"
+    a2a_url: str | None = None
+    a2a_token: SecretStr | None = None
+    a2a_token_file: Path | None = None
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
     # --- invoices, docs/mailbox-agents/concept/agent-invoices.md ----------------------
@@ -111,6 +118,8 @@ class Settings(files.FileSettings):
         "otlp_headers_file",
         "service_token_file",
         "gateway_key_file",
+        "a2a_url",
+        "a2a_token_file",
         mode="before",
     )
     @classmethod
@@ -165,7 +174,7 @@ class Settings(files.FileSettings):
         with the mark of UTF-8 an editor puts there. A secret is printable
         ASCII, as a header of HTTP carries it: any other is refused by the
         name of its setting, never with its value."""
-        for name in ("service_token", "gateway_key"):
+        for name in ("service_token", "gateway_key", "a2a_token"):
             setting = f"{PREFIX}{name.upper()}"
             given: SecretStr | None = getattr(self, name)
             if given is not None and not given.get_secret_value():
@@ -201,7 +210,7 @@ class Settings(files.FileSettings):
         of certifi."""
         return None if self.ca_file is None else _context(self.ca_file)
 
-    def secret(self, name: Literal["service_token", "gateway_key"]) -> str:
+    def secret(self, name: Literal["service_token", "gateway_key", "a2a_token"]) -> str:
         """The value of a secret, or a :class:`ConfigError` naming it."""
         found: SecretStr | None = getattr(self, name)
         if found is None:

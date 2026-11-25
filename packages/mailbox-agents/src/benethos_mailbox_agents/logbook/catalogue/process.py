@@ -61,3 +61,13 @@ class MetricsServing(Activity):
 
     def says(self) -> str:
         return f"began serving metrics on port {self.port}"
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class A2AServing(Activity):
+    name: ClassVar[str] = "a2a_serving"
+
+    port: int
+
+    def says(self) -> str:
+        return f"began serving peers over A2A on port {self.port}"

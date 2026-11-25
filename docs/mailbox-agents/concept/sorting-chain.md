@@ -235,8 +235,8 @@ and may correct (decided 2026-11-25). The example of the live setup,
   set each other off, with exit code 1.
 - **The feed.** A keyword set or taken off comes as one
   `message.updated` of the same id, measured through the mailbox service
-  at Stalwart ([mailbox service](mailbox-service.md)). One set in a mail
-  client over IMAP reaches the feed through CONDSTORE **(to verify)**.
+  at Stalwart ([mailbox service](mailbox-service.md)). One set or taken
+  off in a mail client over IMAP comes the same way, measured there too.
 - **An account without keywords**, Gmail and POP3 in the mailbox
   service, gets no keyword: the service refuses it and the runtime logs
   the refusal **(to verify)**. There one instance with `when` is the

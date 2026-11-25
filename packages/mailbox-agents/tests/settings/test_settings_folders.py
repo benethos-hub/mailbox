@@ -48,7 +48,8 @@ def test_a_relative_path_counts_from_the_named_file(
     env.write_text(
         f"{PREFIX}DATA_DIR=data\n"
         f"{PREFIX}SORTING_FILE=s.json\n"
-        f"{PREFIX}SERVICE_TOKEN_FILE=token\n",
+        f"{PREFIX}SERVICE_TOKEN_FILE=token\n"
+        f"{PREFIX}OTLP_HEADERS_FILE=otlp.headers\n",
         encoding="utf-8",
     )
 
@@ -56,6 +57,7 @@ def test_a_relative_path_counts_from_the_named_file(
 
     assert found.data_dir == other / "data"
     assert found.sorting_file == other / "s.json"
+    assert found.otlp_headers_file == other / "otlp.headers"
     assert found.secret("service_token") == "service-token-value"
 
 
