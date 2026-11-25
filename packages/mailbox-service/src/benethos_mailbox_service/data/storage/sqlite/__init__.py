@@ -15,7 +15,6 @@ from .file import (
 from .index import SqliteMessageIndexRepository
 from .migrations import SCHEMA_VERSION
 from .outbox import SqliteOutboxRepository
-from .sends import SqliteSendLogRepository
 from .tables import Table
 from .webhooks import SqliteWebhookRepository
 
@@ -25,7 +24,6 @@ __all__ = [
     "SqliteChangeLogRepository",
     "SqliteMessageIndexRepository",
     "SqliteOutboxRepository",
-    "SqliteSendLogRepository",
     "SqliteWebhookRepository",
     "Table",
     "inspect_file",

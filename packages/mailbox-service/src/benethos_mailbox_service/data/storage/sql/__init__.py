@@ -14,6 +14,7 @@ from .links import SqlLinkRepository
 from .passkeys import SqlPasskeyRepository
 from .passwords import SqlPasswordRepository
 from .recovery_codes import SqlRecoveryCodeRepository
+from .sends import SqlSendLogRepository
 from .totp import SqlTotpRepository
 from .users import SqlRoleRepository, SqlTokenRepository, SqlUserRepository
 
@@ -28,6 +29,7 @@ __all__ = [
     "SqlPasswordRepository",
     "SqlRecoveryCodeRepository",
     "SqlRoleRepository",
+    "SqlSendLogRepository",
     "SqlTokenRepository",
     "SqlTotpRepository",
     "SqlUserRepository",
