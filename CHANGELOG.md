@@ -100,6 +100,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   off, exit code 1, else 0.
 - The live setup of the agents: three example lists of instances of
   `sorting` that hand a message on, in `containers/live/mailbox-agents/chain/`.
+- `benethos-mailbox-agents`: the recognizer `invoice` of `sorting`. A
+  category with `"recognize": "invoice"` holds for an invoice, asked of
+  the model with a copy of the prompt `v5` of `invoices`, the near miss
+  of one that is not in the details. A category the model chose this
+  way may name `by_topic` as one with a topic does.
 
 ### Changed
 

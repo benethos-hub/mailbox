@@ -48,7 +48,7 @@ DISPLACED = "moves.displaced"
 
 # The matches that are code: a category so found was not the model's
 # choice.
-BY_CODE = frozenset({"group", "none", "ambiguous", "keyword"})
+BY_CODE = frozenset({"group", "none", "ambiguous", "keyword", "invoice_rules"})
 
 
 def key(index: int, dimension: Dimension, name: str) -> str:
