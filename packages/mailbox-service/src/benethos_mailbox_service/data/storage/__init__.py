@@ -40,6 +40,7 @@ from .sends import InMemorySendLogRepository, SendLogRepository
 from .sql import (
     SqlAccountRepository,
     SqlAuditRepository,
+    SqlIdempotencyRepository,
     SqlLinkRepository,
     SqlPasskeyRepository,
     SqlPasswordRepository,
@@ -53,7 +54,6 @@ from .sql.database import Database
 from .sqlite import (
     SCHEMA_VERSION,
     SqliteChangeLogRepository,
-    SqliteIdempotencyRepository,
     SqliteMessageIndexRepository,
     SqliteOutboxRepository,
     SqliteSendLogRepository,
@@ -129,7 +129,7 @@ __all__ = [
     "SendLogRepository",
     "SqlAccountRepository",
     "SqliteChangeLogRepository",
-    "SqliteIdempotencyRepository",
+    "SqlIdempotencyRepository",
     "SqlLinkRepository",
     "SqliteMessageIndexRepository",
     "SqliteOutboxRepository",

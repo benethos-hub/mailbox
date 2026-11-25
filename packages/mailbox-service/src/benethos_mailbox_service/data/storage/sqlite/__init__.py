@@ -13,7 +13,6 @@ from .file import (
     remove_database_file,
     service_lock,
 )
-from .idempotency import SqliteIdempotencyRepository
 from .index import SqliteMessageIndexRepository
 from .migrations import SCHEMA_VERSION
 from .outbox import SqliteOutboxRepository
@@ -26,7 +25,6 @@ __all__ = [
     "Migrated",
     "SqliteChangeLogRepository",
     "SqliteCredentialRepository",
-    "SqliteIdempotencyRepository",
     "SqliteKeyRepository",
     "SqliteMessageIndexRepository",
     "SqliteOutboxRepository",
