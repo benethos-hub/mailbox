@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-from .audit import SqliteAuditRepository
 from .changes import SqliteChangeLogRepository
 from .credentials import SqliteCredentialRepository, SqliteKeyRepository
 from .file import (
@@ -31,7 +30,6 @@ __all__ = [
     "SqliteKeyRepository",
     "SqliteMessageIndexRepository",
     "SqliteOutboxRepository",
-    "SqliteAuditRepository",
     "SqliteSendLogRepository",
     "SqliteWebhookRepository",
     "Table",

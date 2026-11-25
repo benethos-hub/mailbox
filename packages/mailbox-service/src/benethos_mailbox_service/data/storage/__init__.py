@@ -39,6 +39,7 @@ from .repositories import Repositories, Store, open_repositories, repositories_o
 from .sends import InMemorySendLogRepository, SendLogRepository
 from .sql import (
     SqlAccountRepository,
+    SqlAuditRepository,
     SqlLinkRepository,
     SqlPasskeyRepository,
     SqlPasswordRepository,
@@ -51,7 +52,6 @@ from .sql import (
 from .sql.database import Database
 from .sqlite import (
     SCHEMA_VERSION,
-    SqliteAuditRepository,
     SqliteChangeLogRepository,
     SqliteIdempotencyRepository,
     SqliteMessageIndexRepository,
@@ -86,7 +86,7 @@ from .webhooks import (
 __all__ = [
     "AuditRepository",
     "InMemoryAuditRepository",
-    "SqliteAuditRepository",
+    "SqlAuditRepository",
     "AccountRepository",
     "Attempt",
     "ChangeLogRepository",

@@ -30,6 +30,7 @@ from .recovery_codes import InMemoryRecoveryCodeRepository, RecoveryCodeReposito
 from .sends import InMemorySendLogRepository, SendLogRepository
 from .sql import (
     SqlAccountRepository,
+    SqlAuditRepository,
     SqlLinkRepository,
     SqlPasskeyRepository,
     SqlPasswordRepository,
@@ -42,7 +43,6 @@ from .sql import (
 from .sql.database import Database
 from .sqlite import (
     Migrated,
-    SqliteAuditRepository,
     SqliteChangeLogRepository,
     SqliteCredentialRepository,
     SqliteIdempotencyRepository,
@@ -188,7 +188,7 @@ def repositories_on(db: Database) -> Repositories:
         sends=SqliteSendLogRepository(db),
         changes=SqliteChangeLogRepository(db),
         webhooks=SqliteWebhookRepository(db),
-        audit=SqliteAuditRepository(db),
+        audit=SqlAuditRepository(db),
         links=SqlLinkRepository(db),
         outbox=SqliteOutboxRepository(db),
         store=db,
