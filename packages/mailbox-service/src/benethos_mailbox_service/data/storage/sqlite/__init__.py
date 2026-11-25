@@ -3,8 +3,6 @@
 
 from __future__ import annotations
 
-from .accounts import SqliteAccountRepository
-from .audit import SqliteAuditRepository
 from .changes import SqliteChangeLogRepository
 from .credentials import SqliteCredentialRepository, SqliteKeyRepository
 from .file import (
@@ -15,40 +13,22 @@ from .file import (
     remove_database_file,
     service_lock,
 )
-from .idempotency import SqliteIdempotencyRepository
 from .index import SqliteMessageIndexRepository
-from .links import SqliteLinkRepository
 from .migrations import SCHEMA_VERSION
 from .outbox import SqliteOutboxRepository
-from .passkeys import SqlitePasskeyRepository
-from .passwords import SqlitePasswordRepository
-from .recovery_codes import SqliteRecoveryCodeRepository
 from .sends import SqliteSendLogRepository
 from .tables import Table
-from .totp import SqliteTotpRepository
-from .users import SqliteRoleRepository, SqliteTokenRepository, SqliteUserRepository
 from .webhooks import SqliteWebhookRepository
 
 __all__ = [
     "SCHEMA_VERSION",
     "Migrated",
-    "SqliteAccountRepository",
     "SqliteChangeLogRepository",
     "SqliteCredentialRepository",
-    "SqliteIdempotencyRepository",
     "SqliteKeyRepository",
-    "SqliteLinkRepository",
     "SqliteMessageIndexRepository",
     "SqliteOutboxRepository",
-    "SqlitePasswordRepository",
-    "SqliteRoleRepository",
-    "SqliteAuditRepository",
-    "SqliteRecoveryCodeRepository",
-    "SqlitePasskeyRepository",
-    "SqliteTotpRepository",
     "SqliteSendLogRepository",
-    "SqliteTokenRepository",
-    "SqliteUserRepository",
     "SqliteWebhookRepository",
     "Table",
     "inspect_file",

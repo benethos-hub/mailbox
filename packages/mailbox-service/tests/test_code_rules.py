@@ -308,7 +308,7 @@ def test_no_test_imports_a_class_of_the_database() -> None:
                 found += [
                     f"{path.relative_to(TESTS).as_posix()}: {alias.name}"
                     for alias in node.names
-                    if alias.name.startswith("Sqlite")
+                    if alias.name.startswith("Sql")
                 ]
     assert found == [], "a test imports a class of the database:\n  " + "\n  ".join(
         found

@@ -323,8 +323,10 @@ packages/mailbox-service/
                         #   databases (dialect.py), the tables of
                         #   schema 26 (schema.py), the database the
                         #   repositories use, an engine on the one
-                        #   connection (database.py), repositories.py
-                        #   opens one of them
+                        #   connection (database.py), the rows of a
+                        #   table keyed by id (rows.py) and the
+                        #   repositories moved so far, one module per
+                        #   subject. repositories.py opens one of them
       secrets/          # envelope encryption, key providers, password
                         #   hashes, the vault of the credentials, TOTP,
                         #   passkeys (fido2)

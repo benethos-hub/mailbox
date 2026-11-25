@@ -1,23 +1,27 @@
-"""Account records in SQLite."""
+"""Account records in SQL."""
 
 from __future__ import annotations
 
 import json
-import sqlite3
 from typing import TYPE_CHECKING
+
+import sqlalchemy as sa
 
 from ...models import Abilities, Account, AccountStatus
 from ..accounts import SettingsDict
-from .rows import SqliteRows, next_position
+from .rows import SqlRows, changed, next_position
+from .schema import accounts
 
 if TYPE_CHECKING:
-    from ..sql.database import Database
+    from .database import Database
 
 
-class SqliteAccountRepository:
+class SqlAccountRepository:
     def __init__(self, db: Database) -> None:
         self._db = db
-        self._rows = SqliteRows(db, "accounts", "account", _account, order="position")
+        self._rows = SqlRows(
+            db, accounts, "account", _account, order=[accounts.c.position]
+        )
 
     def list(self) -> list[Account]:
         return self._rows.list()
@@ -26,17 +30,16 @@ class SqliteAccountRepository:
         return self._rows.get(account_id)
 
     def add(self, account: Account, settings: SettingsDict | None = None) -> None:
-        self._db.execute(
-            "INSERT INTO accounts"
-            " (id, provider, email, display_name, status, settings, position)"
-            f" VALUES (?, ?, ?, ?, ?, ?, {next_position('accounts')})",
-            (
-                account.id,
-                account.provider.value,
-                account.email,
-                account.display_name,
-                account.status.value,
-                json.dumps(settings or {}),
+        changed(
+            self._db,
+            sa.insert(accounts).values(
+                id=account.id,
+                provider=account.provider.value,
+                email=account.email,
+                display_name=account.display_name,
+                status=account.status.value,
+                settings=json.dumps(settings or {}),
+                position=next_position(accounts),
             ),
         )
 
@@ -45,37 +48,30 @@ class SqliteAccountRepository:
         return result
 
     def set_status(self, account_id: str, status: AccountStatus) -> None:
-        self._db.must_change(
-            "UPDATE accounts SET status = ? WHERE id = ?",
-            (status.value, account_id),
-            "account",
-            account_id,
-        )
+        self._change(account_id, status=status.value)
 
     def abilities(self, account_id: str) -> Abilities | None:
         return _abilities(self._rows.row(account_id))
 
     def set_abilities(self, account_id: str, abilities: Abilities) -> None:
-        self._db.must_change(
-            "UPDATE accounts SET abilities = ? WHERE id = ?",
-            (abilities.model_dump_json(), account_id),
-            "account",
-            account_id,
-        )
+        self._change(account_id, abilities=abilities.model_dump_json())
 
     def update(self, account: Account, settings: SettingsDict) -> None:
-        self._db.must_change(
-            "UPDATE accounts SET display_name = ?, settings = ? WHERE id = ?",
-            (account.display_name, json.dumps(settings), account.id),
-            "account",
-            account.id,
+        self._change(
+            account.id, display_name=account.display_name, settings=json.dumps(settings)
         )
 
     def delete(self, account_id: str) -> None:
         self._rows.delete(account_id)
 
+    def _change(self, account_id: str, **values: object) -> None:
+        self._rows.must_change(
+            sa.update(accounts).where(accounts.c.id == account_id).values(**values),
+            account_id,
+        )
 
-def _account(row: sqlite3.Row) -> Account:
+
+def _account(row: sa.RowMapping) -> Account:
     found = _abilities(row) or Abilities()
     return Account(
         id=row["id"],
@@ -88,6 +84,6 @@ def _account(row: sqlite3.Row) -> Account:
     )
 
 
-def _abilities(row: sqlite3.Row) -> Abilities | None:
+def _abilities(row: sa.RowMapping) -> Abilities | None:
     stored = row["abilities"]
     return None if stored is None else Abilities.model_validate_json(stored)
