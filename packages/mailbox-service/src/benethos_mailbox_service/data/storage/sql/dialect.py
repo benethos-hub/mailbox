@@ -120,6 +120,24 @@ def begin(connection: sa.Connection) -> None:
         connection.exec_driver_sql("BEGIN IMMEDIATE")
 
 
+# Where SQLite keeps the last number a counting key handed out.
+_SEQUENCE = sa.table("sqlite_sequence", sa.column("name"), sa.column("seq"))
+
+
+def count_on_from(connection: sa.Connection, table: sa.Table, last: int) -> None:
+    """The counting key of ``table`` hands out numbers after ``last`` at
+    least, also when the rows that had them are gone. On SQLite in
+    ``sqlite_sequence``. PostgreSQL comes with stage 3."""
+    if connection.dialect.name != SQLITE:
+        raise NotImplementedError(f"counting on in {connection.dialect.name}")
+    name = _SEQUENCE.c.name == table.name
+    raised = connection.execute(
+        sa.update(_SEQUENCE).where(name).values(seq=sa.func.max(_SEQUENCE.c.seq, last))
+    ).rowcount
+    if not raised:
+        connection.execute(sa.insert(_SEQUENCE).values(name=table.name, seq=last))
+
+
 def _insert(table: sa.Table, dialect: sa.Dialect) -> Insert:
     if dialect.name == POSTGRESQL:
         return postgresql.insert(table)

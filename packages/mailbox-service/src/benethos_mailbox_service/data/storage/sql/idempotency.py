@@ -64,7 +64,7 @@ class SqlIdempotencyRepository:
             )
 
     def purge(self, before: datetime) -> None:
-        self._db.purge("idempotency", "created_at", before)
+        self._db.purge(idempotency, "created_at", before)
 
     def forget_account(self, account_id: str) -> None:
         # ON DELETE CASCADE does this as well. Said here, so both stores agree.

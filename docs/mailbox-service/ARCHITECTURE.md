@@ -154,9 +154,10 @@ The three layers and what each may import:
 modules, that `common/` stays on the standard library, anyio, idna (host
 names as IDNA 2008) and `mailbox-common`, that FastAPI stays in
 `web/` (and `assembly/web.py`), that providers are reached through the registry,
-that the domain picks no storage implementation, that SQLite is
-reached through `data/storage/` alone, and that the files SQLite keeps
-beside a database are named in `data/storage/sqlite/` alone.
+that the domain picks no storage implementation, that the database is
+reached through `data/storage/` alone, that `data/storage/sql/` reaches
+`data/storage/sqlite/` in `database.py` alone, and that the files SQLite
+keeps beside a database are named in `data/storage/sqlite/` alone.
 `tests/test_code_rules.py`
 checks that the data layer logs nothing above `DEBUG` and the domain
 nothing but activities, that a broad `except` raises or records, the
@@ -195,7 +196,7 @@ An import or a line that breaks a rule fails the suite.
 | a line for the log | a class in `domain/activity/catalogue/<area>.py`, recorded where the thing happens (LOGGING.md) |
 | a change clients hear of | a class in `domain/changes/catalogue.py`, recorded through the feed |
 | a type several layers pass around | `data/models/`, one module per subject, pydantic |
-| a record the service keeps | its model, a repository protocol in `data/storage/`, the in-memory one beside it, the SQLite one in `data/storage/sqlite/`, and a migration |
+| a record the service keeps | its model, a repository protocol in `data/storage/`, the in-memory one beside it, the one on SQLAlchemy Core in `data/storage/sql/`, its table in `data/storage/sql/schema.py`, and a step of the schema |
 | a mail provider | a directory in `data/providers/`, implementing `Reads` and the protocols of `base.py` it can, reached through the registry |
 | a wire protocol | a module in `data/protocols/`, one library, in our types. The adapters compose it |
 | an autodiscovery source | a module in `data/discovery/`, behind `DiscoverySource`, put in order in `sources.py` |

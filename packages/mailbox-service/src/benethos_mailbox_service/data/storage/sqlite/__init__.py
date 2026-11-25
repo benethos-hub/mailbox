@@ -12,12 +12,10 @@ from .file import (
     service_lock,
 )
 from .migrations import SCHEMA_VERSION
-from .tables import Table
 
 __all__ = [
     "SCHEMA_VERSION",
     "Migrated",
-    "Table",
     "inspect_file",
     "migrate_file",
     "move_sidecars",

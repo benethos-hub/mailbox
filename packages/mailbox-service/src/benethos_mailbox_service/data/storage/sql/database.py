@@ -8,29 +8,26 @@ another is a savepoint. A failure of the database leaves this module as a
 MailboxServiceError, a constraint as ConflictError, anything else as
 StorageError, with the text of the driver and never one of SQLAlchemy,
 which would hold the statement and its values.
-
-For the time of the move to SQLAlchemy the old repositories still hand
-SQL as text to ``query``, ``execute`` and the methods beside them, and
-``transaction`` gives them the connection of the driver.
 """
 
 from __future__ import annotations
 
 import threading
-from collections.abc import Callable, Iterable, Iterator, Sequence
+from collections.abc import Iterable, Iterator, Sequence
 from contextlib import AbstractContextManager, contextmanager, suppress
 from datetime import datetime
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import Any
 
 import sqlalchemy as sa
 
 from ....common.clock import iso
-from ....errors import ConflictError, StorageError, missing
+from ....errors import ConflictError, StorageError
 from ..sqlite import file
 from ..sqlite.file import Migrated
 from ..sqlite.migrations import SCHEMA_VERSION
-from ..sqlite.tables import (
+from .dialect import sqlite_engine
+from .tables import (
     Table,
     align_changes,
     fill_table,
@@ -38,9 +35,7 @@ from ..sqlite.tables import (
     read_chunk,
     read_tables,
 )
-from .dialect import in_chunks, sqlite_engine
 
-T = TypeVar("T")
 # The rows of a table read or written at once by an export.
 ROWS_CHUNK = 500
 
@@ -104,19 +99,20 @@ class Database:
                 self._driver.rollback()
 
     @contextmanager
-    def transaction(self) -> Iterator[Any]:
-        """One transaction, as ``connected``. Gives the connection of the
-        driver, for the repositories that still hand it SQL as text."""
+    def transaction(self) -> Iterator[None]:
+        """One transaction, as ``connected``, around calls that succeed
+        or fail together."""
         with self.connected():
-            yield self._driver
+            yield
 
-    def purge(self, table: str, column: str, before: datetime) -> int:
+    def purge(self, table: sa.Table, column: str, before: datetime) -> int:
         """The rows of ``table`` whose time in ``column`` lies before
         ``before``, deleted, and the file shrunk after. Answers how many.
-        ``table`` and ``column`` are names in code, never a caller's."""
-        removed = self.execute(
-            f"DELETE FROM {table} WHERE {column} < ?", (iso(before),)
-        )
+        ``column`` is a name in code, never a caller's."""
+        with self.connected() as conn:
+            removed: int = conn.execute(
+                sa.delete(table).where(table.c[column] < iso(before))
+            ).rowcount
         if removed:
             self.shrink()
         return removed
@@ -130,78 +126,6 @@ class Database:
                 return
             file.shrink(self._driver)
 
-    def query(self, sql: str, params: tuple[Any, ...] = ()) -> list[Any]:
-        with self._lock, translated():
-            rows: list[Any] = self._driver.execute(sql, params).fetchall()
-            return rows
-
-    def query_in(
-        self,
-        sql: str,
-        values: Iterable[Any],
-        before: tuple[Any, ...] = (),
-        after: tuple[Any, ...] = (),
-    ) -> list[Any]:
-        """The rows of ``sql`` for every value, each once. ``{in}`` in
-        ``sql`` stands for ``IN (...)`` of the values, ``before`` and
-        ``after`` are the parameters around them. In chunks, since a
-        database caps the parameters of one statement: the rows come
-        chunk by chunk, not in the order of one query."""
-        rows: list[Any] = []
-        for chunk in in_chunks(values):
-            marks = ", ".join("?" * len(chunk))
-            rows += self.query(
-                sql.replace("{in}", f"IN ({marks})"), (*before, *chunk, *after)
-            )
-        return rows
-
-    def one(self, sql: str, params: tuple[Any, ...] = ()) -> Any:
-        """The first row, or None."""
-        with self._lock, translated():
-            return self._driver.execute(sql, params).fetchone()
-
-    def one_as(
-        self, read: Callable[[Any], T], sql: str, params: tuple[Any, ...] = ()
-    ) -> T | None:
-        """The first row as ``read`` makes it a record, or None."""
-        row = self.one(sql, params)
-        return None if row is None else read(row)
-
-    def query_as(
-        self, read: Callable[[Any], T], sql: str, params: tuple[Any, ...] = ()
-    ) -> list[T]:
-        """Every row as ``read`` makes it a record."""
-        return [read(row) for row in self.query(sql, params)]
-
-    def scalar(self, sql: str, params: tuple[Any, ...] = (), default: int = 0) -> int:
-        """The first value of the first row, a number, or ``default``
-        without a row."""
-        row = self.one(sql, params)
-        return default if row is None or row[0] is None else int(row[0])
-
-    def must_find(
-        self, sql: str, params: tuple[Any, ...], what: str, row_id: str
-    ) -> Any:
-        """``one`` for a row that must be there: NotFoundError when not."""
-        row = self.one(sql, params)
-        if row is None:
-            raise missing(what, row_id)
-        return row
-
-    def execute(self, sql: str, params: tuple[Any, ...] = ()) -> int:
-        """One statement in a transaction of its own. Returns the rows it changed."""
-        with self.transaction() as db:
-            changed: int = db.execute(sql, params).rowcount
-            return changed
-
-    def must_change(
-        self, sql: str, params: tuple[Any, ...], what: str, row_id: str
-    ) -> None:
-        """``execute`` for a statement about one row: NotFoundError when
-        the row is not there."""
-        if not self.execute(sql, params):
-            raise missing(what, row_id)
-
     def serving(self) -> AbstractContextManager[bool]:
         """Mark the database as used by a running service, for as long as
         the block runs, so that a restore refuses to replace it. Yields
@@ -211,8 +135,8 @@ class Database:
     def tables(self) -> list[Table]:
         """Every table of the schema with its columns and key, each after
         the tables it refers to."""
-        with self._lock, translated():
-            return read_tables(self._driver)
+        with self.connected() as conn:
+            return read_tables(conn)
 
     def rows(self, table: str) -> Iterator[tuple[Any, ...]]:
         """The rows of ``table``, a table of ``tables``, as tuples of its
@@ -221,8 +145,8 @@ class Database:
         shape = self._table(table)
         after: tuple[Any, ...] | None = None
         while True:
-            with self._lock, translated():
-                part = read_chunk(self._driver, shape, after, ROWS_CHUNK)
+            with self.connected() as conn:
+                part = read_chunk(conn, shape, after, ROWS_CHUNK)
             yield from part
             if len(part) < ROWS_CHUNK:
                 return
@@ -235,9 +159,9 @@ class Database:
         transaction. The change feed then counts on from the last number
         it handed out. Answers how many rows."""
         shape = self._table(table)
-        with self.transaction() as db:
-            count = fill_table(db, shape, columns, rows, ROWS_CHUNK)
-            align_changes(db)
+        with self.connected() as conn:
+            count = fill_table(conn, shape, columns, rows, ROWS_CHUNK)
+            align_changes(conn)
         return count
 
     def _table(self, name: str) -> Table:

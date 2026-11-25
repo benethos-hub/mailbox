@@ -15,6 +15,8 @@ from benethos_mailbox_service.data.storage import (
     Database,
     repositories_on,
 )
+from benethos_mailbox_service.data.storage.sql.schema import METADATA
+from benethos_mailbox_service.data.storage.sql.tables import BOOKKEEPING
 from benethos_mailbox_service.data.storage.sqlite import SCHEMA_VERSION
 from benethos_mailbox_service.errors import StorageError
 
@@ -64,6 +66,29 @@ def test_every_table_is_named_after_those_it_refers_to() -> None:
     by_name = {t.name: t for t in tables}
     assert by_name["credentials"].key == ("account_id", "field")
     assert by_name["changes"].columns[0] == "seq"
+    db.close()
+
+
+def test_the_definitions_hold_every_table_of_the_database_as_stored() -> None:
+    """A new table can be missing neither in the export nor in the
+    definitions, and the columns of a table are those it stores."""
+    db = Database()
+    stored = {
+        r[0]
+        for r in select(
+            db,
+            "SELECT name FROM sqlite_master WHERE type = 'table'"
+            " AND name NOT LIKE 'sqlite_%'",
+        )
+    }
+    assert stored == set(METADATA.tables)
+    tables = db.tables()
+    assert {t.name for t in tables} == stored - BOOKKEEPING
+    for table in tables:
+        info = select(db, f"SELECT * FROM pragma_table_info('{table.name}')")
+        assert table.columns == tuple(r["name"] for r in info), table.name
+        key = [r["name"] for r in sorted(info, key=lambda r: r["pk"]) if r["pk"]]
+        assert table.key == tuple(key), table.name
     db.close()
 
 

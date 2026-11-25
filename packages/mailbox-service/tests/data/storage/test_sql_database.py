@@ -91,6 +91,21 @@ def test_a_savepoint_is_undone_alone(engine_db: Database) -> None:
 SQLALCHEMY_TEXT = ("[SQL:", "[parameters:", "INSERT", "SELECT")
 
 
+def test_the_database_takes_no_sql_as_text() -> None:
+    gone = (
+        "query",
+        "one",
+        "one_as",
+        "query_as",
+        "scalar",
+        "query_in",
+        "must_find",
+        "execute",
+        "must_change",
+    )
+    assert [name for name in gone if hasattr(Database, name)] == []
+
+
 def _plain(message: str, *values: str) -> None:
     for part in (*SQLALCHEMY_TEXT, *values):
         assert part not in message

@@ -145,16 +145,34 @@ def test_the_domain_picks_no_storage() -> None:
 
 def test_the_database_stays_behind_the_storage_package() -> None:
     """Outside ``data/storage`` the store is reached through the package,
-    so another database replaces ``sqlite/`` and nothing else."""
+    so another database replaces ``sql/`` and ``sqlite/`` and nothing
+    else."""
     inside = f"{PACKAGE}.data.storage"
     violations = [
         f"{name}:{line} imports {imported}"
         for name, path in modules()
         if not name.startswith(inside)
         for imported, line in imports(path)
-        if imported.startswith(f"{inside}.sqlite")
+        if imported.startswith(f"{inside}.sql")
     ]
-    assert not violations, "SQLite reached directly:\n  " + "\n  ".join(violations)
+    assert not violations, "the database reached directly:\n  " + "\n  ".join(
+        violations
+    )
+
+
+def test_sql_reaches_sqlite_in_one_place() -> None:
+    """``sql/`` speaks SQLAlchemy, ``sqlite/`` holds the file and its old
+    migrations: ``database`` opens the file through ``sqlite/``, and no
+    other module of ``sql/`` reaches there."""
+    sql = f"{PACKAGE}.data.storage.sql"
+    violations = [
+        f"{name}:{line} imports {imported}"
+        for name, path in modules()
+        if name.startswith(f"{sql}.") and name != f"{sql}.database"
+        for imported, line in imports(path)
+        if imported.startswith(f"{PACKAGE}.data.storage.sqlite")
+    ]
+    assert not violations, "sqlite/ reached from sql/:\n  " + "\n  ".join(violations)
 
 
 def test_the_files_beside_a_database_are_named_in_sqlite_alone() -> None:

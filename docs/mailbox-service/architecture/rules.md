@@ -98,7 +98,7 @@ noticing. Every change is measured against that.
 | Mail provider | `data/providers/base.py` (`Reads`, which every adapter implements, and `Writes`, `Deletes`, `Drafts`, `Sends`, `KeepsSent`, `FindsSent`, `Watches`, `Deltas`, `FlagChanges`, `Threads`, `Summaries`, `Places`, `ServerNames` for what it may do beyond, `PROTOCOLS` for the protocol behind each capability. `Capability` and `Abilities` of `data/models/accounts.py`, answered by each adapter's `abilities()` from its server), registry in `data/providers/registry.py`. The domain checks what each operation needs and answers 501 for a lack (`domain/accounts/abilities.py`, `NEEDS`) | memory, imap, microsoft, pop3, jmap, gmail | another protocol or library, e.g. `aioimaplib` for IMAPClient |
 | Sending | `data/protocols/smtp.py` (`SmtpSession`), and `data/providers/sender.py` (`SmtpSender`), which adapters without sending of their own (IMAP, POP3) hold | stdlib smtplib | e.g. aiosmtplib |
 | Web layer | `web/` | FastAPI, Jinja2 for the UI | another framework, as long as the OpenAPI document stays the same |
-| Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `PasswordRepository`, `KeyRepository`, `CredentialRepository`, `MessageIndexRepository`, `IdempotencyRepository`, `SendLogRepository`, `OutboxRepository`, `ChangeLogRepository`, `WebhookRepository`, `AuditRepository`, `LinkRepository`, `TotpRepository`, `RecoveryCodeRepository`, `PasskeyRepository`) | in-memory, SQLite (`sqlite3`, and SQLAlchemy Core in `data/storage/sql/`) | another database |
+| Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `PasswordRepository`, `KeyRepository`, `CredentialRepository`, `MessageIndexRepository`, `IdempotencyRepository`, `SendLogRepository`, `OutboxRepository`, `ChangeLogRepository`, `WebhookRepository`, `AuditRepository`, `LinkRepository`, `TotpRepository`, `RecoveryCodeRepository`, `PasskeyRepository`) | in-memory, SQLite through SQLAlchemy Core (`data/storage/sql/`: the types and what differs between databases in `dialect.py`, the tables in `schema.py`, the repositories), the file, its connection and the old steps of the schema on `sqlite3` (`data/storage/sqlite/`) | another database |
 | Autodiscovery source | `data/discovery/` (`DiscoverySource`) | presets, ISP autoconfig, JMAP well-known and SRV, ISPDB, MX (planned: Microsoft realm, SRV for IMAP and SMTP, guessing) | any further lookup, or one switched off |
 | HTTP | `data/protocols/http/` (`SafeFetcher`, `ApiClient`, `ServerClient`) | httpx | another HTTP client |
 | OAuth token source | `TokenSource` in `data/providers/base.py`, made in `data/protocols/oauth/tokens.py`, each OAuth provider's endpoints and scopes in its own directory, reached through `sign_in` in the registry | refresh token in the vault, access token in memory | another token store |
@@ -117,14 +117,19 @@ noticing. Every change is measured against that.
 (2026-11-25) no list takes its order from the hidden `rowid`, the last
 number of the change feed and the active key are kept in `meta`, user
 names are unique by a column and not by a collation, and the search of
-sends needs no function of the service inside SQL. What still belongs
-to SQLite alone, and goes with a second database:
+sends needs no function of the service inside SQL. Since 2026-11-26
+every repository speaks SQLAlchemy Core, and SQL as text stands only
+beside the file of the database (`tests/test_code_rules.py`). Where
+SQLite and another database write differently stands in
+`data/storage/sql/dialect.py`: inserting or updating, inserting or
+leaving out, the greater of two values, how a transaction begins, the
+counter of the change feed after an import.
+What still belongs to SQLite alone, and goes with a second database:
 
-- `INSERT OR REPLACE` in `sqlite/idempotency.py` and in
-  `sqlite/migrations/registry.py`.
-- `INSERT OR IGNORE` in `sqlite/index.py`.
-- The default of the column `keys.created_at`, which the insert of
-  `sqlite/credentials.py` does not set itself.
+- `INSERT OR REPLACE` in `sqlite/migrations/registry.py`, of the old
+  steps of the schema.
+- The default of the column `keys.created_at`, kept for schema 26.
+  The insert sets the time itself.
 - The PRAGMAs `secure_delete` and `auto_vacuum`, and the shrinking with
   `incremental_vacuum`.
 - The backup, a copy of the database file.

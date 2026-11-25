@@ -49,9 +49,9 @@ from .sql import (
     SqlWebhookRepository,
 )
 from .sql.database import Database
+from .sql.tables import Table
 from .sqlite import (
     Migrated,
-    Table,
 )
 from .totp import InMemoryTotpRepository, TotpRepository
 from .users import (
