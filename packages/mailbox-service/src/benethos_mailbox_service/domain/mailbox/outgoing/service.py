@@ -19,12 +19,14 @@ from ....data.mail import compose, convert
 from ....data.models import (
     DraftMessage,
     MessageSummary,
+    OutboxJob,
     OutgoingMessage,
     Page,
     SendFilter,
     SendRecord,
     SendResult,
 )
+from ....data.storage import OutboxRepository
 from ...accounts import NEEDS, drafts
 from ...activity import ActivityLog
 from ...rights import Access
@@ -35,6 +37,7 @@ from . import checks
 from .composing import Composer
 from .delivering import Delivery
 from .idempotency import Idempotency
+from .outbox import RETRY_HOURS, Outbox
 from .sending import SendControl
 
 
@@ -45,15 +48,20 @@ class Outgoing:
         idempotency: Idempotency,
         sends: SendControl,
         cursors: Cursors,
+        jobs: OutboxRepository,
         clock: Callable[[], datetime] = utc_now,
         activity: ActivityLog | None = None,
+        retry_hours: int = RETRY_HOURS,
     ) -> None:
+        """``jobs`` hold the outbox, ``retry_hours`` how long its attempts
+        go on."""
         self._calls = calls
         self._cursors = cursors
         self._idempotency = idempotency
         self._sends = sends
         self._composer = Composer(calls, clock)
         self._delivery = Delivery(calls, sends, activity or ActivityLog(clock))
+        self.outbox = Outbox(calls, self._composer, sends, jobs, clock, retry_hours)
 
     # --- sending --------------------------------------------------------------------
 
@@ -106,6 +114,47 @@ class Outgoing:
                 )
             result = result.model_copy(update={"original_marked": marked})
         return result
+
+    async def queue_message(
+        self,
+        access: Access,
+        account_id: str,
+        message: OutgoingMessage,
+        send_at: datetime | None = None,
+        idempotency_key: str | None = None,
+    ) -> OutboxJob:
+        """Put a message into the outbox: kept as a draft now, sent at
+        ``send_at`` or at once. With an ``idempotency_key`` a retry returns
+        the same job."""
+        return await self._idempotency.run(
+            account_id,
+            idempotency_key,
+            "queue_message",
+            _MessageToQueue(message=message, send_at=send_at),
+            lambda: self.outbox.queue_message(access, account_id, message, send_at),
+            OutboxJob,
+            user_id=access.user_id,
+        )
+
+    async def queue_draft(
+        self,
+        access: Access,
+        account_id: str,
+        draft_id: str,
+        send_at: datetime | None = None,
+        idempotency_key: str | None = None,
+    ) -> OutboxJob:
+        """Put a draft into the outbox, sent at ``send_at`` or at once."""
+        await permitted(self._calls, access, "send_draft", account_id)
+        return await self._idempotency.run(
+            account_id,
+            idempotency_key,
+            "queue_draft",
+            _DraftToQueue(draft_id=draft_id, send_at=send_at),
+            lambda: self.outbox.queue_draft(access, account_id, draft_id, send_at),
+            OutboxJob,
+            user_id=access.user_id,
+        )
 
     def list_sends(
         self,
@@ -267,3 +316,17 @@ class _DraftToSend(BaseModel):
     """What makes two ``send_draft`` requests the same, for Idempotency-Key."""
 
     draft_id: str
+
+
+class _MessageToQueue(BaseModel):
+    """What makes two queued messages the same, for Idempotency-Key."""
+
+    message: OutgoingMessage
+    send_at: datetime | None
+
+
+class _DraftToQueue(BaseModel):
+    """What makes two queued drafts the same, for Idempotency-Key."""
+
+    draft_id: str
+    send_at: datetime | None

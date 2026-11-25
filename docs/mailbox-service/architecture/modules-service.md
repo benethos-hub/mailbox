@@ -187,8 +187,9 @@ packages/mailbox-service/
                         #   (service, with composing, delivering and
                         #   checks, replies), grant limits and the send
                         #   audit (sending), the Idempotency-Key
-                        #   (idempotency). Reads through ..calls and
-                        #   ..reach
+                        #   (idempotency), a send put into the drafts
+                        #   folder to go out later (outbox). Reads
+                        #   through ..calls and ..reach
       sync/             # SyncService (stable message ids), the sync pass
                         #   and how the passes went (runner, SyncRunner),
                         #   what a pass finds (passes), the threads the

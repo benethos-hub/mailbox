@@ -248,6 +248,7 @@ class _Domain:
             clock=clock,
             activity=activity,
             thread_messages=settings.thread_messages,
+            outbox=repositories.outbox,
         )
         self.links = AttachmentLinks(
             repositories.links,
