@@ -29,6 +29,7 @@ code.
 | [Configuration](concept/configuration.md) | Every setting. |
 | [Operation](concept/operation.md) | Containers, health, metrics, cost, logs. |
 | [Testing](concept/testing.md) | The offline suite and the live checks. |
+| [The chain of sorting](concept/sorting-chain.md) | Dimensions run one after another, recognizers and actions as registers, the priority of a move, the stage of an entry. |
 
 ## The agents
 

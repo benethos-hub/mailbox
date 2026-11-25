@@ -20,6 +20,12 @@ of a group, a line of the owner that a model is given, where no sender
 rule settles it. Its choice is recorded only, unless the group acts on
 it ([sorting](../mailbox-agents/concept/agent-sorting.md)).
 
+Since 2026-11-25 `sorting` version 3 runs a chain: a list of dimensions
+run one after another, each category found by its sender, its topic or
+a recognizer of a register, and what follows from it named beside it, a
+keyword, a move, a folder below, by priority and with a stage per entry
+([the chain of sorting](../mailbox-agents/concept/sorting-chain.md)).
+
 ### Next
 
 | Step | Content |

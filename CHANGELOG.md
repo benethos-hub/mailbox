@@ -77,6 +77,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   agent names in its configuration, not only its own: for `sorting` the
   keywords of its list, each `agent-` and lower case letters, digits and
   dashes. Any other keyword is refused as before.
+- The live setup of the agents: its list of `sorting` names two
+  dimensions, the second by sender alone setting the keyword
+  `agent-billing`, and `live/mailbox-agents/sorting.py` checks it and takes
+  it off again.
 - `benethos-mailbox-agents`: `sorting` needs the gateway settings once a
   group of its list has a topic. A list without a topic runs without a
   gateway, as before.

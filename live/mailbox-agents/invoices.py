@@ -59,12 +59,13 @@ from agents_common import (  # beside this script
     put_back,
     run_checks,
     sort_test_account,
+    sorting_keywords,
     worker,
 )
 
 from benethos_mailbox_agents.agents.invoices.agent import Invoices
 from benethos_mailbox_agents.agents.sorting.agent import Sorting
-from benethos_mailbox_agents.agents.sorting.groups import load_groups
+from benethos_mailbox_agents.agents.sorting.lists import load_chain
 from benethos_mailbox_agents.contract import Action
 from benethos_mailbox_agents.llm.gateway import Gateway
 from benethos_mailbox_agents.records import MessageRef
@@ -87,7 +88,8 @@ def _invoices() -> tuple[int, set[str]]:
     how many invoices lie in the inbox, and the subfolders of those that
     sorting moves. The invoice of a held group or of a sender in no group
     stays in the inbox."""
-    groups = load_groups(LIST)
+    # The first dimension of the list holds the moves by sender.
+    partner = load_chain(LIST).chain.first
     count, filed = 0, set()
     for folder, _, message in mail.messages("me@invented.example"):
         gold = mail.GOLD.get(mail.local(str(message["Message-ID"])), {})
@@ -95,10 +97,10 @@ def _invoices() -> tuple[int, set[str]]:
         if folder != "inbox" or label != "invoice":
             continue
         count += 1
-        match = groups.match(parseaddr(str(message["From"]))[1])
-        group = match.group if match else None
-        if group is not None and not group.hold:
-            filed.add(f"{group.folder}/{SUBFOLDER}")
+        match = partner.match(parseaddr(str(message["From"]))[1])
+        category = match.group if match else None
+        if category is not None and not category.hold and category.target:
+            filed.add(f"{category.target}/{SUBFOLDER}")
     return count, filed
 
 
@@ -120,6 +122,11 @@ class Live:
     def keyword(self) -> str:
         """The keyword sorting sets with these settings."""
         return Sorting(self.settings).keyword
+
+    @property
+    def keywords(self) -> tuple[str, ...]:
+        """Every keyword sorting sets with the list of the live setup."""
+        return sorting_keywords(self.settings)
 
     def invoices(self, name: str, **values: object) -> tuple[Worker, Store]:
         settings = self.settings.model_copy(
@@ -153,7 +160,7 @@ class Live:
     async def restore(self) -> int:
         """Every message back as it lay, without the keyword of either
         agent where it had none."""
-        return await put_back(self.mailbox, self.before, self.keyword, self.marked)
+        return await put_back(self.mailbox, self.before, *self.keywords, self.marked)
 
     async def sort(self) -> None:
         await sort_test_account(self.settings, self.mailbox, "full", self.folder)

@@ -50,7 +50,7 @@ from .actions import Placed
 from .dimensions import Chain
 from .groups import NONE
 from .lists import Listed, load_chain, used
-from .lists import digest as _version
+from .lists import list_digest as _version
 from .plan import classify, classify_rules, found_in, requests_for, to_decision
 from .recognizers import PROMPT, Choice
 from .summary import fates

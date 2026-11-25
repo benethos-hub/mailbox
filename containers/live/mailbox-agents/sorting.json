@@ -1,55 +1,111 @@
 {
-  "groups": [
+  "dimensions": [
     {
-      "name": "CloudHost",
-      "folder": "Providers/CloudHost",
-      "senders": [
-        "*@cloudhost.example"
+      "name": "partner",
+      "categories": [
+        {
+          "name": "CloudHost",
+          "senders": [
+            "*@cloudhost.example"
+          ],
+          "then": [
+            {
+              "move": "Providers/CloudHost"
+            }
+          ]
+        },
+        {
+          "name": "Telco",
+          "senders": [
+            "rechnung@telco.example"
+          ],
+          "then": [
+            {
+              "move": "Providers/Telco"
+            }
+          ]
+        },
+        {
+          "name": "Paperworks",
+          "senders": [
+            "*@paperworks.example"
+          ],
+          "hold": true,
+          "then": [
+            {
+              "move": "Paperworks"
+            }
+          ]
+        },
+        {
+          "name": "Shop",
+          "senders": [
+            "*@*.shop.example"
+          ],
+          "then": [
+            {
+              "move": "Providers/Shop"
+            }
+          ]
+        },
+        {
+          "name": "Project Harbor",
+          "senders": [
+            "*@northwind.example"
+          ],
+          "topic": "Mail about the project Harbor: the warehouse app for Northwind, its offer, its weekly status and its acceptance",
+          "by_topic": "act",
+          "then": [
+            {
+              "move": "Projects/Harbor"
+            }
+          ]
+        },
+        {
+          "name": "Project Lighthouse",
+          "senders": [
+            "*@northwind.example"
+          ],
+          "topic": "Mail about the project Lighthouse: the move of the Northwind customer portal to a new host",
+          "then": [
+            {
+              "move": "Projects/Lighthouse"
+            }
+          ]
+        },
+        {
+          "name": "Applications",
+          "topic": "Applications and CVs of people who want to work for the owner",
+          "then": [
+            {
+              "move": "Applications"
+            }
+          ]
+        }
       ]
     },
     {
-      "name": "Telco",
-      "folder": "Providers/Telco",
-      "senders": [
-        "rechnung@telco.example"
+      "name": "billing",
+      "when": {
+        "partner": [
+          "CloudHost",
+          "Telco"
+        ]
+      },
+      "categories": [
+        {
+          "name": "Billing",
+          "senders": [
+            "billing@cloudhost.example",
+            "rechnung@telco.example"
+          ],
+          "then": [
+            {
+              "keyword": "agent-billing"
+            }
+          ]
+        }
       ]
-    },
-    {
-      "name": "Paperworks",
-      "folder": "Paperworks",
-      "senders": [
-        "*@paperworks.example"
-      ],
-      "hold": true
-    },
-    {
-      "name": "Shop",
-      "folder": "Providers/Shop",
-      "senders": [
-        "*@*.shop.example"
-      ]
-    },
-    {
-      "name": "Project Harbor",
-      "folder": "Projects/Harbor",
-      "senders": [
-        "*@northwind.example"
-      ],
-      "topic": "Mail about the project Harbor: the warehouse app for Northwind, its offer, its weekly status and its acceptance",
-      "by_topic": "act"
-    },
-    {
-      "name": "Project Lighthouse",
-      "folder": "Projects/Lighthouse",
-      "senders": [
-        "*@northwind.example"
-      ],
-      "topic": "Mail about the project Lighthouse: the move of the Northwind customer portal to a new host"
-    },
-    {
-      "name": "Applications",
-      "folder": "Applications",
-      "topic": "Applications and CVs of people who want to work for the owner"
     }
   ]
 }

@@ -28,7 +28,7 @@ __all__ = [
     "MAX_MODEL",
     "ListRefusedError",
     "Listed",
-    "digest",
+    "list_digest",
     "load_chain",
     "read_chain",
     "used",
@@ -58,7 +58,7 @@ class Listed:
     version: str
 
 
-def digest(groups: Groups) -> str:
+def list_digest(groups: Groups) -> str:
     """The version of a list of groups: a digest of the groups as read, in
     JSON with sorted keys, so the same list gives the same version. A group
     without a topic is read without ``topic`` and ``by_topic``, so a list
@@ -127,7 +127,7 @@ def read_chain(data: Any) -> Listed:
             raise ListRefusedError("a list names groups or dimensions, not both")
         groups = Groups.model_validate(data)
         chain = _from_groups(groups)
-        base = digest(groups)
+        base = list_digest(groups)
     else:
         chain = Chain.model_validate(data)
         normal = json.dumps(chain.model_dump(mode="json"), sort_keys=True)

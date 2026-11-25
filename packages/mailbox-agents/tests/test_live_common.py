@@ -185,7 +185,11 @@ async def test_a_put_back_cut_off_is_done_again_on_the_way_out(
 
     with _live_script(script) as module:
         live = SimpleNamespace(
-            mailbox=None, before={}, keyword="agent-sorted", put_back_done=False
+            mailbox=None,
+            before={},
+            keyword="agent-sorted",
+            keywords=("agent-sorted",),
+            put_back_done=False,
         )
         monkeypatch.setattr(module, step, cut_off)
         with pytest.raises(_CutOffError):
