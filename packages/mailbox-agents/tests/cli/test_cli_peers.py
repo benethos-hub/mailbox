@@ -38,13 +38,9 @@ def test_the_worker_serves_peers_on_the_port_while_it_runs(
 
     async def ask_while_running(self: Worker, stop: asyncio.Event) -> None:
         url = f"http://127.0.0.1:{port}/.well-known/agent-card.json"
+        # The worker runs once the entrance is open.
         async with httpx.AsyncClient() as peer:
-            for _ in range(100):
-                try:
-                    refused = await peer.get(url)
-                    break
-                except httpx.ConnectError:
-                    await asyncio.sleep(0.05)
+            refused = await peer.get(url)
             card = await peer.get(url, headers={"Authorization": f"Bearer {TOKEN}"})
         seen["refused"] = refused.status_code
         seen["card"] = card.json()
