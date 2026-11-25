@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 from .changes import SqliteChangeLogRepository
-from .credentials import SqliteCredentialRepository, SqliteKeyRepository
 from .file import (
     Migrated,
     inspect_file,
@@ -24,8 +23,6 @@ __all__ = [
     "SCHEMA_VERSION",
     "Migrated",
     "SqliteChangeLogRepository",
-    "SqliteCredentialRepository",
-    "SqliteKeyRepository",
     "SqliteMessageIndexRepository",
     "SqliteOutboxRepository",
     "SqliteSendLogRepository",
