@@ -35,6 +35,7 @@ from .sql import (
     SqlIdempotencyRepository,
     SqlKeyRepository,
     SqlLinkRepository,
+    SqlOutboxRepository,
     SqlPasskeyRepository,
     SqlPasswordRepository,
     SqlRecoveryCodeRepository,
@@ -49,7 +50,6 @@ from .sqlite import (
     Migrated,
     SqliteChangeLogRepository,
     SqliteMessageIndexRepository,
-    SqliteOutboxRepository,
     SqliteWebhookRepository,
     Table,
 )
@@ -190,6 +190,6 @@ def repositories_on(db: Database) -> Repositories:
         webhooks=SqliteWebhookRepository(db),
         audit=SqlAuditRepository(db),
         links=SqlLinkRepository(db),
-        outbox=SqliteOutboxRepository(db),
+        outbox=SqlOutboxRepository(db),
         store=db,
     )
