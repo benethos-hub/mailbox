@@ -8,6 +8,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Backup format 3: `benethos-mailbox-service backup --format 3 FILE`
+  writes the records as an export, encrypted in blocks as format 2,
+  independent of the file of the database. `backup FILE` still writes
+  format 2. `backup verify` and `restore` read formats 1, 2 and 3 and
+  name the format, as does the log line of a backup and a restore.
+
 - An outbox. `POST /v1/accounts/{id}/send` and
   `POST /v1/accounts/{id}/drafts/{draft_id}/send` take `outbox: true` or
   `send_at`: the mail is kept as a draft, the answer is `202` with the

@@ -301,6 +301,15 @@ account and re-issuing every token.
   providers rotate them. Those accounts go to `needs_reauth` and are
   reconnected once. API tokens are valid again as they were at backup time:
   if a backup leaked, revoke them.
+- **Format 3** (`backup --format 3 <file>`).
+  The logical export below, in the same encrypted blocks as format 2,
+  with the same key and the same binding of each block. Its manifest
+  also names the rows of each table, and reading holds them to it.
+  Format 3 does not depend on the file of the database: `restore`
+  makes a new database at the schema of the backup, reads the export
+  into it and migrates it as before. `backup` writes format 2 unless
+  told otherwise. `restore` and `backup verify` tell the format from
+  the file. Formats 1, 2 and 3 stay readable for good.
 - **The logical export.** The records can also be written as lines of
   JSON in UTF-8, table by table in the order of their references: a
   head with the schema, per table its columns, its rows and their

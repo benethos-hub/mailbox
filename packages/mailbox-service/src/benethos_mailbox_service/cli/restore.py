@@ -63,11 +63,12 @@ def run(args: argparse.Namespace) -> None:
             file=str(args.source),
             schema=manifest.schema_version,
             made=lines.log_time(parse_iso(manifest.created_at)),
+            format=manifest.format,
         )
     )
     say(
         f"Restored the backup of {lines.log_time(parse_iso(manifest.created_at))}. "
-        "The previous database "
+        f"It is of format {manifest.format}. The previous database "
         "was kept beside it. Accounts whose OAuth tokens changed since then "
         "need reconnecting."
     )

@@ -145,7 +145,7 @@ Drafts are mail content and change nothing others see: not logged.
 | INFO | the host created the master key and the data key | | `keys init` |
 | INFO | the host stored the master key from a recovery key | | `keys import` |
 | INFO | opened the database with schema N; the file was rewritten once: from now on it shrinks after deletions | schema, notes | `system.migrated`, once for a database made by an earlier version |
-| INFO | the host wrote a backup / restored the backup of time T | file, schema, [time] | |
+| INFO | the host wrote a backup / restored the backup of time T | file, schema, format, [time] | |
 | INFO | purged N records older than D from the audit | count, before | at start and once an hour at most, `MAILBOX_SERVICE_AUDIT_DAYS` ([AUDIT.md](../AUDIT.md)) |
 | ERROR | an activity could not be kept in the audit | the activity, traceback | its line is in the log |
 
