@@ -14,7 +14,7 @@ import sqlite3
 import stat
 import tempfile
 import threading
-from collections.abc import Callable, Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from contextlib import ExitStack, contextmanager, suppress
 from dataclasses import dataclass
 from datetime import datetime
@@ -28,6 +28,14 @@ from ....common.clock import iso, utc_now
 from ....errors import ConflictError, StorageError, missing
 from ...files import create_private, free_path
 from .migrations import MIGRATIONS, SCHEMA_VERSION
+from .tables import (
+    Table,
+    align_changes,
+    fill_table,
+    key_of,
+    read_chunk,
+    read_tables,
+)
 
 T = TypeVar("T")
 # What SQLite keeps beside a database: its rollback journal, its write
@@ -53,6 +61,8 @@ def move_sidecars(target: Path, kept: Path) -> None:
 
 # Stays below SQLite's limit of host parameters in one statement.
 IN_CHUNK = 500
+# The rows of a table read or written at once by an export.
+ROWS_CHUNK = 500
 
 # Opening a database of an older schema keeps a copy of it first: the
 # step to this schema rebuilds tables (docs/mailbox-service/concept/security.md 7.8).
@@ -76,11 +86,20 @@ _INCREMENTAL = 2
 class Database:
     """The database at ``path``, readable by its owner alone. Without a
     path it lives in memory, for tests. ``keep_copy``: a file of a schema
-    before ``COPY_BEFORE`` is copied before it is migrated."""
+    before ``COPY_BEFORE`` is copied before it is migrated. ``schema``: a
+    new database is made at that schema and migrated no further, to take
+    the records of an export of it."""
 
-    def __init__(self, path: Path | None = None, *, keep_copy: bool = True) -> None:
+    def __init__(
+        self,
+        path: Path | None = None,
+        *,
+        keep_copy: bool = True,
+        schema: int | None = None,
+    ) -> None:
         self._path = path
         self._keep = keep_copy
+        self._upto = SCHEMA_VERSION if schema is None else schema
         if path is not None:
             path.parent.mkdir(parents=True, exist_ok=True)
             _owner_only(path)
@@ -276,6 +295,44 @@ class Database:
                     return
             yield True
 
+    def tables(self) -> list[Table]:
+        """Every table of the schema with its columns and key, each after
+        the tables it refers to."""
+        with self._lock, translated():
+            return read_tables(self._connection)
+
+    def rows(self, table: str) -> Iterator[tuple[Any, ...]]:
+        """The rows of ``table``, a table of ``tables``, as tuples of its
+        columns in the order of its key. Read in chunks, each under the
+        lock, so the whole table is never in memory."""
+        shape = self._table(table)
+        after: tuple[Any, ...] | None = None
+        while True:
+            with self._lock, translated():
+                part = read_chunk(self._connection, shape, after, ROWS_CHUNK)
+            yield from part
+            if len(part) < ROWS_CHUNK:
+                return
+            after = key_of(shape, part[-1])
+
+    def fill(
+        self, table: str, columns: Sequence[str], rows: Iterable[Sequence[Any]]
+    ) -> int:
+        """Write ``rows`` into ``table``, which holds none yet, in one
+        transaction. The change feed then counts on from the last number
+        it handed out. Answers how many rows."""
+        shape = self._table(table)
+        with self.transaction() as db:
+            count = fill_table(db, shape, columns, rows, ROWS_CHUNK)
+            align_changes(db)
+        return count
+
+    def _table(self, name: str) -> Table:
+        for table in self.tables():
+            if table.name == name:
+                return table
+        raise StorageError(f"the schema has no table {name}")
+
     def schema_version(self) -> int:
         with self._lock, translated():
             return MIGRATIONS.version_of(self._connection)
@@ -327,11 +384,13 @@ class Database:
                 f"database schema {current} is newer than this version supports "
                 f"({SCHEMA_VERSION}): run a newer version of the service"
             )
+        if not current <= self._upto <= SCHEMA_VERSION:
+            raise StorageError(f"there is no way from schema {current} to {self._upto}")
         kept = None
         if self._keep and self._path is not None and 0 < current < COPY_BEFORE:
             kept = self._keep_copy(self._path, current)
         notes: list[str] = []
-        for migration in MIGRATIONS.pending(current):
+        for migration in MIGRATIONS.pending(current)[: self._upto - current]:
             with self.transaction() as db:
                 notes += MIGRATIONS.apply(db, migration)
         if kept is not None:
@@ -340,8 +399,8 @@ class Database:
             notes.append(
                 "the file was rewritten once: from now on it shrinks after deletions"
             )
-        if current < SCHEMA_VERSION or rewritten:
-            self.migrated = Migrated(current, SCHEMA_VERSION, tuple(notes))
+        if current < self._upto or rewritten:
+            self.migrated = Migrated(current, self._upto, tuple(notes))
 
     def _keep_copy(self, path: Path, current: int) -> str:
         """A copy of the database beside ``path``, readable by its owner

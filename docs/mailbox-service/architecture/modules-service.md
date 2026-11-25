@@ -313,8 +313,9 @@ packages/mailbox-service/
       storage/          # own records, one module per subject, table.py
                         #   for the in-memory ones, sqlite/ the database
                         #   and the files SQLite keeps beside it
-                        #   (database.py) and its rows read typed
-                        #   (rows.py), sqlite/migrations/ the base, the registry,
+                        #   (database.py), its rows read typed
+                        #   (rows.py), its tables as stored for an
+                        #   export (tables.py), sqlite/migrations/ the base, the registry,
                         #   versions/ one class per schema version,
                         #   repositories.py opens one of them
       secrets/          # envelope encryption, key providers, password

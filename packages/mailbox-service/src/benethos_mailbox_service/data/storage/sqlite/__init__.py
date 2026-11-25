@@ -25,6 +25,7 @@ from .passkeys import SqlitePasskeyRepository
 from .passwords import SqlitePasswordRepository
 from .recovery_codes import SqliteRecoveryCodeRepository
 from .sends import SqliteSendLogRepository
+from .tables import Table
 from .totp import SqliteTotpRepository
 from .users import SqliteRoleRepository, SqliteTokenRepository, SqliteUserRepository
 from .webhooks import SqliteWebhookRepository
@@ -51,6 +52,7 @@ __all__ = [
     "SqliteTokenRepository",
     "SqliteUserRepository",
     "SqliteWebhookRepository",
+    "Table",
     "inspect_file",
     "migrate_file",
     "move_sidecars",
