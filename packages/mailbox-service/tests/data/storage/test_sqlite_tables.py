@@ -4,6 +4,7 @@ back unchanged."""
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -14,7 +15,7 @@ from benethos_mailbox_service.data.storage import (
     Database,
     repositories_on,
 )
-from benethos_mailbox_service.data.storage.sqlite import SCHEMA_VERSION, database
+from benethos_mailbox_service.data.storage.sqlite import SCHEMA_VERSION
 from benethos_mailbox_service.errors import StorageError
 
 from ...schema_helpers import run, select
@@ -83,9 +84,9 @@ def test_rows_come_back_as_they_went_in() -> None:
 
 
 def test_rows_are_read_in_chunks_in_the_order_of_the_key(
-    monkeypatch: pytest.MonkeyPatch,
+    export_chunks: Callable[[int], None],
 ) -> None:
-    monkeypatch.setattr(database, "ROWS_CHUNK", 3)
+    export_chunks(3)
     db = _filled()
     for n in (5, 1, 4, 2, 3, 7, 6):
         run(

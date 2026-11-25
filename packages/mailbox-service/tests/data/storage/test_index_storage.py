@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
-
-import pytest
 
 from benethos_mailbox_service.data.models import Account, ProviderType
 from benethos_mailbox_service.data.storage import (
@@ -14,7 +13,6 @@ from benethos_mailbox_service.data.storage import (
     MessageIndexRepository,
     repositories_on,
 )
-from benethos_mailbox_service.data.storage.sqlite import database
 
 from .index_helpers import ACC, entry
 
@@ -94,9 +92,9 @@ def test_an_update_takes_its_native_id_from_another_entry(
 
 
 def test_in_folders_keeps_the_order_across_chunks(
-    index: MessageIndexRepository, monkeypatch: pytest.MonkeyPatch
+    index: MessageIndexRepository, in_chunks: Callable[[int], None]
 ) -> None:
-    monkeypatch.setattr(database, "IN_CHUNK", 2)
+    in_chunks(2)
     folders = ["f_a", "f_b", "f_c", "f_d", "f_e"]
     index.add(ACC, [entry(n, folders[n % 5]) for n in range(10)])
     found = index.in_folders(ACC, folders)

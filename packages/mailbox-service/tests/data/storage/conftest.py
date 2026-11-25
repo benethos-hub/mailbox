@@ -1,6 +1,11 @@
-"""Fixtures the tests of the storage share."""
+"""Fixtures the tests of the storage share. The settings a test turns,
+such as the size of a chunk, are turned here alone: a test does not know
+the module that holds them."""
 
 from __future__ import annotations
+
+from collections.abc import Callable
+from pathlib import Path
 
 import pytest
 
@@ -9,6 +14,7 @@ from benethos_mailbox_service.data.storage import (
     MessageIndexRepository,
     Repositories,
 )
+from benethos_mailbox_service.data.storage.sqlite import database
 
 from .disk_helpers import Disk
 from .index_helpers import ACC
@@ -26,3 +32,34 @@ def index(repositories: Repositories) -> MessageIndexRepository:
 @pytest.fixture
 def disk(monkeypatch: pytest.MonkeyPatch) -> Disk:
     return Disk(monkeypatch)
+
+
+@pytest.fixture
+def in_chunks(monkeypatch: pytest.MonkeyPatch) -> Callable[[int], None]:
+    """Sets how many values one ``IN`` of the database takes at most."""
+
+    def size(values: int) -> None:
+        monkeypatch.setattr(database, "IN_CHUNK", values)
+
+    return size
+
+
+@pytest.fixture
+def export_chunks(monkeypatch: pytest.MonkeyPatch) -> Callable[[int], None]:
+    """Sets how many rows of a table the export reads at once."""
+
+    def size(rows: int) -> None:
+        monkeypatch.setattr(database, "ROWS_CHUNK", rows)
+
+    return size
+
+
+@pytest.fixture
+def no_room_for_copy(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A disk on which the copy of a database before a migration cannot
+    be made."""
+
+    def full(path: Path, data: bytes = b"") -> None:
+        raise OSError(28, "No space left on device")
+
+    monkeypatch.setattr(database, "create_private", full)

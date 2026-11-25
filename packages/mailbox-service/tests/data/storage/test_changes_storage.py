@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -19,7 +20,6 @@ from benethos_mailbox_service.data.storage import (
     Repositories,
     repositories_on,
 )
-from benethos_mailbox_service.data.storage.sqlite import database
 
 T0 = datetime(2026, 9, 25, 12, 0, tzinfo=UTC)
 
@@ -167,9 +167,9 @@ def test_sqlite_deleting_the_account_drops_its_changes(tmp_path: Path) -> None:
 
 
 def test_accounts_in_chunks_come_in_order(
-    log: ChangeLogRepository, monkeypatch: pytest.MonkeyPatch
+    log: ChangeLogRepository, in_chunks: Callable[[int], None]
 ) -> None:
-    monkeypatch.setattr(database, "IN_CHUNK", 1)
+    in_chunks(1)
     log.append([change(1), change(2, "acc_2"), change(3), change(4, "acc_2")])
     found = log.after(["acc_2", "acc_1", "acc_2"], 0, limit=3)
     assert [c.record.id for c in found] == ["msg_1", "msg_2", "msg_3"]

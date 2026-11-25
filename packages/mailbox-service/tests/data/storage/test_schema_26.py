@@ -20,7 +20,6 @@ from benethos_mailbox_service.data.storage import (
     ThreadChain,
     repositories_on,
 )
-from benethos_mailbox_service.data.storage.sqlite import database
 from benethos_mailbox_service.data.storage.sqlite.database import inspect_file
 from benethos_mailbox_service.data.storage.sqlite.users import ascii_lower
 from benethos_mailbox_service.errors import ConflictError, StorageError
@@ -251,16 +250,10 @@ def test_a_new_database_gets_no_copy(tmp_path: Path) -> None:
     assert [p.name for p in tmp_path.iterdir()] == ["new.db"]
 
 
-def test_without_its_copy_the_database_stays_at_its_schema(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+@pytest.mark.usefixtures("no_room_for_copy")
+def test_without_its_copy_the_database_stays_at_its_schema(tmp_path: Path) -> None:
     path = tmp_path / "old.db"
     at_schema(path, 25).close()
-
-    def full(path: Path, data: bytes = b"") -> None:
-        raise OSError(28, "No space left on device")
-
-    monkeypatch.setattr(database, "create_private", full)
     with pytest.raises(StorageError, match="schema 25 was not migrated"):
         Database(path)
     assert inspect_file(path) == 25
