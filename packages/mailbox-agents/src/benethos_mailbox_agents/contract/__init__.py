@@ -15,6 +15,7 @@ from .agent import (
     Route,
     Shown,
     ShownAction,
+    TracePart,
     Trigger,
 )
 from .context import Context, Items, Model, Reader
@@ -36,6 +37,7 @@ __all__ = [
     "Route",
     "Shown",
     "ShownAction",
+    "TracePart",
     "Trigger",
     "discover",
     "load_agent",

@@ -22,6 +22,7 @@ from ..runtime.readiness import start
 from ..settings import PREFIX, Settings
 from ..sources.mailbox import Mailbox, connect
 from ..store import Store, earlier_file, path_for
+from ..telemetry import open_spans
 
 __all__ = [
     "TRANSPORTS",
@@ -111,7 +112,13 @@ async def session(cls: type[Agent], settings: Settings) -> AsyncIterator[Session
                     notes=found.notes,
                 )
             )
+        spans = stack.enter_context(open_spans(settings, agent.name))
         worker = Worker(
-            agent=agent, store=store, mailbox=mailbox, gateway=gateway, now=now
+            agent=agent,
+            store=store,
+            mailbox=mailbox,
+            gateway=gateway,
+            now=now,
+            spans=spans,
         )
         yield Session(agent, store, mailbox, worker)

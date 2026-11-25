@@ -38,6 +38,7 @@ from ..errors import (
 from ..logbook import actions, record
 from ..records import DISCARD_ROLES, FolderRef, MailMessage, MessageRef
 from ..store import Store
+from ..telemetry import NO_SPANS, Spans
 from .metrics import Metrics
 from .writer import Writer
 
@@ -132,10 +133,12 @@ class Executor:
         mailbox: Writer,
         now: Callable[[], datetime],
         metrics: Metrics | None = None,
+        spans: Spans = NO_SPANS,
     ) -> None:
         self.metrics = metrics or Metrics(
             agent.name, agent.version, agent.settings.stage
         )
+        self.spans = spans
         self.agent = agent
         self.stage = agent.settings.stage
         self._store = store
@@ -178,7 +181,19 @@ class Executor:
                 outcomes.append(Outcome.SKIPPED)
                 continue
             held = request.ref in recorded and not request.held
-            outcome = await self._run(replace(request, held=True) if held else request)
+            # The action by its name and its code, never its folder or
+            # keyword: those are the owner's text.
+            with self.spans.span(
+                "action",
+                action=request.action.value,
+                reason=request.why,
+                stage=self.stage,
+                held=held or request.held,
+            ) as span:
+                outcome = await self._run(
+                    replace(request, held=True) if held else request
+                )
+                span.set("outcome", outcome.value)
             outcomes.append(outcome)
             if request.action in _FOLDER_ACTIONS:
                 if outcome in (Outcome.REFUSED, Outcome.DISCARDED, Outcome.SKIPPED):

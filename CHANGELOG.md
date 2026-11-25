@@ -67,6 +67,17 @@ adheres to [Semantic Versioning](https://semver.org/).
   category: moved, recorded, held, displaced by priority, keyword set or
   recorded, only sorted.
 
+- `benethos-mailbox-agents`: spans over OpenTelemetry. With
+  `MAILBOX_AGENTS_OTLP_ENDPOINT` set, each agent exports a span per
+  message, below it the decision with a span per dimension of `sorting`,
+  and a span per action, over OTLP and HTTP to `<endpoint>/v1/traces`: a
+  collector, Tempo or Langfuse. `MAILBOX_AGENTS_OTLP_HEADERS_FILE` names a
+  file of headers such as a key, never logged. A span holds ids, states,
+  codes and counts, never anything of a mail, nor the name of a category,
+  a keyword or a folder of a list. Unset, nothing is exported. New
+  dependencies `opentelemetry-sdk` and
+  `opentelemetry-exporter-otlp-proto-http`.
+
 ### Changed
 
 - `benethos-mailbox-agents`: `sorting` is version 3 and stores its

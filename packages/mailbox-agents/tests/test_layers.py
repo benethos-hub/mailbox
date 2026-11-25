@@ -41,9 +41,12 @@ MAY_IMPORT: dict[str, frozenset[str]] = {
     "sources": frozenset({"errors", "records"}),
     # The model gateway, behind one module, and the evidence check.
     "llm": frozenset({"errors", "records"}),
+    # The spans, behind one module.
+    "telemetry": frozenset({"errors", "records", "settings"}),
     # The runtime holds every piece below it and hands an agent its context.
     "runtime": frozenset(
-        {"errors", "logbook", "settings", "records", "contract", "store", "llm"}
+        {"errors", "logbook", "settings", "records", "contract", "store"}
+        | {"llm", "telemetry"}
     ),
     # An agent sees the contract and the records, never the client, the
     # gateway, the state file or the runtime that holds them. settings for
@@ -64,6 +67,7 @@ MAY_IMPORT: dict[str, frozenset[str]] = {
             "llm",
             "runtime",
             "evaluation",
+            "telemetry",
         }
     ),
     "__main__": frozenset({"cli"}),
@@ -102,6 +106,7 @@ CONFINED: dict[str, frozenset[str]] = {
             "settings/model.py",
             "sources/mailbox.py",
             "store/store.py",
+            "telemetry/otlp.py",
             "agents/invoices/agent.py",
             "agents/sorting/agent.py",
             "agents/sorting/lists.py",
@@ -112,6 +117,7 @@ CONFINED: dict[str, frozenset[str]] = {
     ),
     "httpx": frozenset({"sources/mailbox.py", "llm/gateway.py"}),
     "prometheus_client": frozenset({"runtime/metrics.py"}),
+    "opentelemetry": frozenset({"telemetry/otlp.py"}),
     # Its one home is the group settings of mailbox-common.
     "pydantic_settings": frozenset(),
     # The TLS context of the own CA: read in the settings, used by the two

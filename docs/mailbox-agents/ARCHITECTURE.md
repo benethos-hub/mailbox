@@ -49,8 +49,10 @@ top-level module.
 - `errors`, `records` and `logbook` import nothing of the package.
   `settings` stands on `errors`.
 - `contract` and `store` stand on these. `sources` and `llm`, the two
-  upstreams, stand on `errors` and `records` alone.
-- `runtime` holds everything below it but `sources`.
+  upstreams, stand on `errors` and `records` alone. `telemetry`, the
+  spans, stands on `errors`, `records` and `settings`.
+- `runtime` holds everything below it but `sources`, `telemetry` among
+  it.
 - `agents` see `contract`, `records`, `settings` and `errors`, never
   `sources`, `llm`, `store` or `runtime`.
 - `evaluation` stands on `runtime` and `store`.
@@ -78,8 +80,8 @@ the agents too, with four differences of their own design:
   `settings/model.py`, which reads the CA of the setup. `CONFINED`
   names them.
 - **Imports through `__init__.py` (5.3).** `contract`, `records`,
-  `errors`, `logbook`, `settings`, `store` and `cli` offer their names
-  there. `runtime`, `llm`, `sources` and `evaluation` offer none, and
+  `errors`, `logbook`, `settings`, `store`, `telemetry` and `cli` offer
+  their names there. `runtime`, `llm`, `sources` and `evaluation` offer none, and
   their callers import the module.
 - **The architecture test (13).** It is `tests/test_layers.py`, beside
   `tests/test_code_rules.py` for the size of modules and classes (15).
@@ -114,6 +116,10 @@ packages/mailbox-agents/src/benethos_mailbox_agents/
   llm/
     gateway.py    # the only module that talks to the model gateway
     evidence.py   # whether a quote is in the mail the model was given
+  telemetry/
+    spans.py      # the spans as the rest sees them, off by default
+    otlp.py       # the only module importing opentelemetry: OTLP over
+                  # HTTP when an endpoint is set
   store/          # SQLite, one file per agent: store.py opens and
                   # migrates it, rows.py is what its parts stand on,
                   # messages.py, steps.py, actions.py, items.py and

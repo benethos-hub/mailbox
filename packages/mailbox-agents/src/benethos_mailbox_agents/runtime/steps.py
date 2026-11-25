@@ -35,6 +35,7 @@ from ..logbook import messages, record
 from ..records import Decision, MailMessage, MessageRef, StepResult
 from ..settings import Settings
 from ..store import State, Store
+from ..telemetry import NO_SPANS, Spans
 from .items import StoredItems
 from .metrics import Metrics
 from .model import Asker, Calls, start_of_day
@@ -141,10 +142,12 @@ class StepRunner:
         effects: Effects,
         now: Callable[[], datetime],
         metrics: Metrics | None = None,
+        spans: Spans = NO_SPANS,
     ) -> None:
         self.metrics = metrics or Metrics(
             agent.name, agent.version, agent.settings.stage
         )
+        self.spans = spans
         self.agent = agent
         self.settings = agent.settings
         self._store = store
@@ -229,8 +232,21 @@ class StepRunner:
         """Run the steps of one message. Answers the state it is left in.
 
         A mailbox service or a gateway that is away, and a configuration
-        error, are raised to the loop and leave the message as it was.
+        error, are raised to the loop and leave the message as it was. The
+        steps run in a span of the message, with the state it is left in.
         """
+        with self.spans.span(
+            "message",
+            agent=self.agent.name,
+            account_id=ref.account_id,
+            message_id=ref.message_id,
+            attempt=attempts + 1,
+        ) as span:
+            state = await self._process(ref, attempts)
+            span.set("state", state)
+            return state
+
+    async def _process(self, ref: MessageRef, attempts: int) -> str:
         try:
             message = await self._reader.message(ref)
         except MailboxRefusedError as exc:
@@ -348,7 +364,19 @@ class StepRunner:
 
     async def _decision(self, message: MailMessage, calls: Calls) -> Decision:
         """The decision of the model with its evidence checked, stored once
-        per prompt version and model alias."""
+        per prompt version and model alias, in a span with a span below it
+        for each part the agent names."""
+        with self.spans.span("decision", agent=self.agent.name) as span:
+            decided = await self._decided(message, calls)
+            span.set("source", decided.source)
+            span.set("model_calls", calls.count)
+            span.set("refused", decided.refused or "")
+            for part in self.agent.trace_parts(decided):
+                with self.spans.span(part.name, **dict(part.attributes)):
+                    pass
+            return decided
+
+    async def _decided(self, message: MailMessage, calls: Calls) -> Decision:
         ref = message.ref
         stored = self._store.step(
             ref, "decision", self.agent.prompt_version, self.model_alias
