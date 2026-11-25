@@ -3,6 +3,8 @@ the commands."""
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 import sqlite3
 from datetime import UTC, datetime
@@ -31,6 +33,7 @@ from benethos_mailbox_service.data.secrets import (
     decode_recovery,
 )
 from benethos_mailbox_service.data.storage import (
+    SCHEMA_VERSION,
     Repositories,
 )
 
@@ -383,3 +386,94 @@ def test_a_client_secret_file_that_is_missing(
     assert "no-such-secret" in capsys.readouterr().err
     # The database it opened before is closed again.
     assert len(closed) == 1
+
+
+# --- format 3 -------------------------------------------------------------------
+
+
+def test_a_backup_of_format_3_is_restored_table_for_table(machine: Path) -> None:
+    account_id, _ = _populate()
+    services = _services()
+    assert services.store is not None
+    master = services.vault.master_key()
+    manifest = create_backup(
+        services.store, master, machine / "b.bak", "9.9.9", format=3
+    )
+    tables = services.store.tables()
+    before = {t.name: list(services.store.rows(t.name)) for t in tables}
+    create_account(services.accounts, ProviderType.MEMORY, "later@example.com")
+    services.close()
+
+    assert verify_backup(machine / "b.bak", master, machine / "v.db") == manifest
+    assert not (machine / "v.db").exists()
+    assert not (machine / "v.db.export").exists()
+    restore_backup(machine / "b.bak", master, Settings().database_path)
+    restored = _services()
+    assert restored.store is not None
+    after = {t.name: list(restored.store.rows(t.name)) for t in tables}
+    assert after == before
+    assert restored.adapters.ids() == [account_id]
+    assert restored.vault.read(account_id, "password").get_secret_value() == "hunter2"
+    restored.close()
+    folder = Settings().database_path.parent
+    assert len(list(folder.glob("mailbox.db.before-restore-*"))) == 1
+    assert list(folder.glob("*.export")) == []
+    assert list(folder.glob("*.restoring*")) == []
+
+
+# An export at schema 26, its head never changed: once there is a schema
+# 27, restoring it shows the migration after a restore of format 3.
+EXPORT_26 = [
+    {"export": 1, "schema": 26},
+    {
+        "table": "accounts",
+        "columns": [
+            "id",
+            "provider",
+            "email",
+            "display_name",
+            "status",
+            "settings",
+            "abilities",
+            "position",
+        ],
+    },
+    ["acc_old", "memory", "old@example.org", None, "connected", "{}", None, 1],
+    {"end": "accounts", "rows": 1},
+    {
+        "table": "users",
+        "columns": [
+            "id",
+            "name",
+            "roles",
+            "grants",
+            "disabled",
+            "ui_sign_in",
+            "service",
+            "position",
+            "name_lower",
+        ],
+    },
+    ["usr_old", "Old", "[]", "[]", 0, 0, "[]", 1, "old"],
+    {"end": "users", "rows": 1},
+    {"tables": 2},
+]
+
+
+def test_a_backup_of_format_3_at_schema_26_is_migrated(tmp_path: Path) -> None:
+    export = tmp_path / "export"
+    export.write_bytes(b"".join(json.dumps(v).encode() + b"\n" for v in EXPORT_26))
+    master = cipher.new_key()
+    digest = hashlib.sha256(export.read_bytes()).hexdigest()
+    manifest = backup.Manifest(
+        "0.12.0", 26, "now", digest, rows={"accounts": 1, "users": 1}, format=3
+    )
+    backup.write_backup(export, manifest, master, tmp_path / "b.bak")
+    target = tmp_path / "data" / "mailbox.db"
+    restore_backup(tmp_path / "b.bak", master, target)
+    raw = sqlite3.connect(target)
+    assert raw.execute("SELECT id FROM accounts").fetchall() == [("acc_old",)]
+    assert raw.execute("SELECT name_lower FROM users").fetchall() == [("old",)]
+    version = raw.execute("SELECT value FROM meta WHERE key = 'schema_version'")
+    assert int(version.fetchone()[0]) == SCHEMA_VERSION
+    raw.close()
