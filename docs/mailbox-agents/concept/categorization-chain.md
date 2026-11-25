@@ -212,8 +212,8 @@ and may correct (decided 2026-11-25). The example of the live setup,
 | Instance | Waits for | Decides | Sets |
 |---|---|---|---|
 | `partner` | the arrival in the inbox | the partner by the sender | `agent-partner-<partner>`, and its sign |
-| `beleg` | the arrival, and `agent-partner-*` | the partner by its keyword, the kind by the recognizer `invoice` | `agent-invoice`, and its sign |
-| `ablage` | `agent-categorized-beleg`, the sign of `beleg` | the partner and the kind by their keywords, no model | the move to `Providers/<partner>/Rechnungen`, and its own keyword |
+| `bookkeeping` | the arrival, and `agent-partner-*` | the partner by its keyword, the kind by the recognizer `invoice` | `agent-invoice`, and its sign |
+| `filing` | `agent-categorized-bookkeeping`, the sign of `bookkeeping` | the partner and the kind by their keywords, no model | the move to `Providers/<partner>/Invoices`, and its own keyword |
 
 - **Waiting for a keyword.** A list with `on.keywords` is asked about
   `message.updated` too. A message that carries a keyword it waits for is
@@ -228,8 +228,8 @@ and may correct (decided 2026-11-25). The example of the live setup,
 - **The sign.** `"mark_done": true` sets the agent's keyword after every
   decision, `none` included, before a move, so it stands also where the
   move is recorded only. An instance's keyword is the agent's with
-  `-<instance>` after it, `agent-categorized-beleg`. A later instance waits for
-  it, so `ablage` moves once, after `beleg` decided, below the folder of
+  `-<instance>` after it, `agent-categorized-bookkeeping`. A later instance waits for
+  it, so `filing` moves once, after `bookkeeping` decided, below the folder of
   the partner. Without `mark_done` the keyword comes with a move alone.
 - **`shadow` sets no keyword.** An instance others wait for runs in
   `keyword` at least, or the next never starts. In `keyword` its moves
@@ -237,7 +237,7 @@ and may correct (decided 2026-11-25). The example of the live setup,
 - **No circle.** A list never waits for a keyword it sets itself, and an
   instance does not start when its list waits for its own keyword. Across
   instances the command `check --agent categorization partner=partner.json
-  beleg=beleg.json ablage=ablage.json` names each circle of lists that
+  bookkeeping=bookkeeping.json filing=filing.json` names each circle of lists that
   set each other off, with exit code 1.
 - **The feed.** A keyword set or taken off comes as one
   `message.updated` of the same id, measured through the mailbox service
@@ -268,16 +268,16 @@ three example instances on the test account ([testing](testing.md)).
 ### From invoices
 
 A mailbox that ran `invoices` takes two instances of `categorization` in
-its place, after the example lists `beleg` and `ablage` in
+its place, after the example lists `bookkeeping` and `filing` in
 `containers/live/mailbox-agents/chain/`:
 
 | `invoices` | in the lists |
 |---|---|
-| looked at new mail in the inbox | `beleg` with `"on": {"arrival": "inbox"}` |
-| looked in the folders of `INVOICES_FOLDERS` | `beleg` with `"on": {"arrival": "folders"}`, or `"keywords"` on the keywords an earlier instance sets per partner |
-| asked whether a message is an invoice | a category of `beleg` with `"recognize": "invoice"` and the keyword `agent-invoice` in `then`, and `"mark_done": true` |
-| moved an invoice into `INVOICES_SUBFOLDER` below its folder | `ablage` with `"on": {"keywords": ["agent-categorized-beleg"]}` and `move_below` |
-| moved an invoice of the inbox into `INVOICES_INBOX_FOLDER` | `ablage` with a `move` to that folder |
+| looked at new mail in the inbox | `bookkeeping` with `"on": {"arrival": "inbox"}` |
+| looked in the folders of `INVOICES_FOLDERS` | `bookkeeping` with `"on": {"arrival": "folders"}`, or `"keywords"` on the keywords an earlier instance sets per partner |
+| asked whether a message is an invoice | a category of `bookkeeping` with `"recognize": "invoice"` and the keyword `agent-invoice` in `then`, and `"mark_done": true` |
+| moved an invoice into `INVOICES_SUBFOLDER` below its folder | `filing` with `"on": {"keywords": ["agent-categorized-bookkeeping"]}` and `move_below` |
+| moved an invoice of the inbox into `INVOICES_INBOX_FOLDER` | `filing` with a `move` to that folder |
 
 The settings `INVOICES_FOLDERS`, `INVOICES_SUBFOLDER` and
 `INVOICES_INBOX_FOLDER` are no longer read, and an unknown setting is

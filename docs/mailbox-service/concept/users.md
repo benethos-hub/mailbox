@@ -146,7 +146,7 @@ with the role
 - **Constraints.** A grant can narrow further without changing the model:
   `recipients` (send only to `*@firma.example`) and `max_sends_per_day` are
   the main guard against prompt injection (7.7). `expires_at` ends a grant at a time. `folders` (read
-  only `INBOX` and `Rechnungen`) keeps reading, writing and deleting to
+  only `INBOX` and `Invoices`) keeps reading, writing and deleting to
   those folders and their subfolders ([PERMISSIONS.md](../PERMISSIONS.md)
   8.5).
 

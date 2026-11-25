@@ -1,7 +1,7 @@
 {
   "on": {
     "keywords": [
-      "agent-categorized-beleg"
+      "agent-categorized-bookkeeping"
     ]
   },
   "dimensions": [
@@ -42,7 +42,7 @@
           ],
           "then": [
             {
-              "move_below": "Rechnungen"
+              "move_below": "Invoices"
             }
           ]
         }

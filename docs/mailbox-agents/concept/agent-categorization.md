@@ -53,16 +53,16 @@ invoice and moved it on within the folder it lay in. Since version 3 a
 list asks that question itself, with the recognizer `invoice`
 ([the chain](categorization-chain.md)). It ran beside `invoices` in
 `shadow` on the owner's mailbox on 2026-11-25, and `invoices` was removed
-the same day (decided 2026-11-25). An instance such as `beleg` recognises
-the invoice and sets a keyword, a later one such as `ablage` files it:
+the same day (decided 2026-11-25). An instance such as `bookkeeping` recognises
+the invoice and sets a keyword, a later one such as `filing` files it:
 
 ```
 Inbox
 Bank/
 CloudHost/
-  Rechnungen/
+  Invoices/
 Telco/
-  Rechnungen/
+  Invoices/
 ```
 
 ## 2. The list

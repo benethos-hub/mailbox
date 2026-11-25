@@ -13,7 +13,9 @@ from benethos_mailbox_agents.peers import Card, app
 from benethos_mailbox_agents.records import Classified, MessageRef, NotClassified
 
 TOKEN = "peer-token-value"  # pragma: allowlist secret
-CARD = Card(name="categorization/beleg", version="3", url="http://agents.example.test/")
+CARD = Card(
+    name="categorization/bookkeeping", version="3", url="http://agents.example.test/"
+)
 ASKED = {"account_id": "acc1", "message_id": "m1"}
 # Without it, a request counts as one of the protocol 0.3.
 V1 = {"A2A-Version": "1.0"}
@@ -32,7 +34,7 @@ class Answers:
 
 
 CLASSIFIED = Classified(
-    agent="categorization/beleg",
+    agent="categorization/bookkeeping",
     version="v1-list-0123456789ab",
     label="Invoice",
     source="model",
@@ -85,7 +87,7 @@ async def test_the_card_names_the_agent_its_skill_and_the_token() -> None:
     async with client(Answers(CLASSIFIED)) as peer:
         card = (await peer.get("/.well-known/agent-card.json")).json()
 
-    assert card["name"] == "categorization/beleg"
+    assert card["name"] == "categorization/bookkeeping"
     assert card["supportedInterfaces"][0]["url"] == "http://agents.example.test/"
     assert [s["id"] for s in card["skills"]] == ["classify"]
     scheme = card["securitySchemes"]["bearer"]["httpAuthSecurityScheme"]
@@ -126,12 +128,12 @@ async def test_a_peer_of_protocol_0_3_is_told_the_same() -> None:
 
 
 async def test_a_message_not_classified_is_told_why() -> None:
-    gone = NotClassified(agent="categorization/beleg", reason="message_gone")
+    gone = NotClassified(agent="categorization/bookkeeping", reason="message_gone")
     async with client(Answers(gone)) as peer:
         sent = await peer.post("/", json=v1(ASKED), headers=V1)
 
     data = sent.json()["result"]["message"]["parts"][0]["data"]
-    assert data == {"agent": "categorization/beleg", "reason": "message_gone"}
+    assert data == {"agent": "categorization/bookkeeping", "reason": "message_gone"}
 
 
 @pytest.mark.parametrize(

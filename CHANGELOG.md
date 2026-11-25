@@ -95,7 +95,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   taken once, a keyword already there not again. A list that waits for
   a keyword it sets itself is refused.
 - `benethos-mailbox-agents`: the command `check --agent categorization
-  partner=partner.json beleg=beleg.json ...` reads the lists of several
+  partner=partner.json bookkeeping=bookkeeping.json ...` reads the lists of several
   instances together and names each circle of lists that set each other
   off, exit code 1, else 0.
 - The live setup of the agents: three example lists of instances of
@@ -111,7 +111,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   names the recognizer in its file name.
 - The live checks of the agents: `live/mailbox-agents/chain.py` runs the
   three example instances of `categorization` on the test account and puts the
-  mail back, and the example list `beleg` asks the recognizer `invoice`.
+  mail back, and the example list `bookkeeping` asks the recognizer `invoice`.
 - `benethos-mailbox-agents`: an entrance for peers over A2A. With
   `MAILBOX_AGENTS_A2A_PORT` and a token (`MAILBOX_AGENTS_A2A_TOKEN` or
   `_FILE`) the worker serves the skill `classify`: another agent, or the
@@ -171,9 +171,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 - `benethos-mailbox-agents`: the agent `invoices`. Its question is the
   recognizer `invoice` of `categorization`. To move over, run two
-  instances of `categorization` after the example lists `beleg` and
-  `ablage`: `beleg` recognises an invoice and sets `agent-invoice`,
-  `ablage` files it with `move_below` for what `INVOICES_SUBFOLDER` did
+  instances of `categorization` after the example lists `bookkeeping` and
+  `filing`: `bookkeeping` recognises an invoice and sets `agent-invoice`,
+  `filing` files it with `move_below` for what `INVOICES_SUBFOLDER` did
   and a `move` for what `INVOICES_INBOX_FOLDER` did. Name `agent-invoice`
   in the `keywords` of a category, so mail `invoices` marked is taken up
   as an invoice. `MAILBOX_AGENTS_INVOICES_FOLDERS`, `_SUBFOLDER` and

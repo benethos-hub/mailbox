@@ -1,6 +1,6 @@
 """Three instances of categorization hand one message on through the feed by
-keywords: partner sets a keyword, beleg waits for it and decides the kind,
-ablage waits for beleg to be done and moves:
+keywords: partner sets a keyword, bookkeeping waits for it and decides the kind,
+filing waits for bookkeeping to be done and moves:
 docs/mailbox-agents/concept/categorization-chain.md."""
 
 from __future__ import annotations
@@ -52,7 +52,7 @@ KINDS = {
     ],
 }
 
-BELEG: dict[str, Any] = {
+BOOKKEEPING: dict[str, Any] = {
     "on": {"arrival": "inbox", "keywords": ["agent-partner-*"]},
     "mark_done": True,
     "dimensions": [
@@ -67,8 +67,8 @@ BELEG: dict[str, Any] = {
     ],
 }
 
-ABLAGE: dict[str, Any] = {
-    "on": {"keywords": ["agent-categorized-beleg"]},
+FILING: dict[str, Any] = {
+    "on": {"keywords": ["agent-categorized-bookkeeping"]},
     "dimensions": [
         {
             "name": "partner",
@@ -123,8 +123,8 @@ async def chain(tmp_path: Path) -> AsyncIterator[Chain]:
             workers: dict[str, Worker] = {}
             for name, listed, stage in (
                 ("partner", PARTNER, "keyword"),
-                ("beleg", BELEG, "keyword"),
-                ("ablage", ABLAGE, "full"),
+                ("bookkeeping", BOOKKEEPING, "keyword"),
+                ("filing", FILING, "full"),
             ):
                 path = tmp_path / f"{name}.json"
                 path.write_text(json.dumps(listed), encoding="utf-8")
@@ -160,17 +160,17 @@ async def test_the_instances_hand_a_message_on_by_their_keywords(
 
     await chain.run("partner")
     assert chain.keywords() == ["agent-categorized-partner", "agent-partner-hosting"]
-    # ablage waits for beleg: the keyword of partner alone moves nothing.
-    await chain.run("ablage")
+    # filing waits for bookkeeping: the keyword of partner alone moves nothing.
+    await chain.run("filing")
     assert mail(chain.world, "m1")["folder_ids"] == ["inbox"]
 
-    await chain.run("beleg")
+    await chain.run("bookkeeping")
     assert "agent-invoice" in chain.keywords()
-    assert "agent-categorized-beleg" in chain.keywords()
+    assert "agent-categorized-bookkeeping" in chain.keywords()
 
-    await chain.run("ablage")
+    await chain.run("filing")
     assert mail(chain.world, "m1")["folder_ids"] == ["inv-hosting/Billed"]
-    assert "agent-categorized-ablage" in chain.keywords()
+    assert "agent-categorized-filing" in chain.keywords()
     assert len(chain.world.fake_gateway.requests) == 1
 
 
@@ -178,17 +178,17 @@ async def test_a_change_later_asks_no_model_and_moves_nothing_twice(
     chain: Chain,
 ) -> None:
     chain.world.fake_gateway.answer({"group": "Invoice", "quote": QUOTE})
-    for name in ("partner", "beleg", "ablage"):
+    for name in ("partner", "bookkeeping", "filing"):
         await chain.run(name)
     writes = len(chain.world.service.writes())
 
-    # The update of ablage's move reaches beleg and ablage again.
-    for name in ("beleg", "ablage", "beleg", "ablage"):
+    # The update of filing's move reaches bookkeeping and filing again.
+    for name in ("bookkeeping", "filing", "bookkeeping", "filing"):
         await chain.run(name)
 
     assert len(chain.world.service.writes()) == writes
     assert len(chain.world.fake_gateway.requests) == 1
-    moves = [a for a in actions_of(chain, "ablage") if a[0] == "move_to_folder"]
+    moves = [a for a in actions_of(chain, "filing") if a[0] == "move_to_folder"]
     assert moves == [("move_to_folder", "Invoices/Hosting/Billed", True)]
 
 
@@ -197,7 +197,7 @@ async def test_a_keyword_corrected_by_hand_reaches_the_code_not_the_model(
 ) -> None:
     chain.world.fake_gateway.answer({"group": "Invoice", "quote": QUOTE})
     await chain.run("partner")
-    await chain.run("beleg")
+    await chain.run("bookkeeping")
     # A person corrects the partner of the message.
     found = mail(chain.world, "m1")
     found["keywords"] = [
@@ -206,16 +206,16 @@ async def test_a_keyword_corrected_by_hand_reaches_the_code_not_the_model(
     ]
     chain.world.service.change("message.updated", "m1")
 
-    await chain.run("beleg")
+    await chain.run("bookkeeping")
 
     ref = MessageRef(account_id=ACCOUNT, message_id="m1")
     message = await chain.world.mailbox.message(ref)
-    decided = chain.workers["beleg"].agent.refresh(
-        _stored(chain, "beleg", ref), message
+    decided = chain.workers["bookkeeping"].agent.refresh(
+        _stored(chain, "bookkeeping", ref), message
     )
     assert (decided.label, decided.fields) == ("Telco", {"kind": "Invoice"})
     assert len(chain.world.fake_gateway.requests) == 1
-    await chain.run("ablage")
+    await chain.run("filing")
     assert mail(chain.world, "m1")["folder_ids"] == ["inv-telco/Billed"]
 
 
