@@ -29,6 +29,7 @@ code.
 | [Configuration](concept/configuration.md) | Every setting. |
 | [Operation](concept/operation.md) | Containers, health, metrics, cost, logs. |
 | [Testing](concept/testing.md) | The offline suite and the live checks. |
+| [The chain of sorting](concept/sorting-chain.md) | Dimensions run one after another, recognizers and actions as registers, the priority of a move, the stage of an entry. |
 
 ## The agents
 
@@ -38,7 +39,7 @@ code.
 | `invoices` | is this an invoice? It moves one into the subfolder of the folder it lies in | built, version 6, prompt `v5` | [agent-invoices.md](concept/agent-invoices.md) |
 | `awaiting_reply` | does this sent message wait for an answer? | built, version 2, prompt `v2` | [agent-awaiting-reply.md](concept/agent-awaiting-reply.md) |
 | `inquiries` | is this a project inquiry, and what does it say? | built, version 2, prompt `v4` | [agent-inquiries.md](concept/agent-inquiries.md) |
-| `sorting` | does the message belong to a listed group, by its sender or by what it says, and which folder is the group's? | built, version 2: the sender rules in code, a model only for a message they do not settle and only where a group has a topic (2026-11-24). `invoices` then files an invoice within the folder `sorting` put it in | [agent-sorting.md](concept/agent-sorting.md) |
+| `sorting` | which category of its list does the message belong to, in each dimension of the list, and what follows from it? | built, version 3: dimensions run in order, the sender rules in code, a model only for a message they do not settle and only where a category has a topic (2026-11-24), what follows from a category named in its list (2026-11-25). `invoices` then files an invoice within the folder `sorting` put it in | [agent-sorting.md](concept/agent-sorting.md) |
 
 ## Beside the concept
 

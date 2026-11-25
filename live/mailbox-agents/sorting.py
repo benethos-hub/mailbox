@@ -9,8 +9,9 @@ It runs ``sorting`` over the mail of the last weeks with the list
 containers/live/mailbox-agents/sorting.json, each time with a state file in a folder of
 its own: first in ``shadow``, which must change nothing in the mailbox,
 then in ``full``, which makes the missing folders and moves the mail of
-each group not held, with the agent's keyword. Then it moves every
-message back to where it was and takes the keyword off. The folders it
+each group not held, with the agent's keyword, and sets the keyword of
+the second dimension of the list on the mail of two groups. Then it
+moves every message back to where it was and takes the keywords off. The folders it
 made stay: no agent may delete a folder, and a second run finds them
 there. Each check says ok or FAILED, and the exit code is 1 if one
 failed. Never point it at an account that is not a test account.
@@ -44,6 +45,7 @@ from agents_common import (  # beside this script
     run_checks,
     snapshot,
     sort_test_account,
+    sorting_keywords,
 )
 
 from benethos_mailbox_agents.agents.sorting.agent import Sorting
@@ -56,6 +58,10 @@ from benethos_mailbox_agents.store import ActionRow
 # containers/live/mailbox-agents/mail.py.
 MOVED = {"CloudHost": 3, "Telco": 1}
 HELD = {"Paperworks": 2}
+# The keyword of the second dimension of the list, by sender alone after
+# the first, and how many of the moved messages carry it: those of
+# CloudHost and Telco.
+BILLING = ("agent-billing", 4)
 FOLDERS = ("Providers", "Providers/CloudHost", "Providers/Telco")
 # The groups chosen by their topic: the one that acts and its folder, and
 # the folders of those that record it, never made.
@@ -86,6 +92,11 @@ class Live:
     def keyword(self) -> str:
         """The keyword sorting sets with these settings."""
         return Sorting(self.settings).keyword
+
+    @property
+    def keywords(self) -> tuple[str, ...]:
+        """Every keyword sorting sets with the list of the live setup."""
+        return sorting_keywords(self.settings)
 
     async def sort(
         self, stage: str, folder: Path
@@ -151,22 +162,30 @@ async def full(live: Live) -> str:
     expected = {f"Providers/{name}": count for name, count in MOVED.items()}
     if dict(by_folder) != expected:
         raise AssertionError(f"moved {dict(by_folder)}, {expected} expected")
+    billed = 0
     for action in live.moved:
         message = await live.mailbox.message(action.ref)
         if [f.path for f in message.folders] != [action.argument]:
             raise AssertionError("a message is not in the folder it was moved to")
         if live.keyword.casefold() not in {k.casefold() for k in message.keywords}:
             raise AssertionError("a moved message lacks the keyword")
+        if BILLING[0] in {k.casefold() for k in message.keywords}:
+            billed += 1
+    if billed != BILLING[1]:
+        raise AssertionError(
+            f"{billed} messages with {BILLING[0]}, {BILLING[1]} expected"
+        )
     made = sorted((folders - live.folders_before) & {*FOLDERS, "Projects", ACTS[1]})
     return (
         f"{sum(by_folder.values())} moved by sender, {by_topic} by topic into "
         f"{ACTS[1]} ({TO_ACT} by the gold labels), {sum(HELD.values())} held, "
+        f"{billed} with {BILLING[0]}, "
         f"folders made {made or 'none, there from an earlier run'}"
     )
 
 
 async def put_back_check(live: Live) -> str:
-    moved = await put_back(live.mailbox, live.before, live.keyword)
+    moved = await put_back(live.mailbox, live.before, *live.keywords)
     live.put_back_done = True
     after = await snapshot(live.mailbox, live.before)
     if after != live.before:
@@ -191,7 +210,7 @@ async def run(settings: Settings) -> int:
         finally:
             # A check that failed or a run cut short leaves no mail moved.
             if not live.put_back_done:
-                moved = await put_back(live.mailbox, live.before, live.keyword)
+                moved = await put_back(live.mailbox, live.before, *live.keywords)
                 if moved:
                     print(f"         {moved} messages back in the inbox")
     return 1 if failed else 0

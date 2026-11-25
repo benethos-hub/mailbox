@@ -31,6 +31,7 @@ from ..settings import KEYWORD_FORM, Settings
 from .context import Context
 
 __all__ = [
+    "KEYWORD_FORM",
     "NAME_PATTERN",
     "REVERSED_BY",
     "Action",
@@ -263,6 +264,13 @@ class Agent(ABC):
         agent whose answer depends on the folder above, such as its role.
         Code only, never from an answer of the model. None by default."""
         return False
+
+    def keywords(self) -> frozenset[str]:
+        """The keywords the runtime may set and take off for this agent:
+        its own, and those its configuration names, such as the keywords of
+        a list. Code only, never from an answer of the model. Its own by
+        default."""
+        return frozenset({self.keyword})
 
     def prepare(self) -> None:
         """Read what the agent needs beyond its settings, such as a list

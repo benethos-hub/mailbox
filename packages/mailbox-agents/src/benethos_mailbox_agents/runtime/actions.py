@@ -343,8 +343,10 @@ class Executor:
             if not request.folder:
                 raise ActionRefusedError("a folder to make has no path")
             _well_formed(request.folder)
-        elif request.keyword != self.agent.keyword:
-            raise ActionRefusedError("an agent sets and takes off its own keyword only")
+        elif not request.keyword or request.keyword not in self.agent.keywords():
+            raise ActionRefusedError(
+                "an agent sets and takes off its own keywords only"
+            )
 
     async def _plan(self, request: ActionRequest, message: MailMessage) -> Plan | None:
         """What to record and the target, or None when the result is
@@ -375,7 +377,7 @@ class Executor:
             return Plan(folder.path, {"folders": before}, folder.id)
         if request.action is Action.CREATE_FOLDER:
             return await self._plan_folder(account, request.folder)
-        keyword = self.agent.keyword
+        keyword = request.keyword or ""  # never empty, _admissible checked it
         if (request.action is Action.ADD_KEYWORD) == message.has_keyword(keyword):
             return None
         return Plan(keyword, {"keywords": list(message.keywords)}, keyword)

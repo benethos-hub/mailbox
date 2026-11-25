@@ -15,7 +15,7 @@ from typing import Any, Literal, cast
 from pydantic import BaseModel, ConfigDict, create_model
 
 from ...records import Attachment, MailMessage
-from .groups import NONE, Group
+from .groups import NONE, Entry
 
 __all__ = [
     "MAX_ADDRESS",
@@ -58,7 +58,7 @@ def answer_for(names: Sequence[str]) -> type[BaseModel]:
     )
 
 
-def system_for(prompt: str, groups: Sequence[Group]) -> str:
+def system_for(prompt: str, groups: Sequence[Entry]) -> str:
     """The system text of one call: the fixed text of the prompt, and
     under it a line for each group to choose from, its name and its
     topic."""

@@ -48,13 +48,39 @@ adheres to [Semantic Versioning](https://semver.org/).
   in several groups that each have a topic: the model then chooses
   among them. A sender rule of one group decides as before, with no
   model call.
+- `benethos-mailbox-agents`: the list of `sorting` may name
+  `dimensions` in place of `groups`, such as the partner of a mail and
+  its kind, run one after another. A dimension names its categories, and
+  with `when` the categories of an earlier dimension it runs after. A
+  category is found by its `senders`, its `topic` or a recognizer it
+  names in `recognize`, and names in `then` what follows: `move` into a
+  folder, `move_below` a folder below the one it goes to or lies in, and
+  `keyword`. Of several moves the category of the highest `priority`
+  wins. A list of `groups` is read as one dimension and keeps its
+  version. Two recognizers of a list may ask the model, each once per
+  message. An entry of `then` may name a `stage`, `shadow`, `keyword` or
+  `full`: below the stage of the agent it is recorded only.
+  `"on": {"arrival": "folders"}` takes up mail that arrives in a
+  folder without a role as well, such as one a rule of the mail server
+  files into: it is not moved out of it, only below it by `move_below`.
+  `report` names each dimension and what became of the mail of each
+  category: moved, recorded, held, displaced by priority, keyword set or
+  recorded, only sorted.
 
 ### Changed
 
-- `benethos-mailbox-agents`: `sorting` is version 2 and stores its
+- `benethos-mailbox-agents`: `sorting` is version 3 and stores its
   decision under the version `v1-list-` and the digest of its list, so
   every message is decided anew. Run it in `shadow` again before a
-  higher stage.
+  higher stage. A list of `groups` keeps its digest from version 2.
+- `benethos-mailbox-agents`: the runtime sets and takes off a keyword an
+  agent names in its configuration, not only its own: for `sorting` the
+  keywords of its list, each `agent-` and lower case letters, digits and
+  dashes. Any other keyword is refused as before.
+- The live setup of the agents: its list of `sorting` names two
+  dimensions, the second by sender alone setting the keyword
+  `agent-billing`, and `live/mailbox-agents/sorting.py` checks it and takes
+  it off again.
 - `benethos-mailbox-agents`: `sorting` needs the gateway settings once a
   group of its list has a topic. A list without a topic runs without a
   gateway, as before.

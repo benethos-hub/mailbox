@@ -2,13 +2,15 @@
 
 Part of the [concept](../CONCEPT.md).
 
-> **Status: version 2 built, and run in `shadow` and in `full` on the
-> test account, its choice by a topic measured there on 2026-11-24
-> against the invented mail of the live setup
+> **Status: version 3 built (2026-11-25): a list may name dimensions run
+> one after another, and what follows from each category, see
+> [the chain of sorting](sorting-chain.md). Run in `shadow` and in `full`
+> on the test account. Version 2, its choice by a topic, was measured
+> there on 2026-11-24 against the invented mail of the live setup
 > (`reports/mailbox-agents/sorting/`). Version 1, by the sender alone, ran in `shadow` and in
 > `full` on the test account, and on a real mailbox on 2026-11-22,
-> read-only and in `shadow`, and changed nothing. Version 2 has not run on
-> a real mailbox. A run on the owner's account is the owner's decision,
+> read-only and in `shadow`, and changed nothing. Versions 2 and 3 have
+> not run on a real mailbox. A run on the owner's account is the owner's decision,
 > in `shadow` first.** Its purpose: the mail of providers such as a shop,
 > a hoster or a bank goes into a folder of its own, and one folder may
 > take several, such as all banks. With a topic, mail of a project, a
@@ -16,14 +18,22 @@ Part of the [concept](../CONCEPT.md).
 > says.
 
 **Question:** does this message in the inbox belong to a listed group, by
-its sender or by what it says, and which folder is the group's?
+its sender or by what it says, and which folder is the group's? With a
+list of dimensions: which category of each dimension does it belong to,
+and what follows from it ([the chain](sorting-chain.md))?
+
+This file describes a list of `groups`, which the chain reads as one
+dimension called `group`, each group a category that moves to its
+folder. What a list of dimensions adds, a keyword per category, a move
+below another, a priority, a stage per entry, mail that arrives in a
+folder, stands in [the chain of sorting](sorting-chain.md).
 
 | | |
 |---|---|
 | Triggers | `message.created` in the inbox, and `backfill` for older mail |
 | Baseline | the sender rules of the list |
 | Model | one call for a message no sender rule settles, when a group has a topic: the group or `none`, one quote |
-| Actions | `move_to_folder`, `create_folder`, and `add_keyword` with the move |
+| Actions | `move_to_folder`, `create_folder`, and `add_keyword` with the move and for a keyword of the list |
 | Keyword | `agent-sorted`, set with each move, see section 3 |
 
 ## 1. Two stages, two agents (decided 2026-11-18)
@@ -215,7 +225,9 @@ to a person in a mail client and to a state file made anew. A message in
 the inbox that carries it was put back by a person and is left alone.
 Besides, the runtime moves a message at most once for an agent ([agent
 contract](agent-contract.md)). The keyword is its own and no other agent
-sets it, so a move by `sorting` and a move by `invoices` stay told apart.
+sets it. A list of dimensions may name keywords of its own, which the
+runtime sets as well and refuses any other (decided 2026-11-25,
+[the chain](sorting-chain.md)). The agent's keyword is its own, so a move by `sorting` and a move by `invoices` stay told apart.
 The keyword is asked for after the move in every stage. The runtime takes
 nothing after a refused move and records only what follows a move recorded
 only, by the stage or for a held group, so it never stands without the move
@@ -405,7 +417,12 @@ another, was measured there first
 ## 11. What was decided against
 
 - **Categories inside `sorting` as on 2026-11-18, one agent that sorts
-  and recognises invoices.** Two agents it stayed then, for three
+  and recognises invoices.** Replaced on 2026-11-25 by the chain:
+  dimensions with categories, each with its recognizer, and the actions
+  beside them ([the chain](sorting-chain.md)). `invoices` stays until a
+  recognizer of invoices in the chain reaches its numbers on the gold set
+  and a run in `shadow` on the owner's mailbox fits. The reasons of
+  2026-11-18 and 2026-11-24 follow. Two agents it stayed then, for three
   reasons: an agent has one stage, a gateway that is away would hold back
   mail that needs no model, and a category is a prompt, rules and a gold
   set, not configuration. On 2026-11-24 it was decided that `sorting`
@@ -430,8 +447,10 @@ another, was measured there first
 - **`invoices` and `sorting` side by side with a waiting time.** A message
   whose model call waits for a gateway that is away would be moved by
   `sorting` in the meantime, and `invoices` would then skip it.
-- **A keyword per group.** The runtime lets an agent set one keyword, its
-  own. It stayed so on 2026-11-24.
+- **A keyword per group.** The runtime let an agent set one keyword, its
+  own, and it stayed so on 2026-11-24. Replaced on 2026-11-25: a category
+  of a list of dimensions names its keywords, only those of the list,
+  each `agent-` in front ([the chain](sorting-chain.md)).
 - **A gold item that names a folder.** The folder follows from the group
   and the list, and the gold format has no place for it.
 - **One list for both agents.** `invoices` must work without `sorting`

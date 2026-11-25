@@ -1,5 +1,6 @@
 """The run of the checks and what they share: a check skipped, the agent
-``sorting`` over the test account, and the labels a state file holds."""
+``sorting`` over the test account and the keywords it sets, and the
+labels a state file holds."""
 
 from __future__ import annotations
 
@@ -59,6 +60,15 @@ async def sort_test_account(
             await sorting.backfill(DAYS)
             await sorting.drain()
             return store.actions(), labels(store)
+
+
+def sorting_keywords(settings: Settings) -> tuple[str, ...]:
+    """Every keyword ``sorting`` sets with the list of the live setup: its
+    own and those of the list, each to be taken off when the mail is put
+    back."""
+    agent = Sorting(settings.model_copy(update={"sorting_file": LIST}))
+    agent.prepare()
+    return tuple(sorted(agent.keywords()))
 
 
 async def run_checks(

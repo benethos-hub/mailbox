@@ -104,6 +104,7 @@ CONFINED: dict[str, frozenset[str]] = {
             "store/store.py",
             "agents/invoices/agent.py",
             "agents/sorting/agent.py",
+            "agents/sorting/lists.py",
             "cli/__init__.py",
             "cli/commands.py",
             "cli/report.py",
