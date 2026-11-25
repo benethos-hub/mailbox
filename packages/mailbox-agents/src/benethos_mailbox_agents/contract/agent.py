@@ -43,6 +43,7 @@ __all__ = [
     "Shown",
     "TracePart",
     "Trigger",
+    "state_name",
 ]
 
 NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
@@ -201,7 +202,23 @@ class Agent(ABC):
     def __init__(self, settings: Settings) -> None:
         self.validate_definition()
         self.settings = settings
-        self.keyword = settings.keyword or self.default_keyword
+        self.instance = settings.instance
+        default = self.default_keyword
+        if self.instance:
+            default = f"{default}-{self.instance}"
+        self.keyword = settings.keyword or default
+
+    @property
+    def label(self) -> str:
+        """The agent as a log line, a metric and a command name it: its
+        name, and its instance after a slash when it has one."""
+        return f"{self.name}/{self.instance}" if self.instance else self.name
+
+    @property
+    def state_name(self) -> str:
+        """The name of its state file without the suffix: its name, and its
+        instance after a dash when it has one."""
+        return state_name(self.name, self.instance)
 
     # -- to implement ---------------------------------------------------------
 
@@ -319,6 +336,12 @@ class Agent(ABC):
                 raise ContractError(f"{cls.__name__}: {attr} must be declared")
         _check_identity(cls)
         _check_declarations(cls)
+
+
+def state_name(name: str, instance: str | None) -> str:
+    """The name of the state file of agent ``name`` in ``instance``,
+    without the suffix."""
+    return f"{name}-{instance}" if instance else name
 
 
 def _check_identity(cls: type[Agent]) -> None:

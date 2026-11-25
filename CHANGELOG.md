@@ -66,7 +66,6 @@ adheres to [Semantic Versioning](https://semver.org/).
   `report` names each dimension and what became of the mail of each
   category: moved, recorded, held, displaced by priority, keyword set or
   recorded, only sorted.
-
 - `benethos-mailbox-agents`: spans over OpenTelemetry. With
   `MAILBOX_AGENTS_OTLP_ENDPOINT` set, each agent exports a span per
   message, below it the decision with a span per dimension of `sorting`,
@@ -77,6 +76,12 @@ adheres to [Semantic Versioning](https://semver.org/).
   a keyword or a folder of a list. Unset, nothing is exported. New
   dependencies `opentelemetry-sdk` and
   `opentelemetry-exporter-otlp-proto-http`.
+- `benethos-mailbox-agents`: `MAILBOX_AGENTS_INSTANCE` runs one of
+  several processes of one agent, each with settings and a list of its
+  own. An instance keeps its state file as `<agent>-<instance>.db`, sets
+  the agent's keyword with `-<instance>` after it by default, and is
+  named `<agent>/<instance>` in the log, `status` and `report`, its
+  metrics with the label `instance`. Unset, everything stays as it was.
 
 ### Changed
 

@@ -145,7 +145,7 @@ class StepRunner:
         spans: Spans = NO_SPANS,
     ) -> None:
         self.metrics = metrics or Metrics(
-            agent.name, agent.version, agent.settings.stage
+            agent.name, agent.version, agent.settings.stage, agent.instance or ""
         )
         self.spans = spans
         self.agent = agent
@@ -203,7 +203,7 @@ class StepRunner:
         )
         record(
             messages.StateSet(
-                agent=self.agent.name, message_id=ref.message_id, state=state
+                agent=self.agent.label, message_id=ref.message_id, state=state
             )
         )
         return state
@@ -212,7 +212,7 @@ class StepRunner:
         """The line and the count of a step that failed."""
         record(
             messages.StepFailed(
-                agent=self.agent.name, message_id=ref.message_id, step=step, error=exc
+                agent=self.agent.label, message_id=ref.message_id, step=step, error=exc
             )
         )
         self.metrics.step_failed(exc.code)
@@ -262,7 +262,7 @@ class StepRunner:
         except AnswerRefusedError as exc:
             record(
                 messages.AnswerRefused(
-                    agent=self.agent.name,
+                    agent=self.agent.label,
                     message_id=ref.message_id,
                     reason=exc.reason,
                 )
@@ -389,7 +389,7 @@ class StepRunner:
             if item.found is False:
                 record(
                     messages.QuoteMissing(
-                        agent=self.agent.name,
+                        agent=self.agent.label,
                         message_id=ref.message_id,
                         field=item.field,
                     )
@@ -411,7 +411,7 @@ class StepRunner:
         )
         record(
             messages.StepDone(
-                agent=self.agent.name,
+                agent=self.agent.label,
                 message_id=ref.message_id,
                 step="decision",
                 ms=duration,

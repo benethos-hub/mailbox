@@ -23,6 +23,7 @@ and `KEYWORD`.
 | `ACCOUNTS` | the accounts to work on, comma separated, all the user may read when unset |
 | `STAGE` | `shadow`, `keyword` or `full`, `shadow` when unset |
 | `KEYWORD` | the keyword the agent sets, the agent's own default when unset. Lower case letters, digits and dashes, such as `agent-invoice` (2026-11-19). It belongs in the env file of one agent: an agent whose keyword is another agent's default does not start, and `status` warns when it is set |
+| `INSTANCE` | one of several processes of one agent, each with a list of its own, such as `partner` for `sorting` (2026-11-25). Its state file is `<agent>-<instance>.db`, its default keyword the agent's with `-<instance>` after it, its log lines, `status` and `report` name it `<agent>/<instance>`, its metrics carry the label `instance`. Lower case letters, digits and dashes, a letter first, at most 40. Unset: the agent alone, as before |
 | `POLL_SECONDS`, `TICK_SECONDS` | how often the feed is read and the clock asked, `60` and `900` when unset |
 | `MAX_ATTEMPTS` | failed attempts before a message is `failed`, a refused answer or a step the service refused among them, and the passes in a row that end at one message ([runtime](runtime.md)), `5` when unset |
 | `BACKOFF_CEILING_SECONDS` | the longest wait between two attempts, `3600` when unset |

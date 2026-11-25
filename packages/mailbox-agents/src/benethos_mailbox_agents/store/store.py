@@ -36,7 +36,8 @@ __all__ = ["Migrated", "Store", "earlier_file", "path_for"]
 
 
 def path_for(data_dir: Path, agent: str) -> Path:
-    """Where the state file of ``agent`` lives."""
+    """Where the state file of ``agent`` lives, ``agent`` its state name,
+    with its instance when it has one."""
     return data_dir / f"{agent}.db"
 
 

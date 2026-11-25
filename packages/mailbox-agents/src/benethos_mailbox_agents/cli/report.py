@@ -160,7 +160,8 @@ async def report(
     agent: Agent, settings: Settings, *, limit: int, state: str | None, offline: bool
 ) -> list[str]:
     """The report of ``agent``, read beside the running agent."""
-    with Store.open(path_for(settings.data_dir, agent.name), read_only=True) as store:
+    path = path_for(settings.data_dir, agent.state_name)
+    with Store.open(path, read_only=True) as store:
         counts = store.counts()
         total = counts.get(state, 0) if state else sum(counts.values())
         if offline:

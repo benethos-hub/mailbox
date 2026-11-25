@@ -80,7 +80,14 @@ async def test_a_pass_fills_the_metrics(world: Wired) -> None:
         == 1
     )
     assert (
-        sample(m, "mailbox_agents_info", agent="echo", version="1", stage="keyword")
+        sample(
+            m,
+            "mailbox_agents_info",
+            agent="echo",
+            version="1",
+            stage="keyword",
+            instance="",
+        )
         == 1
     )
     assert b"mailbox_agents_last_pass_timestamp_seconds" in m.text()

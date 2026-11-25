@@ -109,7 +109,9 @@ class Worker:
         self.store = store
         self._mailbox = mailbox
         self._now = now
-        self.metrics = Metrics(agent.name, agent.version, agent.settings.stage)
+        self.metrics = Metrics(
+            agent.name, agent.version, agent.settings.stage, agent.instance or ""
+        )
         self.executor = Executor(
             agent=agent,
             store=store,
@@ -206,7 +208,7 @@ class Worker:
         self.metrics.state(self.store, now)
         record(
             worker.PassDone(
-                agent=self.agent.name,
+                agent=self.agent.label,
                 seconds=time.monotonic() - started,
                 pending=self.store.counts()["pending"],
             )
@@ -223,7 +225,7 @@ class Worker:
         try:
             events, fresh = await self._mailbox.changes(state, self.accounts)
         except ChangesExpiredError:
-            record(feed.Expired(agent=self.agent.name))
+            record(feed.Expired(agent=self.agent.label))
             fresh = await self._mailbox.start(self.accounts)
             await self._backfill(self.settings.backfill_days)
             # The backfill takes up new messages only. An update in the gap
@@ -248,7 +250,9 @@ class Worker:
             elif route is Route.OBSERVE and event.ref not in observe:
                 observe[event.ref] = None
                 selected += 1
-        record(feed.Read(agent=self.agent.name, changes=len(events), selected=selected))
+        record(
+            feed.Read(agent=self.agent.label, changes=len(events), selected=selected)
+        )
         return list(observe)
 
     def _route(self, event: Event) -> Route | None:
@@ -378,7 +382,7 @@ class Worker:
             for request, outcome in zip(group, outcomes, strict=False):
                 self._note(request, outcome)
         self._last_tick = now
-        record(worker.TickDone(agent=self.agent.name, actions=len(requests)))
+        record(worker.TickDone(agent=self.agent.label, actions=len(requests)))
 
     def _note(self, request: ActionRequest, outcome: Outcome) -> None:
         """Keep on an open item what became of its keyword: set when it is on
@@ -407,7 +411,7 @@ class Worker:
     def _wait_after(self, error: UnavailableError) -> float:
         """The wait after an upstream that is away, logged as such."""
         wait = self._back_off(error)
-        record(worker.UpstreamAway(agent=self.agent.name, error=error, wait=wait))
+        record(worker.UpstreamAway(agent=self.agent.label, error=error, wait=wait))
         return wait
 
     def _back_off(self, error: MailboxAgentError) -> float:
@@ -438,7 +442,7 @@ class Worker:
             event = Event(type="message.created", ref=ref, at=now)
             if self._route(event) is Route.DECIDE:
                 added += self.store.enqueue(ref, now, again=again)
-        record(feed.Backfilled(agent=self.agent.name, messages=added, days=days))
+        record(feed.Backfilled(agent=self.agent.label, messages=added, days=days))
         return added
 
     async def _in_folders(self, since: date) -> list[MessageRef]:
@@ -474,7 +478,7 @@ class Worker:
                 raise
             except MailboxAgentError as exc:
                 wait = self._back_off(exc)
-                record(worker.PassFailed(agent=self.agent.name, error=exc, wait=wait))
+                record(worker.PassFailed(agent=self.agent.label, error=exc, wait=wait))
             await self._sleep(wait, stop)
 
     async def _sleep(self, wait: float, stop: asyncio.Event) -> None:

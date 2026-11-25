@@ -136,7 +136,7 @@ class Executor:
         spans: Spans = NO_SPANS,
     ) -> None:
         self.metrics = metrics or Metrics(
-            agent.name, agent.version, agent.settings.stage
+            agent.name, agent.version, agent.settings.stage, agent.instance or ""
         )
         self.spans = spans
         self.agent = agent
@@ -273,7 +273,7 @@ class Executor:
         done = actions.Done if executed else actions.Recorded
         record(
             done(
-                agent=self.agent.name,
+                agent=self.agent.label,
                 message_id=request.ref.message_id,
                 action=request.action.value,
                 stage=self.stage,
@@ -322,7 +322,7 @@ class Executor:
         as refused, and the caller notes it so it is not asked again."""
         if isinstance(exc, _OwnersChoiceError):
             record(
-                actions.Kept(agent=self.agent.name, message_id=request.ref.message_id)
+                actions.Kept(agent=self.agent.label, message_id=request.ref.message_id)
             )
             return Outcome.SKIPPED
         self._log_refused(
@@ -335,7 +335,7 @@ class Executor:
     ) -> None:
         record(
             actions.Refused(
-                agent=self.agent.name,
+                agent=self.agent.label,
                 message_id=request.ref.message_id,
                 action=request.action.value,
                 error=exc,
