@@ -56,3 +56,12 @@ async def test_list_all_sends_names_the_accounts(make_client: Callable) -> None:
     assert request.url.path == "/v1/sends"
     assert request.url.params.get_list("accounts") == ["acc_1", "acc_2"]
     assert request.url.params["before"] == "2026-10-09T00:00:00+00:00"
+
+
+async def test_a_send_through_the_outbox_names_its_job(make_client: Callable) -> None:
+    row = {**ROW, "outcome": "queued", "error": None, "outbox_job_id": "obx_1"}
+    found = await make_client(FakeApi({"items": [row]})).list_sends("acc_1")
+    assert (found.items[0].outcome, found.items[0].outbox_job_id) == (
+        "queued",
+        "obx_1",
+    )

@@ -55,6 +55,7 @@ def test_webhooks_of_users_deleted_before_are_dropped(tmp_path: Path) -> None:
         raw.execute("DROP TABLE passkeys")
         raw.execute("DROP INDEX message_index_header")
         raw.execute("DROP TABLE outbox")
+        raw.execute("ALTER TABLE sends DROP COLUMN outbox_job_id")
         raw.execute(
             "INSERT INTO users (id, name, roles, grants)"
             " VALUES ('usr_1', 'u', '[]', '[]')"
@@ -103,6 +104,7 @@ def _at_schema_14(path: Path, users: dict[str, list[dict[str, object]]]) -> None
         raw.execute("DROP TABLE passkeys")
         raw.execute("DROP INDEX message_index_header")
         raw.execute("DROP TABLE outbox")
+        raw.execute("ALTER TABLE sends DROP COLUMN outbox_job_id")
         raw.execute("UPDATE meta SET value = '14' WHERE key = 'schema_version'")
     raw.close()
 
@@ -199,6 +201,7 @@ def test_recovery_codes_of_schema_18_are_deleted(tmp_path: Path) -> None:
         raw.execute("DROP TABLE passkeys")
         raw.execute("DROP INDEX message_index_header")
         raw.execute("DROP TABLE outbox")
+        raw.execute("ALTER TABLE sends DROP COLUMN outbox_job_id")
         for statement in MIGRATIONS.step(18).statements[2:]:
             raw.execute(statement)
         raw.execute(

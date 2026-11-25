@@ -91,4 +91,5 @@ def _send(item: dict[str, Any]) -> SendRecord:
         error=item.get("error"),
         refused=tuple(item.get("refused") or []),
         message_id_header=item.get("message_id_header"),
+        outbox_job_id=item.get("outbox_job_id"),
     )

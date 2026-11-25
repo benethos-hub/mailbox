@@ -266,7 +266,11 @@ accounts and webhooks, read by `GET /v1/audit` with `audit` in
 the send limits, which count from it. Every attempt through `send_message`
 or `send_draft` is one record: time, user, token,
 account, operation, recipients, outcome (`sent`, `denied` by a grant,
-`failed`), error code, refused recipients and the Message-ID. It keeps no
+`failed`), error code, refused recipients and the Message-ID. A send put
+into the outbox adds a record `queued`, each attempt of its job a record
+of its own, and a job that ends without an attempt saying so a record
+`cancelled`, `unknown` or `failed`. Each of them names the job
+(`outbox_job_id`). Only `sent` counts against a send limit. It keeps no
 reference to account or user, so it outlives both. A record is kept for
 `MAILBOX_SERVICE_AUDIT_DAYS` days, 90 by default, `0` keeps every
 record. Old ones are purged at start and as a send comes in, once an

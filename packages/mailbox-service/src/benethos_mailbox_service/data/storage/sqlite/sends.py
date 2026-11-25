@@ -20,7 +20,8 @@ class SqliteSendLogRepository:
         self._db.execute(
             "INSERT INTO sends (id, created_at, user_id, credential_id,"
             " account_id, operation, recipients, outcome, error, refused,"
-            " message_id_header) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            " message_id_header, outbox_job_id)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 record.id,
                 iso(record.created_at),
@@ -33,6 +34,7 @@ class SqliteSendLogRepository:
                 record.error,
                 json.dumps(record.refused),
                 record.message_id_header,
+                record.outbox_job_id,
             ),
         )
 
@@ -105,4 +107,5 @@ def _send(row: sqlite3.Row) -> SendRecord:
         error=row["error"],
         refused=json.loads(row["refused"]),
         message_id_header=row["message_id_header"],
+        outbox_job_id=row["outbox_job_id"],
     )

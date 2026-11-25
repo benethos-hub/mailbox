@@ -8,7 +8,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-SendOutcome = Literal["sent", "denied", "failed"]
+SendOutcome = Literal["sent", "denied", "failed", "queued", "cancelled", "unknown"]
 
 
 class SendRecord(BaseModel):
@@ -27,7 +27,10 @@ class SendRecord(BaseModel):
         description=(
             "`sent`: the mail server took it. `denied`: a grant's recipients "
             "or send limit stopped it. `failed`: an error before or while "
-            "sending."
+            "sending. `queued`: put into the outbox, sent later. "
+            "`cancelled`: an outbox job that ended without a send. "
+            "`unknown`: an outbox job whose send may or may not have gone "
+            "out."
         )
     )
     error: str | None = Field(default=None, description="The error code, if any.")
@@ -36,6 +39,9 @@ class SendRecord(BaseModel):
         description="Recipients the server refused while it accepted others.",
     )
     message_id_header: str | None = None
+    outbox_job_id: str | None = Field(
+        default=None, description="The outbox job of the attempt, if any."
+    )
 
 
 class SendFilter(BaseModel):

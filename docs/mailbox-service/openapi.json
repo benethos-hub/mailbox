@@ -5148,7 +5148,10 @@
                   "enum": [
                     "sent",
                     "denied",
-                    "failed"
+                    "failed",
+                    "queued",
+                    "cancelled",
+                    "unknown"
                   ],
                   "type": "string"
                 },
@@ -7534,7 +7537,10 @@
                   "enum": [
                     "sent",
                     "denied",
-                    "failed"
+                    "failed",
+                    "queued",
+                    "cancelled",
+                    "unknown"
                   ],
                   "type": "string"
                 },
@@ -13955,10 +13961,13 @@
             "enum": [
               "sent",
               "denied",
-              "failed"
+              "failed",
+              "queued",
+              "cancelled",
+              "unknown"
             ],
             "title": "Outcome",
-            "description": "`sent`: the mail server took it. `denied`: a grant's recipients or send limit stopped it. `failed`: an error before or while sending."
+            "description": "`sent`: the mail server took it. `denied`: a grant's recipients or send limit stopped it. `failed`: an error before or while sending. `queued`: put into the outbox, sent later. `cancelled`: an outbox job that ended without a send. `unknown`: an outbox job whose send may or may not have gone out."
           },
           "error": {
             "anyOf": [
@@ -13990,6 +13999,18 @@
               }
             ],
             "title": "Message Id Header"
+          },
+          "outbox_job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outbox Job Id",
+            "description": "The outbox job of the attempt, if any."
           }
         },
         "type": "object",

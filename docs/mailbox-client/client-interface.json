@@ -2098,6 +2098,10 @@
         },
         "message_id_header": {
           "type": "str | None"
+        },
+        "outbox_job_id": {
+          "type": "str | None",
+          "default": "None"
         }
       }
     }

@@ -5,6 +5,7 @@ A job says which draft, what it was when queued (a digest), the
 Message-ID every attempt sends, and where it stands. It never holds
 the mail. A job goes with its account. It keeps the user who queued it
 without a reference, so a deleted user ends the job instead of the row.
+The audit of sends names the job of an attempt.
 """
 
 from __future__ import annotations
@@ -39,4 +40,5 @@ class V0025Outbox(Migration):
         """,
         "CREATE INDEX outbox_account ON outbox (account_id, created_at)",
         "CREATE INDEX outbox_state ON outbox (state, due_at)",
+        "ALTER TABLE sends ADD COLUMN outbox_job_id TEXT",
     )
