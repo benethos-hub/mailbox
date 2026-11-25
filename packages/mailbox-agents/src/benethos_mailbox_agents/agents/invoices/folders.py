@@ -1,7 +1,7 @@
 """Where ``invoices`` looks for invoices, and where it puts one.
 
 The folders it looks in are a setting, read at its start, so it works with
-``sorting`` and without it (decided 2026-11-18): it knows nothing of
+``categorization`` and without it (decided 2026-11-18): it knows nothing of
 groups. ``MAILBOX_AGENTS_INVOICES_FOLDERS`` names them, separated by
 commas, each written in one of three ways:
 
@@ -19,7 +19,7 @@ takes in ``Providers/CloudHost``. The subfolder is not looked in even
 where the settings would take it in, as ``Invoices`` and ``Invoices/*``
 take in ``Invoices/Rechnungen``. ``Parent/*`` and ``*`` are matched
 against the path of the folder a message lies in, so a folder made after
-the start, by ``sorting`` say, is looked in too.
+the start, by ``categorization`` say, is looked in too.
 
 ``MAILBOX_AGENTS_INVOICES_SUBFOLDER`` is where an invoice goes, as
 ``{folder}/Rechnungen``: below the folder the message lies in.

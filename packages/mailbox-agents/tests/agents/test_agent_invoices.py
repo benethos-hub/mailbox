@@ -140,7 +140,7 @@ async def test_an_invoice_put_into_the_end_station_is_marked_and_stays(
     invoices_world: Wired,
 ) -> None:
     """``*`` takes in an inbox folder at the top: an invoice put there by a
-    person or by ``sorting`` is asked about and marked, nothing is made
+    person or by ``categorization`` is asked about and marked, nothing is made
     below it and it does not move."""
     top = agent(invoices_folders=["*"], invoices_inbox_folder="Invoices")
     invoices_world.fake_gateway.answer(answer("invoice", "Ihre Rechnung R-78"))

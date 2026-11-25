@@ -27,7 +27,7 @@ that message:
 
 ```json
 {
-  "agent": "sorting/beleg",
+  "agent": "categorization/beleg",
   "version": "v1-list-0123456789ab",
   "label": "Invoice",
   "source": "model",

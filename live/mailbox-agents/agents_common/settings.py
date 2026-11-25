@@ -21,7 +21,7 @@ LIVE = ROOT / "containers" / "live" / "mailbox-agents"
 ENV = LIVE / "secrets" / "agent.env"
 
 
-LIST = LIVE / "sorting.json"
+LIST = LIVE / "categorization.json"
 
 
 # The hosts of a mailbox service on this machine, as containers/live has it.

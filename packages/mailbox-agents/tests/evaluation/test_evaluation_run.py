@@ -9,8 +9,8 @@ from pathlib import Path
 import httpx
 import pytest
 
+from benethos_mailbox_agents.agents.categorization.agent import Categorization
 from benethos_mailbox_agents.agents.invoices.agent import Invoices
-from benethos_mailbox_agents.agents.sorting.agent import Sorting
 from benethos_mailbox_agents.cli import main
 from benethos_mailbox_agents.errors import GatewayUnavailableError
 from benethos_mailbox_agents.evaluation.gold import GoldItem
@@ -119,7 +119,7 @@ def outcome(label: str, fields: dict[str, str | None], found: str) -> Outcome:
 def test_a_report_names_no_label_or_field_the_agent_does_not_declare(
     tmp_path: Path,
 ) -> None:
-    """A group of sorting is named by its owner, often after a person, and
+    """A group of categorization is named by its owner, often after a person, and
     a report is versioned: such a name becomes a placeholder."""
     outcomes = [
         outcome("Dr Jane Invented", {"free text": "x"}, "Dr Jane Invented"),
@@ -127,7 +127,7 @@ def test_a_report_names_no_label_or_field_the_agent_does_not_declare(
         outcome("none", {}, "Dr Jane Invented"),
     ]
 
-    report = build(Sorting(settings()), "", outcomes, WHEN)
+    report = build(Categorization(settings()), "", outcomes, WHEN)
 
     text = (write(report, tmp_path)).read_text(encoding="utf-8")
     assert "Jane" not in text

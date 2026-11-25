@@ -276,7 +276,7 @@ async def test_a_marked_message_the_state_file_knows_goes_on(
 
 
 async def test_another_keyword_does_not_skip(steps_world: Wired) -> None:
-    _marked(steps_world, keyword="agent-sorted")
+    _marked(steps_world, keyword="agent-categorized")
     steps_world.fake_gateway.answer(MATCH)
 
     assert await runner(steps_world, Marking(settings())).process(MARKED) == "done"

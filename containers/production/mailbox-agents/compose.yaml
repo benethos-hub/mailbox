@@ -105,22 +105,22 @@ services:
       retries: 3
 
   # Asks no model: needs the mailbox service alone.
-  sorting:
+  categorization:
     <<: *agent
-    profiles: ["sorting"]
-    command: ["worker", "--agent", "sorting"]
-    env_file: ./agents/sorting/.env
+    profiles: ["categorization"]
+    command: ["worker", "--agent", "categorization"]
+    env_file: ./agents/categorization/.env
     environment:
       MAILBOX_AGENTS_SERVICE_TOKEN_FILE: /run/secrets/service_token
-      MAILBOX_AGENTS_SORTING_FILE: /config/sorting.json
+      MAILBOX_AGENTS_CATEGORIZATION_FILE: /config/categorization.json
     volumes:
-      - sorting-data:/data
-      - ./agents/sorting:/config:ro
-      - ./secrets/sorting:/run/secrets:ro
+      - categorization-data:/data
+      - ./agents/categorization:/config:ro
+      - ./secrets/categorization:/run/secrets:ro
     ports:
-      - "127.0.0.1:${MAILBOX_AGENTS_SORTING_METRICS_PORT:-9474}:9464"
+      - "127.0.0.1:${MAILBOX_AGENTS_CATEGORIZATION_METRICS_PORT:-9474}:9464"
     healthcheck:
-      test: ["CMD", "benethos-mailbox-agents", "health", "--agent", "sorting"]
+      test: ["CMD", "benethos-mailbox-agents", "health", "--agent", "categorization"]
       interval: 60s
       timeout: 10s
       start_period: 120s
@@ -151,5 +151,5 @@ volumes:
   invoices-data:
   awaiting-reply-data:
   inquiries-data:
-  sorting-data:
+  categorization-data:
   counting-data:

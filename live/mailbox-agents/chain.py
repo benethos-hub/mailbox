@@ -1,4 +1,4 @@
-"""The live check of three instances of the agent sorting that hand a
+"""The live check of three instances of the agent categorization that hand a
 message on by keywords, against the test account of
 containers/live/mailbox-agents/. It WRITES to that account and puts the
 mail back.
@@ -49,7 +49,7 @@ from agents_common import (  # beside this script
     worker,
 )
 
-from benethos_mailbox_agents.agents.sorting.agent import Sorting
+from benethos_mailbox_agents.agents.categorization.agent import Categorization
 from benethos_mailbox_agents.records import MessageRef
 from benethos_mailbox_agents.runtime.loop import Worker
 from benethos_mailbox_agents.settings import Settings
@@ -110,11 +110,12 @@ class Live:
                 update={
                     "stage": stage,
                     "instance": name,
-                    "sorting_file": LISTS / f"sorting.{name}.example.json",
+                    "categorization_file": LISTS
+                    / f"categorization.{name}.example.json",
                     "data_dir": self.folder,
                 }
             )
-            agent = Sorting(found)
+            agent = Categorization(found)
             agent.prepare()
             gateway = None
             if agent.asks_model():
@@ -163,7 +164,7 @@ async def partner(live: Live) -> str:
     await live.workers["partner"].drain()
     for sender, name in PARTNERS.items():
         for keywords in await live.keywords_of(sender):
-            wanted = {f"agent-partner-{name}", "agent-sorted-partner"}
+            wanted = {f"agent-partner-{name}", "agent-categorized-partner"}
             if not wanted <= keywords:
                 raise AssertionError(f"a message of {name} lacks its keywords")
     return f"partner keywords on the mail of {len(PARTNERS)} partners"
@@ -266,5 +267,7 @@ async def run(settings: Settings) -> int:
 
 
 if __name__ == "__main__":
-    found = parse_settings("chain", "The live check of three instances of sorting.")
+    found = parse_settings(
+        "chain", "The live check of three instances of categorization."
+    )
     sys.exit(asyncio.run(run(found)))

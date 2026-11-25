@@ -14,9 +14,10 @@ The class attributes are validated on instantiation.
 | `limits` | model calls per message and per day, and the longest quote or value an answer may hold, 300 characters |
 | `requires` | settings that must be present before it starts |
 | `default_keyword` | the keyword it sets when `MAILBOX_AGENTS_KEYWORD` is unset |
-| `prompt_version` | the version of the prompt its model step runs under. Read from the instance: `sorting` sets it from its list |
+| `former_names` | the names it had before: it does not start beside a state file of one, and `status` names one. None by default, `sorting` for `categorization` (2026-11-25) |
+| `prompt_version` | the version of the prompt its model step runs under. Read from the instance: `categorization` sets it from its list |
 | `skip_marked` | whether a message that carries its keyword and that its state file does not know is `skipped` before baseline and model. Off by default |
-| `report_labels`, `report_fields` | the labels and field names an evaluation report names in plain text, its own fixed ones. Any other, such as the name of a group of `sorting`, becomes `label-<n>` or `field-<n>` there (decided 2026-11-19). None by default |
+| `report_labels`, `report_fields` | the labels and field names an evaluation report names in plain text, its own fixed ones. Any other, such as the name of a group of `categorization`, becomes `label-<n>` or `field-<n>` there (decided 2026-11-19). None by default |
 
 **Marked mail a state file does not know (decided 2026-11-19).** An agent
 that declares `skip_marked` leaves a message alone that carries its keyword
@@ -40,7 +41,7 @@ others do not:
 | `inquiries` | off | its state file holds the fields of an inquiry, which a skipped message would lack |
 | `awaiting_reply` | off | it watches its marked mail to take the keyword off |
 | `counting` | off | it sets no keyword |
-| `sorting` | off | its own rule is stricter: `admit` refuses every message in the inbox that carries its keyword |
+| `categorization` | off | its own rule is stricter: `admit` refuses every message in the inbox that carries its keyword |
 
 **An agent's keyword is `agent-<word>` (decided 2026-11-18).** A keyword
 in that form is recognisable as set by an agent, shares no name with a
@@ -56,7 +57,7 @@ that is not lower case letters, digits and dashes, the same form
 | `invoices` | `agent-invoice` |
 | `awaiting_reply` | `agent-awaiting-reply` |
 | `inquiries` | `agent-inquiry` |
-| `sorting` | `agent-sorted` |
+| `categorization` | `agent-categorized` |
 | `counting` | `agent-counted`, never set |
 
 `MAILBOX_AGENTS_KEYWORD` names another keyword for one deployment.
@@ -71,17 +72,17 @@ that is not lower case letters, digits and dashes, the same form
 | `observe(message, context)` | for an event routed to `observe`: the actions it calls for, no model |
 | `tick(now, context)` | for agents with deadlines: what is due |
 | `prepare()` | reads what the agent needs beyond its settings, such as a list in a file |
-| `asks_model()` | whether the agent, as configured, asks a model and needs the gateway. Asked after `prepare()`. By default whether its limits allow a call. `sorting` asks one only when a group of its list has a topic (2026-11-24) |
+| `asks_model()` | whether the agent, as configured, asks a model and needs the gateway. Asked after `prepare()`. By default whether its limits allow a call. `categorization` asks one only when a group of its list has a topic (2026-11-24) |
 | `backfill_folder(folder)` | whether `backfill` takes up the messages of this folder besides the inbox and sent mail. No folder by default |
 | `folders_needed()` | the folders its configuration names and expects to be there, which `status` looks up. None by default |
 | `describe_folders(folders)` | for `status`: a line for each folder of an account that matters to it, such as one it looks in and what it does there. `folders` are the account's folders by path. Folder names only. Asked of an agent whose `folders_needed()` names one, nothing by default |
-| `keywords()` | the keywords the runtime may set and take off for it: its own, and those its configuration names, such as the keywords of the list of `sorting` (decided 2026-11-25). Code only, never from an answer of the model. Its own by default |
+| `keywords()` | the keywords the runtime may set and take off for it: its own, and those its configuration names, such as the keywords of the list of `categorization` (decided 2026-11-25). Code only, never from an answer of the model. Its own by default |
 | `may_create(path, folders)` | whether the runtime may make the folder at `path` for it: one its configuration names. `folders` are the account's folders by path, so an answer may rest on the folder above and its role. Code only, no folder by default |
 | `decide_again(message)` | after `observe`: whether the message is decided again, taken up anew as `backfill` does, such as one given a keyword the agent waits for. Code only. No by default (2026-11-25) |
 | `refresh(stored, message)` | a decision stored before, as it holds for the message now: what code decides may be worked out anew, never what the model answered. The runtime asks it before it reuses a stored decision. Unchanged by default (2026-11-25) |
-| `alone(part)` | for `eval --recognizer`: one part of the agent as an agent of its own, scored alone in its own space, such as the recognizer `invoice` of `sorting`. None by default (2026-11-25) |
-| `check_together(configured)` | a class method, for the command `check`: what is wrong with the configuration of several instances of the agent together, each file by the name of its instance, a line per problem, such as a circle of lists of `sorting` that set each other off. None by default (2026-11-25) |
-| `trace_parts(decision)` | the parts of a decision a span names below the span of the decision, such as the dimensions of `sorting`: a kind and attributes that are ids, states, counts or codes, never anything of the mail or the owner's text. None by default (2026-11-25) |
+| `alone(part)` | for `eval --recognizer`: one part of the agent as an agent of its own, scored alone in its own space, such as the recognizer `invoice` of `categorization`. None by default (2026-11-25) |
+| `check_together(configured)` | a class method, for the command `check`: what is wrong with the configuration of several instances of the agent together, each file by the name of its instance, a line per problem, such as a circle of lists of `categorization` that set each other off. None by default (2026-11-25) |
+| `trace_parts(decision)` | the parts of a decision a span names below the span of the decision, such as the dimensions of `categorization`: a kind and attributes that are ids, states, counts or codes, never anything of the mail or the owner's text. None by default (2026-11-25) |
 | `summarize(shown)` | for `report`: lines about the messages shown, each given as sender, decision and its actions with whether each was carried out |
 
 An event routed to `decide` makes the message `pending` and runs the steps
@@ -138,7 +139,7 @@ as the agent's one move, and one whose result is not there is dropped. When
 the service cannot tell either, it stays recorded and not taken. What the
 stage does not allow is recorded as what would have been done, and so is an
 action the agent asks to be `held`, whatever the stage: for a group of
-[sorting](agent-sorting.md) whose folder would lend a forged mail trust.
+[categorization](agent-categorization.md) whose folder would lend a forged mail trust.
 An action recorded and not taken is recorded once per message and stage:
 asked for again with the same argument, as by a second `backfill`, it adds
 no row and no log line, and counts as recorded (decided 2026-11-18). A

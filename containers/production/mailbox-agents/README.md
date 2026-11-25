@@ -14,14 +14,14 @@ This folder is all it needs, no clone of the repository.
 1. Copy `.env.example` to `.env` and name the version, best with the
    digest of the release behind it, as `.env.example` says.
 2. For each agent you run, copy `agents/<name>/.env.example` to
-   `agents/<name>/.env` and fill it in. `sorting` also needs
-   `agents/sorting/sorting.json`, its groups, made after
-   `sorting.example.json`, and `inquiries` needs
+   `agents/<name>/.env` and fill it in. `categorization` also needs
+   `agents/categorization/categorization.json`, its groups, made after
+   `categorization.example.json`, and `inquiries` needs
    `agents/inquiries/inquiries.json`, its sender domains and phrases, made
    after `inquiries.example.json`. `counting` asks no model and has no
-   `gateway_key`. `sorting` asks one only when a group of its list has a
+   `gateway_key`. `categorization` asks one only when a group of its list has a
    topic: then it needs the gateway settings in its `.env`, as
-   `agents/sorting/.env.example` shows, and a `gateway_key`.
+   `agents/categorization/.env.example` shows, and a `gateway_key`.
 3. Put the agent's secrets into `secrets/<name>/`, one file each,
    readable by the container's user (uid 10001) and nobody else:
 

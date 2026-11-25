@@ -85,20 +85,20 @@ services:
       retries: 3
 
   # Asks no model. Writes to the test account in the stage full only.
-  sorting:
+  categorization:
     <<: *agent
-    profiles: ["sorting"]
-    command: ["worker", "--agent", "sorting"]
+    profiles: ["categorization"]
+    command: ["worker", "--agent", "categorization"]
     environment:
       <<: *environment
-      MAILBOX_AGENTS_SORTING_FILE: /config/sorting.json
+      MAILBOX_AGENTS_CATEGORIZATION_FILE: /config/categorization.json
     volumes:
-      - sorting-data:/data
-      - ../../live/mailbox-agents/sorting.json:/config/sorting.json:ro
+      - categorization-data:/data
+      - ../../live/mailbox-agents/categorization.json:/config/categorization.json:ro
     ports:
-      - "127.0.0.1:${MAILBOX_AGENTS_SORTING_METRICS_PORT:-9482}:9464"
+      - "127.0.0.1:${MAILBOX_AGENTS_CATEGORIZATION_METRICS_PORT:-9482}:9464"
     healthcheck:
-      test: ["CMD", "benethos-mailbox-agents", "health", "--agent", "sorting"]
+      test: ["CMD", "benethos-mailbox-agents", "health", "--agent", "categorization"]
       interval: 30s
       timeout: 10s
       start_period: 30s
@@ -112,4 +112,4 @@ networks:
 volumes:
   counting-data:
   invoices-data:
-  sorting-data:
+  categorization-data:

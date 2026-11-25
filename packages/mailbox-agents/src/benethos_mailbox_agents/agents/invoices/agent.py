@@ -6,14 +6,14 @@ folders its settings name. An invoice gets the keyword. One in a folder it
 looks in moves into the subfolder below that folder, made when missing, so
 the folder says whose invoice it is. One in the inbox stays there, unless
 an inbox folder is set, and gets an open item: when a person or
-``sorting`` moves it into a folder the agent looks in, the update of the
+``categorization`` moves it into a folder the agent looks in, the update of the
 message reaches the agent, which moves it on into the subfolder without a
 new model call. The item is opened also when an inbox folder is set, as
 its move may not be taken, and closes when the message reaches it. The
 inbox folder is an end station: where the settings take it in, an invoice
 there is marked and stays. A message that carries its keyword and that
 its state file does not know is skipped. Who put a message into a folder
-does not matter: ``sorting``, a rule of the mail server or the owner by
+does not matter: ``categorization``, a rule of the mail server or the owner by
 hand. The agent knows nothing of groups and names no supplier (agent
 version 5).
 See docs/mailbox-agents/concept/agent-invoices.md.
@@ -149,7 +149,7 @@ class Invoices(Agent):
         if folder.role == "inbox":
             # It stays, or its move into the inbox folder may not be taken,
             # the folder missing or the stage below full: a move into a
-            # folder the agent looks in, by a person or by sorting, reaches
+            # folder the agent looks in, by a person or by categorization, reaches
             # it as an update (observe). One that reaches the inbox folder
             # closes the item, as filed where the agent looks in it.
             await context.items.open(message.ref, message.thread_id, NO_DEADLINE)
@@ -183,7 +183,7 @@ class Invoices(Agent):
 
     def summarize(self, shown: list[Shown]) -> list[str]:
         """The senders of invoices marked and left where they lay, with how
-        many each sent: candidates for a group of ``sorting``, so their
+        many each sent: candidates for a group of ``categorization``, so their
         invoices reach a folder of their own. An invoice marked in the
         inbox folder counts too, although it is where it belongs: ``shown``
         names no folder, so it cannot be told from one left in the inbox."""

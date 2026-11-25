@@ -1,9 +1,9 @@
 # Concept of Mailbox Agents
 
 > **Status: alpha, 2026-11-23. The runtime and the agents `counting`, `invoices`,
-> `awaiting_reply`, `inquiries` and `sorting` are built and run against a
+> `awaiting_reply`, `inquiries` and `categorization` are built and run against a
 > test account of invented mail. On a real mailbox, read-only and in
-> `shadow`: `invoices` version 3 on 2026-11-18, `sorting` and `invoices`
+> `shadow`: `invoices` version 3 on 2026-11-18, `categorization` and `invoices`
 > on 2026-11-22, and `invoices`, `inquiries` and `awaiting_reply` in the
 > versions of 0.11.0 on 2026-11-23. None changed anything, and none acts
 > on a real mailbox yet.** A statement about another system that nobody has checked
@@ -29,7 +29,7 @@ code.
 | [Configuration](concept/configuration.md) | Every setting. |
 | [Operation](concept/operation.md) | Containers, health, metrics, cost, logs. |
 | [Testing](concept/testing.md) | The offline suite and the live checks. |
-| [The chain of sorting](concept/sorting-chain.md) | Dimensions run one after another, recognizers and actions as registers, the priority of a move, the stage of an entry. |
+| [The chain of categorization](concept/categorization-chain.md) | Dimensions run one after another, recognizers and actions as registers, the priority of a move, the stage of an entry. |
 | [Peers over A2A](concept/a2a.md) | The entrance for another agent: it classifies a message by its ids, acts on nothing, tells nothing of the mail. |
 
 ## The agents
@@ -40,7 +40,7 @@ code.
 | `invoices` | is this an invoice? It moves one into the subfolder of the folder it lies in | built, version 6, prompt `v5` | [agent-invoices.md](concept/agent-invoices.md) |
 | `awaiting_reply` | does this sent message wait for an answer? | built, version 2, prompt `v2` | [agent-awaiting-reply.md](concept/agent-awaiting-reply.md) |
 | `inquiries` | is this a project inquiry, and what does it say? | built, version 2, prompt `v4` | [agent-inquiries.md](concept/agent-inquiries.md) |
-| `sorting` | which category of its list does the message belong to, in each dimension of the list, and what follows from it? | built, version 3: dimensions run in order, the sender rules in code, a model only for a message they do not settle and only where a category has a topic (2026-11-24), what follows from a category named in its list (2026-11-25). `invoices` then files an invoice within the folder `sorting` put it in | [agent-sorting.md](concept/agent-sorting.md) |
+| `categorization` | which category of its list does the message belong to, in each dimension of the list, and what follows from it? | built, version 3: dimensions run in order, the sender rules in code, a model only for a message they do not settle and only where a category has a topic (2026-11-24), what follows from a category named in its list (2026-11-25). `invoices` then files an invoice within the folder `categorization` put it in | [agent-categorization.md](concept/agent-categorization.md) |
 
 ## Beside the concept
 
@@ -132,11 +132,11 @@ on one runtime, and each process runs one of them.
   for an invoice, into the subfolder of a folder it looks in, and out of
   the inbox only into the inbox folder the owner set. The model names no
   folder ([invoices](concept/agent-invoices.md)). A second since
-  2026-11-24: `sorting` acts on the group its model chose by the group's
+  2026-11-24: `categorization` acts on the group its model chose by the group's
   topic where the owner set `"by_topic": "act"` for it, with a quote
   found in the mail. The model names a group of the list, never a
   folder, and a held group stays held
-  ([sorting](concept/agent-sorting.md)).
+  ([categorization](concept/agent-categorization.md)).
 - **Reversible only.** Every action records what was there before.
 - **Nothing of a mail in a log line, secrets never travel**
   ([safety](concept/safety.md), [LOGGING.md](LOGGING.md)).

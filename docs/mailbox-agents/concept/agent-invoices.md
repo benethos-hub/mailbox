@@ -4,7 +4,7 @@ Part of the [concept](../CONCEPT.md).
 
 > **Status: version 6, prompt `v5`. Version 5 was evaluated on the
 > invented mail of the test account and run there in `shadow` beside
-> [sorting](agent-sorting.md). Version 6 reads the text of an HTML-only
+> [categorization](agent-categorization.md). Version 6 reads the text of an HTML-only
 > mail and was evaluated on the same invented mail on 2026-11-23,
 > through `mail-classifier`. On a real mailbox it ran on 2026-11-23,
 > read-only and in `shadow`, and changed nothing.
@@ -33,11 +33,11 @@ the opposite sign (decided 2026-11-18 for now, prompt `v3`).
 **The folder says whose invoice it is (decided 2026-11-18).** `invoices`
 asks one question: is this message an invoice? It no longer asks from which
 supplier. It moves an invoice into a subfolder of the folder it lies in.
-Who put the message there does not matter: [sorting](agent-sorting.md), a rule of
+Who put the message there does not matter: [categorization](agent-categorization.md), a rule of
 the mail server or the owner by hand. Filing by provider comes first, the
 subfolder for invoices in a second run.
 
-**It works without `sorting` (decided 2026-11-18).** So the folders it
+**It works without `categorization` (decided 2026-11-18).** So the folders it
 looks in are a setting, and it knows nothing of groups or sender rules.
 
 ## Settings
@@ -70,8 +70,8 @@ folder like any other, but nothing moves on from it:
 | a subfolder, such as `Invoices/Hosting/Rechnungen` | never | |
 
 It is looked in because an inbox folder that is also a folder of a group
-of `sorting`, or one the settings take in, would otherwise leave an
-invoice put there by `sorting` or by hand neither marked nor filed,
+of `categorization`, or one the settings take in, would otherwise leave an
+invoice put there by `categorization` or by hand neither marked nor filed,
 silently. Such an invoice is asked about and marked. An invoice the owner
 puts into the end station by hand costs a model call.
 One the agent moved there itself is known to its state file and costs
@@ -81,7 +81,7 @@ pattern of the subfolder points, such as `Invoices/Rechnungen` beside
 
 **`*` takes in the owner's own folders (decided 2026-11-18).** It covers
 every folder at the top that has no role, the owner's own among them, so
-the folders of [sorting](agent-sorting.md) may lie at the top. The inbox, sent
+the folders of [categorization](agent-categorization.md) may lie at the top. The inbox, sent
 mail, drafts, the trash, junk, the archive and a folder of all mail have a
 role and are not taken in. A folder named by its path is looked in whatever
 its role, but the trash, junk and spam. The runtime makes a subfolder only
@@ -89,14 +89,14 @@ below a folder that exists and that the agent looks in, judged with its
 role, so `*` makes none below sent mail, drafts or the inbox.
 
 `Parent/*` and `*` are matched against the path of the folder a message
-lies in, not resolved once at the start, so a folder `sorting` makes later
+lies in, not resolved once at the start, so a folder `categorization` makes later
 is looked in at once. At the start the settings are checked: a wrong one
 stops it. `status` looks up in the mailbox service the folders that should
 be there, those named, the parents of `Parent/*` and the inbox folder, and
 names each one missing in each account the settings name, or without
 `MAILBOX_AGENTS_ACCOUNTS` in each account the user is granted, as
 `get_me` answers them (since 2026-11-18). A missing one does
-not stop the start, as `sorting` may make it later. One whose name is
+not stop the start, as `categorization` may make it later. One whose name is
 there in another case only is named as such: the runtime neither moves
 into it nor makes it.
 
@@ -193,24 +193,24 @@ evidence check looks a quote up in the same cut text.
 Recognising an electronic invoice by its embedded data needs the attachment
 read and is not part of this version.
 
-## Beside `sorting`
+## Beside `categorization`
 
 Without an inbox folder, whichever agent comes first, the end is the same:
 
 - `invoices` first: the message is marked in the inbox and gets an open
-  item. `sorting` moves it. The move reaches `invoices` as an update of the
+  item. `categorization` moves it. The move reaches `invoices` as an update of the
   message, it finds the open item, sees the message in a folder it looks in
   and moves it on.
-- `sorting` first: `invoices` finds the message in the folder it looks in
+- `categorization` first: `invoices` finds the message in the folder it looks in
   and moves it on after its decision.
 
 With an inbox folder set, an invoice `invoices` takes up first goes into
-that folder, and `sorting` leaves it there. Its item closes and the
+that folder, and `categorization` leaves it there. Its item closes and the
 invoice stays there, as nothing moves on from the end station. While that
 move is not taken, the folder missing or the stage below `full`, the item
 stays open and the invoice goes the way of `invoices` first above: once
-`sorting` moves it into a folder the agent looks in, it is filed there.
-`sorting` first ends as without an inbox folder. An invoice `sorting` puts
+`categorization` moves it into a folder the agent looks in, it is filed there.
+`categorization` first ends as without an inbox folder. An invoice `categorization` puts
 into the inbox folder itself, before `invoices` takes it up, is marked
 there and stays when the settings take that folder in. When they do not,
 it is neither marked nor filed.
@@ -248,7 +248,7 @@ as with version 5.
 
 `live/mailbox-agents/invoices.py` ran on the test account on 2026-11-19 with version 5,
 `invoices` in `shadow` and the model of the live setup, and all its checks
-passed. The two orders beside `sorting` ended as with version 4. Then:
+passed. The two orders beside `categorization` ended as with version 4. Then:
 
 - The end station: an invoice of the inbox moved by hand into
   `Invoices/Telco`, the inbox folder, which `Invoices/*` takes in. A

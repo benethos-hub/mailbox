@@ -65,8 +65,9 @@ class Settings(files.FileSettings):
     stage: Stage = "shadow"
     keyword: str | None = None
     # One of several processes of one agent, each with a list of its own,
-    # such as sorting for partners and sorting for documents: its own state
-    # file, keyword, metrics and log lines (decided 2026-11-25).
+    # such as categorization for partners and categorization for
+    # documents: its own state file, keyword, metrics and log lines
+    # (decided 2026-11-25).
     instance: str | None = None
 
     # --- the loop ------------------------------------------------------------
@@ -105,14 +106,14 @@ class Settings(files.FileSettings):
     # --- inquiries, docs/mailbox-agents/concept/agent-inquiries.md --------------------
     inquiries_patterns_file: Path | None = None
 
-    # --- sorting, docs/mailbox-agents/concept/agent-sorting.md ------------------------
-    sorting_file: Path | None = None
+    # --- categorization, docs/mailbox-agents/concept/agent-categorization.md
+    categorization_file: Path | None = None
 
     @field_validator(
         "ca_file",
         "keyword",
         "instance",
-        "sorting_file",
+        "categorization_file",
         "inquiries_patterns_file",
         "otlp_endpoint",
         "otlp_headers_file",

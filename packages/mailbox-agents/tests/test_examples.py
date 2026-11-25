@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
+from benethos_mailbox_agents.agents.categorization.lists import load_chain
 from benethos_mailbox_agents.agents.inquiries.patterns import load_patterns
-from benethos_mailbox_agents.agents.sorting.lists import load_chain
 
 from .agents_helpers import ROOT
 
@@ -16,12 +16,12 @@ EXAMPLES = sorted(
     [
         *(ROOT / "config" / "benethos-mailbox-agents").rglob("*.example.json"),
         *(ROOT / "containers").glob("*/mailbox-agents/**/*.example.json"),
-        ROOT / "containers" / "live" / "mailbox-agents" / "sorting.json",
+        ROOT / "containers" / "live" / "mailbox-agents" / "categorization.json",
     ]
 )
 LOADERS = {
     "inquiries": load_patterns,
-    "sorting": load_chain,
+    "categorization": load_chain,
 }
 
 

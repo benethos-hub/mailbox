@@ -1,5 +1,5 @@
 """The run of the checks and what they share: a check skipped, the agent
-``sorting`` over the test account and the keywords it sets, and the
+``categorization`` over the test account and the keywords it sets, and the
 labels a state file holds."""
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ from contextlib import AsyncExitStack
 from pathlib import Path
 from typing import TypeVar
 
-from benethos_mailbox_agents.agents.sorting.agent import Sorting
+from benethos_mailbox_agents.agents.categorization.agent import Categorization
 from benethos_mailbox_agents.settings import Settings
 from benethos_mailbox_agents.sources.mailbox import Mailbox
 from benethos_mailbox_agents.store import ActionRow, Store
@@ -39,15 +39,16 @@ def labels(store: Store) -> Counter[str]:
 async def sort_test_account(
     settings: Settings, mailbox: Mailbox, stage: str, folder: Path
 ) -> tuple[list[ActionRow], Counter[str]]:
-    """The agent ``sorting`` with the list containers/live/mailbox-agents/sorting.json,
-    in ``stage``, over the mail of the last :data:`DAYS` days, with its state
-    file in ``folder``, through the gateway of the settings when a group
-    of the list has a topic. Answers its actions and how many messages it
+    """The agent ``categorization`` with the list
+    containers/live/mailbox-agents/categorization.json, in ``stage``,
+    over the mail of the last :data:`DAYS` days, with its state file in
+    ``folder``, through the gateway of the settings when a group of the
+    list has a topic. Answers its actions and how many messages it
     decided for each label."""
     found = settings.model_copy(
-        update={"stage": stage, "sorting_file": LIST, "data_dir": folder}
+        update={"stage": stage, "categorization_file": LIST, "data_dir": folder}
     )
-    agent = Sorting(found)
+    agent = Categorization(found)
     agent.prepare()
     async with AsyncExitStack() as stack:
         gateway = (
@@ -55,18 +56,18 @@ async def sort_test_account(
             if agent.asks_model()
             else None
         )
-        with Store.open(folder / "sorting.db") as store:
-            sorting = worker(agent, store, mailbox, gateway)
-            await sorting.backfill(DAYS)
-            await sorting.drain()
+        with Store.open(folder / "categorization.db") as store:
+            categorization = worker(agent, store, mailbox, gateway)
+            await categorization.backfill(DAYS)
+            await categorization.drain()
             return store.actions(), labels(store)
 
 
-def sorting_keywords(settings: Settings) -> tuple[str, ...]:
-    """Every keyword ``sorting`` sets with the list of the live setup: its
+def categorization_keywords(settings: Settings) -> tuple[str, ...]:
+    """Every keyword ``categorization`` sets with the list of the live setup: its
     own and those of the list, each to be taken off when the mail is put
     back."""
-    agent = Sorting(settings.model_copy(update={"sorting_file": LIST}))
+    agent = Categorization(settings.model_copy(update={"categorization_file": LIST}))
     agent.prepare()
     return tuple(sorted(agent.keywords()))
 

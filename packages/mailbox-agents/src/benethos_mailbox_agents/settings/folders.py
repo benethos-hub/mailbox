@@ -35,7 +35,7 @@ ENV_FILE_VARIABLE = "MAILBOX_AGENTS_ENV_FILE"
 # the settings file, outside the layout of the repository.
 PATH_SETTINGS = (
     "data_dir",
-    "sorting_file",
+    "categorization_file",
     "inquiries_patterns_file",
     "ca_file",
     "service_token_file",
@@ -69,7 +69,7 @@ class _Paths(files.FileSettings):
     model_config = {"env_prefix": "MAILBOX_AGENTS_", "env_file_encoding": "utf-8"}
 
     data_dir: str | None = None
-    sorting_file: str | None = None
+    categorization_file: str | None = None
     inquiries_patterns_file: str | None = None
     ca_file: str | None = None
     service_token_file: str | None = None

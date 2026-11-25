@@ -22,7 +22,7 @@ MADE = [
     "gateway.env",
     "gateway-db.env",
     "gold-invoices.jsonl",
-    "gold-sorting.jsonl",
+    "gold-categorization.jsonl",
 ]
 
 
@@ -30,7 +30,7 @@ def secrets(tmp_path: Path, *names: str) -> Path:
     folder = tmp_path / "secrets"
     (folder / "tls").mkdir(parents=True)
     (folder / "tls" / "ca.pem").write_text("ca", encoding="utf-8")
-    (folder / "data" / "sorting").mkdir(parents=True)
+    (folder / "data" / "categorization").mkdir(parents=True)
     (folder / "anthropic_api_key").write_text("key", encoding="utf-8")
     for name in (*MADE, *names):
         target = folder / name

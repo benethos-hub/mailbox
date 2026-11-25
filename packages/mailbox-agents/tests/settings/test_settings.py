@@ -107,7 +107,7 @@ def test_an_empty_secret_lets_its_file_be_read(
     [
         "keyword",
         "ca_file",
-        "sorting_file",
+        "categorization_file",
         "inquiries_patterns_file",
         "service_token_file",
         "gateway_key_file",

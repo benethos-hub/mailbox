@@ -41,7 +41,7 @@ upstream away, logged as `worker.pass_failed` with its wait (decided
 2026-11-20).
 
 An upstream away in the middle of a message's actions may leave some of
-them taken: `sorting` has moved the message out of the inbox, and setting
+them taken: `categorization` has moved the message out of the inbox, and setting
 its keyword failed. When the worker runs that message again, it goes on to
 its effect without asking `admit`, which would refuse it outside the
 inbox, and the executor finds what is done there already (2026-11-20). The
@@ -134,7 +134,7 @@ details, each quote and whether it was found, the label of the baseline,
 and each action with its stage and whether it was carried out or would
 have been. It ends with what the agent has to say about the messages shown: for
 `invoices`, the senders of invoices it marked and did not move, with how
-many each sent, as candidates for a group of `sorting`. For `sorting`, per group
+many each sent, as candidates for a group of `categorization`. For `categorization`, per group
 how many messages were moved, recorded, held or not moved, the senders in
 no group that wrote most often, and the senders two groups name alike.
 These counts cover the messages shown. When the state file holds more,

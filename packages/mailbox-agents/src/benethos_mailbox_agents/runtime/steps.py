@@ -336,7 +336,7 @@ class StepRunner:
 
     def _baseline_version(self) -> str:
         """What the baseline is stored under: the agent version, and the
-        prompt version beside it when there is one. For ``sorting`` the
+        prompt version beside it when there is one. For ``categorization`` the
         prompt version is the list, which its rules read as well, so a
         changed list runs the rules anew beside the new decision."""
         if not self.agent.prompt_version:
