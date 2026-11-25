@@ -34,10 +34,11 @@ and `KEYWORD`.
 | `OTLP_ENDPOINT` | where spans go over OTLP and HTTP, `<endpoint>/v1/traces` ([operation](operation.md)). Unset: no spans leave the process |
 | `OTLP_HEADERS_FILE` | a file of headers for it, one `name=value` per line, such as a key. Never logged |
 | `OTLP_ALLOW_HTTP` | http to another machine as well, `false` when unset |
+| `A2A_PORT`, `A2A_HOST`, `A2A_URL`, `A2A_TOKEN`, `A2A_TOKEN_FILE` | the entrance for peers over A2A, off unless a port is set, and then only with a token ([peers over A2A](a2a.md)) |
 | `LOG_LEVEL` | `DEBUG`, `INFO`, `WARNING` or `ERROR`, `INFO` when unset |
 
-`SERVICE_TOKEN_FILE` and `GATEWAY_KEY_FILE` name the file a secret is read
-from. A secret given directly wins over its file. The file is read as
+`SERVICE_TOKEN_FILE`, `GATEWAY_KEY_FILE` and `A2A_TOKEN_FILE` name the
+file a secret is read from. A secret given directly wins over its file. The file is read as
 UTF-8, a mark of UTF-8 at its start left out. A secret is printable ASCII,
 as a header of HTTP carries it, and any other stops the start, naming the
 setting and never the value.

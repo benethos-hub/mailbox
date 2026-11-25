@@ -171,6 +171,7 @@ operator's filters. It writes under the logger
 | `process.stopped` | INFO | the worker stopped, and why |
 | `process.migrated` | INFO | the state file was made or migrated, with the notes of its steps |
 | `process.metrics_serving` | INFO | the metrics are served on a port |
+| `process.a2a_serving` | INFO | the entrance for peers over A2A is served on a port |
 | `worker.pass_done` | DEBUG | a pass ended, with its duration and the messages pending |
 | `worker.pass_failed` | ERROR | a pass failed with an error of the agent's own, and the loop waits as after an upstream away |
 | `worker.upstream_away` | WARNING | the mailbox service or the gateway is away, and the loop waits |
@@ -183,6 +184,7 @@ operator's filters. It writes under the logger
 | `messages.step_failed` | WARNING | a step of a message failed |
 | `messages.answer_refused` | WARNING | the model's answer failed its schema, or the gateway refused the request |
 | `messages.quote_missing` | INFO | a quote the model gave for a field is not in the mail |
+| `messages.peer_asked` | INFO | a peer asked over A2A how a message is classified, with the outcome and never the categories |
 | `actions.done` | INFO | an action was carried out on a message |
 | `actions.recorded` | INFO | an action was recorded and not carried out: the stage did not allow it, the agent held it, or a folder or move before it was recorded only |
 | `actions.kept` | INFO | a move of a message the agent moved once before was not taken: the folder the owner chose since stands |

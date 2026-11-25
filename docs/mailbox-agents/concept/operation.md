@@ -40,6 +40,10 @@ Part of the [concept](../CONCEPT.md).
   `mailbox_agents_model_call_seconds` and `mailbox_agents_actions_total` by
   action and whether it was carried out. A port another process holds
   ends `worker` with exit code 2, naming `METRICS_PORT`.
+- **Peers over A2A:** off unless `A2A_PORT` is set, then served beside
+  the metrics in the process of the worker and stopped with it, only
+  with `A2A_TOKEN` ([peers over A2A](a2a.md)). A port another process
+  holds ends `worker` with exit code 2, naming `A2A_PORT`.
 - **Spans:** over OpenTelemetry, off unless `OTLP_ENDPOINT` is set
   (decided 2026-11-25). Then each process exports over OTLP and HTTP to
   `<endpoint>/v1/traces`, so the target is a setting and any that takes

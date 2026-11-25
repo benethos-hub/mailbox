@@ -30,6 +30,7 @@ code.
 | [Operation](concept/operation.md) | Containers, health, metrics, cost, logs. |
 | [Testing](concept/testing.md) | The offline suite and the live checks. |
 | [The chain of sorting](concept/sorting-chain.md) | Dimensions run one after another, recognizers and actions as registers, the priority of a move, the stage of an entry. |
+| [Peers over A2A](concept/a2a.md) | The entrance for another agent: it classifies a message by its ids, acts on nothing, tells nothing of the mail. |
 
 ## The agents
 

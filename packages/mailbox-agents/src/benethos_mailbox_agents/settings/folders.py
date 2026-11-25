@@ -41,6 +41,7 @@ PATH_SETTINGS = (
     "service_token_file",
     "gateway_key_file",
     "otlp_headers_file",
+    "a2a_token_file",
 )
 
 
@@ -74,6 +75,7 @@ class _Paths(files.FileSettings):
     service_token_file: str | None = None
     gateway_key_file: str | None = None
     otlp_headers_file: str | None = None
+    a2a_token_file: str | None = None
 
 
 def rebased(where: Folders, given: dict[str, Any]) -> dict[str, Any]:

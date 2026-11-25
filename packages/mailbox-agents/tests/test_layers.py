@@ -54,21 +54,12 @@ MAY_IMPORT: dict[str, frozenset[str]] = {
     "agents": frozenset({"errors", "records", "settings", "contract"}),
     # Scores an agent the way the runtime runs it, on a state file of its own.
     "evaluation": frozenset({"errors", "records", "contract", "store", "runtime"}),
+    # The entrance over A2A: it is handed what classifies a message.
+    "peers": frozenset({"errors", "records", "settings"}),
     # The top: it wires the upstreams, the state file and the runtime.
     "cli": frozenset(
-        {
-            "errors",
-            "logbook",
-            "settings",
-            "records",
-            "contract",
-            "store",
-            "sources",
-            "llm",
-            "runtime",
-            "evaluation",
-            "telemetry",
-        }
+        {"errors", "logbook", "settings", "records", "contract", "store"}
+        | {"sources", "llm", "runtime", "evaluation", "telemetry", "peers"}
     ),
     "__main__": frozenset({"cli"}),
 }
@@ -118,6 +109,9 @@ CONFINED: dict[str, frozenset[str]] = {
     "httpx": frozenset({"sources/mailbox.py", "llm/gateway.py"}),
     "prometheus_client": frozenset({"runtime/metrics.py"}),
     "opentelemetry": frozenset({"telemetry/otlp.py"}),
+    # The entrance over A2A and the server that opens its port, the one
+    # socket besides the metrics, which prometheus_client opens.
+    **dict.fromkeys(("a2a", "starlette", "uvicorn"), frozenset({"peers/a2a.py"})),
     # Its one home is the group settings of mailbox-common.
     "pydantic_settings": frozenset(),
     # The TLS context of the own CA: read in the settings, used by the two

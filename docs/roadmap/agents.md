@@ -26,6 +26,10 @@ a recognizer of a register, and what follows from it named beside it, a
 keyword, a move, a folder below, by priority and with a stage per entry
 ([the chain of sorting](../mailbox-agents/concept/sorting-chain.md)).
 
+Since 2026-11-25 an agent answers another agent over A2A how it
+classifies a message, read only, behind a token
+([peers over A2A](../mailbox-agents/concept/a2a.md)).
+
 ### Next
 
 | Step | Content |

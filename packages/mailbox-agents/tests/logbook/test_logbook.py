@@ -129,6 +129,10 @@ LINES: list[tuple[Activity, str]] = [
         "a began serving metrics on port 9464",
     ),
     (
+        process.A2AServing(agent="a", port=9470),
+        "a began serving peers over A2A on port 9470",
+    ),
+    (
         worker.PassDone(agent="a", seconds=0.5, pending=1),
         "a finished a pass in 0.50s with 1 message pending",
     ),
@@ -174,6 +178,10 @@ LINES: list[tuple[Activity, str]] = [
     (
         messages.QuoteMissing(agent="a", message_id="m1", field="label"),
         "a found no quote for label in message m1",
+    ),
+    (
+        messages.PeerAsked(agent="a", message_id="m1", outcome="classified"),
+        "a told a peer of message m1: classified",
     ),
     (
         actions.Done(

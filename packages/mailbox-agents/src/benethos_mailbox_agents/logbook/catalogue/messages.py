@@ -74,3 +74,17 @@ class QuoteMissing(Activity):
 
     def says(self) -> str:
         return f"found no quote for {self.field} in message {self.message_id}"
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class PeerAsked(Activity):
+    """A peer asked over A2A how the agent classifies a message, and was
+    told ``outcome``: ``classified``, ``refused`` or why not."""
+
+    name: ClassVar[str] = "peer_asked"
+
+    message_id: str
+    outcome: str
+
+    def says(self) -> str:
+        return f"told a peer of message {self.message_id}: {self.outcome}"

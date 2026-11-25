@@ -56,6 +56,8 @@ top-level module.
 - `agents` see `contract`, `records`, `settings` and `errors`, never
   `sources`, `llm`, `store` or `runtime`.
 - `evaluation` stands on `runtime` and `store`.
+- `peers`, the entrance for peers over A2A, stands on `errors`,
+  `records` and `settings`: it is handed what classifies a message.
 - `cli` wires everything on top, and `__main__` calls it.
 
 Of the other packages of the repository, the agents take the client,
@@ -80,7 +82,7 @@ the agents too, with four differences of their own design:
   `settings/model.py`, which reads the CA of the setup. `CONFINED`
   names them.
 - **Imports through `__init__.py` (5.3).** `contract`, `records`,
-  `errors`, `logbook`, `settings`, `store`, `telemetry` and `cli` offer
+  `errors`, `logbook`, `settings`, `store`, `telemetry`, `peers` and `cli` offer
   their names there. `runtime`, `llm`, `sources` and `evaluation` offer none, and
   their callers import the module.
 - **The architecture test (13).** It is `tests/test_layers.py`, beside
@@ -107,7 +109,8 @@ packages/mailbox-agents/src/benethos_mailbox_agents/
                   # Context an agent is handed with its protocols Model,
                   # Reader and Items, the registry of agents, prompt loading
   records/        # the models passed between layers: MessageRef, Decision,
-                  # Evidence, StepResult, OpenItem, and what an agent sees of
+                  # Evidence, StepResult, OpenItem, Classified and
+                  # NotClassified, and what an agent sees of
                   # a mailbox: Event, MailMessage, Address, Attachment,
                   # FolderRef, Thread
   sources/
@@ -120,6 +123,10 @@ packages/mailbox-agents/src/benethos_mailbox_agents/
     spans.py      # the spans as the rest sees them, off by default
     otlp.py       # the only module importing opentelemetry: OTLP over
                   # HTTP when an endpoint is set
+  peers/
+    a2a.py        # the only module importing a2a-sdk, Starlette and
+                  # uvicorn: the entrance over A2A, served when a port
+                  # is set
   store/          # SQLite, one file per agent: store.py opens and
                   # migrates it, rows.py is what its parts stand on,
                   # messages.py, steps.py, actions.py, items.py and
@@ -128,7 +135,7 @@ packages/mailbox-agents/src/benethos_mailbox_agents/
   runtime/        # worker loop, feed reader, tick, step runner, the model
                   # calls of one message, open items over the state file,
                   # the read-only mailbox, action executor, readiness,
-                  # health, metrics
+                  # health, metrics, a classification for a peer
   evaluation/     # the gold format, the run, scoring per label and per
                   # field, the report
   agents/         # one package per agent. agent.py holds its one

@@ -8,12 +8,14 @@ import argparse
 import asyncio
 import signal
 import tempfile
-from contextlib import ExitStack, suppress
+from collections.abc import AsyncIterator
+from contextlib import ExitStack, asynccontextmanager, suppress
 from pathlib import Path
 from typing import Any
 
 from benethos_mailbox_common.values import text as text_values
 
+from .. import peers
 from ..contract import Agent, discover, load_agent, state_name
 from ..errors import (
     ConfigError,
@@ -25,13 +27,15 @@ from ..evaluation.gold import GoldItem, load_gold
 from ..evaluation.report import build, render, write
 from ..evaluation.run import evaluate as run_evaluation
 from ..logbook import process, record
+from ..peers import Card, Server
+from ..runtime.classify import Classifier
 from ..runtime.health import check
 from ..runtime.readiness import MAILBOX_SETTINGS, folder_lines, readiness, start
 from ..settings import PREFIX, Settings, folders
 from ..sources.versions import matches, shown, taken
 from ..store import STATES, Store, earlier_file, path_for
 from .report import report as make_report
-from .session import mailbox_for, now, session, upstreams
+from .session import Session, mailbox_for, now, session, upstreams
 
 __all__ = [
     "backfill",
@@ -53,6 +57,9 @@ def _counts(store: Store) -> str:
 
 
 def worker(args: argparse.Namespace, settings: Settings) -> int:
+    if settings.a2a_port:
+        # Before anything is opened: the entrance takes no peer unasked.
+        settings.secret("a2a_token")
     asyncio.run(_worker(args.agent, settings))
     return 0
 
@@ -89,8 +96,36 @@ async def _worker(name: str, settings: Settings) -> None:
                         agent=found.agent.label, port=settings.metrics_port
                     )
                 )
-            await found.worker.run(stop)
+            if settings.a2a_port:
+                async with _peers(found, settings):
+                    await found.worker.run(stop)
+            else:
+                await found.worker.run(stop)
         record(process.Stopped(agent=found.agent.label, reason="signal"))
+
+
+@asynccontextmanager
+async def _peers(found: Session, settings: Settings) -> AsyncIterator[None]:
+    """The entrance for peers over A2A beside the worker, on its port,
+    stopped when the worker stops."""
+    token = settings.secret("a2a_token")
+    classifier = Classifier(
+        found.agent,
+        reader=found.mailbox,
+        gateway=found.gateway,
+        store=found.store,
+        now=now,
+    )
+    url = settings.a2a_url or f"http://{settings.a2a_host}:{settings.a2a_port}/"
+    card = Card(name=found.agent.label, version=found.agent.version, url=url)
+    server = Server(
+        peers.app(classifier.classify, card, token),
+        settings.a2a_host,
+        settings.a2a_port,
+    )
+    async with server.serving():
+        record(process.A2AServing(agent=found.agent.label, port=settings.a2a_port))
+        yield
 
 
 # -- run and backfill -------------------------------------------------------------
