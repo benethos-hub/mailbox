@@ -5,6 +5,7 @@ from __future__ import annotations
 import builtins
 import json
 import sqlite3
+from collections.abc import Iterable
 from datetime import datetime
 
 from ....common.clock import iso, parse_iso
@@ -20,8 +21,8 @@ class SqliteSendLogRepository:
         self._db.execute(
             "INSERT INTO sends (id, created_at, user_id, credential_id,"
             " account_id, operation, recipients, outcome, error, refused,"
-            " message_id_header, outbox_job_id)"
-            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            " message_id_header, outbox_job_id, recipients_folded)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 record.id,
                 iso(record.created_at),
@@ -35,6 +36,7 @@ class SqliteSendLogRepository:
                 json.dumps(record.refused),
                 record.message_id_header,
                 record.outbox_job_id,
+                folded(record.recipients),
             ),
         )
 
@@ -72,13 +74,10 @@ class SqliteSendLogRepository:
                     where.append(column)
                     params.append(value)
             if matching.recipient:
-                # In the JSON of the recipients a LIKE would also match
-                # quotes and commas: the part is looked for in each address.
-                where.append(
-                    "EXISTS (SELECT 1 FROM json_each(recipients)"
-                    " WHERE instr(casefold(value), ?) > 0)"
-                )
-                params.append(matching.recipient.casefold())
+                # One address per line: a part with a line break would
+                # reach across two, and no address holds one.
+                where.append("recipients_folded LIKE ? ESCAPE '\\'")
+                params.append(_within(matching.recipient.casefold()))
         return self._db.query_as(
             _send,
             f"SELECT * FROM sends WHERE {' AND '.join(where)}"
@@ -92,6 +91,22 @@ class SqliteSendLogRepository:
 
     def purge(self, before: datetime) -> int:
         return self._db.purge("sends", "created_at", before)
+
+
+def folded(recipients: Iterable[str]) -> str:
+    """The addresses as the search finds them: each folded by
+    ``str.casefold()``, one per line."""
+    return "\n".join(address.casefold() for address in recipients)
+
+
+def _within(part: str) -> str:
+    """The pattern of LIKE that finds ``part`` as it is, inside one line.
+    A part with a line break gets one that finds nothing."""
+    if "\n" in part:
+        return ""
+    for special in ("\\", "%", "_"):
+        part = part.replace(special, "\\" + special)
+    return f"%{part}%"
 
 
 def _send(row: sqlite3.Row) -> SendRecord:

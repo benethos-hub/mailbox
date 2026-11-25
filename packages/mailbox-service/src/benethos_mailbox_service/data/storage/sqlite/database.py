@@ -24,9 +24,9 @@ from typing import Any, TypeVar
 from benethos_mailbox_common.paths import locks
 
 from ....common.chunks import batched
-from ....common.clock import iso
+from ....common.clock import iso, utc_now
 from ....errors import ConflictError, StorageError, missing
-from ...files import create_private
+from ...files import create_private, free_path
 from .migrations import MIGRATIONS, SCHEMA_VERSION
 
 T = TypeVar("T")
@@ -54,6 +54,10 @@ def move_sidecars(target: Path, kept: Path) -> None:
 # Stays below SQLite's limit of host parameters in one statement.
 IN_CHUNK = 500
 
+# Opening a database of an older schema keeps a copy of it first: the
+# step to this schema rebuilds tables (docs/mailbox-service/concept/security.md 7.8).
+COPY_BEFORE = 26
+
 
 @dataclass(frozen=True, slots=True)
 class Migrated:
@@ -71,10 +75,12 @@ _INCREMENTAL = 2
 
 class Database:
     """The database at ``path``, readable by its owner alone. Without a
-    path it lives in memory, for tests."""
+    path it lives in memory, for tests. ``keep_copy``: a file of a schema
+    before ``COPY_BEFORE`` is copied before it is migrated."""
 
-    def __init__(self, path: Path | None = None) -> None:
+    def __init__(self, path: Path | None = None, *, keep_copy: bool = True) -> None:
         self._path = path
+        self._keep = keep_copy
         if path is not None:
             path.parent.mkdir(parents=True, exist_ok=True)
             _owner_only(path)
@@ -93,10 +99,6 @@ class Database:
             self._connection.execute("PRAGMA foreign_keys = ON")
             # Freed pages are overwritten, so deleted secrets do not linger.
             self._connection.execute("PRAGMA secure_delete = ON")
-            # Case folded as Python folds it, beyond ASCII too.
-            self._connection.create_function(
-                "casefold", 1, _casefold, deterministic=True
-            )
         try:
             rewritten = self._shrinkable()
             self._migrate(rewritten)
@@ -325,16 +327,53 @@ class Database:
                 f"database schema {current} is newer than this version supports "
                 f"({SCHEMA_VERSION}): run a newer version of the service"
             )
+        kept = None
+        if self._keep and self._path is not None and 0 < current < COPY_BEFORE:
+            kept = self._keep_copy(self._path, current)
         notes: list[str] = []
         for migration in MIGRATIONS.pending(current):
             with self.transaction() as db:
                 notes += MIGRATIONS.apply(db, migration)
+        if kept is not None:
+            notes.append(f"a copy of the database at schema {current} is kept: {kept}")
         if rewritten:
             notes.append(
                 "the file was rewritten once: from now on it shrinks after deletions"
             )
         if current < SCHEMA_VERSION or rewritten:
             self.migrated = Migrated(current, SCHEMA_VERSION, tuple(notes))
+
+    def _keep_copy(self, path: Path, current: int) -> str:
+        """A copy of the database beside ``path``, readable by its owner
+        alone, before the steps to schema ``COPY_BEFORE`` change it. It is
+        never removed by the service. Answers its name. StorageError when
+        it cannot be written, and then nothing is migrated."""
+        stamp = utc_now().strftime("%Y%m%dT%H%M%SZ")
+        kept = free_path(
+            path.with_name(f"{path.name}.before-schema-{COPY_BEFORE}-{stamp}")
+        )
+        try:
+            create_private(kept)
+        except OSError as exc:
+            raise _not_copied(current, exc) from None
+        try:
+            with self._lock, translated():
+                copy = sqlite3.connect(str(kept))
+                try:
+                    self._connection.backup(copy)
+                finally:
+                    copy.close()
+        except (OSError, StorageError) as exc:
+            remove_database_file(kept)
+            raise _not_copied(current, exc) from None
+        return kept.name
+
+
+def _not_copied(current: int, exc: Exception) -> StorageError:
+    return StorageError(
+        f"the database at schema {current} was not migrated: its copy"
+        f" before schema {COPY_BEFORE} could not be written: {exc}"
+    )
 
 
 @contextmanager
@@ -349,13 +388,10 @@ def translated() -> Iterator[None]:
         raise StorageError(f"the database failed: {exc}") from None
 
 
-def _casefold(value: str | None) -> str | None:
-    return value.casefold() if isinstance(value, str) else value
-
-
 def migrate_file(path: Path) -> None:
-    """Bring the database file at ``path`` to this version's schema."""
-    Database(path).close()
+    """Bring the database file at ``path`` to this version's schema. It
+    comes from a backup, which is its copy: none is kept beside it."""
+    Database(path, keep_copy=False).close()
 
 
 def service_lock(path: Path) -> Path:

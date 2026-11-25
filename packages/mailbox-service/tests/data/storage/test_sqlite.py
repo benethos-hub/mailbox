@@ -35,10 +35,12 @@ from benethos_mailbox_service.data.storage.sqlite.migrations import (
 from benethos_mailbox_service.domain.rights import Access
 from benethos_mailbox_service.errors import StorageError
 
+from ...schema_helpers import at_schema
+
 
 def test_webhooks_of_users_deleted_before_are_dropped(tmp_path: Path) -> None:
     path = tmp_path / "old.db"
-    Database(path).close()
+    at_schema(path, 25).close()
     raw = sqlite3.connect(path)
     with raw:
         raw.execute("ALTER TABLE users DROP COLUMN service")
@@ -80,7 +82,7 @@ def test_webhooks_of_users_deleted_before_are_dropped(tmp_path: Path) -> None:
 def _at_schema_14(path: Path, users: dict[str, list[dict[str, object]]]) -> None:
     """A database of schema 14: rights of the service still in the grants.
     ``users``: a user's name to its grants. A role of each name as well."""
-    Database(path).close()
+    at_schema(path, 25).close()
     raw = sqlite3.connect(path)
     with raw:
         for number, (name, grants) in enumerate(users.items()):
@@ -189,7 +191,7 @@ def test_recovery_codes_of_schema_18_are_deleted(tmp_path: Path) -> None:
     """Their plain SHA-256 hashes cannot become keyed ones: a user makes
     new codes (docs/mailbox-service/AUTHENTICATION.md 6)."""
     path = tmp_path / "old.db"
-    Database(path).close()
+    at_schema(path, 25).close()
     raw = sqlite3.connect(path)
     with raw:
         raw.execute("DROP TABLE recovery_codes")

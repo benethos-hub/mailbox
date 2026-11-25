@@ -28,6 +28,9 @@ from benethos_mailbox_service.data.storage import (
     Database,
     inspect_file,
 )
+from benethos_mailbox_service.data.storage.sqlite import SCHEMA_VERSION
+
+from ..schema_helpers import at_schema
 
 
 @pytest.mark.parametrize(
@@ -176,3 +179,16 @@ def test_a_backup_of_version_1_is_still_read(tmp_path: Path) -> None:
     (tmp_path / "old.bak").write_bytes(header + nonce + sealed)
     assert read_backup(tmp_path / "old.bak", master, tmp_path / "out.db") == manifest
     assert (tmp_path / "out.db").read_bytes() == db.read_bytes()
+
+
+def test_a_restore_of_schema_25_keeps_no_copy_of_its_own(tmp_path: Path) -> None:
+    """The backup is the copy: the file restored from it is migrated
+    without one beside it."""
+    path = tmp_path / "old.db"
+    at_schema(path, 25).close()
+    master = cipher.new_key()
+    write_backup(path, Manifest("1", 25, "now", _digest(path)), master, tmp_path / "b")
+    target = tmp_path / "data" / "mailbox.db"
+    restore_backup(tmp_path / "b", master, target)
+    assert inspect_file(target) == SCHEMA_VERSION
+    assert list(target.parent.glob("*before-schema-*")) == []

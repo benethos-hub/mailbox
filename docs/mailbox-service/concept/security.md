@@ -301,3 +301,12 @@ account and re-issuing every token.
   providers rotate them. Those accounts go to `needs_reauth` and are
   reconnected once. API tokens are valid again as they were at backup time:
   if a backup leaked, revoke them.
+- **A copy before schema 26** (**decided 2026-11-25**). The step to
+  schema 26 builds tables anew. Before it runs, opening a database of an
+  older schema keeps a copy of the file beside it,
+  `<file>.before-schema-26-<time>`, readable by its owner alone. When
+  the copy cannot be written, the database stays at its schema and the
+  service does not start. The start log names the copy. It holds what
+  the database holds, so it needs the same care. The service never
+  removes it: delete it once the service runs on schema 26 and a new
+  backup is taken.

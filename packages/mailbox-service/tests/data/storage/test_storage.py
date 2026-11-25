@@ -150,6 +150,35 @@ def test_roles_round_trip(stores: Stores) -> None:
         repo.delete("reader")
 
 
+def test_users_and_roles_keep_their_places(stores: Stores) -> None:
+    """A list comes in the order the records were added. Saving one
+    again keeps its place, one added after a deletion comes last."""
+    for name in ("b", "a", "c"):
+        stores.users.save(User(id=f"usr_{name}", name=name))
+        stores.roles.save(Role(id=f"role_{name}"))
+    stores.users.delete("usr_c")
+    stores.roles.delete("role_c")
+    stores.users.save(User(id="usr_d", name="d"))
+    stores.roles.save(Role(id="role_d"))
+    stores.users.save(User(id="usr_b", name="b2"))
+    stores.roles.save(Role(id="role_b", service=["users.read"]))
+    assert [u.id for u in stores.users.list()] == ["usr_b", "usr_a", "usr_d"]
+    assert [r.id for r in stores.roles.list()] == ["role_b", "role_a", "role_d"]
+
+
+def test_accounts_keep_their_places(stores: Stores) -> None:
+    for n in (2, 1, 3):
+        stores.accounts.add(
+            Account(id=f"acc_{n}", provider=ProviderType.IMAP, email="a@example.com")
+        )
+    stores.accounts.delete("acc_3")
+    stores.accounts.add(
+        Account(id="acc_4", provider=ProviderType.IMAP, email="a@example.com")
+    )
+    stores.accounts.update(stores.accounts.get("acc_2"), {"host": "h"})
+    assert [a.id for a in stores.accounts.list()] == ["acc_2", "acc_1", "acc_4"]
+
+
 def test_tokens_round_trip(stores: Stores) -> None:
     stores.users.save(User(id="usr_1", name="u"))
     repo = stores.tokens
