@@ -48,6 +48,7 @@ LIBRARY_HOMES = {
     "fido2": f"{PACKAGE}.data.secrets.passkeys",
     "keyring": f"{PACKAGE}.data.secrets.keys",
     "sqlite3": f"{PACKAGE}.data.storage.sqlite",
+    "sqlalchemy": f"{PACKAGE}.data.storage.sql",
     "imapclient": f"{PACKAGE}.data.protocols.imap",
     # The errors and the quoting of the standard library beside IMAPClient.
     "imaplib": f"{PACKAGE}.data.protocols.imap",

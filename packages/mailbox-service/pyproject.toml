@@ -104,6 +104,9 @@ dependencies = [
     # The metrics of `GET /v1/metrics` in the text format of Prometheus
     # (web/api/exposition.py).
     "prometheus-client>=0.26",
+    # The storage speaks SQL through SQLAlchemy Core (data/storage/sql/),
+    # so the database can be exchanged.
+    "sqlalchemy>=2.1",
 ]
 
 [project.urls]
