@@ -311,6 +311,12 @@ into the inbox folder `Invoices/Telco`, and an invoice marked beforehand.
 Every message goes back without either keyword. It asks the model of
 `agent.env`, one call per message and run.
 
+`chain/` holds three example lists of instances of `sorting` that hand a
+message on by keywords, `partner`, `beleg` and `ablage`
+([the chain of sorting](../../../docs/mailbox-agents/concept/sorting-chain.md#8-instances-that-hand-a-message-on)).
+`uv run benethos-mailbox-agents check --agent sorting partner=... beleg=...
+ablage=...` reads them together.
+
 ## Spans
 
 The setup runs no target for spans, and the agents send none unless

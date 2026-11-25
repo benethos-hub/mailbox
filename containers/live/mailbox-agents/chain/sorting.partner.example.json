@@ -1,0 +1,32 @@
+{
+  "mark_done": true,
+  "dimensions": [
+    {
+      "name": "partner",
+      "categories": [
+        {
+          "name": "CloudHost",
+          "senders": [
+            "*@cloudhost.example"
+          ],
+          "then": [
+            {
+              "keyword": "agent-partner-cloudhost"
+            }
+          ]
+        },
+        {
+          "name": "Telco",
+          "senders": [
+            "rechnung@telco.example"
+          ],
+          "then": [
+            {
+              "keyword": "agent-partner-telco"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

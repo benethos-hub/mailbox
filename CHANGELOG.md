@@ -98,6 +98,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   partner=partner.json beleg=beleg.json ...` reads the lists of several
   instances together and names each circle of lists that set each other
   off, exit code 1, else 0.
+- The live setup of the agents: three example lists of instances of
+  `sorting` that hand a message on, in `containers/live/mailbox-agents/chain/`.
 
 ### Changed
 
