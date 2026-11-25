@@ -28,7 +28,7 @@ Part of the [concept](../CONCEPT.md).
 - **Metrics:** an HTTP endpoint in the Prometheus text format on
   `METRICS_PORT`, served with the `prometheus-client` package (decided
   2026-11-17), one registry per process: `mailbox_agents_info` with agent,
-  version and stage, `mailbox_agents_messages` per state,
+  version, stage and instance, `mailbox_agents_messages` per state,
   `mailbox_agents_oldest_pending_age_seconds`,
   `mailbox_agents_last_pass_timestamp_seconds`,
   `mailbox_agents_step_failures_total` by kind, for every step whose

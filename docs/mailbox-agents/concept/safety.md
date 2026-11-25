@@ -8,7 +8,7 @@ Three locks, in three places, none of which the model can reach:
 |---|---|
 | The mailbox service | sending, deleting for good, drafts: the agent's user has no right to them |
 | The model gateway | a model outside the agent's list, spending past its budget |
-| The runtime | every action the agent did not declare, the trash among them, and a folder made that its configuration does not name |
+| The runtime | every action the agent did not declare, the trash among them, a folder made or a keyword set that its configuration does not name |
 
 The runtime does not check the target of a move against the agent's
 configuration: only the agent's code computes it, never a model
@@ -32,7 +32,8 @@ Further rules:
   ones. The folder it lies in was chosen by a rule or by hand, never by
   the model ([invoices](agent-invoices.md)). `categorization` from version 2 is
   the second exception (2026-11-24): it moves a message into the folder
-  of the group its model chose by the group's topic, but only where the
+  of the group its model chose by the group's topic, or since 2026-11-25
+  by a recognizer such as `invoice`, but only where the
   owner set `"by_topic": "act"` for that group, and only with a quote
   found in the mail, not in the topics. The model chooses among the
   groups of the list it is given and names no folder. A held group stays

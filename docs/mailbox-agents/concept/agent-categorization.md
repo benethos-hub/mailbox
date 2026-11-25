@@ -53,8 +53,11 @@ folder it lies in. No agent does both. `invoices` stays an agent of its
 own: a topic chooses a folder, it does not tell an invoice from a
 reminder.
 
-Each agent works without the other. `categorization` knows nothing of invoices.
-`invoices` knows nothing of groups: it is told at its start which folders
+Each agent works without the other. A list of groups knows nothing of
+invoices. Since version 3 a list may ask the question of `invoices`
+itself, with the recognizer `invoice`, and `invoices` goes once that
+fits on the owner's mailbox
+([the chain](categorization-chain.md)). `invoices` knows nothing of groups: it is told at its start which folders
 it looks in ([invoices](agent-invoices.md#settings)).
 
 The two never compete for a message:
@@ -354,7 +357,7 @@ project's folder when its group acts.
 | Setting | Meaning |
 |---|---|
 | `MAILBOX_AGENTS_CATEGORIZATION_FILE` | the list of section 2. Required |
-| `MAILBOX_AGENTS_GATEWAY_URL`, `MAILBOX_AGENTS_GATEWAY_KEY`, `MAILBOX_AGENTS_MODEL` | required once a group of the list has a topic, else not read (2026-11-24) |
+| `MAILBOX_AGENTS_GATEWAY_URL`, `MAILBOX_AGENTS_GATEWAY_KEY`, `MAILBOX_AGENTS_MODEL` | required once a recognizer of the list asks a model, a category with a topic or one naming `invoice`, else not read (2026-11-25) |
 
 The stage, the accounts and the rest are the settings of every agent
 ([configuration](configuration.md)).
@@ -443,13 +446,11 @@ another, was measured there first
   configuration, measured per list.
 - **Rules by words in the subject or the text, without a model.** A list
   of words is a weaker topic, and a stranger writes them as easily.
-- **A group that forwards a message, or hands it to another agent
-  without a folder.** Not built (2026-11-24). The list keeps apart which
-  mail belongs to a group, by `senders` and `topic`, and what the group
-  sets off, today its folder, so either can be added. A hand-over works
-  today through the folder another agent looks in, as with `invoices`.
-  One without a move would need a keyword per group or the mailbox
-  service. A forward is an action that cannot be taken back: it would
+- **A group that forwards a message.** Not built (2026-11-24). A
+  hand-over to another agent without a folder is built since 2026-11-25,
+  by keywords between instances
+  ([the chain](categorization-chain.md#8-instances-that-hand-a-message-on)).
+  A forward is an action that cannot be taken back: it would
   come into the [agent contract](agent-contract.md) first, with a fixed
   recipient from the list and never from the model.
 - **`invoices` and `categorization` side by side with a waiting time.** A message

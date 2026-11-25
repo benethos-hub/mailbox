@@ -2,7 +2,7 @@
 
 Part of the [concept](../CONCEPT.md).
 
-One SQLite file per agent, with numbered migrations that are never changed
+One SQLite file per agent, or per instance of one, with numbered migrations that are never changed
 once released.
 
 | Table | Holds |

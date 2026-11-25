@@ -9,7 +9,9 @@ Part of the [concept](../CONCEPT.md).
 > through `mail-classifier`. On a real mailbox it ran on 2026-11-23,
 > read-only and in `shadow`, and changed nothing.
 > A run on the owner's account is the owner's decision, in `shadow`
-> first.**
+> first. The recognizer `invoice` of `categorization` asks the same
+> question with a copy of its prompt, and `invoices` goes once that fits
+> on the owner's mailbox ([the chain](categorization-chain.md)).**
 
 **Question:** is this message an invoice?
 

@@ -283,6 +283,7 @@ prompt and no answer.
 uv run python live/mailbox-agents/agents_smoke.py
 uv run python live/mailbox-agents/categorization.py
 uv run python live/mailbox-agents/invoices.py
+uv run python live/mailbox-agents/chain.py
 uv run benethos-mailbox-agents --env-file containers/live/mailbox-agents/secrets/agent.env status
 uv run benethos-mailbox-agents --env-file containers/live/mailbox-agents/secrets/agent.env run --agent counting
 ```
@@ -316,7 +317,13 @@ Every message goes back without either keyword. It asks the model of
 message on by keywords, `partner`, `beleg` and `ablage`
 ([the chain of categorization](../../../docs/mailbox-agents/concept/categorization-chain.md#8-instances-that-hand-a-message-on)).
 `uv run benethos-mailbox-agents check --agent categorization partner=... beleg=...
-ablage=...` reads them together.
+ablage=...` reads them together. `live/mailbox-agents/chain.py` runs the three on the
+account, each in a state file of its own: keywords per partner and
+`agent-invoice`, the signs of the instances, the moves into
+`Providers/<partner>/Rechnungen`, a partner keyword set and changed by
+hand. It puts every message back. The folders made stay. Run it with
+`python -u` and without a short timeout: a check cut off puts nothing
+back.
 
 ## Spans
 
