@@ -130,6 +130,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 - The service image installs publicsuffixlist 1.1.2.20261125 from the
   lockfile.
+- The images build with uv 0.13.10.
 - `benethos-mailbox-agents`: the agent `sorting` is named
   `categorization`. To move over:
   - `--agent sorting` becomes `--agent categorization`, and so does the
