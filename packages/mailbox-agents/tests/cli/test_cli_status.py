@@ -9,7 +9,7 @@ import httpx
 import pytest
 
 from benethos_mailbox_agents.agents.sorting import agent as sorting_agent
-from benethos_mailbox_agents.agents.sorting.groups import Groups
+from benethos_mailbox_agents.agents.sorting.lists import Listed
 from benethos_mailbox_agents.cli import main
 from benethos_mailbox_agents.settings import PREFIX
 
@@ -127,17 +127,17 @@ def test_status_reads_the_sorting_list_once(
     monkeypatch.setenv(f"{PREFIX}ACCOUNTS", "acc1")
     monkeypatch.setenv(f"{PREFIX}SORTING_FILE", str(listed))
     reads: list[Path] = []
-    real = sorting_agent.load_groups
+    real = sorting_agent.load_chain
 
-    def counted(path: Path) -> Groups:
+    def counted(path: Path) -> Listed:
         reads.append(path)
         return real(path)
 
-    monkeypatch.setattr(sorting_agent, "load_groups", counted)
+    monkeypatch.setattr(sorting_agent, "load_chain", counted)
 
     assert main(["status"]) == 0
 
-    assert "sorting 2: ready" in capsys.readouterr().out
+    assert "sorting 3: ready" in capsys.readouterr().out
     assert reads == [listed]
 
 

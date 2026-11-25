@@ -48,13 +48,24 @@ adheres to [Semantic Versioning](https://semver.org/).
   in several groups that each have a topic: the model then chooses
   among them. A sender rule of one group decides as before, with no
   model call.
+- `benethos-mailbox-agents`: the list of `sorting` may name
+  `dimensions` in place of `groups`, such as the partner of a mail and
+  its kind, run one after another. A dimension names its categories, and
+  with `when` the categories of an earlier dimension it runs after. A
+  category is found by its `senders`, its `topic` or a recognizer it
+  names in `recognize`, and names in `then` what follows: `move` into a
+  folder, `move_below` a folder below the one it goes to or lies in, and
+  `keyword`. Of several moves the category of the highest `priority`
+  wins. A list of `groups` is read as one dimension and keeps its
+  version. Two recognizers of a list may ask the model, each once per
+  message.
 
 ### Changed
 
-- `benethos-mailbox-agents`: `sorting` is version 2 and stores its
+- `benethos-mailbox-agents`: `sorting` is version 3 and stores its
   decision under the version `v1-list-` and the digest of its list, so
   every message is decided anew. Run it in `shadow` again before a
-  higher stage.
+  higher stage. A list of `groups` keeps its digest from version 2.
 - `benethos-mailbox-agents`: `sorting` needs the gateway settings once a
   group of its list has a topic. A list without a topic runs without a
   gateway, as before.

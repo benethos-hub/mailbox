@@ -31,6 +31,7 @@ from ..settings import KEYWORD_FORM, Settings
 from .context import Context
 
 __all__ = [
+    "KEYWORD_FORM",
     "NAME_PATTERN",
     "REVERSED_BY",
     "Action",

@@ -5,6 +5,7 @@ docs/mailbox-agents/concept/agent-contract.md."""
 from __future__ import annotations
 
 from .agent import (
+    KEYWORD_FORM,
     REVERSED_BY,
     Action,
     ActionRequest,
@@ -21,6 +22,7 @@ from .prompts import load_prompt
 from .registry import discover, load_agent
 
 __all__ = [
+    "KEYWORD_FORM",
     "REVERSED_BY",
     "Action",
     "ActionRequest",

@@ -35,11 +35,11 @@ from __future__ import annotations
 import json
 import re
 import unicodedata
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from enum import IntEnum
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Generic, Literal, TypeVar
 
 from pydantic import (
     BaseModel,
@@ -58,11 +58,17 @@ __all__ = [
     "MAX_TOPICS",
     "NONE",
     "READERS",
+    "Entry",
     "Group",
     "Groups",
     "Kind",
     "Match",
+    "candidates_in",
+    "check_rules",
+    "folder_path",
+    "from_top",
     "load_groups",
+    "match_in",
 ]
 
 # The label of a message whose sender is in no group, or in two alike. No
@@ -171,14 +177,14 @@ def _glob(pattern: str, text: str) -> bool:
     return True
 
 
-class Group(BaseModel):
-    """One group: its name, its folder, its senders, its topic, how far a
-    choice by its topic goes, and whether its moves are held."""
+class Entry(BaseModel):
+    """What a group and a category of a chain share: a name, the senders
+    that belong to it, a topic, how far a choice by its topic goes, and
+    whether what follows from it is held."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     name: str = Field(min_length=1, max_length=100)
-    folder: str = Field(min_length=1, max_length=200)
     senders: tuple[str, ...] = ()
     hold: StrictBool = False
     topic: str | None = None
@@ -194,14 +200,6 @@ class Group(BaseModel):
                 f"a group is not named {NONE}: that is the label of a message "
                 "in no group"
             )
-        return value
-
-    @field_validator("folder")
-    @classmethod
-    def _folder(cls, value: str) -> str:
-        parts = value.split("/")
-        if any(not p.strip() or p in (".", "..") or p != p.strip() for p in parts):
-            raise ValueError("a folder is names between /, none empty, . or ..")
         return value
 
     @field_validator("senders")
@@ -234,12 +232,7 @@ class Group(BaseModel):
             raise ValueError(f"{where}a topic is one line, without control characters")
         return value
 
-    @model_validator(mode="after")
-    def _what_it_names(self) -> Group:
-        if not self.senders and self.topic is None:
-            raise ValueError(
-                f"group {self.name!r}: a group names senders, a topic or both"
-            )
+    def _check_topic(self) -> None:
         if self.topic is None and "by_topic" in self.model_fields_set:
             raise ValueError(f"group {self.name!r}: by_topic needs a topic")
         if self.topic is not None and not _one_line(self.name):
@@ -248,14 +241,48 @@ class Group(BaseModel):
                 f"group {self.name!r}: the name of a group with a topic is one "
                 "line, without control characters"
             )
+
+
+def folder_path(value: str) -> str:
+    """``value`` when it is names between /, none empty, . or .., else a
+    ValueError."""
+    parts = value.split("/")
+    if any(not p.strip() or p in (".", "..") or p != p.strip() for p in parts):
+        raise ValueError("a folder is names between /, none empty, . or ..")
+    return value
+
+
+def from_top(path: str) -> tuple[str, ...]:
+    """``path`` and every folder above it, the top first."""
+    parts = path.split("/")
+    return tuple("/".join(parts[: i + 1]) for i in range(len(parts)))
+
+
+class Group(Entry):
+    """One group: its name, its folder, its senders, its topic, how far a
+    choice by its topic goes, and whether its moves are held."""
+
+    folder: str = Field(min_length=1, max_length=200)
+
+    @field_validator("folder")
+    @classmethod
+    def _folder(cls, value: str) -> str:
+        return folder_path(value)
+
+    @model_validator(mode="after")
+    def _what_it_names(self) -> Group:
+        if not self.senders and self.topic is None:
+            raise ValueError(
+                f"group {self.name!r}: a group names senders, a topic or both"
+            )
+        self._check_topic()
         return self
 
     @property
     def folders(self) -> tuple[str, ...]:
         """Its folder and every folder above it, the top first: the folders
         the agent may make for it."""
-        parts = self.folder.split("/")
-        return tuple("/".join(parts[: i + 1]) for i in range(len(parts)))
+        return from_top(self.folder)
 
 
 def _spelt_alike(groups: tuple[Group, ...]) -> None:
@@ -274,18 +301,77 @@ def _spelt_alike(groups: tuple[Group, ...]) -> None:
                 )
 
 
+E = TypeVar("E", bound=Entry)
+
+
 @dataclass(frozen=True)
-class Match:
+class Match(Generic[E]):
     """The groups whose most specific rules match a sender: one, or more
     when the list names the sender alike in several."""
 
-    groups: tuple[Group, ...]
+    groups: tuple[E, ...]
     kind: Kind
 
     @property
-    def group(self) -> Group | None:
+    def group(self) -> E | None:
         """The one group, None when several match alike."""
         return self.groups[0] if len(self.groups) == 1 else None
+
+
+def check_rules(entries: Sequence[Entry]) -> None:
+    """Raise a ValueError when a rule is named by two entries of which one
+    has no topic, or when more than :data:`MAX_TOPICS` have a topic. A rule
+    belongs to one group, or to several that each have a topic, among which
+    the model chooses."""
+    owners: dict[str, Entry] = {}
+    for entry in entries:
+        for number, rule in enumerate(entry.senders, start=1):
+            first = owners.setdefault(rule, entry)
+            if first.name != entry.name and (
+                first.topic is None or entry.topic is None
+            ):
+                raise ValueError(
+                    f"{_place(entry.name, number)} is named by group "
+                    f"{first.name!r} as well"
+                )
+    if sum(entry.topic is not None for entry in entries) > MAX_TOPICS:
+        raise ValueError(f"more than {MAX_TOPICS} groups have a topic")
+
+
+def match_in(entries: Sequence[E], address: str | None) -> Match[E] | None:
+    """The entries ``address`` belongs to by their most specific rules, or
+    None when no rule matches."""
+    if not address:
+        return None
+    found = address.strip().lower()
+    if len(found) > MAX_ADDRESS:
+        return None
+    hits = [
+        (entry, _kind(rule))
+        for entry in entries
+        for rule in entry.senders
+        if _matches(rule, _kind(rule), found)
+    ]
+    if not hits:
+        return None
+    best = max(kind for _, kind in hits)
+    top = {entry.name: entry for entry, kind in hits if kind == best}
+    return Match(groups=tuple(top.values()), kind=best)
+
+
+def candidates_in(entries: Sequence[E], address: str | None) -> tuple[E, ...]:
+    """The entries a model chooses among for a message from ``address``.
+
+    None when one entry matches the sender: the code decides. The entries
+    that match it alike when each has a topic. None when one of them has no
+    topic. Every entry with a topic, in the order of the list, when no rule
+    matches."""
+    found = match_in(entries, address)
+    if found is None:
+        return tuple(entry for entry in entries if entry.topic is not None)
+    if len(found.groups) > 1 and all(g.topic is not None for g in found.groups):
+        return found.groups
+    return ()
 
 
 class Groups(BaseModel):
@@ -306,56 +392,18 @@ class Groups(BaseModel):
                     raise ValueError(f"two groups share the {attribute} {key!r}")
                 seen.add(key)
         _spelt_alike(value)
-        # A rule belongs to one group, or to several that each have a topic,
-        # among which the model chooses.
-        owners: dict[str, Group] = {}
-        for group in value:
-            for number, rule in enumerate(group.senders, start=1):
-                first = owners.setdefault(rule, group)
-                if first.name != group.name and (
-                    first.topic is None or group.topic is None
-                ):
-                    raise ValueError(
-                        f"{_place(group.name, number)} is named by group "
-                        f"{first.name!r} as well"
-                    )
-        if sum(group.topic is not None for group in value) > MAX_TOPICS:
-            raise ValueError(f"more than {MAX_TOPICS} groups have a topic")
+        check_rules(value)
         return value
 
-    def match(self, address: str | None) -> Match | None:
+    def match(self, address: str | None) -> Match[Group] | None:
         """The groups ``address`` belongs to by their most specific rules,
         or None when no rule matches."""
-        if not address:
-            return None
-        found = address.strip().lower()
-        if len(found) > MAX_ADDRESS:
-            return None
-        hits = [
-            (group, _kind(rule))
-            for group in self.groups
-            for rule in group.senders
-            if _matches(rule, _kind(rule), found)
-        ]
-        if not hits:
-            return None
-        best = max(kind for _, kind in hits)
-        top = {group.name: group for group, kind in hits if kind == best}
-        return Match(groups=tuple(top.values()), kind=best)
+        return match_in(self.groups, address)
 
     def candidates(self, address: str | None) -> tuple[Group, ...]:
-        """The groups a model chooses among for a message from ``address``.
-
-        None when one group matches the sender: the code decides. The
-        groups that match it alike when each has a topic. None when one of
-        them has no topic, as before. Every group with a topic, in the
-        order of the list, when no rule matches."""
-        found = self.match(address)
-        if found is None:
-            return self.topical
-        if len(found.groups) > 1 and all(g.topic is not None for g in found.groups):
-            return found.groups
-        return ()
+        """The groups a model chooses among for a message from ``address``,
+        see :func:`candidates_in`."""
+        return candidates_in(self.groups, address)
 
     @property
     def topical(self) -> tuple[Group, ...]:
