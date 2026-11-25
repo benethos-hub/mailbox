@@ -113,6 +113,25 @@ noticing. Every change is measured against that.
 | Metrics | `exposition` in `web/api/exposition.py`, the text format of `GET /v1/metrics` | prometheus_client | another Prometheus library, or the text format written by hand |
 | Client ↔ service | the REST API, `docs/mailbox-service/openapi.json` | the package `mailbox-client`: each endpoint in `endpoints/`, sent by an async and a sync client over httpx. The MCP server uses it | a generated client, another HTTP library in `client.py`, `sync.py`, `calls.py`, `environment.py` and the modules that read an answer |
 
+**What of the store is still SQLite's own.** Since schema 26
+(2026-11-25) no list takes its order from the hidden `rowid`, the last
+number of the change feed and the active key are kept in `meta`, user
+names are unique by a column and not by a collation, and the search of
+sends needs no function of the service inside SQL. What still belongs
+to SQLite alone, and goes with a second database:
+
+- `INSERT OR REPLACE` in `sqlite/idempotency.py` and in
+  `sqlite/migrations/registry.py`.
+- `INSERT OR IGNORE` in `sqlite/index.py`.
+- The default of the column `keys.created_at`, which the insert of
+  `sqlite/credentials.py` does not set itself.
+- The PRAGMAs `secure_delete` and `auto_vacuum`, and the shrinking with
+  `incremental_vacuum`.
+- The backup, a copy of the database file.
+
+The rule that keeps it so: every query that returns several rows names
+its order.
+
 **When you add something new**, ask first where its seam is. A new
 provider is a new module behind `Reads`, not a branch in a route. A
 new library gets a wrapper before it gets a caller. If a change needs edits
