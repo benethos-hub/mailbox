@@ -33,6 +33,7 @@ from .sql import (
     SqlPasswordRepository,
     SqlRoleRepository,
     SqlTokenRepository,
+    SqlTotpRepository,
     SqlUserRepository,
 )
 from .sql.database import Database
@@ -49,7 +50,6 @@ from .sqlite import (
     SqlitePasskeyRepository,
     SqliteRecoveryCodeRepository,
     SqliteSendLogRepository,
-    SqliteTotpRepository,
     SqliteWebhookRepository,
     Table,
 )
@@ -178,7 +178,7 @@ def repositories_on(db: Database) -> Repositories:
         roles=SqlRoleRepository(db),
         tokens=SqlTokenRepository(db),
         passwords=SqlPasswordRepository(db),
-        totp=SqliteTotpRepository(db),
+        totp=SqlTotpRepository(db),
         passkeys=SqlitePasskeyRepository(db),
         recovery_codes=SqliteRecoveryCodeRepository(db),
         keys=SqliteKeyRepository(db),

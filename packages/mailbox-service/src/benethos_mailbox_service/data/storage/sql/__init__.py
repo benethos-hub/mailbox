@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from .accounts import SqlAccountRepository
 from .passwords import SqlPasswordRepository
+from .totp import SqlTotpRepository
 from .users import SqlRoleRepository, SqlTokenRepository, SqlUserRepository
 
 __all__ = [
@@ -15,5 +16,6 @@ __all__ = [
     "SqlPasswordRepository",
     "SqlRoleRepository",
     "SqlTokenRepository",
+    "SqlTotpRepository",
     "SqlUserRepository",
 ]

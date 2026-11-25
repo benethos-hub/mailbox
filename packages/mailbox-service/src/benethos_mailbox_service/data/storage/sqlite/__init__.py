@@ -23,7 +23,6 @@ from .passkeys import SqlitePasskeyRepository
 from .recovery_codes import SqliteRecoveryCodeRepository
 from .sends import SqliteSendLogRepository
 from .tables import Table
-from .totp import SqliteTotpRepository
 from .webhooks import SqliteWebhookRepository
 
 __all__ = [
@@ -39,7 +38,6 @@ __all__ = [
     "SqliteAuditRepository",
     "SqliteRecoveryCodeRepository",
     "SqlitePasskeyRepository",
-    "SqliteTotpRepository",
     "SqliteSendLogRepository",
     "SqliteWebhookRepository",
     "Table",

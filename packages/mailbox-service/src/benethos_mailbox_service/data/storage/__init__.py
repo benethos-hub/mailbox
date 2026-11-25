@@ -42,6 +42,7 @@ from .sql import (
     SqlPasswordRepository,
     SqlRoleRepository,
     SqlTokenRepository,
+    SqlTotpRepository,
     SqlUserRepository,
 )
 from .sql.database import Database
@@ -56,7 +57,6 @@ from .sqlite import (
     SqlitePasskeyRepository,
     SqliteRecoveryCodeRepository,
     SqliteSendLogRepository,
-    SqliteTotpRepository,
     SqliteWebhookRepository,
     Table,
     inspect_file,
@@ -137,7 +137,7 @@ __all__ = [
     "SqlRoleRepository",
     "SqliteRecoveryCodeRepository",
     "SqlitePasskeyRepository",
-    "SqliteTotpRepository",
+    "SqlTotpRepository",
     "SqliteSendLogRepository",
     "SqlTokenRepository",
     "SqlUserRepository",
