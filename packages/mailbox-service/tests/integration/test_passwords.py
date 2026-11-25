@@ -22,6 +22,8 @@ from benethos_mailbox_service.data.storage import (
 from benethos_mailbox_service.domain.auth.passwords import Passwords
 from benethos_mailbox_service.errors import ConflictError
 
+from ..data.storage.old_schema import at_schema
+
 # Cheap, so the tests run fast. The service uses Scrypt().
 CHEAP = Scrypt(log_n=4, r=1, p=1)
 NOW = datetime(2026, 9, 27, 12, 0, tzinfo=UTC)
@@ -147,7 +149,7 @@ def test_the_migration_renames_a_name_taken_twice(
     tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
     path = tmp_path / "old.db"
-    Database(path).close()
+    at_schema(path, 25).close()
     raw = sqlite3.connect(path)
     with raw:
         # Back to schema 8, with a name two users share.
@@ -188,7 +190,7 @@ def test_the_migration_keeps_the_ui_sign_in_of_who_has_a_password(
     tmp_path: Path,
 ) -> None:
     path = tmp_path / "old.db"
-    Database(path).close()
+    at_schema(path, 25).close()
     raw = sqlite3.connect(path)
     with raw:
         # Back to schema 11: users without the switch, one with a password.

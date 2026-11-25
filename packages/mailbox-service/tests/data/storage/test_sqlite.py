@@ -19,6 +19,7 @@ import pytest
 
 from benethos_mailbox_service.cli import main
 from benethos_mailbox_service.config import Settings
+from benethos_mailbox_service.data.models import User
 from benethos_mailbox_service.data.storage import (
     Database,
     SqliteMessageIndexRepository,
@@ -42,7 +43,7 @@ from .old_schema import at_schema
 
 def test_webhooks_of_users_deleted_before_are_dropped(tmp_path: Path) -> None:
     path = tmp_path / "old.db"
-    Database(path).close()
+    at_schema(path, 25).close()
     raw = sqlite3.connect(path)
     with raw:
         raw.execute("ALTER TABLE users DROP COLUMN service")
@@ -84,7 +85,7 @@ def test_webhooks_of_users_deleted_before_are_dropped(tmp_path: Path) -> None:
 def _at_schema_14(path: Path, users: dict[str, list[dict[str, object]]]) -> None:
     """A database of schema 14: rights of the service still in the grants.
     ``users``: a user's name to its grants. A role of each name as well."""
-    Database(path).close()
+    at_schema(path, 25).close()
     raw = sqlite3.connect(path)
     with raw:
         for number, (name, grants) in enumerate(users.items()):
@@ -193,7 +194,7 @@ def test_recovery_codes_of_schema_18_are_deleted(tmp_path: Path) -> None:
     """Their plain SHA-256 hashes cannot become keyed ones: a user makes
     new codes (docs/mailbox-service/AUTHENTICATION.md 6)."""
     path = tmp_path / "old.db"
-    Database(path).close()
+    at_schema(path, 25).close()
     raw = sqlite3.connect(path)
     with raw:
         raw.execute("DROP TABLE recovery_codes")
@@ -274,6 +275,27 @@ def test_the_index_keeps_its_order_through_schema_26(tmp_path: Path) -> None:
         lambda: "thr_new",
     )
     assert merged == {"msg_b": "thr_z"}
+    db.close()
+
+
+def test_users_and_roles_keep_their_places_through_schema_26(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "old.db"
+    raw = at_schema(path, 25)
+    for name in ("b", "a", "c"):
+        raw.execute("INSERT INTO users (id, name) VALUES (?, ?)", (f"usr_{name}", name))
+        raw.execute("INSERT INTO roles (id, grants) VALUES (?, '[]')", (f"r_{name}",))
+    raw.execute("DELETE FROM users WHERE id = 'usr_a'")
+    raw.close()
+    db = Database(path)
+    rows = db.query("SELECT id, position FROM users ORDER BY position")
+    assert [tuple(r) for r in rows] == [("usr_b", 1), ("usr_c", 3)]
+    users = SqliteUserRepository(db)
+    users.save(User(id="usr_d", name="d"))
+    assert [u.id for u in users.list()] == ["usr_b", "usr_c", "usr_d"]
+    roles = [r.id for r in SqliteRoleRepository(db).list()]
+    assert roles == ["r_b", "r_a", "r_c"]
     db.close()
 
 

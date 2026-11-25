@@ -5,6 +5,9 @@ The order in which index entries and thread links came was the hidden
 anew with a key ``seq`` that counts up, the rows taking their ``rowid``
 as ``seq``, so the order stays as it was. The rebuild needs free space
 of the size of the index once.
+
+Accounts, users and roles were listed in the order of their ``rowid``
+as well. Each gets a column ``position``, filled from it.
 """
 
 from __future__ import annotations
@@ -56,4 +59,13 @@ class V0026Portable(Migration):
         "DROP TABLE thread_links",
         "ALTER TABLE thread_links_new RENAME TO thread_links",
         "CREATE INDEX thread_links_thread ON thread_links (account_id, thread_id)",
+        "ALTER TABLE accounts ADD COLUMN position INTEGER",
+        "UPDATE accounts SET position = rowid",
+        "CREATE UNIQUE INDEX accounts_position ON accounts (position)",
+        "ALTER TABLE users ADD COLUMN position INTEGER",
+        "UPDATE users SET position = rowid",
+        "CREATE UNIQUE INDEX users_position ON users (position)",
+        "ALTER TABLE roles ADD COLUMN position INTEGER",
+        "UPDATE roles SET position = rowid",
+        "CREATE UNIQUE INDEX roles_position ON roles (position)",
     )

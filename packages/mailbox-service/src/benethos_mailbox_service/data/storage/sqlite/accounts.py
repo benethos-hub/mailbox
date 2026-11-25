@@ -8,13 +8,13 @@ import sqlite3
 from ...models import Abilities, Account, AccountStatus
 from ..accounts import SettingsDict
 from .database import Database
-from .rows import SqliteRows
+from .rows import SqliteRows, next_position
 
 
 class SqliteAccountRepository:
     def __init__(self, db: Database) -> None:
         self._db = db
-        self._rows = SqliteRows(db, "accounts", "account", _account)
+        self._rows = SqliteRows(db, "accounts", "account", _account, order="position")
 
     def list(self) -> list[Account]:
         return self._rows.list()
@@ -25,8 +25,8 @@ class SqliteAccountRepository:
     def add(self, account: Account, settings: SettingsDict | None = None) -> None:
         self._db.execute(
             "INSERT INTO accounts"
-            " (id, provider, email, display_name, status, settings)"
-            " VALUES (?, ?, ?, ?, ?, ?)",
+            " (id, provider, email, display_name, status, settings, position)"
+            f" VALUES (?, ?, ?, ?, ?, ?, {next_position('accounts')})",
             (
                 account.id,
                 account.provider.value,

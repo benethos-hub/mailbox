@@ -9,17 +9,18 @@ from datetime import datetime
 from ....common.clock import iso, parse_iso
 from ...models import ApiToken, Grant, Role, User
 from .database import Database
-from .rows import SqliteRows
+from .rows import SqliteRows, next_position
 
 
 class SqliteUserRepository(SqliteRows[User]):
     def __init__(self, db: Database) -> None:
-        super().__init__(db, "users", "user", _user)
+        super().__init__(db, "users", "user", _user, order="position")
 
     def save(self, user: User) -> None:
         self._db.execute(
             "INSERT INTO users (id, name, roles, service, grants, disabled,"
-            " ui_sign_in) VALUES (?, ?, ?, ?, ?, ?, ?)"
+            " ui_sign_in, position) VALUES (?, ?, ?, ?, ?, ?, ?,"
+            f" {next_position('users')})"
             " ON CONFLICT(id) DO UPDATE SET name = excluded.name,"
             " roles = excluded.roles, service = excluded.service,"
             " grants = excluded.grants, disabled = excluded.disabled,"
@@ -53,11 +54,12 @@ def _user(row: sqlite3.Row) -> User:
 
 class SqliteRoleRepository(SqliteRows[Role]):
     def __init__(self, db: Database) -> None:
-        super().__init__(db, "roles", "role", _role)
+        super().__init__(db, "roles", "role", _role, order="position")
 
     def save(self, role: Role) -> None:
         self._db.execute(
-            "INSERT INTO roles (id, service, grants) VALUES (?, ?, ?)"
+            "INSERT INTO roles (id, service, grants, position)"
+            f" VALUES (?, ?, ?, {next_position('roles')})"
             " ON CONFLICT(id) DO UPDATE SET service = excluded.service,"
             " grants = excluded.grants",
             (role.id, json.dumps(role.service), _grants_json(role.grants)),
@@ -75,7 +77,9 @@ def _role(row: sqlite3.Row) -> Role:
 class SqliteTokenRepository:
     def __init__(self, db: Database) -> None:
         self._db = db
-        self._rows = SqliteRows(db, "tokens", "token", _api_token)
+        self._rows = SqliteRows(
+            db, "tokens", "token", _api_token, order="created_at, id"
+        )
 
     def list_for_user(self, user_id: str) -> list[ApiToken]:
         return self._db.query_as(
