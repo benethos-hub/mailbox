@@ -56,10 +56,3 @@ class SqliteRows(Generic[T]):
         self._db.must_change(
             f"DELETE FROM {self._table} WHERE id = ?", (row_id,), self._what, row_id
         )
-
-
-def next_position(table: str) -> str:
-    """The SQL of the place after the last of ``table``, for a row added
-    to a table listed by its column ``position``. ``table`` is a name in
-    code, never a caller's."""
-    return f"(SELECT COALESCE(MAX(position), 0) + 1 FROM {table})"

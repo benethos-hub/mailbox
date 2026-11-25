@@ -21,7 +21,7 @@ from benethos_mailbox_service.data.storage import (
     inspect_file,
     repositories_on,
 )
-from benethos_mailbox_service.data.storage.sqlite.users import ascii_lower
+from benethos_mailbox_service.data.storage.sql.users import ascii_lower
 from benethos_mailbox_service.errors import ConflictError, StorageError
 
 from ...schema_helpers import at_schema, select

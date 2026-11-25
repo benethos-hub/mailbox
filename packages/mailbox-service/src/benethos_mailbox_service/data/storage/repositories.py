@@ -30,6 +30,9 @@ from .recovery_codes import InMemoryRecoveryCodeRepository, RecoveryCodeReposito
 from .sends import InMemorySendLogRepository, SendLogRepository
 from .sql import (
     SqlAccountRepository,
+    SqlRoleRepository,
+    SqlTokenRepository,
+    SqlUserRepository,
 )
 from .sql.database import Database
 from .sqlite import (
@@ -45,11 +48,8 @@ from .sqlite import (
     SqlitePasskeyRepository,
     SqlitePasswordRepository,
     SqliteRecoveryCodeRepository,
-    SqliteRoleRepository,
     SqliteSendLogRepository,
-    SqliteTokenRepository,
     SqliteTotpRepository,
-    SqliteUserRepository,
     SqliteWebhookRepository,
     Table,
 )
@@ -174,9 +174,9 @@ def repositories_on(db: Database) -> Repositories:
     The one place that names the classes of the database."""
     return Repositories(
         accounts=SqlAccountRepository(db),
-        users=SqliteUserRepository(db),
-        roles=SqliteRoleRepository(db),
-        tokens=SqliteTokenRepository(db),
+        users=SqlUserRepository(db),
+        roles=SqlRoleRepository(db),
+        tokens=SqlTokenRepository(db),
         passwords=SqlitePasswordRepository(db),
         totp=SqliteTotpRepository(db),
         passkeys=SqlitePasskeyRepository(db),
