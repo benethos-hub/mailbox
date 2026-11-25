@@ -209,3 +209,12 @@ def test_ended_jobs_go_with_the_audit_waiting_ones_stay(box: Outbox) -> None:
     kept = {j.id for j in jobs.list(box.account_id, limit=10, before=None)}
     assert sent.id not in kept and waiting.id in kept
     assert box.job(waiting.id).state == "queued"
+
+
+def test_a_job_whose_time_is_up_is_not_sent_late(box: Outbox) -> None:
+    job = box.queue()
+    box.clock.tick(hours=49)
+    box.round()
+    ended = box.job(job.id)
+    assert (ended.state, ended.last_error) == ("failed", "expired")
+    assert box.sent() == [] and box.drafts() == [job.draft_id]

@@ -47,6 +47,8 @@ UNCLEAR = timedelta(minutes=15)
 # The codes of a job whose draft was deleted or changed after it was queued.
 DRAFT_GONE = "draft_gone"
 DRAFT_CHANGED = "draft_changed"
+# The code of a job whose time was up before it could be tried.
+EXPIRED = "expired"
 # The code of a job whose sent copy could not be made.
 NO_COPY = "no_sent_copy"
 # How the end of a job stands in the audit of sends.
@@ -116,6 +118,9 @@ class OutboxRunner:
                 continue
             if job.state == "copying":
                 await self._copy(job, now)
+            elif job.state == "queued" and now > job.expires_at:
+                # The service was away past the job's time: not sent late.
+                self._end(job, "failed", EXPIRED, note=True)
             elif job.state == "queued":
                 await self._attempt(job, now)
 
