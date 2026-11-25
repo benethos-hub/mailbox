@@ -11,14 +11,12 @@ from .file import (
     remove_database_file,
     service_lock,
 )
-from .index import SqliteMessageIndexRepository
 from .migrations import SCHEMA_VERSION
 from .tables import Table
 
 __all__ = [
     "SCHEMA_VERSION",
     "Migrated",
-    "SqliteMessageIndexRepository",
     "Table",
     "inspect_file",
     "migrate_file",

@@ -36,6 +36,7 @@ from .sql import (
     SqlIdempotencyRepository,
     SqlKeyRepository,
     SqlLinkRepository,
+    SqlMessageIndexRepository,
     SqlOutboxRepository,
     SqlPasskeyRepository,
     SqlPasswordRepository,
@@ -50,7 +51,6 @@ from .sql import (
 from .sql.database import Database
 from .sqlite import (
     Migrated,
-    SqliteMessageIndexRepository,
     Table,
 )
 from .totp import InMemoryTotpRepository, TotpRepository
@@ -183,7 +183,7 @@ def repositories_on(db: Database) -> Repositories:
         recovery_codes=SqlRecoveryCodeRepository(db),
         keys=SqlKeyRepository(db),
         credentials=SqlCredentialRepository(db),
-        index=SqliteMessageIndexRepository(db),
+        index=SqlMessageIndexRepository(db),
         idempotency=SqlIdempotencyRepository(db),
         sends=SqlSendLogRepository(db),
         changes=SqlChangeLogRepository(db),

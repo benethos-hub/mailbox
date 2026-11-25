@@ -11,6 +11,7 @@ from .audit import SqlAuditRepository
 from .changes import SqlChangeLogRepository
 from .credentials import SqlCredentialRepository, SqlKeyRepository
 from .idempotency import SqlIdempotencyRepository
+from .index import SqlMessageIndexRepository
 from .links import SqlLinkRepository
 from .outbox import SqlOutboxRepository
 from .passkeys import SqlPasskeyRepository
@@ -29,6 +30,7 @@ __all__ = [
     "SqlIdempotencyRepository",
     "SqlKeyRepository",
     "SqlLinkRepository",
+    "SqlMessageIndexRepository",
     "SqlOutboxRepository",
     "SqlPasskeyRepository",
     "SqlPasswordRepository",
