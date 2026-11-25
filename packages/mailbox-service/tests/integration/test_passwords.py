@@ -22,7 +22,7 @@ from benethos_mailbox_service.data.storage import (
 from benethos_mailbox_service.domain.auth.passwords import Passwords
 from benethos_mailbox_service.errors import ConflictError
 
-from ..data.storage.old_schema import at_schema
+from ..schema_helpers import at_schema
 
 # Cheap, so the tests run fast. The service uses Scrypt().
 CHEAP = Scrypt(log_n=4, r=1, p=1)

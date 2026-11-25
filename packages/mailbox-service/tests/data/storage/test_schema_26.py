@@ -5,7 +5,9 @@ the migrations, keeps what it held."""
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
+import stat
 from contextlib import closing
 from datetime import UTC, datetime
 from pathlib import Path
@@ -22,11 +24,12 @@ from benethos_mailbox_service.data.storage import (
     SqliteUserRepository,
     ThreadChain,
 )
-from benethos_mailbox_service.data.storage.sqlite import SqliteKeyRepository
+from benethos_mailbox_service.data.storage.sqlite import SqliteKeyRepository, database
+from benethos_mailbox_service.data.storage.sqlite.database import inspect_file
 from benethos_mailbox_service.data.storage.sqlite.users import ascii_lower
-from benethos_mailbox_service.errors import ConflictError
+from benethos_mailbox_service.errors import ConflictError, StorageError
 
-from .old_schema import at_schema
+from ...schema_helpers import at_schema
 
 KEYS_IN_META = ("active_key", "changes_last")
 
@@ -228,3 +231,41 @@ def test_sends_of_schema_25_are_found_by_recipient(tmp_path: Path) -> None:
     )
     assert [r.id for r in found] == ["snd_1"]
     db.close()
+
+
+def test_a_copy_is_kept_before_schema_26(tmp_path: Path) -> None:
+    path = tmp_path / "old.db"
+    at_schema(path, 25).close()
+    db = Database(path)
+    copies = list(tmp_path.glob("old.db.before-schema-26-*"))
+    assert len(copies) == 1
+    assert inspect_file(copies[0]) == 25
+    assert db.migrated is not None
+    assert any(copies[0].name in note for note in db.migrated.notes)
+    if os.name == "posix":
+        assert stat.S_IMODE(copies[0].stat().st_mode) == 0o600
+    db.close()
+    Database(path).close()
+    assert list(tmp_path.glob("old.db.before-schema-26-*")) == copies
+
+
+def test_a_new_database_gets_no_copy(tmp_path: Path) -> None:
+    Database(tmp_path / "new.db").close()
+    Database().close()
+    assert [p.name for p in tmp_path.iterdir()] == ["new.db"]
+
+
+def test_without_its_copy_the_database_stays_at_its_schema(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path = tmp_path / "old.db"
+    at_schema(path, 25).close()
+
+    def full(path: Path, data: bytes = b"") -> None:
+        raise OSError(28, "No space left on device")
+
+    monkeypatch.setattr(database, "create_private", full)
+    with pytest.raises(StorageError, match="schema 25 was not migrated"):
+        Database(path)
+    assert inspect_file(path) == 25
+    assert list(tmp_path.glob("old.db.before-schema-26-*")) == []

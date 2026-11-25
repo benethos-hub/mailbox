@@ -35,7 +35,7 @@ from benethos_mailbox_service.data.storage.sqlite.migrations import (
 from benethos_mailbox_service.domain.rights import Access
 from benethos_mailbox_service.errors import StorageError
 
-from .old_schema import at_schema
+from ...schema_helpers import at_schema
 
 
 def test_webhooks_of_users_deleted_before_are_dropped(tmp_path: Path) -> None:
