@@ -11,7 +11,7 @@ from functools import partial
 from ..common.clock import utc_now
 from ..config import Settings
 from ..data.logbook import LogBook
-from ..data.models import ProviderType
+from ..data.models import OutboxJob, ProviderType
 from ..data.protocols import Lookup, OAuthClient, Resolve, SafeFetcher
 from ..data.providers import ProviderFactory
 from ..data.secrets import CredentialVault, KeyProvider, PasswordHasher
@@ -34,8 +34,10 @@ from ..domain.mailbox import (
     AttachmentLinks,
     Idempotency,
     MailboxService,
+    OutboxRunner,
     SendControl,
 )
+from ..domain.rights import Access
 from ..domain.sync import SyncService, SyncWorker
 from ..domain.system import RecoveryKey, ServiceLog, StatusService
 from ..domain.users import (
@@ -124,6 +126,7 @@ def build_services(
             index=repositories.index,
             changes=changes,
             worker=services.worker,
+            outbox=services.outbox,
             vault=vault,
             oauth=OAuthService(
                 services.accounts,
@@ -139,6 +142,8 @@ def build_services(
                 services.sync,
                 services.worker,
                 services.webhooks,
+                outbox=repositories.outbox,
+                clock=clock,
             ),
             recovery=RecoveryKey(services.auth, vault),
             log=ServiceLog(logbook or LogBook(), records.activity),
@@ -150,6 +155,7 @@ def build_services(
                 records.activity.purge,
                 changes.purge,
                 services.sends.purge,
+                services.mailbox.outgoing.jobs.purge,
                 services.links.purge,
             ),
         )
@@ -248,6 +254,8 @@ class _Domain:
             clock=clock,
             activity=activity,
             thread_messages=settings.thread_messages,
+            outbox=repositories.outbox,
+            outbox_retry_hours=settings.outbox_retry_hours,
         )
         self.links = AttachmentLinks(
             repositories.links,
@@ -258,6 +266,26 @@ class _Domain:
             activity=activity,
         )
         self.deliveries = self._dispatcher(resolve)
+        outgoing = self.mailbox.outgoing
+        self.outbox = OutboxRunner(
+            outgoing.outbox,
+            outgoing.queued,
+            self.sends,
+            self._access_for_job,
+            clock=clock,
+            activity=activity,
+            purge=outgoing.jobs.purge,
+        )
+
+    def _access_for_job(self, job: OutboxJob) -> Access | None:
+        """What the user who queued a job may do now: through the token it
+        was queued with, which must still hold, or as the user of the UI."""
+        if job.credential_id is None:
+            return self.auth.access_of(job.user_id)
+        access = self.auth.token_access(job.credential_id, "the outbox")
+        if access is None or access.user_id != job.user_id:
+            return None
+        return access
 
     def _account_service(
         self, offered: frozenset[ProviderType] | None

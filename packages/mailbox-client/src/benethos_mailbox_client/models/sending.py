@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 
 from .messages import Address
 
@@ -19,6 +20,30 @@ class Sent:
     original_marked: bool | None = None
     # The copy in the sent folder, where the service put one.
     sent_copy_id: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class OutboxEntry:
+    """A send in the outbox: put in with ``outbox`` or ``send_at``, sent in
+    the background. ``state`` is ``queued``, ``sending``, ``copying``,
+    ``sent``, ``failed``, ``unknown`` or ``cancelled``. ``last_error`` is
+    the code of the last failure, or why it ended."""
+
+    id: str
+    account_id: str
+    user_id: str
+    operation: str
+    draft_id: str
+    message_id_header: str
+    recipients: list[str]
+    state: str
+    attempts: int
+    due_at: datetime
+    expires_at: datetime
+    send_at: datetime | None
+    last_error: str | None
+    created_at: datetime
+    finished_at: datetime | None
 
 
 @dataclass(frozen=True, slots=True)

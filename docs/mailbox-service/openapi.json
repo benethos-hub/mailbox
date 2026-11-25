@@ -5148,7 +5148,10 @@
                   "enum": [
                     "sent",
                     "denied",
-                    "failed"
+                    "failed",
+                    "queued",
+                    "cancelled",
+                    "unknown"
                   ],
                   "type": "string"
                 },
@@ -7272,7 +7275,7 @@
           "mailbox"
         ],
         "summary": "Send Message",
-        "description": "Send from the account's address. The service sets From, Date and\nMessage-ID and keeps a read copy in the sent folder. `200` means the\nmail server accepted the message. It cannot be taken back.",
+        "description": "Send from the account's address. The service sets From, Date and\nMessage-ID and keeps a read copy in the sent folder. `200` means the\nmail server accepted the message. It cannot be taken back.\n\nWith `outbox` or `send_at` the message goes into the outbox instead:\nkept as a draft, answered with `202` and the job at once, and sent in\nthe background, tried again while the provider is away. Its job says\nhow it went (`get_outbox_job`), and webhooks hear of it.",
         "operationId": "send_message",
         "security": [
           {
@@ -7315,7 +7318,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/OutgoingMessage"
+                "$ref": "#/components/schemas/SendRequest"
               }
             }
           }
@@ -7441,6 +7444,16 @@
               }
             }
           },
+          "202": {
+            "description": "Put into the outbox (`outbox` or `send_at`): the job, sent in the background",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutboxEntry"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -7461,7 +7474,7 @@
           "mailbox"
         ],
         "summary": "List Sends",
-        "description": "The audit of sends from this account, newest first: every attempt\nthrough `send_message` or `send_draft`, sent, denied by a grant or\nfailed, with user, token and recipients, never content. The filter\nparameters narrow the list together.",
+        "description": "The audit of sends from this account, newest first: every attempt\nthrough `send_message` or `send_draft`, sent, denied by a grant or\nfailed, with user, token and recipients, never content. A send through\nthe outbox adds `queued`, and its end `cancelled` or `unknown`. The\nfilter parameters narrow the list together.",
         "operationId": "list_sends",
         "security": [
           {
@@ -7534,7 +7547,10 @@
                   "enum": [
                     "sent",
                     "denied",
-                    "failed"
+                    "failed",
+                    "queued",
+                    "cancelled",
+                    "unknown"
                   ],
                   "type": "string"
                 },
@@ -8633,7 +8649,7 @@
           "mailbox"
         ],
         "summary": "Send Draft",
-        "description": "Send a draft as it is stored, dated now. Then it is deleted and a\nread copy kept in the sent folder. A reply or forward marks its\noriginal. Right: `send_draft` (`send`). It cannot be taken back.",
+        "description": "Send a draft as it is stored, dated now. Then it is deleted and a\nread copy kept in the sent folder. A reply or forward marks its\noriginal. Right: `send_draft` (`send`). It cannot be taken back.\n\nWith `outbox` or `send_at` the draft goes into the outbox instead:\nanswered with `202` and the job at once, sent in the background. A\ndraft changed or deleted before then is not sent.",
         "operationId": "send_draft",
         "security": [
           {
@@ -8680,6 +8696,23 @@
             "description": "Sent again with the same key within 24 hours, the request returns the first result instead of sending twice. The same key with a different message answers `409`. Without a key a retried request sends again."
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/DraftSendOptions"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Options"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -8797,6 +8830,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Put into the outbox (`outbox` or `send_at`): the job, sent in the background",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutboxEntry"
                 }
               }
             }
@@ -9511,6 +9554,552 @@
           }
         },
         "x-permission": "mail.share"
+      }
+    },
+    "/v1/accounts/{account_id}/outbox": {
+      "get": {
+        "tags": [
+          "mailbox"
+        ],
+        "summary": "List Outbox",
+        "description": "The sends of the outbox, newest first: the caller's own, or every\none with `list_sends`. `state` narrows the list. Ended sends are kept\nas long as the audit of sends keeps its records.",
+        "operationId": "list_outbox",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Account Id"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "queued",
+                    "sending",
+                    "copying",
+                    "sent",
+                    "failed",
+                    "unknown",
+                    "cancelled"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_OutboxEntry_"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "The provider cannot do this",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The provider failed or rejected the credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-permission": "send"
+      }
+    },
+    "/v1/accounts/{account_id}/outbox/{job_id}": {
+      "get": {
+        "tags": [
+          "mailbox"
+        ],
+        "summary": "Get Outbox Job",
+        "description": "One send of the outbox and how it stands.",
+        "operationId": "get_outbox_job",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Account Id"
+            }
+          },
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutboxEntry"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "The provider cannot do this",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The provider failed or rejected the credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-permission": "send"
+      },
+      "delete": {
+        "tags": [
+          "mailbox"
+        ],
+        "summary": "Cancel Send",
+        "description": "Cancel a send that waits: its draft stays in the drafts folder.\nThe caller's own sends, or every one with `update_account`. One that\nis being sent or ended answers `409`.",
+        "operationId": "cancel_send",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Account Id"
+            }
+          },
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutboxEntry"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request is not valid, e.g. a cursor or a right",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller lacks the right for this operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The request body is larger than the service takes (`payload_too_large`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests from this token, session or address (`rate_limited`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "A stored credential cannot be read, or the service's own database failed (`credential_unreadable`, `storage_error`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No user exists yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with what is stored, e.g. a name taken",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "The provider cannot do this",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The provider failed or rejected the credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-permission": "send"
       }
     },
     "/v1/webhooks": {
@@ -11143,7 +11732,22 @@
           "attention": {
             "type": "boolean",
             "title": "Attention",
-            "description": "Whether a person should look: the account is not connected, the service cannot use it, or its last pass failed"
+            "description": "Whether a person should look: the account is not connected, the service cannot use it, its last pass failed, or a send of its outbox in the last 24 hours has an unknown outcome"
+          },
+          "outbox_queued": {
+            "type": "integer",
+            "title": "Outbox Queued",
+            "description": "Sends waiting in its outbox"
+          },
+          "outbox_failed": {
+            "type": "integer",
+            "title": "Outbox Failed",
+            "description": "Sends of its outbox that failed in the last 24 hours"
+          },
+          "outbox_unknown": {
+            "type": "integer",
+            "title": "Outbox Unknown",
+            "description": "Sends of its outbox in the last 24 hours whose outcome is unknown: they are not sent again, a person looks"
           }
         },
         "type": "object",
@@ -11157,7 +11761,10 @@
           "last_sync_at",
           "last_error",
           "last_error_at",
-          "attention"
+          "attention",
+          "outbox_queued",
+          "outbox_failed",
+          "outbox_unknown"
         ],
         "title": "AccountSync",
         "description": "An account and how its sync goes."
@@ -11680,6 +12287,9 @@
                 "message.updated",
                 "message.deleted",
                 "message.sent",
+                "message.send_failed",
+                "message.send_unknown",
+                "message.send_cancelled",
                 "account.needs_reauth"
               ]
             },
@@ -12125,6 +12735,32 @@
         "type": "object",
         "title": "DraftReplacement",
         "description": "A draft as `create_draft` takes it, and which attachments of the\nstored draft to keep."
+      },
+      "DraftSendOptions": {
+        "properties": {
+          "outbox": {
+            "type": "boolean",
+            "title": "Outbox",
+            "description": "Put the draft into the outbox: the answer is `202` with the job at once, the service sends it in the background.",
+            "default": false
+          },
+          "send_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Send At",
+            "description": "When to send it, with a time zone, at most 30 days ahead. Puts it into the outbox."
+          }
+        },
+        "type": "object",
+        "title": "DraftSendOptions",
+        "description": "How a draft is sent. Without a body it is sent at once, as before."
       },
       "ErrorDetail": {
         "properties": {
@@ -13345,6 +13981,129 @@
         "title": "MessageUpdate",
         "description": "What ``PATCH`` changes on a message. Fields left out stay as they are."
       },
+      "OutboxEntry": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "account_id": {
+            "type": "string",
+            "title": "Account Id"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id",
+            "description": "Who queued it. It is sent with their rights."
+          },
+          "operation": {
+            "type": "string",
+            "title": "Operation",
+            "description": "`send_message` or `send_draft`."
+          },
+          "draft_id": {
+            "type": "string",
+            "title": "Draft Id",
+            "description": "The draft that is sent."
+          },
+          "message_id_header": {
+            "type": "string",
+            "title": "Message Id Header",
+            "description": "The Message-ID it goes out with."
+          },
+          "recipients": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Recipients"
+          },
+          "state": {
+            "type": "string",
+            "title": "State",
+            "description": "`queued`: waits for its time. `sending`: handed to the provider now. `copying`: sent, the copy in the sent folder still missing. `sent`. `failed`: not sent, the draft stays. `unknown`: whether it went out cannot be told, it is not sent again and the draft stays. `cancelled`: not sent, the draft stays."
+          },
+          "attempts": {
+            "type": "integer",
+            "title": "Attempts"
+          },
+          "due_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Due At",
+            "description": "When the next attempt is due."
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At",
+            "description": "After this, no further attempt."
+          },
+          "send_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Send At",
+            "description": "The time asked for, if any."
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error",
+            "description": "The code of the last failure, or why it ended: such as `provider_unavailable`, `draft_changed`, `draft_gone`, `cancelled_by_user`, `no_sent_copy`."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At",
+            "description": "When it was sent or ended."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "account_id",
+          "user_id",
+          "operation",
+          "draft_id",
+          "message_id_header",
+          "recipients",
+          "state",
+          "attempts",
+          "due_at",
+          "expires_at",
+          "send_at",
+          "last_error",
+          "created_at",
+          "finished_at"
+        ],
+        "title": "OutboxEntry",
+        "description": "A send in the outbox. Its draft waits in the drafts folder until it\nwent out."
+      },
       "OutgoingAttachment": {
         "properties": {
           "filename": {
@@ -13374,99 +14133,6 @@
           "data"
         ],
         "title": "OutgoingAttachment"
-      },
-      "OutgoingMessage": {
-        "properties": {
-          "reference": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/MessageReference"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "to": {
-            "items": {
-              "$ref": "#/components/schemas/Recipient"
-            },
-            "type": "array",
-            "title": "To"
-          },
-          "cc": {
-            "items": {
-              "$ref": "#/components/schemas/Recipient"
-            },
-            "type": "array",
-            "title": "Cc"
-          },
-          "bcc": {
-            "items": {
-              "$ref": "#/components/schemas/Recipient"
-            },
-            "type": "array",
-            "title": "Bcc",
-            "description": "Receive it, but appear in no header."
-          },
-          "reply_to": {
-            "items": {
-              "$ref": "#/components/schemas/Recipient"
-            },
-            "type": "array",
-            "title": "Reply To"
-          },
-          "subject": {
-            "type": "string",
-            "maxLength": 998,
-            "pattern": "^[^\\r\\n\\x0b\\x0c\\x1c-\\x1e\\x85\\u2028\\u2029]*$",
-            "title": "Subject",
-            "default": ""
-          },
-          "text": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Text",
-            "description": "Plain text. Left out beside `html`: made from the HTML."
-          },
-          "html": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Html",
-            "description": "HTML, sent beside a text part (multipart/alternative)."
-          },
-          "attachments": {
-            "items": {
-              "$ref": "#/components/schemas/OutgoingAttachment"
-            },
-            "type": "array",
-            "title": "Attachments"
-          },
-          "attachments_from": {
-            "items": {
-              "$ref": "#/components/schemas/AttachmentSource"
-            },
-            "type": "array",
-            "maxItems": 20,
-            "title": "Attachments From",
-            "description": "Attachments of other messages of this account, by id, attached before those of `attachments`. Needs the right to read them."
-          }
-        },
-        "type": "object",
-        "title": "OutgoingMessage",
-        "description": "A message to send. The service sets From, Date and Message-ID. It\nneeds a recipient, unless it is a reply: that finds one in the original."
       },
       "Page_Account_": {
         "properties": {
@@ -13548,6 +14214,33 @@
           "items"
         ],
         "title": "Page[MessageSummary]"
+      },
+      "Page_OutboxEntry_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OutboxEntry"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "Page[OutboxEntry]"
       },
       "Page_SendRecord_": {
         "properties": {
@@ -13955,10 +14648,13 @@
             "enum": [
               "sent",
               "denied",
-              "failed"
+              "failed",
+              "queued",
+              "cancelled",
+              "unknown"
             ],
             "title": "Outcome",
-            "description": "`sent`: the mail server took it. `denied`: a grant's recipients or send limit stopped it. `failed`: an error before or while sending."
+            "description": "`sent`: the mail server took it. `denied`: a grant's recipients or send limit stopped it. `failed`: an error before or while sending. `queued`: put into the outbox, sent later. `cancelled`: an outbox job that ended without a send. `unknown`: an outbox job whose send may or may not have gone out."
           },
           "error": {
             "anyOf": [
@@ -13990,6 +14686,18 @@
               }
             ],
             "title": "Message Id Header"
+          },
+          "outbox_job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outbox Job Id",
+            "description": "The outbox job of the attempt, if any."
           }
         },
         "type": "object",
@@ -14005,6 +14713,118 @@
         ],
         "title": "SendRecord",
         "description": "One attempt to send: a mail or a draft."
+      },
+      "SendRequest": {
+        "properties": {
+          "reference": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MessageReference"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "to": {
+            "items": {
+              "$ref": "#/components/schemas/Recipient"
+            },
+            "type": "array",
+            "title": "To"
+          },
+          "cc": {
+            "items": {
+              "$ref": "#/components/schemas/Recipient"
+            },
+            "type": "array",
+            "title": "Cc"
+          },
+          "bcc": {
+            "items": {
+              "$ref": "#/components/schemas/Recipient"
+            },
+            "type": "array",
+            "title": "Bcc",
+            "description": "Receive it, but appear in no header."
+          },
+          "reply_to": {
+            "items": {
+              "$ref": "#/components/schemas/Recipient"
+            },
+            "type": "array",
+            "title": "Reply To"
+          },
+          "subject": {
+            "type": "string",
+            "maxLength": 998,
+            "pattern": "^[^\\r\\n\\x0b\\x0c\\x1c-\\x1e\\x85\\u2028\\u2029]*$",
+            "title": "Subject",
+            "default": ""
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text",
+            "description": "Plain text. Left out beside `html`: made from the HTML."
+          },
+          "html": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Html",
+            "description": "HTML, sent beside a text part (multipart/alternative)."
+          },
+          "attachments": {
+            "items": {
+              "$ref": "#/components/schemas/OutgoingAttachment"
+            },
+            "type": "array",
+            "title": "Attachments"
+          },
+          "attachments_from": {
+            "items": {
+              "$ref": "#/components/schemas/AttachmentSource"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Attachments From",
+            "description": "Attachments of other messages of this account, by id, attached before those of `attachments`. Needs the right to read them."
+          },
+          "outbox": {
+            "type": "boolean",
+            "title": "Outbox",
+            "description": "Put the message into the outbox: it is kept as a draft, the answer is `202` with the job at once, and the service sends it in the background. A provider away does not lose it.",
+            "default": false
+          },
+          "send_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Send At",
+            "description": "When to send it, with a time zone, at most 30 days ahead. Puts it into the outbox."
+          }
+        },
+        "type": "object",
+        "title": "SendRequest",
+        "description": "A message to send, at once or through the outbox."
       },
       "SendResult": {
         "properties": {
@@ -14937,6 +15757,9 @@
                 "message.updated",
                 "message.deleted",
                 "message.sent",
+                "message.send_failed",
+                "message.send_unknown",
+                "message.send_cancelled",
                 "account.needs_reauth"
               ]
             },
@@ -15020,6 +15843,9 @@
                 "message.updated",
                 "message.deleted",
                 "message.sent",
+                "message.send_failed",
+                "message.send_unknown",
+                "message.send_cancelled",
                 "account.needs_reauth"
               ]
             },
@@ -15069,6 +15895,9 @@
                 "message.updated",
                 "message.deleted",
                 "message.sent",
+                "message.send_failed",
+                "message.send_unknown",
+                "message.send_cancelled",
                 "account.needs_reauth"
               ]
             },
@@ -15243,6 +16072,9 @@
                     "message.updated",
                     "message.deleted",
                     "message.sent",
+                    "message.send_failed",
+                    "message.send_unknown",
+                    "message.send_cancelled",
                     "account.needs_reauth"
                   ]
                 },

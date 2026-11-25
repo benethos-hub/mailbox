@@ -20,6 +20,7 @@ from ....common.clock import utc_now
 from ....common.locks import KeyedLocks
 from ....common.retention import Retention
 from ....data.models import (
+    OutboxJob,
     Page,
     SendFilter,
     SendOutcome,
@@ -64,6 +65,39 @@ class SendControl:
         # the limit.
         self._locks: KeyedLocks[tuple[str, str]] = KeyedLocks()
 
+    async def queue(
+        self,
+        access: Access,
+        operation: Operation,
+        account_id: str,
+        recipients: list[str],
+        message_id_header: str,
+        job_id: str,
+    ) -> None:
+        """Record a send put into the outbox, if a grant allows sending to
+        ``recipients``. The send limit counts when it is sent, not now."""
+        async with self._locks.get((access.user_id, account_id)):
+            record = self._recorder(access, operation, account_id, recipients, job_id)
+            self._allowed(
+                access, operation, account_id, recipients, record, count=False
+            )
+            record("queued", message_id_header=message_id_header)
+
+    def note(self, job: OutboxJob, outcome: SendOutcome, error: str | None) -> None:
+        """Record how an outbox job ended where no attempt says it: given
+        up, cancelled, or with an outcome that cannot be told."""
+        self._add(
+            job.user_id,
+            job.credential_id,
+            job.account_id,
+            job.operation,
+            job.recipients,
+            job.id,
+            outcome=outcome,
+            error=error,
+            message_id_header=job.message_id_header,
+        )
+
     async def send(
         self,
         access: Access,
@@ -72,46 +106,15 @@ class SendControl:
         recipients: list[str],
         action: Callable[[], Awaitable[SentMessage]],
         message_id_header: str,
+        job_id: str | None = None,
     ) -> SentMessage:
         """``action``'s result, if the grants allow sending to
-        ``recipients``. Recorded either way."""
+        ``recipients``. Recorded either way, with the outbox job it is an
+        attempt of, if any."""
         async with self._locks.get((access.user_id, account_id)):
-
-            def record(outcome: SendOutcome, **fields: object) -> None:
-                if self._retention.due(self._clock()):
-                    self.purge()
-                self._store.add(
-                    SendRecord.model_validate(
-                        {
-                            "id": secret.new_id("snd"),
-                            "created_at": self._clock(),
-                            "user_id": access.user_id,
-                            "credential_id": access.credential_id,
-                            "account_id": account_id,
-                            "operation": operation,
-                            "recipients": recipients,
-                            "outcome": outcome,
-                            **fields,
-                        }
-                    )
-                )
-
+            record = self._recorder(access, operation, account_id, recipients, job_id)
             by = Actor.of(access)
-            try:
-                self._allow(access, operation, account_id, recipients)
-            except MailboxServiceError as exc:
-                record("denied", error=exc.code)
-                self._activity.record(
-                    said.SendLimitReached(
-                        by=by,
-                        account_id=account_id,
-                        reason=exc.message,
-                        retry_after=exc.retry_after,
-                    )
-                    if isinstance(exc, SendLimitError)
-                    else said.SendRefused(by=by, account_id=account_id, code=exc.code)
-                )
-                raise
+            self._allowed(access, operation, account_id, recipients, record)
             try:
                 sent = await action()
             except MailboxServiceError as exc:
@@ -151,12 +154,95 @@ class SendControl:
                 said.SendsPurged(by=SERVICE, count=purged.count, before=purged.before)
             )
 
+    def _recorder(
+        self,
+        access: Access,
+        operation: Operation,
+        account_id: str,
+        recipients: list[str],
+        job_id: str | None,
+    ) -> Callable[..., None]:
+        """What records an outcome of this attempt."""
+
+        def record(outcome: SendOutcome, **fields: object) -> None:
+            self._add(
+                access.user_id,
+                access.credential_id,
+                account_id,
+                operation,
+                recipients,
+                job_id,
+                outcome=outcome,
+                **fields,
+            )
+
+        return record
+
+    def _add(
+        self,
+        user_id: str,
+        credential_id: str | None,
+        account_id: str,
+        operation: Operation,
+        recipients: list[str],
+        job_id: str | None,
+        **fields: object,
+    ) -> None:
+        if self._retention.due(self._clock()):
+            self.purge()
+        self._store.add(
+            SendRecord.model_validate(
+                {
+                    "id": secret.new_id("snd"),
+                    "created_at": self._clock(),
+                    "user_id": user_id,
+                    "credential_id": credential_id,
+                    "account_id": account_id,
+                    "operation": operation,
+                    "recipients": recipients,
+                    "outbox_job_id": job_id,
+                    **fields,
+                }
+            )
+        )
+
+    def _allowed(
+        self,
+        access: Access,
+        operation: Operation,
+        account_id: str,
+        recipients: list[str],
+        record: Callable[..., None],
+        *,
+        count: bool = True,
+    ) -> None:
+        """Raise and record ``denied`` when no grant allows the send. The
+        send limit only when ``count``."""
+        by = Actor.of(access)
+        try:
+            self._allow(access, operation, account_id, recipients, count=count)
+        except MailboxServiceError as exc:
+            record("denied", error=exc.code)
+            self._activity.record(
+                said.SendLimitReached(
+                    by=by,
+                    account_id=account_id,
+                    reason=exc.message,
+                    retry_after=exc.retry_after,
+                )
+                if isinstance(exc, SendLimitError)
+                else said.SendRefused(by=by, account_id=account_id, code=exc.code)
+            )
+            raise
+
     def _allow(
         self,
         access: Access,
         operation: Operation,
         account_id: str,
         recipients: list[str],
+        *,
+        count: bool = True,
     ) -> None:
         limits = access.send_limits(operation, account_id)
         fitting = [
@@ -169,7 +255,7 @@ class SendControl:
                 + (", ".join(outside) if outside else "these recipients together")
             )
         caps = [limit.max_per_day for limit in fitting]
-        if any(cap is None for cap in caps):
+        if not count or any(cap is None for cap in caps):
             return
         cap = max(cap for cap in caps if cap is not None)
         now = self._clock()

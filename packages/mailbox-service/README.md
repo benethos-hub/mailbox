@@ -283,6 +283,7 @@ names the settings file it read and the database at start.
 | `MAILBOX_SERVICE_CHANGES_DAYS` | `7` | days the change feed keeps a change |
 | `MAILBOX_SERVICE_LINK_SECONDS` | `120` | seconds a link to an attachment holds at most, any value from 1 on. 60 to 300 is the range to keep to: whoever holds the URL fetches the file, and the URL stands in access logs, such as a reverse proxy's |
 | `MAILBOX_SERVICE_AUDIT_DAYS` | `90` | days the audits of sends and of administration keep a record. `0` keeps every record. |
+| `MAILBOX_SERVICE_OUTBOX_RETRY_HOURS` | `48` | hours the attempts of a send in the outbox go on after it is due. Then it fails, and its draft stays |
 | `MAILBOX_SERVICE_WEBHOOK_ATTEMPTS` | `8` | tries of a webhook post before its events are dropped |
 | `MAILBOX_SERVICE_WEBHOOK_FIRST_RETRY` | `30` | seconds before the second try, doubled for each further one |
 | `MAILBOX_SERVICE_WEBHOOK_LONGEST_RETRY` | `3600` | the longest pause between two tries, in seconds |

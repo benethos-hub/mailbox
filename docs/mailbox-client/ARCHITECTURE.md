@@ -42,7 +42,9 @@ packages/mailbox-client/
       attachments.py    # an attachment's bytes, a link to it
       threads.py        # the threads of a folder, one thread
       drafts.py         # list, write, replace, delete drafts
-      sending.py        # send a message, send a draft
+      sending.py        # send a message, send a draft, each at once or
+                        #   through the outbox
+      outbox.py         # the sends of the outbox, one, cancelling one
       sends.py          # the audit of sends
       users.py          # users, a password set
       tokens.py         # a user's tokens
@@ -80,7 +82,8 @@ packages/mailbox-client/
       changes.py        # the changes since a state
       attachments.py    # an attachment's bytes, a link to an attachment
       threads.py        # a thread and its summary
-      sending.py        # a recipient, what a send answered
+      sending.py        # a recipient, what a send answered, a send in
+                        #   the outbox
       sends.py          # a record of the audit of sends
       rights.py         # a grant, the catalogue of rights
       users.py          # a user, a password made for one

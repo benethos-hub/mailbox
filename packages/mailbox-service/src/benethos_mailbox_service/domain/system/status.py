@@ -9,14 +9,28 @@ provider for it.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 
+from ...common.clock import utc_now
 from ...data.models import Account, AccountStatus, Webhook
+from ...data.storage import OutboxRepository
 from ...errors import ForbiddenError, MailboxServiceError
 from ..accounts import AccountService
 from ..rights import Access
 from ..sync import SyncService, SyncState, SyncWorker, WorkerState
 from ..webhooks import WebhookCounts, WebhookService
+
+
+@dataclass(frozen=True, slots=True)
+class OutboxCounts:
+    """The account's sends in the outbox: those that wait, and those that
+    failed or whose outcome is unknown in the last 24 hours."""
+
+    queued: int = 0
+    failed: int = 0
+    unknown: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -30,14 +44,17 @@ class AccountHealth:
     # Why the service cannot build the account's adapter, e.g. a Gmail
     # account without the Google client in the settings.
     problem: str | None = None
+    outbox: OutboxCounts = OutboxCounts()
 
     @property
     def attention(self) -> bool:
-        """Whether a person should look at it."""
+        """Whether a person should look at it: also a send of the last day
+        whose outcome is unknown, which the service does not send again."""
         return (
             self.account.status is not AccountStatus.CONNECTED
             or self.sync.last_error is not None
             or self.problem is not None
+            or self.outbox.unknown > 0
         )
 
 
@@ -88,11 +105,16 @@ class StatusService:
         sync: SyncService,
         worker: SyncWorker | None,
         webhooks: WebhookService,
+        outbox: OutboxRepository | None = None,
+        clock: Callable[[], datetime] = utc_now,
     ) -> None:
+        """``outbox`` holds the sends the counts of an account read."""
         self._accounts = accounts
         self._sync = sync
         self._worker = worker
         self._webhooks = webhooks
+        self._outbox = outbox
+        self._clock = clock
 
     def sync_of(self, access: Access, account_id: str) -> SyncState | None:
         """How the account's sync went, None when no pass does anything
@@ -159,9 +181,21 @@ class StatusService:
                     synced=synced,
                     watching=account.id in watching,
                     problem=problem,
+                    outbox=self._outbox_of(account.id),
                 )
             )
         return healths
+
+    def _outbox_of(self, account_id: str) -> OutboxCounts:
+        if self._outbox is None:
+            return OutboxCounts()
+        day = self._clock() - timedelta(hours=24)
+        jobs = self._outbox
+        return OutboxCounts(
+            queued=jobs.count(account_id, "queued"),
+            failed=jobs.count(account_id, "failed", since=day),
+            unknown=jobs.count(account_id, "unknown", since=day),
+        )
 
     def _synced(self, account_id: str) -> tuple[bool, str | None]:
         """Whether a sync pass does anything for the account, and why

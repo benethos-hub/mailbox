@@ -15,7 +15,7 @@ from benethos_mailbox_common.log import redact
 
 from ...errors import MailboxServiceError, RateLimitedError
 from ..errors import status_of
-from .schemas import ErrorResponse
+from .schemas import ErrorResponse, OutboxEntry
 
 # What each status means, documented so generated clients know the shape.
 _MEANINGS = {
@@ -87,6 +87,17 @@ LINK_ERRORS: dict[int | str, dict[str, Any]] = {
 }
 
 # A grant may narrow sending (CONCEPT 7.5).
+# A send put into the outbox: the job, at once.
+QUEUED: dict[int | str, dict[str, Any]] = {
+    202: {
+        "model": OutboxEntry,
+        "description": (
+            "Put into the outbox (`outbox` or `send_at`): the job, sent in "
+            "the background"
+        ),
+    },
+}
+
 SEND_ERRORS: dict[int | str, dict[str, Any]] = {
     403: {
         "model": ErrorResponse,

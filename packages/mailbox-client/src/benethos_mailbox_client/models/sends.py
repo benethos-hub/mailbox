@@ -11,7 +11,8 @@ class SendRecord:
     """One attempt to send from an account. ``operation`` is
     ``send_message`` or ``send_draft``, ``outcome`` ``sent``, ``denied`` or
     ``failed`` with its ``error``, ``refused`` the recipients the server
-    did not take."""
+    did not take. A send through the outbox adds ``queued``,
+    ``cancelled`` and ``unknown``, and ``outbox_job_id`` names its job."""
 
     id: str
     created_at: datetime
@@ -24,3 +25,4 @@ class SendRecord:
     error: str | None
     refused: tuple[str, ...]
     message_id_header: str | None
+    outbox_job_id: str | None = None

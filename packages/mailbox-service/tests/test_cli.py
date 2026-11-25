@@ -206,6 +206,7 @@ def test_alert_rules_need_no_key_and_no_oauth_app(
         "- alert: MailboxAccountNeedsALook",
         "- alert: MailboxSyncStalls",
         "- alert: MailboxWebhookFails",
+        "- alert: MailboxSendUnknown",
     ]
     assert "\t" not in out
 

@@ -36,6 +36,7 @@ from ...data.models import (
     Thread,
     ThreadSummary,
 )
+from ...data.storage import OutboxRepository
 from ...errors import BadRequestError, MailboxServiceError, missing, missing_message
 from ..accounts import Adapters, for_delete, for_list, for_update
 from ..activity import ActivityLog
@@ -46,7 +47,7 @@ from .calls import Calls, public
 from .cursors import Cursors
 from .folders import Folders, require_listed, with_roles_resolved
 from .guards import Guards, Lookups
-from .outgoing import Idempotency, Outgoing, SendControl
+from .outgoing import RETRY_HOURS, Idempotency, Outgoing, SendControl
 from .reach import of_the_account, permitted, reach_of
 from .threads import THREAD_MESSAGES, Threads
 
@@ -65,9 +66,11 @@ class MailboxService:
         sync: SyncService,
         idempotency: Idempotency,
         sends: SendControl,
+        outbox: OutboxRepository,
         clock: Callable[[], datetime] = utc_now,
         activity: ActivityLog | None = None,
         thread_messages: int = THREAD_MESSAGES,
+        outbox_retry_hours: int = RETRY_HOURS,
     ) -> None:
         self._calls = Calls(adapters, sync)
         self._cursors = Cursors()
@@ -78,7 +81,14 @@ class MailboxService:
         self._threads = Threads(self._calls, self._folders, thread_messages)
         # Sending, drafts and the audit of sends: mailbox.outgoing.send_message.
         self.outgoing = Outgoing(
-            self._calls, idempotency, sends, self._cursors, clock, activity
+            self._calls,
+            idempotency,
+            sends,
+            self._cursors,
+            outbox,
+            clock,
+            activity,
+            retry_hours=outbox_retry_hours,
         )
 
     # --- folders ----------------------------------------------------------------------

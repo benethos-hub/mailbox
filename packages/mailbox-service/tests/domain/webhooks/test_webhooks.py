@@ -40,6 +40,9 @@ def test_create_answers_the_secret_once(
         "message.updated",
         "message.deleted",
         "message.sent",
+        "message.send_failed",
+        "message.send_unknown",
+        "message.send_cancelled",
         "account.needs_reauth",
     ]
     assert body["accounts"] is None

@@ -22,6 +22,7 @@ from .credentials import (
 from .idempotency import IdempotencyRepository, InMemoryIdempotencyRepository
 from .index import InMemoryMessageIndexRepository, MessageIndexRepository
 from .links import InMemoryLinkRepository, LinkRepository
+from .outbox import InMemoryOutboxRepository, OutboxRepository
 from .passkeys import InMemoryPasskeyRepository, PasskeyRepository
 from .passwords import InMemoryPasswordRepository, PasswordRepository
 from .recovery_codes import InMemoryRecoveryCodeRepository, RecoveryCodeRepository
@@ -37,6 +38,7 @@ from .sqlite import (
     SqliteKeyRepository,
     SqliteLinkRepository,
     SqliteMessageIndexRepository,
+    SqliteOutboxRepository,
     SqlitePasskeyRepository,
     SqlitePasswordRepository,
     SqliteRecoveryCodeRepository,
@@ -111,6 +113,7 @@ class Repositories:
     webhooks: WebhookRepository
     audit: AuditRepository
     links: LinkRepository
+    outbox: OutboxRepository
     # The store behind them, for backups and for closing. None in memory.
     store: Store | None = None
 
@@ -141,6 +144,7 @@ def open_repositories(
             webhooks=InMemoryWebhookRepository(),
             audit=InMemoryAuditRepository(),
             links=InMemoryLinkRepository(),
+            outbox=InMemoryOutboxRepository(),
         )
     db = Database(database_path)
     return Repositories(
@@ -161,5 +165,6 @@ def open_repositories(
         webhooks=SqliteWebhookRepository(db),
         audit=SqliteAuditRepository(db),
         links=SqliteLinkRepository(db),
+        outbox=SqliteOutboxRepository(db),
         store=db,
     )

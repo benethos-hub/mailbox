@@ -15,6 +15,10 @@ from .catalogue import (
     MessagesDeleted,
     MessageSent,
     MessagesUpdated,
+    SendCancelled,
+    SendEnded,
+    SendFailed,
+    SendUnknown,
 )
 from .feed import ChangeFeed, decided
 
@@ -27,5 +31,9 @@ __all__ = [
     "MessagesCreated",
     "MessagesDeleted",
     "MessagesUpdated",
+    "SendCancelled",
+    "SendEnded",
+    "SendFailed",
+    "SendUnknown",
     "decided",
 ]

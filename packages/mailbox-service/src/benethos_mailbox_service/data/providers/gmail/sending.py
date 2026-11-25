@@ -71,6 +71,17 @@ async def delete_draft(api: GmailApi, draft_id: str) -> None:
         await api.call("DELETE", f"/drafts/{path_part(gmail_id)}")
 
 
+async def find_sent(api: GmailApi, message_id_header: str) -> bool:
+    """Whether the sent mail holds a message with this Message-ID. A draft
+    with it is not sent mail."""
+    params = [
+        ("q", f"rfc822msgid:{message_id_header.strip('<>')} in:sent"),
+        ("maxResults", "1"),
+    ]
+    found = await api.read(Messages, "GET", "/messages", params=params)
+    return bool(found.messages)
+
+
 async def _in_thread(
     api: GmailApi, raw: bytes, message: dict[str, str]
 ) -> dict[str, str]:

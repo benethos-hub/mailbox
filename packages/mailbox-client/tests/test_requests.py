@@ -27,7 +27,12 @@ CONTRACT = OPENAPI
 DOCUMENT = json.loads(CONTRACT.read_text("utf-8"))
 METHODS = {"get", "put", "post", "patch", "delete"}
 # Endpoints that send another operation: a shorthand of it.
-SENDS = {"update_messages": "batch_messages", "trash_messages": "batch_messages"}
+SENDS = {
+    "update_messages": "batch_messages",
+    "trash_messages": "batch_messages",
+    "queue_message": "send_message",
+    "queue_draft": "send_draft",
+}
 # Takes any method and path: it covers no operation of its own.
 GENERIC = {"request"}
 # A sample per annotation, by its first type.

@@ -165,6 +165,9 @@ class GmailProvider:
     async def send(self, raw: bytes, sender: str, recipients: list[str]) -> SentMessage:
         return await sending.send(self._api, raw, sender, recipients)
 
+    async def find_sent(self, message_id_header: str) -> bool:
+        return await sending.find_sent(self._api, message_id_header)
+
     async def list_drafts(
         self, *, limit: int, cursor: str | None
     ) -> Page[MessageSummary]:

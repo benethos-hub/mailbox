@@ -112,6 +112,8 @@ each account and compares.
 | DEBUG | an Idempotency-Key was replayed | account id, operation | |
 | ERROR | did the operation on A, but could not keep its result for the Idempotency-Key | account id, operation, traceback | a retry with the same key would do it again |
 | INFO | purged N records older than D from the audit of sends | count, before | at start and once an hour at most, `MAILBOX_SERVICE_AUDIT_DAYS` |
+| INFO | the outbox will try the send of J from A again in N s: reason | account id, job id, the error's code, seconds | a provider away or busy, a refused sign-in, a send limit, an outcome to look into |
+| WARNING | the outbox ended the send of J from A as S: reason | account id, job id, state, a code | `failed`, `unknown` or `cancelled`, or `sent` without its copy in the sent folder (`no_sent_copy`). Never a recipient |
 | INFO | X shared attachment T of M in A as link L for N s | actor, the ids of the attachment, the message, the account and the link, seconds | never the secret, never the URL |
 | INFO | X had attachment T of M in A fetched through link L | the user of the token that made the link, its token, the address that fetched it, the ids | |
 | WARNING | someone was refused link L: reason | source, link id, reason: used, ended, its token or the token's user can no longer act, or what the service answered | a secret that is no link's writes no line, as a wrong token does not |

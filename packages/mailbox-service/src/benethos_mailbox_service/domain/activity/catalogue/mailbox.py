@@ -120,6 +120,49 @@ class SendLimitReached(Activity):
 
 
 @dataclass(frozen=True, kw_only=True)
+class OutboxRetry(Activity):
+    """An attempt of an outbox job did not send, the job waits for the
+    next. The reason is the error's code."""
+
+    name: ClassVar[str] = "outbox_retry"
+
+    account_id: str
+    job_id: str
+    code: str
+    seconds: int
+
+    def says(self) -> str:
+        return (
+            f"will try the send of {self.job_id} from {self.account_id} again "
+            f"in {self.seconds}s"
+        )
+
+    def why(self) -> str:
+        return self.code
+
+
+@dataclass(frozen=True, kw_only=True)
+class OutboxEnded(Activity):
+    """An outbox job ended without a send: failed, cancelled, or with an
+    outcome that cannot be told. Also a job sent whose copy in the sent
+    folder could not be made. The reason is a code."""
+
+    name: ClassVar[str] = "outbox_ended"
+    level: ClassVar[int] = logging.WARNING
+
+    account_id: str
+    job_id: str
+    state: str
+    code: str
+
+    def says(self) -> str:
+        return f"ended the send of {self.job_id} from {self.account_id} as {self.state}"
+
+    def why(self) -> str:
+        return self.code
+
+
+@dataclass(frozen=True, kw_only=True)
 class SendsPurged(Purged):
     """Records older than the audit keeps are gone. The normal course,
     once an hour at most, so no warning."""

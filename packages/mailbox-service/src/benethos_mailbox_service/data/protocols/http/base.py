@@ -8,7 +8,7 @@ from collections.abc import Mapping
 
 import httpx
 
-from ....errors import ProviderError, ProviderUnavailableError
+from ....errors import OutcomeUnknownError, ProviderError, ProviderUnavailableError
 from ..transport import system_context
 
 
@@ -76,9 +76,20 @@ def wire_host(target: httpx.URL) -> str:
     return target.raw_host.decode("ascii").lower()
 
 
+# Failures once the request went out: the server may have done what it
+# asked, and whether it did cannot be told.
+AFTER_SENDING = (httpx.ReadTimeout, httpx.ReadError, httpx.RemoteProtocolError)
+
+
 def unreachable(exc: httpx.HTTPError, host: str) -> ProviderUnavailableError:
     """The failure named by its kind alone, never by the request: a URL
-    may carry a token."""
+    may carry a token. One once the request went out is an
+    ``OutcomeUnknownError``, which a caller sees as any other."""
+    kind = (
+        OutcomeUnknownError
+        if isinstance(exc, AFTER_SENDING)
+        else (ProviderUnavailableError)
+    )
     if isinstance(exc, httpx.TimeoutException):
-        return ProviderUnavailableError(f"{host} did not answer in time")
-    return ProviderUnavailableError(f"{host} is not reachable: {type(exc).__name__}")
+        return kind(f"{host} did not answer in time")
+    return kind(f"{host} is not reachable: {type(exc).__name__}")

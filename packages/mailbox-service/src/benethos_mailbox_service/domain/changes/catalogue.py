@@ -82,6 +82,37 @@ class MessageSent(MailboxChange):
 
 
 @dataclass(frozen=True, slots=True)
+class SendEnded(MailboxChange):
+    """A send of the outbox ended without going out. ``job_id``: its job."""
+
+    job_id: str
+
+    def ids(self) -> Sequence[str]:
+        return [self.job_id]
+
+
+@dataclass(frozen=True, slots=True)
+class SendFailed(SendEnded):
+    """It was refused, or its attempts ran out."""
+
+    kind: ClassVar[ChangeKind] = "message.send_failed"
+
+
+@dataclass(frozen=True, slots=True)
+class SendUnknown(SendEnded):
+    """Whether it went out cannot be told. It is not sent again."""
+
+    kind: ClassVar[ChangeKind] = "message.send_unknown"
+
+
+@dataclass(frozen=True, slots=True)
+class SendCancelled(SendEnded):
+    """It was cancelled, or its draft deleted or changed."""
+
+    kind: ClassVar[ChangeKind] = "message.send_cancelled"
+
+
+@dataclass(frozen=True, slots=True)
 class AccountNeedsSignIn(MailboxChange):
     """The provider refused the account's sign-in: a person signs in again."""
 

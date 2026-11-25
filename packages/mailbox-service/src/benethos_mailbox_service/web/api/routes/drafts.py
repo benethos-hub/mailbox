@@ -4,11 +4,13 @@ deleted."""
 from __future__ import annotations
 
 from fastapi import APIRouter
+from fastapi.responses import JSONResponse
 
 from ....data.models import DraftMessage, MessageSummary, Page, SendResult
 from ..deps import Caller, IdempotencyKey, Limit, Mailbox
-from ..errors import SEND_ERRORS
-from ..schemas import DraftReplacement
+from ..errors import QUEUED, SEND_ERRORS
+from ..schemas import DraftReplacement, DraftSendOptions
+from .sending import queued
 
 router = APIRouter(prefix="/accounts/{account_id}", tags=["mailbox"])
 
@@ -61,17 +63,31 @@ async def update_draft(
     )
 
 
-@router.post("/drafts/{draft_id}/send", responses=SEND_ERRORS)
+@router.post(
+    "/drafts/{draft_id}/send",
+    response_model=SendResult,
+    responses={**SEND_ERRORS, **QUEUED},
+)
 async def send_draft(
     account_id: str,
     draft_id: str,
     caller: Caller,
     mailbox: Mailbox,
+    options: DraftSendOptions | None = None,
     idempotency_key: IdempotencyKey = None,
-) -> SendResult:
+) -> SendResult | JSONResponse:
     """Send a draft as it is stored, dated now. Then it is deleted and a
     read copy kept in the sent folder. A reply or forward marks its
-    original. Right: `send_draft` (`send`). It cannot be taken back."""
+    original. Right: `send_draft` (`send`). It cannot be taken back.
+
+    With `outbox` or `send_at` the draft goes into the outbox instead:
+    answered with `202` and the job at once, sent in the background. A
+    draft changed or deleted before then is not sent."""
+    if options is not None and options.queued:
+        job = await mailbox.outgoing.queue_draft(
+            caller, account_id, draft_id, options.send_at, idempotency_key
+        )
+        return queued(job)
     return await mailbox.outgoing.send_draft(
         caller, account_id, draft_id, idempotency_key
     )

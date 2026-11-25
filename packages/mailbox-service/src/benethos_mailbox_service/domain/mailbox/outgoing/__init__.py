@@ -9,7 +9,9 @@ It reads the provider through ``..calls`` and the grants through
 from __future__ import annotations
 
 from .idempotency import Idempotency
+from .outbox import RETRY_HOURS
+from .runner import OutboxRunner
 from .sending import SendControl
 from .service import Outgoing
 
-__all__ = ["Idempotency", "Outgoing", "SendControl"]
+__all__ = ["RETRY_HOURS", "Idempotency", "OutboxRunner", "Outgoing", "SendControl"]

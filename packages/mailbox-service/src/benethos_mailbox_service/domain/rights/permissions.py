@@ -61,7 +61,15 @@ GROUPS: dict[str, tuple[str, ...]] = {
     # get_message too.
     "drafts": ("list_drafts", "create_draft", "update_draft", "delete_draft"),
     # Cannot be taken back either.
-    "send": ("send_message", "send_draft"),
+    # The outbox goes with sending: a caller sees and cancels its own
+    # sends there. list_sends sees every one, update_account cancels any.
+    "send": (
+        "send_message",
+        "send_draft",
+        "list_outbox",
+        "get_outbox_job",
+        "cancel_send",
+    ),
     # A link that hands an attachment to whoever holds it: out of every
     # other group, so a grant names it on purpose.
     "mail.share": ("share_attachment",),

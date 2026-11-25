@@ -86,7 +86,7 @@ packages/mailbox-service/
         exposition.py   # the figures of GET /v1/metrics in the text
                         #   format of Prometheus (prometheus_client),
                         #   and alert_rules.yml, the alerts on them
-        alert_rules.yml # three alerts for Prometheus, printed by
+        alert_rules.yml # four alerts for Prometheus, printed by
                         #   the command alert-rules
         routes/         # one router per resource. One account's mail:
                         #   folders.py, mailbox.py (its messages, in
@@ -187,8 +187,11 @@ packages/mailbox-service/
                         #   (service, with composing, delivering and
                         #   checks, replies), grant limits and the send
                         #   audit (sending), the Idempotency-Key
-                        #   (idempotency). Reads through ..calls and
-                        #   ..reach
+                        #   (idempotency), a send put into the drafts
+                        #   folder to go out later (outbox), how a job
+                        #   of it is sent (queued) and the rounds that
+                        #   send what is due (runner, OutboxRunner).
+                        #   Reads through ..calls and ..reach
       sync/             # SyncService (stable message ids), the sync pass
                         #   and how the passes went (runner, SyncRunner),
                         #   what a pass finds (passes), the threads the

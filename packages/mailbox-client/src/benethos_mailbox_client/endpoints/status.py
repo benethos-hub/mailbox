@@ -53,6 +53,9 @@ def _status(found: dict[str, Any]) -> Status:
                 last_error=a.get("last_error"),
                 last_error_at=maybe_time(a.get("last_error_at")),
                 attention=bool(a["attention"]),
+                outbox_queued=int(a.get("outbox_queued") or 0),
+                outbox_failed=int(a.get("outbox_failed") or 0),
+                outbox_unknown=int(a.get("outbox_unknown") or 0),
             )
             for a in found["accounts"]
         ),

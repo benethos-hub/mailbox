@@ -239,6 +239,29 @@ class Sends(Protocol):
 
 
 @runtime_checkable
+class KeepsSent(Protocol):
+    """Keeps the copy of a sent message where the provider does not, as
+    ``Sends.send`` does, for a copy that failed after the message went
+    out. IMAP, whose sends go over SMTP."""
+
+    async def keep_sent(self, raw: bytes) -> MessageSummary | None:
+        """A read copy of ``raw`` in the sent folder, None without one. A
+        copy with its Message-ID that is there already is that copy."""
+        ...
+
+
+@runtime_checkable
+class FindsSent(Protocol):
+    """Looks into the sent folder for a message the provider sent and
+    filed there itself: Gmail, Microsoft, JMAP. Not IMAP, where the
+    service files the copy only once the send succeeded."""
+
+    async def find_sent(self, message_id_header: str) -> bool:
+        """Whether the sent folder holds a message with this Message-ID."""
+        ...
+
+
+@runtime_checkable
 class Watches(Protocol):
     """Hears of changes as the server reports them, without polling."""
 
