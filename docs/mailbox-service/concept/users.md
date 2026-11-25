@@ -100,7 +100,7 @@ with the role
   | `mail.write` | `update_message`, `delete_message` to trash (also by a move), `batch_messages`, `create_folder`, `update_folder` |
   | `mail.delete` | `delete_message_permanent` (`delete_message` with `permanent=true`), `delete_folder` |
   | `drafts` | `list_drafts`, `create_draft`, `update_draft`, `delete_draft` |
-  | `send` | `send_message`, `send_draft` |
+  | `send` | `send_message`, `send_draft`, `list_outbox`, `get_outbox_job`, `cancel_send` |
   | `mail.share` | `share_attachment`: a link to an attachment for another service (6.3), in no role template |
   | `audit` | `list_sends`, `list_all_sends` on accounts, `list_activity` in `service` |
   | `accounts.manage` | `update_account`, `delete_account`, `verify_account`, `list_server_names`, credentials of mail accounts |

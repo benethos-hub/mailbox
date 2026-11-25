@@ -67,7 +67,7 @@ only inside its group.
 |---|---|---|
 | `mail` | Mail itself, nothing of Mailbox. The visible text of an HTML body, as the mail page of the service shows it and the model of the MCP server reads it. Addresses in a readable form. The marks a person sees on a message, and their words. | the standard library |
 | `log` | The line of a log: its format, its levels and its time, plain, in colour on a terminal or as JSON. Secrets are noted once and masked in every text. | the standard library |
-| `paths` | Where a program keeps its files: the folders of the operating system for settings and data. | the extra `paths`, which brings platformdirs |
+| `paths` | Where a program keeps its files: the folders of the operating system for settings and data, and an exclusive lock on a file. | the extra `paths`, which brings platformdirs |
 | `settings` | A program's settings, from the command line, the environment, a settings file and the defaults. | the extra `settings`, which brings pydantic-settings |
 | `values` | Values written one way: JSON compact to send and canonical to hash, sizes, a pause that doubles up to a ceiling, ids, tokens and digests, and text on one line. | the standard library |
 

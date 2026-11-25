@@ -80,7 +80,7 @@ Part of [UI.md](../UI.md): section 7.
   recovery codes one for all of them. Where the browser offers no
   clipboard, a page not on https or localhost, the button selects the
   text instead.
-- **Times in lists**: tokens, devices, sends, webhooks, deliveries
+- **Times in lists**: tokens, devices, sends, the outbox, webhooks, deliveries
   and the last sync of an account show a time under a day ago as "3 minutes ago", older ones as date
   and time, the full stamp always as the tooltip (macro `ago`). Audit,
   log, the facts of a record and the message keep the full stamp.

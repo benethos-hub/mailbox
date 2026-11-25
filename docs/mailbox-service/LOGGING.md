@@ -96,7 +96,7 @@ past tense, in this order:
 - **who**: the user's name and id, `admin (usr_7f3a…)`. When the user
   came with a token, the token's name after it: `Claude Desktop
   (usr_91c0…, token laptop)`. The service itself is `the worker`, `the
-  dispatcher`, `the host` for a CLI command.
+  dispatcher`, `the outbox`, `the host` for a CLI command.
 - **did what**: the verb of the operation: signed in, connected,
   changed, removed, issued, revoked, sent.
 - **to which**: the record: a user by name and id, an account by address
