@@ -311,9 +311,11 @@ packages/mailbox-service/
                         #   memory: store.py what it holds, where
                         #   tests look, messages, folders, drafts
       storage/          # own records, one module per subject, table.py
-                        #   for the in-memory ones, sqlite/ the database
-                        #   and the files SQLite keeps beside it
-                        #   (database.py), its rows read typed
+                        #   for the in-memory ones, sqlite/ the file of
+                        #   the database, its connection, the steps of
+                        #   its schema and the files SQLite keeps beside
+                        #   it (file.py), the database the repositories
+                        #   use (database.py), its rows read typed
                         #   (rows.py), its tables as stored for an
                         #   export (tables.py), sqlite/migrations/ the base, the registry,
                         #   versions/ one class per schema version,

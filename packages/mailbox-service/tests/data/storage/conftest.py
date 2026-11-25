@@ -14,7 +14,7 @@ from benethos_mailbox_service.data.storage import (
     MessageIndexRepository,
     Repositories,
 )
-from benethos_mailbox_service.data.storage.sqlite import database
+from benethos_mailbox_service.data.storage.sqlite import database, file
 
 from .disk_helpers import Disk
 from .index_helpers import ACC
@@ -62,4 +62,4 @@ def no_room_for_copy(monkeypatch: pytest.MonkeyPatch) -> None:
     def full(path: Path, data: bytes = b"") -> None:
         raise OSError(28, "No space left on device")
 
-    monkeypatch.setattr(database, "create_private", full)
+    monkeypatch.setattr(file, "create_private", full)
