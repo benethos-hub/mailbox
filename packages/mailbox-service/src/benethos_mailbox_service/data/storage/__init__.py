@@ -43,6 +43,7 @@ from .sql import (
     SqlChangeLogRepository,
     SqlIdempotencyRepository,
     SqlLinkRepository,
+    SqlMessageIndexRepository,
     SqlOutboxRepository,
     SqlPasskeyRepository,
     SqlPasswordRepository,
@@ -57,7 +58,6 @@ from .sql import (
 from .sql.database import Database
 from .sqlite import (
     SCHEMA_VERSION,
-    SqliteMessageIndexRepository,
     Table,
     inspect_file,
     migrate_file,
@@ -131,7 +131,7 @@ __all__ = [
     "SqlChangeLogRepository",
     "SqlIdempotencyRepository",
     "SqlLinkRepository",
-    "SqliteMessageIndexRepository",
+    "SqlMessageIndexRepository",
     "SqlOutboxRepository",
     "SqlPasswordRepository",
     "SqlRoleRepository",
