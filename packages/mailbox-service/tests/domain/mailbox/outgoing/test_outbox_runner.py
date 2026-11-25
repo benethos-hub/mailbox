@@ -4,12 +4,19 @@ missing sent copy is made again."""
 
 from __future__ import annotations
 
+import asyncio
 from datetime import timedelta
 from email import message_from_bytes
 
 import pytest
 
-from benethos_mailbox_service.data.models import Message, ProviderType, SentMessage
+from benethos_mailbox_service.data.models import (
+    DraftMessage,
+    Message,
+    ProviderType,
+    Recipient,
+    SentMessage,
+)
 from benethos_mailbox_service.errors import BadRequestError, ProviderUnavailableError
 
 from ....conftest import ADMIN, create_account
@@ -132,3 +139,33 @@ def test_one_job_per_account_at_a_time(box: Outbox) -> None:
     assert box.job(elsewhere.id).state == "sent"
     box.round()
     assert box.job(second.id).state == "sent"
+
+
+def test_a_draft_deleted_since_cancels_the_job(box: Outbox) -> None:
+    job = box.queue()
+    asyncio.run(
+        box.services.mailbox.outgoing.delete_draft(ADMIN, box.account_id, job.draft_id)
+    )
+    box.round()
+    ended = box.job(job.id)
+    assert (ended.state, ended.last_error) == ("cancelled", "draft_gone")
+    assert box.sent() == []
+    assert ("cancelled", "draft_gone") in box.outcomes()
+
+
+def test_a_draft_changed_since_cancels_the_job_and_stays(box: Outbox) -> None:
+    job = box.queue()
+    asyncio.run(
+        box.services.mailbox.outgoing.update_draft(
+            ADMIN,
+            box.account_id,
+            job.draft_id,
+            DraftMessage(to=[Recipient(email="eve@example.com")], text="Other."),
+        )
+    )
+    (changed,) = box.drafts()
+    box.round()
+    ended = box.job(job.id)
+    assert (ended.state, ended.last_error) == ("cancelled", "draft_changed")
+    assert box.sent() == []
+    assert box.drafts() == [changed]

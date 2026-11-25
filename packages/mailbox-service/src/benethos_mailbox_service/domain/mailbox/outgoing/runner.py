@@ -3,10 +3,11 @@ is due, one job per account at a time, the earliest due first.
 
 A job is sent with the rights of the user who queued it, read anew for
 each attempt: a right taken away, a token revoked or a user gone ends
-it. A server that is away or busy, a refused sign-in and a reached send
-limit wait for the next attempt, until the job's time is up. Any other
-refusal ends it. A job sent whose copy in the sent folder failed keeps
-its draft until the copy is made again."""
+it. A draft deleted or changed in a mail client since cancels it: only
+what was queued goes out. A server that is away or busy, a refused
+sign-in and a reached send limit wait for the next attempt, until the
+job's time is up. Any other refusal ends it. A job sent whose copy in
+the sent folder failed keeps its draft until the copy is made again."""
 
 from __future__ import annotations
 
@@ -19,6 +20,7 @@ from ....common.clock import utc_now
 from ....data.models import OutboxJob, OutboxState, SendOutcome
 from ....errors import (
     MailboxServiceError,
+    NotFoundError,
     NotSupportedError,
     OutcomeUnknownError,
     ProviderAuthError,
@@ -30,7 +32,7 @@ from ...activity import mailbox as said
 from ...rights import Access
 from ...rounds import rounds
 from .outbox import Outbox
-from .queued import QueuedSend
+from .queued import Prepared, QueuedSend
 from .sending import SendControl
 
 # Seconds between two rounds.
@@ -42,6 +44,9 @@ LATER = 1800
 # How long an unclear attempt waits before the sent folder is looked into
 # again: a provider files its copy a while after it took the message.
 UNCLEAR = timedelta(minutes=15)
+# The codes of a job whose draft was deleted or changed after it was queued.
+DRAFT_GONE = "draft_gone"
+DRAFT_CHANGED = "draft_changed"
 # The code of a job whose sent copy could not be made.
 NO_COPY = "no_sent_copy"
 # How the end of a job stands in the audit of sends.
@@ -124,10 +129,8 @@ class OutboxRunner:
             if not await self._looked(taken, now):
                 return
             taken = taken.model_copy(update={"unclear_since": None})
-        try:
-            prepared = await self._queued.prepare(taken, now)
-        except MailboxServiceError as exc:
-            self._end(taken, "failed", exc.code, note=True)
+        prepared = await self._prepared(taken, now)
+        if prepared is None:
             return
         try:
             _, copy_error = await self._queued.deliver(access, taken, prepared)
@@ -142,6 +145,23 @@ class OutboxRunner:
             raise
         else:
             self._went_out(taken, copy_error, now)
+
+    async def _prepared(self, job: OutboxJob, now: datetime) -> Prepared | None:
+        """The job's draft made ready to go out, None when the job ended:
+        a draft deleted or changed in a mail client cancels it."""
+        try:
+            prepared = await self._queued.prepare(job, now)
+        except NotFoundError:
+            self._end(job, "cancelled", DRAFT_GONE, note=True)
+            return None
+        except MailboxServiceError as exc:
+            self._end(job, "failed", exc.code, note=True)
+            return None
+        if prepared.digest != job.digest:
+            # What goes out is only what was queued.
+            self._end(job, "cancelled", DRAFT_CHANGED, note=True)
+            return None
+        return prepared
 
     async def _unclear(self, job: OutboxJob, code: str, now: datetime) -> None:
         """An attempt whose outcome cannot be told. Found in the sent folder,

@@ -15,17 +15,20 @@ from ...rights import Access
 from ..calls import Calls
 from . import checks
 from .delivering import Delivery
+from .outbox import draft_digest
 
 
 @dataclass(frozen=True, slots=True)
 class Prepared:
     """A job's draft as it goes out: the bytes, who gets it, the reference
-    a reply or forward keeps, and the account it goes from."""
+    a reply or forward keeps, the account it goes from, and the digest of
+    the draft as it is stored now."""
 
     account: Account
     raw: bytes
     recipients: list[str]
     reference: str | None
+    digest: str
 
 
 class QueuedSend:
@@ -49,6 +52,7 @@ class QueuedSend:
             out.raw,
             checks.addressed(out.recipients),
             out.reference,
+            draft_digest(stored),
         )
 
     async def deliver(
