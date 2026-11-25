@@ -12,7 +12,7 @@ import pytest
 from benethos_mailbox_service.data.models import ChangeRecord
 from benethos_mailbox_service.data.storage import (
     Database,
-    SqliteChangeLogRepository,
+    repositories_on,
 )
 from benethos_mailbox_service.data.storage.sqlite import SCHEMA_VERSION, database
 from benethos_mailbox_service.errors import StorageError
@@ -93,7 +93,7 @@ def test_rows_are_read_in_chunks_in_the_order_of_the_key(
 
 def test_a_filled_feed_counts_on_from_its_last_number() -> None:
     source = _filled()
-    feed = SqliteChangeLogRepository(source)
+    feed = repositories_on(source).changes
     record = ChangeRecord(
         type="message.created",
         id="msg_1",
@@ -105,7 +105,7 @@ def test_a_filled_feed_counts_on_from_its_last_number() -> None:
     target = Database()
     for table in source.tables():
         target.fill(table.name, table.columns, source.rows(table.name))
-    SqliteChangeLogRepository(target).append([record])
+    repositories_on(target).changes.append([record])
     assert [r[0] for r in target.rows("changes")] == [1, 4]
     source.close()
     target.close()

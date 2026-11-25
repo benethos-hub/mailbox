@@ -12,8 +12,7 @@ from benethos_mailbox_service.data.storage import (
     IndexChanges,
     IndexEntry,
     MessageIndexRepository,
-    SqliteAccountRepository,
-    SqliteMessageIndexRepository,
+    repositories_on,
 )
 from benethos_mailbox_service.data.storage.sqlite import database
 
@@ -122,9 +121,9 @@ def test_forget_account(index: MessageIndexRepository) -> None:
 
 def test_deleting_an_account_drops_its_entries(tmp_path: Path) -> None:
     db = Database(tmp_path / "cascade.db")
-    accounts = SqliteAccountRepository(db)
+    accounts = repositories_on(db).accounts
     accounts.add(Account(id=ACC, provider=ProviderType.IMAP, email="a@example.com"))
-    index = SqliteMessageIndexRepository(db)
+    index = repositories_on(db).index
     index.add(ACC, [entry(1)])
     index.apply(ACC, IndexChanges(states={"f_inbox": "s"}))
     accounts.delete(ACC)

@@ -292,3 +292,24 @@ def test_no_test_of_the_domain_calls_an_adapter_itself() -> None:
                     name = path.relative_to(tests).as_posix()
                     found.append(f"{name}:{node.lineno} {module}")
     assert not found, "a domain test calls an adapter:\n  " + "\n  ".join(found)
+
+
+# The tests of the storage take their repositories from one place
+# (repositories_on, open_repositories, the fixture repositories), so a
+# class of the database can be replaced without touching a test.
+TESTS = Path(__file__).resolve().parent
+
+
+def test_no_test_imports_a_class_of_the_database() -> None:
+    found = []
+    for path in sorted(TESTS.rglob("*.py")):
+        for node in ast.walk(ast.parse(path.read_text("utf-8"))):
+            if isinstance(node, ast.ImportFrom):
+                found += [
+                    f"{path.relative_to(TESTS).as_posix()}: {alias.name}"
+                    for alias in node.names
+                    if alias.name.startswith("Sqlite")
+                ]
+    assert found == [], "a test imports a class of the database:\n  " + "\n  ".join(
+        found
+    )

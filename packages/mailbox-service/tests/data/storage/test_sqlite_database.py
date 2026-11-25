@@ -21,13 +21,11 @@ from benethos_mailbox_service.data.models import ApiToken, ProviderType, User
 from benethos_mailbox_service.data.secrets import totp
 from benethos_mailbox_service.data.storage import (
     Database,
-    SqliteTokenRepository,
-    SqliteUserRepository,
     WrappedKey,
+    repositories_on,
 )
 from benethos_mailbox_service.data.storage.sqlite import (
     SCHEMA_VERSION,
-    SqliteKeyRepository,
 )
 from benethos_mailbox_service.errors import (
     ConflictError,
@@ -53,19 +51,19 @@ def test_schema_is_migrated(db: Database) -> None:
 
 
 def test_deleting_a_user_cascades_to_its_tokens(db: Database) -> None:
-    SqliteUserRepository(db).save(User(id="usr_1", name="u"))
-    repo = SqliteTokenRepository(db)
+    repositories_on(db).users.save(User(id="usr_1", name="u"))
+    repo = repositories_on(db).tokens
     repo.save(
         ApiToken(id="tok_1", user_id="usr_1", name="t", token_hash="h", created_at=NOW)
     )
-    SqliteUserRepository(db).delete("usr_1")
+    repositories_on(db).users.delete("usr_1")
     assert repo.list_for_user("usr_1") == []
     with pytest.raises(NotFoundError):
         repo.get("tok_1")
 
 
 def test_the_key_added_last_is_active_whatever_the_clock(db: Database) -> None:
-    keys = SqliteKeyRepository(db)
+    keys = repositories_on(db).keys
     assert keys.active() is None
     keys.add(WrappedKey("key_1", b"n1", b"c1"))
     keys.add(WrappedKey("key_2", b"n2", b"c2"))
@@ -141,10 +139,9 @@ def test_the_index_of_a_deleted_account_is_a_conflict(db: Database) -> None:
     from benethos_mailbox_service.data.storage import (
         IndexChanges,
         IndexEntry,
-        SqliteMessageIndexRepository,
     )
 
-    index = SqliteMessageIndexRepository(db)
+    index = repositories_on(db).index
     changes = IndexChanges(added=[IndexEntry("msg_1", "n1", "INBOX")])
     with pytest.raises(ConflictError):
         index.apply("acc_gone", changes)
@@ -378,16 +375,14 @@ def test_forgetting_an_account_gives_its_pages_back(tmp_path: Path) -> None:
     from benethos_mailbox_service.data.models import Account
     from benethos_mailbox_service.data.storage import (
         IndexEntry,
-        SqliteAccountRepository,
-        SqliteMessageIndexRepository,
     )
 
     db = Database(tmp_path / "index.db")
     try:
-        SqliteAccountRepository(db).add(
+        repositories_on(db).accounts.add(
             Account(id="acc_1", provider=ProviderType.IMAP, email="a@example.com")
         )
-        index = SqliteMessageIndexRepository(db)
+        index = repositories_on(db).index
         index.add(
             "acc_1",
             [

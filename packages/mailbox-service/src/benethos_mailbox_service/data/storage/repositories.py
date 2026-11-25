@@ -164,7 +164,12 @@ def open_repositories(
             links=InMemoryLinkRepository(),
             outbox=InMemoryOutboxRepository(),
         )
-    db = Database(database_path)
+    return repositories_on(Database(database_path))
+
+
+def repositories_on(db: Database) -> Repositories:
+    """The repositories on a database already open, each on that one.
+    The one place that names the classes of the database."""
     return Repositories(
         accounts=SqliteAccountRepository(db),
         users=SqliteUserRepository(db),

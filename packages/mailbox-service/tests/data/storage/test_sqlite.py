@@ -21,9 +21,7 @@ from benethos_mailbox_service.cli import main
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.storage import (
     Database,
-    SqliteRecoveryCodeRepository,
-    SqliteRoleRepository,
-    SqliteUserRepository,
+    repositories_on,
 )
 from benethos_mailbox_service.data.storage.sqlite import SCHEMA_VERSION
 from benethos_mailbox_service.data.storage.sqlite.migrations import (
@@ -133,8 +131,8 @@ def test_rights_of_the_service_leave_the_grants(tmp_path: Path) -> None:
         },
     )
     db = Database(path)
-    users = {u.name: u for u in SqliteUserRepository(db).list()}
-    roles = {r.id: r for r in SqliteRoleRepository(db).list()}
+    users = {u.name: u for u in repositories_on(db).users.list()}
+    roles = {r.id: r for r in repositories_on(db).roles.list()}
     for name in users:
         assert (users[name].service, users[name].grants) == (
             roles[name].service,
@@ -175,7 +173,7 @@ def test_nobody_loses_a_right_by_the_move(tmp_path: Path) -> None:
         },
     )
     db = Database(path)
-    users = {u.name: u for u in SqliteUserRepository(db).list()}
+    users = {u.name: u for u in repositories_on(db).users.list()}
     deputy = Access.for_user(users["deputy"], {})
     assert deputy.allows("delete_message_permanent", "acc_1")
     assert deputy.allows("create_user") and deputy.allows("create_webhook")
@@ -217,7 +215,7 @@ def test_recovery_codes_of_schema_18_are_deleted(tmp_path: Path) -> None:
     assert db.query("SELECT * FROM recovery_codes") == []
     columns = [r[1] for r in db.query("PRAGMA table_info(recovery_codes)")]
     assert columns == ["user_id", "key_id", "hash", "used_at"]
-    codes = SqliteRecoveryCodeRepository(db)
+    codes = repositories_on(db).recovery_codes
     assert codes.left("usr_1") == 0
     assert codes.use("usr_1", "", "h", datetime.now(UTC)) is False
     db.close()

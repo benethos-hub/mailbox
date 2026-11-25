@@ -16,11 +16,8 @@ import pytest
 from benethos_mailbox_service.data.models import SendFilter
 from benethos_mailbox_service.data.storage import (
     Database,
-    SqliteChangeLogRepository,
-    SqliteMessageIndexRepository,
-    SqliteSendLogRepository,
+    repositories_on,
 )
-from benethos_mailbox_service.data.storage.sqlite import SqliteKeyRepository
 
 from ...schema_helpers import at_schema
 
@@ -125,19 +122,19 @@ def test_a_migrated_seed_reads_as_it_was_written(tmp_path: Path, schema: int) ->
     path = tmp_path / "old.db"
     _seeded(path, schema)
     db = Database(path)
-    feed = SqliteChangeLogRepository(db)
+    feed = repositories_on(db).changes
     assert [e.seq for e in feed.after(["acc_seed1", "acc_seed2"], 0, limit=10)] == [
         5,
         7,
     ]
     assert feed.last() == 9
-    index = SqliteMessageIndexRepository(db)
+    index = repositories_on(db).index
     entries = index.in_folders("acc_seed2", ["f_inbox"])
     assert [e.id for e in entries] == ["msg_seed_c", "msg_seed_d", "msg_seed_b"]
-    key = SqliteKeyRepository(db).active()
+    key = repositories_on(db).keys.active()
     assert key is not None
     assert key.key_id == "key_seed_a"
-    found = SqliteSendLogRepository(db).list(
+    found = repositories_on(db).sends.list(
         "acc_seed2", limit=10, before=None, matching=SendFilter(recipient="JÖRG.REC")
     )
     assert [r.id for r in found] == ["snd_seed1"]

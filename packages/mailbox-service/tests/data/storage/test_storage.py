@@ -3,10 +3,7 @@ same tests for the in-memory and the SQLite implementation."""
 
 from __future__ import annotations
 
-from collections.abc import Iterator
-from dataclasses import dataclass
 from datetime import UTC, datetime
-from pathlib import Path
 
 import pytest
 
@@ -20,19 +17,7 @@ from benethos_mailbox_service.data.models import (
     User,
 )
 from benethos_mailbox_service.data.storage import (
-    AccountRepository,
-    Database,
-    InMemoryAccountRepository,
-    InMemoryRoleRepository,
-    InMemoryTokenRepository,
-    InMemoryUserRepository,
-    RoleRepository,
-    SqliteAccountRepository,
-    SqliteRoleRepository,
-    SqliteTokenRepository,
-    SqliteUserRepository,
-    TokenRepository,
-    UserRepository,
+    Repositories,
 )
 from benethos_mailbox_service.data.storage.table import drop_where
 from benethos_mailbox_service.errors import ConflictError, NotFoundError
@@ -40,35 +25,12 @@ from benethos_mailbox_service.errors import ConflictError, NotFoundError
 NOW = datetime(2026, 9, 24, 12, 0, tzinfo=UTC)
 
 
-@dataclass(frozen=True)
-class Stores:
-    accounts: AccountRepository
-    users: UserRepository
-    roles: RoleRepository
-    tokens: TokenRepository
+@pytest.fixture
+def stores(repositories: Repositories) -> Repositories:
+    return repositories
 
 
-@pytest.fixture(params=["memory", "sqlite"])
-def stores(request: pytest.FixtureRequest, tmp_path: Path) -> Iterator[Stores]:
-    if request.param == "memory":
-        yield Stores(
-            InMemoryAccountRepository(),
-            InMemoryUserRepository(),
-            InMemoryRoleRepository(),
-            InMemoryTokenRepository(),
-        )
-        return
-    db = Database(tmp_path / "test.db")
-    yield Stores(
-        SqliteAccountRepository(db),
-        SqliteUserRepository(db),
-        SqliteRoleRepository(db),
-        SqliteTokenRepository(db),
-    )
-    db.close()
-
-
-def test_accounts_round_trip(stores: Stores) -> None:
+def test_accounts_round_trip(stores: Repositories) -> None:
     repo = stores.accounts
     account = Account(id="acc_1", provider=ProviderType.IMAP, email="a@example.com")
     repo.add(account, {"host": "imap.example.com", "port": 993, "tls": True})
@@ -97,7 +59,7 @@ def test_accounts_round_trip(stores: Stores) -> None:
             call()
 
 
-def test_an_account_id_is_taken_once(stores: Stores) -> None:
+def test_an_account_id_is_taken_once(stores: Repositories) -> None:
     account = Account(id="acc_1", provider=ProviderType.IMAP, email="a@example.com")
     stores.accounts.add(account)
     with pytest.raises(ConflictError):
@@ -105,7 +67,7 @@ def test_an_account_id_is_taken_once(stores: Stores) -> None:
     assert stores.accounts.get("acc_1").email == "a@example.com"
 
 
-def test_a_user_name_is_unique_regardless_of_case(stores: Stores) -> None:
+def test_a_user_name_is_unique_regardless_of_case(stores: Repositories) -> None:
     repo = stores.users
     repo.save(User(id="usr_1", name="admin"))
     with pytest.raises(ConflictError):
@@ -114,7 +76,7 @@ def test_a_user_name_is_unique_regardless_of_case(stores: Stores) -> None:
     assert [u.name for u in repo.list()] == ["Admin"]
 
 
-def test_users_round_trip(stores: Stores) -> None:
+def test_users_round_trip(stores: Repositories) -> None:
     repo = stores.users
     user = User(
         id="usr_1",
@@ -136,7 +98,7 @@ def test_users_round_trip(stores: Stores) -> None:
         repo.delete("usr_1")
 
 
-def test_roles_round_trip(stores: Stores) -> None:
+def test_roles_round_trip(stores: Repositories) -> None:
     repo = stores.roles
     role = Role(id="reader", grants=[Grant(accounts=["acc_a"], allow=["mail.read"])])
     repo.save(role)
@@ -150,7 +112,7 @@ def test_roles_round_trip(stores: Stores) -> None:
         repo.delete("reader")
 
 
-def test_users_and_roles_keep_their_places(stores: Stores) -> None:
+def test_users_and_roles_keep_their_places(stores: Repositories) -> None:
     """A list comes in the order the records were added. Saving one
     again keeps its place, one added after a deletion comes last."""
     for name in ("b", "a", "c"):
@@ -166,7 +128,7 @@ def test_users_and_roles_keep_their_places(stores: Stores) -> None:
     assert [r.id for r in stores.roles.list()] == ["role_b", "role_a", "role_d"]
 
 
-def test_accounts_keep_their_places(stores: Stores) -> None:
+def test_accounts_keep_their_places(stores: Repositories) -> None:
     for n in (2, 1, 3):
         stores.accounts.add(
             Account(id=f"acc_{n}", provider=ProviderType.IMAP, email="a@example.com")
@@ -179,7 +141,7 @@ def test_accounts_keep_their_places(stores: Stores) -> None:
     assert [a.id for a in stores.accounts.list()] == ["acc_2", "acc_1", "acc_4"]
 
 
-def test_tokens_round_trip(stores: Stores) -> None:
+def test_tokens_round_trip(stores: Repositories) -> None:
     stores.users.save(User(id="usr_1", name="u"))
     repo = stores.tokens
     token = ApiToken(
@@ -201,7 +163,7 @@ def test_tokens_round_trip(stores: Stores) -> None:
         repo.get("tok_1")
 
 
-def test_touching_a_token_changes_its_last_use_alone(stores: Stores) -> None:
+def test_touching_a_token_changes_its_last_use_alone(stores: Repositories) -> None:
     stores.users.save(User(id="usr_1", name="u"))
     repo = stores.tokens
     token = ApiToken(
@@ -216,7 +178,7 @@ def test_touching_a_token_changes_its_last_use_alone(stores: Stores) -> None:
 
 
 def test_a_token_hash_is_held_once_and_a_save_replaces_the_whole(
-    stores: Stores,
+    stores: Repositories,
 ) -> None:
     stores.users.save(User(id="usr_1", name="u"))
     stores.users.save(User(id="usr_2", name="v"))

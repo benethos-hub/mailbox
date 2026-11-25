@@ -19,7 +19,7 @@ from benethos_mailbox_service.data.models import (
 from benethos_mailbox_service.data.storage import (
     Database,
     InMemorySendLogRepository,
-    SqliteSendLogRepository,
+    repositories_on,
 )
 from benethos_mailbox_service.domain.mailbox import SendControl
 from benethos_mailbox_service.domain.rights.access import (
@@ -191,7 +191,7 @@ def test_sqlite_send_log(tmp_path: object) -> None:
     db = Database()
     try:
         clock = Clock(datetime(2026, 9, 24, 12, tzinfo=UTC))
-        store = SqliteSendLogRepository(db)
+        store = repositories_on(db).sends
         control = SendControl(store, clock)
         access = Access(
             "usr_1", "u", [Grant(accounts=["acc_1"], allow=["send"])], "tok_1"
@@ -222,7 +222,7 @@ def test_sqlite_send_log(tmp_path: object) -> None:
 def test_the_send_log_filters(kind: str) -> None:
     db = Database()
     store = (
-        InMemorySendLogRepository() if kind == "memory" else SqliteSendLogRepository(db)
+        InMemorySendLogRepository() if kind == "memory" else repositories_on(db).sends
     )
     at = datetime(2026, 9, 27, 12, tzinfo=UTC)
     for n, (user, outcome, to) in enumerate(

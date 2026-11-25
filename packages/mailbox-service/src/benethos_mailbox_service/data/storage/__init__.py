@@ -35,7 +35,7 @@ from .outbox import InMemoryOutboxRepository, OutboxRepository
 from .passkeys import InMemoryPasskeyRepository, PasskeyRepository, StoredPasskey
 from .passwords import InMemoryPasswordRepository, PasswordRepository, StoredPassword
 from .recovery_codes import InMemoryRecoveryCodeRepository, RecoveryCodeRepository
-from .repositories import Repositories, Store, open_repositories
+from .repositories import Repositories, Store, open_repositories, repositories_on
 from .sends import InMemorySendLogRepository, SendLogRepository
 from .sqlite import (
     SCHEMA_VERSION,
@@ -158,6 +158,7 @@ __all__ = [
     "migrate_file",
     "move_sidecars",
     "open_repositories",
+    "repositories_on",
     "remove_database_file",
     "service_lock",
 ]

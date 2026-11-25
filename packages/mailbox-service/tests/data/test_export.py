@@ -13,7 +13,7 @@ import pytest
 
 from benethos_mailbox_service.data.export import ExportError, read_export, write_export
 from benethos_mailbox_service.data.models import ChangeRecord
-from benethos_mailbox_service.data.storage import Database, SqliteChangeLogRepository
+from benethos_mailbox_service.data.storage import Database, repositories_on
 
 from ..schema_helpers import at_schema
 
@@ -116,12 +116,12 @@ def test_a_purged_feed_counts_on_after_an_export(source: Database) -> None:
         account_id="acc_seed2",
         at=datetime(2026, 11, 25, tzinfo=UTC),
     )
-    feed = SqliteChangeLogRepository(source)
+    feed = repositories_on(source).changes
     feed.append([record, record])
     source.execute("DELETE FROM changes WHERE seq > 7")
     target = Database()
     read_export(io.BytesIO(_exported(source)), target)
-    SqliteChangeLogRepository(target).append([record])
+    repositories_on(target).changes.append([record])
     assert [row[0] for row in target.rows("changes")] == [5, 7, 12]
     source.close()
     target.close()

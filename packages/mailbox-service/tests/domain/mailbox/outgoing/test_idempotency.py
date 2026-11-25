@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
 
 import anyio
 import pytest
@@ -19,11 +17,9 @@ from benethos_mailbox_service.data.models import (
 )
 from benethos_mailbox_service.data.providers.memory import MemoryProvider
 from benethos_mailbox_service.data.storage import (
-    Database,
     IdempotencyRepository,
     InMemoryIdempotencyRepository,
-    SqliteAccountRepository,
-    SqliteIdempotencyRepository,
+    Repositories,
     StoredResult,
 )
 from benethos_mailbox_service.domain.mailbox import Idempotency
@@ -246,19 +242,12 @@ async def test_a_retry_during_the_first_waits_for_it() -> None:
 # --- storage --------------------------------------------------------------
 
 
-@pytest.fixture(params=["memory", "sqlite"])
-def store(
-    request: pytest.FixtureRequest, tmp_path: Path
-) -> Iterator[IdempotencyRepository]:
-    if request.param == "memory":
-        yield InMemoryIdempotencyRepository()
-        return
-    db = Database(tmp_path / "idem.db")
-    SqliteAccountRepository(db).add(
+@pytest.fixture
+def store(repositories: Repositories) -> IdempotencyRepository:
+    repositories.accounts.add(
         Account(id="acc", provider=ProviderType.IMAP, email="a@example.com")
     )
-    yield SqliteIdempotencyRepository(db)
-    db.close()
+    return repositories.idempotency
 
 
 def test_store_round_trip_and_purge(store: IdempotencyRepository) -> None:

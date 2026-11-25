@@ -17,14 +17,10 @@ import pytest
 from benethos_mailbox_service.data.models import SendFilter, SendRecord, User
 from benethos_mailbox_service.data.storage import (
     Database,
-    SqliteChangeLogRepository,
-    SqliteMessageIndexRepository,
-    SqliteRoleRepository,
-    SqliteSendLogRepository,
-    SqliteUserRepository,
     ThreadChain,
+    repositories_on,
 )
-from benethos_mailbox_service.data.storage.sqlite import SqliteKeyRepository, database
+from benethos_mailbox_service.data.storage.sqlite import database
 from benethos_mailbox_service.data.storage.sqlite.database import inspect_file
 from benethos_mailbox_service.data.storage.sqlite.users import ascii_lower
 from benethos_mailbox_service.errors import ConflictError, StorageError
@@ -72,7 +68,7 @@ def test_the_index_keeps_its_order_through_schema_26(tmp_path: Path) -> None:
         (4, "msg_e"),
         (5, "msg_d"),
     ]
-    index = SqliteMessageIndexRepository(db)
+    index = repositories_on(db).index
     ids = [e.id for e in index.in_folders("acc_1", ["f_inbox"])]
     assert ids == ["msg_c", "msg_b", "msg_e", "msg_d"]
     assert [e.id for e in index.in_thread("acc_1", "thr_z")] == ["msg_c", "msg_d"]
@@ -99,10 +95,10 @@ def test_users_and_roles_keep_their_places_through_schema_26(
     db = Database(path)
     rows = db.query("SELECT id, position FROM users ORDER BY position")
     assert [tuple(r) for r in rows] == [("usr_b", 1), ("usr_c", 3)]
-    users = SqliteUserRepository(db)
+    users = repositories_on(db).users
     users.save(User(id="usr_d", name="d"))
     assert [u.id for u in users.list()] == ["usr_b", "usr_c", "usr_d"]
-    roles = [r.id for r in SqliteRoleRepository(db).list()]
+    roles = [r.id for r in repositories_on(db).roles.list()]
     assert roles == ["r_b", "r_a", "r_c"]
     db.close()
 
@@ -132,17 +128,17 @@ def test_the_active_key_and_the_last_change_move_to_meta(tmp_path: Path) -> None
         db.query("SELECT key, value FROM meta WHERE key IN (?, ?)", KEYS_IN_META)
     )
     assert meta == {"active_key": "key_a", "changes_last": "3"}
-    key = SqliteKeyRepository(db).active()
+    key = repositories_on(db).keys.active()
     assert key is not None
     assert key.key_id == "key_a"
-    assert SqliteChangeLogRepository(db).last() == 3
+    assert repositories_on(db).changes.last() == 3
     db.close()
 
 
 def test_a_new_database_has_no_key_and_no_change(tmp_path: Path) -> None:
     db = Database(tmp_path / "new.db")
-    assert SqliteKeyRepository(db).active() is None
-    assert SqliteChangeLogRepository(db).last() == 0
+    assert repositories_on(db).keys.active() is None
+    assert repositories_on(db).changes.last() == 0
     db.close()
 
 
@@ -164,7 +160,7 @@ def test_names_are_unique_by_their_ascii_letters(tmp_path: Path) -> None:
     db = Database(path)
     rows = db.query("SELECT name, name_lower FROM users")
     assert [tuple(r) for r in rows] == [("Anna", "anna")]
-    users = SqliteUserRepository(db)
+    users = repositories_on(db).users
     with pytest.raises(ConflictError):
         users.save(User(id="usr_2", name="ANNA"))
     # Beyond ASCII the index lets both in. The domain refuses the second.
@@ -191,7 +187,7 @@ def _send(n: int, *recipients: str) -> SendRecord:
 
 def test_the_recipient_search_takes_the_part_as_it_is() -> None:
     db = Database()
-    sends = SqliteSendLogRepository(db)
+    sends = repositories_on(db).sends
     sends.add(_send(0, "a_b@example.org"))
     sends.add(_send(1, "axb@example.org"))
     sends.add(_send(2, "100%@example.org"))
@@ -226,7 +222,7 @@ def test_sends_of_schema_25_are_found_by_recipient(tmp_path: Path) -> None:
     db = Database(path)
     stored = db.query("SELECT recipients_folded FROM sends")[0][0]
     assert stored == "jörg@example.org\nann@example.org"
-    found = SqliteSendLogRepository(db).list(
+    found = repositories_on(db).sends.list(
         "acc_1", limit=10, before=None, matching=SendFilter(recipient="JÖRG")
     )
     assert [r.id for r in found] == ["snd_1"]
