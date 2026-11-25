@@ -64,6 +64,7 @@ from .messages import (
     as_keyword,
     received_or_written,
 )
+from .outbox import OPEN_STATES, OutboxJob, OutboxState
 from .paging import AccountFailure, Before, MessagePage, Page
 from .sending import (
     AttachmentSource,
@@ -149,6 +150,9 @@ __all__ = [
     "OUTSIDE_ALL",
     "RESERVED_KEYWORDS",
     "OutgoingAttachment",
+    "OPEN_STATES",
+    "OutboxJob",
+    "OutboxState",
     "OutgoingMessage",
     "Page",
     "Passkey",
