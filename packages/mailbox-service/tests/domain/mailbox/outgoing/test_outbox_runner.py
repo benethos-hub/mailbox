@@ -197,3 +197,15 @@ def test_each_end_without_a_send_is_an_event(box: Outbox) -> None:
         ("message.send_cancelled", gone.id),
     ]
     assert [kind for kind, _ in found[2:]] == ["message.sent"]
+
+
+def test_ended_jobs_go_with_the_audit_waiting_ones_stay(box: Outbox) -> None:
+    sent = box.queue()
+    box.round()
+    box.clock.tick(days=91)
+    waiting = box.queue(days=1)
+    box.round()
+    jobs = box.services.mailbox.outgoing.outbox.jobs
+    kept = {j.id for j in jobs.list(box.account_id, limit=10, before=None)}
+    assert sent.id not in kept and waiting.id in kept
+    assert box.job(waiting.id).state == "queued"

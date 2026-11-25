@@ -65,8 +65,9 @@ class Services:
     outbox: OutboxRunner | None = None
     oauth_clients: Mapping[ProviderType, OAuthClient] = field(default_factory=dict)
     # What removes records older than the days to keep: the audit, the
-    # change feed, the audit of sends, and the links used or ended. Each
-    # runs once when the service starts, then as new records come in.
+    # change feed, the audit of sends, the ended sends of the outbox, and
+    # the links used or ended. Each runs once when the service starts,
+    # then as new records come in.
     purges: tuple[Callable[[], None], ...] = ()
 
     @property

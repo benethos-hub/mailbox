@@ -13,6 +13,7 @@ from collections.abc import Callable
 from datetime import datetime
 
 from ....common.clock import utc_now
+from ....common.retention import Retention
 from ....data.models import OutboxJob, OutboxState, Page
 from ....data.storage import OutboxRepository
 from ....errors import ConflictError, ForbiddenError, missing
@@ -37,6 +38,15 @@ class OutboxJobs:
         self._sends = sends
         self._jobs = jobs
         self._clock = clock
+        # Ended jobs are kept as long as the audit of sends keeps a record.
+        self._retention = Retention(sends.days)
+
+    def purge(self) -> None:
+        """Remove the ended jobs older than the days to keep, when due: at
+        the first call, then at most once an hour. Jobs that wait stay."""
+        now = self._clock()
+        if self._retention.due(now):
+            self._retention.purge(now, self._jobs.purge)
 
     def list_outbox(
         self,

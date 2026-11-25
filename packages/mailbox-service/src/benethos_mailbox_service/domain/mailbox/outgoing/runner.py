@@ -70,9 +70,11 @@ class OutboxRunner:
         clock: Callable[[], datetime] = utc_now,
         sleep: Sleep = anyio.sleep,
         activity: ActivityLog | None = None,
+        purge: Callable[[], None] = lambda: None,
     ) -> None:
         """``access_for`` gives what the user who queued a job may do now,
-        None when that user or its token is gone."""
+        None when that user or its token is gone. ``purge`` removes the
+        ended jobs that are due to go, called each round."""
         self._jobs = outbox.jobs
         self._queued = queued
         self._sends = sends
@@ -80,6 +82,7 @@ class OutboxRunner:
         self._clock = clock
         self._sleep = sleep
         self._activity = activity or ActivityLog(clock)
+        self._purge = purge
 
     async def run(self) -> None:
         """Until cancelled. A failure ends a round, never the runner."""
@@ -102,6 +105,7 @@ class OutboxRunner:
 
     async def send_due(self) -> None:
         """One round: per account the earliest job, if it is due."""
+        self._purge()
         now = self._clock()
         seen: set[str] = set()
         for job in self._jobs.open():

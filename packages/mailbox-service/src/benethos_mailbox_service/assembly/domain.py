@@ -155,6 +155,7 @@ def build_services(
                 records.activity.purge,
                 changes.purge,
                 services.sends.purge,
+                services.mailbox.outgoing.jobs.purge,
                 services.links.purge,
             ),
         )
@@ -273,6 +274,7 @@ class _Domain:
             self._access_for_job,
             clock=clock,
             activity=activity,
+            purge=outgoing.jobs.purge,
         )
 
     def _access_for_job(self, job: OutboxJob) -> Access | None:
