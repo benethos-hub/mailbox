@@ -14,6 +14,12 @@ number of the change feed was read from ``sqlite_sequence``. Both are
 written to ``meta`` now, as ``active_key`` and ``changes_last``. Not
 the newest ``created_at``: a clock set back would make an old key the
 active one.
+
+User names were unique by ``COLLATE NOCASE``, a collation of SQLite.
+A column ``name_lower`` holds the name with its ASCII letters in lower
+case, which is what ``lower()`` and ``NOCASE`` fold, with the unique
+index on it. So no name is renamed. The domain compares names with
+``casefold()`` and refuses a second one beyond ASCII, as before.
 """
 
 from __future__ import annotations
@@ -82,4 +88,8 @@ class V0026Portable(Migration):
         INSERT INTO meta (key, value) VALUES ('changes_last', CAST(COALESCE(
             (SELECT seq FROM sqlite_sequence WHERE name = 'changes'), 0) AS TEXT))
         """,
+        "ALTER TABLE users ADD COLUMN name_lower TEXT",
+        "UPDATE users SET name_lower = lower(name)",
+        "DROP INDEX users_name",
+        "CREATE UNIQUE INDEX users_name_lower ON users (name_lower)",
     )

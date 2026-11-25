@@ -4,7 +4,11 @@ the migrations, keeps what it held."""
 
 from __future__ import annotations
 
+import sqlite3
+from contextlib import closing
 from pathlib import Path
+
+import pytest
 
 from benethos_mailbox_service.data.models import User
 from benethos_mailbox_service.data.storage import (
@@ -16,6 +20,8 @@ from benethos_mailbox_service.data.storage import (
     ThreadChain,
 )
 from benethos_mailbox_service.data.storage.sqlite import SqliteKeyRepository
+from benethos_mailbox_service.data.storage.sqlite.users import ascii_lower
+from benethos_mailbox_service.errors import ConflictError
 
 from .old_schema import at_schema
 
@@ -131,4 +137,34 @@ def test_a_new_database_has_no_key_and_no_change(tmp_path: Path) -> None:
     db = Database(tmp_path / "new.db")
     assert SqliteKeyRepository(db).active() is None
     assert SqliteChangeLogRepository(db).last() == 0
+    db.close()
+
+
+@pytest.mark.parametrize(
+    "name", ["Admin", "ADMIN", "Ärger", "ärger", "İstanbul", "ıi", "Straße", "ΣΑΣ"]
+)
+def test_a_name_is_folded_as_sqlite_folds_it(name: str) -> None:
+    with closing(sqlite3.connect(":memory:")) as raw:
+        assert (
+            ascii_lower(name) == raw.execute("SELECT lower(?)", (name,)).fetchone()[0]
+        )
+
+
+def test_names_are_unique_by_their_ascii_letters(tmp_path: Path) -> None:
+    path = tmp_path / "old.db"
+    raw = at_schema(path, 25)
+    raw.execute("INSERT INTO users (id, name) VALUES ('usr_1', 'Anna')")
+    raw.close()
+    db = Database(path)
+    rows = db.query("SELECT name, name_lower FROM users")
+    assert [tuple(r) for r in rows] == [("Anna", "anna")]
+    users = SqliteUserRepository(db)
+    with pytest.raises(ConflictError):
+        users.save(User(id="usr_2", name="ANNA"))
+    # Beyond ASCII the index lets both in. The domain refuses the second.
+    users.save(User(id="usr_3", name="Ärger"))
+    users.save(User(id="usr_4", name="ärger"))
+    users.save(User(id="usr_1", name="Anna Maria"))
+    users.save(User(id="usr_5", name="anna"))
+    assert [u.name for u in users.list()] == ["Anna Maria", "Ärger", "ärger", "anna"]
     db.close()

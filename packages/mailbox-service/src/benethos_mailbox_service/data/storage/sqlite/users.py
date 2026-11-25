@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import string
 from datetime import datetime
 
 from ....common.clock import iso, parse_iso
@@ -18,16 +19,18 @@ class SqliteUserRepository(SqliteRows[User]):
 
     def save(self, user: User) -> None:
         self._db.execute(
-            "INSERT INTO users (id, name, roles, service, grants, disabled,"
-            " ui_sign_in, position) VALUES (?, ?, ?, ?, ?, ?, ?,"
+            "INSERT INTO users (id, name, name_lower, roles, service, grants,"
+            " disabled, ui_sign_in, position) VALUES (?, ?, ?, ?, ?, ?, ?, ?,"
             f" {next_position('users')})"
             " ON CONFLICT(id) DO UPDATE SET name = excluded.name,"
-            " roles = excluded.roles, service = excluded.service,"
-            " grants = excluded.grants, disabled = excluded.disabled,"
+            " name_lower = excluded.name_lower, roles = excluded.roles,"
+            " service = excluded.service, grants = excluded.grants,"
+            " disabled = excluded.disabled,"
             " ui_sign_in = excluded.ui_sign_in",
             (
                 user.id,
                 user.name,
+                ascii_lower(user.name),
                 json.dumps(user.roles),
                 json.dumps(user.service),
                 _grants_json(user.grants),
@@ -38,6 +41,16 @@ class SqliteUserRepository(SqliteRows[User]):
 
     def count(self) -> int:
         return self._db.scalar("SELECT COUNT(*) FROM users")
+
+
+_ASCII_LOWER = str.maketrans(string.ascii_uppercase, string.ascii_lowercase)
+
+
+def ascii_lower(name: str) -> str:
+    """``name`` with the letters A to Z in lower case and every other
+    character as it is, as ``lower()`` of SQLite folds it: the key that
+    keeps two names apart in the unique index."""
+    return name.translate(_ASCII_LOWER)
 
 
 def _user(row: sqlite3.Row) -> User:
