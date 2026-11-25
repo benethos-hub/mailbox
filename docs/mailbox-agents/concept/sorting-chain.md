@@ -242,6 +242,20 @@ and may correct (decided 2026-11-25). The example of the live setup,
   the refusal **(to verify)**. There one instance with `when` is the
   way.
 
+### The recognizer `invoice` and the way out for `invoices`
+
+The recognizer `invoice` asks the question of the agent `invoices` with a
+copy of its prompt `v5`, its schema and its rules. `eval --agent sorting
+--recognizer invoice` scores it alone in the space of `invoices`, so the
+gold set of `invoices` serves unchanged. On the gold set of the test
+account, through the same model alias, it reached the numbers of
+`invoices` on 2026-11-25
+(`reports/mailbox-agents/sorting/2026-11-25-v3-invoice-v5-mail-classifier.json`
+beside `reports/mailbox-agents/invoices/2026-11-23-v6-v5-mail-classifier.json`).
+`invoices` goes only after a run in `shadow` on the owner's mailbox fits
+as well (decided 2026-11-25). `live/mailbox-agents/chain.py` runs the
+three example instances on the test account ([testing](testing.md)).
+
 ## 9. Not part of it
 
 - Forwarding a message: an action without a way back, for the

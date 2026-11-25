@@ -109,6 +109,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   scores the recognizer alone, its rules beside the model, in the space
   of `invoices`: the gold set of `invoices` serves unchanged. The report
   names the recognizer in its file name.
+- The live checks of the agents: `live/mailbox-agents/chain.py` runs the
+  three example instances of `sorting` on the test account and puts the
+  mail back, and the example list `beleg` asks the recognizer `invoice`.
 
 ### Changed
 
