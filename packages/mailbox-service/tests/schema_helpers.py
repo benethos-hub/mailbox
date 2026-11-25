@@ -1,7 +1,8 @@
 """A database file at an older schema, made by the migrations up to it,
 for the tests of the steps after it. And SQL as text on a ``Database``,
 for a test that looks below its repositories: the one place a test hands
-it SQL, also inside ``with db.transaction():``."""
+it SQL, on the connection of the driver beneath it, also inside
+``with db.transaction():``."""
 
 from __future__ import annotations
 
@@ -11,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from benethos_mailbox_service.data.storage import Database
+from benethos_mailbox_service.data.storage.sqlite.file import translated
 from benethos_mailbox_service.data.storage.sqlite.migrations import MIGRATIONS
 
 
@@ -30,25 +32,37 @@ def at_schema(path: Path, version: int) -> sqlite3.Connection:
 
 def select(db: Database, sql: str, params: Sequence[Any] = ()) -> list[Any]:
     """The rows ``sql`` reads from ``db``, each by name and by place."""
-    return db.query(sql, tuple(params))
+    with translated():
+        rows: list[Any] = _driver(db).execute(sql, tuple(params)).fetchall()
+        return rows
 
 
 def value(db: Database, sql: str, params: Sequence[Any] = ()) -> Any:
     """The first value of the first row ``sql`` reads, or None."""
-    row = db.one(sql, tuple(params))
+    with translated():
+        row = _driver(db).execute(sql, tuple(params)).fetchone()
     return None if row is None else row[0]
 
 
 def run(db: Database, sql: str, params: Sequence[Any] = ()) -> int:
     """``sql`` on ``db``, in the transaction open or in one of its own.
     The rows it changed."""
-    return db.execute(sql, tuple(params))
+    with translated():
+        changed: int = _driver(db).execute(sql, tuple(params)).rowcount
+        return changed
 
 
 def run_many(db: Database, sql: str, rows: Iterable[Sequence[Any]]) -> None:
     """``sql`` once for each of ``rows``, in one transaction."""
-    with db.transaction() as conn:
-        conn.executemany(sql, rows)
+    with db.transaction(), translated():
+        _driver(db).executemany(sql, rows)
+
+
+def _driver(db: Database) -> sqlite3.Connection:
+    """The connection of the driver beneath ``db``: the one place a test
+    knows where it sits."""
+    driver: sqlite3.Connection = db._driver
+    return driver
 
 
 def shape(conn: sqlite3.Connection) -> dict[str, Any]:

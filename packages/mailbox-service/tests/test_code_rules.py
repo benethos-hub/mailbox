@@ -349,3 +349,60 @@ def test_only_the_dialect_module_names_a_database() -> None:
     assert found == [], "a database named outside sql/dialect.py:\n  " + "\n  ".join(
         found
     )
+
+
+# Where SQL stands as text: the file of the database and the old chain
+# of migrations in sqlite/, and the beginning of a transaction in
+# sql/dialect.py. Every other statement is an expression of SQLAlchemy,
+# so none is built from the text of a mail or of a caller.
+SQL_AS_TEXT_HOMES = ("data/storage/sqlite/", "data/storage/sql/dialect.py")
+SQL_STATEMENT = re.compile(
+    r"\s*(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|PRAGMA)\s"
+)
+
+
+def _docstrings(tree: ast.AST) -> set[int]:
+    found = set()
+    for node in ast.walk(tree):
+        if isinstance(
+            node, ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef
+        ):
+            body = node.body
+            if body and isinstance(body[0], ast.Expr):
+                found.add(id(body[0].value))
+    return found
+
+
+def _speaks_sql(node: ast.AST, docstrings: set[int]) -> bool:
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return id(node) not in docstrings and bool(SQL_STATEMENT.match(node.value))
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+        called = node.func
+        if called.attr == "exec_driver_sql":
+            return True
+        return (
+            called.attr == "text"
+            and isinstance(called.value, ast.Name)
+            and called.value.id in {"sa", "sqlalchemy"}
+        )
+    if isinstance(node, ast.ImportFrom) and (node.module or "").startswith(
+        "sqlalchemy"
+    ):
+        return any(alias.name == "text" for alias in node.names)
+    return False
+
+
+def test_sql_stands_as_text_only_beside_the_database_file() -> None:
+    found = []
+    for path in sorted(ROOT.rglob("*.py")):
+        place = path.relative_to(ROOT).as_posix()
+        if place.startswith(SQL_AS_TEXT_HOMES):
+            continue
+        tree = ast.parse(path.read_text("utf-8"))
+        docstrings = _docstrings(tree)
+        found += [
+            f"{place}:{node.lineno}"
+            for node in ast.walk(tree)
+            if _speaks_sql(node, docstrings)
+        ]
+    assert found == [], "SQL as text outside its homes:\n  " + "\n  ".join(found)

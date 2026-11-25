@@ -61,7 +61,7 @@ class SqlAuditRepository:
             return [_activity(row) for row in rows]
 
     def purge(self, before: datetime) -> int:
-        return self._db.purge("activity", "at", before)
+        return self._db.purge(activity, "at", before)
 
 
 def _matching(matching: ActivityFilter) -> list[sa.ColumnElement[bool]]:
