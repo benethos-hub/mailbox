@@ -40,6 +40,28 @@ Part of the [concept](../CONCEPT.md).
   `mailbox_agents_model_call_seconds` and `mailbox_agents_actions_total` by
   action and whether it was carried out. A port another process holds
   ends `worker` with exit code 2, naming `METRICS_PORT`.
+- **Spans:** over OpenTelemetry, off unless `OTLP_ENDPOINT` is set
+  (decided 2026-11-25). Then each process exports over OTLP and HTTP to
+  `<endpoint>/v1/traces`, so the target is a setting and any that takes
+  OTLP works: a collector, Tempo in Grafana, Langfuse, which takes OTLP at
+  `/api/public/otel`. `OTLP_HEADERS_FILE` names a file of headers, one
+  `name=value` per line, such as `Authorization=Basic ...` for the key of
+  Langfuse: its values are secrets, masked in every error text and never
+  logged. The endpoint is https, or http to this machine, or anywhere
+  with `OTLP_ALLOW_HTTP`, as the headers may hold a key. `CA_FILE` holds
+  for it as for the upstreams. One trace per message and process: a span
+  `message` with the agent, the account and message ids, the attempt and
+  the state the message is left in, below it `decision` with its source,
+  its model calls and why it was refused, below that a span per part the
+  agent names, for `sorting` a `dimension` with its name, how its category
+  was found, the category as `label-<n>` by its place in the list and
+  whether its quote was found, and a span `action` per action with its
+  name, its code, the stage, whether it was held and what became of it.
+  No span holds anything of a mail, a quote among it, nor the name of a
+  category, a keyword or a folder of a list, which are the owner's text
+  and often name a person. Several agents on one message meet by the
+  message id, not by a trace handed on. A target such as Langfuse that
+  shows a prompt and an answer gets neither: the spans do not carry them.
 - **Cost:** read at the gateway, per key.
 - **Logs:** stderr, through `logbook/` only. [docs/mailbox-agents/LOGGING.md](../LOGGING.md)
   holds the levels, the shape of a line, what never goes into one and the
