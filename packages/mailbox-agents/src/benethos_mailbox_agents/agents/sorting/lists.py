@@ -12,6 +12,7 @@ it as read, beside the versions of the recognizers it uses besides
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -28,6 +29,7 @@ __all__ = [
     "MAX_MODEL",
     "ListRefusedError",
     "Listed",
+    "circles",
     "list_digest",
     "load_chain",
     "read_chain",
@@ -136,6 +138,44 @@ def read_chain(data: Any) -> Listed:
     extra = [r for r in used(chain) if r.name not in _IN_PROMPT]
     version = base + "".join(f"-{r.name}-{r.version}" for r in extra)
     return Listed(chain=chain, version=version)
+
+
+def circles(chains: Mapping[str, Chain], sign: str) -> list[list[str]]:
+    """The circles among the lists of several instances, each list by the
+    name of its instance: one sets a keyword another waits for, and so on
+    back to the first. ``sign`` is the agent's keyword, which an instance
+    sets with ``-<instance>`` after it with a move or with ``mark_done``.
+    Each circle once, from the instance first in ``chains``."""
+    sets: dict[str, set[str]] = {}
+    for name, chain in chains.items():
+        found = set(chain.keywords())
+        if chain.mark_done or chain.folders():
+            found.add(f"{sign}-{name}")
+        sets[name] = found
+    after = {
+        name: [
+            other
+            for other, chain in chains.items()
+            if any(chain.on.waits_for(k) for k in sets[name])
+        ]
+        for name in chains
+    }
+    found_circles: list[list[str]] = []
+    seen: set[frozenset[str]] = set()
+
+    def walk(path: list[str]) -> None:
+        for other in after[path[-1]]:
+            if other == path[0]:
+                key = frozenset(path)
+                if key not in seen:
+                    seen.add(key)
+                    found_circles.append([*path, other])
+            elif other not in path:
+                walk([*path, other])
+
+    for name in chains:
+        walk([name])
+    return found_circles
 
 
 def load_chain(path: Path) -> Listed:

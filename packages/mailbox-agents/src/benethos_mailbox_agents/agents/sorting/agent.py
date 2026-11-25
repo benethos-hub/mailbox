@@ -29,6 +29,7 @@ from __future__ import annotations
 from collections import Counter
 from collections.abc import Mapping
 from functools import cached_property
+from pathlib import Path
 
 from benethos_mailbox_common.values import text as text_values
 
@@ -50,7 +51,7 @@ from ...settings import PREFIX
 from .actions import Placed
 from .dimensions import Chain
 from .groups import NONE
-from .lists import Listed, load_chain, used
+from .lists import Listed, circles, load_chain, used
 from .lists import list_digest as _version
 from .plan import (
     classify,
@@ -122,6 +123,16 @@ class Sorting(Agent):
         found = load_chain(path)
         self.prompt_version = f"{PROMPT}-{found.version}"
         return found
+
+    @classmethod
+    def check_together(cls, configured: Mapping[str, Path]) -> list[str]:
+        """A line for each circle of lists that set each other off, by
+        the names of their instances (decided 2026-11-25)."""
+        chains = {name: load_chain(path).chain for name, path in configured.items()}
+        return [
+            "a circle: " + " -> ".join(found)
+            for found in circles(chains, cls.default_keyword)
+        ]
 
     @property
     def chain(self) -> Chain:

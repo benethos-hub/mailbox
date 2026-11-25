@@ -4,11 +4,17 @@ instance that waits for a keyword: docs/mailbox-agents/concept/sorting-chain.md.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
 import pytest
 
+from benethos_mailbox_agents.agents.sorting.agent import Sorting
+from benethos_mailbox_agents.cli import main
+from benethos_mailbox_agents.errors import ConfigError
+
+from ..agents_helpers import settings
 from .sorting_chain_helpers import Scripted, context, decided, message, sorting
 
 
@@ -108,3 +114,82 @@ async def test_without_mark_done_the_sign_comes_with_a_move_alone(
         requests = await agent.effect(decision, found, context(Scripted()))
 
         assert (("add_keyword", "agent-sorted", False) in plain(requests)) is signed
+
+
+# -- finding 16: no circles --------------------------------------------------------
+
+
+def circle_lists(tmp_path: Path, closed: bool) -> list[str]:
+    """A sets agent-x and waits for agent-y, B sets agent-y and waits for
+    agent-x when ``closed``, for agent-z when not."""
+    found = []
+    for name, sets, waits in (
+        ("a", "agent-x", "agent-y"),
+        ("b", "agent-y", "agent-x" if closed else "agent-z"),
+    ):
+        listed = {
+            "on": {"keywords": [waits]},
+            "dimensions": [
+                {
+                    "name": "kind",
+                    "categories": [
+                        {
+                            "name": "Any",
+                            "keywords": [waits],
+                            "then": [{"keyword": sets}],
+                        }
+                    ],
+                }
+            ],
+        }
+        path = tmp_path / f"{name}.json"
+        path.write_text(json.dumps(listed), encoding="utf-8")
+        found.append(f"{name}={path}")
+    return found
+
+
+@pytest.mark.parametrize(("closed", "code"), [(True, 1), (False, 0)])
+def test_the_command_check_finds_a_circle_of_lists(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], closed: bool, code: int
+) -> None:
+    lists = circle_lists(tmp_path, closed)
+
+    assert main(["check", "--agent", "sorting", *lists]) == code
+
+    out = capsys.readouterr().out
+    if closed:
+        assert "sorting: a circle: a -> b -> a" in out
+        assert out.count("a circle") == 1
+    else:
+        assert "sorting: 2 lists, no problem found" in out
+
+
+def test_the_sign_of_an_instance_closes_a_circle_too(tmp_path: Path) -> None:
+    waits_for_b = {
+        "on": {"keywords": ["agent-sorted-b"]},
+        "mark_done": True,
+        "dimensions": [
+            {"name": "kind", "categories": [{"name": "Any", "keywords": ["agent-q"]}]}
+        ],
+    }
+    waits_for_a = {**waits_for_b, "on": {"keywords": ["agent-sorted-a"]}}
+    paths = {}
+    for name, listed in (("a", waits_for_b), ("b", waits_for_a)):
+        paths[name] = tmp_path / f"{name}.json"
+        paths[name].write_text(json.dumps(listed), encoding="utf-8")
+
+    assert Sorting.check_together(paths) == ["a circle: a -> b -> a"]
+
+
+def test_a_list_waiting_for_its_own_keyword_does_not_start(tmp_path: Path) -> None:
+    listed = {
+        "on": {"keywords": ["agent-sorted-*"]},
+        "dimensions": [
+            {"name": "kind", "categories": [{"name": "Any", "keywords": ["agent-q"]}]}
+        ],
+    }
+    path = tmp_path / "self.json"
+    path.write_text(json.dumps(listed), encoding="utf-8")
+
+    with pytest.raises(ConfigError, match="it would set itself off"):
+        Sorting(settings(sorting_file=path, instance="self")).prepare()

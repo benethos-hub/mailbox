@@ -94,6 +94,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   the model answered is taken as stored, with no new call. A move is
   taken once, a keyword already there not again. A list that waits for
   a keyword it sets itself is refused.
+- `benethos-mailbox-agents`: the command `check --agent sorting
+  partner=partner.json beleg=beleg.json ...` reads the lists of several
+  instances together and names each circle of lists that set each other
+  off, exit code 1, else 0.
 
 ### Changed
 

@@ -264,6 +264,27 @@ def report(args: argparse.Namespace, settings: Settings) -> int:
     return 0
 
 
+# -- check ----------------------------------------------------------------------------
+
+
+def check_lists(args: argparse.Namespace, settings: Settings) -> int:
+    """0 when the configurations of the instances fit together, 1 with a
+    line per problem when they do not."""
+    agent = load_agent(args.agent)
+    configured: dict[str, Path] = {}
+    for item in args.instances:
+        name, sep, path = item.partition("=")
+        if not sep or not name or not path:
+            raise ConfigError(f"{item!r} is not instance=file")
+        configured[name] = Path(path)
+    problems = agent.check_together(configured)
+    for line in problems:
+        _say(f"{agent.name}: {line}")
+    if not problems:
+        _say(f"{agent.name}: {len(configured)} lists, no problem found")
+    return 1 if problems else 0
+
+
 # -- health ---------------------------------------------------------------------------
 
 

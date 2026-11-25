@@ -109,6 +109,19 @@ def build_parser() -> argparse.ArgumentParser:
     _agent(found)
     found.set_defaults(handler=commands.health)
 
+    found = sub.add_parser(
+        "check",
+        help="whether the lists of several instances of an agent fit together",
+    )
+    _agent(found)
+    found.add_argument(
+        "instances",
+        nargs="+",
+        metavar="INSTANCE=FILE",
+        help="the list of each instance, such as partner=partner.json",
+    )
+    found.set_defaults(handler=commands.check_lists)
+
     found = sub.add_parser("paths", help="where the settings and the state files are")
     found.set_defaults(handler=commands.paths)
     return parser

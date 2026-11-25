@@ -15,6 +15,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
+from pathlib import Path
 from typing import ClassVar
 
 from ..errors import ContractError
@@ -329,6 +330,15 @@ class Agent(ABC):
         gateway. Asked after :meth:`prepare`. By default whether its limits
         allow a call."""
         return self.limits.model_calls_per_message > 0
+
+    @classmethod
+    def check_together(cls, configured: Mapping[str, Path]) -> list[str]:
+        """For ``check``: what is wrong with the configuration of several
+        instances of the agent together, each file by the name of its
+        instance, such as a circle of lists that set each other off. A
+        line per problem, none when all is well. Raises a ConfigError for a
+        file that is wrong by itself. None by default."""
+        return []
 
     # -- provided -------------------------------------------------------------
 
