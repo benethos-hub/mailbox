@@ -18,6 +18,7 @@ from typing import Any
 from ...errors import (
     BadRequestError,
     MailboxServiceError,
+    OutcomeUnknownError,
     ProviderAuthError,
     ProviderError,
     ProviderUnavailableError,
@@ -95,9 +96,7 @@ class SmtpSession:
                         "support SMTPUTF8"
                     )
             try:
-                refused = connection.sendmail(
-                    envelope[0], envelope[1:], raw, mail_options=options
-                )
+                refused = _sendmail(connection, envelope[0], envelope[1:], raw, options)
             except smtplib.SMTPRecipientsRefused as exc:
                 raise BadRequestError(
                     "the mail server refused every recipient: "
@@ -147,6 +146,54 @@ class SmtpSession:
         finally:
             with suppress(smtplib.SMTPException, OSError):
                 connection.quit()
+
+
+def _sendmail(
+    connection: Any, sender: str, recipients: list[str], raw: bytes, options: list[str]
+) -> dict[str, tuple[int, bytes]]:
+    """``smtplib.SMTP.sendmail`` step by step, so a failure once DATA
+    began is told apart: the server may have taken the message, and
+    whether it did cannot be told. Every step before it sent nothing."""
+    connection.ehlo_or_helo_if_needed()
+    esmtp: list[str] = []
+    if connection.does_esmtp:
+        if connection.has_extn("size"):
+            esmtp.append(f"size={len(raw)}")
+        esmtp += options
+    code, answer = connection.mail(sender, esmtp)
+    if code != 250:
+        _reset(connection, code)
+        raise smtplib.SMTPSenderRefused(code, answer, sender)
+    refused: dict[str, tuple[int, bytes]] = {}
+    for recipient in recipients:
+        code, answer = connection.rcpt(recipient, [])
+        if code not in (250, 251):
+            refused[recipient] = (code, answer)
+        if code == 421:
+            connection.close()
+            raise smtplib.SMTPRecipientsRefused(refused)
+    if len(refused) == len(recipients):
+        connection.rset()
+        raise smtplib.SMTPRecipientsRefused(refused)
+    try:
+        code, answer = connection.data(raw)
+    except (smtplib.SMTPServerDisconnected, OSError) as exc:
+        raise OutcomeUnknownError(
+            f"the mail server dropped the connection while taking the message: {exc}"
+        ) from None
+    if code != 250:
+        _reset(connection, code)
+        raise smtplib.SMTPDataError(code, answer)
+    return refused
+
+
+def _reset(connection: Any, code: int) -> None:
+    """As smtplib does after a refusal: 421 closes the connection."""
+    if code == 421:
+        connection.close()
+    else:
+        with suppress(smtplib.SMTPException, OSError):
+            connection.rset()
 
 
 def translated() -> AbstractContextManager[None]:

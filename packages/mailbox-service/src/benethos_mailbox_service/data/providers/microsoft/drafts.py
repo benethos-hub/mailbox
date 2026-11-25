@@ -15,6 +15,8 @@ from ...protocols import path_part
 from .. import rules
 from . import listing, mappers, messages, uploads
 from .api import Graph
+from .shapes import Listing
+from .shapes import Message as GraphMessage
 
 
 async def send(graph: Graph, raw: bytes, recipients: list[str]) -> SentMessage:
@@ -39,6 +41,19 @@ async def send(graph: Graph, raw: bytes, recipients: list[str]) -> SentMessage:
     roles = await graph.folder_roles()
     sent = next((k for k, v in roles.items() if v is FolderRole.SENT), None)
     return SentMessage(sent_copy=mappers.sent_copy(draft, sent))
+
+
+async def find_sent(graph: Graph, message_id_header: str) -> bool:
+    """Whether Sent Items holds a message with this Message-ID."""
+    sent = await graph.role_id(FolderRole.SENT)
+    header = message_id_header.replace("'", "''")
+    found = await graph.read(
+        Listing[GraphMessage],
+        "GET",
+        f"/me/mailFolders/{path_part(sent)}/messages",
+        params={"$select": "id", "$filter": f"internetMessageId eq '{header}'"},
+    )
+    return bool(found.value)
 
 
 async def list_drafts(

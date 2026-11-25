@@ -20,6 +20,7 @@ from ....data.models import OutboxJob, OutboxState, SendOutcome
 from ....errors import (
     MailboxServiceError,
     NotSupportedError,
+    OutcomeUnknownError,
     ProviderAuthError,
     ProviderUnavailableError,
     SendLimitError,
@@ -38,6 +39,9 @@ POLL = 5.0
 STEPS = (60, 120, 300, 900)
 # Seconds between attempts after those, and while a sign-in is refused.
 LATER = 1800
+# How long an unclear attempt waits before the sent folder is looked into
+# again: a provider files its copy a while after it took the message.
+UNCLEAR = timedelta(minutes=15)
 # The code of a job whose sent copy could not be made.
 NO_COPY = "no_sent_copy"
 # How the end of a job stands in the audit of sends.
@@ -74,7 +78,7 @@ class OutboxRunner:
 
     async def run(self) -> None:
         """Until cancelled. A failure ends a round, never the runner."""
-        self.recover()
+        await self.recover()
         await rounds(
             self.send_due,
             pause=POLL,
@@ -83,12 +87,13 @@ class OutboxRunner:
             by=OUTBOX,
         )
 
-    def recover(self) -> None:
+    async def recover(self) -> None:
         """A job still sending when the service stopped may have gone out
-        or not."""
+        or not: its outcome is looked into as any unclear one."""
+        now = self._clock()
         for job in self._jobs.open():
             if job.state == "sending":
-                self._end(job, "unknown", job.last_error or "interrupted", note=True)
+                await self._unclear(job, "interrupted", now)
 
     async def send_due(self) -> None:
         """One round: per account the earliest job, if it is due."""
@@ -115,6 +120,10 @@ class OutboxRunner:
         )
         if not self._jobs.update(taken, was="queued"):
             return
+        if taken.unclear_since is not None:
+            if not await self._looked(taken, now):
+                return
+            taken = taken.model_copy(update={"unclear_since": None})
         try:
             prepared = await self._queued.prepare(taken, now)
         except MailboxServiceError as exc:
@@ -122,6 +131,8 @@ class OutboxRunner:
             return
         try:
             _, copy_error = await self._queued.deliver(access, taken, prepared)
+        except OutcomeUnknownError as exc:
+            await self._unclear(taken, exc.code, now)
         except MailboxServiceError as exc:
             self._refused(taken, exc, now)
         except Exception:
@@ -131,6 +142,58 @@ class OutboxRunner:
             raise
         else:
             self._went_out(taken, copy_error, now)
+
+    async def _unclear(self, job: OutboxJob, code: str, now: datetime) -> None:
+        """An attempt whose outcome cannot be told. Found in the sent folder,
+        it went out. An account that cannot look ends it as unknown: it is
+        never sent twice. Else it is looked for again after a while, and
+        sent anew only when it is not there then."""
+        found = await self._find(job)
+        if found is None:
+            self._end(job, "unknown", code, note=True)
+        elif found:
+            await self._was_sent(job, job.unclear_since or now)
+        else:
+            self._stored(
+                job.model_copy(
+                    update={
+                        "state": "queued",
+                        "unclear_since": job.unclear_since or now,
+                        "due_at": now + UNCLEAR,
+                        "last_error": code,
+                    }
+                ),
+                was=job.state,
+            )
+            self._waits(job, code, int(UNCLEAR.total_seconds()))
+
+    async def _looked(self, job: OutboxJob, now: datetime) -> bool:
+        """For a job with an unclear attempt: whether it may be sent now,
+        because the sent folder still does not hold it."""
+        found = await self._find(job)
+        if found is None:
+            self._end(job, "unknown", job.last_error, note=True)
+            return False
+        if found:
+            await self._was_sent(job, job.unclear_since or now)
+            return False
+        return True
+
+    async def _find(self, job: OutboxJob) -> bool | None:
+        """Whether the sent folder holds the job's message, None where the
+        account cannot look. A failure to look counts as not found yet."""
+        try:
+            return await self._queued.find_sent(job)
+        except NotSupportedError:
+            return None
+        except MailboxServiceError:
+            return False
+
+    async def _was_sent(self, job: OutboxJob, at: datetime) -> None:
+        """The job's message went out after all."""
+        await self._queued.found(job)
+        self._sends.note(job, "sent", None)
+        self._end(job, "sent", None, at=at)
 
     def _refused(self, job: OutboxJob, exc: MailboxServiceError, now: datetime) -> None:
         """An attempt that did not send, as the audit of sends has it."""
@@ -198,6 +261,9 @@ class OutboxRunner:
             ),
             was="sending",
         )
+        self._waits(job, code, wait)
+
+    def _waits(self, job: OutboxJob, code: str, wait: int) -> None:
         self._activity.record(
             said.OutboxRetry(
                 by=OUTBOX,

@@ -28,6 +28,9 @@ class FakeSmtpServer:
     # The server's answer to a login, whatever the password.
     login_refusal: tuple[int, bytes] | None = None
     extensions: set[str] = field(default_factory=set)
+    # What DATA raises, as a connection that drops while the server takes
+    # the message.
+    data_failure: Exception | None = None
 
     # the connection factory signature SmtpSession expects
     def __call__(self, server: Any, timeout: float) -> FakeSmtpConnection:
@@ -38,8 +41,13 @@ class FakeSmtpServer:
 
 
 class FakeSmtpConnection:
+    does_esmtp = True
+
     def __init__(self, server: FakeSmtpServer) -> None:
         self._server = server
+        self._sender = ""
+        self._options: list[str] = []
+        self._recipients: list[str] = []
 
     def login(self, username: str, password: str) -> None:
         self._server.calls.append(("login", username))
@@ -65,23 +73,31 @@ class FakeSmtpConnection:
     def has_extn(self, name: str) -> bool:
         return name.lower() in self._server.extensions
 
-    def sendmail(
-        self,
-        sender: str,
-        recipients: list[str],
-        raw: bytes,
-        mail_options: list[str] = (),  # type: ignore[assignment]
-    ) -> dict[str, Any]:
+    def mail(self, sender: str, options: list[str] = ()) -> tuple[int, bytes]:  # type: ignore[assignment]
+        self._sender, self._options, self._recipients = sender, list(options), []
+        return 250, b"ok"
+
+    def rcpt(self, recipient: str, options: list[str] = ()) -> tuple[int, bytes]:  # type: ignore[assignment]
+        if recipient in self._server.refuse:
+            return 550, b"no such user"
+        self._recipients.append(recipient)
+        return 250, b"ok"
+
+    def data(self, raw: bytes) -> tuple[int, bytes]:
         if not raw.isascii():
             raise UnicodeEncodeError("ascii", raw.decode("latin-1"), 0, 1, "8bit")
-        refused = {
-            r: (550, b"no such user") for r in recipients if r in self._server.refuse
-        }
-        if len(refused) == len(recipients):
-            raise smtplib.SMTPRecipientsRefused(refused)
-        accepted = [r for r in recipients if r not in refused]
-        self._server.sent.append(Sent(sender, accepted, raw, list(mail_options)))
-        return refused
+        if self._server.data_failure is not None:
+            raise self._server.data_failure
+        self._server.sent.append(
+            Sent(self._sender, list(self._recipients), raw, self._options)
+        )
+        return 250, b"ok"
+
+    def rset(self) -> tuple[int, bytes]:
+        return 250, b"ok"
+
+    def close(self) -> None:
+        return None
 
     def quit(self) -> None:
         self._server.calls.append(("quit",))

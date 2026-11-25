@@ -102,7 +102,13 @@ def test_the_open_jobs_come_earliest_due_first(outbox: OutboxRepository) -> None
     outbox.add(job("copying", state="copying", due_at=NOW))
     outbox.add(job("done", state="sent", finished_at=NOW))
     outbox.add(job("unclear", state="unknown", finished_at=NOW))
-    assert [j.id for j in outbox.open()] == ["obx_early", "obx_copying", "obx_late"]
+    outbox.add(job("aa_queued_later", created_at=NOW + timedelta(seconds=1)))
+    assert [j.id for j in outbox.open()] == [
+        "obx_early",
+        "obx_copying",
+        "obx_aa_queued_later",
+        "obx_late",
+    ]
 
 
 def test_a_list_is_newest_first_and_narrowed(outbox: OutboxRepository) -> None:

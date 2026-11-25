@@ -9,7 +9,8 @@ from datetime import datetime
 
 from ....data.mail import compose
 from ....data.models import Account, OutboxJob, SendResult
-from ...accounts import drafts, keeps_sent
+from ... import changes
+from ...accounts import drafts, finds_sent, keeps_sent
 from ...rights import Access
 from ..calls import Calls
 from . import checks
@@ -80,6 +81,19 @@ class QueuedSend:
                     access, job.account_id, prepared.reference
                 )
         return result, copy_error
+
+    async def find_sent(self, job: OutboxJob) -> bool:
+        """Whether the sent folder holds the job's message.
+        ``NotSupportedError`` where the account cannot look."""
+        return await self._calls.call(
+            job.account_id, lambda p: finds_sent(p).find_sent(job.message_id_header)
+        )
+
+    async def found(self, job: OutboxJob) -> None:
+        """The job's message went out after all: its draft goes, and the
+        change feed hears of the send."""
+        await self._calls.delete_draft(job.account_id, job.draft_id)
+        self._calls.changed(changes.MessageSent(job.account_id, job.message_id_header))
 
     async def keep_copy(self, job: OutboxJob, sent_at: datetime) -> None:
         """The copy in the sent folder made again from the draft, as it

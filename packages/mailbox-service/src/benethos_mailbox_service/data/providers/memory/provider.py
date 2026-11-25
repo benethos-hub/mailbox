@@ -159,6 +159,9 @@ class MemoryProvider:
     async def keep_sent(self, raw: bytes) -> MessageSummary | None:
         return drafts.keep_sent(self, raw)
 
+    async def find_sent(self, message_id_header: str) -> bool:
+        return drafts.find_sent(self, message_id_header)
+
     async def list_drafts(
         self, *, limit: int, cursor: str | None
     ) -> Page[MessageSummary]:

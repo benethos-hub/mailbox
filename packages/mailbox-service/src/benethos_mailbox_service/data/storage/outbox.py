@@ -24,7 +24,8 @@ class OutboxRepository(Protocol):
         ...
 
     def open(self) -> builtins.list[OutboxJob]:
-        """Every job the runner still works on, the earliest due first."""
+        """Every job the runner still works on, the earliest due first, of
+        the same time the one queued first."""
         ...
 
     def list(
@@ -64,7 +65,7 @@ class InMemoryOutboxRepository:
     def open(self) -> builtins.list[OutboxJob]:
         return sorted(
             (job for job in self._jobs.list() if job.open),
-            key=lambda job: (job.due_at, job.id),
+            key=lambda job: (job.due_at, job.created_at, job.id),
         )
 
     def list(

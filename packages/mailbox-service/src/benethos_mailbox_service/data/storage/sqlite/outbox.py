@@ -53,7 +53,8 @@ class SqliteOutboxRepository:
     def open(self) -> builtins.list[OutboxJob]:
         return self._db.query_as(
             _job,
-            f"SELECT * FROM outbox WHERE state IN ({_OPEN}) ORDER BY due_at, id",
+            f"SELECT * FROM outbox WHERE state IN ({_OPEN})"
+            " ORDER BY due_at, created_at, id",
         )
 
     def list(

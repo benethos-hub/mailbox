@@ -15,6 +15,14 @@ def send(store: Store, raw: bytes, sender: str, recipients: list[str]) -> SentMe
     return SentMessage(sent_copy=keep_sent(store, raw))
 
 
+def find_sent(store: Store, message_id_header: str) -> bool:
+    sent = {f.id for f in store.folders if f.role is FolderRole.SENT}
+    return any(
+        m.message_id_header == message_id_header and sent & set(m.folder_ids)
+        for m in store.messages
+    )
+
+
 def keep_sent(store: Store, raw: bytes) -> MessageSummary | None:
     """A copy in the sent folder, the one there is with its Message-ID."""
     sent = next((f.id for f in store.folders if f.role is FolderRole.SENT), None)

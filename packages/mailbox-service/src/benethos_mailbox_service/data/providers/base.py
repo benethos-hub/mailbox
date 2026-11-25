@@ -251,6 +251,17 @@ class KeepsSent(Protocol):
 
 
 @runtime_checkable
+class FindsSent(Protocol):
+    """Looks into the sent folder for a message the provider sent and
+    filed there itself: Gmail, Microsoft, JMAP. Not IMAP, where the
+    service files the copy only once the send succeeded."""
+
+    async def find_sent(self, message_id_header: str) -> bool:
+        """Whether the sent folder holds a message with this Message-ID."""
+        ...
+
+
+@runtime_checkable
 class Watches(Protocol):
     """Hears of changes as the server reports them, without polling."""
 

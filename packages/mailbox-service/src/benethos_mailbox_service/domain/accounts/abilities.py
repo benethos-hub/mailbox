@@ -28,6 +28,7 @@ from ...data.providers import (
     Deletes,
     Deltas,
     Drafts,
+    FindsSent,
     KeepsSent,
     Reads,
     Sends,
@@ -217,6 +218,12 @@ def sends(adapter: Reads) -> Sends:
     if isinstance(adapter, Sends):
         return adapter
     raise NotSupportedError("this account cannot send")
+
+
+def finds_sent(adapter: Reads) -> FindsSent:
+    if isinstance(adapter, FindsSent):
+        return adapter
+    raise NotSupportedError("this account cannot look for a message it sent")
 
 
 def keeps_sent(adapter: Reads) -> KeepsSent:

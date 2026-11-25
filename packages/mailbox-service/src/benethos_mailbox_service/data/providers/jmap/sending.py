@@ -57,6 +57,26 @@ async def send(
     return await _sent_copy(account, email_id, sent)
 
 
+async def find_sent(account: JmapAccount, message_id_header: str) -> bool:
+    """Whether the sent folder holds a message with this Message-ID. A
+    message the server holds to send waits in the drafts folder."""
+    sent = rules.role_folder(await account.folders(), FolderRole.SENT)
+    if sent is None:
+        return False
+    found = await account.one(
+        "Email/query",
+        {
+            "filter": {
+                "inMailbox": sent.id,
+                "header": ["Message-ID", message_id_header],
+            },
+            "limit": 1,
+        },
+        jmap.Queried,
+    )
+    return bool(found.ids)
+
+
 def _imported(owner: str, blob: str, holder: Folder, draft: bool) -> jmap.Invocation:
     """The ``Email/import`` of the message to send, as ``#m``, into the
     folder that holds it until it is sent."""

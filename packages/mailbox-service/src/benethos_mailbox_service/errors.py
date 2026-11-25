@@ -152,3 +152,9 @@ class ProviderUnavailableError(ProviderError):
     """The provider did not answer or dropped the connection. Worth retrying."""
 
     code = "provider_unavailable"
+
+
+class OutcomeUnknownError(ProviderUnavailableError):
+    """The request went out and the answer did not come: whether the
+    provider did what it asked cannot be told. A caller sees the same as
+    for a provider away. The outbox does not simply send again."""
