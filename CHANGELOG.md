@@ -138,6 +138,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The service keeps its records through SQLAlchemy Core, still in
+  SQLite. Nothing is to be done for an update: the database file and its
+  schema stay as they are.
 - The service image installs publicsuffixlist 1.1.2.20261125 from the
   lockfile.
 - The images build with uv 0.13.10.
