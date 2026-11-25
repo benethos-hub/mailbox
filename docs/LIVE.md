@@ -35,6 +35,7 @@ checks of the agents run against a setup of their own
 | [`pop3.py`](#pop3py) | the test mail server in a container | one mail, deleted for good |
 | [`jmap.py`](#jmappy) | the test mail server in a container | one mail, a folder and a draft, deleted for good |
 | [`imap.py`](#imappy) | the test mail server in a container | one mail, a folder and a draft, deleted for good |
+| [`outbox.py`](#outboxpy) | the test mail server in a container, with `--bots` the first two test accounts | four mails through the outbox, two with `--bots`, and two drafts, deleted for good |
 
 The checks that start a service as a process make its first user with
 `users create-admin`, change the one-time password in the UI and make a
@@ -173,6 +174,9 @@ set up: [MICROSOFT.md](mailbox-service/MICROSOFT.md).
   arrive whole.
 - With `--marks` it reads, then puts `$answered` and `$forwarded` on the
   newest mail of the inbox and takes them off, and sends nothing.
+- With `--outbox-draft` it stores a draft, reads it twice and deletes it
+  again, and sends nothing: the outbox sends a queued draft only while
+  it reads the same.
 - Where a mail of the inbox has inline images, they must be listed and
   download.
 - A report of non-delivery of an earlier run in the inbox of the
@@ -229,6 +233,26 @@ thread read, changed, moved into a new folder that is renamed with the
 mail in it, moved back, a draft replaced under its id, left out of `all`
 in the trash, then deleted for good on both sides. The folder is deleted
 as well.
+
+## `outbox.py`
+
+`uv run python live/mailbox-service/outbox.py [--bots]`
+
+Checks the outbox against the same server, with a service of its own as
+a process and its runner beside it. The first account sends to the
+second over IMAP, its SMTP through a TCP relay of the script that
+passes the bytes on as they are and can turn connections away, so no
+container is stopped. A mail put into the outbox goes out once in the
+background, arrives, has its copy in the sent folder and its draft
+gone, and the audit of sends holds `queued` and `sent`. A mail for two
+minutes ahead waits, then goes out. One for an hour ahead is cancelled,
+its draft stays and is deleted. A draft queued for a minute ahead and
+changed in the meantime is not sent. With the relay turning connections
+away, a queued mail waits with `provider_unavailable`, and once they go
+through again it goes out exactly once. `--bots` runs the first three
+steps between the first two test accounts of `live/.env` as well. Every
+mail of the check is deleted for good at the end. It takes about five
+minutes, with `--bots` about eight.
 
 ## The agents
 
