@@ -61,7 +61,7 @@ The groups as `domain/rights/permissions.py` holds them:
 | `mail.write` | `update_message`, `delete_message` (to the trash, also by a move), `batch_messages`, `create_folder`, `update_folder` | an account |
 | `mail.delete` | `delete_message_permanent`, `delete_folder` | an account |
 | `drafts` | `list_drafts`, `create_draft`, `update_draft`, `delete_draft` | an account |
-| `send` | `send_message`, `send_draft` | an account |
+| `send` | `send_message`, `send_draft`, `list_outbox`, `get_outbox_job`, `cancel_send` | an account |
 | `mail.share` | `share_attachment`: a link to an attachment for another service ([CONCEPT 6.3](concept/api-mail.md#63-messages)), in no template of 8.7 | an account |
 | `audit` | `list_sends`, `list_all_sends` | an account |
 | `audit` | `list_activity`, the audit of administration (8.6) | the service |

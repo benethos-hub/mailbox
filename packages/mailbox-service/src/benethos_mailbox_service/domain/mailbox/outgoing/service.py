@@ -37,6 +37,7 @@ from . import checks
 from .composing import Composer
 from .delivering import Delivery
 from .idempotency import Idempotency
+from .jobs import OutboxJobs
 from .outbox import RETRY_HOURS, Outbox
 from .queued import QueuedSend
 from .sending import SendControl
@@ -64,6 +65,7 @@ class Outgoing:
         self._delivery = Delivery(calls, sends, activity or ActivityLog(clock))
         self.outbox = Outbox(calls, self._composer, sends, jobs, clock, retry_hours)
         self.queued = QueuedSend(calls, self._delivery)
+        self.jobs = OutboxJobs(calls, sends, jobs, clock)
 
     # --- sending --------------------------------------------------------------------
 

@@ -6,12 +6,14 @@ Part of the [concept](../CONCEPT.md): sections 6.4 to 6.8.
 
 | Method | Path | Purpose |
 |---|---|---|
-| POST | `{acc}/send` | send. Body: recipients, `reply_to`, subject, text / html, attachments, `attachments_from`, optional `reference: {message_id, action: reply\|reply_all\|forward}`. Header `Idempotency-Key` |
+| POST | `{acc}/send` | send. Body: recipients, `reply_to`, subject, text / html, attachments, `attachments_from`, optional `reference: {message_id, action: reply\|reply_all\|forward}`, optional `outbox` and `send_at` for the outbox. Header `Idempotency-Key` |
 | GET | `{acc}/drafts` | list |
 | POST | `{acc}/drafts` | create (same body as send) |
 | PUT | `{acc}/drafts/{draft_id}` | replace, `keep_attachments` names stored attachments that stay. The answer names the draft's id from now on: IMAP keeps it, Gmail, Microsoft and JMAP store a new message under a new id (decided 2026-10-06). Where the old one cannot be deleted, the new one is taken back, and the error names it only where that fails too. IMAP without `UIDPLUS` answers `501` |
 | DELETE | `{acc}/drafts/{draft_id}` | delete |
-| POST | `{acc}/drafts/{draft_id}/send` | send a draft, `Idempotency-Key` |
+| POST | `{acc}/drafts/{draft_id}/send` | send a draft, `Idempotency-Key`. Optional body `outbox`, `send_at` for the outbox |
+| GET | `{acc}/outbox` | the sends of the outbox, newest first, `state` narrows them |
+| GET / DELETE | `{acc}/outbox/{job_id}` | one send of the outbox, cancel one that waits |
 | GET | `{acc}/sends` | the audit of sends, newest first |
 | GET | `/v1/sends` | the audit of sends of every account the caller may audit, or of those in `accounts`, newest first |
 
@@ -72,8 +74,30 @@ Rules of the implementation for drafts (phase 2):
 Sending is **synchronous**: `200` means the provider accepted the
 message. After an SMTP send the copy is appended to the sent folder.
 Gmail and Graph keep it themselves, JMAP moves the submitted message
-there (5.6). A queued outbox with `send_at`
-is a later option (see IDEAS.md).
+there (5.6).
+
+**The outbox, decided 2026-11-25.** A send may go through an outbox
+instead, asked for per request with `outbox: true` or a `send_at`. The
+answer is then `202` with the job at once, and the service sends it in
+the background. Without either, sending stays synchronous as above.
+
+- The mail waits as a draft in the account's drafts folder. The service
+  keeps a job that names the draft, a digest of it and the Message-ID
+  every attempt sends, never the mail: it still holds no mail (7.8). An
+  account without drafts, such as POP3, has no outbox.
+- `send_at` lies at most 30 days ahead. Attempts go on for
+  `MAILBOX_SERVICE_OUTBOX_RETRY_HOURS`, 48 by default, from the time the
+  send is due. Then it fails and its draft stays.
+- A send whose outcome cannot be told, such as a connection that drops
+  once the server took the message, is never sent twice: the service
+  looks for its Message-ID in the sent folder. Found, it went out. Where
+  an account cannot look, it ends as `unknown` and is not sent again.
+- A draft deleted or changed in a mail client after it was queued is not
+  sent: the job is cancelled.
+- The send goes with the rights of the user who queued it, read anew for
+  each attempt. A right lost in between makes it fail, the draft stays.
+- Whoever queued a send sees and cancels it. `list_sends` sees every
+  send of the account, `update_account` sees and cancels every one.
 
 `Idempotency-Key`: the result of the first request is stored for 24 hours.
 The same key with the same body returns the stored result, with a different

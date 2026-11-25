@@ -36,7 +36,7 @@ from .paging import Paged
 from .rights import Grant, Permissions
 from .roles import Role
 from .secrets import Secret
-from .sending import AttachmentSource, OutgoingFile, Recipient, Sent
+from .sending import AttachmentSource, OutboxEntry, OutgoingFile, Recipient, Sent
 from .sends import SendRecord
 from .status import AccountHealth, Status, Worker
 from .threads import Thread, ThreadSummary
@@ -102,6 +102,7 @@ __all__ = [
     "Secret",
     "Sending",
     "Sent",
+    "OutboxEntry",
     "Webhook",
     "WebhookSecret",
 ]

@@ -45,8 +45,9 @@ from .messages import (
     update_message,
     update_messages,
 )
+from .outbox import cancel_send, get_outbox_job, list_outbox
 from .roles import create_role, delete_role, get_role, list_roles, replace_role
-from .sending import send_draft, send_message
+from .sending import queue_draft, queue_message, send_draft, send_message
 from .sends import list_all_sends, list_sends
 from .status import get_metrics, get_status
 from .threads import get_thread, list_threads
@@ -75,6 +76,9 @@ __all__ = [
     "get_metrics",
     "list_all_sends",
     "list_sends",
+    "list_outbox",
+    "get_outbox_job",
+    "cancel_send",
     "list_activity",
     "create_webhook",
     "delete_webhook",
@@ -132,6 +136,8 @@ __all__ = [
     "request",
     "send_draft",
     "send_message",
+    "queue_message",
+    "queue_draft",
     "share_attachment",
     "trash_messages",
     "update_draft",

@@ -21,6 +21,7 @@ from .oauth import (
     DeviceOAuthStarted,
     DeviceOAuthState,
 )
+from .outbox import DraftSendOptions, OutboxEntry, SendRequest
 from .status import ServiceStatus
 from .tokens import TokenCreate, TokenCreated, TokenInfo
 from .users import (
@@ -37,6 +38,9 @@ from .users import (
 )
 
 __all__ = [
+    "DraftSendOptions",
+    "OutboxEntry",
+    "SendRequest",
     "AccountCreate",
     "AccountUpdate",
     "ServerName",

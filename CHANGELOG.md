@@ -8,6 +8,24 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- An outbox. `POST /v1/accounts/{id}/send` and
+  `POST /v1/accounts/{id}/drafts/{draft_id}/send` take `outbox: true` or
+  `send_at`: the mail is kept as a draft, the answer is `202` with the
+  job at once, and the service sends it in the background, tried again
+  for 48 hours while the provider is away
+  (`MAILBOX_SERVICE_OUTBOX_RETRY_HOURS`). A send whose outcome cannot be
+  told is never sent twice, and a draft changed or deleted in between is
+  not sent. `GET /v1/accounts/{id}/outbox` lists the sends,
+  `GET` and `DELETE /v1/accounts/{id}/outbox/{job_id}` read and cancel
+  one. Webhooks hear of `message.send_failed`, `message.send_unknown`
+  and `message.send_cancelled`, the audit of sends of `queued`,
+  `cancelled` and `unknown` with the job in `outbox_job_id`. Without
+  `outbox` and `send_at` a send is as before.
+- `benethos-mailbox-client`: `queue_message` and `queue_draft` put a
+  send into the outbox and answer its job, an `OutboxEntry`.
+  `list_outbox`, `get_outbox_job` and `cancel_send` read and cancel the
+  jobs. `send_message` and `send_draft` are unchanged. `SendRecord`
+  names the job of an attempt in `outbox_job_id`.
 - `benethos-mailbox-agents`: a group of the list of `sorting` may name a
   `topic`, one line on the mail that belongs to it, and with it
   `by_topic`, `record` or `act`. For a message in the inbox that no

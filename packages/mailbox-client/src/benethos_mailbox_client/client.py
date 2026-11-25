@@ -108,6 +108,11 @@ class MailboxClient:
     delete_draft = awaiting(endpoints.delete_draft)
     send_message = awaiting(endpoints.send_message)
     send_draft = awaiting(endpoints.send_draft)
+    queue_message = awaiting(endpoints.queue_message)
+    queue_draft = awaiting(endpoints.queue_draft)
+    list_outbox = awaiting(endpoints.list_outbox)
+    get_outbox_job = awaiting(endpoints.get_outbox_job)
+    cancel_send = awaiting(endpoints.cancel_send)
 
     # --- webhooks ---------------------------------------------------------------------
 

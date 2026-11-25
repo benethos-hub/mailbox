@@ -110,6 +110,11 @@ class SyncMailboxClient:
     delete_draft = blocking(endpoints.delete_draft)
     send_message = blocking(endpoints.send_message)
     send_draft = blocking(endpoints.send_draft)
+    queue_message = blocking(endpoints.queue_message)
+    queue_draft = blocking(endpoints.queue_draft)
+    list_outbox = blocking(endpoints.list_outbox)
+    get_outbox_job = blocking(endpoints.get_outbox_job)
+    cancel_send = blocking(endpoints.cancel_send)
 
     # --- webhooks ---------------------------------------------------------------------
 
