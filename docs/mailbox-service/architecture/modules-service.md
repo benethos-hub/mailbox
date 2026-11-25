@@ -314,8 +314,7 @@ packages/mailbox-service/
                         #   for the in-memory ones, sqlite/ the file of
                         #   the database, its connection, the steps of
                         #   its schema and the files SQLite keeps beside
-                        #   it (file.py), its rows read typed
-                        #   (rows.py), its tables as stored for an
+                        #   it (file.py), its tables as stored for an
                         #   export (tables.py), sqlite/migrations/ the base, the registry,
                         #   versions/ one class per schema version,
                         #   sql/ what is spoken through SQLAlchemy

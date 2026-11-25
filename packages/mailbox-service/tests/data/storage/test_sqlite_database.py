@@ -15,7 +15,7 @@ import pytest
 
 from benethos_mailbox_service.assembly import build_services
 from benethos_mailbox_service.cli import main
-from benethos_mailbox_service.common.clock import iso
+from benethos_mailbox_service.common.clock import iso, parse_iso
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.models import ApiToken, ProviderType, User
 from benethos_mailbox_service.data.secrets import totp
@@ -72,6 +72,12 @@ def test_the_key_added_last_is_active_whatever_the_clock(db: Database) -> None:
     # The clock was set back between the two.
     run(db, "UPDATE keys SET created_at = '2000-01-01' WHERE key_id = 'key_2'")
     assert keys.active() == WrappedKey("key_2", b"n2", b"c2")
+
+
+def test_a_key_added_carries_its_time_in_utc(db: Database) -> None:
+    repositories_on(db).keys.add(WrappedKey("key_1", b"n1", b"c1"))
+    made = parse_iso(value(db, "SELECT created_at FROM keys WHERE key_id = 'key_1'"))
+    assert made.utcoffset() is not None
 
 
 def _abort() -> None:

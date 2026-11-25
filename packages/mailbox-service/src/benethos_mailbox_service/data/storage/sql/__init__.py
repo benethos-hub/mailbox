@@ -8,24 +8,35 @@ from __future__ import annotations
 
 from .accounts import SqlAccountRepository
 from .audit import SqlAuditRepository
+from .changes import SqlChangeLogRepository
+from .credentials import SqlCredentialRepository, SqlKeyRepository
 from .idempotency import SqlIdempotencyRepository
 from .links import SqlLinkRepository
+from .outbox import SqlOutboxRepository
 from .passkeys import SqlPasskeyRepository
 from .passwords import SqlPasswordRepository
 from .recovery_codes import SqlRecoveryCodeRepository
+from .sends import SqlSendLogRepository
 from .totp import SqlTotpRepository
 from .users import SqlRoleRepository, SqlTokenRepository, SqlUserRepository
+from .webhooks import SqlWebhookRepository
 
 __all__ = [
     "SqlAccountRepository",
     "SqlAuditRepository",
+    "SqlChangeLogRepository",
+    "SqlCredentialRepository",
     "SqlIdempotencyRepository",
+    "SqlKeyRepository",
     "SqlLinkRepository",
+    "SqlOutboxRepository",
     "SqlPasskeyRepository",
     "SqlPasswordRepository",
     "SqlRecoveryCodeRepository",
     "SqlRoleRepository",
+    "SqlSendLogRepository",
     "SqlTokenRepository",
     "SqlTotpRepository",
     "SqlUserRepository",
+    "SqlWebhookRepository",
 ]
