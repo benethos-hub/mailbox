@@ -178,12 +178,14 @@ def to_decision(chain: Chain, choices: list[Choice | None]) -> Decision:
         if source is not None:
             # A quote of the model is looked up by the check. Code found the
             # rest, or the model said none: no quote, found from the start.
-            checked = choice.by_model and choice.quote is not None
+            checked = (
+                choice.by_model and choice.quote is not None and choice.category != NONE
+            )
             evidence.append(
                 Evidence(
                     field=name,
                     value=choice.category,
-                    quote=choice.quote or "",
+                    quote=(choice.quote or "") if checked else "",
                     found=None if checked else True,
                 )
             )

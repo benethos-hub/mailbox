@@ -49,6 +49,7 @@ from ...errors import ConfigError
 from ...records import Decision, Event, FolderRef, MailMessage
 from ...settings import PREFIX
 from .actions import Placed
+from .alone import alone
 from .dimensions import Chain
 from .groups import NONE
 from .lists import Listed, circles, load_chain, used
@@ -123,6 +124,11 @@ class Sorting(Agent):
         found = load_chain(path)
         self.prompt_version = f"{PROMPT}-{found.version}"
         return found
+
+    def alone(self, part: str) -> Agent:
+        """A recognizer scored alone, such as ``invoice``, in its own space
+        (decided 2026-11-25)."""
+        return alone(part, self)
 
     @classmethod
     def check_together(cls, configured: Mapping[str, Path]) -> list[str]:

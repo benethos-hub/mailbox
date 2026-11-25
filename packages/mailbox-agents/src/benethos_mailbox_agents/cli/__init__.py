@@ -95,6 +95,12 @@ def build_parser() -> argparse.ArgumentParser:
     _agent(found)
     found.add_argument("--gold", type=Path, required=True, help="the gold file")
     found.add_argument(
+        "--recognizer",
+        default=None,
+        help="one recognizer of the agent alone, in its own space, such as "
+        "invoice of sorting",
+    )
+    found.add_argument(
         "--reports",
         type=Path,
         default=None,

@@ -105,6 +105,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   the model with a copy of the prompt `v5` of `invoices`, the near miss
   of one that is not in the details. A category the model chose this
   way may name `by_topic` as one with a topic does.
+- `benethos-mailbox-agents`: `eval --agent sorting --recognizer invoice`
+  scores the recognizer alone, its rules beside the model, in the space
+  of `invoices`: the gold set of `invoices` serves unchanged. The report
+  names the recognizer in its file name.
 
 ### Changed
 

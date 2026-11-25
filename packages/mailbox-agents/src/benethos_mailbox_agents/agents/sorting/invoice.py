@@ -89,8 +89,11 @@ class Invoice(Recognizer):
         if answer.near_miss != "none":
             details["near_miss"] = answer.near_miss
         if answer.label != "invoice":
-            # none needs no quote: nothing is done on it.
-            return Choice(NONE, {**details, "match": "none"}, by_model=True)
+            # none needs no quote in the chain: nothing is done on it. The
+            # quote goes along for the recognizer scored alone.
+            return Choice(
+                NONE, {**details, "match": "none"}, quote=answer.quote, by_model=True
+            )
         if category.hold:
             details["hold"] = "yes"
         return Choice(category.name, details, quote=answer.quote, by_model=True)
