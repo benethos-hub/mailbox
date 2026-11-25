@@ -123,6 +123,8 @@ def write(report: dict[str, Any], folder: Path) -> Path:
         )
     )
     path = folder / report["agent"] / f"{name}.json"
+    # A recognizer scored alone names itself in prompt_version, and so in
+    # the name of the file.
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes((json.dumps(report, indent=2) + "\n").encode("utf-8"))
     return path

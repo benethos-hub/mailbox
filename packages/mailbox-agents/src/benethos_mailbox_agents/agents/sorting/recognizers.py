@@ -5,8 +5,9 @@ A recognizer reads a message and answers a category of a dimension, or
 that shows it. It changes nothing. Those that ask no model run first, in
 the order of :data:`RECOGNIZERS`: the first that settles the dimension
 decides. Those that ask the model run only when none of them settled it,
-and only in ``decide``. ``sender`` reads the sender rules, ``topic`` asks
-the model among the categories with a topic. Another recognizer is a
+and only in ``decide``. ``sender`` reads the sender rules, ``keyword`` the
+keywords a message carries, ``topic`` asks the model among the categories
+with a topic, ``invoice`` whether a message is an invoice. Another recognizer is a
 subclass of :class:`Recognizer` and an entry in :data:`RECOGNIZERS`, named
 by a category's ``recognize`` (decided 2026-11-25). See
 docs/mailbox-agents/concept/agent-sorting.md.
@@ -14,21 +15,21 @@ docs/mailbox-agents/concept/agent-sorting.md.
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
 from functools import cached_property
-from typing import ClassVar
 
 from ...contract import Context, load_prompt
 from ...records import MailMessage
+from .choice import Choice, Recognizer
 from .dimensions import Dimension
 from .groups import NONE
+from .invoice import Invoice
 from .schema import answer_for, parts, render, system_for
 
 __all__ = [
     "PROMPT",
     "RECOGNIZERS",
     "Choice",
+    "Invoice",
     "Keywords",
     "Recognizer",
     "Sender",
@@ -37,52 +38,6 @@ __all__ = [
 
 # The version of the fixed text of the prompt of ``topic``.
 PROMPT = "v1"
-
-
-@dataclass(frozen=True)
-class Choice:
-    """The answer of a recognizer for one dimension: a category or
-    ``none``, what to record, and the quote when the model chose.
-
-    ``settled`` is False for an answer that leaves the dimension to the
-    next recognizer, such as a sender two categories name alike.
-    ``confidence`` is left None for now: a threshold would need a gold set
-    large enough to measure it."""
-
-    category: str
-    details: dict[str, str] = field(default_factory=dict)
-    quote: str | None = None
-    by_model: bool = False
-    settled: bool = True
-    confidence: float | None = None
-
-
-class Recognizer(ABC):
-    """One way to find a category: its name, the version of what it asks
-    or reads, and whether it asks the model for a dimension."""
-
-    name: ClassVar[str]
-    version: ClassVar[str]
-
-    @abstractmethod
-    def asks_model(self, dimension: Dimension) -> bool:
-        """Whether it asks the model for ``dimension``."""
-
-    def applies(self, dimension: Dimension) -> bool:
-        """Whether ``dimension`` has a category for it. By default one that
-        names it in ``recognize``."""
-        return any(c.recognize == self.name for c in dimension.categories)
-
-    def baseline(self, dimension: Dimension, message: MailMessage) -> Choice | None:
-        """The answer by rules alone, None when it has none."""
-        return None
-
-    async def decide(
-        self, dimension: Dimension, message: MailMessage, context: Context
-    ) -> Choice | None:
-        """The answer, with the model where it asks one. By default the
-        answer by rules."""
-        return self.baseline(dimension, message)
 
 
 class Sender(Recognizer):
@@ -203,5 +158,6 @@ class Keywords(Recognizer):
 
 # The recognizers a list may use, by name, in the order they run.
 RECOGNIZERS: dict[str, Recognizer] = {
-    recognizer.name: recognizer for recognizer in (Sender(), Keywords(), Topic())
+    recognizer.name: recognizer
+    for recognizer in (Sender(), Keywords(), Topic(), Invoice())
 }

@@ -18,7 +18,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import ClassVar
 
-from ..errors import ContractError
+from ..errors import ConfigError, ContractError
 from ..records import (
     EVENTS,
     Decision,
@@ -330,6 +330,13 @@ class Agent(ABC):
         gateway. Asked after :meth:`prepare`. By default whether its limits
         allow a call."""
         return self.limits.model_calls_per_message > 0
+
+    def alone(self, part: str) -> Agent:
+        """For ``eval --recognizer``: one part of the agent as an agent of
+        its own, scored alone in its own space, such as a recognizer of
+        ``sorting``. Raises a ConfigError for a part the agent does not
+        have. None by default."""
+        raise ConfigError(f"{self.name} has no part to score alone")
 
     @classmethod
     def check_together(cls, configured: Mapping[str, Path]) -> list[str]:

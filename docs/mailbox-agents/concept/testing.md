@@ -26,6 +26,9 @@ Part of the [concept](../CONCEPT.md).
   two checks of version 5, each with a new state file: an invoice moved
   by hand into the inbox folder `Invoices/Telco`, and an invoice marked
   beforehand. Every message goes back without either keyword.
+  `live/mailbox-agents/chain.py` runs three instances of `sorting` that
+  hand a message on by keywords through the feed, a partner keyword set
+  by hand among it, and puts every message back without their keywords.
   The model gateway belongs to it (decided 2026-11-17): LiteLLM with Claude
   through the owner's API key, and local models under llama.cpp, one
   service on the graphics card and one on the CPU. `live/mailbox-agents/gold.py` turns

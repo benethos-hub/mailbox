@@ -317,7 +317,7 @@ def evaluate(args: argparse.Namespace, settings: Settings) -> int:
     """Run an agent over a gold set, print the scores, write the report."""
     cls = load_agent(args.agent)
     items = load_gold(args.gold)
-    built = asyncio.run(_evaluate(cls, items, settings))
+    built = asyncio.run(_evaluate(cls, items, settings, args.recognizer))
     for line in render(built):
         print(line)
     print(f"report: {write(built, args.reports or _reports(args, settings))}")
@@ -334,9 +334,11 @@ def _reports(args: argparse.Namespace, settings: Settings) -> Path:
 
 
 async def _evaluate(
-    cls: type[Agent], items: list[GoldItem], settings: Settings
+    cls: type[Agent], items: list[GoldItem], settings: Settings, part: str | None
 ) -> dict[str, Any]:
     agent = start(cls, settings)
+    if part is not None:
+        agent = agent.alone(part)
     async with upstreams(agent, settings) as (mailbox, gateway):
         # It reads mail and writes a report that is kept: only from a
         # service that matches, as a pass.

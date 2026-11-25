@@ -121,7 +121,8 @@ class Category(Entry):
                     f"category {self.name!r}: a keyword is lower case letters, "
                     "digits and dashes"
                 )
-        self._check_topic()
+        if self.recognize is None:
+            self._check_topic()
         moves = [step for step in self.then if step.action == Move.name]
         belows = [step for step in self.then if step.action == MoveBelow.name]
         if len(moves) > 1 or len(belows) > 1:
