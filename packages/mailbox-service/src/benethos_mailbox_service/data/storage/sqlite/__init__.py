@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-from .accounts import SqliteAccountRepository
 from .audit import SqliteAuditRepository
 from .changes import SqliteChangeLogRepository
 from .credentials import SqliteCredentialRepository, SqliteKeyRepository
@@ -32,7 +31,6 @@ from .webhooks import SqliteWebhookRepository
 __all__ = [
     "SCHEMA_VERSION",
     "Migrated",
-    "SqliteAccountRepository",
     "SqliteChangeLogRepository",
     "SqliteCredentialRepository",
     "SqliteIdempotencyRepository",

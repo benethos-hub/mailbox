@@ -28,10 +28,12 @@ from .passkeys import InMemoryPasskeyRepository, PasskeyRepository
 from .passwords import InMemoryPasswordRepository, PasswordRepository
 from .recovery_codes import InMemoryRecoveryCodeRepository, RecoveryCodeRepository
 from .sends import InMemorySendLogRepository, SendLogRepository
+from .sql import (
+    SqlAccountRepository,
+)
 from .sql.database import Database
 from .sqlite import (
     Migrated,
-    SqliteAccountRepository,
     SqliteAuditRepository,
     SqliteChangeLogRepository,
     SqliteCredentialRepository,
@@ -171,7 +173,7 @@ def repositories_on(db: Database) -> Repositories:
     """The repositories on a database already open, each on that one.
     The one place that names the classes of the database."""
     return Repositories(
-        accounts=SqliteAccountRepository(db),
+        accounts=SqlAccountRepository(db),
         users=SqliteUserRepository(db),
         roles=SqliteRoleRepository(db),
         tokens=SqliteTokenRepository(db),

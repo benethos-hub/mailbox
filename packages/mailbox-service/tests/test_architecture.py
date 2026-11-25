@@ -138,7 +138,7 @@ def test_the_domain_picks_no_storage() -> None:
         for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
             if isinstance(node, ast.ImportFrom):
                 for alias in node.names:
-                    if alias.name.startswith(("InMemory", "Sqlite")):
+                    if alias.name.startswith(("InMemory", "Sql")):
                         violations.append(f"{name}:{node.lineno} {alias.name}")
     assert not violations, "storage chosen in the domain:\n  " + "\n  ".join(violations)
 

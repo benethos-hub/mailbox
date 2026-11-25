@@ -124,7 +124,7 @@ def test_every_seam_is_in_the_table_of_section_8() -> None:
     protocols = re.findall(r"^class (\w+)\(.*Protocol.*\):", base, re.M)
     storage = (SERVICE / "data" / "storage" / "__init__.py").read_text("utf-8")
     exported = re.findall(r'^    "(\w+Repository)",', storage, re.M)
-    repositories = [n for n in exported if not n.startswith(("InMemory", "Sqlite"))]
+    repositories = [n for n in exported if not n.startswith(("InMemory", "Sql"))]
     assert protocols and repositories
     missing = [n for n in protocols + repositories if f"`{n}`" not in table]
     assert missing == [], "not in ARCHITECTURE 8"

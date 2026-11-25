@@ -37,10 +37,12 @@ from .passwords import InMemoryPasswordRepository, PasswordRepository, StoredPas
 from .recovery_codes import InMemoryRecoveryCodeRepository, RecoveryCodeRepository
 from .repositories import Repositories, Store, open_repositories, repositories_on
 from .sends import InMemorySendLogRepository, SendLogRepository
+from .sql import (
+    SqlAccountRepository,
+)
 from .sql.database import Database
 from .sqlite import (
     SCHEMA_VERSION,
-    SqliteAccountRepository,
     SqliteAuditRepository,
     SqliteChangeLogRepository,
     SqliteIdempotencyRepository,
@@ -125,7 +127,7 @@ __all__ = [
     "Sealed",
     "RecoveryCodeRepository",
     "SendLogRepository",
-    "SqliteAccountRepository",
+    "SqlAccountRepository",
     "SqliteChangeLogRepository",
     "SqliteIdempotencyRepository",
     "SqliteLinkRepository",
