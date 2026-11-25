@@ -68,3 +68,49 @@ async def test_a_keyword_of_the_list_is_set_with_the_move(
         ("move_to_folder", "Invoices/Hosting", True),
         ("add_keyword", "agent-sorted", True),
     ]
+
+
+async def test_an_entry_in_shadow_is_recorded_while_the_agent_acts_in_full(
+    stage_world: Wired, tmp_path: Path
+) -> None:
+    chain = listed(keyword_stage="shadow")
+
+    assert await run(stage_world, "hosting", agent(tmp_path, chain)) == "done"
+
+    found = mail(stage_world, "hosting")
+    assert found["folder_ids"] == ["inv-hosting"]
+    assert found["keywords"] == ["agent-sorted"]
+    assert actions(stage_world, "hosting") == [
+        ("add_keyword", "agent-hosting", False),
+        ("move_to_folder", "Invoices/Hosting", True),
+        ("add_keyword", "agent-sorted", True),
+    ]
+
+
+async def test_in_keyword_the_keywords_are_set_and_the_move_recorded(
+    stage_world: Wired, tmp_path: Path
+) -> None:
+    sorter = agent(tmp_path, listed(), stage="keyword")
+
+    assert await run(stage_world, "hosting", sorter) == "done"
+
+    found = mail(stage_world, "hosting")
+    assert found["folder_ids"] == ["inbox"]
+    assert found["keywords"] == ["agent-hosting"]
+    assert actions(stage_world, "hosting") == [
+        ("add_keyword", "agent-hosting", True),
+        ("move_to_folder", "Invoices/Hosting", False),
+        ("add_keyword", "agent-sorted", False),
+    ]
+
+
+async def test_a_move_whose_entry_says_keyword_is_recorded_in_full(
+    stage_world: Wired, tmp_path: Path
+) -> None:
+    chain = listed(move_stage="keyword")
+
+    assert await run(stage_world, "hosting", agent(tmp_path, chain)) == "done"
+
+    found = mail(stage_world, "hosting")
+    assert found["folder_ids"] == ["inbox"]
+    assert found["keywords"] == ["agent-hosting"]

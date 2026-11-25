@@ -58,7 +58,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   `keyword`. Of several moves the category of the highest `priority`
   wins. A list of `groups` is read as one dimension and keeps its
   version. Two recognizers of a list may ask the model, each once per
-  message.
+  message. An entry of `then` may name a `stage`, `shadow`, `keyword` or
+  `full`: below the stage of the agent it is recorded only.
 
 ### Changed
 
