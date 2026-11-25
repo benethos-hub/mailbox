@@ -265,6 +265,13 @@ class Agent(ABC):
         Code only, never from an answer of the model. None by default."""
         return False
 
+    def keywords(self) -> frozenset[str]:
+        """The keywords the runtime may set and take off for this agent:
+        its own, and those its configuration names, such as the keywords of
+        a list. Code only, never from an answer of the model. Its own by
+        default."""
+        return frozenset({self.keyword})
+
     def prepare(self) -> None:
         """Read what the agent needs beyond its settings, such as a list
         in a file, and raise a ConfigError if it is wrong. Called once

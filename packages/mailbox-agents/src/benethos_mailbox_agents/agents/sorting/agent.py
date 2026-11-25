@@ -150,6 +150,11 @@ class Sorting(Agent):
                 return True
         return False
 
+    def keywords(self) -> frozenset[str]:
+        """Its own keyword and every keyword the list sets in ``then``
+        (decided 2026-11-25)."""
+        return frozenset({self.keyword}) | self.chain.keywords()
+
     def backfill_folder(self, folder: FolderRef) -> bool:
         """A folder without a role, when the list takes up mail that
         arrives there."""

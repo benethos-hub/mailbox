@@ -27,7 +27,7 @@ from pydantic import (
     model_validator,
 )
 
-from .actions import ACTIONS, Move, MoveBelow, Stage
+from .actions import ACTIONS, Keyword, Move, MoveBelow, Stage
 from .groups import (
     NONE,
     Entry,
@@ -252,6 +252,15 @@ class Chain(BaseModel):
             for below in belows - {None}:
                 found.update(from_top(f"{target}/{below}"))
         return frozenset(found)
+
+    def keywords(self) -> frozenset[str]:
+        """Every keyword an entry of ``then`` sets."""
+        return frozenset(
+            str(step.params["target"])
+            for dimension in self.dimensions
+            for category in dimension.categories
+            for step in category.steps(Keyword.name)
+        )
 
     def belows(self) -> frozenset[str]:
         """Every folder below another that a move_below of the list names,

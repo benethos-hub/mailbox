@@ -66,6 +66,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   decision under the version `v1-list-` and the digest of its list, so
   every message is decided anew. Run it in `shadow` again before a
   higher stage. A list of `groups` keeps its digest from version 2.
+- `benethos-mailbox-agents`: the runtime sets and takes off a keyword an
+  agent names in its configuration, not only its own: for `sorting` the
+  keywords of its list, each `agent-` and lower case letters, digits and
+  dashes. Any other keyword is refused as before.
 - `benethos-mailbox-agents`: `sorting` needs the gateway settings once a
   group of its list has a topic. A list without a topic runs without a
   gateway, as before.

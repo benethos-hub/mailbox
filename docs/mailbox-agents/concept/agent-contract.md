@@ -75,6 +75,7 @@ that is not lower case letters, digits and dashes, the same form
 | `backfill_folder(folder)` | whether `backfill` takes up the messages of this folder besides the inbox and sent mail. No folder by default |
 | `folders_needed()` | the folders its configuration names and expects to be there, which `status` looks up. None by default |
 | `describe_folders(folders)` | for `status`: a line for each folder of an account that matters to it, such as one it looks in and what it does there. `folders` are the account's folders by path. Folder names only. Asked of an agent whose `folders_needed()` names one, nothing by default |
+| `keywords()` | the keywords the runtime may set and take off for it: its own, and those its configuration names, such as the keywords of the list of `sorting` (decided 2026-11-25). Code only, never from an answer of the model. Its own by default |
 | `may_create(path, folders)` | whether the runtime may make the folder at `path` for it: one its configuration names. `folders` are the account's folders by path, so an answer may rest on the folder above and its role. Code only, no folder by default |
 | `summarize(shown)` | for `report`: lines about the messages shown, each given as sender, decision and its actions with whether each was carried out |
 
@@ -106,7 +107,8 @@ An agent declares which of them it uses, and the runtime carries out no
 other. A new action is added here first, with how it is taken back.
 
 The runtime carries out an action only on these terms: it is declared, a
-keyword is the agent's own, a move goes into a folder that exists and is
+keyword is one the agent names in `keywords()`, its own or one its
+configuration names (2026-11-25), a move goes into a folder that exists and is
 neither the trash, junk or spam nor below them, the message itself is in
 none of them nor in a folder below one, and the account is one the agent
 works on. A message in one of them is the owner's choice: its action is

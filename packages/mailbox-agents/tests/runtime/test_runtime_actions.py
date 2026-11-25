@@ -273,3 +273,35 @@ async def test_a_move_not_taken_while_the_service_was_away_is_dropped(
         await executor(actions_world)([MOVE])
 
     assert actions_world.store.actions() == []
+
+
+class Listing(Echo):
+    """An agent whose configuration names a keyword beside its own."""
+
+    actions = frozenset({Action.ADD_KEYWORD, Action.REMOVE_KEYWORD})
+
+    def keywords(self) -> frozenset[str]:
+        return frozenset({self.keyword, "agent-listed"})
+
+
+@pytest.mark.parametrize(
+    ("keyword", "outcome", "written"),
+    [
+        ("agent-listed", Outcome.DONE, [(PATH, {"add_keywords": ["agent-listed"]})]),
+        ("echo", Outcome.DONE, [(PATH, {"add_keywords": ["echo"]})]),
+        ("agent-other", Outcome.REFUSED, []),
+    ],
+)
+async def test_a_keyword_the_agent_names_is_set_and_no_other(
+    actions_world: Wired, keyword: str, outcome: Outcome, written: list[object]
+) -> None:
+    run = Executor(
+        agent=Listing(settings(stage="full")),
+        store=actions_world.store,
+        mailbox=actions_world.mailbox,
+        now=actions_world.clock,
+    )
+    request = ActionRequest(Action.ADD_KEYWORD, REF, keyword=keyword)
+
+    assert await run([request]) == [outcome]
+    assert actions_world.service.writes() == written
