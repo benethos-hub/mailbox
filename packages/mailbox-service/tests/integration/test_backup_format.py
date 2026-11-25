@@ -15,8 +15,10 @@ from benethos_mailbox_service.data import backup
 from benethos_mailbox_service.data.backup import (
     MAGIC,
     MAGIC_1,
+    MAGIC_3,
     BackupError,
     Manifest,
+    create_backup,
     read_backup,
     restore_backup,
     write_backup,
@@ -31,6 +33,8 @@ from benethos_mailbox_service.data.storage import (
 from benethos_mailbox_service.data.storage.sqlite import SCHEMA_VERSION
 
 from ..schema_helpers import at_schema
+
+SEED = Path(__file__).parents[1] / "data" / "storage" / "seeds" / "schema_25.sql"
 
 
 @pytest.mark.parametrize(
@@ -192,3 +196,89 @@ def test_a_restore_of_schema_25_keeps_no_copy_of_its_own(tmp_path: Path) -> None
     restore_backup(tmp_path / "b", master, target)
     assert inspect_file(target) == SCHEMA_VERSION
     assert list(target.parent.glob("*before-schema-*")) == []
+
+
+# --- version 3, the export ------------------------------------------------------
+
+
+def _source(tmp_path: Path) -> Database:
+    """A database with every table filled: the seed of schema 25, migrated."""
+    raw = at_schema(tmp_path / "source.db", 25)
+    raw.executescript(SEED.read_text(encoding="utf-8"))
+    raw.close()
+    return Database(tmp_path / "source.db")
+
+
+def test_a_backup_of_version_3_holds_the_export(tmp_path: Path) -> None:
+    source = _source(tmp_path)
+    master = cipher.new_key()
+    target = tmp_path / "three.bak"
+    written = create_backup(source, master, target, "9.9.9", format=3)
+    raw = target.read_bytes()
+    assert raw.startswith(MAGIC_3)
+    assert b"two@example.org" not in raw
+    assert not (tmp_path / "three.bak.export").exists()
+    assert written.rows == {
+        t.name: len(list(source.rows(t.name))) for t in source.tables()
+    }
+
+    manifest = read_backup(target, master, tmp_path / "out.db")
+    assert manifest == written
+    assert manifest.format == 3
+    assert not (tmp_path / "out.db.export").exists()
+    out = Database(tmp_path / "out.db")
+    for table in source.tables():
+        assert list(out.rows(table.name)) == list(source.rows(table.name)), table
+    out.close()
+    with pytest.raises(BackupError, match="does not decrypt"):
+        read_backup(target, cipher.new_key(), tmp_path / "wrong.db")
+    assert not (tmp_path / "wrong.db").exists()
+    source.close()
+
+
+def test_a_block_of_version_3_altered_is_found(
+    tmp_path: Path, small_blocks: int
+) -> None:
+    source = _source(tmp_path)
+    master = cipher.new_key()
+    target = tmp_path / "three.bak"
+    create_backup(source, master, target, "9.9.9", format=3)
+    source.close()
+    raw = target.read_bytes()
+    end = raw.index(b"\n", len(MAGIC_3)) + 1
+    header, rest = raw[:end], raw[end:]
+    records = []
+    while rest:
+        size = int.from_bytes(rest[13:17], "big")
+        records.append(rest[: 17 + size])
+        rest = rest[17 + size :]
+    assert len(records) > 2
+    for change, message in (
+        (records[:-1], "truncated"),
+        ([records[1], records[0], *records[2:]], "does not decrypt"),
+        ([*records, records[-1]], "more than its backup"),
+        (
+            [records[0][:-1] + bytes([records[0][-1] ^ 1]), *records[1:]],
+            "does not decrypt",
+        ),
+    ):
+        target.write_bytes(header + b"".join(change))
+        with pytest.raises(BackupError, match=message):
+            read_backup(target, master, tmp_path / "out.db")
+        assert not (tmp_path / "out.db").exists()
+        assert not (tmp_path / "out.db.export").exists()
+
+
+def test_a_version_3_before_schema_26_is_refused(tmp_path: Path) -> None:
+    export = tmp_path / "export"
+    export.write_bytes(b"")
+    master = cipher.new_key()
+    manifest = Manifest("1", 25, "now", _digest(export), rows={}, format=3)
+    write_backup(export, manifest, master, tmp_path / "old.bak")
+    with pytest.raises(BackupError, match="does not match its manifest"):
+        read_backup(tmp_path / "old.bak", master, tmp_path / "out.db")
+    newer = Manifest("1", 999, "now", _digest(export), rows={}, format=3)
+    write_backup(export, newer, master, tmp_path / "new.bak")
+    with pytest.raises(BackupError, match="update the service first"):
+        read_backup(tmp_path / "new.bak", master, tmp_path / "out.db")
+    assert not (tmp_path / "out.db").exists()

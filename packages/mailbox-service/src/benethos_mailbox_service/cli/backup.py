@@ -1,5 +1,5 @@
-"""``backup FILE`` writes an encrypted backup, ``backup verify FILE``
-checks one."""
+"""``backup FILE`` writes an encrypted backup, in format 2 or with
+``--format 3``, ``backup verify FILE`` checks one of any format."""
 
 from __future__ import annotations
 
@@ -30,6 +30,13 @@ def add(commands: Commands, option: argparse.ArgumentParser) -> None:
     )
     backup.add_argument("target", nargs="+", metavar="[verify] FILE")
     backup.add_argument(
+        "--format",
+        type=int,
+        choices=(2, 3),
+        help="with FILE: 2, the file of the database (the default), or 3, "
+        "the export of its records",
+    )
+    backup.add_argument(
         "--recovery-key",
         action="store_true",
         help="with verify: ask for the recovery key at a hidden prompt, or "
@@ -39,12 +46,15 @@ def add(commands: Commands, option: argparse.ArgumentParser) -> None:
 
 def run(args: argparse.Namespace) -> None:
     if args.target[0] == "verify":
+        if args.format is not None:
+            # The format of a backup is read from the file itself.
+            raise UsageError("--format goes with `backup FILE`")
         _verify(args.target, args.recovery_key, args.env_file)
     elif args.recovery_key:
         # A backup is written with the master key the service holds.
         raise UsageError("--recovery-key goes with `backup verify FILE`")
     else:
-        _write(args.target, args.env_file)
+        _write(args.target, args.env_file, args.format or 2)
 
 
 def _verify(target: list[str], recovery_key: bool, env_file: Path | None) -> None:
@@ -59,12 +69,13 @@ def _verify(target: list[str], recovery_key: bool, env_file: Path | None) -> Non
     scratch = database.with_name(database.name + ".verifying")
     manifest = verify_backup(Path(target[1]), master, scratch)
     say(
-        f"OK: backup of {lines.log_time(parse_iso(manifest.created_at))}, service "
-        f"{manifest.service_version}, schema {manifest.schema_version}"
+        f"OK: backup of {lines.log_time(parse_iso(manifest.created_at))}, format "
+        f"{manifest.format}, service {manifest.service_version}, schema "
+        f"{manifest.schema_version}"
     )
 
 
-def _write(target: list[str], env_file: Path | None) -> None:
+def _write(target: list[str], env_file: Path | None, format: int) -> None:
     from ..assembly import opened
     from ..data.backup import create_backup
     from ..domain.activity import HOST, system
@@ -80,14 +91,19 @@ def _write(target: list[str], env_file: Path | None) -> None:
             services.vault.master_key(),
             Path(target[0]),
             __version__,
+            format=format,
         )
         services.activity.record(
             system.BackupWritten(
-                by=HOST, file=target[0], schema=manifest.schema_version
+                by=HOST,
+                file=target[0],
+                schema=manifest.schema_version,
+                format=manifest.format,
             )
         )
     say(
-        f"Backup written: schema {manifest.schema_version}, "
+        f"Backup written in format {manifest.format}: schema "
+        f"{manifest.schema_version}, "
         f"{lines.log_time(parse_iso(manifest.created_at))}. "
         "It opens only with this master key or the recovery key."
     )

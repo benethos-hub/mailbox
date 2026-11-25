@@ -10,9 +10,14 @@ neither can the header. A backup is written from a copy of the database
 on disk and read back into a file, so no more than one block is in
 memory at a time.
 
+Version 3 holds the logical export of the records (``export``) in the
+same blocks, and its manifest the rows of each table. It does not depend
+on the file of the database: it is read into a new database of its
+schema. Version 2 stays what ``backup`` writes unless told otherwise.
+
 Version 1 holds the database as one ciphertext, authenticated with the
-magic and the manifest. It is still read. The master key itself is never
-in a backup.
+magic and the manifest. Versions 1, 2 and 3 are read. The master key
+itself is never in a backup.
 """
 
 from __future__ import annotations
@@ -21,7 +26,7 @@ import hashlib
 import json
 import os
 from collections.abc import Iterator
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import BinaryIO
 
@@ -29,10 +34,13 @@ from benethos_mailbox_common.paths import locks
 from benethos_mailbox_common.values import sizes
 
 from ..common.clock import iso, utc_now
+from ..errors import MailboxServiceError
+from .export import ExportError, read_export, write_export
 from .files import create_private, free_path
 from .secrets import cipher
 from .storage import (
     SCHEMA_VERSION,
+    Database,
     Store,
     inspect_file,
     migrate_file,
@@ -43,6 +51,10 @@ from .storage import (
 
 MAGIC = b"MAILBOX-SERVICE-BACKUP 2\n"
 MAGIC_1 = b"MAILBOX-SERVICE-BACKUP 1\n"
+MAGIC_3 = b"MAILBOX-SERVICE-BACKUP 3\n"
+_MAGICS = {MAGIC_1: 1, MAGIC: 2, MAGIC_3: 3}
+# The first schema format 3 is written of: its export needs schema 26.
+_FIRST_EXPORTED = 26
 BLOCK = sizes.MIB
 _KEY_INFO = b"mailbox-service backup v1"
 # The longest manifest line read: it holds four short fields.
@@ -62,11 +74,22 @@ class Manifest:
     schema_version: int
     created_at: str
     sha256: str
+    # Format 3: the rows of each table.
+    rows: dict[str, int] | None = None
+    # Not in the file: the format its magic names.
+    format: int = field(default=2, compare=False)
 
 
 def create_backup(
-    store: Store, master_key: bytes, target: Path, service_version: str
+    store: Store,
+    master_key: bytes,
+    target: Path,
+    service_version: str,
+    *,
+    format: int = 2,
 ) -> Manifest:
+    """A backup of ``store`` at ``target``, in format 2, the file of the
+    database, or 3, its export. Both are taken from a snapshot."""
     if target.exists():
         raise BackupError(f"{target} exists, refusing to overwrite it")
     with store.snapshot_file() as snapshot:
@@ -78,18 +101,50 @@ def create_backup(
             service_version=service_version,
             schema_version=schema_version,
             created_at=iso(utc_now()),
-            sha256=_sha256(snapshot),
+            sha256="",
+            format=format,
         )
+        if format == 3:
+            return _write_export(snapshot, manifest, master_key, target)
+        manifest = replace(manifest, sha256=_sha256(snapshot))
         write_backup(snapshot, manifest, master_key, target)
+    return manifest
+
+
+def _write_export(
+    snapshot: Path, manifest: Manifest, master_key: bytes, target: Path
+) -> Manifest:
+    """The export of the database at ``snapshot`` as a backup of format 3.
+    The export goes to a file beside ``target`` first, readable by its
+    owner alone and removed afterwards."""
+    staged = target.with_name(target.name + ".export")
+    try:
+        create_private(staged)
+    except OSError as exc:
+        raise BackupError(f"{staged} cannot be written: {exc.strerror}") from None
+    try:
+        db = Database(snapshot)
+        try:
+            with staged.open("ab") as out:
+                rows = write_export(db, out)
+        finally:
+            db.close()
+        manifest = replace(manifest, sha256=_sha256(staged), rows=rows)
+        write_backup(staged, manifest, master_key, target)
+    except OSError as exc:
+        raise BackupError(f"{staged} cannot be written: {exc.strerror}") from None
+    finally:
+        staged.unlink(missing_ok=True)
     return manifest
 
 
 def write_backup(
     source: Path, manifest: Manifest, master_key: bytes, target: Path
 ) -> None:
-    """The database file at ``source`` as a backup at ``target``, block by
-    block. A backup that cannot be finished is removed."""
-    header = MAGIC + json.dumps(asdict(manifest)).encode() + b"\n"
+    """The file at ``source`` as a backup at ``target``, block by block:
+    the database in format 2, its export in format 3, as the manifest
+    says. A backup that cannot be finished is removed."""
+    header = _head(manifest)
     key = _backup_key(master_key)
     try:
         create_private(target, header)
@@ -110,37 +165,81 @@ def write_backup(
 
 
 def read_backup(source: Path, master_key: bytes, into: Path) -> Manifest:
-    """Decrypt and check a backup into a new file at ``into``, readable by
-    its owner alone. Raises ``BackupError`` on any doubt, and leaves no
-    file at ``into`` then."""
+    """Decrypt and check a backup into a new database file at ``into``,
+    readable by its owner alone. Raises ``BackupError`` on any doubt, and
+    leaves no file at ``into`` then."""
     try:
         file = source.open("rb")
     except OSError as exc:
         raise BackupError(f"{source} cannot be read: {exc.strerror}") from None
     with file:
         header, manifest = _header(file, source)
+        if manifest.format == 3:
+            _exported_schema(manifest)
+        plain = into.with_name(into.name + ".export") if manifest.format == 3 else into
         try:
-            create_private(into)
+            create_private(plain)
         except OSError as exc:
-            raise BackupError(f"{into} cannot be written: {exc.strerror}") from None
+            raise BackupError(f"{plain} cannot be written: {exc.strerror}") from None
         try:
-            with into.open("ab") as out:
+            with plain.open("ab") as out:
                 digest = _decrypt(file, header, _backup_key(master_key), out, source)
             if digest != manifest.sha256:
                 raise BackupError("the backup does not match its checksum")
-            try:
-                schema = inspect_file(into)
-            except ValueError as exc:
-                raise BackupError(str(exc)) from None
-            if schema != manifest.schema_version:
-                raise BackupError("the backup does not match its manifest")
+            if manifest.format == 3:
+                _read_export(plain, manifest, into)
+            _check_schema(into, manifest)
         except OSError as exc:
-            into.unlink(missing_ok=True)
+            remove_database_file(into)
             raise BackupError(f"{source} cannot be read: {exc.strerror}") from None
         except BaseException:
-            into.unlink(missing_ok=True)
+            remove_database_file(into)
             raise
+        finally:
+            if plain != into:
+                plain.unlink(missing_ok=True)
     return manifest
+
+
+def _exported_schema(manifest: Manifest) -> None:
+    """A schema an export of format 3 can have, and this version read."""
+    schema = manifest.schema_version
+    if schema < _FIRST_EXPORTED or not isinstance(manifest.rows, dict):
+        raise BackupError("the backup does not match its manifest")
+    if schema > SCHEMA_VERSION:
+        raise BackupError(
+            f"the backup has schema {schema}, this version supports up to "
+            f"{SCHEMA_VERSION}: update the service first"
+        )
+
+
+def _read_export(plain: Path, manifest: Manifest, into: Path) -> None:
+    """The export at ``plain`` into a new database at ``into`` of the
+    schema of the manifest, its rows held to the manifest."""
+    try:
+        create_private(into)
+    except OSError as exc:
+        raise BackupError(f"{into} cannot be written: {exc.strerror}") from None
+    try:
+        db = Database(into, schema=manifest.schema_version)
+        try:
+            with plain.open("rb") as source:
+                rows = read_export(source, db)
+        finally:
+            db.close()
+    except (ExportError, MailboxServiceError) as exc:
+        raise BackupError(f"the backup cannot be read back: {exc}") from None
+    if rows != manifest.rows:
+        raise BackupError("the backup does not match its manifest")
+
+
+def _check_schema(path: Path, manifest: Manifest) -> None:
+    try:
+        schema = inspect_file(path)
+    except ValueError as exc:
+        raise BackupError(str(exc)) from None
+    if schema != manifest.schema_version:
+        raise BackupError("the backup does not match its manifest")
 
 
 def verify_backup(source: Path, master_key: bytes, scratch: Path) -> Manifest:
@@ -177,16 +276,32 @@ def restore_backup(source: Path, master_key: bytes, target: Path) -> Manifest:
 def _header(file: BinaryIO, source: Path) -> tuple[bytes, Manifest]:
     """The magic and the manifest line, and the manifest."""
     magic = file.readline(len(MAGIC))
-    if magic not in (MAGIC, MAGIC_1):
+    if magic not in _MAGICS:
         raise BackupError(f"{source} is not a backup of this service")
     line = file.readline(_MANIFEST_BYTES)
     if not line.endswith(b"\n"):
         raise BackupError(f"{source} is truncated")
     try:
-        manifest = Manifest(**json.loads(line))
+        fields = json.loads(line)
+        if not isinstance(fields, dict):
+            raise TypeError
+        # The magic names the format, whatever the manifest says.
+        fields.pop("format", None)
+        manifest = Manifest(**fields, format=_MAGICS[magic])
     except (ValueError, TypeError):
         raise BackupError(f"{source} has an unreadable manifest") from None
     return magic + line, manifest
+
+
+def _head(manifest: Manifest) -> bytes:
+    """The magic and the manifest line of ``manifest``'s format. Format 2
+    holds the four fields it always held."""
+    fields = asdict(manifest)
+    del fields["format"]
+    if manifest.format != 3:
+        del fields["rows"]
+    magic = {2: MAGIC, 3: MAGIC_3}[manifest.format]
+    return magic + json.dumps(fields).encode() + b"\n"
 
 
 def _decrypt(

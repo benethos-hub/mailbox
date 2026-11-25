@@ -148,9 +148,12 @@ class BackupWritten(Activity):
 
     file: str
     schema: int
+    format: int
 
     def says(self) -> str:
-        return f"wrote a backup to {self.file}, schema {self.schema}"
+        return (
+            f"wrote a backup to {self.file}, schema {self.schema}, format {self.format}"
+        )
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -161,9 +164,13 @@ class BackupRestored(Activity):
     schema: int
     # When the backup was made, as its manifest says.
     made: str
+    format: int
 
     def says(self) -> str:
-        return f"restored the backup {self.file} of {self.made}, schema {self.schema}"
+        return (
+            f"restored the backup {self.file} of {self.made}, schema"
+            f" {self.schema}, format {self.format}"
+        )
 
 
 @dataclass(frozen=True, kw_only=True)
