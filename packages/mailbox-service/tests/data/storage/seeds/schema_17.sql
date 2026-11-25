@@ -1,0 +1,39 @@
+-- A database of schema 17 (0.3.0), every table filled.
+-- Written once and never changed, like a migration.
+
+INSERT INTO keys (key_id, nonce, ciphertext, created_at) VALUES ('key_seed_b', X'010101010101010101010101', X'020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202', '2026-01-02 10:00:00');
+INSERT INTO keys (key_id, nonce, ciphertext, created_at) VALUES ('key_seed_a', X'030303030303030303030303', X'040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404', '2026-01-01 10:00:00');
+INSERT INTO accounts (id, provider, email, display_name, status, settings) VALUES ('acc_seed2', 'imap', 'two@example.org', 'Two', 'connected', '{"host": "imap.example.org", "port": 993, "tls": true}');
+INSERT INTO accounts (id, provider, email, display_name, status, settings) VALUES ('acc_seed1', 'microsoft', 'one@example.org', NULL, 'needs_reauth', '{}');
+INSERT INTO users (id, name, roles, grants, disabled, ui_sign_in, service) VALUES ('usr_seed2', 'Admin', '["reader"]', '[{"accounts": ["*"], "allow": ["mail.read"]}]', 0, 1, '["users.read"]');
+INSERT INTO users (id, name, roles, grants, disabled, ui_sign_in, service) VALUES ('usr_seed1', 'dashboard', '[]', '[{"accounts": ["acc_seed2"], "allow": ["mail.read", "send"]}]', 1, 0, '[]');
+INSERT INTO roles (id, grants, service) VALUES ('reader', '[{"accounts": ["*"], "allow": ["mail.read"]}]', '[]');
+INSERT INTO roles (id, grants, service) VALUES ('auditor', '[]', '["audit.read"]');
+INSERT INTO tokens (id, user_id, name, token_hash, created_at, expires_at, last_used_at, revoked_at) VALUES ('tok_seed2', 'usr_seed2', 'first', 'hash-seed-2', '2026-01-03T10:00:00Z', NULL, '2026-01-04T10:00:00Z', NULL);
+INSERT INTO tokens (id, user_id, name, token_hash, created_at, expires_at, last_used_at, revoked_at) VALUES ('tok_seed1', 'usr_seed1', 'second', 'hash-seed-1', '2026-01-02T10:00:00Z', '2027-01-02T10:00:00Z', NULL, '2026-01-05T10:00:00Z');
+INSERT INTO passwords (user_id, hash, must_change, updated_at, last_sign_in_at) VALUES ('usr_seed2', 'scrypt$seed$2', 0, '2026-01-03T10:00:00Z', '2026-01-04T10:00:00Z');
+INSERT INTO passwords (user_id, hash, must_change, updated_at, last_sign_in_at) VALUES ('usr_seed1', 'scrypt$seed$1', 1, '2026-01-02T10:00:00Z', NULL);
+INSERT INTO credentials (account_id, field, key_id, nonce, ciphertext, updated_at) VALUES ('acc_seed2', 'password', 'key_seed_b', X'050505050505050505050505', X'0606060606060606060606060606060606060606060606060606060606060606', '2026-01-03T10:00:00Z');
+INSERT INTO credentials (account_id, field, key_id, nonce, ciphertext, updated_at) VALUES ('acc_seed1', 'refresh_token', 'key_seed_a', X'070707070707070707070707', X'0808080808080808080808080808080808080808080808080808080808080808', '2026-01-03T11:00:00Z');
+INSERT INTO message_index (account_id, id, native_id, folder_id, header) VALUES ('acc_seed2', 'msg_seed_c', 'n-c', 'f_inbox', '<c@example.org>');
+INSERT INTO message_index (account_id, id, native_id, folder_id, header) VALUES ('acc_seed2', 'msg_seed_a', 'n-a', 'f_inbox', NULL);
+INSERT INTO message_index (account_id, id, native_id, folder_id, header) VALUES ('acc_seed2', 'msg_seed_d', 'n-d', 'f_inbox', NULL);
+INSERT INTO message_index (account_id, id, native_id, folder_id, header) VALUES ('acc_seed2', 'msg_seed_b', 'n-b', 'f_inbox', '<b@example.org>');
+DELETE FROM message_index WHERE id = 'msg_seed_a';
+INSERT INTO folder_states (account_id, folder_id, state) VALUES ('acc_seed2', 'f_inbox', '{"uidvalidity": 7, "uidnext": 42}');
+INSERT INTO folder_states (account_id, folder_id, state) VALUES ('acc_seed2', 'f_sent', '{"uidvalidity": 8, "uidnext": 3}');
+INSERT INTO changes (seq, account_id, message_id, type, at, folder_id) VALUES (5, 'acc_seed2', 'msg_seed_c', 'message.created', '2026-01-03T10:00:00Z', 'f_inbox');
+INSERT INTO changes (seq, account_id, message_id, type, at, folder_id) VALUES (7, 'acc_seed2', 'msg_seed_b', 'message.updated', '2026-01-03T11:00:00Z', NULL);
+INSERT INTO changes (seq, account_id, message_id, type, at, folder_id) VALUES (9, 'acc_seed1', 'msg_seed_x', 'message.deleted', '2026-01-03T12:00:00Z', NULL);
+DELETE FROM changes WHERE seq = 9;
+INSERT INTO idempotency (account_id, user_id, key, operation, request_hash, result, created_at) VALUES ('acc_seed2', 'usr_seed2', 'idem-1', 'send_message', 'rh-1', '{"message_id": "<s1@example.org>"}', '2026-01-03T10:00:00Z');
+INSERT INTO idempotency (account_id, user_id, key, operation, request_hash, result, created_at) VALUES ('acc_seed2', 'usr_seed1', 'idem-2', 'create_draft', 'rh-2', '{"id": "drf_1"}', '2026-01-03T11:00:00Z');
+INSERT INTO sends (id, created_at, user_id, credential_id, account_id, operation, recipients, outcome, error, refused, message_id_header) VALUES ('snd_seed1', '2026-01-03T10:00:00Z', 'usr_seed2', 'tok_seed2', 'acc_seed2', 'send_message', '["J\u00f6rg.Recipient@Example.org", "carol@example.org"]', 'sent', NULL, '[]', '<s1@example.org>');
+INSERT INTO sends (id, created_at, user_id, credential_id, account_id, operation, recipients, outcome, error, refused, message_id_header) VALUES ('snd_seed2', '2026-01-03T11:00:00Z', 'usr_seed1', NULL, 'acc_seed2', 'send_draft', '["dave@example.org"]', 'denied', 'not allowed', '["dave@example.org"]', NULL);
+INSERT INTO webhooks (id, user_id, url, events, accounts, created_at, key_id, nonce, ciphertext, cursor, attempts, next_attempt_at, last_delivery_at, last_error) VALUES ('whk_seed1', 'usr_seed2', 'https://hooks.example.org/a', '["message.created"]', '["acc_seed2"]', '2026-01-03T10:00:00Z', 'key_seed_b', X'090909090909090909090909', X'0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a', 5, 0, NULL, '2026-01-03T10:01:00Z', NULL);
+INSERT INTO webhooks (id, user_id, url, events, accounts, created_at, key_id, nonce, ciphertext, cursor, attempts, next_attempt_at, last_delivery_at, last_error) VALUES ('whk_seed2', 'usr_seed1', 'https://hooks.example.org/b', '["message.deleted"]', NULL, '2026-01-03T11:00:00Z', 'key_seed_a', X'0b0b0b0b0b0b0b0b0b0b0b0b', X'0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c', 0, 2, '2026-01-03T12:00:00Z', NULL, 'timeout');
+INSERT INTO webhook_attempts (seq, webhook_id, delivery_id, at, events, status, error) VALUES (3, 'whk_seed1', 'dlv_1', '2026-01-03T10:01:00Z', '[5]', 200, NULL);
+INSERT INTO webhook_attempts (seq, webhook_id, delivery_id, at, events, status, error) VALUES (4, 'whk_seed2', 'dlv_2', '2026-01-03T11:30:00Z', '[9]', NULL, 'timeout');
+INSERT INTO activity (id, at, activity, user_id, user_name, credential, record, source, outcome, detail) VALUES ('act_seed1', '2026-01-03T10:00:00Z', 'user.created', 'usr_seed2', 'Admin', 'password', 'usr_seed1', 'ui', 'done', '{}');
+INSERT INTO activity (id, at, activity, user_id, user_name, credential, record, source, outcome, detail) VALUES ('act_seed2', '2026-01-03T11:00:00Z', 'token.created', NULL, 'cli', NULL, 'tok_seed1', 'cli', 'refused', '{"reason": "seed"}');
+INSERT INTO meta (key, value) VALUES ('changes_horizon', '3');
