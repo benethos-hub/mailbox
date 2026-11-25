@@ -50,7 +50,7 @@ Part of the [concept](../CONCEPT.md).
   logged. The endpoint is https, or http to this machine, or anywhere
   with `OTLP_ALLOW_HTTP`, as the headers may hold a key. `CA_FILE` holds
   for it as for the upstreams. One trace per message and process: a span
-  `message` with the agent, the account and message ids, the attempt and
+  `message` with the agent and its instance, the account and message ids, the attempt and
   the state the message is left in, below it `decision` with its source,
   its model calls and why it was refused, below that a span per part the
   agent names, for `sorting` a `dimension` with its name, how its category

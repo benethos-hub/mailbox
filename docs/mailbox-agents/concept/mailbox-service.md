@@ -49,6 +49,15 @@ What the agents rely on:
   keyword, find it on the message and take it off when they put the mail
   back.
 
+A keyword as a signal between agents, for the instances of `sorting`
+that wait for one ([the chain](sorting-chain.md)), measured 2026-11-25
+against 0.11.1 with IMAP at Stalwart, on the test account: a keyword set
+through `update_message`, a second one set, the first taken off, the
+second taken off. Each change came as one `message.updated` of the same
+id, about 9 seconds later, and `get_message` showed the keywords as set.
+A keyword a person sets or takes off in a mail client over IMAP reaches
+the feed through CONDSTORE, as a flag does **(to verify for keywords)**.
+
 Folders and moves, measured 2026-11-18 against 0.7.5 with IMAP at
 Stalwart, on the test account:
 

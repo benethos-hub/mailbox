@@ -66,7 +66,6 @@ adheres to [Semantic Versioning](https://semver.org/).
   `report` names each dimension and what became of the mail of each
   category: moved, recorded, held, displaced by priority, keyword set or
   recorded, only sorted.
-
 - `benethos-mailbox-agents`: spans over OpenTelemetry. With
   `MAILBOX_AGENTS_OTLP_ENDPOINT` set, each agent exports a span per
   message, below it the decision with a span per dimension of `sorting`,
@@ -77,6 +76,30 @@ adheres to [Semantic Versioning](https://semver.org/).
   a keyword or a folder of a list. Unset, nothing is exported. New
   dependencies `opentelemetry-sdk` and
   `opentelemetry-exporter-otlp-proto-http`.
+- `benethos-mailbox-agents`: `MAILBOX_AGENTS_INSTANCE` runs one of
+  several processes of one agent, each with settings and a list of its
+  own. An instance keeps its state file as `<agent>-<instance>.db`, sets
+  the agent's keyword with `-<instance>` after it by default, and is
+  named `<agent>/<instance>` in the log, `status` and `report`, its
+  metrics with the label `instance`. Unset, everything stays as it was.
+- `benethos-mailbox-agents`: a category of `sorting` may name `keywords`:
+  it holds for a message that carries all of them, set by an earlier
+  instance or by a person, found by code without a model. A list with
+  `"mark_done": true` sets the agent's keyword after every decision,
+  `none` included, as a sign for a later instance that this one is done.
+- `benethos-mailbox-agents`: a list of `sorting` may wait for keywords,
+  `"on": {"keywords": ["agent-partner-*"]}`, beside or in place of the
+  arrival: a message given such a keyword, by an earlier instance or by
+  a person, is decided again. What code decides is worked out anew, what
+  the model answered is taken as stored, with no new call. A move is
+  taken once, a keyword already there not again. A list that waits for
+  a keyword it sets itself is refused.
+- `benethos-mailbox-agents`: the command `check --agent sorting
+  partner=partner.json beleg=beleg.json ...` reads the lists of several
+  instances together and names each circle of lists that set each other
+  off, exit code 1, else 0.
+- The live setup of the agents: three example lists of instances of
+  `sorting` that hand a message on, in `containers/live/mailbox-agents/chain/`.
 
 ### Changed
 

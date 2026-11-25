@@ -2,8 +2,9 @@
 
 Part of the [concept](../CONCEPT.md).
 
-> **Status: built in `sorting` version 3 (2026-11-25), checked on the test
-> account of the live setup. Not run on a real mailbox.** A list of
+> **Status: built in `sorting` version 3 (2026-11-25), with instances that
+> hand a message on by keywords, checked on the test account of the live
+> setup. Not run on a real mailbox.** A list of
 > `groups` alone, the form before, works as it did and keeps its version.
 
 The agent [sorting](agent-sorting.md) sorts a message in steps. Each step,
@@ -27,6 +28,7 @@ mail says. The executor of the runtime stays the lock on what is done
 | Recognizer | Reads | Asks the model |
 |---|---|---|
 | `sender` | the sender rules of the categories, as in [sorting](agent-sorting.md#sender-rules) | no |
+| `keyword` | the keywords a message carries: the category whose `keywords` it all carries, the one that names most when several do | no |
 | `topic` | the topics of the categories the sender rules leave open | once per dimension |
 
 | Action | Value | Primitives | On a choice of the model |
@@ -81,12 +83,15 @@ a change to the rest (decided 2026-11-25).
 
 | Field | Meaning | Rule |
 |---|---|---|
-| `on.arrival` | which mail the list takes up: `inbox`, or `folders` for mail that arrives in a folder without a role as well (section 5) | `inbox` when left out |
+| `on.arrival` | which mail the list takes up: `inbox`, or `folders` for mail that arrives in a folder without a role as well (section 5) | `inbox` when left out, none when `on` names `keywords` alone |
+| `on.keywords` | the keywords the list waits for, a `*` at the end for every keyword it starts (section 8) | none of the keywords the list sets itself |
+| `mark_done` | the agent's keyword after every decision, `none` included (section 8) | `false` when left out |
 | `dimensions` | the dimensions in the order they run | 1 to 4. Their recognizers ask the model twice at most, each once per message |
 | `name` of a dimension | what the decision and `report` call it | lower case letters, digits and `_`, a letter first, unique |
 | `when` | the categories of earlier dimensions it runs after, `none` among them | each name an earlier dimension, each category one of it |
 | `categories` | its categories | one at least |
-| a category | `name`, `senders`, `topic`, `by_topic`, `hold` as a group of [sorting](agent-sorting.md#2-the-list), and `recognize`, `priority`, `then` | it names senders, a topic or a recognizer. Its name is unique in its dimension |
+| a category | `name`, `senders`, `topic`, `by_topic`, `hold` as a group of [sorting](agent-sorting.md#2-the-list), and `keywords`, `recognize`, `priority`, `then` | it names senders, a topic, keywords or a recognizer. Its name is unique in its dimension |
+| `keywords` of a category | the keywords a message carries, all of them, for the recognizer `keyword` | lower case letters, digits and dashes |
 | `recognize` | a recognizer of section 1 | one of the register |
 | `priority` | how its move ranks against the moves of other dimensions (section 3) | a whole number, 0 when left out |
 | `then` | what follows from it, each entry one action with its value, and a `stage` | one `move` and one `move_below` at most |
@@ -189,11 +194,56 @@ with nothing in `then`. A list of groups keeps its heading `groups:`. The
 senders in no category of the first dimension are the candidates for the
 list, as before.
 
-## 8. Not part of it
+## 8. Instances that hand a message on
 
-- Several instances of `sorting` that hand a message on by keywords, and
-  a list that waits for a keyword (`on.keywords`, `mark_done`): refused
-  with a clear message until they are built.
+Several processes of `sorting` may run on one account, each an instance
+with a list, a state file, a stage and metrics of its own,
+`MAILBOX_AGENTS_INSTANCE` ([configuration](configuration.md)). One hands a
+message on to the next by keywords, which a person sees in a mail client
+and may correct (decided 2026-11-25). The example of the live setup,
+`containers/live/mailbox-agents/chain/`:
+
+| Instance | Waits for | Decides | Sets |
+|---|---|---|---|
+| `partner` | the arrival in the inbox | the partner by the sender | `agent-partner-<partner>`, and its sign |
+| `beleg` | the arrival, and `agent-partner-*` | the partner by its keyword, the kind by its topic | `agent-invoice`, and its sign |
+| `ablage` | `agent-sorted-beleg`, the sign of `beleg` | the partner and the kind by their keywords, no model | the move to `Providers/<partner>/Rechnungen`, and its own keyword |
+
+- **Waiting for a keyword.** A list with `on.keywords` is asked about
+  `message.updated` too. A message that carries a keyword it waits for is
+  decided again, whoever set the keyword, the agent's own keyword on it
+  or not, never one in the trash, junk or spam. What code decides is
+  worked out anew, so a keyword a person corrected counts. What the
+  model answered is taken as stored, with no new call: a dimension the
+  model did not answer before stays without a category. The executor
+  takes only what is not there yet, and a message moved once is not
+  moved again: the owner's choice stands. Without `on.keywords`, an
+  update is left as before.
+- **The sign.** `"mark_done": true` sets the agent's keyword after every
+  decision, `none` included, before a move, so it stands also where the
+  move is recorded only. An instance's keyword is the agent's with
+  `-<instance>` after it, `agent-sorted-beleg`. A later instance waits for
+  it, so `ablage` moves once, after `beleg` decided, below the folder of
+  the partner. Without `mark_done` the keyword comes with a move alone.
+- **`shadow` sets no keyword.** An instance others wait for runs in
+  `keyword` at least, or the next never starts. In `keyword` its moves
+  are recorded, its keywords set.
+- **No circle.** A list never waits for a keyword it sets itself, and an
+  instance does not start when its list waits for its own keyword. Across
+  instances the command `check --agent sorting partner=partner.json
+  beleg=beleg.json ablage=ablage.json` names each circle of lists that
+  set each other off, with exit code 1.
+- **The feed.** A keyword set or taken off comes as one
+  `message.updated` of the same id, measured through the mailbox service
+  at Stalwart ([mailbox service](mailbox-service.md)). One set in a mail
+  client over IMAP reaches the feed through CONDSTORE **(to verify)**.
+- **An account without keywords**, Gmail and POP3 in the mailbox
+  service, gets no keyword: the service refuses it and the runtime logs
+  the refusal **(to verify)**. There one instance with `when` is the
+  way.
+
+## 9. Not part of it
+
 - Forwarding a message: an action without a way back, for the
   [agent contract](agent-contract.md) first, with the mailbox service's
   outbox.

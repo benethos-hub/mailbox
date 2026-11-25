@@ -145,7 +145,7 @@ class StepRunner:
         spans: Spans = NO_SPANS,
     ) -> None:
         self.metrics = metrics or Metrics(
-            agent.name, agent.version, agent.settings.stage
+            agent.name, agent.version, agent.settings.stage, agent.instance or ""
         )
         self.spans = spans
         self.agent = agent
@@ -203,7 +203,7 @@ class StepRunner:
         )
         record(
             messages.StateSet(
-                agent=self.agent.name, message_id=ref.message_id, state=state
+                agent=self.agent.label, message_id=ref.message_id, state=state
             )
         )
         return state
@@ -212,7 +212,7 @@ class StepRunner:
         """The line and the count of a step that failed."""
         record(
             messages.StepFailed(
-                agent=self.agent.name, message_id=ref.message_id, step=step, error=exc
+                agent=self.agent.label, message_id=ref.message_id, step=step, error=exc
             )
         )
         self.metrics.step_failed(exc.code)
@@ -237,7 +237,7 @@ class StepRunner:
         """
         with self.spans.span(
             "message",
-            agent=self.agent.name,
+            agent=self.agent.label,
             account_id=ref.account_id,
             message_id=ref.message_id,
             attempt=attempts + 1,
@@ -262,7 +262,7 @@ class StepRunner:
         except AnswerRefusedError as exc:
             record(
                 messages.AnswerRefused(
-                    agent=self.agent.name,
+                    agent=self.agent.label,
                     message_id=ref.message_id,
                     reason=exc.reason,
                 )
@@ -366,7 +366,7 @@ class StepRunner:
         """The decision of the model with its evidence checked, stored once
         per prompt version and model alias, in a span with a span below it
         for each part the agent names."""
-        with self.spans.span("decision", agent=self.agent.name) as span:
+        with self.spans.span("decision", agent=self.agent.label) as span:
             decided = await self._decided(message, calls)
             span.set("source", decided.source)
             span.set("model_calls", calls.count)
@@ -382,14 +382,14 @@ class StepRunner:
             ref, "decision", self.agent.prompt_version, self.model_alias
         )
         if stored is not None:
-            return Decision.model_validate(stored.result)
+            return self.agent.refresh(Decision.model_validate(stored.result), message)
         started = time.monotonic()
         decided = await decide_checked(self.agent, message, self.context(calls), calls)
         for item in decided.evidence:
             if item.found is False:
                 record(
                     messages.QuoteMissing(
-                        agent=self.agent.name,
+                        agent=self.agent.label,
                         message_id=ref.message_id,
                         field=item.field,
                     )
@@ -411,7 +411,7 @@ class StepRunner:
         )
         record(
             messages.StepDone(
-                agent=self.agent.name,
+                agent=self.agent.label,
                 message_id=ref.message_id,
                 step="decision",
                 ms=duration,

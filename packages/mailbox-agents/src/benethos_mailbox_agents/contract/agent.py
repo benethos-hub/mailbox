@@ -15,6 +15,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
+from pathlib import Path
 from typing import ClassVar
 
 from ..errors import ContractError
@@ -43,6 +44,7 @@ __all__ = [
     "Shown",
     "TracePart",
     "Trigger",
+    "state_name",
 ]
 
 NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
@@ -201,7 +203,23 @@ class Agent(ABC):
     def __init__(self, settings: Settings) -> None:
         self.validate_definition()
         self.settings = settings
-        self.keyword = settings.keyword or self.default_keyword
+        self.instance = settings.instance
+        default = self.default_keyword
+        if self.instance:
+            default = f"{default}-{self.instance}"
+        self.keyword = settings.keyword or default
+
+    @property
+    def label(self) -> str:
+        """The agent as a log line, a metric and a command name it: its
+        name, and its instance after a slash when it has one."""
+        return f"{self.name}/{self.instance}" if self.instance else self.name
+
+    @property
+    def state_name(self) -> str:
+        """The name of its state file without the suffix: its name, and its
+        instance after a dash when it has one."""
+        return state_name(self.name, self.instance)
 
     # -- to implement ---------------------------------------------------------
 
@@ -237,6 +255,18 @@ class Agent(ABC):
     ) -> list[ActionRequest]:
         """For an event routed to ``observe``: the actions it calls for."""
         return []
+
+    def decide_again(self, message: MailMessage) -> bool:
+        """After ``observe``: whether the message is to be decided again,
+        taken up anew as ``backfill`` does, such as one given a keyword the
+        agent waits for. Code only. No by default."""
+        return False
+
+    def refresh(self, stored: Decision, message: MailMessage) -> Decision:
+        """A decision stored before, as it holds for ``message`` now: an
+        agent may work out anew what code decides, never what the model
+        did. Unchanged by default."""
+        return stored
 
     async def tick(self, now: datetime, context: Context) -> list[ActionRequest]:
         """For agents with deadlines: the actions that are due."""
@@ -301,6 +331,15 @@ class Agent(ABC):
         allow a call."""
         return self.limits.model_calls_per_message > 0
 
+    @classmethod
+    def check_together(cls, configured: Mapping[str, Path]) -> list[str]:
+        """For ``check``: what is wrong with the configuration of several
+        instances of the agent together, each file by the name of its
+        instance, such as a circle of lists that set each other off. A
+        line per problem, none when all is well. Raises a ConfigError for a
+        file that is wrong by itself. None by default."""
+        return []
+
     # -- provided -------------------------------------------------------------
 
     @classmethod
@@ -319,6 +358,12 @@ class Agent(ABC):
                 raise ContractError(f"{cls.__name__}: {attr} must be declared")
         _check_identity(cls)
         _check_declarations(cls)
+
+
+def state_name(name: str, instance: str | None) -> str:
+    """The name of the state file of agent ``name`` in ``instance``,
+    without the suffix."""
+    return f"{name}-{instance}" if instance else name
 
 
 def _check_identity(cls: type[Agent]) -> None:

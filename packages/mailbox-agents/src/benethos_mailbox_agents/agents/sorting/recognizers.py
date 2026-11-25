@@ -25,7 +25,15 @@ from .dimensions import Dimension
 from .groups import NONE
 from .schema import answer_for, parts, render, system_for
 
-__all__ = ["PROMPT", "RECOGNIZERS", "Choice", "Recognizer", "Sender", "Topic"]
+__all__ = [
+    "PROMPT",
+    "RECOGNIZERS",
+    "Choice",
+    "Keywords",
+    "Recognizer",
+    "Sender",
+    "Topic",
+]
 
 # The version of the fixed text of the prompt of ``topic``.
 PROMPT = "v1"
@@ -155,7 +163,45 @@ class Topic(Recognizer):
         return Choice(category.name, details, quote=said["quote"], by_model=True)
 
 
+class Keywords(Recognizer):
+    """The keywords a message carries: the category whose keywords it all
+    carries settles it, by code, without a quote. Of several the one that
+    names most wins, two alike leave it to none. A keyword set by an
+    earlier instance or by a person is read so (decided 2026-11-25)."""
+
+    name = "keyword"
+    version = "1"
+
+    def asks_model(self, dimension: Dimension) -> bool:
+        return False
+
+    def applies(self, dimension: Dimension) -> bool:
+        return any(c.keywords for c in dimension.categories)
+
+    def baseline(self, dimension: Dimension, message: MailMessage) -> Choice | None:
+        found = [
+            category
+            for category in dimension.categories
+            if category.keywords
+            and all(message.has_keyword(k) for k in category.keywords)
+        ]
+        if not found:
+            return None
+        most = max(len(c.keywords) for c in found)
+        top = [c for c in found if len(c.keywords) == most]
+        if len(top) > 1:
+            return Choice(
+                NONE,
+                {"match": "ambiguous", "groups": ",".join(c.name for c in top)},
+                settled=False,
+            )
+        details = {"match": "keyword"}
+        if top[0].hold:
+            details["hold"] = "yes"
+        return Choice(top[0].name, details)
+
+
 # The recognizers a list may use, by name, in the order they run.
 RECOGNIZERS: dict[str, Recognizer] = {
-    recognizer.name: recognizer for recognizer in (Sender(), Topic())
+    recognizer.name: recognizer for recognizer in (Sender(), Keywords(), Topic())
 }

@@ -14,7 +14,7 @@ from typing import Any
 
 from benethos_mailbox_common.values import text as text_values
 
-from ..contract import Agent, discover, load_agent
+from ..contract import Agent, discover, load_agent, state_name
 from ..errors import (
     ConfigError,
     MailboxAgentError,
@@ -72,7 +72,7 @@ async def _worker(name: str, settings: Settings) -> None:
     async with session(load_agent(name), settings) as found:
         record(
             process.Started(
-                agent=found.agent.name,
+                agent=found.agent.label,
                 version=found.agent.version,
                 stage=settings.stage,
             )
@@ -86,11 +86,11 @@ async def _worker(name: str, settings: Settings) -> None:
                 )
                 record(
                     process.MetricsServing(
-                        agent=found.agent.name, port=settings.metrics_port
+                        agent=found.agent.label, port=settings.metrics_port
                     )
                 )
             await found.worker.run(stop)
-        record(process.Stopped(agent=found.agent.name, reason="signal"))
+        record(process.Stopped(agent=found.agent.label, reason="signal"))
 
 
 # -- run and backfill -------------------------------------------------------------
@@ -103,7 +103,7 @@ def run(args: argparse.Namespace, settings: Settings) -> int:
 async def _run(name: str, settings: Settings) -> int:
     async with session(load_agent(name), settings) as found:
         await found.worker.run_pass()
-        print(f"{found.agent.name}: {_counts(found.store)}")
+        print(f"{found.agent.label}: {_counts(found.store)}")
         return 1 if found.worker.away else 0
 
 
@@ -118,7 +118,7 @@ async def _backfill(name: str, days: int, settings: Settings) -> int:
     async with session(load_agent(name), settings) as found:
         added = await found.worker.backfill(days, again=True)
         await found.worker.drain()
-        print(f"{found.agent.name}: {added} taken up, {_counts(found.store)}")
+        print(f"{found.agent.label}: {added} taken up, {_counts(found.store)}")
         return 0
 
 
@@ -195,7 +195,8 @@ def status(args: argparse.Namespace, settings: Settings) -> int:
             state = "misses " + ", ".join(found.missing)
         else:
             state = f"not ready: {found.problem}"
-        _say(f"{found.name} {found.version}: {state}")
+        name = f"{found.name}/{settings.instance}" if settings.instance else found.name
+        _say(f"{name} {found.version}: {state}")
         if found.agent is not None:
             for line in _folders(found.agent, settings):
                 _say(f"  {line}")
@@ -207,8 +208,8 @@ def status(args: argparse.Namespace, settings: Settings) -> int:
 def _state(name: str, settings: Settings) -> list[str]:
     """What the state file of agent ``name`` says, and where one lies at
     the place before."""
-    path = path_for(settings.data_dir, name)
-    earlier = earlier_file(settings.data_dir, name)
+    path = path_for(settings.data_dir, state_name(name, settings.instance))
+    earlier = earlier_file(settings.data_dir, state_name(name, settings.instance))
     if earlier is not None:
         where = path.resolve()
         return [f"a state file lies at {earlier.resolve()}: move it to {where}"]
@@ -228,11 +229,11 @@ def paths(args: argparse.Namespace, settings: Settings) -> int:
     print(f"settings: {env.resolve()} ({'found' if env.is_file() else 'missing'})")
     print(f"data: {settings.data_dir.resolve()}")
     for name in discover():
-        path = path_for(settings.data_dir, name)
+        path = path_for(settings.data_dir, state_name(name, settings.instance))
         print(
             f"  {name}: {path.resolve()} ({'found' if path.is_file() else 'none yet'})"
         )
-        earlier = earlier_file(settings.data_dir, name)
+        earlier = earlier_file(settings.data_dir, state_name(name, settings.instance))
         if earlier is not None:
             print(f"    a state file lies at {earlier.resolve()}: move it here")
     return 0
@@ -243,7 +244,7 @@ def paths(args: argparse.Namespace, settings: Settings) -> int:
 
 def report(args: argparse.Namespace, settings: Settings) -> int:
     agent = load_agent(args.agent)(settings)
-    name = agent.name
+    name = agent.label
     if args.state is not None and args.state not in STATES:
         raise ConfigError(f"--state is one of {', '.join(STATES)}")
     if args.limit < 1:
@@ -263,6 +264,27 @@ def report(args: argparse.Namespace, settings: Settings) -> int:
     return 0
 
 
+# -- check ----------------------------------------------------------------------------
+
+
+def check_lists(args: argparse.Namespace, settings: Settings) -> int:
+    """0 when the configurations of the instances fit together, 1 with a
+    line per problem when they do not."""
+    agent = load_agent(args.agent)
+    configured: dict[str, Path] = {}
+    for item in args.instances:
+        name, sep, path = item.partition("=")
+        if not sep or not name or not path:
+            raise ConfigError(f"{item!r} is not instance=file")
+        configured[name] = Path(path)
+    problems = agent.check_together(configured)
+    for line in problems:
+        _say(f"{agent.name}: {line}")
+    if not problems:
+        _say(f"{agent.name}: {len(configured)} lists, no problem found")
+    return 1 if problems else 0
+
+
 # -- health ---------------------------------------------------------------------------
 
 
@@ -270,8 +292,11 @@ def health(args: argparse.Namespace, settings: Settings) -> int:
     """0 while the agent's loop makes progress, 1 when it does not, a
     state file not there yet or one that cannot be read included: Docker
     keeps 2 for itself."""
-    name = load_agent(args.agent).name
-    path = path_for(settings.data_dir, name)
+    agent = load_agent(args.agent)
+    name = agent.name
+    if settings.instance:
+        name = f"{name}/{settings.instance}"
+    path = path_for(settings.data_dir, state_name(agent.name, settings.instance))
     if not path.is_file():
         print(f"{name}: unhealthy, no progress yet")
         return 1

@@ -93,11 +93,11 @@ async def session(cls: type[Agent], settings: Settings) -> AsyncIterator[Session
     agent = start(cls, settings)
     async with AsyncExitStack() as stack:
         mailbox, gateway = await stack.enter_async_context(upstreams(agent, settings))
-        path = path_for(settings.data_dir, agent.name)
-        earlier = earlier_file(settings.data_dir, agent.name)
+        path = path_for(settings.data_dir, agent.state_name)
+        earlier = earlier_file(settings.data_dir, agent.state_name)
         if earlier is not None:
             raise ConfigError(
-                f"the state file of {agent.name} lies at {earlier.resolve()}, "
+                f"the state file of {agent.label} lies at {earlier.resolve()}, "
                 f"the agents keep it at {path.resolve()} now: move it there, "
                 f"or set {PREFIX}DATA_DIR to its folder"
             )
@@ -106,7 +106,7 @@ async def session(cls: type[Agent], settings: Settings) -> AsyncIterator[Session
             found = store.migrated
             record(
                 process.Migrated(
-                    agent=agent.name,
+                    agent=agent.label,
                     before=found.before,
                     after=found.after,
                     notes=found.notes,

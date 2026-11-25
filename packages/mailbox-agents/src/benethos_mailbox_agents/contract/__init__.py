@@ -17,6 +17,7 @@ from .agent import (
     ShownAction,
     TracePart,
     Trigger,
+    state_name,
 )
 from .context import Context, Items, Model, Reader
 from .prompts import load_prompt
@@ -42,4 +43,5 @@ __all__ = [
     "discover",
     "load_agent",
     "load_prompt",
+    "state_name",
 ]

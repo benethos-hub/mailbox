@@ -24,6 +24,10 @@ KEYWORD_FORM = re.compile(r"[a-z0-9][a-z0-9-]*")
 
 PREFIX = "MAILBOX_AGENTS_"
 
+# The form of MAILBOX_AGENTS_INSTANCE: lower case letters, digits and
+# dashes, a letter first, at most 40.
+INSTANCE_FORM = re.compile(r"[a-z][a-z0-9-]{0,39}")
+
 Stage = Literal["shadow", "keyword", "full"]
 
 
@@ -60,6 +64,10 @@ class Settings(files.FileSettings):
     accounts: files.Names = Field(default_factory=list)
     stage: Stage = "shadow"
     keyword: str | None = None
+    # One of several processes of one agent, each with a list of its own,
+    # such as sorting for partners and sorting for documents: its own state
+    # file, keyword, metrics and log lines (decided 2026-11-25).
+    instance: str | None = None
 
     # --- the loop ------------------------------------------------------------
     poll_seconds: float = Field(default=60.0, gt=0)
@@ -96,6 +104,7 @@ class Settings(files.FileSettings):
     @field_validator(
         "ca_file",
         "keyword",
+        "instance",
         "sorting_file",
         "inquiries_patterns_file",
         "otlp_endpoint",
@@ -133,6 +142,18 @@ class Settings(files.FileSettings):
             raise ValueError(
                 "a keyword is lower case letters, digits and dashes, "
                 "such as agent-invoice"
+            )
+        return value
+
+    @field_validator("instance")
+    @classmethod
+    def _instance(cls, value: str | None) -> str | None:
+        """Lower case letters, digits and dashes, a letter first: it stands
+        in the name of a file and of a keyword."""
+        if value is not None and not INSTANCE_FORM.fullmatch(value):
+            raise ValueError(
+                "an instance is lower case letters, digits and dashes, a letter "
+                "first, such as partner"
             )
         return value
 

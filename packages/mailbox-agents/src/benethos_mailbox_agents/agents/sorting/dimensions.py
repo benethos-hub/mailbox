@@ -22,11 +22,13 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    StrictBool,
     StrictInt,
     field_validator,
     model_validator,
 )
 
+from ...contract import KEYWORD_FORM
 from .actions import ACTIONS, Keyword, Move, MoveBelow, Stage
 from .groups import (
     NONE,
@@ -95,16 +97,30 @@ class Category(Entry):
     what follows from it."""
 
     recognize: str | None = Field(default=None, pattern=r"^[a-z][a-z0-9_]*$")
+    # The keywords a message carries, all of them, for the recognizer
+    # keyword: set by an earlier instance or by a person.
+    keywords: tuple[str, ...] = ()
     priority: StrictInt = 0
     then: tuple[Step, ...] = ()
 
     @model_validator(mode="after")
     def _what_it_names(self) -> Category:
-        if not self.senders and self.topic is None and self.recognize is None:
+        if (
+            not self.senders
+            and self.topic is None
+            and self.recognize is None
+            and not self.keywords
+        ):
             raise ValueError(
-                f"category {self.name!r}: a category names senders, a topic "
-                "or a recognizer"
+                f"category {self.name!r}: a category names senders, a topic, "
+                "keywords or a recognizer"
             )
+        for keyword in self.keywords:
+            if not KEYWORD_FORM.fullmatch(keyword):
+                raise ValueError(
+                    f"category {self.name!r}: a keyword is lower case letters, "
+                    "digits and dashes"
+                )
         self._check_topic()
         moves = [step for step in self.then if step.action == Move.name]
         belows = [step for step in self.then if step.action == MoveBelow.name]
@@ -183,11 +199,47 @@ class Dimension(BaseModel):
 
 class On(BaseModel):
     """Which mail the list takes up: mail that arrives in the inbox, or in
-    a folder without a role as well (decided 2026-11-25)."""
+    a folder without a role as well, and mail that is given a keyword, by
+    an earlier instance or by a person (decided 2026-11-25). A pattern
+    ends in ``*`` for every keyword it starts. Without ``arrival`` beside
+    ``keywords`` the list waits for a keyword alone."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    arrival: Literal["inbox", "folders"] = "inbox"
+    arrival: Literal["inbox", "folders"] | None = "inbox"
+    keywords: tuple[str, ...] = ()
+
+    @model_validator(mode="before")
+    @classmethod
+    def _keywords_alone(cls, value: Any) -> Any:
+        if isinstance(value, dict) and "keywords" in value and "arrival" not in value:
+            return {**value, "arrival": None}
+        return value
+
+    @field_validator("keywords")
+    @classmethod
+    def _patterns(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        for pattern in value:
+            if not KEYWORD_FORM.fullmatch(pattern.removesuffix("*")):
+                raise ValueError(
+                    "a keyword of on is lower case letters, digits and dashes, "
+                    "a * at its end for every keyword it starts"
+                )
+        return value
+
+    @model_validator(mode="after")
+    def _something(self) -> On:
+        if self.arrival is None and not self.keywords:
+            raise ValueError("on names an arrival, keywords or both")
+        return self
+
+    def waits_for(self, keyword: str) -> bool:
+        """Whether ``keyword`` is one the list waits for, case aside."""
+        found = keyword.casefold()
+        return any(
+            found.startswith(p[:-1]) if p.endswith("*") else found == p
+            for p in self.keywords
+        )
 
 
 class Chain(BaseModel):
@@ -197,20 +249,22 @@ class Chain(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     on: On = Field(default_factory=On)
+    # The agent's keyword after every decision, none included, not only
+    # with a move: a sign for a later instance that this one is done.
+    mark_done: StrictBool = False
     dimensions: tuple[Dimension, ...] = Field(min_length=1)
 
-    @model_validator(mode="before")
-    @classmethod
-    def _not_yet(cls, value: Any) -> Any:
-        if isinstance(value, dict):
-            on = value.get("on")
-            if isinstance(on, dict) and "keywords" in on:
+    @model_validator(mode="after")
+    def _no_loop(self) -> Chain:
+        """A list never waits for a keyword it sets itself (decided
+        2026-11-25): it would set itself off again."""
+        for keyword in self.keywords():
+            if self.on.waits_for(keyword):
                 raise ValueError(
-                    "on.keywords is not supported yet: a list is taken up on arrival"
+                    "on.keywords names a keyword the list sets in then: it "
+                    "would set itself off"
                 )
-            if "mark_done" in value:
-                raise ValueError("mark_done is not supported yet")
-        return value
+        return self
 
     @field_validator("dimensions")
     @classmethod

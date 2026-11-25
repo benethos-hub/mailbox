@@ -1,0 +1,42 @@
+{
+  "on": {
+    "arrival": "inbox",
+    "keywords": [
+      "agent-partner-*"
+    ]
+  },
+  "mark_done": true,
+  "dimensions": [
+    {
+      "name": "partner",
+      "categories": [
+        {
+          "name": "CloudHost",
+          "keywords": [
+            "agent-partner-cloudhost"
+          ]
+        },
+        {
+          "name": "Telco",
+          "keywords": [
+            "agent-partner-telco"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "kind",
+      "categories": [
+        {
+          "name": "Invoice",
+          "topic": "An invoice, a credit note or a notice that an invoice is ready, of a provider for a service the owner pays",
+          "then": [
+            {
+              "keyword": "agent-invoice"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -98,6 +98,64 @@ async def classify(
     return found
 
 
+def _stored(decision: Decision, index: int, dimension: Dimension) -> Choice | None:
+    """The answer the model gave for ``dimension`` in ``decision``, None
+    when the model did not answer it or the check dropped it."""
+    name = decision.label if index == 0 else decision.fields.get(dimension.name)
+    if name is None:
+        return None
+    if index == 0:
+        details = {k: v for k, v in decision.details.items() if "." not in k}
+    else:
+        prefix = f"{dimension.name}."
+        details = {
+            k.removeprefix(prefix): v
+            for k, v in decision.details.items()
+            if k.startswith(prefix)
+        }
+    field = LABEL if index == 0 else dimension.name
+    quote = next((e.quote for e in decision.evidence if e.field == field), None)
+    return Choice(name, details, quote=quote or None, by_model=True)
+
+
+def refreshed(chain: Chain, stored: Decision, message: MailMessage) -> Decision:
+    """``stored`` as it holds for ``message`` now: the dimensions code
+    decides worked out anew, such as a keyword a person set since, those
+    the model answered taken as stored, with no new call. A dimension the
+    model did not answer before and that runs now stays without a
+    category. A refused decision stays as it was (decided 2026-11-25)."""
+    if not stored.actionable:
+        return stored
+    chosen: dict[str, str] = {}
+    choices: list[Choice | None] = []
+    for index, dimension in enumerate(chain.dimensions):
+        if not _runs(dimension, chosen):
+            choices.append(None)
+            continue
+        match = stored.details.get(key(index, dimension, "match"))
+        by_model = match is not None and (
+            match not in BY_CODE or key(index, dimension, "among") in stored.details
+        )
+        found = (
+            _stored(stored, index, dimension)
+            if by_model
+            else classify_rules(dimension, message)
+        )
+        if found is None and not by_model:
+            found = classify_rules(dimension, message)
+        if found is not None:
+            chosen[dimension.name] = found.category
+        choices.append(found)
+    fresh = to_decision(chain, choices)
+    # A quote of the model was found by the check before: it stays found.
+    checked = {e.field: e.found for e in stored.evidence}
+    evidence = tuple(
+        e.model_copy(update={"found": checked.get(e.field, e.found)})
+        for e in fresh.evidence
+    )
+    return fresh.model_copy(update={"evidence": evidence})
+
+
 def to_decision(chain: Chain, choices: list[Choice | None]) -> Decision:
     """The decision of the chain from the answer of each dimension, None
     for one that did not run."""
@@ -241,13 +299,8 @@ def _path(
     return f"{own}/{under}", None
 
 
-def requests_for(
-    found: list[Found], placed: Placed, own_keyword: str
-) -> list[ActionRequest]:
-    """What the categories ``found`` ask for, in the order the executor
-    takes it: the other actions first, as a move held or refused holds or
-    stops what follows it, then the folders and the move, then the own
-    keyword, which says the message was moved."""
+def _others(found: list[Found], placed: Placed) -> list[ActionRequest]:
+    """The keywords and other actions of ``then`` but the moves."""
     requests: list[ActionRequest] = []
     for item in found:
         for step in item.category.then:
@@ -257,13 +310,19 @@ def requests_for(
             params = action.params.model_validate(step.params)
             held = _held(item, step, action)
             requests += action.requests(params, placed, held=held, why="keyword")
+    return requests
+
+
+def _moving(found: list[Found], placed: Placed) -> list[ActionRequest]:
+    """The folders and the move of the winner, with its move_below, or
+    none."""
     moves = [f for f in found if f.category.target is not None]
     belows = [f for f in found if f.category.below is not None]
     winner = _winner(moves) if moves else None
     below = _winner(belows) if belows else None
     found_path = _path(winner, below, placed)
     if found_path is None:
-        return requests
+        return []
     path, winner = found_path
     held = False
     for part, entry in ((winner, Move.name), (below, MoveBelow.name)):
@@ -272,7 +331,7 @@ def requests_for(
             held = held or _held(part, step, ACTIONS[entry])
     lead = winner if winner is not None else below
     if lead is None:  # never: one of them gave the path
-        return requests
+        return []
     move = ACTIONS[Move.name]
     params = move.params.model_validate({"target": path})
     moving = move.requests(params, placed, held=held, why=_why(lead, held))
@@ -286,12 +345,32 @@ def requests_for(
             if r.action is not Action.CREATE_FOLDER
             or (r.folder or "").startswith(f"{own}/")
         ]
-    requests += moving
+    return moving
+
+
+def requests_for(
+    found: list[Found], placed: Placed, own_keyword: str, *, mark_done: bool = False
+) -> list[ActionRequest]:
+    """What the categories ``found`` ask for, in the order the executor
+    takes it: the other actions first, as a move held or refused holds or
+    stops what follows it, then the folders and the move, then the own
+    keyword, which says the message was moved. With ``mark_done`` the own
+    keyword comes before the move instead, and also when nothing moves: it
+    says this instance decided (decided 2026-11-25)."""
+    own = ActionRequest(
+        Action.ADD_KEYWORD,
+        placed.ref,
+        keyword=own_keyword,
+        why="done" if mark_done else "sorted",
+    )
+    requests = _others(found, placed)
+    if mark_done:
+        return [*requests, own, *_moving(found, placed)]
+    moving = _moving(found, placed)
+    if not moving:
+        return requests
     # The keyword says the message was moved, so it is asked for after the
     # move. The executor takes nothing after a refused move, and records
     # only what follows a move recorded only: the keyword never stands
     # without the move.
-    requests.append(
-        ActionRequest(Action.ADD_KEYWORD, placed.ref, keyword=own_keyword, why="sorted")
-    )
-    return requests
+    return [*requests, *moving, own]

@@ -112,7 +112,7 @@ def test_the_version_follows_the_list(tmp_path: Path) -> None:
         ),
         (
             lambda c: c["dimensions"][0]["categories"][0].update(senders=[]),
-            "a category names senders, a topic or a recognizer",
+            "a category names senders, a topic, keywords or a recognizer",
         ),
         (
             lambda c: c["dimensions"][0]["categories"][0]["then"].append(
@@ -192,12 +192,14 @@ def test_more_than_two_dimensions_asking_the_model_are_refused(
 @pytest.mark.parametrize(
     ("change", "says"),
     [
-        ({"on": {"keywords": ["agent-x"]}}, "on.keywords is not supported yet"),
-        ({"mark_done": True}, "mark_done is not supported yet"),
+        ({"on": {"keywords": ["agent-b*"]}}, "it would set itself off"),
+        ({"on": {"keywords": ["Agent-X"]}}, "a keyword of on is lower case"),
+        ({"on": {"arrival": None}}, "on names an arrival, keywords or both"),
+        ({"mark_done": "yes"}, "mark_done: Input should be a valid boolean"),
         ({"on": {"arrival": "everywhere"}}, "'inbox' or 'folders'"),
     ],
 )
-def test_what_comes_later_is_refused_with_a_clear_message(
+def test_a_wrong_on_or_mark_done_is_refused_with_a_clear_message(
     tmp_path: Path, change: dict[str, Any], says: str
 ) -> None:
     refused(tmp_path, chain(**change), says)

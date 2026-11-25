@@ -36,11 +36,13 @@ _PREFIX = "mailbox_agents"
 class Metrics:
     """The metrics of one agent's process."""
 
-    def __init__(self, agent: str, version: str, stage: str) -> None:
+    def __init__(
+        self, agent: str, version: str, stage: str, instance: str = ""
+    ) -> None:
         self.registry = CollectorRegistry()
         r = self.registry
         Info(f"{_PREFIX}", "The agent of this process.", registry=r).info(
-            {"agent": agent, "version": version, "stage": stage}
+            {"agent": agent, "version": version, "stage": stage, "instance": instance}
         )
         self.messages = Gauge(
             f"{_PREFIX}_messages", "Messages per state.", ["state"], registry=r
