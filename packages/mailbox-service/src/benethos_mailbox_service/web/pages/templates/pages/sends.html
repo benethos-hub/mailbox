@@ -33,10 +33,13 @@
             <td>
               {% if r.outcome == "sent" %}<span class="tag ok">sent</span>
               {% elif r.outcome == "denied" %}<span class="tag warn">denied</span>
+              {% elif r.outcome == "queued" %}<span class="tag">queued</span>
+              {% elif r.outcome == "cancelled" %}<span class="tag">cancelled</span>
+              {% elif r.outcome == "unknown" %}<span class="tag warn">unknown</span>
               {% else %}<span class="tag bad">failed</span>{% endif %}
               {% if r.error %}<span class="sub">{{ r.error }}</span>{% endif %}
             </td>
-            <td>{{ "draft" if r.operation == "send_draft" else "message" }}</td>
+            <td>{{ "draft" if r.operation == "send_draft" else "message" }}{% if r.outbox_job_id %}<span class="sub"><a href="/ui/accounts/{{ r.account_id }}/outbox">outbox</a></span>{% endif %}</td>
           </tr>
           {% endfor %}
         </tbody>

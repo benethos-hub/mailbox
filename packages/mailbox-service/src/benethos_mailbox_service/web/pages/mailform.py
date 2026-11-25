@@ -9,6 +9,7 @@ second click on Send returns the first result instead of sending twice.
 from __future__ import annotations
 
 import base64
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import Request
@@ -26,6 +27,7 @@ from ...data.models import (
     DraftMessage,
     Message,
     MessageReference,
+    OutboxJob,
     OutgoingAttachment,
     Recipient,
     SendResult,
@@ -118,6 +120,24 @@ def build(model: type[DraftMessage], fields: dict[str, Any]) -> Any:
     return model_of(model, fields, error=ComposeError)
 
 
+def send_at_of(form: FormData) -> datetime | None:
+    """The time asked for in the field ``send_at``, read as UTC, None when
+    empty: the form says so beside the field."""
+    given = text_of(form, "send_at")
+    if not given:
+        return None
+    try:
+        found = datetime.fromisoformat(given)
+    except ValueError:
+        raise ComposeError("Send at: not a date and time") from None
+    return found.replace(tzinfo=UTC) if found.tzinfo is None else found
+
+
+def queued_text(job: OutboxJob) -> str:
+    when = "" if job.send_at is None else f" for {job.send_at:%Y-%m-%d %H:%M} UTC"
+    return f"In the outbox{when}. It goes out in the background."
+
+
 def sent_text(result: SendResult) -> str:
     refused = f" Refused: {', '.join(result.refused)}." if result.refused else ""
     return f"Sent.{refused}"
@@ -177,6 +197,10 @@ def show(
             "update_draft" if draft_id else "create_draft", account_id
         ),
         can_delete=draft_id is not None and caller.allows("delete_draft", account_id),
+        # The outbox keeps the mail as a draft: whoever may send may queue.
+        can_queue=caller.allows(
+            "send_draft" if draft_id else "send_message", account_id
+        ),
     )
 
 
@@ -193,7 +217,7 @@ async def show_again(
     must be chosen again: a browser cannot be handed files."""
     values = {
         key: text_of(form, key, strip=False)
-        for key in (*MESSAGE_FIELDS, "original", "action", "forward_as")
+        for key in (*MESSAGE_FIELDS, "original", "action", "forward_as", "send_at")
     }
     original = None
     if values["original"] and values["action"] in ACTIONS:

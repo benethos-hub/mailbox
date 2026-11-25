@@ -15,7 +15,14 @@ from ..templates import PAGE_SIZE, page_links, render
 
 router = APIRouter()
 
-OUTCOMES = [("sent", "sent"), ("denied", "denied"), ("failed", "failed")]
+OUTCOMES = [
+    ("sent", "sent"),
+    ("denied", "denied"),
+    ("failed", "failed"),
+    ("queued", "queued"),
+    ("cancelled", "cancelled"),
+    ("unknown", "unknown"),
+]
 
 
 @router.get("/sends")

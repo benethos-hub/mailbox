@@ -50,6 +50,7 @@ The click budget, counted from the overview after signing in:
 | Read a mail of one account | 2 | Mail on its row of the overview or of Accounts, the message |
 | Read the newest mail of every account | 2 | Mail search, the message |
 | Reply to a mail | 5 | Mail search, the message, Reply, Send, Send in the dialog |
+| Cancel a send that waits in the outbox | 5 | Mail on its row of the overview, Drafts, Outbox, Cancel send, Cancel send in the dialog |
 | Connect an account | 4 | Accounts, Connect, Look up, Connect (or Sign in with the provider) |
 | Change an account's password | 3 | Accounts, the account, Save |
 | Create a user with rights | 3 | Users, New user, Create |
@@ -89,8 +90,8 @@ refused, nothing changes, and the message names each refused entry
 with the reason. A batch of messages acts on the mail server, which
 cannot take back a part: it names the messages it could not change.
 
-Lists: Accounts, Users, Roles, Sends, Webhooks, Mail, Drafts, Audit,
-Log, and Changes if it is built (6.7).
+Lists: Accounts, Users, Roles, Sends, Webhooks, Mail, Drafts, Outbox,
+Audit, Log, and Changes if it is built (6.7).
 
 ### 4.2 Detail
 

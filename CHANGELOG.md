@@ -27,6 +27,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   `outbox_unknown`, series `mailbox_account_outbox`). One of unknown
   outcome makes the account need a look. A fourth alert,
   `MailboxSendUnknown`, fires on `mailbox_outbox_unknown`.
+- The UI: **Put in outbox** and **Send at** in the mail form, an
+  **Outbox** page per account, reached from Drafts, to follow and cancel
+  its sends, and the outcomes of the outbox on Sends.
 - `benethos-mailbox-mcp`: `send_message` and `send_draft` take `outbox`
   and `send_at`, and then answer `queued` with the job instead of a
   send. New tools `list_outbox` and `cancel_send`.

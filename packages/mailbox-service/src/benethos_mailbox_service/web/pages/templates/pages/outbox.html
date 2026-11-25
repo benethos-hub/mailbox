@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import action, ago, breadcrumb, empty, link_button, pager with context %}
+{% block title %}Outbox · {{ account.email }} · {{ APP_NAME }}{% endblock %}
+{% block heading %}Outbox{% endblock %}
+{% block subheading %}{{ breadcrumb(trail) }}{% endblock %}
+{% block actions %}
+{{ link_button("/ui/accounts/" ~ account.id ~ "/drafts", "Drafts", "pencil") }}
+{% endblock %}
+{% block content %}
+<section class="card">
+  <div class="body">
+    <form class="toolbar" method="get" action="/ui/accounts/{{ account.id }}/outbox">
+      <label for="f-state">State</label>
+      <select id="f-state" name="state">
+        <option value=""{% if not state %} selected{% endif %}>any</option>
+        {% for s in states %}<option value="{{ s }}"{% if s == state %} selected{% endif %}>{{ s }}</option>{% endfor %}
+      </select>
+      <button type="submit">Filter</button>
+    </form>
+    <p class="hint">A send in the outbox waits as a draft in the drafts folder and goes out in the background, tried again for 48 hours while the mail server is away. Times are UTC.</p>
+  </div>
+  <div class="body tight">
+    {% if jobs %}
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>Queued</th><th>To</th><th>Due</th><th>State</th><th>Tries</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for job in jobs %}
+          <tr>
+            <td>{{ ago(job.created_at) }}</td>
+            <td>{{ job.recipients | join(", ") }}</td>
+            <td>{% if job.state in ("queued", "copying") %}{{ job.due_at | when }}{% else %}—{% endif %}</td>
+            <td>
+              {% if job.state == "sent" %}<span class="tag ok">sent</span>
+              {% elif job.state in ("queued", "sending", "copying") %}<span class="tag">{{ job.state }}</span>
+              {% elif job.state == "cancelled" %}<span class="tag">cancelled</span>
+              {% elif job.state == "unknown" %}<span class="tag warn">unknown</span><span class="sub">Whether it went out cannot be told. It is not sent again, and its draft stays: look whether it arrived.</span>
+              {% else %}<span class="tag bad">failed</span>{% endif %}
+              {% if job.last_error and job.state != "sent" %}<span class="sub">{{ job.last_error }}</span>{% endif %}
+            </td>
+            <td>{{ job.attempts }}</td>
+            <td class="actions">
+              {% if job.state == "queued" and (can_cancel_any or (can_cancel_own and job.user_id == me_id)) %}
+              {{ action("/ui/accounts/" ~ account.id ~ "/outbox/" ~ job.id ~ "/cancel", "Cancel send", confirm="Cancel this send? Its draft stays in the drafts folder.", icon="x-lg", alone=True) }}
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    {{ empty("Nothing in the outbox" ~ (" in this state" if state else "") ~ ".") }}
+    {% endif %}
+  </div>
+  {{ pager(pages) }}
+</section>
+{% endblock %}
