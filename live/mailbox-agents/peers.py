@@ -7,7 +7,7 @@ it enters two agents and deletes them at the end.
     uv run python live/mailbox-agents/peers.py --host ADDRESS
         [--env-file containers/live/mailbox-agents/secrets/agent.env]
 
-The agent ``categorization`` with the example list ``beleg``, which asks the
+The agent ``categorization`` with the example list ``bookkeeping``, which asks the
 recognizer ``invoice``, serves the entrance at ``--host`` on port 38470,
 with a token made for this run. ``--host`` is an address of this machine
 that the gateway's container reaches: under WSL, the address of the
@@ -67,7 +67,7 @@ from benethos_mailbox_agents.sources.mailbox import Mailbox
 from benethos_mailbox_agents.store import Store
 
 PORT = 38470
-LIST = LIVE / "chain" / "categorization.beleg.example.json"
+LIST = LIVE / "chain" / "categorization.bookkeeping.example.json"
 V1 = {"A2A-Version": "1.0"}
 
 
@@ -166,7 +166,7 @@ async def card(live: Live) -> str:
             headers={"Authorization": f"Bearer {live.token}"},
         )
     named = given.json()
-    if refused.status_code != 401 or named["name"] != "categorization/beleg":
+    if refused.status_code != 401 or named["name"] != "categorization/bookkeeping":
         raise AssertionError(f"{refused.status_code}, card of {named.get('name')}")
     return f"refused without the token, the card names {named['name']}"
 
@@ -198,7 +198,7 @@ def _agent(live: Live, name: str, headers: dict[str, str] | None) -> dict[str, A
         "agent_name": name,
         "agent_card_params": {
             "protocolVersion": "1.0",
-            "name": "categorization/beleg",
+            "name": "categorization/bookkeeping",
             "description": "Classifies one message by its ids.",
             "url": live.url,
             "version": "3",
@@ -290,7 +290,9 @@ def _master() -> dict[str, str]:
 
 async def run(settings: Settings, host: str) -> int:
     agent = Categorization(
-        settings.model_copy(update={"instance": "beleg", "categorization_file": LIST})
+        settings.model_copy(
+            update={"instance": "bookkeeping", "categorization_file": LIST}
+        )
     )
     agent.prepare()
     token = secrets.token_urlsafe(32)

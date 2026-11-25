@@ -317,13 +317,13 @@ stay, as no agent may delete a folder. `setup.sh` makes the account
 anew without them.
 
 `chain/` holds three example lists of instances of `categorization` that hand a
-message on by keywords, `partner`, `beleg` and `ablage`
+message on by keywords, `partner`, `bookkeeping` and `filing`
 ([the chain of categorization](../../../docs/mailbox-agents/concept/categorization-chain.md#8-instances-that-hand-a-message-on)).
-`uv run benethos-mailbox-agents check --agent categorization partner=... beleg=...
-ablage=...` reads them together. `live/mailbox-agents/chain.py` runs the three on the
+`uv run benethos-mailbox-agents check --agent categorization partner=... bookkeeping=...
+filing=...` reads them together. `live/mailbox-agents/chain.py` runs the three on the
 account, each in a state file of its own: keywords per partner and
 `agent-invoice`, the signs of the instances, the moves into
-`Providers/<partner>/Rechnungen`, a partner keyword set and changed by
+`Providers/<partner>/Invoices`, a partner keyword set and changed by
 hand. It puts every message back. The folders made stay. Run it with
 `python -u` and without a short timeout: a check cut off puts nothing
 back.
@@ -382,7 +382,7 @@ joined by a colon. What a span holds:
 `live/mailbox-agents/peers.py --host ADDRESS` checks the entrance for
 peers over A2A behind the gateway
 ([peers over A2A](../../../docs/mailbox-agents/concept/a2a.md)). It
-serves `categorization` with the example list `beleg` on this machine at port
+serves `categorization` with the example list `bookkeeping` on this machine at port
 38470, with a token made for the run, and enters it in LiteLLM with the
 master key of `secrets/gateway.env`:
 

@@ -27,7 +27,7 @@ that message:
 
 ```json
 {
-  "agent": "categorization/beleg",
+  "agent": "categorization/bookkeeping",
   "version": "v1-list-0123456789ab-invoice-v5",
   "label": "Telco",
   "source": "model",

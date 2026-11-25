@@ -10,12 +10,12 @@ mail back.
 It runs the example lists of containers/live/mailbox-agents/chain/, each
 instance with a state file of its own: ``partner`` in ``keyword`` over the
 inbox of the last weeks, which sets a keyword per partner and its sign,
-``beleg`` in ``keyword``, which asks the model of the settings whether
+``bookkeeping`` in ``keyword``, which asks the model of the settings whether
 each message is an invoice and sets ``agent-invoice`` and its sign, and
-``ablage`` in ``full``, which waits for the sign of ``beleg`` in the feed
-and moves the mail of a partner, an invoice below it into ``Rechnungen``.
+``filing`` in ``full``, which waits for the sign of ``bookkeeping`` in the feed
+and moves the mail of a partner, an invoice below it into ``Invoices``.
 Then a partner keyword set by hand on the invoice of a sender in no group
-reaches ``beleg`` without a new model call and ``ablage`` moves it once,
+reaches ``bookkeeping`` without a new model call and ``filing`` moves it once,
 and a second correction moves nothing. Then it moves every message back
 and takes every keyword off. The folders made stay. Each check says ok or
 FAILED, and the exit code is 1 if one failed. Never point it at an
@@ -58,7 +58,7 @@ from benethos_mailbox_agents.store import Store
 
 LISTS = LIVE / "chain"
 # Each instance, its stage, and whether it asks the model.
-INSTANCES = (("partner", "keyword"), ("beleg", "keyword"), ("ablage", "full"))
+INSTANCES = (("partner", "keyword"), ("bookkeeping", "keyword"), ("filing", "full"))
 # The partners of the example list, by sender.
 PARTNERS = {
     "billing@cloudhost.example": "cloudhost",
@@ -93,7 +93,7 @@ class Live:
     workers: dict[str, Worker] = field(default_factory=dict)
     before: Snapshot = field(default_factory=dict)
     senders: dict[MessageRef, str] = field(default_factory=dict)
-    calls_after_beleg: int = 0
+    calls_after_bookkeeping: int = 0
     put_back_done: bool = False
 
     @property
@@ -141,7 +141,7 @@ class Live:
             await asyncio.sleep(6)
 
     def calls(self) -> int:
-        store = self.workers["beleg"].store
+        store = self.workers["bookkeeping"].store
         return store.model_calls_since(datetime(2000, 1, 1, tzinfo=UTC))
 
     async def keywords_of(self, sender: str) -> list[set[str]]:
@@ -170,10 +170,10 @@ async def partner(live: Live) -> str:
     return f"partner keywords on the mail of {len(PARTNERS)} partners"
 
 
-async def beleg(live: Live) -> str:
-    await live.workers["beleg"].backfill(DAYS)
-    await live.workers["beleg"].drain()
-    await live.settle("beleg")
+async def bookkeeping(live: Live) -> str:
+    await live.workers["bookkeeping"].backfill(DAYS)
+    await live.workers["bookkeeping"].drain()
+    await live.settle("bookkeeping")
     marked = 0
     for sender in INVOICE_SENDERS:
         for keywords in await live.keywords_of(sender):
@@ -181,22 +181,22 @@ async def beleg(live: Live) -> str:
     stranger = await live.keywords_of(STRANGER)
     if not any("agent-invoice" in k for k in stranger):
         raise AssertionError("the invoice of a sender in no group lacks agent-invoice")
-    live.calls_after_beleg = live.calls()
+    live.calls_after_bookkeeping = live.calls()
     return (
         f"{marked} messages of the gold invoice senders marked, the invoice of a "
-        f"sender in no group among them, {live.calls_after_beleg} model calls"
+        f"sender in no group among them, {live.calls_after_bookkeeping} model calls"
     )
 
 
-async def ablage(live: Live) -> str:
-    await live.settle("beleg", "ablage")
+async def filing(live: Live) -> str:
+    await live.settle("bookkeeping", "filing")
     moved = [
         a
-        for a in live.workers["ablage"].store.actions()
+        for a in live.workers["filing"].store.actions()
         if a.action == "move_to_folder" and a.executed
     ]
     targets = sorted({a.argument for a in moved})
-    wanted = {"Providers/CloudHost/Rechnungen", "Providers/Telco/Rechnungen"}
+    wanted = {"Providers/CloudHost/Invoices", "Providers/Telco/Invoices"}
     if not wanted <= set(targets):
         raise AssertionError(
             f"moved to {targets}, {sorted(wanted)} expected among them"
@@ -211,17 +211,17 @@ async def by_hand(live: Live) -> str:
     corrected again."""
     ref = next(r for r, s in live.senders.items() if s == STRANGER)
     await live.mailbox.add_keyword(ref, "agent-partner-telco")
-    await live.settle("beleg", "ablage")
+    await live.settle("bookkeeping", "filing")
     message = await live.mailbox.message(ref)
-    if [f.path for f in message.folders] != ["Providers/Telco/Rechnungen"]:
+    if [f.path for f in message.folders] != ["Providers/Telco/Invoices"]:
         raise AssertionError("the corrected invoice was not filed below Telco")
     await live.mailbox.remove_keyword(ref, "agent-partner-telco")
     await live.mailbox.add_keyword(ref, "agent-partner-cloudhost")
-    await live.settle("beleg", "ablage")
+    await live.settle("bookkeeping", "filing")
     message = await live.mailbox.message(ref)
-    if [f.path for f in message.folders] != ["Providers/Telco/Rechnungen"]:
+    if [f.path for f in message.folders] != ["Providers/Telco/Invoices"]:
         raise AssertionError("a second correction moved the message again")
-    if live.calls() != live.calls_after_beleg:
+    if live.calls() != live.calls_after_bookkeeping:
         raise AssertionError("a correction asked the model again")
     return "filed below Telco once, the second correction moved nothing, no call"
 
@@ -240,8 +240,8 @@ async def put_back_check(live: Live) -> str:
 CHECKS: list[tuple[str, Callable[[Live], Awaitable[str]]]] = [
     ("the inbox before", before),
     ("partner in keyword", partner),
-    ("beleg in keyword", beleg),
-    ("ablage in full", ablage),
+    ("bookkeeping in keyword", bookkeeping),
+    ("filing in full", filing),
     ("a partner corrected by hand", by_hand),
     ("the mail put back", put_back_check),
 ]
