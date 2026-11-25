@@ -82,6 +82,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   the agent's keyword with `-<instance>` after it by default, and is
   named `<agent>/<instance>` in the log, `status` and `report`, its
   metrics with the label `instance`. Unset, everything stays as it was.
+- `benethos-mailbox-agents`: a category of `sorting` may name `keywords`:
+  it holds for a message that carries all of them, set by an earlier
+  instance or by a person, found by code without a model. A list with
+  `"mark_done": true` sets the agent's keyword after every decision,
+  `none` included, as a sign for a later instance that this one is done.
 
 ### Changed
 

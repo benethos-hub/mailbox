@@ -241,13 +241,8 @@ def _path(
     return f"{own}/{under}", None
 
 
-def requests_for(
-    found: list[Found], placed: Placed, own_keyword: str
-) -> list[ActionRequest]:
-    """What the categories ``found`` ask for, in the order the executor
-    takes it: the other actions first, as a move held or refused holds or
-    stops what follows it, then the folders and the move, then the own
-    keyword, which says the message was moved."""
+def _others(found: list[Found], placed: Placed) -> list[ActionRequest]:
+    """The keywords and other actions of ``then`` but the moves."""
     requests: list[ActionRequest] = []
     for item in found:
         for step in item.category.then:
@@ -257,13 +252,19 @@ def requests_for(
             params = action.params.model_validate(step.params)
             held = _held(item, step, action)
             requests += action.requests(params, placed, held=held, why="keyword")
+    return requests
+
+
+def _moving(found: list[Found], placed: Placed) -> list[ActionRequest]:
+    """The folders and the move of the winner, with its move_below, or
+    none."""
     moves = [f for f in found if f.category.target is not None]
     belows = [f for f in found if f.category.below is not None]
     winner = _winner(moves) if moves else None
     below = _winner(belows) if belows else None
     found_path = _path(winner, below, placed)
     if found_path is None:
-        return requests
+        return []
     path, winner = found_path
     held = False
     for part, entry in ((winner, Move.name), (below, MoveBelow.name)):
@@ -272,7 +273,7 @@ def requests_for(
             held = held or _held(part, step, ACTIONS[entry])
     lead = winner if winner is not None else below
     if lead is None:  # never: one of them gave the path
-        return requests
+        return []
     move = ACTIONS[Move.name]
     params = move.params.model_validate({"target": path})
     moving = move.requests(params, placed, held=held, why=_why(lead, held))
@@ -286,12 +287,32 @@ def requests_for(
             if r.action is not Action.CREATE_FOLDER
             or (r.folder or "").startswith(f"{own}/")
         ]
-    requests += moving
+    return moving
+
+
+def requests_for(
+    found: list[Found], placed: Placed, own_keyword: str, *, mark_done: bool = False
+) -> list[ActionRequest]:
+    """What the categories ``found`` ask for, in the order the executor
+    takes it: the other actions first, as a move held or refused holds or
+    stops what follows it, then the folders and the move, then the own
+    keyword, which says the message was moved. With ``mark_done`` the own
+    keyword comes before the move instead, and also when nothing moves: it
+    says this instance decided (decided 2026-11-25)."""
+    own = ActionRequest(
+        Action.ADD_KEYWORD,
+        placed.ref,
+        keyword=own_keyword,
+        why="done" if mark_done else "sorted",
+    )
+    requests = _others(found, placed)
+    if mark_done:
+        return [*requests, own, *_moving(found, placed)]
+    moving = _moving(found, placed)
+    if not moving:
+        return requests
     # The keyword says the message was moved, so it is asked for after the
     # move. The executor takes nothing after a refused move, and records
     # only what follows a move recorded only: the keyword never stands
     # without the move.
-    requests.append(
-        ActionRequest(Action.ADD_KEYWORD, placed.ref, keyword=own_keyword, why="sorted")
-    )
-    return requests
+    return [*requests, *moving, own]

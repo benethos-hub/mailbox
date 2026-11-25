@@ -197,7 +197,9 @@ class Sorting(Agent):
     ) -> list[ActionRequest]:
         # The categories as the list says now, not as it said at the decision.
         found = found_in(self.chain, decision, message)
-        return requests_for(found, Placed.of(message), self.keyword)
+        return requests_for(
+            found, Placed.of(message), self.keyword, mark_done=self.chain.mark_done
+        )
 
     def summarize(self, shown: list[Shown]) -> list[str]:
         """Per dimension and category what became of its messages, the

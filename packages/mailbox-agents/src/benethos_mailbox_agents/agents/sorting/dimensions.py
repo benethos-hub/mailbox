@@ -22,11 +22,13 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    StrictBool,
     StrictInt,
     field_validator,
     model_validator,
 )
 
+from ...contract import KEYWORD_FORM
 from .actions import ACTIONS, Keyword, Move, MoveBelow, Stage
 from .groups import (
     NONE,
@@ -95,16 +97,30 @@ class Category(Entry):
     what follows from it."""
 
     recognize: str | None = Field(default=None, pattern=r"^[a-z][a-z0-9_]*$")
+    # The keywords a message carries, all of them, for the recognizer
+    # keyword: set by an earlier instance or by a person.
+    keywords: tuple[str, ...] = ()
     priority: StrictInt = 0
     then: tuple[Step, ...] = ()
 
     @model_validator(mode="after")
     def _what_it_names(self) -> Category:
-        if not self.senders and self.topic is None and self.recognize is None:
+        if (
+            not self.senders
+            and self.topic is None
+            and self.recognize is None
+            and not self.keywords
+        ):
             raise ValueError(
-                f"category {self.name!r}: a category names senders, a topic "
-                "or a recognizer"
+                f"category {self.name!r}: a category names senders, a topic, "
+                "keywords or a recognizer"
             )
+        for keyword in self.keywords:
+            if not KEYWORD_FORM.fullmatch(keyword):
+                raise ValueError(
+                    f"category {self.name!r}: a keyword is lower case letters, "
+                    "digits and dashes"
+                )
         self._check_topic()
         moves = [step for step in self.then if step.action == Move.name]
         belows = [step for step in self.then if step.action == MoveBelow.name]
@@ -197,6 +213,9 @@ class Chain(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     on: On = Field(default_factory=On)
+    # The agent's keyword after every decision, none included, not only
+    # with a move: a sign for a later instance that this one is done.
+    mark_done: StrictBool = False
     dimensions: tuple[Dimension, ...] = Field(min_length=1)
 
     @model_validator(mode="before")
@@ -208,8 +227,6 @@ class Chain(BaseModel):
                 raise ValueError(
                     "on.keywords is not supported yet: a list is taken up on arrival"
                 )
-            if "mark_done" in value:
-                raise ValueError("mark_done is not supported yet")
         return value
 
     @field_validator("dimensions")

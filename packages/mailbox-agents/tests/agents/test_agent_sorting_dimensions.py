@@ -112,7 +112,7 @@ def test_the_version_follows_the_list(tmp_path: Path) -> None:
         ),
         (
             lambda c: c["dimensions"][0]["categories"][0].update(senders=[]),
-            "a category names senders, a topic or a recognizer",
+            "a category names senders, a topic, keywords or a recognizer",
         ),
         (
             lambda c: c["dimensions"][0]["categories"][0]["then"].append(
@@ -193,7 +193,7 @@ def test_more_than_two_dimensions_asking_the_model_are_refused(
     ("change", "says"),
     [
         ({"on": {"keywords": ["agent-x"]}}, "on.keywords is not supported yet"),
-        ({"mark_done": True}, "mark_done is not supported yet"),
+        ({"mark_done": "yes"}, "mark_done: Input should be a valid boolean"),
         ({"on": {"arrival": "everywhere"}}, "'inbox' or 'folders'"),
     ],
 )

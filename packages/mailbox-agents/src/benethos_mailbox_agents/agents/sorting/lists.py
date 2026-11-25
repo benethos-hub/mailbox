@@ -42,7 +42,7 @@ GROUP = "group"
 MAX_MODEL = 2
 
 # The recognizers whose version the version of the prompt holds already.
-_IN_PROMPT = frozenset({"sender", "topic"})
+_IN_PROMPT = frozenset({"sender", "topic", "keyword"})
 
 
 class ListRefusedError(ValueError):
