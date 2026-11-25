@@ -301,6 +301,16 @@ account and re-issuing every token.
   providers rotate them. Those accounts go to `needs_reauth` and are
   reconnected once. API tokens are valid again as they were at backup time:
   if a backup leaked, revoke them.
+- **The logical export.** The records can also be written as lines of
+  JSON in UTF-8, table by table in the order of their references: a
+  head with the schema, per table its columns, its rows and their
+  count, and the number of tables at the end. A BLOB is Base64. It
+  does not depend on the file of the database. Read back, it goes only
+  into a new database of the same schema. A table or column the schema
+  does not have, a count that does not match and an export that ends
+  early are refused. The message names the table, never a value. The
+  export holds what the database holds, and is never written
+  unencrypted outside the backup.
 - **A copy before schema 26** (**decided 2026-11-25**). The step to
   schema 26 builds tables anew. Before it runs, opening a database of an
   older schema keeps a copy of the file beside it,

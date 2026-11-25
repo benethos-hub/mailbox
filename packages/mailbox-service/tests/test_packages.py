@@ -121,6 +121,7 @@ LINES = {
     ),
     "data": (
         {"backup"},
+        {"export"},
         {"secrets"},
         {"storage", "providers", "discovery"},
         {"protocols"},

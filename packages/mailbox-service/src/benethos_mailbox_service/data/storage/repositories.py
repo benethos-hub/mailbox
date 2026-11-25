@@ -5,10 +5,11 @@ implementation: in memory for tests and ``storage = memory``, else SQLite.
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Iterator, Sequence
 from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, Protocol
+from typing import Any, Literal, Protocol
 
 from .accounts import AccountRepository, InMemoryAccountRepository
 from .audit import AuditRepository, InMemoryAuditRepository
@@ -48,6 +49,7 @@ from .sqlite import (
     SqliteTotpRepository,
     SqliteUserRepository,
     SqliteWebhookRepository,
+    Table,
 )
 from .totp import InMemoryTotpRepository, TotpRepository
 from .users import (
@@ -84,6 +86,22 @@ class Store(Protocol):
 
     def schema_version(self) -> int:
         """The version of the schema the records are in."""
+        ...
+
+    def tables(self) -> list[Table]:
+        """Every table of the schema with its columns and key, each after
+        the tables it refers to."""
+        ...
+
+    def rows(self, table: str) -> Iterator[tuple[Any, ...]]:
+        """The rows of a table of ``tables`` in the order of its key, read
+        in chunks."""
+        ...
+
+    def fill(
+        self, table: str, columns: Sequence[str], rows: Iterable[Sequence[Any]]
+    ) -> int:
+        """Write ``rows`` into ``table``, which holds none yet. How many."""
         ...
 
     @property
