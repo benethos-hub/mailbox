@@ -2,34 +2,21 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
-from pathlib import Path
-
 import pytest
 
 from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.data.storage import (
-    Database,
-    InMemoryWebhookRepository,
-    SqliteWebhookRepository,
+    Repositories,
     WebhookRepository,
+    WrappedKey,
 )
 
 
-@pytest.fixture(params=["memory", "sqlite"])
-def store(
-    request: pytest.FixtureRequest, tmp_path: Path
-) -> Iterator[WebhookRepository]:
-    if request.param == "memory":
-        yield InMemoryWebhookRepository()
-        return
-    db = Database(tmp_path / "hooks.db")
+@pytest.fixture
+def store(repositories: Repositories) -> WebhookRepository:
     # The sealed secret names a data key that must exist.
-    db.execute(
-        "INSERT INTO keys (key_id, nonce, ciphertext) VALUES ('k1', x'00', x'00')"
-    )
-    yield SqliteWebhookRepository(db)
-    db.close()
+    repositories.keys.add(WrappedKey("k1", b"\x00", b"\x00"))
+    return repositories.webhooks
 
 
 @pytest.fixture

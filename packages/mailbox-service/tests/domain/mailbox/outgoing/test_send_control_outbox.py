@@ -20,8 +20,7 @@ from benethos_mailbox_service.data.models import (
 from benethos_mailbox_service.data.storage import (
     Database,
     InMemorySendLogRepository,
-    SqliteAccountRepository,
-    SqliteSendLogRepository,
+    repositories_on,
 )
 from benethos_mailbox_service.domain.mailbox import SendControl
 from benethos_mailbox_service.domain.rights.access import Access
@@ -112,10 +111,10 @@ def job() -> OutboxJob:
 
 def test_the_end_of_a_job_is_recorded(tmp_path: Path) -> None:
     db = Database(tmp_path / "sends.db")
-    SqliteAccountRepository(db).add(
+    repositories_on(db).accounts.add(
         Account(id="acc_1", provider=ProviderType.IMAP, email="a@example.org")
     )
-    store = SqliteSendLogRepository(db)
+    store = repositories_on(db).sends
     control = SendControl(store)
     control.note(job(), "unknown", "provider_unavailable")
     control.note(job(), "cancelled", "draft_changed")

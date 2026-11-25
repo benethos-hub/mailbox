@@ -4,6 +4,7 @@ back unchanged."""
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -12,25 +13,30 @@ import pytest
 from benethos_mailbox_service.data.models import ChangeRecord
 from benethos_mailbox_service.data.storage import (
     Database,
-    SqliteChangeLogRepository,
+    repositories_on,
 )
-from benethos_mailbox_service.data.storage.sqlite import SCHEMA_VERSION, database
+from benethos_mailbox_service.data.storage.sqlite import SCHEMA_VERSION
 from benethos_mailbox_service.errors import StorageError
+
+from ...schema_helpers import run, select
 
 AT = "2026-11-25T12:00:00Z"
 
 
 def _filled() -> Database:
     db = Database()
-    db.execute(
+    run(
+        db,
         "INSERT INTO accounts (id, provider, email, status, settings, position)"
-        " VALUES ('acc_1', 'imap', 'a@example.org', 'connected', '{}', 1)"
+        " VALUES ('acc_1', 'imap', 'a@example.org', 'connected', '{}', 1)",
     )
-    db.execute(
+    run(
+        db,
         "INSERT INTO keys (key_id, nonce, ciphertext) VALUES ('k1', ?, ?)",
         (b"\x00\xff\x10", bytes(range(256))),
     )
-    db.execute(
+    run(
+        db,
         "INSERT INTO activity (id, at, activity, user_id, user_name, outcome,"
         " detail) VALUES ('act_1', ?, 'user.created', NULL, 'two\nlines', 'done',"
         " '{}')",
@@ -43,14 +49,15 @@ def test_every_table_is_named_after_those_it_refers_to() -> None:
     db = Database()
     tables = db.tables()
     names = [t.name for t in tables]
-    stored = db.query(
+    stored = select(
+        db,
         "SELECT name FROM sqlite_master WHERE type = 'table'"
-        " AND name NOT LIKE 'sqlite_%'"
+        " AND name NOT LIKE 'sqlite_%'",
     )
     assert sorted(names) == sorted(r[0] for r in stored)
     assert "meta" in names
     for table in tables:
-        refers = db.query(f"SELECT * FROM pragma_foreign_key_list('{table.name}')")
+        refers = select(db, f"SELECT * FROM pragma_foreign_key_list('{table.name}')")
         for ref in refers:
             if ref["table"] != table.name:
                 assert names.index(ref["table"]) < names.index(table.name)
@@ -77,12 +84,13 @@ def test_rows_come_back_as_they_went_in() -> None:
 
 
 def test_rows_are_read_in_chunks_in_the_order_of_the_key(
-    monkeypatch: pytest.MonkeyPatch,
+    export_chunks: Callable[[int], None],
 ) -> None:
-    monkeypatch.setattr(database, "ROWS_CHUNK", 3)
+    export_chunks(3)
     db = _filled()
     for n in (5, 1, 4, 2, 3, 7, 6):
-        db.execute(
+        run(
+            db,
             "INSERT INTO changes (seq, account_id, message_id, type, at)"
             " VALUES (?, 'acc_1', 'm', 'message.created', ?)",
             (n, AT),
@@ -93,7 +101,7 @@ def test_rows_are_read_in_chunks_in_the_order_of_the_key(
 
 def test_a_filled_feed_counts_on_from_its_last_number() -> None:
     source = _filled()
-    feed = SqliteChangeLogRepository(source)
+    feed = repositories_on(source).changes
     record = ChangeRecord(
         type="message.created",
         id="msg_1",
@@ -101,11 +109,11 @@ def test_a_filled_feed_counts_on_from_its_last_number() -> None:
         at=datetime(2026, 11, 25, tzinfo=UTC),
     )
     feed.append([record, record, record])
-    source.execute("DELETE FROM changes WHERE seq > 1")
+    run(source, "DELETE FROM changes WHERE seq > 1")
     target = Database()
     for table in source.tables():
         target.fill(table.name, table.columns, source.rows(table.name))
-    SqliteChangeLogRepository(target).append([record])
+    repositories_on(target).changes.append([record])
     assert [r[0] for r in target.rows("changes")] == [1, 4]
     source.close()
     target.close()

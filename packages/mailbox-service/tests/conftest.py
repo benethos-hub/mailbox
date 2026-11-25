@@ -9,6 +9,7 @@ import logging
 import os
 from collections.abc import Iterator
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 import anyio
@@ -47,6 +48,7 @@ from benethos_mailbox_service.data.secrets import (
     cipher,
     encode_recovery,
 )
+from benethos_mailbox_service.data.storage import Repositories, open_repositories
 from benethos_mailbox_service.domain.accounts.service import AccountService
 from benethos_mailbox_service.domain.auth.service import AuthService
 from benethos_mailbox_service.domain.rights import ADMIN_SERVICE, permissions
@@ -80,6 +82,17 @@ ADMIN = admin_access("usr_test_admin", "test admin")
 def forget_secrets() -> None:
     """No secret is noted to be masked."""
     redact.forget()
+
+
+@pytest.fixture(params=["memory", "sqlite"])
+def repositories(
+    request: pytest.FixtureRequest, tmp_path: Path
+) -> Iterator[Repositories]:
+    """The repositories of each store, in memory and in SQLite: the one
+    place a test of their behaviour gets them from."""
+    opened = open_repositories(request.param, tmp_path / "store.db")
+    yield opened
+    opened.close()
 
 
 @pytest.fixture(autouse=True)

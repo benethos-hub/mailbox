@@ -3,9 +3,7 @@ in-memory and the SQLite implementation."""
 
 from __future__ import annotations
 
-from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
 
 import pytest
 
@@ -16,11 +14,8 @@ from benethos_mailbox_service.data.models import (
     ProviderType,
 )
 from benethos_mailbox_service.data.storage import (
-    Database,
-    InMemoryOutboxRepository,
     OutboxRepository,
-    SqliteAccountRepository,
-    SqliteOutboxRepository,
+    Repositories,
 )
 from benethos_mailbox_service.errors import NotFoundError
 
@@ -47,21 +42,13 @@ def job(name: str, **fields: object) -> OutboxJob:
     return OutboxJob.model_validate(values)
 
 
-@pytest.fixture(params=["memory", "sqlite"])
-def outbox(
-    request: pytest.FixtureRequest, tmp_path: Path
-) -> Iterator[OutboxRepository]:
-    if request.param == "memory":
-        yield InMemoryOutboxRepository()
-        return
-    db = Database(tmp_path / "outbox.db")
-    accounts = SqliteAccountRepository(db)
+@pytest.fixture
+def outbox(repositories: Repositories) -> OutboxRepository:
     for account_id in ("acc_1", "acc_2"):
-        accounts.add(
+        repositories.accounts.add(
             Account(id=account_id, provider=ProviderType.IMAP, email="a@example.org")
         )
-    yield SqliteOutboxRepository(db)
-    db.close()
+    return repositories.outbox
 
 
 def test_a_job_is_kept_as_it_came(outbox: OutboxRepository) -> None:

@@ -3,7 +3,6 @@ in-memory and the SQLite implementation (docs/mailbox-service/AUTHENTICATION.md 
 
 from __future__ import annotations
 
-from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -12,11 +11,10 @@ import pytest
 from benethos_mailbox_service.data.models import User
 from benethos_mailbox_service.data.storage import (
     Database,
-    InMemoryPasskeyRepository,
     PasskeyRepository,
-    SqlitePasskeyRepository,
-    SqliteUserRepository,
+    Repositories,
     StoredPasskey,
+    repositories_on,
 )
 from benethos_mailbox_service.errors import ConflictError, NotFoundError
 
@@ -26,19 +24,11 @@ LAPTOP = StoredPasskey("psk_1", "Laptop", b"cred-1", b"data 1", NOW, sign_count=
 KEY = StoredPasskey("psk_2", "Security key", b"cred-2", b"data 2", NOW + timedelta(1))
 
 
-@pytest.fixture(params=["memory", "sqlite"])
-def passkeys(
-    request: pytest.FixtureRequest, tmp_path: Path
-) -> Iterator[PasskeyRepository]:
-    if request.param == "memory":
-        yield InMemoryPasskeyRepository()
-        return
-    db = Database(tmp_path / "test.db")
-    users = SqliteUserRepository(db)
+@pytest.fixture
+def passkeys(repositories: Repositories) -> PasskeyRepository:
     for user_id in ("usr_a", "usr_b"):
-        users.save(User(id=user_id, name=user_id))
-    yield SqlitePasskeyRepository(db)
-    db.close()
+        repositories.users.save(User(id=user_id, name=user_id))
+    return repositories.passkeys
 
 
 def test_passkeys_round_trip_oldest_first(passkeys: PasskeyRepository) -> None:
@@ -103,9 +93,9 @@ def test_passkeys_are_removed(passkeys: PasskeyRepository) -> None:
 
 def test_passkeys_go_with_their_user(tmp_path: Path) -> None:
     db = Database(tmp_path / "test.db")
-    users = SqliteUserRepository(db)
+    users = repositories_on(db).users
     users.save(User(id="usr_a", name="a"))
-    repository = SqlitePasskeyRepository(db)
+    repository = repositories_on(db).passkeys
     repository.add("usr_a", LAPTOP)
     users.delete("usr_a")
     assert repository.passkeys("usr_a") == []

@@ -6,7 +6,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
-from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -22,9 +21,8 @@ from benethos_mailbox_service.data.models import (
 )
 from benethos_mailbox_service.data.storage import (
     AuditRepository,
-    Database,
     InMemoryAuditRepository,
-    SqliteAuditRepository,
+    Repositories,
 )
 from benethos_mailbox_service.domain.activity import (
     SERVICE,
@@ -391,14 +389,9 @@ def test_audit_is_named_in_both_lists_of_the_catalogue(client: TestClient) -> No
 # --- the stores ---------------------------------------------------------------
 
 
-@pytest.fixture(params=["memory", "sqlite"])
-def store(request: pytest.FixtureRequest, tmp_path: Path) -> Iterator[AuditRepository]:
-    if request.param == "memory":
-        yield InMemoryAuditRepository()
-        return
-    db = Database(tmp_path / "audit.db")
-    yield SqliteAuditRepository(db)
-    db.close()
+@pytest.fixture
+def store(repositories: Repositories) -> AuditRepository:
+    return repositories.audit
 
 
 def record(n: int, activity: str, **fields: object) -> ActivityRecord:

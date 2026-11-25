@@ -3,21 +3,14 @@ for the in-memory and the SQLite implementation."""
 
 from __future__ import annotations
 
-from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
 
 import pytest
 
 from benethos_mailbox_service.data.models import Account, ApiToken, ProviderType, User
 from benethos_mailbox_service.data.storage import (
-    Database,
-    InMemoryLinkRepository,
     LinkRepository,
-    SqliteAccountRepository,
-    SqliteLinkRepository,
-    SqliteTokenRepository,
-    SqliteUserRepository,
+    Repositories,
     StoredLink,
 )
 
@@ -36,21 +29,16 @@ def link(name: str, seconds: int = 120) -> StoredLink:
     )
 
 
-@pytest.fixture(params=["memory", "sqlite"])
-def links(request: pytest.FixtureRequest, tmp_path: Path) -> Iterator[LinkRepository]:
-    if request.param == "memory":
-        yield InMemoryLinkRepository()
-        return
-    db = Database(tmp_path / "links.db")
-    SqliteAccountRepository(db).add(
+@pytest.fixture
+def links(repositories: Repositories) -> LinkRepository:
+    repositories.accounts.add(
         Account(id="acc_1", provider=ProviderType.IMAP, email="a@example.com")
     )
-    SqliteUserRepository(db).save(User(id="usr_1", name="u"))
-    SqliteTokenRepository(db).save(
+    repositories.users.save(User(id="usr_1", name="u"))
+    repositories.tokens.save(
         ApiToken(id="tok_1", user_id="usr_1", name="t", token_hash="h", created_at=NOW)
     )
-    yield SqliteLinkRepository(db)
-    db.close()
+    return repositories.links
 
 
 def test_a_link_is_found_by_the_digest_of_its_secret(links: LinkRepository) -> None:

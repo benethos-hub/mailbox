@@ -3,7 +3,6 @@ in-memory and the SQLite implementation (docs/mailbox-service/AUTHENTICATION.md 
 
 from __future__ import annotations
 
-from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -12,12 +11,11 @@ import pytest
 from benethos_mailbox_service.data.models import User
 from benethos_mailbox_service.data.storage import (
     Database,
-    InMemoryTotpRepository,
+    Repositories,
     Sealed,
-    SqliteTotpRepository,
-    SqliteUserRepository,
     StoredTotpDevice,
     TotpRepository,
+    repositories_on,
 )
 from benethos_mailbox_service.errors import NotFoundError
 
@@ -30,17 +28,11 @@ TABLET = StoredTotpDevice(
 )
 
 
-@pytest.fixture(params=["memory", "sqlite"])
-def devices(request: pytest.FixtureRequest, tmp_path: Path) -> Iterator[TotpRepository]:
-    if request.param == "memory":
-        yield InMemoryTotpRepository()
-        return
-    db = Database(tmp_path / "test.db")
-    users = SqliteUserRepository(db)
+@pytest.fixture
+def devices(repositories: Repositories) -> TotpRepository:
     for user_id in ("usr_a", "usr_b"):
-        users.save(User(id=user_id, name=user_id))
-    yield SqliteTotpRepository(db)
-    db.close()
+        repositories.users.save(User(id=user_id, name=user_id))
+    return repositories.totp
 
 
 def test_devices_round_trip_oldest_first(devices: TotpRepository) -> None:
@@ -93,9 +85,9 @@ def test_every_device_of_a_user_goes_at_once(devices: TotpRepository) -> None:
 
 def test_a_deleted_user_takes_its_devices_along(tmp_path: Path) -> None:
     db = Database(tmp_path / "test.db")
-    users = SqliteUserRepository(db)
+    users = repositories_on(db).users
     users.save(User(id="usr_a", name="Anna"))
-    devices = SqliteTotpRepository(db)
+    devices = repositories_on(db).totp
     devices.add("usr_a", PHONE)
     users.delete("usr_a")
     assert devices.devices("usr_a") == []

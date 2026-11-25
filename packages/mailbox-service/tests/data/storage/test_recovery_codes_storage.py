@@ -3,7 +3,6 @@ in-memory and the SQLite implementation (docs/mailbox-service/AUTHENTICATION.md 
 
 from __future__ import annotations
 
-from collections.abc import Iterator
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -12,28 +11,19 @@ import pytest
 from benethos_mailbox_service.data.models import User
 from benethos_mailbox_service.data.storage import (
     Database,
-    InMemoryRecoveryCodeRepository,
     RecoveryCodeRepository,
-    SqliteRecoveryCodeRepository,
-    SqliteUserRepository,
+    Repositories,
+    repositories_on,
 )
 
 NOW = datetime(2026, 10, 9, 12, 0, tzinfo=UTC)
 
 
-@pytest.fixture(params=["memory", "sqlite"])
-def codes(
-    request: pytest.FixtureRequest, tmp_path: Path
-) -> Iterator[RecoveryCodeRepository]:
-    if request.param == "memory":
-        yield InMemoryRecoveryCodeRepository()
-        return
-    db = Database(tmp_path / "test.db")
-    users = SqliteUserRepository(db)
+@pytest.fixture
+def codes(repositories: Repositories) -> RecoveryCodeRepository:
     for user_id in ("usr_a", "usr_b"):
-        users.save(User(id=user_id, name=user_id))
-    yield SqliteRecoveryCodeRepository(db)
-    db.close()
+        repositories.users.save(User(id=user_id, name=user_id))
+    return repositories.recovery_codes
 
 
 def test_a_recovery_code_works_once(codes: RecoveryCodeRepository) -> None:
@@ -71,9 +61,9 @@ def test_deleting_takes_the_codes_of_one_user(codes: RecoveryCodeRepository) -> 
 
 def test_a_deleted_user_takes_its_codes_along(tmp_path: Path) -> None:
     db = Database(tmp_path / "test.db")
-    users = SqliteUserRepository(db)
+    users = repositories_on(db).users
     users.save(User(id="usr_a", name="Anna"))
-    codes = SqliteRecoveryCodeRepository(db)
+    codes = repositories_on(db).recovery_codes
     codes.replace("usr_a", "key_1", ["h1"])
     users.delete("usr_a")
     assert codes.left("usr_a") == 0

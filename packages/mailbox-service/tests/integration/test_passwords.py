@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import sqlite3
-from collections.abc import Iterator
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -15,9 +14,9 @@ from benethos_mailbox_service.data.storage import (
     Database,
     InMemoryPasswordRepository,
     PasswordRepository,
-    SqlitePasswordRepository,
-    SqliteUserRepository,
+    Repositories,
     StoredPassword,
+    repositories_on,
 )
 from benethos_mailbox_service.domain.auth.passwords import Passwords
 from benethos_mailbox_service.errors import ConflictError
@@ -82,17 +81,10 @@ def test_checking_nobody_does_the_work_of_a_check() -> None:
 # --- storage --------------------------------------------------------------------------
 
 
-@pytest.fixture(params=["memory", "sqlite"])
-def store(
-    request: pytest.FixtureRequest, tmp_path: Path
-) -> Iterator[PasswordRepository]:
-    if request.param == "memory":
-        yield InMemoryPasswordRepository()
-        return
-    db = Database(tmp_path / "pw.db")
-    SqliteUserRepository(db).save(User(id="usr_a", name="anna"))
-    yield SqlitePasswordRepository(db)
-    db.close()
+@pytest.fixture
+def store(repositories: Repositories) -> PasswordRepository:
+    repositories.users.save(User(id="usr_a", name="anna"))
+    return repositories.passwords
 
 
 def test_store_round_trip(store: PasswordRepository) -> None:
@@ -127,9 +119,9 @@ async def test_a_sign_in_is_noted_and_outlives_a_new_password() -> None:
 
 def test_a_password_goes_with_its_user(tmp_path: Path) -> None:
     db = Database(tmp_path / "pw.db")
-    users = SqliteUserRepository(db)
+    users = repositories_on(db).users
     users.save(User(id="usr_a", name="anna"))
-    passwords = SqlitePasswordRepository(db)
+    passwords = repositories_on(db).passwords
     passwords.set("usr_a", StoredPassword("scrypt$x", False, NOW))
     users.delete("usr_a")
     assert passwords.get("usr_a") is None
@@ -138,7 +130,7 @@ def test_a_password_goes_with_its_user(tmp_path: Path) -> None:
 
 def test_names_are_unique_regardless_of_case(tmp_path: Path) -> None:
     db = Database(tmp_path / "pw.db")
-    users = SqliteUserRepository(db)
+    users = repositories_on(db).users
     users.save(User(id="usr_a", name="Anna"))
     with pytest.raises(ConflictError):
         users.save(User(id="usr_b", name="anna"))
@@ -177,7 +169,7 @@ def test_the_migration_renames_a_name_taken_twice(
         raw.execute("INSERT INTO users (id, name) VALUES ('usr_22222222bb', 'anna')")
     raw.close()
     db = Database(path)
-    names = sorted(u.name for u in SqliteUserRepository(db).list())
+    names = sorted(u.name for u in repositories_on(db).users.list())
     assert names == ["Anna", "anna-22222222"]
     # The data layer logs nothing: the service logs the notes at start.
     assert db.migrated is not None and db.migrated.before == 8
@@ -219,6 +211,6 @@ def test_the_migration_keeps_the_ui_sign_in_of_who_has_a_password(
         )
     raw.close()
     db = Database(path)
-    users = {u.name: u.ui_sign_in for u in SqliteUserRepository(db).list()}
+    users = {u.name: u.ui_sign_in for u in repositories_on(db).users.list()}
     assert users == {"anna": True, "bot": False}
     db.close()

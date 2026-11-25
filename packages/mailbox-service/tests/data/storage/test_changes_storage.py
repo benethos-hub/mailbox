@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -17,30 +17,20 @@ from benethos_mailbox_service.data.models import (
 from benethos_mailbox_service.data.storage import (
     ChangeLogRepository,
     Database,
-    InMemoryChangeLogRepository,
-    SqliteAccountRepository,
-    SqliteChangeLogRepository,
+    Repositories,
+    repositories_on,
 )
-from benethos_mailbox_service.data.storage.sqlite import database
 
 T0 = datetime(2026, 9, 25, 12, 0, tzinfo=UTC)
 
 
-@pytest.fixture(params=["memory", "sqlite"])
-def log(
-    request: pytest.FixtureRequest, tmp_path: Path
-) -> Iterator[ChangeLogRepository]:
-    if request.param == "memory":
-        yield InMemoryChangeLogRepository()
-        return
-    db = Database(tmp_path / "changes.db")
-    accounts = SqliteAccountRepository(db)
+@pytest.fixture
+def log(repositories: Repositories) -> ChangeLogRepository:
     for account_id in ("acc_1", "acc_2"):
-        accounts.add(
+        repositories.accounts.add(
             Account(id=account_id, provider=ProviderType.IMAP, email="a@example.com")
         )
-    yield SqliteChangeLogRepository(db)
-    db.close()
+    return repositories.changes
 
 
 def change(
@@ -151,14 +141,14 @@ def test_forget_account(log: ChangeLogRepository) -> None:
 def test_sqlite_keeps_the_log_across_a_reopen(tmp_path: Path) -> None:
     path = tmp_path / "reopen.db"
     db = Database(path)
-    SqliteAccountRepository(db).add(
+    repositories_on(db).accounts.add(
         Account(id="acc_1", provider=ProviderType.IMAP, email="a@example.com")
     )
-    SqliteChangeLogRepository(db).append([change(1), change(2, minutes=10)])
-    SqliteChangeLogRepository(db).purge(T0 + timedelta(minutes=1))
+    repositories_on(db).changes.append([change(1), change(2, minutes=10)])
+    repositories_on(db).changes.purge(T0 + timedelta(minutes=1))
     db.close()
     db = Database(path)
-    log = SqliteChangeLogRepository(db)
+    log = repositories_on(db).changes
     assert log.last() == 2
     assert log.horizon() == 1
     assert [e.seq for e in log.after(["acc_1"], 0, limit=10)] == [2]
@@ -167,9 +157,9 @@ def test_sqlite_keeps_the_log_across_a_reopen(tmp_path: Path) -> None:
 
 def test_sqlite_deleting_the_account_drops_its_changes(tmp_path: Path) -> None:
     db = Database(tmp_path / "cascade.db")
-    accounts = SqliteAccountRepository(db)
+    accounts = repositories_on(db).accounts
     accounts.add(Account(id="acc_1", provider=ProviderType.IMAP, email="a@example.com"))
-    log = SqliteChangeLogRepository(db)
+    log = repositories_on(db).changes
     log.append([change(1)])
     accounts.delete("acc_1")
     assert log.after(["acc_1"], 0, limit=10) == []
@@ -177,9 +167,9 @@ def test_sqlite_deleting_the_account_drops_its_changes(tmp_path: Path) -> None:
 
 
 def test_accounts_in_chunks_come_in_order(
-    log: ChangeLogRepository, monkeypatch: pytest.MonkeyPatch
+    log: ChangeLogRepository, in_chunks: Callable[[int], None]
 ) -> None:
-    monkeypatch.setattr(database, "IN_CHUNK", 1)
+    in_chunks(1)
     log.append([change(1), change(2, "acc_2"), change(3), change(4, "acc_2")])
     found = log.after(["acc_2", "acc_1", "acc_2"], 0, limit=3)
     assert [c.record.id for c in found] == ["msg_1", "msg_2", "msg_3"]
