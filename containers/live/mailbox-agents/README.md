@@ -162,7 +162,8 @@ export MAILBOX_AGENTS_GATEWAY_KEY=$(sed -n 's/^LITELLM_MASTER_KEY=//p' \
     containers/live/mailbox-agents/secrets/gateway.env)
 MAILBOX_AGENTS_MODEL=claude/haiku-5-5 uv run benethos-mailbox-agents \
     --env-file containers/live/mailbox-agents/secrets/agent.env \
-    eval --agent invoices --gold containers/live/mailbox-agents/secrets/gold-invoices.jsonl \
+    eval --agent categorization --recognizer invoice \
+    --gold containers/live/mailbox-agents/secrets/gold-invoices.jsonl \
     --reports containers/live/mailbox-agents/secrets/reports
 ```
 
@@ -290,7 +291,6 @@ prompt and no answer.
 ```
 uv run python live/mailbox-agents/agents_smoke.py
 uv run python live/mailbox-agents/categorization.py
-uv run python live/mailbox-agents/invoices.py
 uv run python live/mailbox-agents/chain.py
 uv run benethos-mailbox-agents --env-file containers/live/mailbox-agents/secrets/agent.env status
 uv run benethos-mailbox-agents --env-file containers/live/mailbox-agents/secrets/agent.env run --agent counting
@@ -314,12 +314,7 @@ and a second by sender alone that sets the keyword `agent-billing` on
 the mail of two groups, taken off again. The folders it made, `Providers` and
 two below it, and `Projects/Harbor` when the model chose that group,
 stay, as no agent may delete a folder. `setup.sh` makes the account
-anew without them. `live/mailbox-agents/invoices.py` runs `invoices` in `shadow` beside
-`categorization` in `full`, in both orders, and puts the mail back. Then two
-checks of version 5, each with a new state file: an invoice moved by hand
-into the inbox folder `Invoices/Telco`, and an invoice marked beforehand.
-Every message goes back without either keyword. It asks the model of
-`agent.env`, one call per message and run.
+anew without them.
 
 `chain/` holds three example lists of instances of `categorization` that hand a
 message on by keywords, `partner`, `beleg` and `ablage`

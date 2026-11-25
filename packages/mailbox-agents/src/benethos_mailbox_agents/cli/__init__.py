@@ -34,7 +34,7 @@ PROG = "benethos-mailbox-agents"
 
 
 def _agent(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--agent", required=True, help="the agent, such as invoices")
+    parser.add_argument("--agent", required=True, help="the agent, such as counting")
 
 
 def build_parser() -> argparse.ArgumentParser:

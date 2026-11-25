@@ -4,7 +4,7 @@
 # that first: sh containers/live/mailbox-agents/setup.sh
 #
 #   docker compose up -d --build                    the agent counting
-#   docker compose --profile invoices up -d         an agent that asks a model,
+#   docker compose --profile categorization up -d   an agent that asks a model,
 #                                                   with the gateway in ./.env
 #   docker compose exec counting benethos-mailbox-agents report --agent counting
 #   docker compose down -v                          stop, and forget the volumes
@@ -69,22 +69,8 @@ services:
       start_period: 30s
       retries: 3
 
-  invoices:
-    <<: *agent
-    profiles: ["invoices"]
-    command: ["worker", "--agent", "invoices"]
-    volumes:
-      - invoices-data:/data
-    ports:
-      - "127.0.0.1:${MAILBOX_AGENTS_INVOICES_METRICS_PORT:-9481}:9464"
-    healthcheck:
-      test: ["CMD", "benethos-mailbox-agents", "health", "--agent", "invoices"]
-      interval: 30s
-      timeout: 10s
-      start_period: 30s
-      retries: 3
-
-  # Asks no model. Writes to the test account in the stage full only.
+  # Asks the model of ./.env for the groups with a topic. Writes to the
+  # test account in the stage full only.
   categorization:
     <<: *agent
     profiles: ["categorization"]
@@ -111,5 +97,4 @@ networks:
 
 volumes:
   counting-data:
-  invoices-data:
   categorization-data:

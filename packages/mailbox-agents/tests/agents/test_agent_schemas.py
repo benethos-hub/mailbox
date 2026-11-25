@@ -63,8 +63,6 @@ def _too_long(name: str) -> tuple[type[BaseModel], dict[str, Any]]:
     """The answer model of agent ``name`` and an answer to it with one
     value too long."""
     schema = _schema_modules()[name]
-    if name == "invoices":
-        return schema.Answer, {"label": "invoice", "near_miss": "none", "quote": LONG}
     if name == "awaiting_reply":
         return schema.Answer, {"expects_reply": True, "quote": LONG}
     if name == "inquiries":
@@ -158,7 +156,6 @@ def test_an_answer_that_copies_the_mail_goes_past_the_runtime_limit(
 # JSON. A change here is a change of what the model reads: a new prompt
 # version, never a refactoring.
 SENT = {
-    "invoices": "7c4a889d07ed6a1b8a0b28cbe99f38616df041104ce16cdaddbf4a726acb2b9d",
     "inquiries": "e791dfc941671cf4253830c1053f6a4ce295b90ff2c9fe080137970e8ea7d7e8",
     "awaiting_reply": (
         "f2fe71ce95925f3725756ac7b2a75576d1d50a3e17b3bec638c75788b4019186"

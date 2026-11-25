@@ -26,10 +26,10 @@ This folder is all it needs, no clone of the repository.
    readable by the container's user (uid 10001) and nobody else:
 
    ```sh
-   mkdir -p secrets/invoices
-   printf '%s' "<token of the agent's user>" > secrets/invoices/service_token
-   printf '%s' "<the agent's gateway key>" > secrets/invoices/gateway_key
-   chmod 400 secrets/invoices/* && sudo chown -R 10001 secrets/invoices
+   mkdir -p secrets/categorization
+   printf '%s' "<token of the agent's user>" > secrets/categorization/service_token
+   printf '%s' "<the agent's gateway key>" > secrets/categorization/gateway_key
+   chmod 400 secrets/categorization/* && sudo chown -R 10001 secrets/categorization
    ```
 
    Each agent has a user of its own in the mailbox service, with
@@ -48,7 +48,7 @@ This folder is all it needs, no clone of the repository.
    ```sh
    docker compose --profile counting up -d
    docker compose exec counting benethos-mailbox-agents report --agent counting --limit 5
-   docker compose --profile invoices up -d
+   docker compose --profile categorization up -d
    ```
 
 Every agent starts in the stage its `.env` names, `shadow` in the
@@ -60,8 +60,8 @@ its stage.
 Change `MAILBOX_VERSION` in `.env`, then:
 
 ```sh
-docker compose --profile invoices pull
-docker compose --profile invoices up -d
+docker compose --profile categorization pull
+docker compose --profile categorization up -d
 ```
 
 Update the mailbox service to the same version at the same time: before

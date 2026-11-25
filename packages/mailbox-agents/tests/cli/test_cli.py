@@ -128,7 +128,6 @@ def test_a_broken_state_file_is_named_and_the_others_still_listed(
         "awaiting_reply",
         "counting",
         "inquiries",
-        "invoices",
         "categorization",
     ):
         assert name in starts
@@ -178,7 +177,6 @@ def test_a_state_file_of_a_newer_schema_is_named_and_unhealthy(
         "awaiting_reply",
         "counting",
         "inquiries",
-        "invoices",
         "categorization",
     ):
         assert name in starts
@@ -222,7 +220,7 @@ def test_backfill_stops_when_the_gateway_is_away(
     monkeypatch.setitem(session.TRANSPORTS, "gateway", httpx.MockTransport(away))
     service.add(wire_message("m1", subject="Your invoice"), change=None)
 
-    assert main(["backfill", "--agent", "invoices", "--days", "3"]) == 1
+    assert main(["backfill", "--agent", "inquiries", "--days", "3"]) == 1
 
     assert len(gateway.requests) == 1
     assert "taken up" not in capsys.readouterr().out

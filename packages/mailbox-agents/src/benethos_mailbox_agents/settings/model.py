@@ -95,11 +95,6 @@ class Settings(files.FileSettings):
     a2a_token_file: Path | None = None
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
-    # --- invoices, docs/mailbox-agents/concept/agent-invoices.md ----------------------
-    invoices_folders: files.Names = Field(default_factory=list)
-    invoices_subfolder: str | None = None
-    invoices_inbox_folder: str | None = None
-
     # --- awaiting_reply, docs/mailbox-agents/concept/agent-awaiting-reply.md ----------
     reply_days: int = Field(default=3, ge=1)
 

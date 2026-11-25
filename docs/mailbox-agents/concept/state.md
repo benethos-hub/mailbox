@@ -12,7 +12,7 @@ once released.
 | `messages` | message id, account id, state, attempts, next attempt |
 | `steps` | message, step, prompt version, model alias and the model reported, result, tokens, duration. A baseline's prompt version is the agent version, with `/` and the prompt version after it when the agent has one, such as `5/v4` |
 | `actions` | message, action, its argument (the keyword or the path of the folder), what was there before, when, stage, whether it was carried out |
-| `open_items` | for agents that follow a message, `awaiting_reply` with a deadline and `invoices` without one: message, thread, due, whether the keyword is on the message, the stage its keyword was recorded in without being set, closed and why, for `awaiting_reply` `replied`, `followed_up`, `keyword_removed`, `message_gone` or `discarded`. The keyword counts as on the message until the runtime saw it taken off, also after the item closed |
+| `open_items` | for an agent that follows a message, `awaiting_reply`, with a deadline (`invoices` kept them without one until it was removed on 2026-11-25): message, thread, due, whether the keyword is on the message, the stage its keyword was recorded in without being set, closed and why, for `awaiting_reply` `replied`, `followed_up`, `keyword_removed`, `message_gone` or `discarded`. The keyword counts as on the message until the runtime saw it taken off, also after the item closed |
 | `calls` | the full request and answer of a model call, only while `PROMPT_RETENTION_DAYS` keeps them |
 
 The schema version is the file's `user_version`. A reader opens the file

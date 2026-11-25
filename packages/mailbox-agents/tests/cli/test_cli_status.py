@@ -3,6 +3,7 @@ account, and why they were not checked."""
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
 
 import httpx
@@ -10,11 +11,35 @@ import pytest
 
 from benethos_mailbox_agents.agents.categorization import agent as categorization_agent
 from benethos_mailbox_agents.agents.categorization.lists import Listed
-from benethos_mailbox_agents.cli import main
+from benethos_mailbox_agents.cli import commands, main
+from benethos_mailbox_agents.records import FolderRef
 from benethos_mailbox_agents.settings import PREFIX
 
 from ..agents_fake import FakeService
-from ..agents_helpers import configure
+from ..agents_helpers import Echo, configure
+
+
+class Watching(Echo):
+    """An agent that expects the folders of ``needed`` and says it looks in
+    each folder below Invoices: what status says of an agent's folders."""
+
+    needed: tuple[str, ...] = ()
+
+    def folders_needed(self) -> tuple[str, ...]:
+        return self.needed
+
+    def describe_folders(self, folders: Mapping[str, FolderRef]) -> list[str]:
+        return [
+            f"{path}: looked in"
+            for path in sorted(folders)
+            if path.startswith("Invoices/")
+        ]
+
+
+def watching(monkeypatch: pytest.MonkeyPatch, *needed: str) -> None:
+    """Status lists this agent alone, expecting ``needed``."""
+    agent = type("Watched", (Watching,), {"needed": needed})
+    monkeypatch.setattr(commands, "discover", lambda: {"echo": agent})
 
 
 def test_status_names_a_folder_that_is_missing(
@@ -27,7 +52,7 @@ def test_status_names_a_folder_that_is_missing(
     monkeypatch.setenv(f"{PREFIX}GATEWAY_URL", "https://gateway.example.test/v1")
     monkeypatch.setenv(f"{PREFIX}GATEWAY_KEY", "gateway-key")
     monkeypatch.setenv(f"{PREFIX}MODEL", "alias")
-    monkeypatch.setenv(f"{PREFIX}INVOICES_FOLDERS", "Invoices/*,Missing/*")
+    watching(monkeypatch, "Invoices", "Missing")
 
     assert main(["status"]) == 0
 
@@ -46,9 +71,7 @@ def test_status_lists_the_folders_that_matter(
     monkeypatch.setenv(f"{PREFIX}GATEWAY_URL", "https://gateway.example.test/v1")
     monkeypatch.setenv(f"{PREFIX}GATEWAY_KEY", "gateway-key")
     monkeypatch.setenv(f"{PREFIX}MODEL", "alias")
-    monkeypatch.setenv(f"{PREFIX}INVOICES_FOLDERS", "Invoices/*")
-    monkeypatch.setenv(f"{PREFIX}INVOICES_SUBFOLDER", "{folder}/Rechnungen")
-    monkeypatch.setenv(f"{PREFIX}INVOICES_INBOX_FOLDER", "Invoices/Telco")
+    watching(monkeypatch, "Invoices")
     service.folders["acc1"].append(
         {"id": "hz-re", "name": "Rechnungen", "role": None, "parent_id": "inv-hosting"}
     )
@@ -58,14 +81,11 @@ def test_status_lists_the_folders_that_matter(
     out = capsys.readouterr().out
     assert (
         "  folders in acc1:\n"
-        "    INBOX: looked in, an invoice moves to Invoices/Telco\n"
-        "    Invoices/CloudHost: looked in, an invoice moves to "
-        "Invoices/CloudHost/Rechnungen\n"
-        "    Invoices/Hosting: looked in, an invoice moves to "
-        "Invoices/Hosting/Rechnungen\n"
-        "    Invoices/Hosting/Rechnungen: subfolder, not looked in\n"
-        "    Invoices/Telco: end station, looked in, an invoice is marked and stays\n"
-        "    Invoices/mo: looked in, an invoice moves to Invoices/mo/Rechnungen\n"
+        "    Invoices/CloudHost: looked in\n"
+        "    Invoices/Hosting: looked in\n"
+        "    Invoices/Hosting/Rechnungen: looked in\n"
+        "    Invoices/Telco: looked in\n"
+        "    Invoices/mo: looked in\n"
     ) in out
     assert "Trash" not in out and "Sent" not in out
 
@@ -80,7 +100,7 @@ def test_status_writes_a_control_character_of_a_folder_escaped(
     monkeypatch.setenv(f"{PREFIX}GATEWAY_URL", "https://gateway.example.test/v1")
     monkeypatch.setenv(f"{PREFIX}GATEWAY_KEY", "gateway-key")
     monkeypatch.setenv(f"{PREFIX}MODEL", "alias")
-    monkeypatch.setenv(f"{PREFIX}INVOICES_FOLDERS", "Invoices/*")
+    watching(monkeypatch, "Invoices")
     clear = chr(27) + "[2J"
     service.folders["acc1"].append(
         {"id": "x", "name": f"Odd{clear}", "role": None, "parent_id": "inv"}
@@ -103,7 +123,7 @@ def test_status_names_a_folder_there_in_another_case(
     monkeypatch.setenv(f"{PREFIX}GATEWAY_URL", "https://gateway.example.test/v1")
     monkeypatch.setenv(f"{PREFIX}GATEWAY_KEY", "gateway-key")
     monkeypatch.setenv(f"{PREFIX}MODEL", "alias")
-    monkeypatch.setenv(f"{PREFIX}INVOICES_FOLDERS", "invoices/*")
+    watching(monkeypatch, "invoices")
 
     assert main(["status"]) == 0
 
@@ -150,7 +170,7 @@ def test_status_without_accounts_checks_every_granted_account(
     monkeypatch.setenv(f"{PREFIX}GATEWAY_URL", "https://gateway.example.test/v1")
     monkeypatch.setenv(f"{PREFIX}GATEWAY_KEY", "gateway-key")
     monkeypatch.setenv(f"{PREFIX}MODEL", "alias")
-    monkeypatch.setenv(f"{PREFIX}INVOICES_FOLDERS", "Invoices/*,Missing/*")
+    watching(monkeypatch, "Invoices", "Missing")
     service.folders["acc2"] = [{"id": "inbox", "name": "INBOX", "role": "inbox"}]
 
     assert main(["status"]) == 0
@@ -173,7 +193,7 @@ def test_status_says_when_no_account_is_granted(
     monkeypatch.setenv(f"{PREFIX}GATEWAY_URL", "https://gateway.example.test/v1")
     monkeypatch.setenv(f"{PREFIX}GATEWAY_KEY", "gateway-key")
     monkeypatch.setenv(f"{PREFIX}MODEL", "alias")
-    monkeypatch.setenv(f"{PREFIX}INVOICES_FOLDERS", "Invoices/*")
+    watching(monkeypatch, "Invoices")
     service.folders.clear()
 
     assert main(["status"]) == 0
@@ -190,7 +210,7 @@ def test_status_lists_the_folders_of_an_account_beside_one_refused(
     monkeypatch.setenv(f"{PREFIX}GATEWAY_URL", "https://gateway.example.test/v1")
     monkeypatch.setenv(f"{PREFIX}GATEWAY_KEY", "gateway-key")
     monkeypatch.setenv(f"{PREFIX}MODEL", "alias")
-    monkeypatch.setenv(f"{PREFIX}INVOICES_FOLDERS", "Invoices/*")
+    watching(monkeypatch, "Invoices")
     listed = service._folders
 
     def folders(request: httpx.Request, parts: list[str]) -> httpx.Response:
@@ -219,7 +239,7 @@ def test_status_says_why_folders_were_not_checked(
     monkeypatch.setenv(f"{PREFIX}GATEWAY_URL", "https://gateway.example.test/v1")
     monkeypatch.setenv(f"{PREFIX}GATEWAY_KEY", "gateway-key")
     monkeypatch.setenv(f"{PREFIX}MODEL", "alias")
-    monkeypatch.setenv(f"{PREFIX}INVOICES_FOLDERS", "Invoices/*")
+    watching(monkeypatch, "Invoices")
     service.down = True
 
     assert main(["status"]) == 0

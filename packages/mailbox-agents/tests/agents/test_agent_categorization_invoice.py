@@ -1,9 +1,10 @@
-"""The recognizer invoice of categorization, a copy of the question of the agent
-invoices: its rules, its prompt, and a category it holds for:
+"""The recognizer invoice of categorization, the question the agent invoices
+asked before it was removed: its rules, its prompt, and a category it holds for:
 docs/mailbox-agents/concept/categorization-chain.md."""
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 from typing import Any
 
@@ -20,7 +21,6 @@ from benethos_mailbox_agents.records import (
     MessageRef,
 )
 
-from ..agents_helpers import ROOT
 from .categorization_chain_helpers import QUOTE, Scripted, categorization, decided
 
 INBOX = FolderRef(id="inbox", name="Inbox", role="inbox", path="Inbox")
@@ -84,7 +84,7 @@ CASES = [
 @pytest.mark.parametrize(
     ("found", "expected"), CASES, ids=[m.subject or "" for m, _ in CASES]
 )
-def test_the_rules_answer_as_those_of_invoices(
+def test_the_rules_answer_as_those_of_invoices_did(
     found: MailMessage, expected: tuple[str, dict[str, str]]
 ) -> None:
     """The cases of the rules of the agent invoices, the same answers."""
@@ -93,14 +93,14 @@ def test_the_rules_answer_as_those_of_invoices(
     assert (decided_by_rules.label, decided_by_rules.fields) == expected
 
 
-def test_the_prompt_is_a_copy_of_the_one_of_invoices() -> None:
+def test_the_prompt_is_the_one_invoices_asked_with() -> None:
+    """The prompt v5 of the agent invoices, unchanged: a change is a new
+    version."""
     ours = load_prompt("benethos_mailbox_agents.agents.categorization", "invoice", "v5")
-    theirs = ROOT / (
-        "packages/mailbox-agents/src/benethos_mailbox_agents/agents/invoices/"
-        "prompts/system.v5.md"
-    )
 
-    assert ours == theirs.read_text(encoding="utf-8")
+    assert hashlib.sha256(ours.encode()).hexdigest() == (
+        "9ce85b89339bcbc1b2c08e56fb5dcf1f76b0a19cc5da17aba2e4ca32ed5cc58c"
+    )
     assert set(Answer.model_fields) == {"label", "near_miss", "quote"}
 
 

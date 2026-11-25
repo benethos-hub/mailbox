@@ -366,8 +366,6 @@ def service(password: str, gateway_key: str) -> None:
                 f"MAILBOX_AGENTS_ACCOUNTS={account_id}",
                 "MAILBOX_AGENTS_STAGE=shadow",
                 "MAILBOX_AGENTS_DATA_DIR=containers/live/mailbox-agents/secrets/data",
-                "MAILBOX_AGENTS_INVOICES_FOLDERS=Providers/*",
-                "MAILBOX_AGENTS_INVOICES_SUBFOLDER={folder}/Rechnungen",
                 "MAILBOX_AGENTS_CATEGORIZATION_FILE=containers/live/mailbox-agents/categorization.json",
                 f"MAILBOX_AGENTS_GATEWAY_URL={os.environ['GATEWAY_URL']}",
                 f"MAILBOX_AGENTS_GATEWAY_KEY={gateway_key}",

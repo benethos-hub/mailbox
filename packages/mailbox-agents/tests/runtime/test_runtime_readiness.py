@@ -8,7 +8,6 @@ from pathlib import Path
 
 import pytest
 
-from benethos_mailbox_agents.agents.invoices.agent import Invoices
 from benethos_mailbox_agents.contract import Action, ActionRequest
 from benethos_mailbox_agents.errors import ConfigError
 from benethos_mailbox_agents.records import FolderRef, MessageRef
@@ -42,15 +41,23 @@ async def test_the_accounts_are_those_named_or_else_those_granted(
     assert await accounts_of(settings(), readiness_world.mailbox) == [ACCOUNT]
 
 
-async def test_the_lines_of_the_folders_of_an_agent(readiness_world: Wired) -> None:
-    agent = Invoices(
-        settings(invoices_folders=["Invoices/*", "invoices/hosting", "Missing/*"])
-    )
+class Described(Echo):
+    """Names three folders it expects and describes those that are there."""
 
-    lines = await folder_lines(agent, readiness_world.mailbox)
+    def folders_needed(self) -> tuple[str, ...]:
+        return ("Invoices/Hosting", "invoices/hosting", "Missing")
+
+    def describe_folders(self, folders: Mapping[str, FolderRef]) -> list[str]:
+        return [
+            f"{path}: looked in" for path in self.folders_needed() if path in folders
+        ]
+
+
+async def test_the_lines_of_the_folders_of_an_agent(readiness_world: Wired) -> None:
+    lines = await folder_lines(Described(settings()), readiness_world.mailbox)
 
     assert lines[0] == f"folders in {ACCOUNT}:"
-    assert "  Invoices/Hosting: looked in, an invoice is marked and stays" in lines
+    assert "  Invoices/Hosting: looked in" in lines
     assert lines[-2:] == [
         f"folder in another case in {ACCOUNT}: invoices/hosting",
         f"folder missing in {ACCOUNT}: Missing",

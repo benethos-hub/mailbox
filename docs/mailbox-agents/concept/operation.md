@@ -71,5 +71,5 @@ Part of the [concept](../CONCEPT.md).
 - **Logs:** stderr, through `logbook/` only. [docs/mailbox-agents/LOGGING.md](../LOGGING.md)
   holds the levels, the shape of a line, what never goes into one and the
   catalogue of every activity. A line is one sentence, such as
-  `invoices set message m1 to done`, after an ISO time with the offset,
+  `inquiries set message m1 to done`, after an ISO time with the offset,
   the level and the source `activity.<area>.<name>`.

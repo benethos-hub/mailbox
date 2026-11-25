@@ -1,12 +1,14 @@
 # Concept of Mailbox Agents
 
-> **Status: alpha, 2026-11-23. The runtime and the agents `counting`, `invoices`,
+> **Status: alpha, 2026-11-25. The runtime and the agents `counting`,
 > `awaiting_reply`, `inquiries` and `categorization` are built and run against a
 > test account of invented mail. On a real mailbox, read-only and in
 > `shadow`: `invoices` version 3 on 2026-11-18, `categorization` and `invoices`
-> on 2026-11-22, and `invoices`, `inquiries` and `awaiting_reply` in the
-> versions of 0.11.0 on 2026-11-23. None changed anything, and none acts
-> on a real mailbox yet.** A statement about another system that nobody has checked
+> on 2026-11-22, `invoices`, `inquiries` and `awaiting_reply` in the
+> versions of 0.11.0 on 2026-11-23, and the recognizer `invoice` of
+> `categorization` beside `invoices` on 2026-11-25. None changed anything, and none acts
+> on a real mailbox yet. The agent `invoices` was removed on 2026-11-25:
+> its question is the recognizer `invoice` of `categorization`.** A statement about another system that nobody has checked
 > yet is marked **(to verify)**, and a choice that is still open is listed
 > in [the agents' roadmap](../roadmap/agents.md#open-questions) rather than written as fact.
 
@@ -37,10 +39,9 @@ code.
 | Agent | Question | Status | Its file |
 |---|---|---|---|
 | `counting` | none: counts what arrives and is sent, changes nothing | built | [agent-counting.md](concept/agent-counting.md) |
-| `invoices` | is this an invoice? It moves one into the subfolder of the folder it lies in | built, version 6, prompt `v5` | [agent-invoices.md](concept/agent-invoices.md) |
 | `awaiting_reply` | does this sent message wait for an answer? | built, version 2, prompt `v2` | [agent-awaiting-reply.md](concept/agent-awaiting-reply.md) |
 | `inquiries` | is this a project inquiry, and what does it say? | built, version 2, prompt `v4` | [agent-inquiries.md](concept/agent-inquiries.md) |
-| `categorization` | which category of its list does the message belong to, in each dimension of the list, and what follows from it? | built, version 3: dimensions run in order, the sender rules in code, a model only for a message they do not settle and only where a category has a topic (2026-11-24), what follows from a category named in its list, the recognizer `invoice`, and instances that hand a message on by keywords (2026-11-25). `invoices` then files an invoice within the folder `categorization` put it in | [agent-categorization.md](concept/agent-categorization.md) |
+| `categorization` | which category of its list does the message belong to, in each dimension of the list, and what follows from it? | built, version 3: dimensions run in order, the sender rules in code, a model only for a message they do not settle and only where a category has a topic (2026-11-24), what follows from a category named in its list, the recognizer `invoice`, and instances that hand a message on by keywords (2026-11-25). An instance with the recognizer `invoice` takes the place of the agent `invoices`, removed on 2026-11-25 | [agent-categorization.md](concept/agent-categorization.md) |
 
 ## Beside the concept
 
@@ -55,9 +56,9 @@ code.
 
 A set of small agents that work on a mailbox continuously: each one looks at
 mail as it arrives or leaves, decides one narrow question about it, and takes
-one reversible action. The first ones sort invoices, track sent mail that
-is still waiting for a reply, recognise project inquiries and file the mail
-of listed senders into folders.
+one reversible action. The first ones track sent mail that is still
+waiting for a reply, recognise project inquiries, and file the mail of
+listed senders into folders and recognise invoices among it.
 
 The agents reach mail only through the REST API of a mailbox service, with
 its Python client `benethos-mailbox-client`. They reach a language model only
@@ -113,7 +114,7 @@ on one runtime, and each process runs one of them.
 | Console script | `benethos-mailbox-agents` |
 | Container image | `ghcr.io/benethos-hub/benethos-mailbox-agents` |
 | Settings prefix | `MAILBOX_AGENTS_` |
-| Agent names | a lowercase letter, then lowercase letters, digits and `_`: `invoices`, `awaiting_reply`, `inquiries` |
+| Agent names | a lowercase letter, then lowercase letters, digits and `_`: `counting`, `awaiting_reply`, `inquiries` |
 
 ## What matters most
 
@@ -128,11 +129,7 @@ on one runtime, and each process runs one of them.
   ([safety](concept/safety.md)).
 - **The sender is not proof.** Only a rule naming an address or a pattern
   moves a message. A domain rule and a model's choice mark only, with one
-  exception since 2026-11-18: `invoices` moves a message its model takes
-  for an invoice, into the subfolder of a folder it looks in, and out of
-  the inbox only into the inbox folder the owner set. The model names no
-  folder ([invoices](concept/agent-invoices.md)). A second since
-  2026-11-24: `categorization` acts on the group its model chose by the group's
+  exception since 2026-11-24: `categorization` acts on the group its model chose by the group's
   topic, or since 2026-11-25 by a recognizer such as `invoice`, where
   the owner set `"by_topic": "act"` for it, with a quote
   found in the mail. The model names a group of the list, never a

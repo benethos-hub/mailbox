@@ -56,5 +56,5 @@ agent runs over it and the scoring counts where it agrees.
   calls on a state file of its own and applies the evidence check as in
   operation. A gateway that is away ends the run.
 
-Size to start with: about 200 labelled messages for `invoices`, about 150
+Size to start with: about 200 labelled messages for the recognizer `invoice`, about 150
 sent messages for `awaiting_reply`, 80 to 150 inquiries for `inquiries`.

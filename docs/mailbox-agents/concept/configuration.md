@@ -43,7 +43,7 @@ UTF-8, a mark of UTF-8 at its start left out. A secret is printable ASCII,
 as a header of HTTP carries it, and any other stops the start, naming the
 setting and never the value.
 
-Settings of one agent, such as `INVOICES_FOLDERS`, `INVOICES_SUBFOLDER`,
+Settings of one agent, such as
 `REPLY_DAYS`, `INQUIRIES_PATTERNS_FILE` and `CATEGORIZATION_FILE`, are named in
 the agent's file, `agent-<name>.md` beside this one.
 

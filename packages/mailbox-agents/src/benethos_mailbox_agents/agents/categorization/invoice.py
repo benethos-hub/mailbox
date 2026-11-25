@@ -26,7 +26,7 @@ from .schema import parts, render
 
 __all__ = ["Answer", "Invoice"]
 
-# The version of the prompt, a copy of the one of the agent invoices.
+# The version of the prompt, the one the agent invoices asked with.
 PROMPT = "v5"
 
 

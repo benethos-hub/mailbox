@@ -60,7 +60,7 @@ URL.
 A line holds the time, the level, the source and the message:
 
 ```
-2026-11-18T10:12:22.123+01:00 INFO     benethos_mailbox_agents.activity.actions.recorded: invoices recorded add_keyword on message m1 in stage shadow without carrying it out: invoice
+2026-11-18T10:12:22.123+01:00 INFO     benethos_mailbox_agents.activity.actions.recorded: inquiries recorded add_keyword on message m1 in stage shadow without carrying it out: inquiry
 ```
 
 - **The time** is ISO 8601, the local time of the machine, to the
@@ -78,7 +78,7 @@ A line holds the time, the level, the source and the message:
 <agent> <did what> <to which>[: <why>]
 ```
 
-- **agent**: the agent's name, such as `invoices`, with its instance
+- **agent**: the agent's name, such as `inquiries`, with its instance
   after a slash when it has one, such as `categorization/partner`.
 - **did what**: the verb, such as started, read, set, failed, carried
   out, recorded.

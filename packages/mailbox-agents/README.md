@@ -26,8 +26,10 @@
 > **Alpha, version 0.11.1.** Built, and run on a test account of
 > invented mail. On a real mailbox, read-only and in the stage `shadow`:
 > `invoices` version 3 on 2026-11-18, `categorization` and `invoices` on
-> 2026-11-22, and `invoices`, `inquiries` and `awaiting_reply` in the
-> versions of 0.11.0 on 2026-11-23. None changed anything. Names, settings and
+> 2026-11-22, `invoices`, `inquiries` and `awaiting_reply` in the
+> versions of 0.11.0 on 2026-11-23, and the recognizer `invoice` of
+> `categorization` on 2026-11-25. None changed anything. The agent
+> `invoices` is gone since: `categorization` asks its question. Names, settings and
 > the state file may still change from one version to the next. The
 > design is written down in
 > [docs/mailbox-agents/CONCEPT.md](https://github.com/benethos-hub/mailbox/blob/main/docs/mailbox-agents/CONCEPT.md).
@@ -36,10 +38,10 @@
 The AI agents of Mailbox, on PyPI as `benethos-mailbox-agents`. They
 work on a mailbox continuously. Each one looks at mail as it arrives or
 leaves, decides one narrow question about it and takes one
-reversible action: a keyword, or a move to a folder. The first ones sort
-invoices, track sent mail that still waits for a reply, recognise project
-inquiries and file mail into folders, by its sender or by the topic
-of a group.
+reversible action: a keyword, or a move to a folder. The first ones
+track sent mail that still waits for a reply, recognise project
+inquiries, and file mail into folders by its sender, by the topic of a
+group or as an invoice.
 
 Mailbox is self-hosted and has five packages. The agents do not work
 alone. They need the service, which runs on your own machine or server
