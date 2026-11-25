@@ -40,6 +40,7 @@ from ..records import (
     MessageRef,
 )
 from ..store import Store
+from ..telemetry import NO_SPANS, Spans
 from .actions import Executor, Outcome
 from .metrics import Metrics
 from .model import Asker
@@ -101,6 +102,7 @@ class Worker:
         mailbox: Upstream,
         gateway: Asker,
         now: Callable[[], datetime],
+        spans: Spans = NO_SPANS,
     ) -> None:
         self.agent = agent
         self.settings = agent.settings
@@ -109,7 +111,12 @@ class Worker:
         self._now = now
         self.metrics = Metrics(agent.name, agent.version, agent.settings.stage)
         self.executor = Executor(
-            agent=agent, store=store, mailbox=mailbox, now=now, metrics=self.metrics
+            agent=agent,
+            store=store,
+            mailbox=mailbox,
+            now=now,
+            metrics=self.metrics,
+            spans=spans,
         )
         self.runner = StepRunner(
             agent=agent,
@@ -119,6 +126,7 @@ class Worker:
             effects=self.executor,
             now=now,
             metrics=self.metrics,
+            spans=spans,
         )
         self._gateway = gateway
         self._away = 0

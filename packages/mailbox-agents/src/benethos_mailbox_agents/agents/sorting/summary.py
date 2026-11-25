@@ -1,5 +1,5 @@
-"""What ``report`` says of ``sorting``: per dimension and category what
-became of its messages.
+"""What ``report`` and a span say of ``sorting``: per dimension and
+category what became of its messages, and the dimensions of a decision.
 
 A category with a move counts its messages as moved, recorded, recorded
 by topic, held or not moved, as before the chain. A move that lost to the
@@ -14,15 +14,15 @@ from __future__ import annotations
 
 from collections import Counter
 
-from ...contract import Action, Shown
-from ...records import Decision
+from ...contract import Action, Shown, TracePart
+from ...records import LABEL, Decision
 from .actions import Keyword
 from .dimensions import Category, Chain, Dimension
 from .groups import NONE
 from .lists import GROUP
-from .plan import DISPLACED, key
+from .plan import BY_CODE, DISPLACED, key
 
-__all__ = ["FATES", "fates"]
+__all__ = ["FATES", "fates", "parts_of"]
 
 # The fates in the order a line names them.
 FATES = (
@@ -93,3 +93,40 @@ def fates(chain: Chain, shown: list[Shown]) -> list[str]:
             )
             lines.append(f"  {name}: {said}")
     return lines
+
+
+def _label(dimension: Dimension, name: str) -> str:
+    """A category by its place in the dimension, ``label-<n>`` from 1,
+    ``none`` for none, as an evaluation report names it."""
+    if name == NONE:
+        return NONE
+    for number, category in enumerate(dimension.categories, start=1):
+        if category.name == name:
+            return f"label-{number}"
+    return "label-0"
+
+
+def parts_of(chain: Chain, decision: Decision) -> list[TracePart]:
+    """A part for each dimension of ``decision`` that ran."""
+    found: list[TracePart] = []
+    quotes = {item.field: item.found for item in decision.evidence}
+    for index, dimension in enumerate(chain.dimensions):
+        name = _category(decision, index, dimension)
+        if name is None:
+            continue
+        match = decision.details.get(key(index, dimension, "match"), "")
+        field = LABEL if index == 0 else dimension.name
+        attributes: dict[str, str | bool | int] = {
+            "dimension": dimension.name,
+            "recognizer": match,
+            # The model answered none where it was given a choice.
+            "source": "code"
+            if match in BY_CODE
+            and key(index, dimension, "among") not in decision.details
+            else "model",
+            "category": _label(dimension, name),
+        }
+        if quotes.get(field) is not None:
+            attributes["quote_found"] = bool(quotes[field])
+        found.append(TracePart("dimension", attributes))
+    return found

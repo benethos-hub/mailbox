@@ -18,6 +18,7 @@ is a manual aid, never part of `uv run pytest`.
   - [What a model costs](#what-a-model-costs)
 - [Ports](#ports)
 - [Use it](#use-it)
+- [Spans](#spans)
 - [Take it down](#take-it-down)
 
 ## Set it up
@@ -309,6 +310,23 @@ checks of version 5, each with a new state file: an invoice moved by hand
 into the inbox folder `Invoices/Telco`, and an invoice marked beforehand.
 Every message goes back without either keyword. It asks the model of
 `agent.env`, one call per message and run.
+
+## Spans
+
+The setup runs no target for spans, and the agents send none unless
+`MAILBOX_AGENTS_OTLP_ENDPOINT` names one. To look at the spans of a run,
+start a receiver of OTLP over HTTP on this machine, such as a collector
+or Jaeger, and add to `agent.env`:
+
+```
+MAILBOX_AGENTS_OTLP_ENDPOINT=http://127.0.0.1:4318
+```
+
+For Langfuse, the endpoint is its `/api/public/otel` over https, and a
+file named in `MAILBOX_AGENTS_OTLP_HEADERS_FILE` holds the line
+`Authorization=Basic ` and the base64 of its public and secret key,
+joined by a colon. What a span holds:
+[operation](../../../docs/mailbox-agents/concept/operation.md).
 
 ## Take it down
 

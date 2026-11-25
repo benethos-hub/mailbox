@@ -41,6 +41,7 @@ __all__ = [
     "Requires",
     "Route",
     "Shown",
+    "TracePart",
     "Trigger",
 ]
 
@@ -134,6 +135,17 @@ class ActionRequest:
     folder: str | None = None
     why: str = field(default="", compare=False)
     held: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class TracePart:
+    """One part of a decision as a span names it, such as one dimension of
+    ``sorting``: its kind and its attributes. An attribute is an id, a
+    state, a count or a code, never anything of the mail and never text of
+    the owner's configuration such as the name of a category."""
+
+    name: str
+    attributes: Mapping[str, str | bool | int] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)
@@ -271,6 +283,11 @@ class Agent(ABC):
         a list. Code only, never from an answer of the model. Its own by
         default."""
         return frozenset({self.keyword})
+
+    def trace_parts(self, decision: Decision) -> list[TracePart]:
+        """The parts of ``decision`` a span of the decision names below it,
+        such as the dimensions of ``sorting``. None by default."""
+        return []
 
     def prepare(self) -> None:
         """Read what the agent needs beyond its settings, such as a list

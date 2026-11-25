@@ -30,6 +30,9 @@ and `KEYWORD`.
 | `DATA_DIR` | where the state files live, one `<agent>.db` per agent. Unset: the data folder of where the settings come from, below |
 | `PROMPT_RETENTION_DAYS` | [state](state.md), `0` when unset |
 | `METRICS_PORT` | [operation](operation.md), `0` serves no endpoint |
+| `OTLP_ENDPOINT` | where spans go over OTLP and HTTP, `<endpoint>/v1/traces` ([operation](operation.md)). Unset: no spans leave the process |
+| `OTLP_HEADERS_FILE` | a file of headers for it, one `name=value` per line, such as a key. Never logged |
+| `OTLP_ALLOW_HTTP` | http to another machine as well, `false` when unset |
 | `LOG_LEVEL` | `DEBUG`, `INFO`, `WARNING` or `ERROR`, `INFO` when unset |
 
 `SERVICE_TOKEN_FILE` and `GATEWAY_KEY_FILE` name the file a secret is read

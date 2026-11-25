@@ -117,6 +117,11 @@ as the service and the MCP server do. That is the second line of
 defence, not the first: a line is written as if there were no
 redaction.
 
+The spans the agents export over OpenTelemetry keep the same rules, and
+more: no name of a category, no keyword and no folder of a list, a
+category only as `label-<n>` (decided 2026-11-25,
+[operation](concept/operation.md)).
+
 ## 5. Rules for writing a line
 
 1. **Every line is an activity.** A module that has something to say

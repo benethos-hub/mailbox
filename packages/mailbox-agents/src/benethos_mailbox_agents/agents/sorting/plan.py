@@ -31,6 +31,7 @@ from .groups import NONE
 from .recognizers import RECOGNIZERS, Choice
 
 __all__ = [
+    "BY_CODE",
     "DISPLACED",
     "Found",
     "classify",
@@ -47,7 +48,7 @@ DISPLACED = "moves.displaced"
 
 # The matches that are code: a category so found was not the model's
 # choice.
-_BY_CODE = frozenset({"group", "none", "ambiguous", "keyword"})
+BY_CODE = frozenset({"group", "none", "ambiguous", "keyword"})
 
 
 def key(index: int, dimension: Dimension, name: str) -> str:
@@ -178,7 +179,7 @@ def found_in(
             category = dimension.named(name)
         if category is not None:
             chosen[dimension.name] = category.name
-            found.append(Found(index, dimension, category, match not in _BY_CODE))
+            found.append(Found(index, dimension, category, match not in BY_CODE))
     return found
 
 

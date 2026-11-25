@@ -41,6 +41,7 @@ from ...contract import (
     Requires,
     Route,
     Shown,
+    TracePart,
     Trigger,
 )
 from ...errors import ConfigError
@@ -53,7 +54,7 @@ from .lists import Listed, load_chain, used
 from .lists import list_digest as _version
 from .plan import classify, classify_rules, found_in, requests_for, to_decision
 from .recognizers import PROMPT, Choice
-from .summary import fates
+from .summary import fates, parts_of
 
 __all__ = ["NONE", "PROMPT", "Sorting", "_version"]
 
@@ -138,6 +139,12 @@ class Sorting(Agent):
         """Its own keyword and every keyword the list sets in ``then``
         (decided 2026-11-25)."""
         return frozenset({self.keyword}) | self.chain.keywords()
+
+    def trace_parts(self, decision: Decision) -> list[TracePart]:
+        """A part for each dimension that ran: its name, how its category
+        was found, the category as ``label-<n>`` by its place in the list,
+        and whether its quote was found. Never the name of a category."""
+        return parts_of(self.chain, decision)
 
     def backfill_folder(self, folder: FolderRef) -> bool:
         """A folder without a role, when the list takes up mail that

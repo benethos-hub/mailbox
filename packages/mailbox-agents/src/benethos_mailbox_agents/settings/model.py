@@ -72,6 +72,11 @@ class Settings(files.FileSettings):
     data_dir: Path = DATA_DIR
     prompt_retention_days: int = Field(default=0, ge=0)
     metrics_port: int = Field(default=0, ge=0, le=65535)
+    # Spans over OTLP and HTTP, docs/mailbox-agents/concept/operation.md:
+    # off unless an endpoint is set.
+    otlp_endpoint: str | None = None
+    otlp_headers_file: Path | None = None
+    otlp_allow_http: bool = False
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
     # --- invoices, docs/mailbox-agents/concept/agent-invoices.md ----------------------
@@ -93,6 +98,8 @@ class Settings(files.FileSettings):
         "keyword",
         "sorting_file",
         "inquiries_patterns_file",
+        "otlp_endpoint",
+        "otlp_headers_file",
         "service_token_file",
         "gateway_key_file",
         mode="before",
