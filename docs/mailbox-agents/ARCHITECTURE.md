@@ -12,8 +12,7 @@
         +-------------+--------------+
         | mailbox-agents             |   one image,
         |   categorization  + SQLite |   one process per agent,
-        |   invoices        + SQLite |   one state file per agent
-        |   awaiting_reply  + SQLite |
+        |   awaiting_reply  + SQLite |   one state file per agent
         |   inquiries       + SQLite |
         |   counting        + SQLite |
         +-------------+--------------+
@@ -145,8 +144,6 @@ packages/mailbox-agents/src/benethos_mailbox_agents/
                   # and prompts/, its system prompts as Markdown, each
                   # with a version
     counting/     # agent.py alone: it only counts
-    invoices/     # schema.py, prompts/, baseline.py the question by
-                  # rules, folders.py where it looks and files
     inquiries/    # schema.py, prompts/, baseline.py the question by
                   # rules, patterns.py the domains and phrases it knows
     awaiting_reply/  # schema.py, prompts/, text.py what its rules read
@@ -165,7 +162,7 @@ packages/mailbox-agents/tests/  # offline: REST and gateway through
 live/mailbox-agents/    # run by hand, outside testpaths, against the test
                         # account of containers/live/mailbox-agents/:
                         # agents_smoke.py read-only, categorization.py,
-                        # invoices.py, chain.py the instances, peers.py
+                        # chain.py the instances, peers.py
                         # the entrance over A2A, gold.py the gold files from its
                         # labels, agents_common/ what they share
 containers/
@@ -199,7 +196,7 @@ assets/mailbox-agents/  # brand/icon.svg and architecture/architecture.html,
   strangers. The step that reads it returns a value in a fixed schema and
   nothing else, so an instruction hidden in a mail can at worst produce a
   wrong value. Acting on the value is code.
-- **One process per agent, one image for all.** `worker --agent invoices`
+- **One process per agent, one image for all.** `worker --agent inquiries`
   runs one agent. Each has its own credentials, its own state file, its own
   health and its own restart. They share code and nothing else.
 - **The mailbox service and the gateway each sit behind one module.**

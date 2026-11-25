@@ -44,34 +44,17 @@ folder, stands in [the chain of categorization](categorization-chain.md).
 | Actions | `move_to_folder`, `create_folder`, and `add_keyword` with the move and for a keyword of the list |
 | Keyword | `agent-categorized`, set with each move, see section 3 |
 
-## 1. Two stages, two agents (decided 2026-11-18)
+## 1. Invoices in the chain (2026-11-25)
 
-`categorization` moves by the sender, or by the topic of a group, from the inbox
-into the group's folder. Whether a message is an invoice is asked
-afterwards, by [invoices](agent-invoices.md), which moves it on within the
-folder it lies in. No agent does both. `invoices` stays an agent of its
-own: a topic chooses a folder, it does not tell an invoice from a
-reminder.
-
-Each agent works without the other. A list of groups knows nothing of
-invoices. Since version 3 a list may ask the question of `invoices`
-itself, with the recognizer `invoice`, and `invoices` goes once that
-fits on the owner's mailbox
-([the chain](categorization-chain.md)). `invoices` knows nothing of groups: it is told at its start which folders
-it looks in ([invoices](agent-invoices.md#settings)).
-
-The two never compete for a message:
-
-| Agent | Moves a message that lies in | To |
-|---|---|---|
-| `categorization` | the inbox | the folder of the sender's group |
-| `invoices` | a folder it was told to look in, other than the inbox, and the inbox folder, an end station where nothing moves | the subfolder below that folder |
-| `invoices`, with an inbox folder set | the inbox | the inbox folder |
-
-So no rule about who runs first and no waiting time is needed, and both run
-on one account, as long as `invoices` has no inbox folder. With one set, an
-invoice `invoices` takes up first goes into that folder, and `categorization`
-leaves it there.
+From 2026-11-18 two agents shared the work: `categorization` moved by the
+sender, or by the topic of a group, from the inbox into the group's
+folder, and the agent `invoices` asked afterwards whether a message is an
+invoice and moved it on within the folder it lay in. Since version 3 a
+list asks that question itself, with the recognizer `invoice`
+([the chain](categorization-chain.md)). It ran beside `invoices` in
+`shadow` on the owner's mailbox on 2026-11-25, and `invoices` was removed
+the same day (decided 2026-11-25). An instance such as `beleg` recognises
+the invoice and sets a keyword, a later one such as `ablage` files it:
 
 ```
 Inbox
@@ -238,7 +221,7 @@ Besides, the runtime moves a message at most once for an agent ([agent
 contract](agent-contract.md)). The keyword is its own and no other agent
 sets it. A list of dimensions may name keywords of its own, which the
 runtime sets as well and refuses any other (decided 2026-11-25,
-[the chain](categorization-chain.md)). The agent's keyword is its own, so a move by `categorization` and a move by `invoices` stay told apart.
+[the chain](categorization-chain.md)). The agent's keyword is its own, so a move by `categorization` stays told apart from a move by anyone else.
 The keyword is asked for after the move in every stage. The runtime takes
 nothing after a refused move and records only what follows a move recorded
 only, by the stage or for a held group, so it never stands without the move
@@ -300,7 +283,7 @@ Given a list, the agent may make the folders of the list itself.
 | | |
 |---|---|
 | What | makes one folder that is missing. A folder below a missing one is made after it, each as an action of its own |
-| Which | only a folder the agent was configured with: for `categorization` a folder of the list or one above it, for `invoices` the subfolder its pattern gives below a folder it looks in, and each folder between the two |
+| Which | only a folder the agent was configured with: a folder of the list or one above it, and with `move_below` the folder its name gives below the folder a message lies in, and each folder between the two |
 | Never | the trash, junk or spam, nor below them. Nor a folder that exists, under any case |
 | When | in the stage `full`, right before the first move that needs it |
 | Recorded | like every action: the path, the stage, whether it was made |
@@ -312,7 +295,7 @@ it changes no message.
 How the runtime knows which folders an agent may make: the agent answers
 for each path, with `may_create`, whether its configuration names it, and
 the executor refuses any other. A method rather than a set of paths,
-because `invoices` knows its subfolders only from the folder a message
+because a folder of `move_below` follows only from the folder a message
 lies in.
 
 The [agent contract](agent-contract.md), [safety](safety.md) and
@@ -344,7 +327,7 @@ whose sender was verified ([roadmap](../../roadmap/agents.md#next)).
 
 **What the model chooses is not proof either (2026-11-24).** As a rule an
 agent only marks on the choice of a model ([safety](safety.md)). `categorization`
-is the second exception, after `invoices`: it acts on the model's choice
+is the exception: it acts on the model's choice
 where the owner set `"by_topic": "act"` for the group. The model names
 a group of the list, never a folder, and only a group among those to
 choose from. Its quote must be found in the mail, not in the topics. A
@@ -430,9 +413,10 @@ another, was measured there first
 - **Categories inside `categorization` as on 2026-11-18, one agent that sorts
   and recognises invoices.** Replaced on 2026-11-25 by the chain:
   dimensions with categories, each with its recognizer, and the actions
-  beside them ([the chain](categorization-chain.md)). `invoices` stays until a
-  recognizer of invoices in the chain reaches its numbers on the gold set
-  and a run in `shadow` on the owner's mailbox fits. The reasons of
+  beside them ([the chain](categorization-chain.md)). The agent `invoices`
+  stayed until the recognizer `invoice` in the chain reached its numbers on
+  the gold set and a run in `shadow` on the owner's mailbox fitted, and
+  was removed on 2026-11-25. The reasons of
   2026-11-18 and 2026-11-24 follow. Two agents it stayed then, for three
   reasons: an agent has one stage, a gateway that is away would hold back
   mail that needs no model, and a category is a prompt, rules and a gold
@@ -456,11 +440,13 @@ another, was measured there first
 - **`invoices` and `categorization` side by side with a waiting time.** A message
   whose model call waits for a gateway that is away would be moved by
   `categorization` in the meantime, and `invoices` would then skip it.
+  Moot since `invoices` was removed on 2026-11-25.
 - **A keyword per group.** The runtime let an agent set one keyword, its
   own, and it stayed so on 2026-11-24. Replaced on 2026-11-25: a category
   of a list of dimensions names its keywords, only those of the list,
   each `agent-` in front ([the chain](categorization-chain.md)).
 - **A gold item that names a folder.** The folder follows from the group
   and the list, and the gold format has no place for it.
-- **One list for both agents.** `invoices` must work without `categorization`
-  (decided 2026-11-18), so it takes folders, not groups.
+- **One list for both agents.** `invoices` had to work without `categorization`
+  (decided 2026-11-18), so it took folders, not groups. Moot since it was
+  removed on 2026-11-25.

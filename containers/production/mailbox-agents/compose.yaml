@@ -4,10 +4,10 @@
 # folder under agents/ with its settings and a folder under secrets/ with
 # its token and key. README.md beside it says how.
 #
-#   docker compose --profile invoices up -d        start one agent
-#   docker compose --profile invoices --profile awaiting_reply up -d
-#   docker compose logs -f invoices                follow what it says
-#   docker compose exec invoices benethos-mailbox-agents report --agent invoices
+#   docker compose --profile counting up -d        start one agent
+#   docker compose --profile counting --profile awaiting_reply up -d
+#   docker compose logs -f counting                follow what it says
+#   docker compose exec counting benethos-mailbox-agents report --agent counting
 #   docker compose down                            stop everything
 #
 # One service per agent, each behind a profile of its own name, so a plain
@@ -45,25 +45,6 @@ x-secrets: &secrets
   MAILBOX_AGENTS_GATEWAY_KEY_FILE: /run/secrets/gateway_key
 
 services:
-  invoices:
-    <<: *agent
-    profiles: ["invoices"]
-    command: ["worker", "--agent", "invoices"]
-    env_file: ./agents/invoices/.env
-    environment:
-      <<: *secrets
-    volumes:
-      - invoices-data:/data
-      - ./secrets/invoices:/run/secrets:ro
-    ports:
-      - "127.0.0.1:${MAILBOX_AGENTS_INVOICES_METRICS_PORT:-9471}:9464"
-    healthcheck:
-      test: ["CMD", "benethos-mailbox-agents", "health", "--agent", "invoices"]
-      interval: 60s
-      timeout: 10s
-      start_period: 120s
-      retries: 3
-
   awaiting_reply:
     <<: *agent
     profiles: ["awaiting_reply"]
@@ -148,7 +129,6 @@ services:
       retries: 3
 
 volumes:
-  invoices-data:
   awaiting-reply-data:
   inquiries-data:
   categorization-data:

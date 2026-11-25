@@ -37,7 +37,6 @@ others do not:
 
 | Agent | `skip_marked` | Why |
 |---|---|---|
-| `invoices` | on | a filed invoice the owner took out of its subfolder stays where the owner put it, also after a state file made anew |
 | `inquiries` | off | its state file holds the fields of an inquiry, which a skipped message would lack |
 | `awaiting_reply` | off | it watches its marked mail to take the keyword off |
 | `counting` | off | it sets no keyword |
@@ -54,7 +53,6 @@ that is not lower case letters, digits and dashes, the same form
 
 | Agent | Keyword |
 |---|---|
-| `invoices` | `agent-invoice` |
 | `awaiting_reply` | `agent-awaiting-reply` |
 | `inquiries` | `agent-inquiry` |
 | `categorization` | `agent-categorized` |

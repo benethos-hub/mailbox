@@ -11,7 +11,7 @@ the folder --out names, so an agent can be evaluated against it:
 
     uv run benethos-mailbox-agents
         --env-file containers/live/mailbox-agents/secrets/agent.env
-        eval --agent invoices
+        eval --agent categorization --recognizer invoice
         --gold containers/live/mailbox-agents/secrets/gold-invoices.jsonl
         --reports containers/live/mailbox-agents/secrets/reports
 

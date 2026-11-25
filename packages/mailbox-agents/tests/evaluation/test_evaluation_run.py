@@ -10,7 +10,7 @@ import httpx
 import pytest
 
 from benethos_mailbox_agents.agents.categorization.agent import Categorization
-from benethos_mailbox_agents.agents.invoices.agent import Invoices
+from benethos_mailbox_agents.agents.inquiries.agent import Inquiries
 from benethos_mailbox_agents.cli import main
 from benethos_mailbox_agents.errors import GatewayUnavailableError
 from benethos_mailbox_agents.evaluation.gold import GoldItem
@@ -152,14 +152,14 @@ def test_a_report_names_no_label_or_field_the_agent_does_not_declare(
 
 def test_a_report_names_the_labels_and_fields_an_agent_declares() -> None:
     outcomes = [
-        outcome("invoice", {}, "invoice"),
-        outcome("other", {"near_miss": "reminder"}, "other"),
+        outcome("inquiry", {"role": "a tester"}, "inquiry"),
+        outcome("other", {}, "other"),
     ]
 
-    report = build(Invoices(settings()), "", outcomes, WHEN)
+    report = build(Inquiries(settings()), "", outcomes, WHEN)
 
-    assert sorted(report["baseline"]["labels"]) == ["invoice", "other"]
-    assert sorted(report["baseline"]["fields"]) == ["near_miss"]
+    assert sorted(report["baseline"]["labels"]) == ["inquiry", "other"]
+    assert sorted(report["baseline"]["fields"]) == ["role"]
 
 
 def test_the_report_file_is_named_by_date_versions_and_model(tmp_path: Path) -> None:

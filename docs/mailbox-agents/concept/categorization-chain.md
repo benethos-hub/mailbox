@@ -30,7 +30,7 @@ mail says. The executor of the runtime stays the lock on what is done
 | `sender` | the sender rules of the categories, as in [categorization](agent-categorization.md#sender-rules) | no |
 | `keyword` | the keywords a message carries: the category whose `keywords` it all carries, the one that names most when several do | no |
 | `topic` | the topics of the categories the sender rules leave open | once per dimension |
-| `invoice` | whether the message is an invoice, with a copy of the prompt `v5` of `invoices` | once, for a dimension with a category that names it |
+| `invoice` | whether the message is an invoice, with the prompt `v5` the agent `invoices` asked with | once, for a dimension with a category that names it |
 
 | Action | Value | Primitives | On a choice of the model |
 |---|---|---|---|
@@ -248,19 +248,47 @@ and may correct (decided 2026-11-25). The example of the live setup,
   the refusal **(to verify)**. There one instance with `when` is the
   way.
 
-### The recognizer `invoice` and the way out for `invoices`
+### The recognizer `invoice` in place of `invoices`
 
-The recognizer `invoice` asks the question of the agent `invoices` with a
-copy of its prompt `v5`, its schema and its rules. `eval --agent categorization
+The recognizer `invoice` asks the question of the agent `invoices` with
+its prompt `v5`, its schema and its rules. `eval --agent categorization
 --recognizer invoice` scores it alone in the space of `invoices`, so the
 gold set of `invoices` serves unchanged. On the gold set of the test
 account, through the same model alias, it reached the numbers of
 `invoices` on 2026-11-25
 (`reports/mailbox-agents/categorization/2026-11-25-v3-invoice-v5-mail-classifier.json`
 beside `reports/mailbox-agents/invoices/2026-11-23-v6-v5-mail-classifier.json`).
-`invoices` goes only after a run in `shadow` on the owner's mailbox fits
-as well (decided 2026-11-25). `live/mailbox-agents/chain.py` runs the
+`invoices` was to go only after a run in `shadow` on the owner's mailbox
+fitted as well (decided 2026-11-25). Both ran in `shadow` on the owner's
+mailbox on 2026-11-25, read-only, the recognizer decided as `invoices`
+did, and `invoices` was removed the same day. How a list takes its place:
+[From invoices](#from-invoices). `live/mailbox-agents/chain.py` runs the
 three example instances on the test account ([testing](testing.md)).
+
+### From invoices
+
+A mailbox that ran `invoices` takes two instances of `categorization` in
+its place, after the example lists `beleg` and `ablage` in
+`containers/live/mailbox-agents/chain/`:
+
+| `invoices` | in the lists |
+|---|---|
+| looked at new mail in the inbox | `beleg` with `"on": {"arrival": "inbox"}` |
+| looked in the folders of `INVOICES_FOLDERS` | `beleg` with `"on": {"arrival": "folders"}`, or `"keywords"` on the keywords an earlier instance sets per partner |
+| asked whether a message is an invoice | a category of `beleg` with `"recognize": "invoice"` and the keyword `agent-invoice` in `then`, and `"mark_done": true` |
+| moved an invoice into `INVOICES_SUBFOLDER` below its folder | `ablage` with `"on": {"keywords": ["agent-categorized-beleg"]}` and `move_below` |
+| moved an invoice of the inbox into `INVOICES_INBOX_FOLDER` | `ablage` with a `move` to that folder |
+
+The settings `INVOICES_FOLDERS`, `INVOICES_SUBFOLDER` and
+`INVOICES_INBOX_FOLDER` are no longer read, and an unknown setting is
+left alone. Mail `invoices` marked carries `agent-invoice`: a category
+that names that keyword in its `keywords` takes it up as an invoice. The
+state file `invoices.db` stays where it is and nothing reads it. Its open
+items are not carried over: an invoice that a person moved by hand into a
+folder is no longer followed there. A keyword set by hand starts an
+instance that waits for it instead. On an account without keywords, such
+as Gmail, one instance with `when` does the same in one pass. On POP3
+nothing of it applies, as POP3 has no folders.
 
 ## 9. Not part of it
 

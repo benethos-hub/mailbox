@@ -167,6 +167,23 @@ adheres to [Semantic Versioning](https://semver.org/).
   group of its list has a topic. A list without a topic runs without a
   gateway, as before.
 
+### Removed
+
+- `benethos-mailbox-agents`: the agent `invoices`. Its question is the
+  recognizer `invoice` of `categorization`. To move over, run two
+  instances of `categorization` after the example lists `beleg` and
+  `ablage`: `beleg` recognises an invoice and sets `agent-invoice`,
+  `ablage` files it with `move_below` for what `INVOICES_SUBFOLDER` did
+  and a `move` for what `INVOICES_INBOX_FOLDER` did. Name `agent-invoice`
+  in the `keywords` of a category, so mail `invoices` marked is taken up
+  as an invoice. `MAILBOX_AGENTS_INVOICES_FOLDERS`, `_SUBFOLDER` and
+  `_INBOX_FOLDER` are no longer read. The state file `invoices.db` stays
+  and nothing reads it: its open items are not carried over, and an
+  invoice moved by hand is no longer followed. The table in
+  `docs/mailbox-agents/concept/categorization-chain.md`, section "From
+  invoices", maps each setting. The compose files of the agents have no
+  service `invoices` any more.
+
 ## [0.11.1] - 2026-11-24
 
 ### Changed

@@ -105,7 +105,7 @@ changed until the evaluation was run again.
 |---|---|
 | `worker --agent <name>` | runs one agent pass after pass until SIGTERM or SIGINT |
 | `run --agent <name>` | one pass, then the counts per state |
-| `backfill --agent <name> [--days N]` | takes the messages of the last days up anew and runs them: those of the inbox and of sent mail, and those of the folders the agent wants besides, such as the folders `invoices` looks in. It runs until no message is due, and stops with exit code 1 after the first round that found the gateway away |
+| `backfill --agent <name> [--days N]` | takes the messages of the last days up anew and runs them: those of the inbox and of sent mail, and those of the folders the agent wants besides, such as the folders an instance of `categorization` with `"on": {"arrival": "folders"}` takes up. It runs until no message is due, and stops with exit code 1 after the first round that found the gateway away |
 | `report --agent <name> [--limit N] [--state S] [--offline]` | [report](#report) |
 | `eval --agent <name> --gold <file> [--recognizer R] [--reports DIR]` | [evaluation](evaluation.md), with `--recognizer` one part of the agent scored alone |
 | `check --agent <name> INSTANCE=FILE...` | reads the configuration of several instances together and names each circle of lists that set each other off, exit code 1 when there is one, else 0 |
@@ -133,9 +133,7 @@ otherwise, and with `--state` those in one state. Per message it prints
 sender and subject, the decision with its source, model, fields and
 details, each quote and whether it was found, the label of the baseline,
 and each action with its stage and whether it was carried out or would
-have been. It ends with what the agent has to say about the messages shown: for
-`invoices`, the senders of invoices it marked and did not move, with how
-many each sent, as candidates for a group of `categorization`. For `categorization`, per
+have been. It ends with what the agent has to say about the messages shown. For `categorization`, per
 dimension and category what became of its mail
 ([the chain](categorization-chain.md#7-report)), the senders in
 no group that wrote most often, and the senders two groups name alike.

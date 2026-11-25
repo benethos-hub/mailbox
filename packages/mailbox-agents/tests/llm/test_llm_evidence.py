@@ -6,7 +6,7 @@ import unicodedata
 
 import pytest
 
-from benethos_mailbox_agents.agents.invoices.schema import parts, render
+from benethos_mailbox_agents.agents.categorization.schema import parts, render
 from benethos_mailbox_agents.llm.evidence import check, contains
 from benethos_mailbox_agents.records import (
     LABEL,

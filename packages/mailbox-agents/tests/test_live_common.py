@@ -169,23 +169,19 @@ def _live_script(name: str) -> Iterator[ModuleType]:
                 del sys.modules[key]
 
 
-@pytest.mark.parametrize(
-    ("script", "step"),
-    [("categorization", "put_back"), ("invoices", "put_back_between")],
-)
 async def test_a_put_back_cut_off_is_done_again_on_the_way_out(
-    monkeypatch: pytest.MonkeyPatch, script: str, step: str
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     async def cut_off(*args: object) -> object:
         raise _CutOffError
 
     async def done(*args: object) -> object:
-        return 0 if step == "put_back" else "back"
+        return 0
 
     async def same(mailbox: object, before: object) -> object:
         return before
 
-    with _live_script(script) as module:
+    with _live_script("categorization") as module:
         live = SimpleNamespace(
             mailbox=None,
             before={},
@@ -193,12 +189,12 @@ async def test_a_put_back_cut_off_is_done_again_on_the_way_out(
             keywords=("agent-categorized",),
             put_back_done=False,
         )
-        monkeypatch.setattr(module, step, cut_off)
+        monkeypatch.setattr(module, "put_back", cut_off)
         with pytest.raises(_CutOffError):
             await module.put_back_check(live)
         assert live.put_back_done is False
 
-        monkeypatch.setattr(module, step, done)
+        monkeypatch.setattr(module, "put_back", done)
         monkeypatch.setattr(module, "snapshot", same, raising=False)
         await module.put_back_check(live)
         assert live.put_back_done is True

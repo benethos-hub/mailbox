@@ -45,7 +45,7 @@ What the agents rely on:
   before an agent is switched to the keyword stage)**. At Stalwart over
   IMAP they are: measured 2026-11-17 against 0.7.5, a keyword set and
   taken off again, and 2026-11-20 against 0.8.0 and 2026-11-21 against
-  0.9.0, where `live/mailbox-agents/categorization.py` and `live/mailbox-agents/invoices.py` set an agent's
+  0.9.0, where `live/mailbox-agents/categorization.py` and `live/mailbox-agents/invoices.py`, removed with the agent `invoices`, set an agent's
   keyword, find it on the message and take it off when they put the mail
   back.
 
@@ -69,7 +69,7 @@ Stalwart, on the test account:
   it as `message.updated` of that id, once per move.
 - A move made by a mail client over IMAP keeps the message's id as well
   (measured 2026-11-19 against 0.7.5, for the plan of
-  [invoices](agent-invoices.md) version 5). One message was moved out of
+  the agent `invoices` version 5). One message was moved out of
   the inbox into a folder made for the check and back, once with `MOVE`
   and once with `COPY`, `\Deleted` and `EXPUNGE`, as clients without
   `MOVE` do. Each way the feed named only `message.updated` of the same
@@ -82,8 +82,8 @@ Stalwart, on the test account:
   new id, which this check did not see at Stalwart.
 - A message moved and moved back keeps its id (measured 2026-11-19 to
   2026-11-21 against 0.8.0 and 0.9.0). A message that came back under a
-  new id would be new to an agent's state file: `invoices` skips it when it carries the agent's
-  keyword, and asks about it when it does not.
+  new id would be new to an agent's state file: an agent asks about it
+  anew, unless its own rule leaves a message with its keyword alone.
 - `create_folder` makes a folder at the top without a parent, and below
   another with the parent's id. At IMAP a folder's id follows its path.
 - A name that exists in the same case is refused, `409 conflict`. The same
@@ -130,7 +130,6 @@ Rights. Each agent has a user of its own in the service:
 
 | Agent | Rights | Not granted |
 |---|---|---|
-| `invoices` | `mail.read`, `mail.write` | `drafts`, send, `mail.delete` |
 | `awaiting_reply` | `mail.read`, `mail.write` | `drafts`, send, `mail.delete` |
 | `inquiries` | `mail.read`, `mail.write` | `drafts`, send, `mail.delete` |
 | `categorization` | `mail.read`, `mail.write` | `drafts`, send, `mail.delete` |
@@ -156,8 +155,7 @@ A move into the drafts folder is refused by the service since 0.9.0,
 2026-11-21 against 0.9.0 with IMAP at Stalwart, one message of the inbox
 of the test account. The runtime refuses only the trash, junk and spam as
 a target by itself, so an agent moves a message into drafts only where
-its settings name that folder: a target of the categorization list, or
-`MAILBOX_AGENTS_INVOICES_INBOX_FOLDER`. In the stage `full` such a move
+its settings name that folder: a target of the categorization list. In the stage `full` such a move
 meets the `400` and is logged as refused and not recorded, as any refused
 action. In `shadow` and `keyword` it is recorded and the service is not
 asked.
