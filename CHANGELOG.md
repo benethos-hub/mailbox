@@ -135,6 +135,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 - The service image installs publicsuffixlist 1.1.2.20261125 from the
   lockfile.
 - The images build with uv 0.13.10.
+- The database moves to schema 26. The index of messages and the links
+  of threads keep their order in a column of their own and are built
+  anew for it: the first start after the update needs free disk space
+  of the size of the index once.
 - `benethos-mailbox-agents`: the agent `sorting` is named
   `categorization`. To move over:
   - `--agent sorting` becomes `--agent categorization`, and so does the

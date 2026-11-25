@@ -35,13 +35,12 @@ class SqliteMessageIndexRepository:
         self, account_id: str, folder_ids: Iterable[str]
     ) -> list[IndexEntry]:
         rows = self._db.query_in(
-            "SELECT rowid, * FROM message_index"
-            " WHERE account_id = ? AND folder_id {in}",
+            "SELECT * FROM message_index WHERE account_id = ? AND folder_id {in}",
             folder_ids,
             before=(account_id,),
         )
         # In the order the entries came, across the chunks of the query.
-        return [_entry(row) for row in sorted(rows, key=lambda row: row["rowid"])]
+        return [_entry(row) for row in sorted(rows, key=lambda row: row["seq"])]
 
     def with_header(self, account_id: str, headers: Iterable[str]) -> list[IndexEntry]:
         rows = self._db.query_in(
@@ -128,7 +127,7 @@ class SqliteMessageIndexRepository:
         return self._db.query_as(
             _entry,
             "SELECT * FROM message_index WHERE account_id = ? AND thread_id = ?"
-            " ORDER BY rowid",
+            " ORDER BY seq",
             (account_id, thread_id),
         )
 
@@ -136,7 +135,7 @@ class SqliteMessageIndexRepository:
         return self._db.query_as(
             _entry,
             "SELECT * FROM message_index WHERE account_id = ? AND thread_id IS NULL"
-            " ORDER BY rowid LIMIT ?",
+            " ORDER BY seq LIMIT ?",
             (account_id, limit),
         )
 
@@ -162,7 +161,7 @@ def _join(
         [
             r["thread_id"]
             for r in db.execute(
-                "SELECT thread_id, MIN(rowid) AS born FROM thread_links"
+                "SELECT thread_id, MIN(seq) AS born FROM thread_links"
                 f" WHERE account_id = ? AND header IN ({marks})"
                 " GROUP BY thread_id ORDER BY born",
                 (account_id, *headers),

@@ -21,9 +21,11 @@ from benethos_mailbox_service.cli import main
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.storage import (
     Database,
+    SqliteMessageIndexRepository,
     SqliteRecoveryCodeRepository,
     SqliteRoleRepository,
     SqliteUserRepository,
+    ThreadChain,
 )
 from benethos_mailbox_service.data.storage.sqlite import SCHEMA_VERSION
 from benethos_mailbox_service.data.storage.sqlite.migrations import (
@@ -34,6 +36,8 @@ from benethos_mailbox_service.data.storage.sqlite.migrations import (
 )
 from benethos_mailbox_service.domain.rights import Access
 from benethos_mailbox_service.errors import StorageError
+
+from .old_schema import at_schema
 
 
 def test_webhooks_of_users_deleted_before_are_dropped(tmp_path: Path) -> None:
@@ -218,6 +222,58 @@ def test_recovery_codes_of_schema_18_are_deleted(tmp_path: Path) -> None:
     codes = SqliteRecoveryCodeRepository(db)
     assert codes.left("usr_1") == 0
     assert codes.use("usr_1", "", "h", datetime.now(UTC)) is False
+    db.close()
+
+
+def test_the_index_keeps_its_order_through_schema_26(tmp_path: Path) -> None:
+    """The order came from the hidden rowid and is a column since: ids
+    that do not sort, a deleted entry between, a thread born later
+    whose id sorts first."""
+    path = tmp_path / "old.db"
+    raw = at_schema(path, 25)
+    raw.execute(
+        "INSERT INTO accounts (id, provider, email, status, settings)"
+        " VALUES ('acc_1', 'imap', 'a@example.org', 'active', '{}')"
+    )
+    for message, thread in (
+        ("msg_c", "thr_z"),
+        ("msg_a", None),
+        ("msg_b", "thr_a"),
+        ("msg_e", None),
+        ("msg_d", "thr_z"),
+    ):
+        raw.execute(
+            "INSERT INTO message_index (account_id, id, native_id, folder_id,"
+            " thread_id) VALUES ('acc_1', ?, ?, 'f_inbox', ?)",
+            (message, f"n_{message}", thread),
+        )
+    raw.execute("DELETE FROM message_index WHERE id = 'msg_a'")
+    for header, thread in (("<z@x>", "thr_z"), ("<a@x>", "thr_a")):
+        raw.execute(
+            "INSERT INTO thread_links (account_id, header, thread_id)"
+            " VALUES ('acc_1', ?, ?)",
+            (header, thread),
+        )
+    raw.close()
+    db = Database(path)
+    rows = db.query("SELECT seq, id FROM message_index ORDER BY seq")
+    assert [tuple(r) for r in rows] == [
+        (1, "msg_c"),
+        (3, "msg_b"),
+        (4, "msg_e"),
+        (5, "msg_d"),
+    ]
+    index = SqliteMessageIndexRepository(db)
+    ids = [e.id for e in index.in_folders("acc_1", ["f_inbox"])]
+    assert ids == ["msg_c", "msg_b", "msg_e", "msg_d"]
+    assert [e.id for e in index.in_thread("acc_1", "thr_z")] == ["msg_c", "msg_d"]
+    assert [e.id for e in index.unthreaded("acc_1", 5)] == ["msg_e"]
+    merged = index.thread(
+        "acc_1",
+        [ThreadChain(message_id="msg_e", headers=("<a@x>", "<z@x>"))],
+        lambda: "thr_new",
+    )
+    assert merged == {"msg_b": "thr_z"}
     db.close()
 
 
