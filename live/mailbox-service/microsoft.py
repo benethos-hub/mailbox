@@ -9,6 +9,8 @@
     uv run python live/mailbox-service/microsoft.py --project --connect
     # the check
     uv run python live/mailbox-service/microsoft.py --project
+    # a draft read twice, for the outbox: sends nothing
+    uv run python live/mailbox-service/microsoft.py --project --outbox-draft
 
 Needs, in live/.env: the test account's address in LIVE_MICROSOFT_EMAIL.
 Listing the address there confirms it as a test account (CLAUDE.md,
@@ -42,7 +44,10 @@ request, the other through an upload session, and both sides must hold
 them whole. Outlook.com blocked the test account once after several
 sends in a day, so it stays a run of its own. ``--marks`` reads, then
 puts ``$answered`` and ``$forwarded`` on the newest mail of the inbox and
-takes them off, one right after the other, and sends nothing. At the
+takes them off, one right after the other, and sends nothing.
+``--outbox-draft`` stores a draft, reads it twice and deletes it again,
+for the outbox, which sends a queued draft only while it reads the same.
+It sends nothing. At the
 end every mail of this check left in either account, of this run or an
 earlier one, is deleted for good, found by the subject. The change feed
 must name the copy in Sent Items, which the service learns of through
@@ -54,6 +59,7 @@ IMAP IDLE. Credentials and mail content are never printed.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import secrets
 import sys
 import time
@@ -286,6 +292,37 @@ def _large_only(
         sweep(mailbox, [(bot_id, "inbox"), (ms_id, "sent"), (ms_id, "trash")], SUBJECT)
 
 
+def outbox_draft(run: Run, client: httpx.Client, account_id: str, email: str) -> None:
+    """A draft read twice: the outbox keeps a digest of a queued draft and
+    sends only while the draft reads the same. Graph renders a draft
+    anew for each read. Sends nothing, the draft is deleted at the end."""
+    base = f"/v1/accounts/{account_id}"
+    made = client.post(
+        f"{base}/drafts",
+        json={
+            "to": [{"email": email}],
+            "subject": f"{SUBJECT} outbox draft {secrets.token_hex(4)}",
+            "text": "A draft of live/mailbox-service/microsoft.py. It is not sent.",
+        },
+    )
+    if not run.check(
+        "a draft is stored", made.status_code == 201, str(made.status_code)
+    ):
+        return
+    draft_id = made.json()["id"]
+    try:
+        reads = [client.get(f"{base}/messages/{draft_id}/raw") for _ in range(2)]
+        digests = {hashlib.sha256(r.content).hexdigest() for r in reads}
+        run.check(
+            "the draft reads the same twice, so the outbox can tell a change",
+            all(r.status_code == 200 for r in reads) and len(digests) == 1,
+            f"{[r.status_code for r in reads]}, {len(digests)} digest(s)",
+        )
+    finally:
+        gone = client.delete(f"{base}/drafts/{draft_id}")
+        run.check("the draft is deleted again", gone.status_code == 204)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument(
@@ -294,6 +331,11 @@ def main() -> int:
     parser.add_argument("--project", action="store_true", help="with the project's app")
     parser.add_argument(
         "--large", action="store_true", help="read, then send the large mail alone"
+    )
+    parser.add_argument(
+        "--outbox-draft",
+        action="store_true",
+        help="whether a draft reads the same twice, for the outbox; sends nothing",
     )
     parser.add_argument(
         "--marks",
@@ -330,6 +372,9 @@ def main() -> int:
                 print("run with --connect first")
                 return 1
             assert account is not None
+            if options.outbox_draft:
+                outbox_draft(run, client, account["id"], email)
+                return run.finish()
             bot = accounts(env)[0]
             bot_id, outcome = register(mailbox, env, bot)
             if not run.check(

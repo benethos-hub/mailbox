@@ -107,6 +107,9 @@ alone. Before a change in a package, read its file as well as this one:
   - `uv run python live/mailbox-service/gmail.py [--connect]`: the Gmail test account.
   - `uv run python live/mailbox-service/pop3.py`, `live/mailbox-service/jmap.py` and `live/mailbox-service/imap.py`:
     the test mail server in a container.
+  - `uv run python live/mailbox-service/outbox.py [--bots]`: the outbox
+    against the test mail server in a container, with `--bots` between
+    the first two test accounts as well.
   - `live/mailbox-agents/`: the checks of the agents, against a mail
     server, a service and a model gateway of their own
     ([docs/LIVE.md](docs/LIVE.md#the-agents)).
