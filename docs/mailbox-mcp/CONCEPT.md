@@ -56,8 +56,10 @@ one or two `operationId`s.
 | `create_draft` | drafts | `create_draft`, incl. reply / forward by reference, with or without the quote, a forward inline or as a file, `reply_to`, attachments as base64 and of other mail |
 | `update_draft` | drafts | `update_draft`, replaces the whole draft |
 | `delete_draft` | drafts | `delete_draft` |
-| `send_message` | send | `send_message`, with an idempotency key derived from the call |
-| `send_draft` | send | `send_draft`, with an idempotency key derived from the call |
+| `send_message` | send | `send_message`, with an idempotency key derived from the call. With `outbox` or `send_at` the client's `queue_message`, its key derived the same way |
+| `send_draft` | send | `send_draft`, with an idempotency key derived from the call. With `outbox` or `send_at` the client's `queue_draft` |
+| `list_outbox` | send | `list_outbox` |
+| `cancel_send` | send | `cancel_send` |
 | `server_status` | always | none: what the server knows, from its own calls of `health` and `get_me` |
 
 **Decided 2026-09-24, attachments:** `get_attachment` hands images over

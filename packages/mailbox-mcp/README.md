@@ -535,8 +535,10 @@ beside `server_status`, and it lists no account. The tools:
 | `create_draft` | `drafts` | a draft in plain text or HTML, recipients optional. With `original_id` a reply, reply to all or forward, with `quote` false without the original, `forward_as` attachment for the original as a file. `reply_to`, `attachments` as base64, `attach_from` for attachments of other mail. |
 | `update_draft` | `drafts` | replaces a draft as a whole, `keep_attachments` keeps stored files. It answers with the draft's id from now on, a new one at Microsoft, JMAP and Gmail |
 | `delete_draft` | `drafts` | deletes a draft for good, reaches drafts only |
-| `send_message` | `send` | sends a mail at once, plain text or HTML. It takes what `create_draft` takes. It answers the mail's `Message-ID`, the recipients the server refused and `sent_copy_id`, the copy in the sent folder where the account keeps one |
-| `send_draft` | `send` | sends a stored draft, and answers the same as `send_message` |
+| `send_message` | `send` | sends a mail at once, plain text or HTML. It takes what `create_draft` takes. It answers the mail's `Message-ID`, the recipients the server refused and `sent_copy_id`, the copy in the sent folder where the account keeps one. With `outbox` or `send_at` (at most 30 days ahead) it goes into the outbox instead: kept as a draft and sent in the background, tried again while the mail server is away. It then answers `queued` with its `job_id` |
+| `send_draft` | `send` | sends a stored draft, and answers the same as `send_message`. It takes `outbox` and `send_at` as well |
+| `list_outbox` | `send` | the sends of the outbox, newest first, with their state: waiting, sent, failed, cancelled, or `unknown` when whether it went out cannot be told |
+| `cancel_send` | `send` | cancels a send of the outbox that still waits. Its draft stays |
 | `server_status` | – | what runs: the name and version of this server, the transport, Python, the MCP library and the uptime. With `details` the service as this server last saw it: whether it answered and how long ago, its version and whether it matches, whether it took the token, and the tools offered. Offered always, also when the service refuses the token, and asks the service nothing |
 
 Each tool has a title for display and the standard MCP hints. Clients

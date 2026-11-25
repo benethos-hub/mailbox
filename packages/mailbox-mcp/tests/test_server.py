@@ -248,6 +248,8 @@ HINTS = {
     "delete_draft": ("Delete a draft", False, True, True, True),
     "send_message": ("Send a mail", False, True, False, True),
     "send_draft": ("Send a draft", False, True, False, True),
+    "list_outbox": ("List the outbox", True, None, None, True),
+    "cancel_send": ("Cancel a queued send", False, False, True, True),
     "server_status": ("Server status", True, None, None, False),
 }
 

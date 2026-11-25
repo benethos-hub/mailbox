@@ -206,9 +206,9 @@ Part of the [roadmap](../ROADMAP.md): phase 5, in progress, and phase 5a, done.
   with `outbox` or `send_at` waits as a draft in the drafts folder and is
   sent in the background, tried again for 48 hours, never twice when its
   outcome is unclear, not at all when its draft changed. Done in the
-  service and the client: the API, the runner, the audit of sends, the
-  webhooks, status and metrics. Open: the MCP server, the UI and a live
-  check
+  service, the client and the MCP server: the API, the runner, the audit
+  of sends, the webhooks, status and metrics, the tools. Open: the UI and
+  a live check
 
 Open in this phase, each planned in CONCEPT.md:
 

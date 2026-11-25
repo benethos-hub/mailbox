@@ -23,8 +23,10 @@ from .models import (
     MeAccount,
     Message,
     MessageSummary,
+    OutboxEntry,
     Outcome,
     Page,
+    Paged,
     SenderCheck,
     Sending,
     Sent,
@@ -405,3 +407,59 @@ def foreign(source: str, text: str) -> str:
 def _defused(body: str) -> str:
     """A body cannot close the marker early and speak outside it."""
     return re.sub(r"</?\s*mail-content", "[mail-content", body, flags=re.IGNORECASE)
+
+
+QUEUED_NOTE = (
+    "Not sent yet. The service sends it in the background and tries again "
+    "while the mail server is away. list_outbox tells how it went, "
+    "cancel_send stops it while it waits. Its draft stays in the drafts "
+    "folder until it went out."
+)
+OUTBOX_NOTE = (
+    "state: queued waits, sending goes out now, sent went out, failed and "
+    "cancelled did not go out and their draft stays, unknown cannot be told "
+    "and is not sent again: ask the user to look whether it arrived."
+)
+
+
+def queued(entry: OutboxEntry) -> answers.Sent:
+    """A send put into the outbox: not sent yet."""
+    found: answers.Sent = {
+        "sent": False,
+        "queued": True,
+        "job_id": entry.id,
+        "state": entry.state,
+        "due_at": entry.due_at.isoformat(),
+        "draft_id": entry.draft_id,
+        "message_id_header": entry.message_id_header,
+        "note": QUEUED_NOTE,
+    }
+    if entry.send_at is not None:
+        found["send_at"] = entry.send_at.isoformat()
+    return found
+
+
+def outbox_job(entry: OutboxEntry) -> answers.OutboxJob:
+    found: answers.OutboxJob = {
+        "job_id": entry.id,
+        "state": entry.state,
+        "recipients": entry.recipients,
+        "due_at": entry.due_at.isoformat(),
+        "attempts": entry.attempts,
+        "draft_id": entry.draft_id,
+        "message_id_header": entry.message_id_header,
+    }
+    if entry.last_error is not None:
+        found["last_error"] = entry.last_error
+    if entry.finished_at is not None:
+        found["finished_at"] = entry.finished_at.isoformat()
+    return found
+
+
+def outbox(found: Paged[OutboxEntry]) -> answers.Outbox:
+    """A page of the outbox."""
+    return {
+        "jobs": [outbox_job(item) for item in found.items],
+        "next_cursor": found.next_cursor,
+        "note": OUTBOX_NOTE,
+    }

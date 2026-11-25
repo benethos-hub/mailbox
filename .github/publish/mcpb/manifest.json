@@ -105,6 +105,14 @@
       "description": "Send a draft as it is stored."
     },
     {
+      "name": "list_outbox",
+      "description": "The sends of the outbox of an account, newest first: those waiting and those that ended, with their state."
+    },
+    {
+      "name": "cancel_send",
+      "description": "Cancel a send of the outbox that still waits."
+    },
+    {
       "name": "server_status",
       "description": "What this server is and how long it has run: its name and version, the transport, Python, the MCP library and the uptime."
     }
