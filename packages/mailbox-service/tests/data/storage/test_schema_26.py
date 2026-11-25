@@ -18,9 +18,9 @@ from benethos_mailbox_service.data.models import SendFilter, SendRecord, User
 from benethos_mailbox_service.data.storage import (
     Database,
     ThreadChain,
+    inspect_file,
     repositories_on,
 )
-from benethos_mailbox_service.data.storage.sqlite.database import inspect_file
 from benethos_mailbox_service.data.storage.sqlite.users import ascii_lower
 from benethos_mailbox_service.errors import ConflictError, StorageError
 

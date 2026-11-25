@@ -7,11 +7,14 @@ from __future__ import annotations
 import sqlite3
 from collections.abc import Collection, Iterable
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from ....common.clock import iso, parse_iso
 from ...models import ChangeRecord
 from ..changes import LoggedChange
-from .database import Database
+
+if TYPE_CHECKING:
+    from ..sql.database import Database
 
 _HORIZON = "changes_horizon"
 _LAST = "changes_last"

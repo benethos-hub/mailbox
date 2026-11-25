@@ -4,7 +4,7 @@ the module that holds them."""
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pytest
@@ -14,7 +14,8 @@ from benethos_mailbox_service.data.storage import (
     MessageIndexRepository,
     Repositories,
 )
-from benethos_mailbox_service.data.storage.sqlite import database
+from benethos_mailbox_service.data.storage.sql import database, dialect
+from benethos_mailbox_service.data.storage.sqlite import file
 
 from .disk_helpers import Disk
 from .index_helpers import ACC
@@ -30,8 +31,10 @@ def index(repositories: Repositories) -> MessageIndexRepository:
 
 
 @pytest.fixture
-def disk(monkeypatch: pytest.MonkeyPatch) -> Disk:
-    return Disk(monkeypatch)
+def disk() -> Iterator[Disk]:
+    made = Disk()
+    yield made
+    made.mend()
 
 
 @pytest.fixture
@@ -39,7 +42,7 @@ def in_chunks(monkeypatch: pytest.MonkeyPatch) -> Callable[[int], None]:
     """Sets how many values one ``IN`` of the database takes at most."""
 
     def size(values: int) -> None:
-        monkeypatch.setattr(database, "IN_CHUNK", values)
+        monkeypatch.setattr(dialect, "IN_CHUNK", values)
 
     return size
 
@@ -62,4 +65,4 @@ def no_room_for_copy(monkeypatch: pytest.MonkeyPatch) -> None:
     def full(path: Path, data: bytes = b"") -> None:
         raise OSError(28, "No space left on device")
 
-    monkeypatch.setattr(database, "create_private", full)
+    monkeypatch.setattr(file, "create_private", full)

@@ -7,9 +7,11 @@ from __future__ import annotations
 
 import sqlite3
 from collections.abc import Callable
-from typing import Generic, TypeVar
+from typing import TYPE_CHECKING, Generic, TypeVar
 
-from .database import Database
+if TYPE_CHECKING:
+    from ..sql.database import Database
+
 
 T = TypeVar("T")
 

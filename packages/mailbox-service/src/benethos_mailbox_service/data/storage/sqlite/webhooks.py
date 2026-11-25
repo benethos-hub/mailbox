@@ -6,12 +6,15 @@ import builtins
 import json
 import sqlite3
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from ....common.clock import iso, parse_iso
 from ...models import ChangeKind, Webhook
 from ..webhooks import Attempt, Delivery, Sealed, WebhookRecord
-from .database import Database
 from .rows import SqliteRows
+
+if TYPE_CHECKING:
+    from ..sql.database import Database
 
 
 class SqliteWebhookRepository:

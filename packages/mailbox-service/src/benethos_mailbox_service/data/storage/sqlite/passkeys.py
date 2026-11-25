@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import sqlite3
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from ....common.clock import iso, parse_iso
 from ....errors import ConflictError
 from ..passkeys import StoredPasskey
-from .database import Database
+
+if TYPE_CHECKING:
+    from ..sql.database import Database
 
 
 class SqlitePasskeyRepository:

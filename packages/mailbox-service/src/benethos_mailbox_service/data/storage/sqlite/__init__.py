@@ -7,9 +7,7 @@ from .accounts import SqliteAccountRepository
 from .audit import SqliteAuditRepository
 from .changes import SqliteChangeLogRepository
 from .credentials import SqliteCredentialRepository, SqliteKeyRepository
-from .database import (
-    SCHEMA_VERSION,
-    Database,
+from .file import (
     Migrated,
     inspect_file,
     migrate_file,
@@ -20,6 +18,7 @@ from .database import (
 from .idempotency import SqliteIdempotencyRepository
 from .index import SqliteMessageIndexRepository
 from .links import SqliteLinkRepository
+from .migrations import SCHEMA_VERSION
 from .outbox import SqliteOutboxRepository
 from .passkeys import SqlitePasskeyRepository
 from .passwords import SqlitePasswordRepository
@@ -32,7 +31,6 @@ from .webhooks import SqliteWebhookRepository
 
 __all__ = [
     "SCHEMA_VERSION",
-    "Database",
     "Migrated",
     "SqliteAccountRepository",
     "SqliteChangeLogRepository",
