@@ -126,16 +126,39 @@ _SEQUENCE = sa.table("sqlite_sequence", sa.column("name"), sa.column("seq"))
 
 def count_on_from(connection: sa.Connection, table: sa.Table, last: int) -> None:
     """The counting key of ``table`` hands out numbers after ``last`` at
-    least, also when the rows that had them are gone. On SQLite in
-    ``sqlite_sequence``. PostgreSQL comes with stage 3."""
-    if connection.dialect.name != SQLITE:
-        raise NotImplementedError(f"counting on in {connection.dialect.name}")
+    least, also when the rows that had them are gone. Never lowered. On
+    SQLite in ``sqlite_sequence``, on PostgreSQL in the sequence of the
+    column."""
+    if connection.dialect.name == POSTGRESQL:
+        _sequence_on_from(connection, table, last)
+        return
     name = _SEQUENCE.c.name == table.name
     raised = connection.execute(
         sa.update(_SEQUENCE).where(name).values(seq=sa.func.max(_SEQUENCE.c.seq, last))
     ).rowcount
     if not raised:
         connection.execute(sa.insert(_SEQUENCE).values(name=table.name, seq=last))
+
+
+def _sequence_on_from(connection: sa.Connection, table: sa.Table, last: int) -> None:
+    """The sequence behind the counting key of ``table``, set to ``last``
+    when it would hand out that number or a lower one."""
+    [key] = table.primary_key.columns
+    found = connection.execute(
+        sa.select(sa.func.pg_get_serial_sequence(table.name, key.name))
+    ).scalar()
+    if found is None:
+        raise ValueError(f"the key of {table.name} counts with no sequence")
+    schema, _, name = str(found).partition(".")
+    sequence = sa.table(
+        name, sa.column("last_value"), sa.column("is_called"), schema=schema
+    )
+    held = connection.execute(
+        sa.select(sequence.c.last_value, sequence.c.is_called)
+    ).one()
+    current = held.last_value if held.is_called else 0
+    if last > current:
+        connection.execute(sa.select(sa.func.setval(str(found), last)))
 
 
 def _insert(table: sa.Table, dialect: sa.Dialect) -> Insert:
