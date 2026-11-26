@@ -10,10 +10,11 @@ reads a fixed state and holds no writer up.
 
 from __future__ import annotations
 
+import hashlib
 import re
 import threading
 from collections.abc import Iterator
-from contextlib import AbstractContextManager, contextmanager, nullcontext, suppress
+from contextlib import AbstractContextManager, contextmanager, suppress
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -122,8 +123,31 @@ class ServerPlace:
     def shrink(self) -> None:
         """The server gives back what deletions freed by itself."""
 
-    def serving(self) -> AbstractContextManager[bool]:
-        return nullcontext(True)
+    @contextmanager
+    def serving(self) -> Iterator[bool]:
+        """Two services on one schema would lose changes of the feed, so
+        the second is refused: the lock of the session on its one
+        connection, keyed by the schema, held until the block ends or the
+        connection closes."""
+        if self._connection is None:
+            raise StorageError("the database is not open")
+        key = lock_key(self._server.schema_name)
+        with translated():
+            got = self._connection.execute(
+                sa.select(sa.func.pg_try_advisory_lock(key))
+            ).scalar()
+            self._connection.commit()
+        if not got:
+            raise StorageError(
+                "another service runs on this database: one service per"
+                " schema of a database server"
+            )
+        try:
+            yield True
+        finally:
+            with suppress(Exception), translated():
+                self._connection.execute(sa.select(sa.func.pg_advisory_unlock(key)))
+                self._connection.commit()
 
     def snapshot_file(self, lock: threading.RLock) -> AbstractContextManager[Path]:
         raise StorageError("a database on a server has no file")
@@ -216,3 +240,10 @@ def tls_arguments(
         "sslmode": "verify-full",
         "sslrootcert": "system" if ca_file is None else str(ca_file),
     }
+
+
+def lock_key(schema: str) -> int:
+    """The key of the lock a running service holds on ``schema``: a
+    number of 64 bits drawn from its name, the same in every process."""
+    digest = hashlib.sha256(f"benethos-mailbox-service:{schema}".encode()).digest()
+    return int.from_bytes(digest[:8], "big", signed=True)
