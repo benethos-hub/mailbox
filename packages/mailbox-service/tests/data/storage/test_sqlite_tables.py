@@ -121,6 +121,9 @@ def test_rows_are_read_in_chunks_in_the_order_of_the_key(
             (n, AT),
         )
     assert [row[0] for row in db.rows("changes")] == [1, 2, 3, 4, 5, 6, 7]
+    # A view of one moment, as a backup and a move read, in chunks too.
+    with db.view() as records:
+        assert [row[0] for row in records.rows("changes")] == [1, 2, 3, 4, 5, 6, 7]
     db.close()
 
 

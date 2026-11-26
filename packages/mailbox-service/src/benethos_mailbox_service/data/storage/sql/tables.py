@@ -8,8 +8,9 @@ from a caller. Values always go into a statement as parameters.
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator, Sequence
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from dataclasses import dataclass
+from functools import partial
 from itertools import islice
 from typing import Any
 
@@ -89,13 +90,7 @@ class Fixed:
     def rows(self, table: str) -> Iterator[tuple[Any, ...]]:
         """The rows of ``table`` in the order of its key, read in chunks."""
         shape = table_named(self.tables(), table)
-        after: tuple[Any, ...] | None = None
-        while True:
-            part = read_chunk(self._conn, shape, after, ROWS_CHUNK)
-            yield from part
-            if len(part) < ROWS_CHUNK:
-                return
-            after = key_of(shape, part[-1])
+        yield from chunked_rows(shape, partial(read_chunk, self._conn))
 
 
 def _kind(kind: sa.types.TypeEngine[Any]) -> str:
@@ -172,6 +167,21 @@ def read_chunk(
     return [tuple(row) for row in conn.execute(query.order_by(*key).limit(size))]
 
 
+def chunked_rows(
+    table: Table,
+    read: Callable[[Table, Sequence[Any] | None, int], list[tuple[Any, ...]]],
+) -> Iterator[tuple[Any, ...]]:
+    """The rows of ``table`` in the order of its key, ``ROWS_CHUNK`` at a
+    time, each chunk from ``read``, as ``read_chunk`` reads one."""
+    after: tuple[Any, ...] | None = None
+    while True:
+        part = read(table, after, ROWS_CHUNK)
+        yield from part
+        if len(part) < ROWS_CHUNK:
+            return
+        after = key_of(table, part[-1])
+
+
 def key_of(table: Table, row: Sequence[Any]) -> tuple[Any, ...]:
     """The key of ``row``, a row of ``table`` as ``read_chunk`` reads it."""
     return tuple(row[table.columns.index(c)] for c in table.key)
@@ -182,7 +192,6 @@ def fill_table(
     table: Table,
     columns: Sequence[str],
     rows: Iterable[Sequence[Any]],
-    size: int,
 ) -> int:
     """Write ``rows``, each with the values of ``columns``, into ``table``,
     which holds none yet: only ``meta`` holds what the schema wrote, and
@@ -199,7 +208,7 @@ def fill_table(
         statement = insert_or_update(meta, table.key, list(columns), conn.dialect)
     count = 0
     stream = iter(rows)
-    while part := list(islice(stream, size)):
+    while part := list(islice(stream, ROWS_CHUNK)):
         conn.execute(statement, [dict(zip(columns, row, strict=True)) for row in part])
         count += len(part)
     return count

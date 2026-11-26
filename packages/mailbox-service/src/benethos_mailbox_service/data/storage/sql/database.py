@@ -33,13 +33,12 @@ from .place import Place
 from .revisions import SCHEMA_VERSION
 from .schema import meta
 from .tables import (
-    ROWS_CHUNK,
     Fixed,
     Table,
     align_changes,
     align_counter,
+    chunked_rows,
     fill_table,
-    key_of,
     mark_moving,
     moving,
     read_chunk,
@@ -217,15 +216,14 @@ class Database:
         """The rows of ``table``, a table of ``tables``, as tuples of its
         columns in the order of its key. Read in chunks, each under the
         lock, so the whole table is never in memory."""
-        shape = self._table(table)
-        after: tuple[Any, ...] | None = None
-        while True:
+
+        def part(
+            shape: Table, after: Sequence[Any] | None, size: int
+        ) -> list[tuple[Any, ...]]:
             with self.connected() as conn:
-                part = read_chunk(conn, shape, after, ROWS_CHUNK)
-            yield from part
-            if len(part) < ROWS_CHUNK:
-                return
-            after = key_of(shape, part[-1])
+                return read_chunk(conn, shape, after, size)
+
+        yield from chunked_rows(self._table(table), part)
 
     def fill(
         self, table: str, columns: Sequence[str], rows: Iterable[Sequence[Any]]
@@ -236,7 +234,7 @@ class Database:
         out. Answers how many rows."""
         shape = self._table(table)
         with self.connected() as conn:
-            count = fill_table(conn, shape, columns, rows, ROWS_CHUNK)
+            count = fill_table(conn, shape, columns, rows)
             align_counter(conn, shape)
             align_changes(conn)
         return count
