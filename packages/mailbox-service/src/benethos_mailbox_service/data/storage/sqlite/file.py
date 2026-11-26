@@ -28,6 +28,9 @@ from ...files import create_private, free_path
 from ..migrated import Migrated
 from .migrations import MIGRATIONS, SCHEMA_VERSION
 
+# The connection of the driver, for the one place under sql/ that holds it.
+Driver = sqlite3.Connection
+
 # What SQLite keeps beside a database: its rollback journal, its write
 # ahead log and the index of the shared memory.
 SIDECARS = ("-journal", "-wal", "-shm")

@@ -61,7 +61,7 @@ def run_many(db: Database, sql: str, rows: Iterable[Sequence[Any]]) -> None:
 def _driver(db: Database) -> sqlite3.Connection:
     """The connection of the driver beneath ``db``: the one place a test
     knows where it sits."""
-    driver: sqlite3.Connection = db._driver
+    driver: sqlite3.Connection = db._place.driver
     return driver
 
 
