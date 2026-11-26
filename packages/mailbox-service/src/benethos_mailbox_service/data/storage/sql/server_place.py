@@ -13,7 +13,8 @@ from __future__ import annotations
 import hashlib
 import re
 import threading
-from collections.abc import Iterator
+import time
+from collections.abc import Callable, Iterator
 from contextlib import AbstractContextManager, contextmanager, suppress
 from dataclasses import dataclass
 from pathlib import Path
@@ -22,10 +23,11 @@ from typing import Literal
 import sqlalchemy as sa
 
 from ....common.hosts import is_loopback_host
-from ....errors import StorageError
+from ....errors import StorageError, StorageUnavailableError
 from ..migrated import Migrated
 from . import revisions
 from .dialect import reading_fixed, server_engine
+from .outage import Availability, Outage
 from .place import translated_by
 
 # A name the server takes without quoting, so it can stand in the
@@ -66,9 +68,13 @@ class Server:
 
 
 class ServerPlace:
-    """The schema ``server`` names, on the server it names."""
+    """The schema ``server`` names, on the server it names. A server that
+    is away is kept so: every call fails at once until the next attempt
+    is due, by ``clock`` in seconds (``outage``)."""
 
-    def __init__(self, server: Server) -> None:
+    def __init__(
+        self, server: Server, clock: Callable[[], float] = time.monotonic
+    ) -> None:
         if not _PLAIN_NAME.fullmatch(server.schema_name):
             raise StorageError(
                 "the schema of the database is not a plain name:"
@@ -77,6 +83,10 @@ class ServerPlace:
         self._server = server
         self._engine: sa.Engine | None = None
         self._connection: sa.Connection | None = None
+        self._outage = Outage(clock)
+        self._report: Callable[[Availability], None] | None = None
+        # The key of the lock of a running service, while it is held.
+        self._held: int | None = None
 
     def open(self, schema: int, newest: int) -> tuple[sa.Connection, Migrated | None]:
         if schema < revisions.BASELINE:
@@ -85,7 +95,7 @@ class ServerPlace:
                 f" not {schema}"
             )
         self._engine = self._engine_of()
-        with translated():
+        with self.translated():
             self._connection = self._engine.connect()
             version = self._connection.execute(
                 sa.select(sa.func.current_setting("server_version_num"))
@@ -143,22 +153,70 @@ class ServerPlace:
         if self._connection is None:
             raise StorageError("the database is not open")
         key = lock_key(self._server.schema_name)
-        with translated():
-            got = self._connection.execute(
-                sa.select(sa.func.pg_try_advisory_lock(key))
-            ).scalar()
-            self._connection.commit()
+        with self.translated():
+            got = self._locked(self._connection, key)
         if not got:
             raise StorageError(
                 "another service runs on this database: one service per"
                 " schema of a database server"
             )
+        self._held = key
         try:
             yield True
         finally:
-            with suppress(Exception), translated():
+            self._held = None
+            with suppress(Exception), self.translated():
                 self._connection.execute(sa.select(sa.func.pg_advisory_unlock(key)))
                 self._connection.commit()
+
+    @staticmethod
+    def _locked(connection: sa.Connection, key: int) -> bool:
+        """Whether the lock of the session ``key`` is taken now, by this
+        session."""
+        got = connection.execute(sa.select(sa.func.pg_try_advisory_lock(key))).scalar()
+        connection.commit()
+        return bool(got)
+
+    def ready(self) -> None:
+        """Before each call: at once a StorageUnavailableError while the
+        server is away and the pause runs. When it is over, one attempt
+        on a new session, as the first was: its search path from the
+        connecting, the lock of a running service taken again."""
+        if not self._outage.away:
+            return
+        if not self._outage.due():
+            raise self._outage.unavailable()
+        connection = self._connection
+        if connection is None:
+            raise StorageError("the database is not open")
+        try:
+            with suppress(sa.exc.SQLAlchemyError):
+                connection.rollback()
+            connection.execute(sa.select(sa.literal(1)))
+            connection.commit()
+            got = self._held is None or self._locked(connection, self._held)
+        except sa.exc.DBAPIError as exc:
+            self._failed(exc)
+            raise self._outage.unavailable() from None
+        seconds = self._outage.mended() or 0.0
+        self._said(Availability(away=False, seconds=seconds, lock_lost=not got))
+        if not got:
+            raise StorageError("another service took this database while it was away")
+
+    def watch(self, report: Callable[[Availability], None]) -> None:
+        self._report = report
+
+    def unavailable(self) -> StorageUnavailableError | None:
+        return self._outage.unavailable() if self._outage.away else None
+
+    def _failed(self, exc: sa.exc.DBAPIError) -> None:
+        cause = _kind(exc.orig)
+        if self._outage.failed(cause):
+            self._said(Availability(away=True, cause=cause))
+
+    def _said(self, change: Availability) -> None:
+        if self._report is not None:
+            self._report(change)
 
     def snapshot_file(self, lock: threading.RLock) -> AbstractContextManager[Path]:
         raise StorageError("a database on a server has no file")
@@ -169,13 +227,24 @@ class ServerPlace:
         REPEATABLE READ."""
         if self._engine is None:
             raise StorageError("the database is not open")
-        with translated():
+        self.ready()
+        with self.translated():
             conn = reading_fixed(self._engine.connect())
         with conn, conn.begin():
             yield conn
 
-    def translated(self) -> AbstractContextManager[None]:
-        return translated()
+    @contextmanager
+    def translated(self) -> Iterator[None]:
+        """The failures of the database as this project's errors, and a
+        lost connection as the server going away."""
+        with translated():
+            try:
+                yield
+            except sa.exc.DBAPIError as exc:
+                if not _lost(exc):
+                    raise
+                self._failed(exc)
+                raise self._outage.unavailable() from None
 
     def close(self) -> None:
         with suppress(Exception):
@@ -258,3 +327,16 @@ def lock_key(schema: str) -> int:
     number of 64 bits drawn from its name, the same in every process."""
     digest = hashlib.sha256(f"benethos-mailbox-service:{schema}".encode()).digest()
     return int.from_bytes(digest[:8], "big", signed=True)
+
+
+def _lost(exc: sa.exc.DBAPIError) -> bool:
+    """Whether ``exc`` is the connection lost or not made: SQLAlchemy saw
+    a disconnect, or the server gave a code of class 08 (connection) or
+    57P (the server going down), or none, as a failure of the client to
+    connect has."""
+    if exc.connection_invalidated:
+        return True
+    if not isinstance(exc, sa.exc.OperationalError):
+        return False
+    code = getattr(exc.orig, "sqlstate", None)
+    return code is None or code.startswith(("08", "57P"))

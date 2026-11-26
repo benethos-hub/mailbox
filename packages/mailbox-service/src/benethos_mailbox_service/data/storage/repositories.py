@@ -6,13 +6,13 @@ SQLite for ``sqlite``, a schema on a server for ``postgres``.
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator, Sequence
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal, Protocol
 
-from ...errors import StorageError
+from ...errors import StorageError, StorageUnavailableError
 from .accounts import AccountRepository, InMemoryAccountRepository
 from .audit import AuditRepository, InMemoryAuditRepository
 from .changes import ChangeLogRepository, InMemoryChangeLogRepository
@@ -52,6 +52,7 @@ from .sql import (
     SqlWebhookRepository,
 )
 from .sql.database import Database
+from .sql.outage import Availability
 from .sql.server_place import Server, ServerPlace
 from .sql.tables import Table
 from .totp import InMemoryTotpRepository, TotpRepository
@@ -87,6 +88,16 @@ class Records(Protocol):
 class Store(Records, Protocol):
     """What holds the records of all repositories: a fixed view of them
     for a backup, the mark of a running service, and closing."""
+
+    def unavailable(self) -> StorageUnavailableError | None:
+        """The error a call meets now, without asking the database: None
+        unless it is known to be away."""
+        ...
+
+    def watch(self, report: Callable[[Availability], None]) -> None:
+        """``report`` hears of each change of whether the database can be
+        reached."""
+        ...
 
     def view(self) -> AbstractContextManager[Records]:
         """The records at one moment, taken while the store is in use,

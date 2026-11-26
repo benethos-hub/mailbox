@@ -5,16 +5,17 @@ the old steps of its schema up to 26 and the files beside it live."""
 from __future__ import annotations
 
 import threading
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import AbstractContextManager, contextmanager, suppress
 from pathlib import Path
 
 import sqlalchemy as sa
 
-from ....errors import StorageError
+from ....errors import StorageError, StorageUnavailableError
 from ..migrated import Migrated
 from ..sqlite import file
 from .dialect import sqlite_engine
+from .outage import Availability
 from .place import translated_by
 
 
@@ -78,6 +79,15 @@ class FilePlace:
                     yield conn
             finally:
                 snap.close()
+
+    def ready(self) -> None:
+        """A file is there or fails on the call itself."""
+
+    def watch(self, report: Callable[[Availability], None]) -> None:
+        """A file is not away and back."""
+
+    def unavailable(self) -> StorageUnavailableError | None:
+        return None
 
     def translated(self) -> AbstractContextManager[None]:
         return translated()

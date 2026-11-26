@@ -15,7 +15,7 @@ would hold the statement and its values.
 from __future__ import annotations
 
 import threading
-from collections.abc import Iterable, Iterator, Sequence
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from contextlib import AbstractContextManager, contextmanager
 from datetime import datetime
 from pathlib import Path
@@ -24,10 +24,11 @@ from typing import Any
 import sqlalchemy as sa
 
 from ....common.clock import iso
-from ....errors import StorageError
+from ....errors import StorageError, StorageUnavailableError
 from ..migrated import Migrated
 from . import revisions
 from .file_place import FilePlace
+from .outage import Availability
 from .place import Place
 from .revisions import SCHEMA_VERSION
 from .schema import meta
@@ -136,6 +137,7 @@ class Database:
                 with self._connection.begin_nested():
                     yield self._connection
                 return
+            self._place.ready()
             try:
                 with self._connection.begin():
                     yield self._connection
@@ -176,6 +178,16 @@ class Database:
             if self._connection.in_transaction():
                 return
             self._place.shrink()
+
+    def unavailable(self) -> StorageUnavailableError | None:
+        """The error a call meets now, without asking the database: None
+        unless it is known to be away."""
+        return self._place.unavailable()
+
+    def watch(self, report: Callable[[Availability], None]) -> None:
+        """``report`` hears of each change of whether the database can be
+        reached, from the thread of the call that noticed it."""
+        self._place.watch(report)
 
     def serving(self) -> AbstractContextManager[bool]:
         """Mark the database as used by a running service, for as long as
