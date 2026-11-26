@@ -40,6 +40,14 @@ adheres to [Semantic Versioning](https://semver.org/).
   SQLite database, is refused there. `backup verify` there decrypts
   nothing onto a disk: a backup of format 3 is read block by block into
   a database in memory, one of format 1 or 2 into memory whole.
+- `storage move --to postgres|sqlite` moves the records between the
+  file of SQLite and the schema on PostgreSQL that the settings name.
+  The target must be empty, a running service on either side refuses
+  it, and the source stays as it is. Before anything is written, every
+  value is held to its column: a value that does not fit stops the move,
+  with the table, the column and how many. `--check` does only that.
+  After the copy, every table is counted and compared on both sides. A
+  database a move did not finish is not opened by the service.
 - `restore FILE` on PostgreSQL reads a backup of format 3 into the
   schema of the role, which must hold no table yet, and brings it to
   the schema of this version. It refuses while the service runs on that

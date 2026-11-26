@@ -115,6 +115,8 @@ def move_records(source: Path | Server, target: Path | Server) -> Moved:
     """Every record of ``source`` into ``target``, which holds none yet,
     checked first and compared after. MoveError when it cannot be made or
     did not hold: then the target keeps the mark and is not opened."""
+    if isinstance(target, Path):
+        _not_there(target)
     with ExitStack() as held:
         db = held.enter_context(_source(source))
         records = held.enter_context(db.view())
@@ -166,11 +168,7 @@ def _source(side: Path | Server) -> Iterator[Database]:
 def _target(side: Path | Server) -> Iterator[Database]:
     """A new database at ``side``, empty, locked."""
     if isinstance(side, Path):
-        if side.exists():
-            raise MoveError(
-                f"{side} exists: a move goes into a new database only."
-                " Move the file aside first"
-            )
+        _not_there(side)
         with _file_locked(side):
             db = Database(side, keep_copy=False)
             try:
@@ -185,6 +183,14 @@ def _target(side: Path | Server) -> Iterator[Database]:
                 f" an empty schema only. How to set the old one aside: {SET_ASIDE}"
             )
         yield Database(place=place)
+
+
+def _not_there(path: Path) -> None:
+    if path.exists():
+        raise MoveError(
+            f"{path} exists: a move goes into a new database only."
+            " Move the file aside first"
+        )
 
 
 def _current(schema: int) -> None:

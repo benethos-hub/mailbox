@@ -11,7 +11,17 @@ from types import ModuleType
 from benethos_mailbox_common.log import redact
 
 from .. import __version__
-from . import alert_rules, backup, keys, openapi, paths, restore, serve, users
+from . import (
+    alert_rules,
+    backup,
+    keys,
+    openapi,
+    paths,
+    restore,
+    serve,
+    storage,
+    users,
+)
 from .common import ENV_FILE_HELP, expected, message, say
 
 # In the order the help names them.
@@ -24,6 +34,7 @@ COMMANDS: dict[str, ModuleType] = {
     "keys": keys,
     "backup": backup,
     "restore": restore,
+    "storage": storage,
 }
 
 

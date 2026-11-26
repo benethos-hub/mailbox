@@ -29,6 +29,7 @@ PART_LINES = {
             "keys",
             "backup",
             "restore",
+            "storage",
         },
         {"common"},
     ),

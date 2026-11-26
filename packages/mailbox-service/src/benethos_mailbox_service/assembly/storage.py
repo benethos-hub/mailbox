@@ -71,7 +71,14 @@ def server_of(settings: Settings) -> Server | None:
     line. None for another storage."""
     if settings.storage != "postgres" or settings.database_url is None:
         return None
-    parts = database_url_parts(settings.database_url)
+    return database_server(settings)
+
+
+def database_server(settings: Settings) -> Server:
+    """The database server the settings name, whatever the storage says,
+    with the password of its role read now and kept from every log line.
+    ValueError when the settings lack it or break one of its rules."""
+    parts = database_url_parts(settings.check_database_server())
     password = settings.database_password().get_secret_value()
     redact.note(password)
     return Server(
