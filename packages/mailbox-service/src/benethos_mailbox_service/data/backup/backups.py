@@ -19,12 +19,11 @@ from __future__ import annotations
 
 import hashlib
 import io
-import json
 import os
 import shutil
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
-from dataclasses import asdict, dataclass, field, replace
+from dataclasses import replace
 from pathlib import Path
 from typing import BinaryIO
 
@@ -51,9 +50,6 @@ from ..storage import (
 )
 from .blocks import (
     BLOCK,
-    MAGIC,
-    MAGIC_1,
-    MAGIC_3,
     BackupError,
     Decrypting,
     Sealing,
@@ -61,24 +57,10 @@ from .blocks import (
     decrypt,
     sha256_of,
 )
+from .manifest import Manifest, head, read_header
 
-_MAGICS = {MAGIC_1: 1, MAGIC: 2, MAGIC_3: 3}
 # The first schema format 3 is written of: its export needs schema 26.
 _FIRST_EXPORTED = 26
-# The longest manifest line read: it holds four short fields.
-_MANIFEST_BYTES = 4096
-
-
-@dataclass(frozen=True, slots=True)
-class Manifest:
-    service_version: str
-    schema_version: int
-    created_at: str
-    sha256: str
-    # Format 3: the rows of each table.
-    rows: dict[str, int] | None = None
-    # Not in the file: the format its magic names.
-    format: int = field(default=2, compare=False)
 
 
 def create_backup(
@@ -176,7 +158,7 @@ def _sealed(
     """A backup at ``target`` of what ``written`` writes, encrypted block
     by block. Returns the SHA-256 of the plain bytes. A backup that cannot
     be finished is removed."""
-    header = _head(manifest)
+    header = head(manifest)
     try:
         create_private(target, header)
     except OSError as exc:
@@ -207,7 +189,7 @@ def read_backup(source: Path, master_key: bytes, into: Path) -> Manifest:
     # a crash.
     into.with_name(into.name + ".export").unlink(missing_ok=True)
     with file:
-        header, manifest = _header(file, source)
+        header, manifest = read_header(file, source)
         if manifest.format == 3:
             _exported_schema(manifest)
         try:
@@ -298,7 +280,7 @@ def verify_in_memory(source: Path, master_key: bytes) -> Manifest:
     except OSError as exc:
         raise BackupError(f"{source} cannot be read: {exc.strerror}") from None
     with file:
-        header, manifest = _header(file, source)
+        header, manifest = read_header(file, source)
         key = backup_key(master_key)
         if manifest.format == 3:
             _exported_schema(manifest)
@@ -342,7 +324,7 @@ def restore_on_server(source: Path, master_key: bytes, server: Server) -> Manife
     except OSError as exc:
         raise BackupError(f"{source} cannot be read: {exc.strerror}") from None
     with file:
-        header, manifest = _header(file, source)
+        header, manifest = read_header(file, source)
         if manifest.format != 3:
             raise BackupError(
                 f"a backup of format {manifest.format} holds the file of a SQLite"
@@ -440,37 +422,6 @@ def restore_backup(source: Path, master_key: bytes, target: Path) -> Manifest:
             "the service is running on this database: stop it first"
         ) from None
     return manifest
-
-
-def _header(file: BinaryIO, source: Path) -> tuple[bytes, Manifest]:
-    """The magic and the manifest line, and the manifest."""
-    magic = file.readline(len(MAGIC))
-    if magic not in _MAGICS:
-        raise BackupError(f"{source} is not a backup of this service")
-    line = file.readline(_MANIFEST_BYTES)
-    if not line.endswith(b"\n"):
-        raise BackupError(f"{source} is truncated")
-    try:
-        fields = json.loads(line)
-        if not isinstance(fields, dict):
-            raise TypeError
-        # The magic names the format, whatever the manifest says.
-        fields.pop("format", None)
-        manifest = Manifest(**fields, format=_MAGICS[magic])
-    except (ValueError, TypeError):
-        raise BackupError(f"{source} has an unreadable manifest") from None
-    return magic + line, manifest
-
-
-def _head(manifest: Manifest) -> bytes:
-    """The magic and the manifest line of ``manifest``'s format. Format 2
-    holds the four fields it always held."""
-    fields = asdict(manifest)
-    del fields["format"]
-    if manifest.format != 3:
-        del fields["rows"]
-    magic = {2: MAGIC, 3: MAGIC_3}[manifest.format]
-    return magic + json.dumps(fields).encode() + b"\n"
 
 
 def _replace(target: Path, staged: Path) -> None:

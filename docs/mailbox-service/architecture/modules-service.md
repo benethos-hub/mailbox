@@ -344,6 +344,7 @@ packages/mailbox-service/
                         #   passkeys (fido2)
       backup/           # encrypted backups of the database: the file
                         #   of blocks and its encryption (blocks.py),
+                        #   its magic and manifest (manifest.py),
                         #   writing, reading, checking and restoring
                         #   them (backups.py)
       export.py         # the records of a store as lines of JSON and
