@@ -35,8 +35,8 @@ def add(commands: Commands, option: argparse.ArgumentParser) -> None:
 
 
 def run(args: argparse.Namespace) -> None:
-    from ..assembly import key_provider, opened
-    from ..data.backup import restore_backup
+    from ..assembly import key_provider, opened, server_of
+    from ..data.backup import restore_backup, restore_on_server
     from ..domain.activity import HOST, ActivityLog, system
 
     if args.replace_master_key and not args.recovery_key:
@@ -53,7 +53,13 @@ def run(args: argparse.Namespace) -> None:
             "opens now would be lost with it: note its recovery key, then pass "
             "--replace-master-key"
         )
-    manifest = restore_backup(args.source, master, settings.database_path)
+    server = server_of(settings)
+    if server is not None:
+        manifest = restore_on_server(args.source, master, server)
+        kept = "It went into the empty schema of the database."
+    else:
+        manifest = restore_backup(args.source, master, settings.database_path)
+        kept = "The previous database was kept beside it."
     if held != master:
         with opened(settings) as services:
             services.vault.import_master_key(master, replace=args.replace_master_key)
@@ -68,7 +74,6 @@ def run(args: argparse.Namespace) -> None:
     )
     say(
         f"Restored the backup of {lines.log_time(parse_iso(manifest.created_at))}. "
-        f"It is of format {manifest.format}. The previous database "
-        "was kept beside it. Accounts whose OAuth tokens changed since then "
-        "need reconnecting."
+        f"It is of format {manifest.format}. {kept} Accounts whose OAuth "
+        "tokens changed since then need reconnecting."
     )

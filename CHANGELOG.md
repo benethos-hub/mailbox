@@ -35,6 +35,18 @@ adheres to [Semantic Versioning](https://semver.org/).
   minutes: the service is gone, or cannot reach its database. A service
   whose database lock another service took while it was away stops with
   an error (`system.db_taken`).
+- `backup FILE` on PostgreSQL writes format 3, the export of the records,
+  read from one moment while the service runs. Format 2, the file of a
+  SQLite database, is refused there. `backup verify` there decrypts
+  nothing onto a disk: a backup of format 3 is read block by block into
+  a database in memory, one of format 1 or 2 into memory whole.
+- `restore FILE` on PostgreSQL reads a backup of format 3 into the
+  schema of the role, which must hold no table yet, and brings it to
+  the schema of this version. It refuses while the service runs on that
+  schema. When it fails, the tables it made are dropped again, never the
+  schema. A backup of format 1 or 2 is refused there, with the two
+  steps that take it to PostgreSQL: restore it with
+  `MAILBOX_SERVICE_STORAGE=sqlite`, then move it.
 
 - Backup format 3: `benethos-mailbox-service backup --format 3 FILE`
   writes the records as an export, encrypted in blocks as format 2,

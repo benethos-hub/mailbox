@@ -72,3 +72,21 @@ def test_a_format_it_does_not_know_is_a_usage_error(
     assert not (host / "b.bak").exists()
     assert main(["backup", "verify", str(host / "b.bak"), "--format", "3"]) == 1
     assert "--format goes with `backup FILE`" in capsys.readouterr().err
+
+
+def test_format_2_is_refused_on_a_database_server(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Refused before the database is reached: format 2 is a file."""
+    password = tmp_path / "database_password"
+    password.write_text("unused", encoding="utf-8")
+    monkeypatch.setenv("MAILBOX_SERVICE_STORAGE", "postgres")
+    monkeypatch.setenv(
+        "MAILBOX_SERVICE_DATABASE_URL", "postgresql://svc@db.example.org/mailbox"
+    )
+    monkeypatch.setenv("MAILBOX_SERVICE_DATABASE_PASSWORD_FILE", str(password))
+    assert main(["backup", str(tmp_path / "b.bak"), "--format", "2"]) == 1
+    assert "format 2 is the file of a SQLite database" in capsys.readouterr().err
+    assert not (tmp_path / "b.bak").exists()

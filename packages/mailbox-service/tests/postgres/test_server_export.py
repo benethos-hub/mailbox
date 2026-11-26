@@ -5,40 +5,16 @@ feed whose newest rows were purged counts on after it."""
 from __future__ import annotations
 
 import io
-from collections.abc import Iterator
 from datetime import UTC, datetime
-from pathlib import Path
 
-import pytest
+import sqlalchemy as sa
 
 from benethos_mailbox_service.data.export import read_export, write_export
 from benethos_mailbox_service.data.models import ChangeRecord
 from benethos_mailbox_service.data.storage import Database, repositories_on
 
 from ..postgres_helpers import database, schema
-from ..schema_helpers import at_schema, run
-
-SEED = Path(__file__).parent.parent / "data" / "storage" / "seeds" / "schema_25.sql"
-
-
-@pytest.fixture
-def source(tmp_path: Path) -> Iterator[Database]:
-    """A database in SQLite with every table filled: the seed of schema
-    25, migrated, without the two values an older version wrote that do
-    not fit their columns (a text for a number, a text for bytes)."""
-    raw = at_schema(tmp_path / "source.db", 25)
-    raw.executescript(SEED.read_text(encoding="utf-8"))
-    raw.execute(
-        "UPDATE webhook_attempts SET events = CAST(substr(events, 2, 1) AS INTEGER)"
-    )
-    raw.execute(
-        "UPDATE passkeys SET credential_id = CAST(credential_id AS BLOB),"
-        " credential = CAST(credential AS BLOB)"
-    )
-    raw.close()
-    opened = Database(tmp_path / "source.db")
-    yield opened
-    opened.close()
+from ..schema_helpers import run
 
 
 def _exported(db: Database) -> bytes:
@@ -82,3 +58,28 @@ def test_a_purged_feed_counts_on_after_an_export(source: Database) -> None:
         finally:
             target.close()
     assert numbers == [5, 7, 12]
+
+
+def test_every_counting_key_counts_on_after_an_export(source: Database) -> None:
+    """The rows keep their numbers, and the sequence behind each counting
+    key hands out a higher one afterwards."""
+    data = _exported(source)
+    counted = {"changes", "message_index", "thread_links", "webhook_attempts"}
+    with schema() as name:
+        target = database(name)
+        try:
+            read_export(io.BytesIO(data), target)
+            with target.connected() as conn:
+                for table in sorted(counted):
+                    top = conn.execute(
+                        sa.text(f"SELECT max(seq) FROM {table}")
+                    ).scalar()
+                    following = conn.execute(
+                        sa.text(
+                            f"SELECT nextval(pg_get_serial_sequence('{table}', 'seq'))"
+                        )
+                    ).scalar()
+                    assert top and following > top, table
+                conn.rollback()
+        finally:
+            target.close()

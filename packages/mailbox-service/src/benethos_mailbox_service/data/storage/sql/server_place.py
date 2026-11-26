@@ -89,6 +89,10 @@ class ServerPlace:
         self._held: int | None = None
 
     def open(self, schema: int, newest: int) -> tuple[sa.Connection, Migrated | None]:
+        """The one connection, made at the first call. A later call, of a
+        second database on the same place, hands it on as it is."""
+        if self._connection is not None:
+            return self._connection, None
         if schema < revisions.BASELINE:
             raise StorageError(
                 f"a database on a server begins at schema {revisions.BASELINE},"
@@ -220,6 +224,27 @@ class ServerPlace:
 
     def snapshot_file(self, lock: threading.RLock) -> AbstractContextManager[Path]:
         raise StorageError("a database on a server has no file")
+
+    def tables(self) -> list[str]:
+        """The tables of the schema, before a database on it is opened."""
+        if self._connection is None:
+            raise StorageError("the database is not open")
+        with self.translated():
+            names = sa.inspect(self._connection).get_table_names()
+            self._connection.rollback()
+        return sorted(names)
+
+    def drop_tables(self) -> None:
+        """Every table of the schema dropped, the schema itself kept: what
+        a restore made, when it fails. No code drops a schema."""
+        if self._connection is None:
+            raise StorageError("the database is not open")
+        with self.translated():
+            self._connection.rollback()
+            made = sa.MetaData()
+            made.reflect(self._connection)
+            made.drop_all(self._connection)
+            self._connection.commit()
 
     @contextmanager
     def fixed(self, lock: threading.RLock) -> Iterator[sa.Connection]:

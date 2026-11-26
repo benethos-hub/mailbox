@@ -137,6 +137,13 @@ secrets, each bound to a label of its own.
   `auto_vacuum` in its incremental mode, and the pages a removed account
   or a purge freed are given back at once. A database made before that
   is rewritten once when the service opens it, said in the log.
+  On PostgreSQL nothing is overwritten. A deleted row stays in its
+  table until the server cleans up, and in the server's write-ahead
+  log and its archives as long as they are kept. What lies there of the
+  service is what it stores: the ciphertext of the credentials, the
+  hashes of the tokens, and in plain text the audit of the sends with
+  their recipients. Whoever runs the server keeps its log and its
+  backups with the same care as the database.
 - **Files:** decided 2026-10-06, a service installed without the
   repository keeps its settings and data in the folders of the operating
   system. A command takes the first of these that applies:
@@ -269,8 +276,10 @@ mappings, sync state, the jobs of the outbox and the audit log. Losing it means 
 account and re-issuing every token.
 
 - **`benethos-mailbox-service backup <file>`** takes a consistent snapshot while
-  the service runs (SQLite online backup API) and adds a manifest: service
-  version, schema version, time, checksum.
+  the service runs and adds a manifest: service version, schema version,
+  time, checksum. On SQLite the snapshot is a copy of the file (SQLite
+  online backup API). On PostgreSQL it is a read-only view of one moment
+  on a second connection, and the backup is always of format 3 below.
 - **The whole backup file is encrypted** (AES-256-GCM, key derived from the
   KEK), not only the credentials inside it. A stolen backup reveals not
   even the list of accounts.
@@ -310,6 +319,22 @@ account and re-issuing every token.
   into it and migrates it as before. `backup` writes format 2 unless
   told otherwise. `restore` and `backup verify` tell the format from
   the file. Formats 1, 2 and 3 stay readable for good.
+- **On PostgreSQL** (2026-11-26). `backup` writes format 3 alone:
+  format 2 is the file of a SQLite database, and there is none.
+  `backup verify` decrypts nothing onto a disk. A backup of format 3 is
+  read block by block into a database in memory at the schema of its
+  manifest, one of format 1 or 2 into memory whole, and checked there.
+  `restore` reads format 3 alone, into the schema of the role, and only
+  when that schema holds no table yet. It takes the lock of a running
+  service first and refuses while one holds it. The export goes in at
+  the schema of the manifest, the checksum and the rows are held to the
+  manifest, and the revisions bring it forward. When any of it fails,
+  the tables the restore made are dropped again. No code drops the
+  schema itself. A schema that already holds tables is set aside by an
+  administrator of the server, as the README of the production setup
+  describes. A backup of format 1 or 2 goes to PostgreSQL in two steps:
+  `restore` with `MAILBOX_SERVICE_STORAGE=sqlite`, then
+  `storage move --to postgres`.
 - **The logical export.** The records can also be written as lines of
   JSON in UTF-8, table by table in the order of their references: a
   head with the schema, per table its columns, its rows and their

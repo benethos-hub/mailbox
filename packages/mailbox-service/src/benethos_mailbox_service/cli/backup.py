@@ -34,8 +34,9 @@ def add(commands: Commands, option: argparse.ArgumentParser) -> None:
         "--format",
         type=int,
         choices=(2, 3),
-        help="with FILE: 2, the file of the database (the default), or 3, "
-        "the export of its records",
+        help="with FILE: 2, the file of the database (the default on "
+        "SQLite), or 3, the export of its records (the default, and the "
+        "only one, on PostgreSQL)",
     )
     backup.add_argument(
         "--recovery-key",
@@ -55,20 +56,24 @@ def run(args: argparse.Namespace) -> None:
         # A backup is written with the master key the service holds.
         raise UsageError("--recovery-key goes with `backup verify FILE`")
     else:
-        _write(args.target, args.env_file, args.format or 2)
+        _write(args.target, args.env_file, args.format)
 
 
 def _verify(target: list[str], recovery_key: bool, env_file: Path | None) -> None:
-    from ..data.backup import verify_backup
+    from ..data.backup import verify_backup, verify_in_memory
 
     if len(target) != 2:
         raise UsageError("use `backup verify FILE`")
     settings = load_settings(env_file)
     master = read_recovery_key() if recovery_key else master_key(settings)
-    # Decrypted beside the database, where it is as safe as that is.
-    database = settings.database_path
-    scratch = database.with_name(database.name + ".verifying")
-    manifest = verify_backup(Path(target[1]), master, scratch)
+    if settings.storage == "postgres":
+        # No file beside a database on a server: nothing on a disk.
+        manifest = verify_in_memory(Path(target[1]), master)
+    else:
+        # Decrypted beside the database, where it is as safe as that is.
+        database = settings.database_path
+        scratch = database.with_name(database.name + ".verifying")
+        manifest = verify_backup(Path(target[1]), master, scratch)
     say(
         f"OK: backup of {lines.log_time(parse_iso(manifest.created_at))}, format "
         f"{manifest.format}, service {manifest.service_version}, schema "
@@ -76,7 +81,7 @@ def _verify(target: list[str], recovery_key: bool, env_file: Path | None) -> Non
     )
 
 
-def _write(target: list[str], env_file: Path | None, format: int) -> None:
+def _write(target: list[str], env_file: Path | None, chosen: int | None) -> None:
     from ..assembly import opened
     from ..data.backup import create_backup
     from ..domain.activity import HOST, system
@@ -84,6 +89,7 @@ def _write(target: list[str], env_file: Path | None, format: int) -> None:
     if len(target) != 1:
         raise UsageError("use `backup FILE` or `backup verify FILE`")
     settings = stored(load_settings(env_file), "backups")
+    format = _format(settings.storage, chosen)
     with opened(settings) as services:
         if services.store is None:
             raise UsageError(f"backups need {STORED}")
@@ -108,3 +114,16 @@ def _write(target: list[str], env_file: Path | None, format: int) -> None:
         f"{lines.log_time(parse_iso(manifest.created_at))}. "
         "It opens only with this master key or the recovery key."
     )
+
+
+def _format(storage: str, chosen: int | None) -> int:
+    """The format of a backup of ``storage``: 2 by default on SQLite, 3
+    on a database server, which has no file for format 2."""
+    if storage != "postgres":
+        return chosen or 2
+    if chosen == 2:
+        raise UsageError(
+            "format 2 is the file of a SQLite database: a database on"
+            " PostgreSQL is backed up in format 3"
+        )
+    return 3

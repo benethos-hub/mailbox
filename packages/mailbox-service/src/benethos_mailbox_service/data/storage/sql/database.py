@@ -37,6 +37,7 @@ from .tables import (
     Fixed,
     Table,
     align_changes,
+    align_counter,
     fill_table,
     key_of,
     read_chunk,
@@ -219,11 +220,13 @@ class Database:
         self, table: str, columns: Sequence[str], rows: Iterable[Sequence[Any]]
     ) -> int:
         """Write ``rows`` into ``table``, which holds none yet, in one
-        transaction. The change feed then counts on from the last number
-        it handed out. Answers how many rows."""
+        transaction. A counting key then counts on after the numbers the
+        rows hold, and the change feed after the last number it handed
+        out. Answers how many rows."""
         shape = self._table(table)
         with self.connected() as conn:
             count = fill_table(conn, shape, columns, rows, ROWS_CHUNK)
+            align_counter(conn, shape)
             align_changes(conn)
         return count
 

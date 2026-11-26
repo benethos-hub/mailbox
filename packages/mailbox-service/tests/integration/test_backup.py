@@ -21,6 +21,7 @@ from benethos_mailbox_service.data import backup
 from benethos_mailbox_service.data.backup import (
     MAGIC,
     BackupError,
+    backups,
     create_backup,
     read_backup,
     restore_backup,
@@ -173,7 +174,7 @@ def test_a_restore_that_fails_leaves_the_database_in_place(
     def broken(path: Path) -> None:
         raise sqlite3.OperationalError("disk I/O error")
 
-    monkeypatch.setattr(backup, "migrate_file", broken)
+    monkeypatch.setattr(backups, "migrate_file", broken)
     with pytest.raises(sqlite3.OperationalError):
         restore_backup(machine / "b.bak", master, path)
     assert path.read_bytes() == before
@@ -186,15 +187,15 @@ def test_two_restores_in_one_second_keep_every_database(
 ) -> None:
     """The second keeps the first copy, the only one of the original
     (review 2026-11-17, finding 10)."""
-    monkeypatch.setattr(backup, "migrate_file", lambda path: None)
+    monkeypatch.setattr(backups, "migrate_file", lambda path: None)
     second = datetime(2026, 11, 17, 10, tzinfo=UTC)
-    monkeypatch.setattr(backup, "utc_now", lambda: second)
+    monkeypatch.setattr(backups, "utc_now", lambda: second)
     target = tmp_path / "mailbox.db"
     target.write_bytes(b"ORIGINAL")
     for n in (1, 2):
         staged = tmp_path / f"staged-{n}"
         staged.write_bytes(f"RESTORED{n}".encode())
-        backup._replace(target, staged)
+        backups._replace(target, staged)
     kept = "mailbox.db.before-restore-20261117T100000Z"
     assert {p.name: p.read_bytes() for p in tmp_path.iterdir()} == {
         "mailbox.db": b"RESTORED2",

@@ -67,6 +67,7 @@ from .sql.revisions import SCHEMA_VERSION
 from .sql.server_place import Server, ServerPlace
 from .sql.tables import Table
 from .sqlite import (
+    inspect_bytes,
     inspect_file,
     move_sidecars,
     remove_database_file,
@@ -167,6 +168,7 @@ __all__ = [
     "WebhookRecord",
     "WebhookRepository",
     "WrappedKey",
+    "inspect_bytes",
     "inspect_file",
     "migrate_file",
     "move_sidecars",
