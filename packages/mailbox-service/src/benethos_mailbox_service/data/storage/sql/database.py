@@ -1,22 +1,22 @@
 """The database the repositories use: an engine of SQLAlchemy on the one
 connection of the process, guarded by a lock, since every call is short.
 
-The file, its schema up to 26 and the connection itself come from
-``sqlite/file``, the one place under ``sql/`` that reaches into
-``sqlite/``. From schema 26 on the revisions of ``revisions/`` make and
-move the schema. Transactions
-are SQLAlchemy's: one begins as ``dialect.begin`` says, and one inside
-another is a savepoint. A failure of the database leaves this module as a
-MailboxServiceError, a constraint as ConflictError, anything else as
-StorageError, with the text of the driver and never one of SQLAlchemy,
-which would hold the statement and its values.
+Where the database lies, and what hangs on that, comes from its place
+(``place``): the connection itself, for the file of SQLite also its
+schema up to 26 (``file_place``). From schema 26 on the revisions of
+``revisions/`` make and move the schema. Transactions are SQLAlchemy's:
+one begins as ``dialect.begin`` says, and one inside another is a
+savepoint. A failure of the database leaves this module as its place
+translates it, a MailboxServiceError: a constraint as ConflictError,
+anything else as StorageError, never with the text of SQLAlchemy, which
+would hold the statement and its values.
 """
 
 from __future__ import annotations
 
 import threading
 from collections.abc import Iterable, Iterator, Sequence
-from contextlib import AbstractContextManager, contextmanager, suppress
+from contextlib import AbstractContextManager, contextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -24,33 +24,35 @@ from typing import Any
 import sqlalchemy as sa
 
 from ....common.clock import iso
-from ....errors import ConflictError, StorageError
-from ..sqlite import file
-from ..sqlite.file import Migrated
+from ....errors import StorageError
+from ..migrated import Migrated
 from . import revisions
-from .dialect import sqlite_engine
+from .file_place import FilePlace
+from .place import Place
 from .revisions import SCHEMA_VERSION
 from .schema import meta
 from .tables import (
+    ROWS_CHUNK,
+    Fixed,
     Table,
     align_changes,
     fill_table,
     key_of,
     read_chunk,
     read_tables,
+    stored_schema,
+    table_named,
 )
-
-# The rows of a table read or written at once by an export.
-ROWS_CHUNK = 500
 
 
 class Database:
-    """The database at ``path``, readable by its owner alone. Without a
-    path it lives in memory, for tests. ``keep_copy``: a file of a schema
-    before ``COPY_BEFORE`` is copied before it is migrated. ``schema``: a
-    new database is made at that schema and migrated no further, to take
-    the records of an export of it. A database whose schema and mark of
-    the revisions disagree is refused."""
+    """The database at ``path``, a file readable by its owner alone.
+    Without a path it lives in memory, for tests. Or the one at ``place``,
+    where ``path`` and ``keep_copy`` mean nothing. ``keep_copy``: a file of
+    a schema before ``COPY_BEFORE`` is copied before it is migrated.
+    ``schema``: a new database is made at that schema and migrated no
+    further, to take the records of an export of it. A database whose
+    schema and mark of the revisions disagree is refused."""
 
     def __init__(
         self,
@@ -58,19 +60,17 @@ class Database:
         *,
         keep_copy: bool = True,
         schema: int | None = None,
+        place: Place | None = None,
     ) -> None:
-        self._path = path
-        self._keep_copy = keep_copy
-        upto = SCHEMA_VERSION if schema is None else schema
-        self._driver, migrated = file.open_file(
-            path, keep_copy=keep_copy, schema=upto, newest=SCHEMA_VERSION
+        self._place: Place = (
+            FilePlace(path, keep_copy=keep_copy) if place is None else place
         )
+        upto = SCHEMA_VERSION if schema is None else schema
         self._lock = threading.RLock()
         try:
-            driver = self._driver
-            self._engine = sqlite_engine(lambda: driver)
-            self._connection = self._engine.connect()
-            with translated():
+            self._connection, migrated = self._place.open(upto, SCHEMA_VERSION)
+            self._engine = self._connection.engine
+            with self._place.translated():
                 migrated = self._revised(upto, migrated)
         except BaseException:
             self.close()
@@ -114,14 +114,15 @@ class Database:
         return Migrated(before, upto, tuple(notes))
 
     def _copy_before(self, held: int, upto: int) -> list[str]:
-        """A copy of the file at schema ``held`` when a revision on the
-        way to ``upto`` asks for one, named after the first that does."""
-        if not self._keep_copy or self._path is None:
-            return []
+        """A copy of the database at schema ``held`` when a revision on
+        the way to ``upto`` asks for one, named after the first that does,
+        where the place keeps copies."""
         asking = [s for s in revisions.pending(held, upto) if s.keeps_copy]
         if not asking:
             return []
-        kept = file.keep_copy(self._driver, self._path, held, asking[0].version)
+        kept = self._place.keep_copy(held, asking[0].version)
+        if kept is None:
+            return []
         return [f"a copy of the database at schema {held} is kept: {kept}"]
 
     @contextmanager
@@ -130,7 +131,7 @@ class Database:
         for writing: a read too ends its transaction, or the next could not
         begin. Inside another one, a savepoint: it is released into the
         outer transaction, or rolled back alone."""
-        with self._lock, translated():
+        with self._lock, self._place.translated():
             if self._connection.in_transaction():
                 with self._connection.begin_nested():
                     yield self._connection
@@ -146,9 +147,7 @@ class Database:
         """No transaction left open after one failed, also not after a
         failed COMMIT, which SQLAlchemy forgets without telling the
         database. A failure here would only hide the one being raised."""
-        with suppress(Exception):
-            if self._driver.in_transaction:
-                self._driver.rollback()
+        self._place.undo()
 
     @contextmanager
     def transaction(self) -> Iterator[None]:
@@ -176,13 +175,13 @@ class Database:
         with self._lock:
             if self._connection.in_transaction():
                 return
-            file.shrink(self._driver)
+            self._place.shrink()
 
     def serving(self) -> AbstractContextManager[bool]:
         """Mark the database as used by a running service, for as long as
         the block runs, so that a restore refuses to replace it. Yields
         False when another service marked it already."""
-        return file.serving(self._path)
+        return self._place.serving()
 
     def tables(self) -> list[Table]:
         """Every table of the schema with its columns and key, each after
@@ -217,50 +216,34 @@ class Database:
         return count
 
     def _table(self, name: str) -> Table:
-        for table in self.tables():
-            if table.name == name:
-                return table
-        raise StorageError(f"the schema has no table {name}")
+        return table_named(self.tables(), name)
 
     def schema_version(self) -> int:
-        with self._lock:
-            return file.schema_version(self._driver)
+        """The schema the database is in, 0 before the first step."""
+        with self.connected() as conn:
+            return stored_schema(conn)
+
+    @contextmanager
+    def view(self) -> Iterator[Fixed]:
+        """The records at one moment, for the time of the block, taken
+        while the database is in use: its schema, its tables and their
+        rows, as one transaction sees them."""
+        with self._place.fixed(self._lock) as conn, self._place.translated():
+            yield Fixed(conn)
 
     def close(self) -> None:
         with self._lock:
             if hasattr(self, "_connection"):
                 self._connection.close()
-                self._engine.dispose()
-            self._driver.close()
+            self._place.close()
 
     def snapshot_file(self) -> AbstractContextManager[Path]:
-        """A consistent copy of the whole database, taken while it is in
-        use, as a file beside it, readable by its owner alone. It is gone
-        when the block ends. A copy left by a crash is replaced. Another
-        process making one at the same time is refused."""
-        return file.snapshot(self._driver, self._path, self._lock)
-
-
-@contextmanager
-def translated() -> Iterator[None]:
-    """The failures of the database as this project's errors, with the
-    text of the driver: the one of SQLAlchemy holds the statement and its
-    values. A failure SQLAlchemy raises before the driver is named by its
-    kind alone. The driver's own errors, from the connection used
-    directly, are translated by ``file``."""
-    try:
-        with file.translated():
-            yield
-    except sa.exc.IntegrityError as exc:
-        raise ConflictError(f"conflicts with a stored record: {exc.orig}") from None
-    except sa.exc.DBAPIError as exc:
-        raise StorageError(f"the database failed: {exc.orig}") from None
-    except sa.exc.SQLAlchemyError as exc:
-        # Refused before the driver saw it, such as a value that does not
-        # fit its column. Its text, and the one of its cause, can hold the
-        # statement and the value: only the kind is named.
-        cause = getattr(exc, "orig", None) or exc
-        raise StorageError(f"the database failed: {type(cause).__name__}") from None
+        """A consistent copy of the whole database file, taken while it is
+        in use, as a file beside it, readable by its owner alone. It is
+        gone when the block ends. A copy left by a crash is replaced.
+        Another process making one at the same time is refused. A
+        database that is not a file has none."""
+        return self._place.snapshot_file(self._lock)
 
 
 def migrate_file(path: Path) -> None:

@@ -154,3 +154,26 @@ def test_a_purged_feed_counts_on_after_an_export(source: Database) -> None:
     assert [row[0] for row in target.rows("changes")] == [5, 7, 12]
     source.close()
     target.close()
+
+
+def test_an_export_of_a_view_is_the_one_of_the_database(source: Database) -> None:
+    """A view holds the records of one moment: what is written while it
+    is open is not in it, and its export is byte for byte the one of the
+    database at that moment."""
+    before = _exported(source)
+    with source.view() as records:
+        repositories_on(source).changes.append(
+            [
+                ChangeRecord(
+                    type="message.created",
+                    id="msg_written_meanwhile",
+                    account_id="acc_seed1",
+                    at=datetime(2026, 11, 26, tzinfo=UTC),
+                )
+            ]
+        )
+        out = io.BytesIO()
+        write_export(records, out)
+    assert out.getvalue() == before
+    assert _exported(source) != before
+    source.close()

@@ -28,7 +28,7 @@ class Disk:
 
     @staticmethod
     def in_transaction(db: Database) -> bool:
-        return bool(db._driver.in_transaction)
+        return bool(db._place.driver.in_transaction)
 
 
 def _fail(connection: sa.Connection) -> None:
@@ -39,5 +39,5 @@ def traced(db: Database) -> list[str]:
     """Every statement the database runs from now on, as the driver sees
     it."""
     said: list[str] = []
-    db._driver.set_trace_callback(said.append)
+    db._place.driver.set_trace_callback(said.append)
     return said

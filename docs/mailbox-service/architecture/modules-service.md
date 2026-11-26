@@ -311,7 +311,8 @@ packages/mailbox-service/
                         #   memory: store.py what it holds, where
                         #   tests look, messages, folders, drafts
       storage/          # own records, one module per subject, table.py
-                        #   for the in-memory ones, sqlite/ the file of
+                        #   for the in-memory ones, migrated.py what
+                        #   opening did to a schema, sqlite/ the file of
                         #   the database, its connection, the steps of
                         #   its schema and the files SQLite keeps beside
                         #   it (file.py), sqlite/migrations/ the base, the registry,
@@ -321,10 +322,13 @@ packages/mailbox-service/
                         #   databases (dialect.py), the tables of
                         #   schema 26 (schema.py), the database the
                         #   repositories use, an engine on the one
-                        #   connection (database.py), the tables for
-                        #   an export (tables.py), the rows of a
-                        #   table keyed by id (rows.py) and the
-                        #   repositories, one module per subject,
+                        #   connection (database.py), where a database
+                        #   lies (place.py), the file of SQLite as one
+                        #   place (file_place.py), the tables for an
+                        #   export and a view of one moment
+                        #   (tables.py), the rows of a table keyed by
+                        #   id (rows.py) and the repositories, one
+                        #   module per subject,
                         #   sql/revisions/ the steps of the schema from
                         #   schema 26 on, as revisions of Alembic, run
                         #   in the process. repositories.py opens one

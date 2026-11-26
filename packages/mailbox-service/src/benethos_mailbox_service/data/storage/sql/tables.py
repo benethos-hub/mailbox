@@ -8,7 +8,7 @@ from a caller. Values always go into a statement as parameters.
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Iterator, Sequence
 from dataclasses import dataclass
 from itertools import islice
 from typing import Any
@@ -22,6 +22,8 @@ from .schema import METADATA, changes, meta
 # The tables that keep account of the database itself and hold no
 # record: not in the export. Alembic's mark of the revisions.
 BOOKKEEPING = frozenset({"alembic_version"})
+# The rows of a table read or written at once by an export.
+ROWS_CHUNK = 500
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,6 +50,48 @@ def read_tables(conn: sa.Connection) -> list[Table]:
         for table in METADATA.sorted_tables
         if table.name in held and table.name not in BOOKKEEPING
     ]
+
+
+def stored_schema(conn: sa.Connection) -> int:
+    """The schema the database says it is in, 0 before the first step."""
+    if not sa.inspect(conn).has_table(meta.name):
+        return 0
+    stored = conn.execute(
+        sa.select(meta.c.value).where(meta.c.key == "schema_version")
+    ).scalar()
+    return 0 if stored is None else int(stored)
+
+
+class Fixed:
+    """The records of a database as the one transaction open on ``conn``
+    sees them: its schema, its tables and their rows."""
+
+    def __init__(self, conn: sa.Connection) -> None:
+        self._conn = conn
+
+    def schema_version(self) -> int:
+        return stored_schema(self._conn)
+
+    def tables(self) -> list[Table]:
+        return read_tables(self._conn)
+
+    def rows(self, table: str) -> Iterator[tuple[Any, ...]]:
+        """The rows of ``table`` in the order of its key, read in chunks."""
+        shape = table_named(self.tables(), table)
+        after: tuple[Any, ...] | None = None
+        while True:
+            part = read_chunk(self._conn, shape, after, ROWS_CHUNK)
+            yield from part
+            if len(part) < ROWS_CHUNK:
+                return
+            after = key_of(shape, part[-1])
+
+
+def table_named(tables: Iterable[Table], name: str) -> Table:
+    for table in tables:
+        if table.name == name:
+            return table
+    raise StorageError(f"the schema has no table {name}")
 
 
 def align_changes(conn: sa.Connection) -> None:

@@ -21,7 +21,7 @@ import json
 from collections.abc import Iterator
 from typing import IO, Any
 
-from .storage import Store
+from .storage import Records, Store
 
 FORMAT = 1
 
@@ -31,7 +31,7 @@ class ExportError(Exception):
     a value of it."""
 
 
-def write_export(store: Store, out: IO[bytes]) -> dict[str, int]:
+def write_export(store: Records, out: IO[bytes]) -> dict[str, int]:
     """Every record of ``store`` to ``out``. The rows of each table."""
     counts: dict[str, int] = {}
     _line(out, {"export": FORMAT, "schema": store.schema_version()})

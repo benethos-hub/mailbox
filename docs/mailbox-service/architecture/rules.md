@@ -99,6 +99,7 @@ noticing. Every change is measured against that.
 | Sending | `data/protocols/smtp.py` (`SmtpSession`), and `data/providers/sender.py` (`SmtpSender`), which adapters without sending of their own (IMAP, POP3) hold | stdlib smtplib | e.g. aiosmtplib |
 | Web layer | `web/` | FastAPI, Jinja2 for the UI | another framework, as long as the OpenAPI document stays the same |
 | Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `PasswordRepository`, `KeyRepository`, `CredentialRepository`, `MessageIndexRepository`, `IdempotencyRepository`, `SendLogRepository`, `OutboxRepository`, `ChangeLogRepository`, `WebhookRepository`, `AuditRepository`, `LinkRepository`, `TotpRepository`, `RecoveryCodeRepository`, `PasskeyRepository`) | in-memory, SQLite through SQLAlchemy Core (`data/storage/sql/`: the types and what differs between databases in `dialect.py`, the tables in `schema.py`, the repositories), the file, its connection and the old steps of the schema on `sqlite3` (`data/storage/sqlite/`) | another database |
+| Where a database lies | `Place` in `data/storage/sql/place.py`: the one connection, undoing a failed transaction, the copy before a revision, shrinking, the mark of a running service, a view of one moment, the snapshot file, translating the failures of the driver, closing | the file of SQLite (`FilePlace` in `data/storage/sql/file_place.py`, the one module under `sql/` that reaches `sqlite/`) | a database server |
 | Autodiscovery source | `data/discovery/` (`DiscoverySource`) | presets, ISP autoconfig, JMAP well-known and SRV, ISPDB, MX (planned: Microsoft realm, SRV for IMAP and SMTP, guessing) | any further lookup, or one switched off |
 | HTTP | `data/protocols/http/` (`SafeFetcher`, `ApiClient`, `ServerClient`) | httpx | another HTTP client |
 | OAuth token source | `TokenSource` in `data/providers/base.py`, made in `data/protocols/oauth/tokens.py`, each OAuth provider's endpoints and scopes in its own directory, reached through `sign_in` in the registry | refresh token in the vault, access token in memory | another token store |
@@ -124,15 +125,25 @@ SQLite and another database write differently stands in
 `data/storage/sql/dialect.py`: inserting or updating, inserting or
 leaving out, the greater of two values, how a transaction begins, the
 counter of the change feed after an import.
-What still belongs to SQLite alone, and goes with a second database:
+Since 2026-11-26 `Database` reaches the file through its place
+(`data/storage/sql/place.py`). Everything above the place, the
+transactions, the revisions from schema 26 on, the repositories and
+the export, is the same for every database. What a place gives
+`Database`: the one connection and what opening did to the schema,
+undoing a failed transaction, the copy before a revision that asks for
+one, shrinking, the mark of a running service, the records at one
+moment for a backup of format 3 (`view`), the snapshot of the file for
+a backup of format 2, translating the failures of the driver, closing.
+What still belongs to SQLite alone, behind `FilePlace`:
 
 - `INSERT OR REPLACE` in `sqlite/migrations/registry.py`, of the old
-  steps of the schema.
+  steps of the schema up to 26.
 - The default of the column `keys.created_at`, kept for schema 26.
   The insert sets the time itself.
 - The PRAGMAs `secure_delete` and `auto_vacuum`, and the shrinking with
   `incremental_vacuum`.
-- The backup, a copy of the database file.
+- The backup of format 2, a copy of the database file.
+- The lock file of a running service beside the database.
 
 The rule that keeps it so: every query that returns several rows names
 its order.

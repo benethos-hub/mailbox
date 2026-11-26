@@ -142,3 +142,24 @@ def test_a_migrated_seed_reads_as_it_was_written(tmp_path: Path, schema: int) ->
     )
     assert [r.id for r in found] == ["snd_seed1"]
     db.close()
+
+
+@pytest.mark.parametrize("schema", sorted(SEEDED))
+def test_the_schema_of_a_seed_reads_alike_through_sqlalchemy(
+    tmp_path: Path, schema: int
+) -> None:
+    """The number of the schema, read through SQLAlchemy, is the one the
+    old steps read on the file."""
+    path = tmp_path / "old.db"
+    _seeded(path, schema)
+    db = Database(path, keep_copy=False, schema=schema)
+    try:
+        assert db.schema_version() == schema
+    finally:
+        db.close()
+    raw = sqlite3.connect(path)
+    try:
+        [(held,)] = raw.execute("SELECT value FROM meta WHERE key = 'schema_version'")
+    finally:
+        raw.close()
+    assert int(held) == schema

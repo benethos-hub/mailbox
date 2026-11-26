@@ -35,7 +35,13 @@ from .outbox import InMemoryOutboxRepository, OutboxRepository
 from .passkeys import InMemoryPasskeyRepository, PasskeyRepository, StoredPasskey
 from .passwords import InMemoryPasswordRepository, PasswordRepository, StoredPassword
 from .recovery_codes import InMemoryRecoveryCodeRepository, RecoveryCodeRepository
-from .repositories import Repositories, Store, open_repositories, repositories_on
+from .repositories import (
+    Records,
+    Repositories,
+    Store,
+    open_repositories,
+    repositories_on,
+)
 from .sends import InMemorySendLogRepository, SendLogRepository
 from .sql import (
     SqlAccountRepository,
@@ -120,6 +126,7 @@ __all__ = [
     "OutboxRepository",
     "ThreadChain",
     "PasswordRepository",
+    "Records",
     "Repositories",
     "RoleRepository",
     "SCHEMA_VERSION",

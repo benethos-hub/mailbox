@@ -23,6 +23,7 @@ from .credentials import (
 from .idempotency import IdempotencyRepository, InMemoryIdempotencyRepository
 from .index import InMemoryMessageIndexRepository, MessageIndexRepository
 from .links import InMemoryLinkRepository, LinkRepository
+from .migrated import Migrated
 from .outbox import InMemoryOutboxRepository, OutboxRepository
 from .passkeys import InMemoryPasskeyRepository, PasskeyRepository
 from .passwords import InMemoryPasswordRepository, PasswordRepository
@@ -50,9 +51,6 @@ from .sql import (
 )
 from .sql.database import Database
 from .sql.tables import Table
-from .sqlite import (
-    Migrated,
-)
 from .totp import InMemoryTotpRepository, TotpRepository
 from .users import (
     InMemoryRoleRepository,
@@ -65,26 +63,8 @@ from .users import (
 from .webhooks import InMemoryWebhookRepository, WebhookRepository
 
 
-class Store(Protocol):
-    """What holds the records of all repositories: an image of it for a
-    backup, the mark of a running service, and closing."""
-
-    def snapshot_file(self) -> AbstractContextManager[Path]:
-        """A consistent image of every record, taken while it is in use,
-        as a file readable by its owner alone, gone when the block ends."""
-        ...
-
-    def transaction(self) -> AbstractContextManager[object]:
-        """One transaction over every repository of the store. Inside
-        another one, a part of it that is undone alone."""
-        ...
-
-    def serving(self) -> AbstractContextManager[bool]:
-        """Mark the store as used by a running service while the block
-        runs. False when another service marked it already."""
-        ...
-
-    def close(self) -> None: ...
+class Records(Protocol):
+    """The records of a store, table by table, for an export."""
 
     def schema_version(self) -> int:
         """The version of the schema the records are in."""
@@ -99,6 +79,34 @@ class Store(Protocol):
         """The rows of a table of ``tables`` in the order of its key, read
         in chunks."""
         ...
+
+
+class Store(Records, Protocol):
+    """What holds the records of all repositories: a fixed view of them
+    for a backup, the mark of a running service, and closing."""
+
+    def view(self) -> AbstractContextManager[Records]:
+        """The records at one moment, taken while the store is in use,
+        for the time of the block."""
+        ...
+
+    def snapshot_file(self) -> AbstractContextManager[Path]:
+        """For a store that is a file: a consistent copy of it, taken
+        while it is in use, readable by its owner alone, gone when the
+        block ends. Another store has none and raises StorageError."""
+        ...
+
+    def transaction(self) -> AbstractContextManager[object]:
+        """One transaction over every repository of the store. Inside
+        another one, a part of it that is undone alone."""
+        ...
+
+    def serving(self) -> AbstractContextManager[bool]:
+        """Mark the store as used by a running service while the block
+        runs. False when another service marked it already."""
+        ...
+
+    def close(self) -> None: ...
 
     def fill(
         self, table: str, columns: Sequence[str], rows: Iterable[Sequence[Any]]
