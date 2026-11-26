@@ -10,9 +10,7 @@ reads a fixed state and holds no writer up.
 
 from __future__ import annotations
 
-import hashlib
 import re
-import secrets
 import threading
 import time
 from collections.abc import Callable, Iterator
@@ -31,6 +29,7 @@ from .dialect import reading_fixed, server_engine
 from .outage import LONGEST_PAUSE, Availability, Outage
 from .place import translated_by
 from .schema import meta
+from .server_lock import kept_key, lock_key, new_key, unlock
 from .tables import SERVICE_LOCK, stored_schema
 
 # A name the server takes without quoting, so it can stand in the
@@ -184,23 +183,23 @@ class ServerPlace:
     def _service_key(self, connection: sa.Connection) -> int:
         """The key the schema keeps, its lock taken. Made first when
         there is none, under the lock keyed by the name."""
-        key = _kept_key(connection)
+        key = kept_key(connection)
         if key is not None:
             self._take(connection, key)
             return key
         named = lock_key(self._server.schema_name)
         self._take(connection, named)
         try:
-            key = _kept_key(connection)
+            key = kept_key(connection)
             if key is None:
-                key = _new_key()
+                key = new_key()
                 connection.execute(
                     sa.insert(meta).values(key=SERVICE_LOCK, value=str(key))
                 )
                 connection.commit()
             self._take(connection, key)
         finally:
-            _unlock(connection, named)
+            unlock(connection, named)
         return key
 
     @contextmanager
@@ -215,7 +214,7 @@ class ServerPlace:
             self._take(connection, named)
             self._held = (named,)
             try:
-                key = _kept_key(connection)
+                key = kept_key(connection)
                 if key is not None:
                     self._take(connection, key)
                     self._held = (named, key)
@@ -243,7 +242,7 @@ class ServerPlace:
         held, self._held = self._held, ()
         with suppress(Exception), self.translated():
             for key in held:
-                _unlock(connection, key)
+                unlock(connection, key)
 
     @staticmethod
     def _locked(connection: sa.Connection, key: int) -> bool:
@@ -438,48 +437,10 @@ def tls_arguments(
     }
 
 
-def lock_key(schema: str) -> int:
-    """The key of the lock on ``schema`` while it keeps no key of its
-    own: a number of 64 bits drawn from its name, the same in every
-    process, and for every role that knows the name."""
-    digest = hashlib.sha256(f"benethos-mailbox-service:{schema}".encode()).digest()
-    return int.from_bytes(digest[:8], "big", signed=True)
-
-
 def _drop_all(connection: sa.Connection) -> None:
     made = sa.MetaData()
     made.reflect(connection)
     made.drop_all(connection)
-    connection.commit()
-
-
-def _kept_key(connection: sa.Connection) -> int | None:
-    """The key of the lock of a running service the schema keeps, None
-    while it keeps none. Ends the transaction it reads in."""
-    if not sa.inspect(connection).has_table(meta.name):
-        connection.rollback()
-        return None
-    value = connection.execute(
-        sa.select(meta.c.value).where(meta.c.key == SERVICE_LOCK)
-    ).scalar()
-    connection.rollback()
-    if value is None:
-        return None
-    try:
-        return int(value)
-    except ValueError:
-        raise StorageError(
-            f"the value of {SERVICE_LOCK} in meta is no number: delete the row"
-        ) from None
-
-
-def _new_key() -> int:
-    """A key for the lock of a running service, a random number of 64 bits."""
-    return int.from_bytes(secrets.token_bytes(8), "big", signed=True)
-
-
-def _unlock(connection: sa.Connection, key: int) -> None:
-    connection.execute(sa.select(sa.func.pg_advisory_unlock(key)))
     connection.commit()
 
 

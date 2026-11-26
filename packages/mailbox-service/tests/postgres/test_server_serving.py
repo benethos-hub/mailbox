@@ -9,7 +9,7 @@ from __future__ import annotations
 import pytest
 
 from benethos_mailbox_service.data.storage import ServerPlace
-from benethos_mailbox_service.data.storage.sql.server_place import lock_key
+from benethos_mailbox_service.data.storage.sql.server_lock import lock_key
 from benethos_mailbox_service.errors import StorageError
 
 from ..postgres_helpers import connect, database, schema, server
