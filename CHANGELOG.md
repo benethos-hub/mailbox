@@ -35,6 +35,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   minutes: the service is gone, or cannot reach its database. A service
   whose database lock another service took while it was away stops with
   an error (`system.db_taken`).
+- `backup FILE` on PostgreSQL writes format 3, the export of the records,
+  read from one moment while the service runs. Format 2, the file of a
+  SQLite database, is refused there.
 
 - Backup format 3: `benethos-mailbox-service backup --format 3 FILE`
   writes the records as an export, encrypted in blocks as format 2,
