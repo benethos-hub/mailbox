@@ -11489,6 +11489,16 @@
               }
             }
           },
+          "503": {
+            "description": "The service cannot reach its database for now (`service_unavailable`): the link holds, see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Validation Error",
             "content": {

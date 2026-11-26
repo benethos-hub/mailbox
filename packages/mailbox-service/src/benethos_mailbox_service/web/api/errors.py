@@ -85,6 +85,13 @@ LINK_ERRORS: dict[int | str, dict[str, Any]] = {
             "(`provider_unavailable`). The link holds: try again before it ends"
         ),
     },
+    503: {
+        "model": ErrorResponse,
+        "description": (
+            "The service cannot reach its database for now "
+            "(`service_unavailable`): the link holds, see Retry-After"
+        ),
+    },
 }
 
 # A grant may narrow sending (CONCEPT 7.5).

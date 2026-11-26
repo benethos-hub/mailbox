@@ -58,9 +58,10 @@ def test_protected_routes_declare_bearer_and_errors() -> None:
             continue
         if op["x-permission"] == permissions.LINK:
             # Its secret is the credential, and it answers one 404, or 502
-            # where the mail server failed and the link holds.
+            # where the mail server failed and 503 where the database is
+            # away, and the link holds.
             assert "security" not in op, path
-            assert set(op["responses"]) - {"422"} == {"200", "404", "502"}, path
+            assert set(op["responses"]) - {"422"} == {"200", "404", "502", "503"}, path
             continue
         assert op["security"] == [{"bearerAuth": []}], path
         declared = set(op["responses"])
