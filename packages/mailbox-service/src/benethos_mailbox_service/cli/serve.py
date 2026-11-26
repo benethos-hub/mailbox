@@ -72,33 +72,44 @@ def run(args: argparse.Namespace) -> None:
     config = log_config(settings.log_level, book, form=settings.log_format)
     logging.config.dictConfig(config)
     stop = _Stop()
-    # The log names the settings and the database once the app starts.
-    app = waited(
-        lambda: assembly.create_app(
+    services = waited(lambda: assembly.build_services(settings, logbook=book), settings)
+    with contextlib.ExitStack() as running:
+        # Closed at the end also when the server never ran the end of
+        # the app, which closes them otherwise. Closing twice does no harm.
+        running.callback(services.close)
+        # The lock of a running service, taken before the server starts:
+        # a second service on a database server ends here with the
+        # reason, not in the start of the server.
+        held = (
+            None
+            if services.store is None
+            else running.enter_context(services.store.serving())
+        )
+        # The log names the settings and the database once the app starts.
+        app = assembly.create_app(
             settings,
-            logbook=book,
+            services=services,
             settings_file=settings_file(args.env_file),
             stop=stop,
-        ),
-        settings,
-    )
-    # What uvicorn.run does for one process without reload: the server
-    # built here, so a loop that ends can stop it.
-    server = uvicorn.Server(
-        uvicorn.Config(
-            app,
-            host=args.host or settings.host,
-            port=args.port or settings.port,
-            log_config=config,
-            log_level=settings.log_level,
-            forwarded_allow_ips=settings.forwarded_allow_ips,
+            held=held,
         )
-    )
-    stop.server = server
-    # Ctrl-C at a terminal ends serve as it ended uvicorn.run, without a
-    # traceback. The server has shut down by then.
-    with contextlib.suppress(KeyboardInterrupt):
-        server.run()
+        # What uvicorn.run does for one process without reload: the
+        # server built here, so a loop that ends can stop it.
+        server = uvicorn.Server(
+            uvicorn.Config(
+                app,
+                host=args.host or settings.host,
+                port=args.port or settings.port,
+                log_config=config,
+                log_level=settings.log_level,
+                forwarded_allow_ips=settings.forwarded_allow_ips,
+            )
+        )
+        stop.server = server
+        # Ctrl-C at a terminal ends serve as it ended uvicorn.run, without
+        # a traceback. The server has shut down by then.
+        with contextlib.suppress(KeyboardInterrupt):
+            server.run()
     if not server.started:
         sys.exit(STARTUP_FAILURE)
     if stop.reason:

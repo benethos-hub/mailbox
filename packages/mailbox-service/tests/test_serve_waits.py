@@ -40,7 +40,7 @@ def away(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> list[float]:
     def unreachable(*args: object, **kwargs: object) -> NoReturn:
         raise StorageUnavailableError(1, "OperationalError (08001)")
 
-    monkeypatch.setattr(assembly, "create_app", unreachable)
+    monkeypatch.setattr(assembly, "build_services", unreachable)
     monkeypatch.setattr(lifecycle, "build_services", unreachable)
     monkeypatch.setattr(serve.Waiting, "sleep", staticmethod(sleep))
     monkeypatch.setattr(serve.Waiting, "clock", staticmethod(lambda: now[0]))
@@ -69,7 +69,7 @@ def test_a_refusal_that_waiting_does_not_heal_ends_at_once(
             " empty it and try again"
         )
 
-    monkeypatch.setattr(assembly, "create_app", unfinished)
+    monkeypatch.setattr(assembly, "build_services", unfinished)
     assert main(["serve"]) == 1
     assert capsys.readouterr().err.startswith(
         "error: a move or restore into this database did not finish"

@@ -41,14 +41,19 @@ async def serving(
     settings: Settings,
     settings_file: Path | None,
     stop: Callable[[str], None] | None = None,
+    held: bool | None = None,
 ) -> AsyncIterator[None]:
     """While the app serves: the database held, the start and the end in
     the log, the background work running. Should a background loop end,
     ``stop`` ends the server with the reason, and the service stops as
-    it would at a signal. Without ``stop`` the loop's error ends the background work."""
-    with ExitStack() as held:
+    it would at a signal. Without ``stop`` the loop's error ends the
+    background work. ``held``: the lock of a running service, taken by
+    the caller already, or None to take it here."""
+    with ExitStack() as holding:
         store = services.store
-        if store is not None and not held.enter_context(store.serving()):
+        if store is not None and held is None:
+            held = holding.enter_context(store.serving())
+        if store is not None and not held:
             services.activity.record(said.DatabaseShared(by=SERVICE))
         if store is not None:
             store.watch(partial(_taken, services.activity, stop))

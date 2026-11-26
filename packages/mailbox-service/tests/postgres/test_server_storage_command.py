@@ -1,5 +1,7 @@
 """The command ``storage move`` against the server: to PostgreSQL and
-back, the check, and a running service on either side refuses it."""
+back, the check, and a running service on either side refuses it. A
+second ``serve`` on the schema ends with the reason, without a
+traceback."""
 
 from __future__ import annotations
 
@@ -86,3 +88,24 @@ def test_a_running_service_on_either_side_refuses(
             assert "the service is running" in capsys.readouterr().err
     finally:
         on_server.close()
+
+
+def test_a_second_serve_on_the_schema_ends_without_a_traceback(
+    host: Server, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    import uvicorn
+
+    def never(*args: object, **kwargs: object) -> None:
+        raise AssertionError("the second service must not start")
+
+    monkeypatch.setattr(uvicorn.Server, "run", never)
+    monkeypatch.setenv("MAILBOX_SERVICE_STORAGE", "postgres")
+    running = Database(place=ServerPlace(host))
+    try:
+        with running.serving():
+            assert main(["serve"]) == 1
+    finally:
+        running.close()
+    err = capsys.readouterr().err
+    assert "error: another service runs on this database" in err
+    assert "Traceback" not in err
