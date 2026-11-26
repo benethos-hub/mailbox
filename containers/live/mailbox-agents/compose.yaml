@@ -9,7 +9,7 @@ name: mailbox-agents-live
 
 services:
   stalwart:
-    image: stalwartlabs/stalwart:v1.2.0@sha256:79ea09d25baad7e074d8df53db474571c5dc62621298e35e09e9cfd764333ed8
+    image: stalwartlabs/stalwart:v1.2.1@sha256:ed3153af935f0125ed0424b2a6d7d5891915a9249189dda76860a27f906b64ea
     init: true
     restart: unless-stopped
     environment:
@@ -121,7 +121,7 @@ services:
   # Toolkit and its CDI spec on the host (README.md).
   llama-gpu:
     profiles: ["gpu"]
-    image: ghcr.io/ggml-org/llama.cpp:server-cuda-b12723@sha256:2855fd7d0f5781e289a8108c3abd0744d19621314641b97421c038be836ed373
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda-b12767@sha256:d3160910fcaebaf9a6223a5cb7ca8305b5530af2c740884b0ec3789761580273
     restart: unless-stopped
     command: &llama-command
       - --models-preset
@@ -149,7 +149,7 @@ services:
   # On the CPU, with the profile cpu: what a server without a card would do.
   llama-cpu:
     profiles: ["cpu"]
-    image: ghcr.io/ggml-org/llama.cpp:server-b12723@sha256:b0cd5490eefff30b40dcd47f7249a7d7211136908f73fe440a2a86b35a22b23b
+    image: ghcr.io/ggml-org/llama.cpp:server-b12767@sha256:b24873ae66a4732e0b4b66dd7dc658066ccad6e8c63524278e92eebc767aacbe
     restart: unless-stopped
     command: *llama-command
     networks:
