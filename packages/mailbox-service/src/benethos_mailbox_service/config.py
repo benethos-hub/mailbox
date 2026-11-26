@@ -250,6 +250,13 @@ class Settings(files.FileSettings):
             self.oauth_google_client_secret, self.oauth_google_client_secret_file
         )
 
+    def check_database_server(self) -> str:
+        """The address of the database server, held to its rules whatever
+        the storage says: for a move to it or from it. ValueError names the
+        rule, never what was given."""
+        _database_settings(self.database_url, self.database_password_file)
+        return str(self.database_url)
+
     def database_password(self) -> SecretStr:
         """The password of the role on the database server, read from its
         file now. Empty without one."""

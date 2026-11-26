@@ -29,6 +29,7 @@ from . import revisions
 from .dialect import reading_fixed, server_engine
 from .outage import Availability, Outage
 from .place import translated_by
+from .tables import stored_schema
 
 # A name the server takes without quoting, so it can stand in the
 # search path the connection sets.
@@ -36,6 +37,10 @@ _PLAIN_NAME = re.compile(r"[a-z_][a-z0-9_]{0,62}")
 # The oldest server the service runs on (2026-11-25), as the server
 # writes its version as a number: major * 10000 + minor.
 OLDEST_SERVER = 190000
+
+
+# Where an operator reads how to set a schema that holds tables aside.
+SET_ASIDE = "containers/production/mailbox-service/README.md, Set a schema aside"
 
 
 @dataclass(frozen=True, slots=True)
@@ -233,6 +238,16 @@ class ServerPlace:
             names = sa.inspect(self._connection).get_table_names()
             self._connection.rollback()
         return sorted(names)
+
+    def held_schema(self) -> int:
+        """The schema the database on the server says it is in, 0 without
+        one, read before a database on it is opened."""
+        if self._connection is None:
+            raise StorageError("the database is not open")
+        with self.translated():
+            held = stored_schema(self._connection)
+            self._connection.rollback()
+        return held
 
     def drop_tables(self) -> None:
         """Every table of the schema dropped, the schema itself kept: what

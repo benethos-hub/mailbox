@@ -24,16 +24,20 @@ from .schema import METADATA, changes, meta
 BOOKKEEPING = frozenset({"alembic_version"})
 # The rows of a table read or written at once by an export.
 ROWS_CHUNK = 500
+# The key in ``meta`` that marks a database a move is writing into.
+MOVING = "move_started"
 
 
 @dataclass(frozen=True, slots=True)
 class Table:
-    """A table of the schema: its name, its columns in their order, and
-    the columns of its key."""
+    """A table of the schema: its name, its columns in their order, the
+    columns of its key, and the kind of value each column holds, as its
+    definition says: ``text``, ``number`` or ``bytes``. Empty fits each."""
 
     name: str
     columns: tuple[str, ...]
     key: tuple[str, ...]
+    kinds: tuple[str, ...]
 
 
 def read_tables(conn: sa.Connection) -> list[Table]:
@@ -46,6 +50,7 @@ def read_tables(conn: sa.Connection) -> list[Table]:
             table.name,
             tuple(column.name for column in table.columns),
             tuple(column.name for column in table.primary_key.columns),
+            tuple(_kind(column.type) for column in table.columns),
         )
         for table in METADATA.sorted_tables
         if table.name in held and table.name not in BOOKKEEPING
@@ -85,6 +90,31 @@ class Fixed:
             if len(part) < ROWS_CHUNK:
                 return
             after = key_of(shape, part[-1])
+
+
+def _kind(kind: sa.types.TypeEngine[Any]) -> str:
+    if isinstance(kind, sa.LargeBinary):
+        return "bytes"
+    if isinstance(kind, sa.Integer):
+        return "number"
+    if isinstance(kind, sa.String):
+        return "text"
+    raise StorageError(f"a column of the schema holds {type(kind).__name__}")
+
+
+def moving(conn: sa.Connection) -> bool:
+    """Whether a move began to write into the database and did not end."""
+    return (
+        conn.execute(sa.select(meta.c.value).where(meta.c.key == MOVING)).first()
+        is not None
+    )
+
+
+def mark_moving(conn: sa.Connection, started: str | None) -> None:
+    """The mark of a move that began at ``started``, or, with None, its end."""
+    conn.execute(sa.delete(meta).where(meta.c.key == MOVING))
+    if started is not None:
+        conn.execute(sa.insert(meta).values(key=MOVING, value=started))
 
 
 def table_named(tables: Iterable[Table], name: str) -> Table:

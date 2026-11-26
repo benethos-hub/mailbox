@@ -384,6 +384,7 @@ holds is written as `***`, should a message or a traceback carry one.
 | `backup FILE` | writes an encrypted backup, while the service runs |
 | `backup verify FILE [--recovery-key]` | checks a backup |
 | `restore FILE [--recovery-key [--replace-master-key]]` | replaces the database with a backup. Stop the service first. |
+| `storage move --to postgres\|sqlite [--check]` | copies every record into a new, empty database on the other side and compares it. Stop the service first. |
 | `openapi` | prints the OpenAPI document |
 | `alert-rules` | prints five alerts on the figures of `GET /v1/metrics`, a file for `rule_files` of Prometheus |
 | `paths` | names the settings file, the data folder, the database and where the master key is |
@@ -399,6 +400,18 @@ machine. When the key provider holds another
 master key there, `restore` refuses: the database kept beside the
 restored one opens with that key alone. Note its recovery key, then pass
 `--replace-master-key`.
+
+`storage move --to postgres` copies the records from the file
+`mailbox.db` in the data folder into the schema that
+`MAILBOX_SERVICE_DATABASE_URL` names, `--to sqlite` back, whatever
+`MAILBOX_SERVICE_STORAGE` says. The target must be empty, and the source
+stays as it is. Before it writes, the move holds every value to its
+column. A value an older version wrote that does not fit stops it, with
+the table, the column and how many, never a value. `--check` does only
+that. After the copy, every table is counted and compared on both
+sides. A move that does not finish leaves a mark, and the service does
+not open that database. When it is done, set `MAILBOX_SERVICE_STORAGE`
+to the new side and start the service.
 
 ## Users, rights and tokens
 

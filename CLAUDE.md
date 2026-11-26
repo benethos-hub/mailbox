@@ -114,6 +114,9 @@ alone. Before a change in a package, read its file as well as this one:
   - `uv run python live/mailbox-service/outbox.py [--bots]`: the outbox
     against the test mail server in a container, with `--bots` between
     the first two test accounts as well.
+  - `uv run python live/mailbox-service/postgres.py`: PostgreSQL as the
+    storage, the move, backup and restore and a stopped database,
+    against the test database and the test mail server in containers.
   - `live/mailbox-agents/`: the checks of the agents, against a mail
     server, a service and a model gateway of their own
     ([docs/LIVE.md](docs/LIVE.md#the-agents)).

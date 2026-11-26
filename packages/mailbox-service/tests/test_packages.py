@@ -120,7 +120,7 @@ LINES = {
         {"paging"},
     ),
     "data": (
-        {"backup"},
+        {"backup", "move"},
         {"export"},
         {"secrets"},
         {"storage", "providers", "discovery"},

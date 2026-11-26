@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import base64
 import json
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from typing import IO, Any
 
 from .storage import Records, Store
@@ -39,7 +39,7 @@ def write_export(store: Records, out: IO[bytes]) -> dict[str, int]:
         _line(out, {"table": table.name, "columns": list(table.columns)})
         count = 0
         for row in store.rows(table.name):
-            _line(out, [_value(v) for v in row])
+            out.write(row_line(row))
             count += 1
         _line(out, {"end": table.name, "rows": count})
         counts[table.name] = count
@@ -126,9 +126,17 @@ class _Rows:
             yield [_stored(v, self._table) for v in line]
 
 
+def row_line(row: Sequence[Any]) -> bytes:
+    """A row as its line of the export."""
+    return _encoded([_value(v) for v in row])
+
+
 def _line(out: IO[bytes], value: object) -> None:
-    out.write(json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode())
-    out.write(b"\n")
+    out.write(_encoded(value))
+
+
+def _encoded(value: object) -> bytes:
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode() + b"\n"
 
 
 def _value(value: object) -> object:

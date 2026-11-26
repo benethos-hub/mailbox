@@ -29,6 +29,8 @@ packages/mailbox-service/
       keys.py           # init, import, generate
       backup.py         # write a backup, verify one
       restore.py        # replace the database with a backup
+      storage.py        # move the records between SQLite and
+                        #   PostgreSQL, or check that they fit
     assembly/           # builds the service, picks implementations,
                         #   decides nothing else
       storage.py        # the repositories, the audit, the activity log
@@ -344,6 +346,9 @@ packages/mailbox-service/
                         #   them (backups.py)
       export.py         # the records of a store as lines of JSON and
                         #   back, the logical export
+      move.py           # the move of the records between SQLite and
+                        #   PostgreSQL: every value held to its column
+                        #   first, then copied, compared and marked
       files.py          # files for the owner alone (0600): database, backup, key.
                         #   The lock that tells a running service
                         #   from a stopped one is paths.locks of

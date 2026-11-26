@@ -64,8 +64,8 @@ from .sql import (
 from .sql.database import Database, migrate_file
 from .sql.outage import Availability
 from .sql.revisions import SCHEMA_VERSION
-from .sql.server_place import Server, ServerPlace
-from .sql.tables import Table
+from .sql.server_place import SET_ASIDE, Server, ServerPlace
+from .sql.tables import MOVING, Table
 from .sqlite import (
     inspect_bytes,
     inspect_file,
@@ -133,7 +133,9 @@ __all__ = [
     "Records",
     "Repositories",
     "RoleRepository",
+    "MOVING",
     "SCHEMA_VERSION",
+    "SET_ASIDE",
     "Sealed",
     "Server",
     "ServerPlace",
