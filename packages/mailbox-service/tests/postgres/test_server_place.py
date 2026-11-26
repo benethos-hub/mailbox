@@ -26,7 +26,14 @@ from benethos_mailbox_service.data.storage import (
 from benethos_mailbox_service.data.storage.sql.schema import METADATA
 from benethos_mailbox_service.errors import NotFoundError, StorageError
 
-from ..postgres_helpers import connect, database, in_transaction, role, schema
+from ..postgres_helpers import (
+    connect,
+    database,
+    in_transaction,
+    role,
+    schema,
+    server,
+)
 
 
 def _definitions_differ(conn: sa.Connection) -> list[str]:
@@ -216,3 +223,17 @@ def test_a_change_undone_leaves_a_gap_the_feed_reads_past() -> None:
     assert [c.record.id for c in read] == ["msg_1", "msg_3", "msg_4"]
     assert read[1].seq > read[0].seq + 1
     assert [c.record.id for c in later] == ["msg_3", "msg_4"]
+
+
+def test_undo_on_a_lost_connection_does_not_connect_again() -> None:
+    with schema() as name:
+        place = ServerPlace(server(name))
+        try:
+            conn, _ = place.open(26, 26)
+            connects: list[object] = []
+            sa.event.listen(conn.engine, "connect", lambda *_: connects.append(1))
+            conn.invalidate()
+            place.undo()
+            assert connects == []
+        finally:
+            place.close()

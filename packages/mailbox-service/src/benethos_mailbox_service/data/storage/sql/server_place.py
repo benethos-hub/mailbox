@@ -147,9 +147,16 @@ class ServerPlace:
         )
 
     def undo(self) -> None:
+        """The transaction of the driver rolled back. A connection that
+        is lost is left alone: asking it for its driver would connect
+        again, outside ``ready``."""
+        connection = self._connection
+        if connection is None or connection.invalidated:
+            return
         with suppress(Exception):
-            if self._connection is not None:
-                self._connection.connection.driver_connection.rollback()  # type: ignore[union-attr]
+            driver = connection.connection.driver_connection
+            if driver is not None:
+                driver.rollback()
 
     def keep_copy(self, held: int, before: int) -> str | None:
         raise StorageError(
