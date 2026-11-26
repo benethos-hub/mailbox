@@ -57,7 +57,7 @@ alone. Before a change in a package, read its file as well as this one:
 - Windows, PowerShell or Bash. Python 3.11-3.15. CI measures the
   coverage on the newest and builds the fresh install with it. A new
   version goes into the CI matrix, `coverage-python`, `UV_PYTHON` of
-  fresh-install and browser, the classifiers, the table of
+  fresh-install, browser and postgres, the classifiers, the table of
   `docs/mailbox-service/CONCEPT.md` 9 and this line at once, as `test_packaging.py`
   checks.
 - Set up: `uv sync` (the workspace dev group holds pytest, ruff, mypy).
@@ -191,7 +191,7 @@ containers/               # images/ (one folder per image), and one folder
                           #   lowest versions per package, coverage
                           #   badge, CodeQL, hadolint, brand assets),
                           #   fresh install, images, the UI in real
-                          #   browsers,
+                          #   browsers, the storage on PostgreSQL,
                           #   publish.yml: on a release, through the
                           #   organisation's actions, the five packages
                           #   to PyPI, in the order of their dependencies,
@@ -408,7 +408,7 @@ their own: [docs/mailbox-agents/ARCHITECTURE.md](docs/mailbox-agents/ARCHITECTUR
   run leaves it out, CI's browser job runs it.
 - The storage on PostgreSQL: the service's
   [CLAUDE.md](packages/mailbox-service/CLAUDE.md). The default run
-  leaves it out as well.
+  leaves it out as well, CI's postgres job runs it.
 
 Never write a test that reaches a real mail server, and never one that skips
 itself without credentials. Live checks are manual scripts in `live/`, outside

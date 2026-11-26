@@ -137,6 +137,43 @@ jobs:
       - name: The UI in the three browsers
         run: uv run --frozen --group browser pytest packages/mailbox-service/tests/browser -p no:cacheprovider -n 0
 
+  # The storage on PostgreSQL 19, the Debian image: the tests of the
+  # repositories a third time, on the server, and the folder
+  # tests/postgres/ of the service. Each test takes a schema of its own.
+  # The server lives as long as the job, its password with it.
+  postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      UV_PYTHON: "3.15"
+      MAILBOX_POSTGRES_TESTS: ${{ github.workspace }}/.postgres/tests.env
+    services:
+      postgres:
+        image: postgres:19
+        env:
+          POSTGRES_PASSWORD: ci-only
+        ports:
+          - "127.0.0.1:5432:5432"
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U postgres"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+
+      - name: Where the tests find the server
+        run: |
+          mkdir -p .postgres
+          printf 'ci-only\n' > .postgres/admin_password
+          printf 'host=127.0.0.1\nport=5432\nuser=postgres\ndatabase=postgres\npassword_file=admin_password\n' > .postgres/tests.env
+
+      - name: The service against PostgreSQL
+        run: uv run --frozen pytest packages/mailbox-service/tests -p no:cacheprovider
+
   # The other side of fresh-install: the lowest versions pyproject.toml
   # allows, on the oldest supported Python, without the lockfile. An
   # environment that already holds an older fastapi or defusedxml keeps it,

@@ -71,5 +71,6 @@ The storage on a database server is checked against PostgreSQL 19:
 `MAILBOX_POSTGRES_TESTS=containers/test-database/secrets/tests.env uv run
 pytest packages/mailbox-service/tests`. The tests of the repositories
 then run on PostgreSQL as well, and `tests/postgres/` is collected.
-Each test gets a schema of its own. The default run leaves it out.
+Each test gets a schema of its own. The default run leaves it out,
+CI's postgres job runs it.
 Run it after a change under `data/storage/`.
