@@ -27,8 +27,10 @@ class FilePlace:
         self._keep_copy = keep_copy
         self.driver: file.Driver | None = None
         self._engine: sa.Engine | None = None
+        self._newest = 0
 
     def open(self, schema: int, newest: int) -> tuple[sa.Connection, Migrated | None]:
+        self._newest = newest
         driver, migrated = file.open_file(
             self.path, keep_copy=self._keep_copy, schema=schema, newest=newest
         )
@@ -57,6 +59,24 @@ class FilePlace:
         if self.driver is None:
             raise StorageError("the database is not open")
         return file.snapshot(self.driver, self.path, lock)
+
+    @contextmanager
+    def fixed(self, lock: threading.RLock) -> Iterator[sa.Connection]:
+        """The snapshot of the file, checked whole, opened on its own."""
+        with self.snapshot_file(lock) as snapshot:
+            try:
+                file.inspect_file(snapshot)
+            except ValueError as exc:
+                raise StorageError(
+                    f"the copy of the database is unsound: {exc}"
+                ) from None
+            snap = FilePlace(snapshot, keep_copy=False)
+            try:
+                conn, _ = snap.open(self._newest, self._newest)
+                with conn, conn.begin():
+                    yield conn
+            finally:
+                snap.close()
 
     def translated(self) -> AbstractContextManager[None]:
         return translated()

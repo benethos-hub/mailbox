@@ -41,6 +41,7 @@ from .secrets import cipher
 from .storage import (
     SCHEMA_VERSION,
     Database,
+    Records,
     Store,
     inspect_file,
     migrate_file,
@@ -89,46 +90,49 @@ def create_backup(
     format: int = 2,
 ) -> Manifest:
     """A backup of ``store`` at ``target``, in format 2, the file of the
-    database, or 3, its export. Both are taken from a snapshot."""
+    database taken from a snapshot, or 3, its export, read from a view of
+    one moment."""
     if target.exists():
         raise BackupError(f"{target} exists, refusing to overwrite it")
+    if format == 3:
+        with store.view() as records:
+            manifest = _manifest(service_version, records.schema_version(), format)
+            return _write_export(records, manifest, master_key, target)
     with store.snapshot_file() as snapshot:
         try:
             schema_version = inspect_file(snapshot)
         except ValueError as exc:
             raise BackupError(f"the database cannot be backed up: {exc}") from None
-        manifest = Manifest(
-            service_version=service_version,
-            schema_version=schema_version,
-            created_at=iso(utc_now()),
-            sha256="",
-            format=format,
-        )
-        if format == 3:
-            return _write_export(snapshot, manifest, master_key, target)
+        manifest = _manifest(service_version, schema_version, format)
         manifest = replace(manifest, sha256=_sha256(snapshot))
         write_backup(snapshot, manifest, master_key, target)
     return manifest
 
 
+def _manifest(service_version: str, schema_version: int, format: int) -> Manifest:
+    return Manifest(
+        service_version=service_version,
+        schema_version=schema_version,
+        created_at=iso(utc_now()),
+        sha256="",
+        format=format,
+    )
+
+
 def _write_export(
-    snapshot: Path, manifest: Manifest, master_key: bytes, target: Path
+    records: Records, manifest: Manifest, master_key: bytes, target: Path
 ) -> Manifest:
-    """The export of the database at ``snapshot`` as a backup of format 3.
-    The export goes to a file beside ``target`` first, readable by its
-    owner alone and removed afterwards."""
+    """The export of ``records`` as a backup of format 3. The export goes
+    to a file beside ``target`` first, readable by its owner alone and
+    removed afterwards."""
     staged = target.with_name(target.name + ".export")
     try:
         create_private(staged)
     except OSError as exc:
         raise BackupError(f"{staged} cannot be written: {exc.strerror}") from None
     try:
-        db = Database(snapshot)
-        try:
-            with staged.open("ab") as out:
-                rows = write_export(db, out)
-        finally:
-            db.close()
+        with staged.open("ab") as out:
+            rows = write_export(records, out)
         manifest = replace(manifest, sha256=_sha256(staged), rows=rows)
         write_backup(staged, manifest, master_key, target)
     except OSError as exc:

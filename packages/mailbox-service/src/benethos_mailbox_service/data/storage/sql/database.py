@@ -32,16 +32,17 @@ from .place import Place
 from .revisions import SCHEMA_VERSION
 from .schema import meta
 from .tables import (
+    ROWS_CHUNK,
+    Fixed,
     Table,
     align_changes,
     fill_table,
     key_of,
     read_chunk,
     read_tables,
+    stored_schema,
+    table_named,
 )
-
-# The rows of a table read or written at once by an export.
-ROWS_CHUNK = 500
 
 
 class Database:
@@ -215,20 +216,20 @@ class Database:
         return count
 
     def _table(self, name: str) -> Table:
-        for table in self.tables():
-            if table.name == name:
-                return table
-        raise StorageError(f"the schema has no table {name}")
+        return table_named(self.tables(), name)
 
     def schema_version(self) -> int:
         """The schema the database is in, 0 before the first step."""
         with self.connected() as conn:
-            if not sa.inspect(conn).has_table(meta.name):
-                return 0
-            stored = conn.execute(
-                sa.select(meta.c.value).where(meta.c.key == "schema_version")
-            ).scalar()
-        return 0 if stored is None else int(stored)
+            return stored_schema(conn)
+
+    @contextmanager
+    def view(self) -> Iterator[Fixed]:
+        """The records at one moment, for the time of the block, taken
+        while the database is in use: its schema, its tables and their
+        rows, as one transaction sees them."""
+        with self._place.fixed(self._lock) as conn, self._place.translated():
+            yield Fixed(conn)
 
     def close(self) -> None:
         with self._lock:
@@ -237,10 +238,11 @@ class Database:
             self._place.close()
 
     def snapshot_file(self) -> AbstractContextManager[Path]:
-        """A consistent copy of the whole database, taken while it is in
-        use, as a file beside it, readable by its owner alone. It is gone
-        when the block ends. A copy left by a crash is replaced. Another
-        process making one at the same time is refused."""
+        """A consistent copy of the whole database file, taken while it is
+        in use, as a file beside it, readable by its owner alone. It is
+        gone when the block ends. A copy left by a crash is replaced.
+        Another process making one at the same time is refused. A
+        database that is not a file has none."""
         return self._place.snapshot_file(self._lock)
 
 

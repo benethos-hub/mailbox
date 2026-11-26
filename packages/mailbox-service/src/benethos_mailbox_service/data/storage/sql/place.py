@@ -52,6 +52,11 @@ class Place(Protocol):
         connection for the time it takes."""
         ...
 
+    def fixed(self, lock: threading.RLock) -> AbstractContextManager[sa.Connection]:
+        """A connection in one transaction on the records at one moment,
+        taken while the database is in use, for the time of the block."""
+        ...
+
     def translated(self) -> AbstractContextManager[None]:
         """The failures of the database as this project's errors: a
         constraint as ConflictError, anything else as StorageError,
