@@ -35,6 +35,7 @@ from ..files import create_private, free_path
 from ..secrets import cipher
 from ..storage import (
     SCHEMA_VERSION,
+    SET_ASIDE,
     Database,
     Records,
     Server,
@@ -298,10 +299,6 @@ def _read_plain(source: BinaryIO, store: Store) -> dict[str, int]:
         return read_export(source, store)
     except (ExportError, MailboxServiceError) as exc:
         raise BackupError(f"the backup cannot be read back: {exc}") from None
-
-
-# Where an operator reads how to set an old schema aside for a restore.
-SET_ASIDE = "containers/production/mailbox-service/README.md, Restore on PostgreSQL"
 
 
 def restore_on_server(source: Path, master_key: bytes, server: Server) -> Manifest:

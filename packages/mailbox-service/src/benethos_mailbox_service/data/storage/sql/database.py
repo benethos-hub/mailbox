@@ -40,6 +40,8 @@ from .tables import (
     align_counter,
     fill_table,
     key_of,
+    mark_moving,
+    moving,
     read_chunk,
     read_tables,
     stored_schema,
@@ -96,6 +98,11 @@ class Database:
                     sa.select(meta.c.value).where(meta.c.key == "schema_version")
                 ).scalar()
                 held = 0 if stored is None else int(stored)
+                if moving(conn):
+                    raise StorageError(
+                        "a storage move into this database did not finish:"
+                        " empty it and move again"
+                    )
         marked = revisions.mark(conn)
         if marked is None and held == 0:
             return Migrated(0, upto, tuple(revisions.upgrade(conn, upto)))
@@ -229,6 +236,13 @@ class Database:
             align_counter(conn, shape)
             align_changes(conn)
         return count
+
+    def mark_move(self, started: str | None) -> None:
+        """Mark the database as the target of a move that began at
+        ``started``, or, with None, as one that ended. Opening a database
+        with the mark is refused."""
+        with self.connected() as conn:
+            mark_moving(conn, started)
 
     def _table(self, name: str) -> Table:
         return table_named(self.tables(), name)
