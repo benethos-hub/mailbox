@@ -209,6 +209,11 @@ def _exported_schema(manifest: Manifest) -> None:
     schema = manifest.schema_version
     if schema < _FIRST_EXPORTED or not isinstance(manifest.rows, dict):
         raise BackupError("the backup does not match its manifest")
+    _not_newer(schema)
+
+
+def _not_newer(schema: int) -> None:
+    """Refuse a backup of a schema newer than this version's."""
     if schema > SCHEMA_VERSION:
         raise BackupError(
             f"the backup has schema {schema}, this version supports up to "
@@ -409,13 +414,11 @@ def restore_backup(source: Path, master_key: bytes, target: Path) -> Manifest:
         with locks.exclusive_lock(service_lock(target)):
             remove_database_file(staged)  # from a restore that crashed
             manifest = read_backup(source, master_key, staged)
-            if manifest.schema_version > SCHEMA_VERSION:
+            try:
+                _not_newer(manifest.schema_version)
+            except BackupError:
                 remove_database_file(staged)
-                raise BackupError(
-                    f"the backup has schema {manifest.schema_version}, this "
-                    f"version supports up to {SCHEMA_VERSION}: update the "
-                    "service first"
-                )
+                raise
             _replace(target, staged)
     except locks.LockedError:
         raise BackupError(
