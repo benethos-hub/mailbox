@@ -3,12 +3,13 @@ name, and none other, and the oldest server it takes."""
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import Any, cast
 
 import pytest
 
-from benethos_mailbox_service.data.storage import open_repositories
+from benethos_mailbox_service.data.storage import Server, open_repositories
 from benethos_mailbox_service.data.storage.sql.server_place import supported
 from benethos_mailbox_service.errors import StorageError
 
@@ -49,3 +50,18 @@ def test_a_server_older_than_19_is_refused(version: int, refused: bool) -> None:
             supported(version)
     else:
         supported(version)
+
+
+def test_without_its_driver_postgres_names_the_extra(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setitem(sys.modules, "psycopg", None)
+    server = Server(
+        host="db.example.org",
+        port=5432,
+        database="mailbox",
+        role="svc",
+        password="unused",  # pragma: allowlist secret
+    )
+    with pytest.raises(StorageError, match=r"benethos-mailbox-service\[postgres\]"):
+        open_repositories("postgres", tmp_path / "store.db", server)

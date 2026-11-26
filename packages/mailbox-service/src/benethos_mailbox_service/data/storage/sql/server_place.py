@@ -96,7 +96,20 @@ class ServerPlace:
 
     def _engine_of(self) -> sa.Engine:
         server = self._server
-        engine = server_engine(
+        try:
+            engine = self._driven(server)
+        except ImportError:
+            raise StorageError(
+                "storage postgres needs the extra postgres of the service:"
+                " pip install 'benethos-mailbox-service[postgres]'"
+            ) from None
+        sa.event.listen(engine, "handle_error", _not_of_the_driver)
+        return engine
+
+    @staticmethod
+    def _driven(server: Server) -> sa.Engine:
+        """The engine, which loads the driver."""
+        return server_engine(
             host=server.host,
             port=server.port,
             database=server.database,
@@ -105,8 +118,6 @@ class ServerPlace:
             search_path=server.schema_name,
             tls=tls_arguments(server.host, server.tls, server.ca_file),
         )
-        sa.event.listen(engine, "handle_error", _not_of_the_driver)
-        return engine
 
     def undo(self) -> None:
         with suppress(Exception):
