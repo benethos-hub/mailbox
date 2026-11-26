@@ -37,6 +37,8 @@ from .tables import SERVICE_LOCK, stored_schema
 OLDEST_SERVER = 190000
 
 
+# A call before the place was opened, or after it was closed.
+NOT_OPEN = "the database is not open"
 # Another service took the lock while the server was away.
 TAKEN = "another service took this database while it was away"
 
@@ -231,9 +233,16 @@ class ServerPlace:
             self._let_go(connection)
 
     def _open(self) -> sa.Connection:
+        """The one connection, or the error of a place not opened."""
         if self._connection is None:
-            raise StorageError("the database is not open")
+            raise StorageError(NOT_OPEN)
         return self._connection
+
+    def _engine_open(self) -> sa.Engine:
+        """The engine, or the error of a place not opened."""
+        if self._engine is None:
+            raise StorageError(NOT_OPEN)
+        return self._engine
 
     def _take(self, connection: sa.Connection, key: int) -> None:
         if not self._locked(connection, key):
@@ -268,9 +277,7 @@ class ServerPlace:
             return
         if not self._outage.due():
             raise self._outage.unavailable()
-        connection = self._connection
-        if connection is None:
-            raise StorageError("the database is not open")
+        connection = self._open()
         try:
             with suppress(sa.exc.SQLAlchemyError):
                 connection.rollback()
@@ -308,33 +315,30 @@ class ServerPlace:
 
     def tables(self) -> list[str]:
         """The tables of the schema, before a database on it is opened."""
-        if self._connection is None:
-            raise StorageError("the database is not open")
+        connection = self._open()
         with self.translated():
-            names = sa.inspect(self._connection).get_table_names()
-            self._connection.rollback()
+            names = sa.inspect(connection).get_table_names()
+            connection.rollback()
         return sorted(names)
 
     def held_schema(self) -> int:
         """The schema the database on the server says it is in, 0 without
         one, read before a database on it is opened."""
-        if self._connection is None:
-            raise StorageError("the database is not open")
+        connection = self._open()
         with self.translated():
-            held = stored_schema(self._connection)
-            self._connection.rollback()
+            held = stored_schema(connection)
+            connection.rollback()
         return held
 
     def drop_tables(self) -> None:
         """Every table of the schema dropped, the schema itself kept: what
         a restore made, when it fails. No code drops a schema. A
         connection closed by the failure is replaced by a new one."""
-        if self._engine is None:
-            raise StorageError("the database is not open")
+        engine = self._engine_open()
         with self.translated():
             connection = self._connection
             if connection is None or connection.closed:
-                with self._engine.connect() as fresh:
+                with engine.connect() as fresh:
                     _drop_all(fresh)
                 return
             connection.rollback()
@@ -344,11 +348,10 @@ class ServerPlace:
     def fixed(self, lock: threading.RLock) -> Iterator[sa.Connection]:
         """A connection of its own, reading in one transaction of
         REPEATABLE READ."""
-        if self._engine is None:
-            raise StorageError("the database is not open")
+        engine = self._engine_open()
         self.ready()
         with self.translated():
-            conn = reading_fixed(self._engine.connect())
+            conn = reading_fixed(engine.connect())
         with conn, conn.begin():
             yield conn
 
