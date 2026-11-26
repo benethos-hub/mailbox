@@ -233,8 +233,9 @@ class Database:
 def translated() -> Iterator[None]:
     """The failures of the database as this project's errors, with the
     text of the driver: the one of SQLAlchemy holds the statement and its
-    values. The driver's own errors, from the connection used directly,
-    are translated by ``file``."""
+    values. A failure SQLAlchemy raises before the driver is named by its
+    kind alone. The driver's own errors, from the connection used
+    directly, are translated by ``file``."""
     try:
         with file.translated():
             yield
@@ -242,6 +243,12 @@ def translated() -> Iterator[None]:
         raise ConflictError(f"conflicts with a stored record: {exc.orig}") from None
     except sa.exc.DBAPIError as exc:
         raise StorageError(f"the database failed: {exc.orig}") from None
+    except sa.exc.SQLAlchemyError as exc:
+        # Refused before the driver saw it, such as a value that does not
+        # fit its column. Its text, and the one of its cause, can hold the
+        # statement and the value: only the kind is named.
+        cause = getattr(exc, "orig", None) or exc
+        raise StorageError(f"the database failed: {type(cause).__name__}") from None
 
 
 def migrate_file(path: Path) -> None:
