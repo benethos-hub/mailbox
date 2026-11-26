@@ -24,7 +24,7 @@ from ..domain.mailbox import LINK_GONE
 from ..errors import MailboxServiceError, NotFoundError, RateLimitedError
 from . import api, pages
 from .api.errors import api_error, http_error, validation_error
-from .errors import status_of
+from .errors import retry_after, status_of
 from .limits import BodyLimit, Credential, RequestLimit, RequestLimits
 from .pages.errors import error_page
 from .pages.session import carries_session
@@ -71,8 +71,9 @@ def _answer(request: Request, exc: MailboxServiceError) -> Response:
     if not pages.owns(request):
         return api_error(exc)
     page = error_page(request, status_of(exc), redact.redact(exc.message))
-    if isinstance(exc, RateLimitedError):
-        page.headers["Retry-After"] = str(exc.retry_after)
+    wait = retry_after(exc)
+    if wait is not None:
+        page.headers["Retry-After"] = str(wait)
     return page
 
 

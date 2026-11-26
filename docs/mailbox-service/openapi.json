@@ -110,7 +110,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -207,7 +207,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -410,7 +410,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -545,7 +545,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -683,7 +683,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -829,7 +829,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -958,7 +958,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -1107,7 +1107,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -1246,7 +1246,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -1376,7 +1376,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -1517,7 +1517,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -1658,7 +1658,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -1800,7 +1800,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -1946,7 +1946,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -2087,7 +2087,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -2213,7 +2213,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -2338,7 +2338,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -2481,7 +2481,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -2627,7 +2627,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -2756,7 +2756,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -2964,7 +2964,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -3119,7 +3119,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -3277,7 +3277,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -3444,7 +3444,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -3593,7 +3593,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -3751,7 +3751,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -3910,7 +3910,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -4063,7 +4063,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -4236,7 +4236,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -4403,7 +4403,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -4783,7 +4783,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -4984,7 +4984,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -5291,7 +5291,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -5453,7 +5453,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -5620,7 +5620,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -5798,7 +5798,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -5957,7 +5957,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -6326,7 +6326,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -6493,7 +6493,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -6669,7 +6669,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -6840,7 +6840,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -7038,7 +7038,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -7206,7 +7206,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -7395,7 +7395,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -7690,7 +7690,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -7879,7 +7879,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -8076,7 +8076,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -8243,7 +8243,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -8421,7 +8421,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -8580,7 +8580,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -8785,7 +8785,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -8964,7 +8964,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -9127,7 +9127,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -9299,7 +9299,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -9493,7 +9493,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -9705,7 +9705,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -9873,7 +9873,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -10039,7 +10039,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -10247,7 +10247,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -10383,7 +10383,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -10522,7 +10522,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -10669,7 +10669,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -10798,7 +10798,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -10937,7 +10937,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -11187,7 +11187,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -11310,7 +11310,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -11404,7 +11404,7 @@
             }
           },
           "503": {
-            "description": "No user exists yet",
+            "description": "No user exists yet (`setup_required`), or the service cannot reach its database for now (`service_unavailable`), see Retry-After",
             "content": {
               "application/json": {
                 "schema": {

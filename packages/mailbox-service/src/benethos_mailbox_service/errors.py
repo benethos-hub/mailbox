@@ -130,6 +130,20 @@ class StorageError(MailboxServiceError):
     code = "storage_error"
 
 
+class StorageUnavailableError(StorageError):
+    """The service's own database cannot be reached, for now. Its message
+    is the same whatever happened: ``cause`` says what, for the log
+    alone, and ``retry_after`` the seconds until the next attempt."""
+
+    code = "service_unavailable"
+    MESSAGE = "the service is not available at the moment"
+
+    def __init__(self, retry_after: int, cause: str = "") -> None:
+        super().__init__(self.MESSAGE)
+        self.retry_after = retry_after
+        self.cause = cause
+
+
 class NotSupportedError(MailboxServiceError):
     """The provider behind an account cannot do what was asked."""
 
