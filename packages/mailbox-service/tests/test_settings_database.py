@@ -4,14 +4,17 @@ from its file and kept from every log line."""
 
 from __future__ import annotations
 
+import logging
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 
 from benethos_mailbox_common.log import redact
-from benethos_mailbox_service.assembly.storage import server_of
+from benethos_mailbox_service.assembly.storage import server_of, storage
 from benethos_mailbox_service.cli import main
 from benethos_mailbox_service.config import Settings, load_settings
+from benethos_mailbox_service.data.storage import open_repositories
 
 PASSWORD = "an-invented-role-password"  # pragma: allowlist secret
 
@@ -132,3 +135,22 @@ def test_paths_names_the_server_and_never_the_password(
     out = capsys.readouterr().out
     assert f"Database:      {url}" in out.splitlines()
     assert PASSWORD not in out
+
+
+@pytest.mark.parametrize(("tls", "warned"), [("off", True), ("verify", False)])
+def test_tls_switched_off_is_said_at_start(
+    caplog: pytest.LogCaptureFixture, password_file: Path, tls: str, warned: bool
+) -> None:
+    settings = Settings(
+        _env_file=None,  # type: ignore[call-arg]
+        storage="postgres",
+        database_url="postgresql://svc@db.example.org/mailbox",
+        database_password_file=password_file,
+        database_tls=tls,
+    )
+    repositories = open_repositories("memory", Path("unused.db"))
+    with caplog.at_level(logging.WARNING):
+        storage(repositories, settings, lambda: datetime(2026, 11, 26, tzinfo=UTC))
+    said = [r for r in caplog.records if "without TLS" in r.getMessage()]
+    assert len(said) == (1 if warned else 0)
+    assert all(r.levelno == logging.WARNING for r in said)

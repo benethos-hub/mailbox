@@ -3,8 +3,9 @@ names alone are ``hosts``."""
 
 from __future__ import annotations
 
-from ipaddress import ip_address
 from urllib.parse import urlsplit
+
+from .hosts import is_loopback_host
 
 
 def host_of(url: str) -> str | None:
@@ -20,13 +21,7 @@ def host_of(url: str) -> str | None:
 def is_loopback(url: str) -> bool:
     """Whether ``url`` names this computer: localhost or a loopback
     address."""
-    host = host_of(url) or ""
-    if host == "localhost":
-        return True
-    try:
-        return ip_address(host).is_loopback
-    except ValueError:
-        return False
+    return is_loopback_host(host_of(url) or "")
 
 
 def path_and_query(url: str) -> str:

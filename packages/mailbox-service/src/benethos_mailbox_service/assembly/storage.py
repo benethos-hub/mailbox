@@ -33,6 +33,8 @@ def storage(
     activity = ActivityLog(
         clock, audit, transaction=store.transaction if store is not None else None
     )
+    if settings.storage == "postgres" and settings.database_tls == "off":
+        activity.record(said.DatabaseUnencrypted(by=SERVICE))
     migrated = store.migrated if store is not None else None
     if migrated is not None:
         activity.record(
@@ -61,4 +63,6 @@ def server_of(settings: Settings) -> Server | None:
         database=parts.path.removeprefix("/"),
         role=parts.username or "",
         password=password,
+        tls=settings.database_tls,
+        ca_file=settings.database_ca_file,
     )

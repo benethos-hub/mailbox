@@ -110,6 +110,7 @@ and that each is listed here.
 | `system.round_failed` | a round of a background loop failed |
 | `system.key_from_env` | the master key comes from the environment |
 | `system.shared_db` | another service uses this database |
+| `system.db_unencrypted` | the database server is reached without TLS, as the settings say |
 | `system.recovery_shown` | the recovery key was shown |
 | `system.log_read` | the service log was read |
 | `system.keys_created` | the host created the keys |

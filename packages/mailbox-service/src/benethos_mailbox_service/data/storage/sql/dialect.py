@@ -189,9 +189,11 @@ def server_engine(
     role: str,
     password: str,
     search_path: str,
+    tls: Mapping[str, str] | None = None,
 ) -> sa.Engine:
     """An engine on PostgreSQL through psycopg, signed in as ``role``, its
-    connections in the schema ``search_path``, a plain name. Each
+    connections in the schema ``search_path``, a plain name, with what
+    libpq is told of TLS in ``tls``. Each
     connection is its own and closes when it is closed: the service keeps
     one for its life, and a view of one moment takes a second. No value
     of a statement reaches the text of an error."""
@@ -207,7 +209,7 @@ def server_engine(
         url,
         poolclass=NullPool,
         hide_parameters=True,
-        connect_args={"options": f"-csearch_path={search_path}"},
+        connect_args={"options": f"-csearch_path={search_path}", **(tls or {})},
     )
 
 

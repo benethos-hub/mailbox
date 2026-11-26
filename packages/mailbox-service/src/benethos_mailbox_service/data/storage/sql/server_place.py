@@ -16,9 +16,11 @@ from collections.abc import Iterator
 from contextlib import AbstractContextManager, contextmanager, nullcontext, suppress
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 
 import sqlalchemy as sa
 
+from ....common.hosts import is_loopback_host
 from ....errors import StorageError
 from ..migrated import Migrated
 from . import revisions
@@ -36,7 +38,10 @@ OLDEST_SERVER = 190000
 @dataclass(frozen=True, slots=True)
 class Server:
     """Where the database is and who the service is there. ``schema``
-    is named after ``role`` unless given."""
+    is named after ``role`` unless given. ``tls``: "verify" talks to a
+    host other than this one only over TLS with a checked certificate
+    and name, against the authorities of ``ca_file`` or else those of
+    the system. "off" goes without TLS."""
 
     host: str
     port: int
@@ -44,6 +49,8 @@ class Server:
     role: str
     password: str
     schema: str | None = None
+    tls: Literal["verify", "off"] = "verify"
+    ca_file: Path | None = None
 
     @property
     def schema_name(self) -> str:
@@ -95,6 +102,7 @@ class ServerPlace:
             role=server.role,
             password=server.password,
             search_path=server.schema_name,
+            tls=tls_arguments(server.host, server.tls, server.ca_file),
         )
         sa.event.listen(engine, "handle_error", _not_of_the_driver)
         return engine
@@ -190,3 +198,21 @@ def supported(version: int) -> None:
 def _shown(version: int) -> str:
     major, minor = divmod(version, 10000)
     return f"{major}.{minor}"
+
+
+def tls_arguments(
+    host: str, tls: Literal["verify", "off"], ca_file: Path | None
+) -> dict[str, str]:
+    """What libpq is told of TLS. With "verify" a host other than this
+    one is reached only over TLS whose certificate and name are checked
+    (verify-full), against ``ca_file`` or the authorities of the system.
+    This host itself is reached over TLS where the server offers it,
+    without the demand. With "off" never over TLS."""
+    if tls == "off":
+        return {"sslmode": "disable"}
+    if is_loopback_host(host):
+        return {"sslmode": "prefer"}
+    return {
+        "sslmode": "verify-full",
+        "sslrootcert": "system" if ca_file is None else str(ca_file),
+    }

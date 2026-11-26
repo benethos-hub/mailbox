@@ -21,17 +21,23 @@ sh containers/test-database/setup.sh
 
 The script makes the server anew each time. It removes the container's
 volume, starts PostgreSQL on `127.0.0.1:35432` (30000 plus the standard
-port, on the loopback alone) and waits until it answers. Under WSL, the
-port reaches Windows as well.
+port, on the loopback alone) with TLS from a test CA of its own, and
+waits until it answers. Under WSL, the port reaches Windows as well.
+The certificate names `localhost`, `db.mailbox.test`, `127.0.0.1` and
+`::1`.
 
 What it keeps in `secrets/` beside it (not versioned):
 
 | File | Holds |
 |---|---|
 | `admin_password` | the password of the administrator `postgres`, made once, never printed |
-| `tests.env` | what the tests need to connect: host, port, user, database and the name of the password file |
+| `tests.env` | what the tests need to connect: host, port, user, database and the names of the password file and the two CAs |
+| `tls/ca.pem` | the test CA the server's certificate comes from |
+| `tls/other-ca.pem` | a second CA, for the tests that a strange certificate is refused |
+| `tls/` | the keys of both CAs and the server's certificate and key |
 
-Delete `admin_password` for a new password.
+Delete `admin_password` for a new password, the files of `tls/` for new
+certificates.
 
 ## Run the suite
 
