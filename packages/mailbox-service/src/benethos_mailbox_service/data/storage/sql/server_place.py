@@ -10,7 +10,6 @@ reads a fixed state and holds no writer up.
 
 from __future__ import annotations
 
-import re
 import threading
 import time
 from collections.abc import Callable, Iterator
@@ -22,6 +21,7 @@ from typing import Literal
 import sqlalchemy as sa
 
 from ....common.hosts import is_loopback_host
+from ....common.names import is_plain_name
 from ....errors import StorageError, StorageInUseError, StorageUnavailableError
 from ..migrated import Migrated
 from . import revisions
@@ -32,9 +32,6 @@ from .schema import meta
 from .server_lock import kept_key, lock_key, new_key, unlock
 from .tables import SERVICE_LOCK, stored_schema
 
-# A name the server takes without quoting, so it can stand in the
-# search path the connection sets.
-_PLAIN_NAME = re.compile(r"[a-z_][a-z0-9_]{0,62}")
 # The oldest server the service runs on (2026-11-25), as the server
 # writes its version as a number: major * 10000 + minor.
 OLDEST_SERVER = 190000
@@ -84,7 +81,7 @@ class ServerPlace:
     def __init__(
         self, server: Server, clock: Callable[[], float] = time.monotonic
     ) -> None:
-        if not _PLAIN_NAME.fullmatch(server.schema_name):
+        if not is_plain_name(server.schema_name):
             raise StorageError(
                 "the schema of the database is not a plain name:"
                 " lower case letters, digits and underscores"
