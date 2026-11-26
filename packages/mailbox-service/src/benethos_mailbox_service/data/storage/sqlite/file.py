@@ -317,6 +317,24 @@ def inspect_file(path: Path) -> int:
         copy = sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True)
     except sqlite3.Error as exc:
         raise ValueError(f"not a database: {exc}") from None
+    return _inspected(copy)
+
+
+def inspect_bytes(data: bytes) -> int:
+    """As ``inspect_file``, for the bytes of a database file held in
+    memory: nothing of it is written to a disk."""
+    copy = sqlite3.connect(":memory:")
+    try:
+        copy.deserialize(data)
+    except sqlite3.Error as exc:
+        copy.close()
+        raise ValueError(f"not a database: {exc}") from None
+    return _inspected(copy)
+
+
+def _inspected(copy: sqlite3.Connection) -> int:
+    """The integrity of the database ``copy`` checked, its schema version,
+    and ``copy`` closed."""
     try:
         result = copy.execute("PRAGMA integrity_check").fetchone()[0]
         if result != "ok":

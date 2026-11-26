@@ -338,7 +338,10 @@ packages/mailbox-service/
       secrets/          # envelope encryption, key providers, password
                         #   hashes, the vault of the credentials, TOTP,
                         #   passkeys (fido2)
-      backup.py         # encrypted backups of the database, restore
+      backup/           # encrypted backups of the database: the file
+                        #   of blocks and its encryption (blocks.py),
+                        #   writing, reading, checking and restoring
+                        #   them (backups.py)
       export.py         # the records of a store as lines of JSON and
                         #   back, the logical export
       files.py          # files for the owner alone (0600): database, backup, key.

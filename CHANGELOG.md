@@ -37,7 +37,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   an error (`system.db_taken`).
 - `backup FILE` on PostgreSQL writes format 3, the export of the records,
   read from one moment while the service runs. Format 2, the file of a
-  SQLite database, is refused there.
+  SQLite database, is refused there. `backup verify` there decrypts
+  nothing onto a disk: a backup of format 3 is read block by block into
+  a database in memory, one of format 1 or 2 into memory whole.
 
 - Backup format 3: `benethos-mailbox-service backup --format 3 FILE`
   writes the records as an export, encrypted in blocks as format 2,

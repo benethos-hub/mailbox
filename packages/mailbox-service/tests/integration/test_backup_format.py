@@ -11,13 +11,13 @@ from pathlib import Path
 
 import pytest
 
-from benethos_mailbox_service.data import backup
 from benethos_mailbox_service.data.backup import (
     MAGIC,
     MAGIC_1,
     MAGIC_3,
     BackupError,
     Manifest,
+    blocks,
     create_backup,
     read_backup,
     restore_backup,
@@ -116,7 +116,7 @@ def test_inspect_rejects_non_databases(tmp_path: Path) -> None:
 @pytest.fixture
 def small_blocks(monkeypatch: pytest.MonkeyPatch) -> int:
     """Blocks of 1 KiB, so a small database fills many."""
-    monkeypatch.setattr(backup, "BLOCK", 1024)
+    monkeypatch.setattr(blocks, "BLOCK", 1024)
     return 1024
 
 

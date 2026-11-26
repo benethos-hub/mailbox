@@ -60,16 +60,20 @@ def run(args: argparse.Namespace) -> None:
 
 
 def _verify(target: list[str], recovery_key: bool, env_file: Path | None) -> None:
-    from ..data.backup import verify_backup
+    from ..data.backup import verify_backup, verify_in_memory
 
     if len(target) != 2:
         raise UsageError("use `backup verify FILE`")
     settings = load_settings(env_file)
     master = read_recovery_key() if recovery_key else master_key(settings)
-    # Decrypted beside the database, where it is as safe as that is.
-    database = settings.database_path
-    scratch = database.with_name(database.name + ".verifying")
-    manifest = verify_backup(Path(target[1]), master, scratch)
+    if settings.storage == "postgres":
+        # No file beside a database on a server: nothing on a disk.
+        manifest = verify_in_memory(Path(target[1]), master)
+    else:
+        # Decrypted beside the database, where it is as safe as that is.
+        database = settings.database_path
+        scratch = database.with_name(database.name + ".verifying")
+        manifest = verify_backup(Path(target[1]), master, scratch)
     say(
         f"OK: backup of {lines.log_time(parse_iso(manifest.created_at))}, format "
         f"{manifest.format}, service {manifest.service_version}, schema "

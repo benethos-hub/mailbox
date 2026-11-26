@@ -1,19 +1,14 @@
-"""Encrypted backups of the whole database (CONCEPT 7.8).
+"""Encrypted backups of the whole database (CONCEPT 7.8): written,
+read, checked and restored. The file of blocks is ``blocks``.
 
-File layout, version 2: a magic line, a JSON manifest line, then the
-database in blocks of ``BLOCK`` bytes. Each block is written as its nonce,
-a byte that marks the last block, the length of its ciphertext and the
-ciphertext. Every block is encrypted with a key derived from the master
-key and authenticated with the magic, the manifest, its number and its
-mark, so no block can be altered, moved, dropped or added unnoticed, and
-neither can the header. A backup is written from a copy of the database
-on disk and read back into a file, so no more than one block is in
-memory at a time.
+Version 2 holds the file of the database in blocks. A backup is written
+from a copy of the database on disk and read back into a file.
 
 Version 3 holds the logical export of the records (``export``) in the
 same blocks, and its manifest the rows of each table. It does not depend
 on the file of the database: it is read into a new database of its
-schema. Version 2 stays what ``backup`` writes unless told otherwise.
+schema. It is what ``backup`` writes on a database server, and on
+SQLite when told to.
 
 Version 1 holds the database as one ciphertext, authenticated with the
 magic and the manifest. Versions 1, 2 and 3 are read. The master key
@@ -22,54 +17,56 @@ itself is never in a backup.
 
 from __future__ import annotations
 
-import hashlib
+import io
 import json
 import os
-from collections.abc import Iterator
 from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import BinaryIO
 
 from benethos_mailbox_common.paths import locks
-from benethos_mailbox_common.values import sizes
 
-from ..common.clock import iso, utc_now
-from ..errors import MailboxServiceError
-from .export import ExportError, read_export, write_export
-from .files import create_private, free_path
-from .secrets import cipher
-from .storage import (
+from ...common.clock import iso, utc_now
+from ...errors import MailboxServiceError
+from ..export import ExportError, read_export, write_export
+from ..files import create_private, free_path
+from ..secrets import cipher
+from ..storage import (
     SCHEMA_VERSION,
     Database,
     Records,
     Store,
+    inspect_bytes,
     inspect_file,
     migrate_file,
     move_sidecars,
     remove_database_file,
     service_lock,
 )
+from .blocks import (
+    BLOCK,
+    MAGIC,
+    MAGIC_1,
+    MAGIC_3,
+    BackupError,
+    Decrypting,
+    aad,
+    backup_key,
+    blocks_of,
+    decrypt,
+    length,
+    mark,
+    sha256_of,
+)
 
-MAGIC = b"MAILBOX-SERVICE-BACKUP 2\n"
-MAGIC_1 = b"MAILBOX-SERVICE-BACKUP 1\n"
-MAGIC_3 = b"MAILBOX-SERVICE-BACKUP 3\n"
 _MAGICS = {MAGIC_1: 1, MAGIC: 2, MAGIC_3: 3}
 # The first schema format 3 is written of: its export needs schema 26.
 _FIRST_EXPORTED = 26
-BLOCK = sizes.MIB
-_KEY_INFO = b"mailbox-service backup v1"
 # The longest manifest line read: it holds four short fields.
 _MANIFEST_BYTES = 4096
-_LENGTH_BYTES = 4
-# A ciphertext holds its block and the tag of AES-GCM.
-_LONGEST_SEALED = BLOCK + 16
 
 
-class BackupError(Exception):
-    """A backup that cannot be read, decrypted or restored."""
-
-
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Manifest:
     service_version: str
     schema_version: int
@@ -104,7 +101,7 @@ def create_backup(
         except ValueError as exc:
             raise BackupError(f"the database cannot be backed up: {exc}") from None
         manifest = _manifest(service_version, schema_version, format)
-        manifest = replace(manifest, sha256=_sha256(snapshot))
+        manifest = replace(manifest, sha256=sha256_of(snapshot))
         write_backup(snapshot, manifest, master_key, target)
     return manifest
 
@@ -133,7 +130,7 @@ def _write_export(
     try:
         with staged.open("ab") as out:
             rows = write_export(records, out)
-        manifest = replace(manifest, sha256=_sha256(staged), rows=rows)
+        manifest = replace(manifest, sha256=sha256_of(staged), rows=rows)
         write_backup(staged, manifest, master_key, target)
     except OSError as exc:
         raise BackupError(f"{staged} cannot be written: {exc.strerror}") from None
@@ -149,17 +146,17 @@ def write_backup(
     the database in format 2, its export in format 3, as the manifest
     says. A backup that cannot be finished is removed."""
     header = _head(manifest)
-    key = _backup_key(master_key)
+    key = backup_key(master_key)
     try:
         create_private(target, header)
     except OSError as exc:
         raise BackupError(f"{target} cannot be written: {exc.strerror}") from None
     try:
         with source.open("rb") as plain, target.open("ab") as out:
-            for index, block, last in _blocks(plain):
-                found = cipher.encrypt(key, block, _aad(header, index, last))
+            for index, block, last in blocks_of(plain):
+                found = cipher.encrypt(key, block, aad(header, index, last))
                 sealed = found.ciphertext
-                out.write(found.nonce + _mark(last) + _length(len(sealed)) + sealed)
+                out.write(found.nonce + mark(last) + length(len(sealed)) + sealed)
     except OSError as exc:
         target.unlink(missing_ok=True)
         raise BackupError(f"{target} cannot be written: {exc.strerror}") from None
@@ -187,7 +184,7 @@ def read_backup(source: Path, master_key: bytes, into: Path) -> Manifest:
             raise BackupError(f"{plain} cannot be written: {exc.strerror}") from None
         try:
             with plain.open("ab") as out:
-                digest = _decrypt(file, header, _backup_key(master_key), out, source)
+                digest = decrypt(file, header, backup_key(master_key), out, source)
             if digest != manifest.sha256:
                 raise BackupError("the backup does not match its checksum")
             if manifest.format == 3:
@@ -254,6 +251,51 @@ def verify_backup(source: Path, master_key: bytes, scratch: Path) -> Manifest:
         scratch.unlink(missing_ok=True)
 
 
+def verify_in_memory(source: Path, master_key: bytes) -> Manifest:
+    """Check a backup with nothing of it decrypted on a disk, for a
+    service whose database is no file beside which a check could write.
+    Format 3 is read block by block into a database in memory of the
+    schema of the manifest, format 1 and 2, the file of a database, into
+    memory whole. Raises ``BackupError`` on any doubt."""
+    try:
+        file = source.open("rb")
+    except OSError as exc:
+        raise BackupError(f"{source} cannot be read: {exc.strerror}") from None
+    with file:
+        header, manifest = _header(file, source)
+        key = backup_key(master_key)
+        if manifest.format == 3:
+            _exported_schema(manifest)
+            plain = Decrypting(file, header, key, source)
+            db = Database(schema=manifest.schema_version)
+            try:
+                rows = _read_plain(io.BufferedReader(plain, BLOCK), db)
+                plain.finish(manifest.sha256)
+            finally:
+                db.close()
+            if rows != manifest.rows:
+                raise BackupError("the backup does not match its manifest")
+            return manifest
+        held = io.BytesIO()
+        if decrypt(file, header, key, held, source) != manifest.sha256:
+            raise BackupError("the backup does not match its checksum")
+    try:
+        schema = inspect_bytes(held.getvalue())
+    except ValueError as exc:
+        raise BackupError(str(exc)) from None
+    if schema != manifest.schema_version:
+        raise BackupError("the backup does not match its manifest")
+    return manifest
+
+
+def _read_plain(source: BinaryIO, store: Store) -> dict[str, int]:
+    """The export in ``source`` into ``store``, its failures as a backup's."""
+    try:
+        return read_export(source, store)
+    except (ExportError, MailboxServiceError) as exc:
+        raise BackupError(f"the backup cannot be read back: {exc}") from None
+
+
 def restore_backup(source: Path, master_key: bytes, target: Path) -> Manifest:
     """Replace the database at ``target`` with the backup. The previous file
     is kept beside it. The service must not be running."""
@@ -308,86 +350,6 @@ def _head(manifest: Manifest) -> bytes:
     return magic + json.dumps(fields).encode() + b"\n"
 
 
-def _decrypt(
-    file: BinaryIO, header: bytes, key: bytes, out: BinaryIO, source: Path
-) -> str:
-    """Write the database the backup holds to ``out``. Returns its SHA-256."""
-    digest = hashlib.sha256()
-    if header.startswith(MAGIC_1):
-        body = file.read()
-        nonce, ciphertext = body[: cipher.NONCE_BYTES], body[cipher.NONCE_BYTES :]
-        data = _opened(key, nonce, ciphertext, header)
-        out.write(data)
-        digest.update(data)
-        return digest.hexdigest()
-    index = 0
-    while True:
-        nonce = _exactly(file, cipher.NONCE_BYTES, source)
-        last = _exactly(file, 1, source) == _mark(True)
-        length = int.from_bytes(_exactly(file, _LENGTH_BYTES, source), "big")
-        if length > _LONGEST_SEALED:
-            raise BackupError(f"{source} is damaged")
-        sealed = _exactly(file, length, source)
-        block = _opened(key, nonce, sealed, _aad(header, index, last))
-        out.write(block)
-        digest.update(block)
-        if last:
-            break
-        index += 1
-    if file.read(1):
-        raise BackupError(f"{source} holds more than its backup")
-    return digest.hexdigest()
-
-
-def _opened(key: bytes, nonce: bytes, sealed: bytes, aad: bytes) -> bytes:
-    try:
-        return cipher.decrypt(key, nonce, sealed, aad)
-    except cipher.DecryptionError:
-        raise BackupError(
-            "the backup does not decrypt: wrong master key, or the file was altered"
-        ) from None
-
-
-def _exactly(file: BinaryIO, size: int, source: Path) -> bytes:
-    data = file.read(size)
-    if len(data) != size:
-        raise BackupError(f"{source} is truncated")
-    return data
-
-
-def _blocks(file: BinaryIO) -> Iterator[tuple[int, bytes, bool]]:
-    """Each block of the file with its number and whether it is the last.
-    A file that is empty is one empty block."""
-    block = file.read(BLOCK)
-    index = 0
-    while True:
-        after = file.read(BLOCK)
-        yield index, block, not after
-        if not after:
-            return
-        block, index = after, index + 1
-
-
-def _aad(header: bytes, index: int, last: bool) -> bytes:
-    return header + index.to_bytes(8, "big") + _mark(last)
-
-
-def _mark(last: bool) -> bytes:
-    return b"\x01" if last else b"\x00"
-
-
-def _length(size: int) -> bytes:
-    return size.to_bytes(_LENGTH_BYTES, "big")
-
-
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as file:
-        while block := file.read(BLOCK):
-            digest.update(block)
-    return digest.hexdigest()
-
-
 def _replace(target: Path, staged: Path) -> None:
     """Put the database at ``staged`` in place of the one at ``target``.
     It is migrated beside it first, so a crash on the way leaves the old
@@ -410,7 +372,3 @@ def _replace(target: Path, staged: Path) -> None:
             target.replace(kept)  # a file system without hard links
         move_sidecars(target, kept)
     staged.replace(target)
-
-
-def _backup_key(master_key: bytes) -> bytes:
-    return cipher.derive(master_key, _KEY_INFO)
