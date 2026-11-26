@@ -54,7 +54,7 @@ class Running:
 
 
 # What the service may answer before it looked at the token: a limit on
-# the address, or no user yet.
+# the address, no user yet, or its database away for now.
 _BEFORE_THE_TOKEN = frozenset({429, 503})
 # What a gateway answers in front of a service that is down, or the client
 # for an answer it could not read: no envelope, so not the service's own
