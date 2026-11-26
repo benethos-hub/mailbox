@@ -63,6 +63,7 @@ from .sql import (
 )
 from .sql.database import Database, migrate_file
 from .sql.revisions import SCHEMA_VERSION
+from .sql.server_place import Server, ServerPlace
 from .sql.tables import Table
 from .sqlite import (
     inspect_file,
@@ -131,6 +132,8 @@ __all__ = [
     "RoleRepository",
     "SCHEMA_VERSION",
     "Sealed",
+    "Server",
+    "ServerPlace",
     "RecoveryCodeRepository",
     "SendLogRepository",
     "SqlAccountRepository",

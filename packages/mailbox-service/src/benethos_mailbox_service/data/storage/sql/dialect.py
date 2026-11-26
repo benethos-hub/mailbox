@@ -14,7 +14,7 @@ from typing import Any, TypeVar
 
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql, sqlite
-from sqlalchemy.pool import StaticPool
+from sqlalchemy.pool import NullPool, StaticPool
 
 T = TypeVar("T")
 # An INSERT that knows what to do about a row already there.
@@ -156,3 +156,42 @@ def sqlite_engine(connect: Callable[[], Any]) -> sa.Engine:
     )
     sa.event.listen(engine, "begin", begin)
     return engine
+
+
+def server_engine(
+    *,
+    host: str,
+    port: int,
+    database: str,
+    role: str,
+    password: str,
+    search_path: str,
+) -> sa.Engine:
+    """An engine on PostgreSQL through psycopg, signed in as ``role``, its
+    connections in the schema ``search_path``, a plain name. Each
+    connection is its own and closes when it is closed: the service keeps
+    one for its life, and a view of one moment takes a second. No value
+    of a statement reaches the text of an error."""
+    url = sa.URL.create(
+        f"{POSTGRESQL}+psycopg",
+        username=role,
+        password=password,
+        host=host,
+        port=port,
+        database=database,
+    )
+    return sa.create_engine(
+        url,
+        poolclass=NullPool,
+        hide_parameters=True,
+        connect_args={"options": f"-csearch_path={search_path}"},
+    )
+
+
+def reading_fixed(connection: sa.Connection) -> sa.Connection:
+    """``connection`` reading one state in each transaction, writing
+    nothing: REPEATABLE READ, on PostgreSQL read only as well."""
+    options: dict[str, Any] = {"isolation_level": "REPEATABLE READ"}
+    if connection.dialect.name == POSTGRESQL:
+        options["postgresql_readonly"] = True
+    return connection.execution_options(**options)

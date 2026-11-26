@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import itertools
 import os
+import secrets
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -19,6 +20,8 @@ from pathlib import Path
 
 import psycopg
 from psycopg import sql
+
+from benethos_mailbox_service.data.storage import Database, Server, ServerPlace
 
 SWITCH = "MAILBOX_POSTGRES_TESTS"
 _numbers = itertools.count()
@@ -100,3 +103,58 @@ def schemas() -> set[str]:
         for (name,) in rows
         if not name.startswith("pg_") and name != "information_schema"
     }
+
+
+def server(name: str) -> Server:
+    """The schema ``name`` of the server, reached as the administrator."""
+    who = admin()
+    return Server(
+        host=who.host,
+        port=who.port,
+        database=who.database,
+        role=who.user,
+        password=who.password,
+        schema=name,
+    )
+
+
+def database(name: str, *, schema: int | None = None) -> Database:
+    """The database in the schema ``name``, made by the revisions."""
+    return Database(place=ServerPlace(server(name)), schema=schema)
+
+
+@contextmanager
+def role() -> Iterator[Server]:
+    """A role as the service has one: it signs in, has no right beyond
+    its own schema of its name, and is gone after the block with all its
+    schema holds."""
+    name = fresh_name()
+    password = secrets.token_hex(16)
+    made = sql.Identifier(name)
+    with connect() as conn:
+        conn.execute(
+            sql.SQL(
+                "CREATE ROLE {} LOGIN PASSWORD {} NOSUPERUSER NOCREATEDB"
+                " NOCREATEROLE NOINHERIT CONNECTION LIMIT 5"
+            ).format(made, sql.Literal(password))
+        )
+        conn.execute(sql.SQL("CREATE SCHEMA {} AUTHORIZATION {}").format(made, made))
+    who = admin()
+    try:
+        yield Server(
+            host=who.host,
+            port=who.port,
+            database=who.database,
+            role=name,
+            password=password,
+        )
+    finally:
+        with connect() as conn:
+            conn.execute(sql.SQL("DROP SCHEMA IF EXISTS {} CASCADE").format(made))
+            conn.execute(sql.SQL("DROP ROLE IF EXISTS {}").format(made))
+
+
+def in_transaction(db: Database) -> bool:
+    """Whether the one connection of ``db`` is inside a transaction: the
+    one place a test knows where it sits."""
+    return bool(db._connection.in_transaction())

@@ -5,14 +5,17 @@ an export, is SQLAlchemy's and the same on every place."""
 
 from __future__ import annotations
 
-from contextlib import AbstractContextManager
+from collections.abc import Callable, Iterator
+from contextlib import AbstractContextManager, contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Protocol
 
+import sqlalchemy as sa
+
+from ....errors import ConflictError, StorageError
+
 if TYPE_CHECKING:
     import threading
-
-    import sqlalchemy as sa
 
     from ..migrated import Migrated
 
@@ -64,3 +67,26 @@ class Place(Protocol):
         ...
 
     def close(self) -> None: ...
+
+
+@contextmanager
+def translated_by(said: Callable[[BaseException | None], str]) -> Iterator[None]:
+    """The failures SQLAlchemy raises as this project's errors: a
+    constraint as ConflictError, anything else as StorageError. What the
+    driver said is named as ``said`` gives it, never the text of
+    SQLAlchemy, which holds the statement and its values. A failure
+    SQLAlchemy raises before the driver is named by its kind alone."""
+    try:
+        yield
+    except sa.exc.IntegrityError as exc:
+        raise ConflictError(
+            f"conflicts with a stored record: {said(exc.orig)}"
+        ) from None
+    except sa.exc.DBAPIError as exc:
+        raise StorageError(f"the database failed: {said(exc.orig)}") from None
+    except sa.exc.SQLAlchemyError as exc:
+        # Refused before the driver saw it, such as a value that does not
+        # fit its column. Its text, and the one of its cause, can hold the
+        # statement and the value: only the kind is named.
+        cause = getattr(exc, "orig", None) or exc
+        raise StorageError(f"the database failed: {type(cause).__name__}") from None

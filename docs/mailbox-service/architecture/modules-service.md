@@ -324,7 +324,9 @@ packages/mailbox-service/
                         #   repositories use, an engine on the one
                         #   connection (database.py), where a database
                         #   lies (place.py), the file of SQLite as one
-                        #   place (file_place.py), the tables for an
+                        #   place (file_place.py), a schema on a
+                        #   PostgreSQL server as another
+                        #   (server_place.py), the tables for an
                         #   export and a view of one moment
                         #   (tables.py), the rows of a table keyed by
                         #   id (rows.py) and the repositories, one
