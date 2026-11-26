@@ -23,6 +23,12 @@ adheres to [Semantic Versioning](https://semver.org/).
   a second service on the same schema. The driver comes with the extra
   `postgres`: `pip install 'benethos-mailbox-service[postgres]'`. The
   image of the service has it.
+- While the service cannot reach its database server, every route
+  answers `503` at once with the code `service_unavailable`, one message
+  and `Retry-After`, `/health` too. It tries again after a pause that
+  doubles from one second to thirty, and goes on without a restart. The
+  log says once that the database went away, with the cause, and once
+  that it is back (`system.db_away`, `system.db_back`).
 
 - Backup format 3: `benethos-mailbox-service backup --format 3 FILE`
   writes the records as an export, encrypted in blocks as format 2,
@@ -154,6 +160,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- A link to an attachment holds while the service cannot reach its
+  database: its route answers `503` with `Retry-After`, and the attempt
+  does not count against the address that asks.
 - The service keeps its records through SQLAlchemy Core, still in
   SQLite, and moves its schema from schema 26 on with Alembic. Nothing is
   to be done for an update: the database file and its schema stay as
