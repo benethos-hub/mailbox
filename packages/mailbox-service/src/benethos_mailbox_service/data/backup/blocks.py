@@ -97,7 +97,8 @@ class Decrypting(io.RawIOBase):
 def decrypt(
     file: BinaryIO, header: bytes, key: bytes, out: BinaryIO, source: Path
 ) -> str:
-    """Write the database the backup holds to ``out``. Returns its SHA-256."""
+    """Write the plain bytes the backup holds to ``out``, the file of a
+    database in format 1 and 2. Returns their SHA-256."""
     digest = hashlib.sha256()
     if header.startswith(MAGIC_1):
         body = file.read()

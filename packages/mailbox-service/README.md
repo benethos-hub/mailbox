@@ -383,7 +383,7 @@ holds is written as `***`, should a message or a traceback carry one.
 | `users reset-second-factor NAME` | removes the user's second factor, every method and the recovery codes |
 | `backup FILE` | writes an encrypted backup, while the service runs |
 | `backup verify FILE [--recovery-key]` | checks a backup |
-| `restore FILE [--recovery-key [--replace-master-key]]` | replaces the database with a backup. Stop the service first. |
+| `restore FILE [--recovery-key [--replace-master-key]]` | replaces the database with a backup, on PostgreSQL fills an empty schema. Stop the service first. |
 | `storage move --to postgres\|sqlite [--check]` | copies every record into a new, empty database on the other side and compares it. Stop the service first. |
 | `openapi` | prints the OpenAPI document |
 | `alert-rules` | prints five alerts on the figures of `GET /v1/metrics`, a file for `rule_files` of Prometheus |
@@ -400,6 +400,13 @@ machine. When the key provider holds another
 master key there, `restore` refuses: the database kept beside the
 restored one opens with that key alone. Note its recovery key, then pass
 `--replace-master-key`.
+
+On PostgreSQL the lock of a running service is held on the server, not
+in a file. `restore` takes it, and reads a backup of format 3 only into
+a schema that holds no table yet. It keeps no previous database: an
+administrator of the server sets the old schema aside first, as
+[the production setup](https://github.com/benethos-hub/mailbox/blob/main/containers/production/mailbox-service/README.md#set-a-schema-aside)
+describes.
 
 `storage move --to postgres` copies the records from the file
 `mailbox.db` in the data folder into the schema that

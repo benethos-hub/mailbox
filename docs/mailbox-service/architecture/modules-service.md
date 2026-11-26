@@ -28,7 +28,8 @@ packages/mailbox-service/
       users.py          # create-admin, set-password, reset-second-factor
       keys.py           # init, import, generate
       backup.py         # write a backup, verify one
-      restore.py        # replace the database with a backup
+      restore.py        # replace the database with a backup, on a
+                        #   server fill an empty schema
       storage.py        # move the records between SQLite and
                         #   PostgreSQL, or check that they fit
     assembly/           # builds the service, picks implementations,
@@ -328,7 +329,9 @@ packages/mailbox-service/
                         #   lies (place.py), the file of SQLite as one
                         #   place (file_place.py), a schema on a
                         #   PostgreSQL server as another
-                        #   (server_place.py), the keys of the lock
+                        #   (server_place.py), a server that is away
+                        #   and when to try again (outage.py), the
+                        #   keys of the lock
                         #   of a running service there
                         #   (server_lock.py), the tables for an
                         #   export and a view of one moment

@@ -51,9 +51,11 @@ from .tables import (
 
 class Database:
     """The database at ``path``, a file readable by its owner alone.
-    Without a path it lives in memory, for tests. Or the one at ``place``,
-    where ``path`` and ``keep_copy`` mean nothing. ``keep_copy``: a file of
-    a schema before ``COPY_BEFORE`` is copied before it is migrated.
+    Without a path it lives in memory, for tests and to check a backup.
+    Or the one at ``place``, where ``path`` and ``keep_copy`` mean
+    nothing. ``keep_copy``: a file of a schema before ``COPY_BEFORE`` is
+    copied before it is migrated, and before a revision that asks for a
+    copy.
     ``schema``: a new database is made at that schema and migrated no
     further, to take the records of an export of it. A database whose
     schema and mark of the revisions disagree is refused."""

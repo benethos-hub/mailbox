@@ -13,7 +13,8 @@ from typing import BinaryIO
 from .blocks import MAGIC, MAGIC_1, MAGIC_3, BackupError
 
 _MAGICS = {MAGIC_1: 1, MAGIC: 2, MAGIC_3: 3}
-# The longest manifest line read: it holds four short fields.
+# The longest manifest line read: four short fields, and in format 3
+# the rows of each table.
 _MANIFEST_BYTES = 4096
 
 

@@ -2,7 +2,9 @@
 
 ``repositories`` holds them together and picks the implementation, a
 protocol and an in-memory implementation per subject sit in a module of
-their own, SQLite in ``sqlite/``, the in-memory base in ``table``.
+their own, the in-memory base in ``table``. ``sql/`` holds the database
+on SQLAlchemy Core, for the file of SQLite and for a schema on a
+PostgreSQL server, ``sqlite/`` the file of SQLite and its old steps.
 """
 
 from __future__ import annotations

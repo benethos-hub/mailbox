@@ -1,5 +1,6 @@
 """Where a database lies: what ``Database`` needs of it beyond SQLAlchemy.
-The file of SQLite is one place (``file_place``). Everything else of the
+The file of SQLite is one place (``file_place``), a schema on a
+PostgreSQL server another (``server_place``). Everything else of the
 database, its transactions, the revisions of its schema and the rows of
 an export, is SQLAlchemy's and the same on every place."""
 
