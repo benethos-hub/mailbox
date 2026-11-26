@@ -237,3 +237,25 @@ def test_undo_on_a_lost_connection_does_not_connect_again() -> None:
             assert connects == []
         finally:
             place.close()
+
+
+def test_the_feed_counts_on_past_the_largest_integer() -> None:
+    from psycopg import sql
+
+    with schema() as name:
+        db = database(name)
+        stores = repositories_on(db)
+        stores.accounts.add(
+            Account(id="acc_1", provider=ProviderType.IMAP, email="a@example.com")
+        )
+        try:
+            with connect() as admin:
+                admin.execute(
+                    sql.SQL(
+                        "SELECT setval(pg_get_serial_sequence({}, 'seq'), {})"
+                    ).format(sql.Literal(f"{name}.changes"), sql.Literal(2**31 - 1))
+                )
+            stores.changes.append([_change(1)])
+            assert stores.changes.last() == 2**31
+        finally:
+            db.close()
