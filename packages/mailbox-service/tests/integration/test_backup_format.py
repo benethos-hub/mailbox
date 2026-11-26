@@ -39,9 +39,7 @@ from benethos_mailbox_service.data.storage import (
 from benethos_mailbox_service.data.storage.sql.tables import Fixed
 from benethos_mailbox_service.data.storage.sqlite import SCHEMA_VERSION
 
-from ..schema_helpers import at_schema
-
-SEED = Path(__file__).parents[1] / "data" / "storage" / "seeds" / "schema_25.sql"
+from ..schema_helpers import at_schema, seed_25
 
 
 @pytest.mark.parametrize(
@@ -225,10 +223,7 @@ def test_a_restore_of_schema_25_keeps_no_copy_of_its_own(tmp_path: Path) -> None
 
 def _source(tmp_path: Path) -> Database:
     """A database with every table filled: the seed of schema 25, migrated."""
-    raw = at_schema(tmp_path / "source.db", 25)
-    raw.executescript(SEED.read_text(encoding="utf-8"))
-    raw.close()
-    return Database(tmp_path / "source.db")
+    return seed_25(tmp_path / "source.db")
 
 
 def test_a_backup_of_version_3_holds_the_export(tmp_path: Path) -> None:

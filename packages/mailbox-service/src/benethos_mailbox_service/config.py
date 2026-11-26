@@ -3,7 +3,6 @@ and the folders a command reads them from and keeps its data in."""
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 from typing import Literal, Self
 from urllib.parse import SplitResult, urlsplit
@@ -13,6 +12,8 @@ from pydantic import Field, SecretStr, field_validator, model_validator
 # Named apart from folders() below.
 from benethos_mailbox_common.paths import folders as system
 from benethos_mailbox_common.settings import files
+
+from .common.names import is_plain_name
 
 APP = "benethos-mailbox-service"
 # The layout of the repository, relative to the working directory. The
@@ -35,8 +36,6 @@ PATH_SETTINGS = (
 )
 # The address of a database server, without its password.
 DATABASE_URL_FORM = "postgresql://<role>@<host>:<port>/<database>"
-# A role, and the schema named after it, as the server takes it unquoted.
-_PLAIN_NAME = re.compile(r"[a-z_][a-z0-9_]{0,62}")
 
 
 class Settings(files.FileSettings):
@@ -315,7 +314,7 @@ def _database_settings(url: str | None, password_file: Path | None) -> None:
         port is None and ":" in parts.netloc.rsplit("@", 1)[-1]
     ):
         raise ValueError(f"database_url must have the form {DATABASE_URL_FORM}")
-    if not _PLAIN_NAME.fullmatch(role):
+    if not is_plain_name(role):
         raise ValueError(
             "the role in database_url names the schema too: lower case"
             " letters, digits and underscores"

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import shutil
 from pathlib import Path
 from typing import Any, BinaryIO
 
@@ -93,6 +94,10 @@ class Decrypting(io.RawIOBase):
         if self._block or self._digest.hexdigest() != sha256:
             raise BackupError("the backup does not match its checksum")
 
+    def hexdigest(self) -> str:
+        """The SHA-256 of the plain bytes read so far."""
+        return self._digest.hexdigest()
+
 
 def decrypt(
     file: BinaryIO, header: bytes, key: bytes, out: BinaryIO, source: Path
@@ -107,23 +112,9 @@ def decrypt(
         out.write(data)
         digest.update(data)
         return digest.hexdigest()
-    index = 0
-    while True:
-        nonce = exactly(file, cipher.NONCE_BYTES, source)
-        last = exactly(file, 1, source) == mark(True)
-        length = int.from_bytes(exactly(file, LENGTH_BYTES, source), "big")
-        if length > LONGEST_SEALED:
-            raise BackupError(f"{source} is damaged")
-        sealed = exactly(file, length, source)
-        block = opened(key, nonce, sealed, aad(header, index, last))
-        out.write(block)
-        digest.update(block)
-        if last:
-            break
-        index += 1
-    if file.read(1):
-        raise BackupError(f"{source} holds more than its backup")
-    return digest.hexdigest()
+    plain = Decrypting(file, header, key, source)
+    shutil.copyfileobj(plain, out, BLOCK)
+    return plain.hexdigest()
 
 
 def opened(key: bytes, nonce: bytes, sealed: bytes, aad: bytes) -> bytes:

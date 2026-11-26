@@ -5,14 +5,12 @@ service does not open."""
 
 from __future__ import annotations
 
-import io
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import pytest
 
-from benethos_mailbox_service.data.export import write_export
 from benethos_mailbox_service.data.models import ChangeRecord
 from benethos_mailbox_service.data.move import MoveError, move_records
 from benethos_mailbox_service.data.storage import (
@@ -23,31 +21,26 @@ from benethos_mailbox_service.data.storage import (
 from benethos_mailbox_service.errors import StorageError, StorageUnavailableError
 
 from ..postgres_helpers import database, schema, server
-
-
-def _exported(db: Database) -> bytes:
-    out = io.BytesIO()
-    write_export(db, out)
-    return out.getvalue()
+from ..schema_helpers import exported
 
 
 def test_a_move_there_and_back_is_the_same_export(
     source: Database, tmp_path: Path
 ) -> None:
-    before = _exported(source)
+    before = exported(source)
     source.close()
     with schema() as name:
         there = move_records(tmp_path / "source.db", server(name))
         on_server = database(name)
         try:
-            assert _exported(on_server) == before
+            assert exported(on_server) == before
         finally:
             on_server.close()
         back = move_records(server(name), tmp_path / "back.db")
     assert there == back
     returned = Database(tmp_path / "back.db")
     try:
-        assert _exported(returned) == before
+        assert exported(returned) == before
     finally:
         returned.close()
 

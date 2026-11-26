@@ -115,13 +115,14 @@ def test_restore_moves_a_leftover_journal_with_the_old_file(machine: Path) -> No
     restored.close()
 
 
-def _backed_up(machine: Path) -> tuple[bytes, Path]:
-    """The master key and a database with one account, backed up."""
+def _backed_up(machine: Path, version: str = "9.9.9") -> tuple[bytes, Path]:
+    """The master key and a database with one account, backed up to
+    ``b.bak`` by the service of ``version``."""
     _populate()
     services = _services()
     assert services.store is not None
     master = services.vault.master_key()
-    create_backup(services.store, master, machine / "b.bak", "9.9.9")
+    create_backup(services.store, master, machine / "b.bak", version)
     services.close()
     return master, Settings().database_path
 
@@ -217,12 +218,7 @@ def test_backup_never_overwrites(machine: Path) -> None:
 
 
 def _backup_file(machine: Path) -> tuple[Path, bytes]:
-    _populate()
-    services = _services()
-    assert services.store is not None
-    master = services.vault.master_key()
-    create_backup(services.store, master, machine / "b.bak", "1")
-    services.close()
+    master, _ = _backed_up(machine, "1")
     return machine / "b.bak", master
 
 

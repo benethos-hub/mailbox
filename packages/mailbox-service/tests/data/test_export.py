@@ -15,9 +15,8 @@ from benethos_mailbox_service.data.export import ExportError, read_export, write
 from benethos_mailbox_service.data.models import ChangeRecord
 from benethos_mailbox_service.data.storage import Database, repositories_on
 
-from ..schema_helpers import at_schema, run
+from ..schema_helpers import SEED, at_schema, exported, run
 
-SEED = Path(__file__).parent / "storage" / "seeds" / "schema_25.sql"
 # The export of that seed at schema 26, written once by the version
 # before the export read its tables from the definitions, and never
 # changed: every table holds rows.
@@ -38,20 +37,14 @@ def source(tmp_path: Path) -> Database:
     return Database(tmp_path / "source.db")
 
 
-def _exported(db: Database) -> bytes:
-    out = io.BytesIO()
-    write_export(db, out)
-    return out.getvalue()
-
-
 def test_an_export_is_read_back_table_for_table(source: Database) -> None:
-    data = _exported(source)
+    data = exported(source)
     target = Database()
     counts = read_export(io.BytesIO(data), target)
     assert counts == {t.name: len(list(source.rows(t.name))) for t in source.tables()}
     for table in source.tables():
         assert list(target.rows(table.name)) == list(source.rows(table.name)), table
-    assert _exported(target) == data
+    assert exported(target) == data
     source.close()
     target.close()
 
@@ -74,7 +67,7 @@ def test_an_export_of_the_version_before_is_read_back() -> None:
     counts = read_export(io.BytesIO(data), target)
     assert all(counts.values()), "a table left empty"
     written = _by_table(data)
-    again = _by_table(_exported(target))
+    again = _by_table(exported(target))
     assert again.keys() == written.keys()
     for table, rows in written.items():
         assert again[table] == rows, table
@@ -98,7 +91,7 @@ def _refused(lines: list[object], message: str) -> None:
 
 
 def test_what_does_not_fit_is_refused(source: Database) -> None:
-    lines = _lines(_exported(source))
+    lines = _lines(exported(source))
     roles = lines.index(
         {"table": "roles", "columns": ["id", "grants", "service", "position"]}
     )
@@ -130,7 +123,7 @@ def test_what_does_not_fit_is_refused(source: Database) -> None:
 
 
 def test_an_export_cut_in_a_line_is_refused(source: Database) -> None:
-    data = _exported(source)
+    data = exported(source)
     target = Database()
     with pytest.raises(ExportError, match="ends early"):
         read_export(io.BytesIO(data[: len(data) // 2]), target)
@@ -149,7 +142,7 @@ def test_a_purged_feed_counts_on_after_an_export(source: Database) -> None:
     feed.append([record, record])
     run(source, "DELETE FROM changes WHERE seq > 7")
     target = Database()
-    read_export(io.BytesIO(_exported(source)), target)
+    read_export(io.BytesIO(exported(source)), target)
     repositories_on(target).changes.append([record])
     assert [row[0] for row in target.rows("changes")] == [5, 7, 12]
     source.close()
@@ -160,7 +153,7 @@ def test_an_export_of_a_view_is_the_one_of_the_database(source: Database) -> Non
     """A view holds the records of one moment: what is written while it
     is open is not in it, and its export is byte for byte the one of the
     database at that moment."""
-    before = _exported(source)
+    before = exported(source)
     with source.view() as records:
         repositories_on(source).changes.append(
             [
@@ -175,5 +168,5 @@ def test_an_export_of_a_view_is_the_one_of_the_database(source: Database) -> Non
         out = io.BytesIO()
         write_export(records, out)
     assert out.getvalue() == before
-    assert _exported(source) != before
+    assert exported(source) != before
     source.close()

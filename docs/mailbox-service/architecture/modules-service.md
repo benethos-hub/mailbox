@@ -69,6 +69,8 @@ packages/mailbox-service/
       bounded.py        # trim: tables in memory with a cap
       locks.py          # KeyedLocks: one lock per key, for the services
       chunks.py         # batched: a sequence in slices
+      names.py          # is_plain_name: a role or schema the database
+                        #   server takes without quoting
     web/                # PRESENTATION: HTTP only, FastAPI lives here
       __init__.py       # install: both front ends, errors to the right one
       services.py       # the domain services as dependencies, for both

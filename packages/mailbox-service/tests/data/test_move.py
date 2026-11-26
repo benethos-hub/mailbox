@@ -4,7 +4,6 @@ a value."""
 
 from __future__ import annotations
 
-import io
 import sqlite3
 from pathlib import Path
 from typing import Any
@@ -12,7 +11,6 @@ from typing import Any
 import pytest
 
 from benethos_mailbox_common.paths import locks
-from benethos_mailbox_service.data.export import write_export
 from benethos_mailbox_service.data.move import (
     Misfit,
     MoveError,
@@ -24,9 +22,7 @@ from benethos_mailbox_service.data.move import (
 from benethos_mailbox_service.data.storage import Database, service_lock
 from benethos_mailbox_service.errors import StorageError
 
-from ..schema_helpers import at_schema
-
-SEED = Path(__file__).parent / "storage" / "seeds" / "schema_25.sql"
+from ..schema_helpers import at_schema, exported, seed_25
 
 
 @pytest.fixture
@@ -34,10 +30,7 @@ def seeded(tmp_path: Path) -> Database:
     """The seed of schema 25, migrated: it holds a text in a column of
     numbers and texts in two columns of bytes, as an older version wrote
     them."""
-    raw = at_schema(tmp_path / "seeded.db", 25)
-    raw.executescript(SEED.read_text(encoding="utf-8"))
-    raw.close()
-    return Database(tmp_path / "seeded.db")
+    return seed_25(tmp_path / "seeded.db")
 
 
 def test_every_column_whose_values_do_not_fit_is_named(seeded: Database) -> None:
@@ -76,32 +69,16 @@ def test_a_database_this_version_wrote_fits(tmp_path: Path) -> None:
     db.close()
 
 
-def _fitting(path: Path) -> Database:
-    """The seed of schema 25 at ``path``, migrated, without the values
-    that do not fit their columns."""
-    raw = at_schema(path, 25)
-    raw.executescript(SEED.read_text(encoding="utf-8"))
-    raw.execute(
-        "UPDATE webhook_attempts SET events = CAST(substr(events, 2, 1) AS INTEGER)"
-    )
-    raw.execute(
-        "UPDATE passkeys SET credential_id = CAST(credential_id AS BLOB),"
-        " credential = CAST(credential AS BLOB)"
-    )
-    raw.close()
-    return Database(path)
-
-
 def _exported(path: Path) -> bytes:
     db = Database(path)
-    out = io.BytesIO()
-    write_export(db, out)
-    db.close()
-    return out.getvalue()
+    try:
+        return exported(db)
+    finally:
+        db.close()
 
 
 def test_a_move_copies_every_record_and_leaves_no_mark(tmp_path: Path) -> None:
-    _fitting(tmp_path / "from.db").close()
+    seed_25(tmp_path / "from.db", fitting=True).close()
     before = _exported(tmp_path / "from.db")
     moved = move_records(tmp_path / "from.db", tmp_path / "to.db")
     assert _exported(tmp_path / "to.db") == before
@@ -111,7 +88,7 @@ def test_a_move_copies_every_record_and_leaves_no_mark(tmp_path: Path) -> None:
 
 
 def test_a_check_writes_nothing(tmp_path: Path) -> None:
-    _fitting(tmp_path / "from.db").close()
+    seed_25(tmp_path / "from.db", fitting=True).close()
     before = (tmp_path / "from.db").read_bytes()
     files = {p.name for p in tmp_path.iterdir()}
     found = check_move(tmp_path / "from.db")
@@ -131,14 +108,14 @@ def test_values_that_do_not_fit_stop_the_move_before_the_target(
 
 
 def test_a_target_that_exists_is_refused(tmp_path: Path) -> None:
-    _fitting(tmp_path / "from.db").close()
+    seed_25(tmp_path / "from.db", fitting=True).close()
     Database(tmp_path / "to.db").close()
     with pytest.raises(MoveError, match="a new database only"):
         move_records(tmp_path / "from.db", tmp_path / "to.db")
 
 
 def test_a_running_service_on_either_side_refuses_the_move(tmp_path: Path) -> None:
-    _fitting(tmp_path / "from.db").close()
+    seed_25(tmp_path / "from.db", fitting=True).close()
     running = Database(tmp_path / "from.db")
     with running.serving() as free:
         assert free
@@ -155,7 +132,7 @@ def test_a_running_service_on_either_side_refuses_the_move(tmp_path: Path) -> No
 def test_a_move_that_fails_halfway_leaves_a_target_the_service_refuses(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    _fitting(tmp_path / "from.db").close()
+    seed_25(tmp_path / "from.db", fitting=True).close()
     fill = Database.fill
 
     def failing(self: Database, table: str, *args: Any) -> int:
@@ -183,7 +160,7 @@ def test_a_source_of_an_older_schema_is_refused_unchanged(tmp_path: Path) -> Non
 
 def test_a_text_with_nul_does_not_fit(tmp_path: Path) -> None:
     path = tmp_path / "nul.db"
-    _fitting(path).close()
+    seed_25(path, fitting=True).close()
     raw = sqlite3.connect(path)
     raw.execute(
         "UPDATE users SET name = 'a' || char(0) || 'secret-name'"

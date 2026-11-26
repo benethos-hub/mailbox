@@ -14,7 +14,7 @@ from benethos_mailbox_service.data.storage import (
     MessageIndexRepository,
     Repositories,
 )
-from benethos_mailbox_service.data.storage.sql import database, dialect
+from benethos_mailbox_service.data.storage.sql import dialect, tables
 from benethos_mailbox_service.data.storage.sqlite import file
 
 from .disk_helpers import Disk
@@ -52,7 +52,7 @@ def export_chunks(monkeypatch: pytest.MonkeyPatch) -> Callable[[int], None]:
     """Sets how many rows of a table the export reads at once."""
 
     def size(rows: int) -> None:
-        monkeypatch.setattr(database, "ROWS_CHUNK", rows)
+        monkeypatch.setattr(tables, "ROWS_CHUNK", rows)
 
     return size
 

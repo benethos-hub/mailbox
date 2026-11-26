@@ -1,19 +1,51 @@
 """A database file at an older schema, made by the migrations up to it,
-for the tests of the steps after it. And SQL as text on a ``Database``,
+for the tests of the steps after it, the seed of schema 25 in one, and
+the export of a database as bytes. And SQL as text on a ``Database``,
 for a test that looks below its repositories: the one place a test hands
 it SQL, on the connection of the driver beneath it, also inside
 ``with db.transaction():``."""
 
 from __future__ import annotations
 
+import io
 import sqlite3
 from collections.abc import Iterable, Sequence
 from pathlib import Path
 from typing import Any
 
-from benethos_mailbox_service.data.storage import Database
+from benethos_mailbox_service.data.export import write_export
+from benethos_mailbox_service.data.storage import Database, Records
 from benethos_mailbox_service.data.storage.sqlite.file import translated
 from benethos_mailbox_service.data.storage.sqlite.migrations import MIGRATIONS
+
+# Every table filled at schema 25, with two values an older version
+# wrote that do not fit their columns: a text for a number, texts for
+# bytes.
+SEED = Path(__file__).parent / "data" / "storage" / "seeds" / "schema_25.sql"
+
+
+def seed_25(path: Path, *, fitting: bool = False) -> Database:
+    """The seed of schema 25 at ``path``, migrated. ``fitting``: without
+    the values that do not fit their columns, as a move needs it."""
+    raw = at_schema(path, 25)
+    raw.executescript(SEED.read_text(encoding="utf-8"))
+    if fitting:
+        raw.execute(
+            "UPDATE webhook_attempts SET events = CAST(substr(events, 2, 1) AS INTEGER)"
+        )
+        raw.execute(
+            "UPDATE passkeys SET credential_id = CAST(credential_id AS BLOB),"
+            " credential = CAST(credential AS BLOB)"
+        )
+    raw.close()
+    return Database(path)
+
+
+def exported(records: Records) -> bytes:
+    """The export of ``records``, as bytes."""
+    out = io.BytesIO()
+    write_export(records, out)
+    return out.getvalue()
 
 
 def at_schema(path: Path, version: int) -> sqlite3.Connection:

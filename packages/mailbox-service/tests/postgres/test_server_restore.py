@@ -5,7 +5,6 @@ a database the service does not open when it dies half way."""
 
 from __future__ import annotations
 
-import io
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -19,20 +18,14 @@ from benethos_mailbox_service.data.backup import (
     restore_on_server,
     write_backup,
 )
-from benethos_mailbox_service.data.export import write_export
 from benethos_mailbox_service.data.secrets import cipher
 from benethos_mailbox_service.data.storage import Database, ServerPlace
 from benethos_mailbox_service.errors import StorageError, StorageUnavailableError
 
 from ..postgres_helpers import connect, role, schemas
+from ..schema_helpers import exported
 
 MASTER = cipher.new_key()
-
-
-def _exported(db: Database) -> bytes:
-    out = io.BytesIO()
-    write_export(db, out)
-    return out.getvalue()
 
 
 @pytest.fixture
@@ -49,7 +42,7 @@ def test_a_restore_into_an_empty_schema_is_the_export(
         manifest = restore_on_server(backup, MASTER, server)
         restored = Database(place=ServerPlace(server))
         try:
-            assert _exported(restored) == _exported(source)
+            assert exported(restored) == exported(source)
         finally:
             restored.close()
     assert manifest.format == 3
@@ -62,13 +55,13 @@ def test_a_schema_with_tables_is_refused_and_kept(
     with role() as server:
         Database(place=ServerPlace(server)).close()
         held = Database(place=ServerPlace(server))
-        before = _exported(held)
+        before = exported(held)
         held.close()
         with pytest.raises(BackupError, match="empty schema only"):
             restore_on_server(backup, MASTER, server)
         after = Database(place=ServerPlace(server))
         try:
-            assert _exported(after) == before
+            assert exported(after) == before
         finally:
             after.close()
     source.close()
@@ -78,7 +71,7 @@ def test_a_backup_that_does_not_hold_leaves_no_table(
     source: Database, tmp_path: Path
 ) -> None:
     export = tmp_path / "export"
-    export.write_bytes(_exported(source))
+    export.write_bytes(exported(source))
     with source.view() as records:
         schema = records.schema_version()
     import hashlib
