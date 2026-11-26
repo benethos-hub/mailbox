@@ -4,6 +4,9 @@ ends stops the server, and every connection closes either way."""
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
+from contextlib import AbstractContextManager, nullcontext
+from dataclasses import replace
 
 import anyio
 import pytest
@@ -11,6 +14,7 @@ import pytest
 from benethos_mailbox_service.assembly import Services
 from benethos_mailbox_service.assembly.lifecycle import serving
 from benethos_mailbox_service.config import Settings
+from benethos_mailbox_service.data.storage import Availability
 
 
 def broken_dispatcher(services: Services, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -63,3 +67,38 @@ async def test_without_a_stop_the_error_goes_on_and_all_closes(
         async with serving(services, settings, None):
             await anyio.sleep(5)
     assert closed == [True]
+
+
+class _Taken:
+    """A store whose lock another service takes while it is away."""
+
+    def __init__(self) -> None:
+        self.reports: list[Callable[[Availability], None]] = []
+
+    def serving(self) -> AbstractContextManager[bool]:
+        return nullcontext(True)
+
+    def schema_version(self) -> int:
+        return 26
+
+    def watch(self, report: Callable[[Availability], None]) -> None:
+        self.reports.append(report)
+
+    def close(self) -> None:
+        return None
+
+
+async def test_a_lock_taken_meanwhile_stops_the_server(
+    services: Services, settings: Settings, caplog: pytest.LogCaptureFixture
+) -> None:
+    store = _Taken()
+    held = replace(services, repositories=replace(services.repositories, store=store))
+    stops: list[bool] = []
+    with caplog.at_level(logging.ERROR), anyio.fail_after(5):
+        async with serving(held, settings, None, lambda: stops.append(True)):
+            for report in store.reports:
+                report(Availability(away=False, seconds=3.0, lock_lost=True))
+    assert stops == [True]
+    [line] = [r for r in caplog.records if r.name.endswith("db_taken")]
+    assert line.levelno == logging.ERROR
+    assert "another service" in line.getMessage()

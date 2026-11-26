@@ -109,6 +109,7 @@ def test_every_series_with_its_value() -> None:
         "mailbox_outbox_unknown": 0,
         "mailbox_webhooks": 2,
         "mailbox_webhooks_failing": 1,
+        "mailbox_storage_outages_total": 0,
     } | {name: value for name, value in found.items() if name.startswith("process_")}
 
 
@@ -168,7 +169,7 @@ def test_every_figure_an_alert_names_is_written() -> None:
     written = {name.partition("{")[0] for name in lines(figures(every))}
     expressions = re.findall(r"^\s*expr: (.+)$", alert_rules(), re.M)
     named = {n for e in expressions for n in re.findall(r"\bmailbox_\w+", e)}
-    assert len(expressions) == 4 and named
+    assert len(expressions) == 5 and named
     assert named <= written, named - written
 
 
@@ -183,3 +184,15 @@ def test_a_send_of_unknown_outcome_needs_a_look() -> None:
     found = lines(figures(unclear))
     assert found["mailbox_outbox_unknown"] == 1
     assert found['mailbox_account_attention{account="acc_1",provider="imap"}'] == 1
+
+
+def test_the_outages_of_the_database_are_counted() -> None:
+    counted = Figures(
+        accounts=[], worker=WORKER, webhooks=NO_WEBHOOKS, storage_outages=3
+    )
+    assert lines(counted)["mailbox_storage_outages_total"] == 3
+
+
+def test_an_alert_fires_when_the_figures_are_gone() -> None:
+    """Gone or without its database, the service answers no figures."""
+    assert "expr: absent(mailbox_info)" in alert_rules()

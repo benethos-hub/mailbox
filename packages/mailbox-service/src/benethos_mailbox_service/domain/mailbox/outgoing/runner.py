@@ -26,6 +26,7 @@ from ....errors import (
     ProviderAuthError,
     ProviderUnavailableError,
     SendLimitError,
+    StorageError,
 )
 from ...activity import OUTBOX, ActivityLog
 from ...activity import mailbox as said
@@ -88,7 +89,6 @@ class OutboxRunner:
 
     async def run(self) -> None:
         """Until cancelled. A failure ends a round, never the runner."""
-        await self.recover()
         await rounds(
             self.send_due,
             pause=POLL,
@@ -98,15 +98,19 @@ class OutboxRunner:
         )
 
     async def recover(self) -> None:
-        """A job still sending when the service stopped may have gone out
-        or not: its outcome is looked into as any unclear one."""
+        """A job still sending when no attempt holds it, after the service
+        stopped or a round failed on the database, may have gone out or
+        not: its outcome is looked into as any unclear one."""
         now = self._clock()
         for job in self._jobs.open():
             if job.state == "sending":
                 await self._unclear(job, "interrupted", now)
 
     async def send_due(self) -> None:
-        """One round: per account the earliest job, if it is due."""
+        """One round: per account the earliest job, if it is due. The
+        rounds run one after another, so no attempt holds a job when one
+        begins: a job still sending is looked into first."""
+        await self.recover()
         self._purge()
         now = self._clock()
         seen: set[str] = set()
@@ -141,10 +145,21 @@ class OutboxRunner:
         prepared = await self._prepared(taken, now)
         if prepared is None:
             return
+        await self._deliver(access, taken, prepared, now)
+
+    async def _deliver(
+        self, access: Access, taken: OutboxJob, prepared: Prepared, now: datetime
+    ) -> None:
+        """Send the job, taken as sending, and end it as its outcome says."""
         try:
             _, copy_error = await self._queued.deliver(access, taken, prepared)
         except OutcomeUnknownError as exc:
             await self._unclear(taken, exc.code, now)
+        except StorageError:
+            # The service's database failed, not the send: the job stays
+            # sending and is looked into as an unclear one, so it is never
+            # sent twice and never ended for it.
+            raise
         except MailboxServiceError as exc:
             self._refused(taken, exc, now)
         except Exception:
@@ -163,6 +178,8 @@ class OutboxRunner:
         except NotFoundError:
             self._end(job, "cancelled", DRAFT_GONE, note=True)
             return None
+        except StorageError:
+            raise  # the database failed, not the draft: as in _attempt
         except MailboxServiceError as exc:
             self._end(job, "failed", exc.code, note=True)
             return None

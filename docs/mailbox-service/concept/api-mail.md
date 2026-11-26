@@ -44,7 +44,7 @@ an error never go out, nor the URL of a webhook. A point in time that
 does not exist yet, such as the last round before the first, is no
 series, never 0. A deleted account is gone from the next answer. The
 figures live in memory and start again after a restart. The route
-answers `404` while `MAILBOX_SERVICE_METRICS=false`. Four alerts on the
+answers `404` while `MAILBOX_SERVICE_METRICS=false`. Five alerts on the
 figures come with the service: the command `alert-rules` prints them. How
 to scrape it and load them: [containers/production/mailbox-service/README.md](../../../containers/production/mailbox-service/README.md#monitoring-with-prometheus).
 

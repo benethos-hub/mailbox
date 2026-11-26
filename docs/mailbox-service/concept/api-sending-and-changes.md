@@ -175,7 +175,11 @@ The service posts a webhook's events as JSON, up to 100 in one post:
 HMAC-SHA256 of `<unix time>.` followed by the body, with the webhook's
 secret. A receiver checks it and may refuse an old time. Each webhook
 keeps the point in the log it has posted up to, so a restart loses
-nothing and repeats nothing a receiver took. A post the receiver does not
+nothing and repeats nothing a receiver took. Should the service's own
+database fail between a post and keeping that point, the events are
+posted once more later, under a new `delivery_id`: a receiver may get
+them twice, and knows them by the same `type`, `id`, `account_id` and
+`at`. A post the receiver does not
 answer with 2xx is tried again after 30 seconds, then twice as long each
 time up to an hour, 8 times in all (the settings
 `MAILBOX_SERVICE_WEBHOOK_ATTEMPTS`, `_FIRST_RETRY`, `_LONGEST_RETRY`).

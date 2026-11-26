@@ -84,7 +84,7 @@ class ServerPlace:
         self._engine: sa.Engine | None = None
         self._connection: sa.Connection | None = None
         self._outage = Outage(clock)
-        self._report: Callable[[Availability], None] | None = None
+        self._reports: list[Callable[[Availability], None]] = []
         # The key of the lock of a running service, while it is held.
         self._held: int | None = None
 
@@ -204,7 +204,7 @@ class ServerPlace:
             raise StorageError("another service took this database while it was away")
 
     def watch(self, report: Callable[[Availability], None]) -> None:
-        self._report = report
+        self._reports.append(report)
 
     def unavailable(self) -> StorageUnavailableError | None:
         return self._outage.unavailable() if self._outage.away else None
@@ -215,8 +215,8 @@ class ServerPlace:
             self._said(Availability(away=True, cause=cause))
 
     def _said(self, change: Availability) -> None:
-        if self._report is not None:
-            self._report(change)
+        for report in self._reports:
+            report(change)
 
     def snapshot_file(self, lock: threading.RLock) -> AbstractContextManager[Path]:
         raise StorageError("a database on a server has no file")

@@ -29,6 +29,12 @@ adheres to [Semantic Versioning](https://semver.org/).
   doubles from one second to thirty, and goes on without a restart. The
   log says once that the database went away, with the cause, and once
   that it is back (`system.db_away`, `system.db_back`).
+- `mailbox_storage_outages_total` in `GET /v1/metrics` counts the times
+  the database went away since the start, and a fifth alert,
+  `MailboxNotAnswering`, fires when there are no figures for five
+  minutes: the service is gone, or cannot reach its database. A service
+  whose database lock another service took while it was away stops with
+  an error (`system.db_taken`).
 
 - Backup format 3: `benethos-mailbox-service backup --format 3 FILE`
   writes the records as an export, encrypted in blocks as format 2,
@@ -213,6 +219,25 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- A failure of the service's own database while the outbox prepares or
+  sends a job no longer ends the job as `failed` with `storage_error`.
+  The job stays `sending` and is looked into as one whose outcome is
+  unclear: found in the sent folder it ends as `sent`, else it is tried
+  again. It is never sent twice.
+- A send of the outbox left `sending`, by a round that failed, is looked
+  into at the next round, not only when the service starts again, and no
+  longer holds up the later sends of its account until then. A failure
+  of the database at the start of the outbox no longer stops the
+  service.
+- A webhook whose record cannot be read for a failure of the service's
+  own database is no longer passed over as removed: the round fails, and
+  the next one posts.
+- A failure of the service's own database while an account is watched
+  no longer stops the service: the watcher waits and goes on, and a line
+  about the account that cannot be read falls away.
+- A background loop that meets the database away no longer writes an
+  error each round, every few seconds: the log says it once, and the
+  loop waits until the database is tried again.
 - A failure of the service's own database no longer signs anyone out of
   the UI. The page says the service is not available, and the session
   stays.

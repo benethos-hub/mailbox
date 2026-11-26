@@ -151,6 +151,7 @@ def build_services(
                     if repositories.store is not None
                     else None
                 ),
+                outages=lambda: records.outages.count,
             ),
             recovery=RecoveryKey(services.auth, vault),
             log=ServiceLog(logbook or LogBook(), records.activity),

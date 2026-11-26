@@ -111,6 +111,7 @@ and that each is listed here.
 | `system.key_from_env` | the master key comes from the environment |
 | `system.shared_db` | another service uses this database |
 | `system.db_away` | the database server cannot be reached, said once when it goes |
+| `system.db_taken` | another service took the database while it was away: this one stops |
 | `system.db_back` | the database server answers again, after so many seconds |
 | `system.db_unencrypted` | the database server is reached without TLS, as the settings say |
 | `system.recovery_shown` | the recovery key was shown |

@@ -1,4 +1,4 @@
-# Four alerts on the figures of GET /v1/metrics, for rule_files of
+# Five alerts on the figures of GET /v1/metrics, for rule_files of
 # Prometheus. What each means: containers/production/mailbox-service/README.md,
 # "Monitoring with Prometheus".
 groups:
@@ -13,3 +13,6 @@ groups:
         expr: mailbox_webhooks_failing > 0
       - alert: MailboxSendUnknown
         expr: mailbox_outbox_unknown > 0
+      - alert: MailboxNotAnswering
+        expr: absent(mailbox_info)
+        for: 5m

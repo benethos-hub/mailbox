@@ -61,6 +61,11 @@ class _Collector:
         yield from _worker(self._figures.worker)
         yield from _accounts(self._figures.accounts)
         yield from _webhooks(self._figures.webhooks)
+        yield CounterMetricFamily(
+            "mailbox_storage_outages",
+            "Times the service could not reach its database since it started",
+            value=self._figures.storage_outages,
+        )
 
 
 def _gauge(name: str, documentation: str, value: float) -> GaugeMetricFamily:

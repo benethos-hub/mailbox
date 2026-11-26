@@ -21,6 +21,7 @@ the audit keeps as well are listed in [AUDIT.md](../AUDIT.md) section 2.
 | WARNING | another service uses this database | | |
 | WARNING | the service cannot reach the database (cause): every request answers 503 until it is back | the kind of the failure and its code | once when it goes, not per request or round. The answers say "not available" alone |
 | INFO | the service reaches the database again, after N seconds | seconds | once when it is back |
+| ERROR | the service found another service on the database when it was back, and stops | | the lock of a running service was taken meanwhile: `serve` ends with an error |
 | WARNING | the service talks to the database server without TLS | | `MAILBOX_SERVICE_DATABASE_TLS=off` |
 
 ### 5.2 Sign-in and sessions

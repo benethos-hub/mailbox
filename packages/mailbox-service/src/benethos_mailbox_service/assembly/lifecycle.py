@@ -5,11 +5,13 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
 from contextlib import ExitStack, asynccontextmanager, contextmanager
+from functools import partial
 from pathlib import Path
 
 import anyio
 
 from ..config import Settings
+from ..data.storage import Availability
 from ..domain.activity import (
     DISPATCHER,
     OUTBOX,
@@ -48,6 +50,8 @@ async def serving(
         store = services.store
         if store is not None and not held.enter_context(store.serving()):
             services.activity.record(said.DatabaseShared(by=SERVICE))
+        if store is not None:
+            store.watch(partial(_taken, services.activity, stop))
         services.activity.record(
             said.ServiceStarted(
                 by=SERVICE,
@@ -117,4 +121,16 @@ async def _loop(
         activity.record(said.LoopEnded(by=by, error=exc))
         if stop is None:
             raise
+        stop()
+
+
+def _taken(
+    activity: ActivityLog, stop: Callable[[], None] | None, change: Availability
+) -> None:
+    """Another service took the database while it was away: the log
+    says so at ERROR, and ``stop`` ends the server, as when a loop ends."""
+    if not change.lock_lost:
+        return
+    activity.record(said.DatabaseTaken(by=SERVICE))
+    if stop is not None:
         stop()
