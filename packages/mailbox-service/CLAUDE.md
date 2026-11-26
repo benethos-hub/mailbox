@@ -19,20 +19,27 @@ on it. The client's requests are held to it as well
 
 - Every error response uses the envelope `{"error": {"code", "message"}}`.
 - Lists are paged with an opaque `next_cursor`, never with page numbers.
-- A change to the database schema is a new revision of Alembic: a
+- A change to the database schema is a new revision: a class
+  `RNNNN<Subject>` of the base `Revision` (`revisions/revision.py`) in a
   module `rNNNN_<subject>.py` in
-  `src/benethos_mailbox_service/data/storage/sql/revisions/versions/`
-  with the next number as `revision` and the one before as
-  `down_revision`. It ends with `written(NNNN)`, which writes
-  `meta.schema_version`, and `SCHEMA_VERSION` in `revisions/__init__.py`
-  becomes its number. The definitions in `data/storage/sql/schema.py`
-  change with it, and a test holds the two alike. The module's docstring
-  says what it does and why. It runs on SQLite and on PostgreSQL, and
-  only forward. A revision that builds a table anew which others refer
-  to needs care on SQLite, and a test with rows in the tables that refer
-  to it: with foreign keys on, SQLite can delete the rows of a table it
-  drops, and that reaches the tables that refer to it. Measure it with
-  the first such revision.
+  `src/benethos_mailbox_service/data/storage/sql/revisions/versions/`,
+  with the next number as `version`. It makes its step in `steps`: the
+  tables through `alembic.op`, the rows through `self.conn`, rows worked
+  out in Python with `self.rewrite`. `check`, `refuse`, `note`,
+  `keeps_copy` and `in_transaction` are there when a step needs them.
+  The base writes `meta.schema_version` after the step. The module ends
+  with `revision, down_revision, upgrade = RNNNN<Subject>.alembic()`,
+  the three named in `__all__`, since Alembic alone reads them, and
+  `SCHEMA_VERSION` in `revisions/__init__.py` becomes its number. The
+  definitions in `data/storage/sql/schema.py` change with it, and a test
+  holds the two alike. The module's docstring says what it does and why.
+  It runs on SQLite and on PostgreSQL, and only forward. A change to the
+  base that would change what a released revision does is a new
+  revision, never an edit of the base. A revision that builds a table
+  anew which others refer to needs care on SQLite, and a test with rows
+  in the tables that refer to it: with foreign keys on, SQLite can
+  delete the rows of a table it drops, and that reaches the tables that
+  refer to it. Measure it with the first such revision.
 - The old steps up to schema 26, classes in
   `src/benethos_mailbox_service/data/storage/sqlite/migrations/`, are
   closed: no step is added there.

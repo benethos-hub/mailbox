@@ -156,7 +156,7 @@ def _migrate(
     upto = min(upto, SCHEMA_VERSION)
     kept = None
     if keep and path is not None and 0 < current < COPY_BEFORE:
-        kept = _keep_copy(connection, path, current)
+        kept = keep_copy(connection, path, current)
     notes: list[str] = []
     for migration in MIGRATIONS.pending(current)[: max(upto - current, 0)]:
         with _step(connection) as db:
@@ -180,30 +180,36 @@ def _has_meta(connection: sqlite3.Connection) -> bool:
     return found is not None
 
 
-def _keep_copy(connection: sqlite3.Connection, path: Path, current: int) -> str:
-    """A copy of the database beside ``path``, readable by its owner
-    alone, before the steps to schema ``COPY_BEFORE`` change it. It is
-    never removed by the service. Answers its name. StorageError when
-    it cannot be written, and then nothing is migrated."""
+def keep_copy(
+    connection: sqlite3.Connection,
+    path: Path,
+    current: int,
+    before: int = COPY_BEFORE,
+) -> str:
+    """A copy of the database at schema ``current`` beside ``path``,
+    readable by its owner alone, before the step to schema ``before``
+    changes it. It is never removed by the service. Answers its name.
+    StorageError when it cannot be written, and then nothing is
+    migrated."""
     stamp = utc_now().strftime("%Y%m%dT%H%M%SZ")
-    kept = free_path(path.with_name(f"{path.name}.before-schema-{COPY_BEFORE}-{stamp}"))
+    kept = free_path(path.with_name(f"{path.name}.before-schema-{before}-{stamp}"))
     try:
         create_private(kept)
     except OSError as exc:
-        raise _not_copied(current, exc) from None
+        raise _not_copied(current, before, exc) from None
     try:
         with translated():
             _copy(connection, kept)
     except (OSError, StorageError) as exc:
         remove_database_file(kept)
-        raise _not_copied(current, exc) from None
+        raise _not_copied(current, before, exc) from None
     return kept.name
 
 
-def _not_copied(current: int, exc: Exception) -> StorageError:
+def _not_copied(current: int, before: int, exc: Exception) -> StorageError:
     return StorageError(
         f"the database at schema {current} was not migrated: its copy"
-        f" before schema {COPY_BEFORE} could not be written: {exc}"
+        f" before schema {before} could not be written: {exc}"
     )
 
 
