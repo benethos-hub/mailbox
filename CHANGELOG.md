@@ -213,6 +213,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- A failure of the service's own database while an account is watched
+  no longer stops the service: the watcher waits and goes on, and a line
+  about the account that cannot be read falls away.
 - A background loop that meets the database away no longer writes an
   error each round, every few seconds: the log says it once, and the
   loop waits until the database is tried again.

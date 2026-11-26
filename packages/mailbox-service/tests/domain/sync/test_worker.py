@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import replace
+from typing import NoReturn
 
 import anyio
 import pytest
@@ -21,6 +22,7 @@ from benethos_mailbox_service.errors import (
     ForbiddenError,
     NotFoundError,
     ProviderAuthError,
+    StorageUnavailableError,
 )
 
 from ...conftest import ADMIN
@@ -353,3 +355,50 @@ async def test_a_failed_round_does_not_end_the_worker(
         await background.run()
     assert len(rounds) == 2
     assert "the worker could not finish a round" in caplog.text
+
+
+def _storage_away(*args: object, **kwargs: object) -> NoReturn:
+    raise StorageUnavailableError(4, "AdminShutdown (57P01)")
+
+
+async def test_a_database_away_ends_no_watcher(
+    imap_services: Services,
+    imap_account_id: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Reading the account for a line fails too: the watcher waits with
+    its pause and goes on, the line falls away. The test ends it in its
+    third pause."""
+    slept: list[float] = []
+
+    async def note(seconds: float) -> None:
+        slept.append(seconds)
+        if len(slept) == 3:
+            raise anyio.get_cancelled_exc_class()
+
+    monkeypatch.setattr(imap_services.sync, "watched", lambda account: True)
+    monkeypatch.setattr(imap_services.adapters, "record", _storage_away)
+    monkeypatch.setattr(imap_services.adapters, "call", _storage_away)
+    with pytest.raises(anyio.get_cancelled_exc_class()):
+        await SyncWorker(
+            imap_services.adapters, imap_services.sync, interval=300, sleep=note
+        ).watch(imap_account_id)
+    assert len(slept) == 3
+    assert slept[1] > slept[0]
+
+
+async def test_a_database_away_ends_no_round(
+    imap_services: Services,
+    imap_account_id: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A sync that fails on the database is recorded where it can be,
+    and the failure of that record ends nothing."""
+    monkeypatch.setattr(imap_services.adapters, "record", _storage_away)
+    monkeypatch.setattr(imap_services.sync, "sync_account", _async_away)
+    background = SyncWorker(imap_services.adapters, imap_services.sync, interval=300)
+    await background.poll()
+
+
+async def _async_away(*args: object, **kwargs: object) -> NoReturn:
+    raise StorageUnavailableError(4, "AdminShutdown (57P01)")

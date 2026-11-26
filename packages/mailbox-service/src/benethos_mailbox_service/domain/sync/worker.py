@@ -27,7 +27,12 @@ from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStre
 from ...common.clock import utc_now
 from ...common.ratelimit import backoff
 from ...data.models import Account, AccountStatus, Capability
-from ...errors import NotFoundError, NotSupportedError, ProviderAuthError
+from ...errors import (
+    NotFoundError,
+    NotSupportedError,
+    ProviderAuthError,
+    StorageError,
+)
 from ..accounts import Adapters, watches
 from ..activity import WORKER, Activity, ActivityLog
 from ..activity import sync as said
@@ -188,15 +193,17 @@ class SyncWorker:
         self._record(account_id, partial(said.SyncFailed, by=WORKER, error=exc))
 
     def _account(self, account_id: str) -> Account | None:
-        """The account a line names, None once it is deleted."""
+        """The account a line names, None once it is deleted, or while the
+        database cannot be read: a line is never worth stopping for."""
         try:
             return self._adapters.record(account_id)
-        except NotFoundError:
+        except (NotFoundError, StorageError):
             return None
 
     def _record(self, account_id: str, make: Callable[..., Activity]) -> None:
         """Record the activity ``make`` builds with ``account=``, unless
-        the account is deleted."""
+        the account is deleted or cannot be read. Never raises: it is
+        called where a failure is handled."""
         record = self._account(account_id)
         if record is not None:
             self._activity.record(make(account=record))
@@ -208,7 +215,7 @@ class SyncWorker:
         if record is not None:
             self._activity.record(said.Watching(by=WORKER, account=record))
         try:
-            while self._wanted(account_id):
+            while self._still_wanted(account_id):
                 try:
                     changed = await self._adapters.call(
                         account_id, lambda p: watches(p).wait_for_change(IDLE_RENEW)
@@ -240,6 +247,14 @@ class SyncWorker:
             return  # deleted
         finally:
             self._watching.discard(account_id)
+
+    def _still_wanted(self, account_id: str) -> bool:
+        """Whether a watcher goes on. While the database cannot be read it
+        does, and waits out its pause on the failure that follows."""
+        try:
+            return self._wanted(account_id)
+        except StorageError:
+            return True
 
     def _wanted(self, account_id: str) -> bool:
         return self._adapters.status(
