@@ -330,7 +330,12 @@ account and re-issuing every token.
   makes a new database at the schema of the backup, reads the export
   into it and migrates it as before. `backup` writes format 2 unless
   told otherwise. `restore` and `backup verify` tell the format from
-  the file. Formats 1, 2 and 3 stay readable for good.
+  the file. Formats 1, 2 and 3 stay readable for good. Nothing of the
+  records of format 3 is written in plain on a disk. `backup` reads
+  them twice from the same view: once for the checksum and the rows of
+  the manifest, once into the blocks. A second checksum that differs
+  removes the backup. `restore` and `backup verify` decrypt the blocks
+  straight into the new database.
 - **On PostgreSQL** (2026-11-26). `backup` writes format 3 alone:
   format 2 is the file of a SQLite database, and there is none.
   `backup verify` decrypts nothing onto a disk. A backup of format 3 is
@@ -340,9 +345,11 @@ account and re-issuing every token.
   when that schema holds no table yet. It takes the lock of a running
   service first and refuses while one holds it. The export goes in at
   the schema of the manifest, the checksum and the rows are held to the
-  manifest, and the revisions bring it forward. When any of it fails,
-  the tables the restore made are dropped again. No code drops the
-  schema itself. A schema that already holds tables is set aside by an
+  manifest, and the revisions bring it forward. Until the records are
+  checked, the database carries the mark of a move, so a restore that
+  dies half way leaves a database the service does not open. When any
+  of it fails, the tables the restore made are dropped again. No code
+  drops the schema itself. A schema that already holds tables is set aside by an
   administrator of the server, as the README of the production setup
   describes. A backup of format 1 or 2 goes to PostgreSQL in two steps:
   `restore` with `MAILBOX_SERVICE_STORAGE=sqlite`, then
