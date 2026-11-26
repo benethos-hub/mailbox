@@ -44,6 +44,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   once for the checksum and once into the backup. `backup FILE` still writes
   format 2. `backup verify` and `restore` read formats 1, 2 and 3 and
   name the format, as does the log line of a backup and a restore.
+  Format 3 is read into the database block by block, with nothing of it
+  in plain beside it.
 - `backup FILE` on PostgreSQL writes format 3, the export of the records,
   read from one moment while the service runs. Format 2, the file of a
   SQLite database, is refused there. `backup verify` there decrypts

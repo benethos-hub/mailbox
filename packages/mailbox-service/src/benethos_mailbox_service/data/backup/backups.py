@@ -203,22 +203,26 @@ def read_backup(source: Path, master_key: bytes, into: Path) -> Manifest:
         file = source.open("rb")
     except OSError as exc:
         raise BackupError(f"{source} cannot be read: {exc.strerror}") from None
+    # The plain export an earlier version wrote beside ``into``, left by
+    # a crash.
+    into.with_name(into.name + ".export").unlink(missing_ok=True)
     with file:
         header, manifest = _header(file, source)
         if manifest.format == 3:
             _exported_schema(manifest)
-        plain = into.with_name(into.name + ".export") if manifest.format == 3 else into
         try:
-            create_private(plain)
+            create_private(into)
         except OSError as exc:
-            raise BackupError(f"{plain} cannot be written: {exc.strerror}") from None
+            raise BackupError(f"{into} cannot be written: {exc.strerror}") from None
         try:
-            with plain.open("ab") as out:
-                digest = decrypt(file, header, backup_key(master_key), out, source)
-            if digest != manifest.sha256:
-                raise BackupError("the backup does not match its checksum")
+            key = backup_key(master_key)
             if manifest.format == 3:
-                _read_export(plain, manifest, into)
+                _read_export(file, header, key, source, manifest, into)
+            else:
+                with into.open("ab") as out:
+                    digest = decrypt(file, header, key, out, source)
+                if digest != manifest.sha256:
+                    raise BackupError("the backup does not match its checksum")
             _check_schema(into, manifest)
         except OSError as exc:
             remove_database_file(into)
@@ -226,9 +230,6 @@ def read_backup(source: Path, master_key: bytes, into: Path) -> Manifest:
         except BaseException:
             remove_database_file(into)
             raise
-        finally:
-            if plain != into:
-                plain.unlink(missing_ok=True)
     return manifest
 
 
@@ -244,22 +245,27 @@ def _exported_schema(manifest: Manifest) -> None:
         )
 
 
-def _read_export(plain: Path, manifest: Manifest, into: Path) -> None:
-    """The export at ``plain`` into a new database at ``into`` of the
-    schema of the manifest, its rows held to the manifest."""
-    try:
-        create_private(into)
-    except OSError as exc:
-        raise BackupError(f"{into} cannot be written: {exc.strerror}") from None
+def _read_export(
+    file: BinaryIO,
+    header: bytes,
+    key: bytes,
+    source: Path,
+    manifest: Manifest,
+    into: Path,
+) -> None:
+    """The export the backup holds into the new database file at
+    ``into``, of the schema of the manifest, decrypted block by block and
+    never written in plain. Its checksum and rows held to the manifest."""
     try:
         db = Database(into, schema=manifest.schema_version)
-        try:
-            with plain.open("rb") as source:
-                rows = read_export(source, db)
-        finally:
-            db.close()
-    except (ExportError, MailboxServiceError) as exc:
+    except MailboxServiceError as exc:
         raise BackupError(f"the backup cannot be read back: {exc}") from None
+    try:
+        plain = Decrypting(file, header, key, source)
+        rows = _read_plain(io.BufferedReader(plain, BLOCK), db)
+        plain.finish(manifest.sha256)
+    finally:
+        db.close()
     if rows != manifest.rows:
         raise BackupError("the backup does not match its manifest")
 
