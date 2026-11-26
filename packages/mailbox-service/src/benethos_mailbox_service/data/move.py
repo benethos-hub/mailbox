@@ -29,7 +29,6 @@ from ..common.clock import iso, utc_now
 from ..errors import SchemaNotEmptyError, StorageInUseError
 from .export import row_line
 from .storage import (
-    MOVING,
     SCHEMA_VERSION,
     Claim,
     Records,
@@ -241,15 +240,12 @@ def _running() -> MoveError:
 
 def _sums(records: Records) -> dict[str, _Sum]:
     """Per table its rows and the SHA-256 of their lines, in the order of
-    the key. The mark of a move is no record."""
+    the key. The mark of a move is no record, and no row of it."""
     sums: dict[str, _Sum] = {}
     for table in records.tables():
         digest = hashlib.sha256()
         count = 0
-        key = table.columns.index("key") if table.name == "meta" else None
         for row in records.rows(table.name):
-            if key is not None and row[key] == MOVING:
-                continue
             digest.update(row_line(row))
             count += 1
         sums[table.name] = _Sum(count, digest.hexdigest())
