@@ -100,8 +100,8 @@ class Database:
                 held = 0 if stored is None else int(stored)
                 if moving(conn):
                     raise StorageError(
-                        "a storage move into this database did not finish:"
-                        " empty it and move again"
+                        "a move or restore into this database did not"
+                        " finish: empty it and try again"
                     )
         if held > SCHEMA_VERSION:
             # On SQLite the old steps refuse it first, in the same words.

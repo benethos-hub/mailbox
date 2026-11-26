@@ -166,7 +166,7 @@ def test_a_move_that_fails_halfway_leaves_a_target_the_service_refuses(
     with pytest.raises(StorageError, match="the disk is full"):
         move_records(tmp_path / "from.db", tmp_path / "to.db")
     monkeypatch.undo()
-    with pytest.raises(StorageError, match="a storage move into this database"):
+    with pytest.raises(StorageError, match="a move or restore into this database"):
         Database(tmp_path / "to.db")
     Database(tmp_path / "from.db").close()
 

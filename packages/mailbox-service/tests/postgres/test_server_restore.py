@@ -1,12 +1,14 @@
 """A restore on PostgreSQL: into an empty schema only, table for table
 the export, refused while a service holds the schema or where it holds
-tables, and leaving nothing of itself when the backup does not hold."""
+tables, and leaving nothing of itself when the backup does not hold, or
+a database the service does not open when it dies half way."""
 
 from __future__ import annotations
 
 import io
 from dataclasses import replace
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -20,6 +22,7 @@ from benethos_mailbox_service.data.backup import (
 from benethos_mailbox_service.data.export import write_export
 from benethos_mailbox_service.data.secrets import cipher
 from benethos_mailbox_service.data.storage import Database, ServerPlace
+from benethos_mailbox_service.errors import StorageError
 
 from ..postgres_helpers import role, schemas
 
@@ -114,4 +117,28 @@ def test_a_restore_while_a_service_runs_is_refused(
                     restore_on_server(backup, MASTER, replace(server))
         finally:
             running.close()
+    source.close()
+
+
+def test_a_restore_that_dies_half_way_is_not_opened(
+    source: Database, backup: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fill = Database.fill
+    filled: list[str] = []
+
+    def dying(self: Database, table: str, *args: Any) -> int:
+        if len(filled) == 4:
+            raise SystemExit("killed")
+        filled.append(table)
+        return fill(self, table, *args)
+
+    monkeypatch.setattr(Database, "fill", dying)
+    # A process that is killed cleans nothing up.
+    monkeypatch.setattr(ServerPlace, "drop_tables", lambda self: None)
+    with role() as server:
+        with pytest.raises(SystemExit):
+            restore_on_server(backup, MASTER, server)
+        monkeypatch.setattr(Database, "fill", fill)
+        with pytest.raises(StorageError, match="a move or restore into this database"):
+            Database(place=ServerPlace(server))
     source.close()

@@ -394,14 +394,18 @@ def _filled(
 ) -> None:
     """The export of the backup into the empty schema of ``place``, at
     the schema of the manifest, then brought forward. Its tables dropped
-    again on any failure."""
+    again on any failure. Until the records are checked the database
+    keeps the mark a move sets, so a restore that dies half way leaves a
+    database the service does not open."""
     try:
         made = Database(place=place, schema=manifest.schema_version)
+        made.mark_move(iso(utc_now()))
         plain = Decrypting(file, header, backup_key(master_key), source)
         rows = _read_plain(io.BufferedReader(plain, BLOCK), made)
         plain.finish(manifest.sha256)
         if rows != manifest.rows:
             raise BackupError("the backup does not match its manifest")
+        made.mark_move(None)
         Database(place=place)
     except BaseException:
         place.drop_tables()

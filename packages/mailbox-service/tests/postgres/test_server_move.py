@@ -118,5 +118,5 @@ def test_a_move_that_fails_halfway_leaves_a_schema_the_service_refuses(
         with pytest.raises(StorageError, match="the server went away"):
             move_records(tmp_path / "source.db", server(name))
         monkeypatch.undo()
-        with pytest.raises(StorageError, match="a storage move into this database"):
+        with pytest.raises(StorageError, match="a move or restore into this database"):
             database(name)
