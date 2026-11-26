@@ -6,6 +6,8 @@ setup.sh`` writes, lines of ``key=value``: ``host``, ``port``, ``user``,
 ``database`` and ``password_file``, the file of the administrator's
 password, relative to the folder of the first. Unset, the suite is not
 collected. It lies outside ``MAILBOX_SERVICE_``, which the tests clear.
+The driver is imported only when a test reaches the server: the default
+run needs no extra of the service.
 """
 
 from __future__ import annotations
@@ -17,11 +19,12 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-
-import psycopg
-from psycopg import sql
+from typing import TYPE_CHECKING
 
 from benethos_mailbox_service.data.storage import Database, Server, ServerPlace
+
+if TYPE_CHECKING:
+    import psycopg
 
 SWITCH = "MAILBOX_POSTGRES_TESTS"
 _numbers = itertools.count()
@@ -63,6 +66,8 @@ def admin() -> Admin:
 
 def connect() -> psycopg.Connection:
     """A connection of the administrator, outside any transaction."""
+    import psycopg
+
     who = admin()
     return psycopg.connect(
         host=who.host,
@@ -82,6 +87,8 @@ def fresh_name() -> str:
 @contextmanager
 def schema(name: str | None = None) -> Iterator[str]:
     """A schema of its own for the block, with all it holds gone after."""
+    from psycopg import sql
+
     made = name or fresh_name()
     with connect() as conn:
         conn.execute(sql.SQL("CREATE SCHEMA {}").format(sql.Identifier(made)))
@@ -128,6 +135,8 @@ def role() -> Iterator[Server]:
     """A role as the service has one: it signs in, has no right beyond
     its own schema of its name, and is gone after the block with all its
     schema holds."""
+    from psycopg import sql
+
     name = fresh_name()
     password = secrets.token_hex(16)
     made = sql.Identifier(name)

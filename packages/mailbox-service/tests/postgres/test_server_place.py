@@ -5,6 +5,7 @@ order of text, and the transactions of the one connection."""
 from __future__ import annotations
 
 import threading
+from collections.abc import Callable
 from datetime import UTC, datetime
 
 import pytest
@@ -130,6 +131,14 @@ def _change(n: int) -> ChangeRecord:
     )
 
 
+def _undone(db: Database, write: Callable[[], object]) -> None:
+    """``write`` in a transaction, inside another one or not, that fails
+    after it and is undone."""
+    with pytest.raises(RuntimeError), db.transaction():
+        write()
+        raise RuntimeError
+
+
 def test_two_writers_on_two_threads_go_one_after_the_other() -> None:
     with schema() as name:
         db = database(name)
@@ -162,9 +171,7 @@ def test_a_savepoint_is_undone_alone() -> None:
         try:
             with db.transaction():
                 users.save(User(id="usr_kept", name="kept"))
-                with pytest.raises(RuntimeError), db.transaction():
-                    users.save(User(id="usr_undone", name="undone"))
-                    raise RuntimeError
+                _undone(db, lambda: users.save(User(id="usr_undone", name="undone")))
             assert users.get("usr_kept").name == "kept"
             with pytest.raises(NotFoundError):
                 users.get("usr_undone")
@@ -199,9 +206,7 @@ def test_a_change_undone_leaves_a_gap_the_feed_reads_past() -> None:
         )
         try:
             stores.changes.append([_change(1)])
-            with pytest.raises(RuntimeError), db.transaction():
-                stores.changes.append([_change(2)])
-                raise RuntimeError
+            _undone(db, lambda: stores.changes.append([_change(2)]))
             stores.changes.append([_change(3), _change(4)])
             read = stores.changes.after(["acc_1"], 0, limit=10)
             first = read[0].seq
