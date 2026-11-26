@@ -344,6 +344,9 @@ packages/mailbox-service/
                         #   them (backups.py)
       export.py         # the records of a store as lines of JSON and
                         #   back, the logical export
+      move.py           # the move of the records between SQLite and
+                        #   PostgreSQL: every value held to its column
+                        #   first, then copied, compared and marked
       files.py          # files for the owner alone (0600): database, backup, key.
                         #   The lock that tells a running service
                         #   from a stopped one is paths.locks of

@@ -28,12 +28,14 @@ ROWS_CHUNK = 500
 
 @dataclass(frozen=True, slots=True)
 class Table:
-    """A table of the schema: its name, its columns in their order, and
-    the columns of its key."""
+    """A table of the schema: its name, its columns in their order, the
+    columns of its key, and the kind of value each column holds, as its
+    definition says: ``text``, ``number`` or ``bytes``. Empty fits each."""
 
     name: str
     columns: tuple[str, ...]
     key: tuple[str, ...]
+    kinds: tuple[str, ...]
 
 
 def read_tables(conn: sa.Connection) -> list[Table]:
@@ -46,6 +48,7 @@ def read_tables(conn: sa.Connection) -> list[Table]:
             table.name,
             tuple(column.name for column in table.columns),
             tuple(column.name for column in table.primary_key.columns),
+            tuple(_kind(column.type) for column in table.columns),
         )
         for table in METADATA.sorted_tables
         if table.name in held and table.name not in BOOKKEEPING
@@ -85,6 +88,16 @@ class Fixed:
             if len(part) < ROWS_CHUNK:
                 return
             after = key_of(shape, part[-1])
+
+
+def _kind(kind: sa.types.TypeEngine[Any]) -> str:
+    if isinstance(kind, sa.LargeBinary):
+        return "bytes"
+    if isinstance(kind, sa.Integer):
+        return "number"
+    if isinstance(kind, sa.String):
+        return "text"
+    raise StorageError(f"a column of the schema holds {type(kind).__name__}")
 
 
 def table_named(tables: Iterable[Table], name: str) -> Table:
