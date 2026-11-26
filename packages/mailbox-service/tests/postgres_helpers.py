@@ -27,6 +27,7 @@ from benethos_mailbox_service.data.storage import Database, Server, ServerPlace
 
 if TYPE_CHECKING:
     import psycopg
+    import pytest
 
 SWITCH = "MAILBOX_POSTGRES_TESTS"
 _numbers = itertools.count()
@@ -173,3 +174,43 @@ def in_transaction(db: Database) -> bool:
     """Whether the one connection of ``db`` is inside a transaction: the
     one place a test knows where it sits."""
     return bool(db._connection.in_transaction())
+
+
+def service_on(
+    server: Server, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *, storage: str
+) -> None:
+    """Settings of a service on ``storage`` with the role of ``server``
+    named, a master key in a file, and one account with a password."""
+    from pydantic import SecretStr
+
+    from benethos_mailbox_service.assembly import build_services
+    from benethos_mailbox_service.config import Settings
+    from benethos_mailbox_service.data.models import ProviderType
+
+    from .conftest import create_account
+
+    password = tmp_path / "database_password"
+    password.write_text(server.password, encoding="utf-8")
+    who = admin()
+    monkeypatch.setenv("MAILBOX_SERVICE_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("MAILBOX_SERVICE_STORAGE", storage)
+    monkeypatch.setenv(
+        "MAILBOX_SERVICE_DATABASE_URL",
+        f"postgresql://{server.role}@{who.host}:{who.port}/{who.database}",
+    )
+    monkeypatch.setenv("MAILBOX_SERVICE_DATABASE_PASSWORD_FILE", str(password))
+    monkeypatch.setenv("MAILBOX_SERVICE_KEY_PROVIDER", "file")
+    monkeypatch.setenv(
+        "MAILBOX_SERVICE_KEY_FILE", str(tmp_path / "secret" / "master.key")
+    )
+    services = build_services(Settings())
+    try:
+        services.vault.initialize()
+        create_account(
+            services.accounts,
+            ProviderType.MEMORY,
+            "owner@example.com",
+            credentials={"password": SecretStr("hunter2")},
+        )
+    finally:
+        services.close()

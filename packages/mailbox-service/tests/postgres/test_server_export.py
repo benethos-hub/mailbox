@@ -9,22 +9,16 @@ from datetime import UTC, datetime
 
 import sqlalchemy as sa
 
-from benethos_mailbox_service.data.export import read_export, write_export
+from benethos_mailbox_service.data.export import read_export
 from benethos_mailbox_service.data.models import ChangeRecord
 from benethos_mailbox_service.data.storage import Database, repositories_on
 
 from ..postgres_helpers import database, schema
-from ..schema_helpers import run
-
-
-def _exported(db: Database) -> bytes:
-    out = io.BytesIO()
-    write_export(db, out)
-    return out.getvalue()
+from ..schema_helpers import exported, run
 
 
 def test_an_export_is_read_into_a_schema_table_for_table(source: Database) -> None:
-    data = _exported(source)
+    data = exported(source)
     with schema() as name:
         target = database(name)
         try:
@@ -34,7 +28,7 @@ def test_an_export_is_read_into_a_schema_table_for_table(source: Database) -> No
                 assert list(target.rows(table.name)) == list(source.rows(table.name)), (
                     table.name
                 )
-            assert _exported(target) == data
+            assert exported(target) == data
         finally:
             target.close()
 
@@ -48,7 +42,7 @@ def test_a_purged_feed_counts_on_after_an_export(source: Database) -> None:
     )
     repositories_on(source).changes.append([record, record])
     run(source, "DELETE FROM changes WHERE seq > 7")
-    data = _exported(source)
+    data = exported(source)
     with schema() as name:
         target = database(name)
         try:
@@ -63,7 +57,7 @@ def test_a_purged_feed_counts_on_after_an_export(source: Database) -> None:
 def test_every_counting_key_counts_on_after_an_export(source: Database) -> None:
     """The rows keep their numbers, and the sequence behind each counting
     key hands out a higher one afterwards."""
-    data = _exported(source)
+    data = exported(source)
     counted = {"changes", "message_index", "thread_links", "webhook_attempts"}
     with schema() as name:
         target = database(name)
