@@ -26,6 +26,7 @@ from ....errors import (
     ProviderAuthError,
     ProviderUnavailableError,
     SendLimitError,
+    StorageError,
 )
 from ...activity import OUTBOX, ActivityLog
 from ...activity import mailbox as said
@@ -141,10 +142,21 @@ class OutboxRunner:
         prepared = await self._prepared(taken, now)
         if prepared is None:
             return
+        await self._deliver(access, taken, prepared, now)
+
+    async def _deliver(
+        self, access: Access, taken: OutboxJob, prepared: Prepared, now: datetime
+    ) -> None:
+        """Send the job, taken as sending, and end it as its outcome says."""
         try:
             _, copy_error = await self._queued.deliver(access, taken, prepared)
         except OutcomeUnknownError as exc:
             await self._unclear(taken, exc.code, now)
+        except StorageError:
+            # The service's database failed, not the send: the job stays
+            # sending and is looked into as an unclear one, so it is never
+            # sent twice and never ended for it.
+            raise
         except MailboxServiceError as exc:
             self._refused(taken, exc, now)
         except Exception:
@@ -163,6 +175,8 @@ class OutboxRunner:
         except NotFoundError:
             self._end(job, "cancelled", DRAFT_GONE, note=True)
             return None
+        except StorageError:
+            raise  # the database failed, not the draft: as in _attempt
         except MailboxServiceError as exc:
             self._end(job, "failed", exc.code, note=True)
             return None

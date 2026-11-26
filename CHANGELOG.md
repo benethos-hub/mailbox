@@ -213,6 +213,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- A failure of the service's own database while the outbox prepares or
+  sends a job no longer ends the job as `failed` with `storage_error`.
+  The job stays `sending` and is looked into as one whose outcome is
+  unclear: found in the sent folder it ends as `sent`, else it is tried
+  again. It is never sent twice.
 - A failure of the service's own database while an account is watched
   no longer stops the service: the watcher waits and goes on, and a line
   about the account that cannot be read falls away.
