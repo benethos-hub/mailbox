@@ -12,7 +12,7 @@ import pytest
 from benethos_mailbox_service import assembly
 from benethos_mailbox_service.assembly import lifecycle
 from benethos_mailbox_service.cli import main, serve
-from benethos_mailbox_service.errors import StorageError
+from benethos_mailbox_service.errors import StorageError, StorageUnavailableError
 
 PASSWORD = "an-invented-role-password"  # pragma: allowlist secret
 
@@ -38,7 +38,7 @@ def away(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> list[float]:
         now[0] += seconds
 
     def unreachable(*args: object, **kwargs: object) -> NoReturn:
-        raise StorageError("the database failed: OperationalError (08001)")
+        raise StorageUnavailableError(1, "OperationalError (08001)")
 
     monkeypatch.setattr(assembly, "create_app", unreachable)
     monkeypatch.setattr(lifecycle, "build_services", unreachable)
@@ -56,6 +56,25 @@ def test_serve_waits_then_names_the_host_and_the_role(
     assert "within 9 seconds: the database failed: OperationalError" in err
     assert PASSWORD not in err
     assert away == [2.0, 2.0, 2.0, 2.0]
+
+
+def test_a_refusal_that_waiting_does_not_heal_ends_at_once(
+    away: list[float],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    def unfinished(*args: object, **kwargs: object) -> NoReturn:
+        raise StorageError(
+            "a move or restore into this database did not finish:"
+            " empty it and try again"
+        )
+
+    monkeypatch.setattr(assembly, "create_app", unfinished)
+    assert main(["serve"]) == 1
+    assert capsys.readouterr().err.startswith(
+        "error: a move or restore into this database did not finish"
+    )
+    assert away == []
 
 
 def test_another_command_does_not_wait(

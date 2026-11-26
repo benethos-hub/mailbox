@@ -277,7 +277,7 @@ names the settings file it read and the database at start.
 | `MAILBOX_SERVICE_DATABASE_PASSWORD_FILE` | | for `postgres`: the file holding the password of the role |
 | `MAILBOX_SERVICE_DATABASE_TLS` | `verify` | for `postgres`: TLS with a checked certificate and name to any host but this one, or `off` for a private network, which the start says |
 | `MAILBOX_SERVICE_DATABASE_CA_FILE` | the system's | for `postgres`: the certificates of the authorities the server's is checked against |
-| `MAILBOX_SERVICE_DATABASE_START_WAIT` | `30` | for `postgres`: seconds `serve` waits for the database at start |
+| `MAILBOX_SERVICE_DATABASE_START_WAIT` | `30` | for `postgres`: seconds `serve` waits for the database server at start while it cannot be reached. Any other refusal ends it at once |
 | `MAILBOX_SERVICE_KEY_PROVIDER` | `keyring` | where the master key lives: `keyring`, `file` or `env` |
 | `MAILBOX_SERVICE_KEY_FILE` | | the key file, for `file`. Outside the data folder |
 | `MAILBOX_SERVICE_MASTER_KEY` | | the recovery key, for `env` |

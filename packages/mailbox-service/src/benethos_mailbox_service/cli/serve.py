@@ -108,8 +108,9 @@ def run(args: argparse.Namespace) -> None:
 def waited(build: Callable[[], T], settings: Settings) -> T:
     """What ``build`` makes, which opens the database. On a database
     server tried again for up to ``database_start_wait`` seconds while
-    the database cannot be opened, then the last failure, naming the
-    host and the role. Another storage is tried once."""
+    the server cannot be reached, then the last failure, naming the
+    host and the role. Any other refusal ends at once: it would not heal
+    by waiting. Another storage is tried once."""
     if settings.storage != "postgres" or settings.database_url is None:
         return build()
     return _again(build, settings, clock=Waiting.clock, sleep=Waiting.sleep)
@@ -122,18 +123,21 @@ def _again(
     clock: Callable[[], float],
     sleep: Callable[[float], None],
 ) -> T:
-    from ..errors import StorageError
+    from ..errors import StorageError, StorageUnavailableError
 
     end = clock() + settings.database_start_wait
     while True:
         try:
             return build()
-        except StorageError as exc:
+        except StorageUnavailableError as exc:
             if clock() + START_RETRY > end:
                 parts = database_url_parts(settings.database_url or "")
+                failed = (
+                    f"the database failed: {exc.cause}" if exc.cause else exc.message
+                )
                 raise StorageError(
                     f"the database on {parts.hostname} as {parts.username} could not"
                     f" be opened within {settings.database_start_wait} seconds:"
-                    f" {exc.message}"
+                    f" {failed}"
                 ) from None
         sleep(START_RETRY)

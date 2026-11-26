@@ -12,23 +12,23 @@ adheres to [Semantic Versioning](https://semver.org/).
   stays the default: `MAILBOX_SERVICE_STORAGE=postgres` keeps the
   records in a schema on a PostgreSQL server, named after the role the
   service signs in as. `MAILBOX_SERVICE_DATABASE_URL`
-  (`postgresql://<role>@<host>:<port>/<database>`, without a password,
-  a query or a fragment)
-  and `MAILBOX_SERVICE_DATABASE_PASSWORD_FILE` name it. An empty
-  password file is refused.
-  `MAILBOX_SERVICE_DATABASE_TLS` is `verify` by default: a host other
-  than this one is reached only over TLS with a checked certificate and
-  name, against `MAILBOX_SERVICE_DATABASE_CA_FILE` or the authorities of
-  the system. `off` goes without TLS and is said at start. `serve`
-  waits for the database for up to `MAILBOX_SERVICE_DATABASE_START_WAIT`
-  seconds (30). A server older than PostgreSQL 19 is refused, and so are
-  a database a newer version made and a second service on the same
-  schema. The lock that refuses it is keyed
-  by a random number the schema keeps, so another role of the server
-  cannot hold it ahead. The driver comes with the extra
-  `postgres`: `pip install 'benethos-mailbox-service[postgres]'`. The
-  image of the service has it. On SQLite nothing changes but the fixes
-  below, which hold for a failure of either database.
+  (`postgresql://<role>@<host>:<port>/<database>`, without a password, a
+  query or a fragment) and `MAILBOX_SERVICE_DATABASE_PASSWORD_FILE` name
+  it. An empty password file is refused. `MAILBOX_SERVICE_DATABASE_TLS`
+  is `verify` by default: a host other than this one is reached only
+  over TLS with a checked certificate and name, against
+  `MAILBOX_SERVICE_DATABASE_CA_FILE` or the authorities of the system.
+  `off` goes without TLS and is said at start. `serve` waits for the
+  database for up to `MAILBOX_SERVICE_DATABASE_START_WAIT` seconds (30)
+  while the server cannot be reached. Any other refusal ends it at once.
+  A server older than PostgreSQL 19 is refused, and so are a database a
+  newer version made and a second service on the same schema. The lock
+  that refuses it is keyed by a random number the schema keeps, so
+  another role of the server cannot hold it ahead. The driver comes with
+  the extra `postgres`:
+  `pip install 'benethos-mailbox-service[postgres]'`. The image of the
+  service has it. On SQLite nothing changes but the fixes below, which hold for a
+  failure of either database.
 - The compose file of `containers/production/mailbox-service` runs
   PostgreSQL 19 with the profile `postgres`, in a network without a way
   out and without a port on the host. `setup.sh` makes the role
