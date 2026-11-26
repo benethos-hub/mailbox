@@ -5,8 +5,11 @@ from its file and kept from every log line."""
 from __future__ import annotations
 
 import logging
+from contextlib import nullcontext
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 
@@ -14,7 +17,7 @@ from benethos_mailbox_common.log import redact
 from benethos_mailbox_service.assembly.storage import server_of, storage
 from benethos_mailbox_service.cli import main
 from benethos_mailbox_service.config import Settings, load_settings
-from benethos_mailbox_service.data.storage import open_repositories
+from benethos_mailbox_service.data.storage import Availability, open_repositories
 
 PASSWORD = "an-invented-role-password"  # pragma: allowlist secret
 
@@ -154,3 +157,44 @@ def test_tls_switched_off_is_said_at_start(
     said = [r for r in caplog.records if "without TLS" in r.getMessage()]
     assert len(said) == (1 if warned else 0)
     assert all(r.levelno == logging.WARNING for r in said)
+
+
+class _Watched:
+    """A store as the assembly sees it, whose changes the test makes."""
+
+    migrated = None
+
+    def __init__(self) -> None:
+        self.report: Any = None
+
+    def watch(self, report: Any) -> None:
+        self.report = report
+
+    def transaction(self) -> Any:
+        return nullcontext()
+
+
+def test_the_log_says_the_database_away_once_and_back(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    store = _Watched()
+    repositories = replace(
+        open_repositories("memory", Path("unused.db")), store=cast(Any, store)
+    )
+    storage(
+        repositories,
+        Settings(_env_file=None),
+        lambda: datetime(2026, 11, 26, tzinfo=UTC),
+    )  # type: ignore[call-arg]
+    with caplog.at_level(logging.INFO):
+        store.report(Availability(away=True, cause="AdminShutdown (57P01)"))
+        store.report(Availability(away=False, seconds=12.4))
+    lines = [(r.levelno, r.getMessage()) for r in caplog.records]
+    assert lines == [
+        (
+            logging.WARNING,
+            "the service cannot reach the database (AdminShutdown (57P01)):"
+            " every request answers 503 until it is back",
+        ),
+        (logging.INFO, "the service reaches the database again, after 12 seconds"),
+    ]

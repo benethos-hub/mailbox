@@ -104,6 +104,34 @@ class DatabaseShared(Activity):
 
 
 @dataclass(frozen=True, kw_only=True)
+class DatabaseAway(Activity):
+    """The database server cannot be reached: once, when it goes."""
+
+    name: ClassVar[str] = "db_away"
+    level: ClassVar[int] = logging.WARNING
+
+    cause: str
+
+    def says(self) -> str:
+        return (
+            f"cannot reach the database ({self.cause}): every request answers"
+            " 503 until it is back"
+        )
+
+
+@dataclass(frozen=True, kw_only=True)
+class DatabaseBack(Activity):
+    """The database server answers again, after so many seconds."""
+
+    name: ClassVar[str] = "db_back"
+
+    seconds: float
+
+    def says(self) -> str:
+        return f"reaches the database again, after {self.seconds:.0f} seconds"
+
+
+@dataclass(frozen=True, kw_only=True)
 class DatabaseUnencrypted(Activity):
     """The settings switched TLS to the database server off."""
 
