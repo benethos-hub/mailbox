@@ -12,6 +12,7 @@
           "health"
         ],
         "summary": "Health",
+        "description": "`ok` and the version while the service can answer. While its\ndatabase is away, 503: the state is kept, the database is not asked.",
         "operationId": "health",
         "responses": {
           "200": {
@@ -24,6 +25,16 @@
                   },
                   "type": "object",
                   "title": "Response Health"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The service cannot reach its database for now (`service_unavailable`), see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }

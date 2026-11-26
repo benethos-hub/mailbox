@@ -31,3 +31,11 @@ def away(
         for method in dir(repository):
             if not method.startswith("_") and callable(getattr(repository, method)):
                 monkeypatch.setattr(repository, method, fail)
+
+
+def known_away(services: Services, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The store says the database is away, as the place of a server
+    does after a failure: without a call to the database."""
+    monkeypatch.setattr(
+        services.status, "_storage", lambda: StorageUnavailableError(RETRY, CAUSE)
+    )

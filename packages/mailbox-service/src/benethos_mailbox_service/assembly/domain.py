@@ -146,6 +146,11 @@ def build_services(
                 services.webhooks,
                 outbox=repositories.outbox,
                 clock=clock,
+                storage=(
+                    repositories.store.unavailable
+                    if repositories.store is not None
+                    else None
+                ),
             ),
             recovery=RecoveryKey(services.auth, vault),
             log=ServiceLog(logbook or LogBook(), records.activity),
