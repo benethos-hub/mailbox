@@ -28,6 +28,9 @@ from .place import translated_by
 # A name the server takes without quoting, so it can stand in the
 # search path the connection sets.
 _PLAIN_NAME = re.compile(r"[a-z_][a-z0-9_]{0,62}")
+# The oldest server the service runs on (2026-11-25), as the server
+# writes its version as a number: major * 10000 + minor.
+OLDEST_SERVER = 190000
 
 
 @dataclass(frozen=True, slots=True)
@@ -76,6 +79,11 @@ class ServerPlace:
         self._engine = self._engine_of()
         with translated():
             self._connection = self._engine.connect()
+            version = self._connection.execute(
+                sa.select(sa.func.current_setting("server_version_num"))
+            ).scalar()
+            self._connection.rollback()
+        supported(int(str(version)))
         return self._connection, None
 
     def _engine_of(self) -> sa.Engine:
@@ -167,3 +175,18 @@ def _not_of_the_driver(context: sa.engine.ExceptionContext) -> BaseException | N
             f"the database failed: {type(context.original_exception).__name__}"
         )
     return None
+
+
+def supported(version: int) -> None:
+    """Refuse a server older than ``OLDEST_SERVER``, by the number it
+    gives as ``server_version_num``."""
+    if version < OLDEST_SERVER:
+        raise StorageError(
+            f"the database server is PostgreSQL {_shown(version)}:"
+            f" this version needs PostgreSQL {_shown(OLDEST_SERVER)} or newer"
+        )
+
+
+def _shown(version: int) -> str:
+    major, minor = divmod(version, 10000)
+    return f"{major}.{minor}"
