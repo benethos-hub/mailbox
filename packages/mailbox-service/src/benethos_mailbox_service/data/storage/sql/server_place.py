@@ -80,7 +80,7 @@ class ServerPlace:
 
     def _engine_of(self) -> sa.Engine:
         server = self._server
-        return server_engine(
+        engine = server_engine(
             host=server.host,
             port=server.port,
             database=server.database,
@@ -88,6 +88,8 @@ class ServerPlace:
             password=server.password,
             search_path=server.schema_name,
         )
+        sa.event.listen(engine, "handle_error", _not_of_the_driver)
+        return engine
 
     def undo(self) -> None:
         with suppress(Exception):
@@ -133,6 +135,35 @@ class ServerPlace:
 
 
 def translated() -> AbstractContextManager[None]:
-    """The failures of the database as this project's errors, with the
-    text of the driver."""
-    return translated_by(str)
+    """The failures of the database as this project's errors. The server's
+    text of a violated key quotes the key and the first line of other
+    failures can quote a value: of a conflict only the first line of the
+    server, which names the constraint, of anything else only its kind."""
+    return translated_by(_first_line, _kind)
+
+
+def _first_line(exc: BaseException | None) -> str:
+    diag = getattr(exc, "diag", None)
+    primary = getattr(diag, "message_primary", None)
+    return primary if isinstance(primary, str) else _kind(exc)
+
+
+def _kind(exc: BaseException | None) -> str:
+    """The class of the failure and the code of five characters the
+    server gives it, which names what went wrong and nothing it read."""
+    code = getattr(exc, "sqlstate", None)
+    kind = type(exc).__name__
+    return f"{kind} ({code})" if isinstance(code, str) else kind
+
+
+def _not_of_the_driver(context: sa.engine.ExceptionContext) -> BaseException | None:
+    """A failure while a statement runs that is no error of the driver,
+    such as a value the driver cannot bind, named by its kind alone:
+    its text can hold the value."""
+    if context.sqlalchemy_exception is None and isinstance(
+        context.original_exception, Exception
+    ):
+        return StorageError(
+            f"the database failed: {type(context.original_exception).__name__}"
+        )
+    return None

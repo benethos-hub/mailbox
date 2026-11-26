@@ -95,5 +95,5 @@ def translated() -> Iterator[None]:
     text of the driver, which names a table and a column, never a value.
     The driver's own errors, from the connection used directly, are
     translated by ``file``."""
-    with translated_by(str), file.translated():
+    with translated_by(str, str), file.translated():
         yield

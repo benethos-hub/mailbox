@@ -70,20 +70,24 @@ class Place(Protocol):
 
 
 @contextmanager
-def translated_by(said: Callable[[BaseException | None], str]) -> Iterator[None]:
+def translated_by(
+    conflict: Callable[[BaseException | None], str],
+    failure: Callable[[BaseException | None], str],
+) -> Iterator[None]:
     """The failures SQLAlchemy raises as this project's errors: a
-    constraint as ConflictError, anything else as StorageError. What the
-    driver said is named as ``said`` gives it, never the text of
-    SQLAlchemy, which holds the statement and its values. A failure
-    SQLAlchemy raises before the driver is named by its kind alone."""
+    constraint as ConflictError, named as ``conflict`` gives what the
+    driver said, anything else as StorageError, named as ``failure``
+    gives it. Never the text of SQLAlchemy, which holds the statement
+    and its values. A failure SQLAlchemy raises before the driver is
+    named by its kind alone."""
     try:
         yield
     except sa.exc.IntegrityError as exc:
         raise ConflictError(
-            f"conflicts with a stored record: {said(exc.orig)}"
+            f"conflicts with a stored record: {conflict(exc.orig)}"
         ) from None
     except sa.exc.DBAPIError as exc:
-        raise StorageError(f"the database failed: {said(exc.orig)}") from None
+        raise StorageError(f"the database failed: {failure(exc.orig)}") from None
     except sa.exc.SQLAlchemyError as exc:
         # Refused before the driver saw it, such as a value that does not
         # fit its column. Its text, and the one of its cause, can hold the
