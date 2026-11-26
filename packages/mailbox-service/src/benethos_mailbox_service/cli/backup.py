@@ -12,6 +12,7 @@ from .. import __version__
 from ..common.clock import parse_iso
 from ..config import load_settings
 from .common import (
+    STORED,
     Commands,
     UsageError,
     master_key,
@@ -85,7 +86,7 @@ def _write(target: list[str], env_file: Path | None, format: int) -> None:
     settings = stored(load_settings(env_file), "backups")
     with opened(settings) as services:
         if services.store is None:
-            raise UsageError("backups need MAILBOX_SERVICE_STORAGE=sqlite")
+            raise UsageError(f"backups need {STORED}")
         manifest = create_backup(
             services.store,
             services.vault.master_key(),

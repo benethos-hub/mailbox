@@ -261,6 +261,13 @@ class Settings(files.FileSettings):
     def database_path(self) -> Path:
         return (self.data_dir / "mailbox.db").resolve()
 
+    def database_name(self) -> str:
+        """The database for a line: the path of its file, or the address
+        of its server, which holds no password."""
+        if self.storage == "postgres" and self.database_url:
+            return self.database_url
+        return str(self.database_path)
+
 
 def database_url_parts(url: str) -> SplitResult:
     """The parts of ``database_url``, which the settings checked."""

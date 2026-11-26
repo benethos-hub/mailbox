@@ -344,7 +344,7 @@ def test_backup_command_errors(
     assert "keys init" in capsys.readouterr().err
     monkeypatch.setenv("MAILBOX_SERVICE_STORAGE", "memory")
     assert main(["backup", str(machine / "x.bak")]) == 1
-    assert "MAILBOX_SERVICE_STORAGE=sqlite" in capsys.readouterr().err
+    assert "MAILBOX_SERVICE_STORAGE=sqlite or postgres" in capsys.readouterr().err
 
 
 def test_files_that_cannot_be_read_or_written(

@@ -27,11 +27,15 @@ class UsageError(Exception):
     """A command used the wrong way."""
 
 
+# What a command that writes needs the storage to be.
+STORED = "MAILBOX_SERVICE_STORAGE=sqlite or postgres"
+
+
 def stored(settings: Settings, what: str) -> Settings:
     """``settings``, if they keep what the command writes: in memory it
     would vanish with the command."""
-    if settings.storage != "sqlite":
-        raise UsageError(f"{what} need MAILBOX_SERVICE_STORAGE=sqlite")
+    if settings.storage not in ("sqlite", "postgres"):
+        raise UsageError(f"{what} need {STORED}")
     return settings
 
 

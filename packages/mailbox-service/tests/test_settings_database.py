@@ -117,3 +117,18 @@ def test_the_files_count_from_a_named_settings_file(tmp_path: Path) -> None:
     )
     assert settings.database_ca_file == tmp_path / "secrets" / "ca.pem"
     assert settings.database_password().get_secret_value() == PASSWORD
+
+
+def test_paths_names_the_server_and_never_the_password(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    password_file: Path,
+) -> None:
+    url = "postgresql://svc@db.example.org:5432/mailbox"
+    monkeypatch.setenv("MAILBOX_SERVICE_STORAGE", "postgres")
+    monkeypatch.setenv("MAILBOX_SERVICE_DATABASE_URL", url)
+    monkeypatch.setenv("MAILBOX_SERVICE_DATABASE_PASSWORD_FILE", str(password_file))
+    assert main(["paths"]) == 0
+    out = capsys.readouterr().out
+    assert f"Database:      {url}" in out.splitlines()
+    assert PASSWORD not in out

@@ -44,5 +44,5 @@ def run(args: argparse.Namespace) -> None:
         + ("" if found else " (not there, the defaults apply)")
     )
     emit(f"Data folder:   {settings.data_dir.resolve()}")
-    emit(f"Database:      {settings.database_path}")
+    emit(f"Database:      {settings.database_name()}")
     emit(f"Master key:    {key}")
