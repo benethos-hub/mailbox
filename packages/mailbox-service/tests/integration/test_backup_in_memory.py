@@ -108,3 +108,15 @@ def test_a_changed_backup_is_found(
     capsys.readouterr()
     assert main(["backup", "verify", str(path)]) == 1
     assert "does not decrypt" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("format", [1, 2])
+def test_a_file_backup_is_not_restored_on_a_server(
+    backups: dict[int, Path], capsys: pytest.CaptureFixture[str], format: int
+) -> None:
+    """Before the server is reached: the two steps it takes instead."""
+    capsys.readouterr()
+    assert main(["restore", str(backups[format])]) == 1
+    err = capsys.readouterr().err
+    assert "MAILBOX_SERVICE_STORAGE=sqlite" in err
+    assert "storage move --to postgres" in err

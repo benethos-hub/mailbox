@@ -22,6 +22,7 @@ from .lifecycle import opened
 from .providers import build_oauth, offered_providers
 from .secrets import key_provider
 from .services import Services
+from .storage import server_of
 from .web import alert_rules, create_app, openapi_json
 
 __all__ = [
@@ -34,4 +35,5 @@ __all__ = [
     "offered_providers",
     "openapi_json",
     "opened",
+    "server_of",
 ]

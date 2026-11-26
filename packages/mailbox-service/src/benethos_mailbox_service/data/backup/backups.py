@@ -20,6 +20,8 @@ from __future__ import annotations
 import io
 import json
 import os
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import BinaryIO
@@ -35,6 +37,8 @@ from ..storage import (
     SCHEMA_VERSION,
     Database,
     Records,
+    Server,
+    ServerPlace,
     Store,
     inspect_bytes,
     inspect_file,
@@ -294,6 +298,86 @@ def _read_plain(source: BinaryIO, store: Store) -> dict[str, int]:
         return read_export(source, store)
     except (ExportError, MailboxServiceError) as exc:
         raise BackupError(f"the backup cannot be read back: {exc}") from None
+
+
+# Where an operator reads how to set an old schema aside for a restore.
+SET_ASIDE = "containers/production/mailbox-service/README.md, Restore on PostgreSQL"
+
+
+def restore_on_server(source: Path, master_key: bytes, server: Server) -> Manifest:
+    """Read a backup of format 3 into the schema of ``server``, which
+    holds no table yet, then bring it to this version's schema. The lock
+    of a running service is taken for it: a service on the schema refuses
+    the restore. When it fails, the tables it made go, and only those."""
+    try:
+        file = source.open("rb")
+    except OSError as exc:
+        raise BackupError(f"{source} cannot be read: {exc.strerror}") from None
+    with file:
+        header, manifest = _header(file, source)
+        if manifest.format != 3:
+            raise BackupError(
+                f"a backup of format {manifest.format} holds the file of a SQLite"
+                " database: restore it with MAILBOX_SERVICE_STORAGE=sqlite, then"
+                " move it with `storage move --to postgres`"
+            )
+        _exported_schema(manifest)
+        place = ServerPlace(server)
+        # Connected alone, without a revision: the schema is looked at
+        # before anything is made in it.
+        try:
+            place.open(manifest.schema_version, SCHEMA_VERSION)
+            with _held(place):
+                if place.tables():
+                    raise BackupError(
+                        f"the schema {server.schema_name} holds tables: a restore"
+                        " goes into an empty schema only. How to set the old one"
+                        f" aside: {SET_ASIDE}"
+                    )
+                _filled(place, file, header, manifest, source, master_key)
+        finally:
+            place.close()
+    return manifest
+
+
+@contextmanager
+def _held(place: ServerPlace) -> Iterator[None]:
+    """The lock of a running service, for the restore."""
+    try:
+        serving = place.serving()
+        serving.__enter__()
+    except MailboxServiceError:
+        raise BackupError(
+            "the service is running on this database: stop it first"
+        ) from None
+    try:
+        yield
+    finally:
+        serving.__exit__(None, None, None)
+
+
+def _filled(
+    place: ServerPlace,
+    file: BinaryIO,
+    header: bytes,
+    manifest: Manifest,
+    source: Path,
+    master_key: bytes,
+) -> None:
+    """The export of the backup into the empty schema of ``place``, at
+    the schema of the manifest, then brought forward. Its tables dropped
+    again on any failure."""
+    try:
+        made = Database(place=place, schema=manifest.schema_version)
+        plain = Decrypting(file, header, backup_key(master_key), source)
+        rows = _read_plain(io.BufferedReader(plain, BLOCK), made)
+        plain.finish(manifest.sha256)
+        if rows != manifest.rows:
+            raise BackupError("the backup does not match its manifest")
+        Database(place=place)
+    except BaseException:
+        place.drop_tables()
+        raise
 
 
 def restore_backup(source: Path, master_key: bytes, target: Path) -> Manifest:
