@@ -202,6 +202,12 @@ adheres to [Semantic Versioning](https://semver.org/).
   group of its list has a topic. A list without a topic runs without a
   gateway, as before.
 
+### Fixed
+
+- A failure of the service's own database no longer signs anyone out of
+  the UI. The page says the service is not available, and the session
+  stays.
+
 ### Removed
 
 - `benethos-mailbox-agents`: the agent `invoices`. Its question is the

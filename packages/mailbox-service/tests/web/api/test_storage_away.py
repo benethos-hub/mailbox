@@ -11,7 +11,7 @@ from benethos_mailbox_service.assembly import Services, create_app
 from benethos_mailbox_service.config import Settings
 
 from ...conftest import admin_bearer
-from .outage_helpers import CAUSE, RETRY, away, known_away
+from ..outage_helpers import CAUSE, RETRY, away, known_away
 
 
 @pytest.mark.parametrize("token", [True, False], ids=["with a token", "without"])
