@@ -42,7 +42,7 @@ from ...data.storage import (
     WebhookRecord,
     WebhookRepository,
 )
-from ...errors import MailboxServiceError
+from ...errors import MailboxServiceError, NotFoundError, StorageError
 from ..activity import DISPATCHER, ActivityLog
 from ..activity import webhooks as said
 from ..changes import ChangeFeed, decided
@@ -162,6 +162,8 @@ class WebhookDispatcher:
                 for _ in range(ROUND):
                     if not await self._deliver(record.webhook.id):
                         break
+            except StorageError:
+                raise  # the database, not the webhook: the round fails
             except Exception as exc:
                 # A bug with one webhook must not stop the others.
                 self._activity.record(
@@ -174,7 +176,7 @@ class WebhookDispatcher:
         """One post, if one is due. True when more events wait."""
         try:
             record = self._repository.get(webhook_id)
-        except MailboxServiceError:
+        except NotFoundError:
             return False  # removed meanwhile
         now = self._clock()
         due = record.delivery.next_attempt_at

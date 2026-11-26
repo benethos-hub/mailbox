@@ -223,6 +223,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   longer holds up the later sends of its account until then. A failure
   of the database at the start of the outbox no longer stops the
   service.
+- A webhook whose record cannot be read for a failure of the service's
+  own database is no longer passed over as removed: the round fails, and
+  the next one posts.
 - A failure of the service's own database while an account is watched
   no longer stops the service: the watcher waits and goes on, and a line
   about the account that cannot be read falls away.
