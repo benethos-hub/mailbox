@@ -21,7 +21,7 @@ this folder is enough.
 
 | File | What it is |
 |---|---|
-| `compose.yaml` | the service, and Caddy for HTTPS (profile `https`) |
+| `compose.yaml` | the service, Caddy for HTTPS (profile `https`) and PostgreSQL as the database (profile `postgres`) |
 | `.env.example` | template of `.env`: the version, the profiles, the port, the domain, the certificate |
 | `service.env.example` | template of `service.env`: further settings of the service |
 | `Caddyfile` | HTTPS in front, for the profile `https` |
@@ -30,7 +30,7 @@ this folder is enough.
 | `caddy.d/mcp.caddy.example` | template of a route in Caddy to an instance |
 | `caddy.d/metrics.caddy.example` | keeps `/v1/metrics` from the outside at Caddy |
 | `setup.sh` | the first start in one run |
-| `secrets/` | made at the first start, never versioned: `master_key`, `mcp/` the tokens of the instances, `tls/` a certificate of your own |
+| `secrets/` | made at the first start, never versioned: `master_key`, `database_password` and `database_admin_password` with the profile `postgres`, `mcp/` the tokens of the instances, `tls/` a certificate of your own |
 
 Needs Docker with compose 2.24 or newer (`docker compose version`).
 

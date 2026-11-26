@@ -40,6 +40,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   SQLite database, is refused there. `backup verify` there decrypts
   nothing onto a disk: a backup of format 3 is read block by block into
   a database in memory, one of format 1 or 2 into memory whole.
+- The compose file of `containers/production/mailbox-service` runs
+  PostgreSQL 19 with the profile `postgres`, in a network without a way
+  out and without a port on the host. `setup.sh` makes the role
+  `mailbox` with a schema of its own, without further rights, and its
+  password. `service.env.example` shows the settings.
 - `storage move --to postgres|sqlite` moves the records between the
   file of SQLite and the schema on PostgreSQL that the settings name.
   The target must be empty, a running service on either side refuses
