@@ -39,7 +39,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   database a move did not finish is not opened by the service.
 - Backup format 3: `benethos-mailbox-service backup --format 3 FILE`
   writes the records as an export, encrypted in blocks as format 2,
-  independent of the file of the database. `backup FILE` still writes
+  independent of the file of the database. Nothing of the records is
+  written in plain on a disk: they are read twice from the same moment,
+  once for the checksum and once into the backup. `backup FILE` still writes
   format 2. `backup verify` and `restore` read formats 1, 2 and 3 and
   name the format, as does the log line of a backup and a restore.
 - `backup FILE` on PostgreSQL writes format 3, the export of the records,

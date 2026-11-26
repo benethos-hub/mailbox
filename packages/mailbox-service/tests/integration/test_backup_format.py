@@ -6,8 +6,10 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
+from collections.abc import Iterator
 from dataclasses import asdict
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -17,19 +19,23 @@ from benethos_mailbox_service.data.backup import (
     MAGIC_3,
     BackupError,
     Manifest,
+    backups,
     blocks,
     create_backup,
     read_backup,
     restore_backup,
     write_backup,
 )
+from benethos_mailbox_service.data.export import Sink
 from benethos_mailbox_service.data.secrets import (
     cipher,
 )
 from benethos_mailbox_service.data.storage import (
     Database,
+    Records,
     inspect_file,
 )
+from benethos_mailbox_service.data.storage.sql.tables import Fixed
 from benethos_mailbox_service.data.storage.sqlite import SCHEMA_VERSION
 
 from ..schema_helpers import at_schema
@@ -234,6 +240,48 @@ def test_a_backup_of_version_3_holds_the_export(tmp_path: Path) -> None:
         read_backup(target, cipher.new_key(), tmp_path / "wrong.db")
     assert not (tmp_path / "wrong.db").exists()
     source.close()
+
+
+def test_a_backup_of_version_3_writes_nothing_in_plain(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = _source(tmp_path)
+    folder = tmp_path / "backups"
+    folder.mkdir()
+    seen: list[dict[str, bytes]] = []
+    rows = Fixed.rows
+
+    def watched(self: Fixed, table: str) -> Iterator[tuple[Any, ...]]:
+        seen.append({p.name: p.read_bytes() for p in folder.iterdir()})
+        yield from rows(self, table)
+
+    monkeypatch.setattr(Fixed, "rows", watched)
+    create_backup(source, cipher.new_key(), folder / "three.bak", "9.9.9", format=3)
+    source.close()
+    assert seen
+    assert all(set(files) <= {"three.bak"} for files in seen)
+    assert not any(b"two@example.org" in d for f in seen for d in f.values())
+    assert [p.name for p in folder.iterdir()] == ["three.bak"]
+
+
+def test_records_that_change_between_the_passes_remove_the_backup(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = _source(tmp_path)
+    passes: list[int] = []
+
+    def changing(records: Records, out: Sink) -> dict[str, int]:
+        passes.append(1)
+        out.write(b"pass %d" % len(passes))
+        return {}
+
+    monkeypatch.setattr(backups, "write_export", changing)
+    target = tmp_path / "three.bak"
+    with pytest.raises(BackupError, match="records changed"):
+        create_backup(source, cipher.new_key(), target, "9.9.9", format=3)
+    source.close()
+    assert len(passes) == 2
+    assert not target.exists()
 
 
 def test_a_block_of_version_3_altered_is_found(
