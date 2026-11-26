@@ -44,9 +44,31 @@ def read_header(file: BinaryIO, source: Path) -> tuple[bytes, Manifest]:
         # The magic names the format, whatever the manifest says.
         fields.pop("format", None)
         manifest = Manifest(**fields, format=_MAGICS[magic])
+        if not _well_typed(manifest):
+            raise TypeError
     except (ValueError, TypeError):
         raise BackupError(f"{source} has an unreadable manifest") from None
     return magic + line, manifest
+
+
+def _well_typed(manifest: Manifest) -> bool:
+    """Whether each field of the manifest is of its type: it is read
+    before anything of the backup is authenticated."""
+
+    def number(value: object) -> bool:
+        return isinstance(value, int) and not isinstance(value, bool)
+
+    texts = (manifest.service_version, manifest.created_at, manifest.sha256)
+    rows = manifest.rows
+    return (
+        all(isinstance(text, str) for text in texts)
+        and number(manifest.schema_version)
+        and (
+            rows is None
+            or isinstance(rows, dict)
+            and all(isinstance(k, str) and number(v) for k, v in rows.items())
+        )
+    )
 
 
 def head(manifest: Manifest) -> bytes:

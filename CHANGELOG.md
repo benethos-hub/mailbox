@@ -258,6 +258,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `restore` and `backup verify` refuse a backup whose manifest holds a
+  field of the wrong type, such as the schema as a text, with a message
+  instead of a traceback.
 - A failure of the service's own database while the outbox prepares or
   sends a job no longer ends the job as `failed` with `storage_error`.
   The job stays `sending` and is looked into as one whose outcome is
