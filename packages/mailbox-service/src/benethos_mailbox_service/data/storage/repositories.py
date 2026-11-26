@@ -23,6 +23,7 @@ from .credentials import (
 from .idempotency import IdempotencyRepository, InMemoryIdempotencyRepository
 from .index import InMemoryMessageIndexRepository, MessageIndexRepository
 from .links import InMemoryLinkRepository, LinkRepository
+from .migrated import Migrated
 from .outbox import InMemoryOutboxRepository, OutboxRepository
 from .passkeys import InMemoryPasskeyRepository, PasskeyRepository
 from .passwords import InMemoryPasswordRepository, PasswordRepository
@@ -50,9 +51,6 @@ from .sql import (
 )
 from .sql.database import Database
 from .sql.tables import Table
-from .sqlite import (
-    Migrated,
-)
 from .totp import InMemoryTotpRepository, TotpRepository
 from .users import (
     InMemoryRoleRepository,

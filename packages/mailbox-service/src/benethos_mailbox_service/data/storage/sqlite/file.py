@@ -18,7 +18,6 @@ import tempfile
 import threading
 from collections.abc import Iterator
 from contextlib import ExitStack, contextmanager, suppress
-from dataclasses import dataclass
 from pathlib import Path
 
 from benethos_mailbox_common.paths import locks
@@ -26,6 +25,7 @@ from benethos_mailbox_common.paths import locks
 from ....common.clock import utc_now
 from ....errors import ConflictError, StorageError
 from ...files import create_private, free_path
+from ..migrated import Migrated
 from .migrations import MIGRATIONS, SCHEMA_VERSION
 
 # What SQLite keeps beside a database: its rollback journal, its write
@@ -38,16 +38,6 @@ COPY_BEFORE = 26
 
 # PRAGMA auto_vacuum: 0 none, 1 full, 2 incremental.
 _INCREMENTAL = 2
-
-
-@dataclass(frozen=True, slots=True)
-class Migrated:
-    """What opening the database did to its schema, for the log: the
-    versions before and after, and what the migrations had to say."""
-
-    before: int
-    after: int
-    notes: tuple[str, ...] = ()
 
 
 def open_file(

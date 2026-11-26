@@ -25,8 +25,8 @@ import sqlalchemy as sa
 
 from ....common.clock import iso
 from ....errors import ConflictError, StorageError
+from ..migrated import Migrated
 from ..sqlite import file
-from ..sqlite.file import Migrated
 from . import revisions
 from .dialect import sqlite_engine
 from .revisions import SCHEMA_VERSION
