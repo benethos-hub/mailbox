@@ -72,3 +72,40 @@ def test_a_database_away_in_the_preparing_ends_no_job(
     with pytest.raises(StorageUnavailableError):
         box.round()
     assert box.job(job.id).state == "sending"
+
+
+def test_a_job_left_sending_is_looked_into_in_the_next_round(box: Outbox) -> None:
+    """No restart: the round after the database came back looks into it."""
+    box.failing(_away())
+    job = box.queue()
+    with pytest.raises(StorageUnavailableError):
+        box.round()
+    assert box.job(job.id).state == "sending"
+    box.round()
+    assert box.job(job.id).state == "queued"
+
+
+async def test_a_database_away_at_the_start_ends_no_runner(box: Outbox) -> None:
+    """The first round meets the database away: the runner goes on."""
+    jobs = box.services.mailbox.outgoing.outbox.jobs
+    real = jobs.open
+    calls: list[int] = []
+
+    def failing_once() -> list[object]:
+        calls.append(1)
+        if len(calls) == 1:
+            raise _away()
+        return list(real())
+
+    slept: list[float] = []
+
+    async def sleep(seconds: float) -> None:
+        slept.append(seconds)
+        if len(slept) == 2:
+            raise asyncio.CancelledError
+
+    jobs.open = failing_once  # type: ignore[method-assign]
+    box.runner._sleep = sleep
+    with pytest.raises(asyncio.CancelledError):
+        await box.runner.run()
+    assert len(calls) >= 2

@@ -218,6 +218,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   The job stays `sending` and is looked into as one whose outcome is
   unclear: found in the sent folder it ends as `sent`, else it is tried
   again. It is never sent twice.
+- A send of the outbox left `sending`, by a round that failed, is looked
+  into at the next round, not only when the service starts again, and no
+  longer holds up the later sends of its account until then. A failure
+  of the database at the start of the outbox no longer stops the
+  service.
 - A failure of the service's own database while an account is watched
   no longer stops the service: the watcher waits and goes on, and a line
   about the account that cannot be read falls away.
