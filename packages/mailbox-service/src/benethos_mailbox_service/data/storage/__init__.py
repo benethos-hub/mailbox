@@ -55,12 +55,11 @@ from .sql import (
     SqlUserRepository,
     SqlWebhookRepository,
 )
-from .sql.database import Database
+from .sql.database import Database, migrate_file
+from .sql.revisions import SCHEMA_VERSION
 from .sql.tables import Table
 from .sqlite import (
-    SCHEMA_VERSION,
     inspect_file,
-    migrate_file,
     move_sidecars,
     remove_database_file,
     service_lock,

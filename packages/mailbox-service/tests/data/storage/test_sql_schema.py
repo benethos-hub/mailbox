@@ -1,5 +1,6 @@
 """The tables as SQLAlchemy describes them: the same schema as the one the
-migrations make, and right for PostgreSQL from the start."""
+old steps make and the one the baseline of the revisions makes, and right
+for PostgreSQL from the start."""
 
 from __future__ import annotations
 
@@ -13,25 +14,37 @@ from sqlalchemy.schema import CreateTable
 
 from benethos_mailbox_service.data.storage import Database
 from benethos_mailbox_service.data.storage.sql.schema import METADATA
+from benethos_mailbox_service.data.storage.sql.tables import BOOKKEEPING
 
-from ...schema_helpers import shape
+from ...schema_helpers import at_schema, shape
 
 
 def _shape(path: Path) -> dict[str, object]:
     with closing(sqlite3.connect(path)) as conn:
-        return shape(conn)
+        found = shape(conn)
+    return {name: table for name, table in found.items() if name not in BOOKKEEPING}
 
 
-def test_the_tables_are_those_the_migrations_make(tmp_path: Path) -> None:
-    Database(tmp_path / "migrated.db").close()
+def _meta(path: Path) -> list[tuple[str, str]]:
+    with closing(sqlite3.connect(path)) as conn:
+        return sorted(conn.execute("SELECT key, value FROM meta"))
+
+
+def test_three_ways_make_one_schema(tmp_path: Path) -> None:
+    """The baseline on a new database, the old steps up to 26 and the
+    definitions."""
+    Database(tmp_path / "baseline.db").close()
+    at_schema(tmp_path / "old.db", 26).close()
     engine = sa.create_engine(f"sqlite:///{tmp_path / 'described.db'}")
     METADATA.create_all(engine)
     engine.dispose()
-    migrated = _shape(tmp_path / "migrated.db")
-    described = _shape(tmp_path / "described.db")
-    assert sorted(described) == sorted(migrated)
-    for table in migrated:
-        assert described[table] == migrated[table], table
+    old = _shape(tmp_path / "old.db")
+    for other in ("baseline.db", "described.db"):
+        made = _shape(tmp_path / other)
+        assert sorted(made) == sorted(old), other
+        for table in old:
+            assert made[table] == old[table], (other, table)
+    assert _meta(tmp_path / "baseline.db") == _meta(tmp_path / "old.db")
 
 
 def test_on_postgresql_text_compares_byte_for_byte() -> None:

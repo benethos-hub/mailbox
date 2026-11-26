@@ -56,7 +56,7 @@ def test_every_table_is_named_after_those_it_refers_to() -> None:
         "SELECT name FROM sqlite_master WHERE type = 'table'"
         " AND name NOT LIKE 'sqlite_%'",
     )
-    assert sorted(names) == sorted(r[0] for r in stored)
+    assert sorted(names) == sorted({r[0] for r in stored} - BOOKKEEPING)
     assert "meta" in names
     for table in tables:
         refers = select(db, f"SELECT * FROM pragma_foreign_key_list('{table.name}')")
@@ -81,7 +81,7 @@ def test_the_definitions_hold_every_table_of_the_database_as_stored() -> None:
             " AND name NOT LIKE 'sqlite_%'",
         )
     }
-    assert stored == set(METADATA.tables)
+    assert stored - BOOKKEEPING == set(METADATA.tables)
     tables = db.tables()
     assert {t.name for t in tables} == stored - BOOKKEEPING
     for table in tables:

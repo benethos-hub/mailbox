@@ -6,7 +6,6 @@ from __future__ import annotations
 from .file import (
     Migrated,
     inspect_file,
-    migrate_file,
     move_sidecars,
     remove_database_file,
     service_lock,
@@ -17,7 +16,6 @@ __all__ = [
     "SCHEMA_VERSION",
     "Migrated",
     "inspect_file",
-    "migrate_file",
     "move_sidecars",
     "remove_database_file",
     "service_lock",

@@ -112,6 +112,9 @@ def test_every_seeded_row_survives_the_migrations(tmp_path: Path, schema: int) -
                 assert kept == row, (table, key)
         assert conn.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
         assert conn.execute("PRAGMA foreign_key_check").fetchall() == []
+        # Marked at the baseline of the revisions.
+        [(mark,)] = conn.execute("SELECT version_num FROM alembic_version")
+        assert mark == "0026"
     finally:
         conn.close()
         db.close()

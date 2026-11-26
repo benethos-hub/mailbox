@@ -11,6 +11,7 @@ ends by writing it (``written``), and the mark Alembic keeps in
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from pathlib import Path
 
@@ -22,6 +23,11 @@ from alembic.runtime.migration import MigrationContext
 from ..dialect import TEXT, insert_or_update
 
 HERE = Path(__file__).parent
+
+# Alembic says at INFO what it does. A library speaks from WARNING on,
+# also where nobody set up the log of the service: the service names a
+# migration itself, at start.
+logging.getLogger("alembic").setLevel(logging.WARNING)
 
 # The schema the first revision makes, the last step of the old chain.
 BASELINE = 26
