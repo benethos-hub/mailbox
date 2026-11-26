@@ -16,12 +16,13 @@ from ..changes import LoggedChange
 from .dialect import greater, in_chunks, insert_or_set
 from .rows import changed
 from .schema import changes, meta
+from .tables import CHANGES_LAST
 
 if TYPE_CHECKING:
     from .database import Database
 
 _HORIZON = "changes_horizon"
-_LAST = "changes_last"
+_LAST = CHANGES_LAST
 _c = changes.c
 
 

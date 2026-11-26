@@ -24,6 +24,8 @@ from .schema import METADATA, changes, meta
 BOOKKEEPING = frozenset({"alembic_version"})
 # The rows of a table read or written at once by an export.
 ROWS_CHUNK = 500
+# The key in ``meta`` of the last number the change feed handed out.
+CHANGES_LAST = "changes_last"
 # The key in ``meta`` that marks a database a move is writing into.
 MOVING = "move_started"
 # The key in ``meta`` that holds the key of the lock of a running service
@@ -133,7 +135,7 @@ def align_changes(conn: sa.Connection) -> None:
     out, so a feed whose newest rows were purged never hands one out
     again."""
     last = conn.execute(
-        sa.select(meta.c.value).where(meta.c.key == "changes_last")
+        sa.select(meta.c.value).where(meta.c.key == CHANGES_LAST)
     ).scalar()
     if last is not None:
         count_on_from(conn, changes, int(last))

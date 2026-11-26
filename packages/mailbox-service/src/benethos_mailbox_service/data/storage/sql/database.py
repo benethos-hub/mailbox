@@ -94,17 +94,12 @@ class Database:
             return migrated
         conn = self._connection
         with conn.begin():
-            held = 0
-            if sa.inspect(conn).has_table(meta.name):
-                stored = conn.execute(
-                    sa.select(meta.c.value).where(meta.c.key == "schema_version")
-                ).scalar()
-                held = 0 if stored is None else int(stored)
-                if moving(conn):
-                    raise StorageError(
-                        "a move or restore into this database did not"
-                        " finish: empty it and try again"
-                    )
+            held = stored_schema(conn)
+            if sa.inspect(conn).has_table(meta.name) and moving(conn):
+                raise StorageError(
+                    "a move or restore into this database did not"
+                    " finish: empty it and try again"
+                )
         if held > SCHEMA_VERSION:
             # On SQLite the old steps refuse it first, in the same words.
             raise StorageError(
