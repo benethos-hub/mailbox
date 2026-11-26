@@ -3,6 +3,8 @@ What every package's checks share is in ``live/common/``.
 
 - ``test_server``: the test mail server of our own, its accounts, and
   the steps ``imap.py``, ``jmap.py`` and ``pop3.py`` share.
+- ``test_database``: the test database of our own, a role with a schema
+  for a check, and the container stopped and started, for ``postgres.py``.
 - ``capabilities``: what an account names it can do, per kind of
   server, and the check that it does.
 - ``own_service``: a service with a database of its own that keeps a

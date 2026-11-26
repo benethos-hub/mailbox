@@ -35,6 +35,7 @@ checks of the agents run against a setup of their own
 | [`pop3.py`](#pop3py) | the test mail server in a container | one mail, deleted for good |
 | [`jmap.py`](#jmappy) | the test mail server in a container | one mail, a folder and a draft, deleted for good |
 | [`imap.py`](#imappy) | the test mail server in a container | one mail, a folder and a draft, deleted for good |
+| [`postgres.py`](#postgrespy) | the test database and the test mail server in containers | two roles with a schema each, three mails, all removed |
 | [`outbox.py`](#outboxpy) | the test mail server in a container, with `--bots` the first two test accounts | three mails sent through the outbox, two with `--bots`, and two drafts, deleted for good |
 
 The checks that start a service as a process make its first user with
@@ -253,6 +254,28 @@ through again it goes out exactly once. `--bots` runs the first three
 steps between the first two test accounts of `live/.env` as well. Every
 mail of the check is deleted for good at the end. It takes about five
 minutes, with `--bots` about eight.
+
+## `postgres.py`
+
+`uv run python live/mailbox-service/postgres.py`
+
+Checks PostgreSQL as the storage of the service against the test
+database (`containers/test-database/`) and the test mail server, with a
+service of its own as a process and its log in a file. Two roles with a
+schema each are made on the test database and dropped at the end. On
+SQLite the first account of the test mail server sends to the second,
+and the change feed names the mail. The service stops, `storage move
+--to postgres --check` and `storage move --to postgres` move its
+records into the first schema, and the service starts on PostgreSQL
+with the same token: a second mail arrives, and the feed goes on from
+where it was. `backup` writes format 3, and `restore` reads it into the
+empty second schema. Then the test database is stopped with `docker
+stop`: `/health` answers 503 with `service_unavailable`, the service
+keeps running and its log says once that the database is away. Started
+again, `/health` answers 200, the log says once that it is back, and a third
+mail arrives without a restart. Every mail is deleted for good at the
+end. The command of Docker comes from `LIVE_DOCKER` in `live/.env`,
+else `docker`.
 
 ## The agents
 
