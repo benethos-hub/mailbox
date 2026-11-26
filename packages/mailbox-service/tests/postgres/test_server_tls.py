@@ -12,7 +12,7 @@ import psycopg
 import pytest
 
 from benethos_mailbox_service.data.storage import Database, Server, ServerPlace
-from benethos_mailbox_service.data.storage.sql.server_place import tls_arguments
+from benethos_mailbox_service.data.storage.sql.server_engine import tls_arguments
 
 from ..postgres_helpers import admin, schema
 

@@ -124,7 +124,13 @@ beside the file of the database (`tests/test_code_rules.py`). Where
 SQLite and another database write differently stands in
 `data/storage/sql/dialect.py`: inserting or updating, inserting or
 leaving out, the greater of two values, how a transaction begins, the
-counter of the change feed after an import.
+counter of the change feed after an import. How each database is
+reached lies with its place: the engine of SQLite in `file_place.py`,
+the engine of PostgreSQL, its TLS and its time limits in
+`server_engine.py`, its lock in `server_lock.py`, and the rest of the
+server in `server_place.py`. The names of the server itself, its
+functions, its codes of failure, its TLS and the connection of its
+driver, stand in these alone (`tests/test_code_rules.py`).
 Since 2026-11-26 `Database` reaches the file through its place
 (`data/storage/sql/place.py`). Everything above the place, the
 transactions, the revisions from schema 26 on, the repositories and

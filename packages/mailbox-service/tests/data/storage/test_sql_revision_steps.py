@@ -15,7 +15,7 @@ import sqlalchemy as sa
 
 from benethos_mailbox_service.data.storage import Database
 from benethos_mailbox_service.data.storage.sql import database, revisions
-from benethos_mailbox_service.data.storage.sql.dialect import sqlite_engine
+from benethos_mailbox_service.data.storage.sql.file_place import sqlite_engine
 from benethos_mailbox_service.data.storage.sql.revisions import revision
 from benethos_mailbox_service.errors import StorageError
 

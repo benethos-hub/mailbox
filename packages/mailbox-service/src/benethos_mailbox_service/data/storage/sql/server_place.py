@@ -20,14 +20,14 @@ from typing import Literal
 
 import sqlalchemy as sa
 
-from ....common.hosts import is_loopback_host
 from ....common.names import is_plain_name
 from ....errors import StorageError, StorageInUseError, StorageUnavailableError
 from . import revisions
-from .dialect import reading_fixed, server_engine
+from .dialect import reading_fixed
 from .outage import LONGEST_PAUSE, Availability, Outage
 from .place import Opened, translated_by
 from .schema import meta
+from .server_engine import server_engine, tls_arguments
 from .server_lock import kept_key, lock_key, new_key, unlock
 from .tables import SERVICE_LOCK, stored_schema
 
@@ -420,24 +420,6 @@ def supported(version: int) -> None:
 def _shown(version: int) -> str:
     major, minor = divmod(version, 10000)
     return f"{major}.{minor}"
-
-
-def tls_arguments(
-    host: str, tls: Literal["verify", "off"], ca_file: Path | None
-) -> dict[str, str]:
-    """What libpq is told of TLS. With "verify" a host other than this
-    one is reached only over TLS whose certificate and name are checked
-    (verify-full), against ``ca_file`` or the authorities of the system.
-    This host itself is reached over TLS where the server offers it,
-    without the demand. With "off" never over TLS."""
-    if tls == "off":
-        return {"sslmode": "disable"}
-    if is_loopback_host(host):
-        return {"sslmode": "prefer"}
-    return {
-        "sslmode": "verify-full",
-        "sslrootcert": "system" if ca_file is None else str(ca_file),
-    }
 
 
 def _drop_all(connection: sa.Connection) -> None:

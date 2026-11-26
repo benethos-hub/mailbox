@@ -8,12 +8,14 @@ import threading
 from collections.abc import Callable, Iterator
 from contextlib import AbstractContextManager, contextmanager, suppress
 from pathlib import Path
+from typing import Any
 
 import sqlalchemy as sa
+from sqlalchemy.pool import StaticPool
 
 from ....errors import StorageError, StorageUnavailableError
 from ..sqlite import file
-from .dialect import sqlite_engine
+from .dialect import SQLITE, begin
 from .outage import Availability
 from .place import Opened, translated_by
 
@@ -106,3 +108,17 @@ def translated() -> Iterator[None]:
     translated by ``file``."""
     with translated_by(str, str), file.translated():
         yield
+
+
+def sqlite_engine(connect: Callable[[], Any]) -> sa.Engine:
+    """An engine on the one SQLite connection ``connect`` gives, for the
+    whole process. A transaction begins as ``begin`` says. No value of a
+    statement reaches the text of an error."""
+    engine = sa.create_engine(
+        f"{SQLITE}://",
+        creator=connect,
+        poolclass=StaticPool,
+        hide_parameters=True,
+    )
+    sa.event.listen(engine, "begin", begin)
+    return engine

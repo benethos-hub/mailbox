@@ -14,7 +14,7 @@ import sqlalchemy as sa
 
 from benethos_mailbox_service.data.storage.sql import database as database_module
 from benethos_mailbox_service.data.storage.sql import revisions
-from benethos_mailbox_service.data.storage.sql.dialect import server_engine
+from benethos_mailbox_service.data.storage.sql.server_engine import server_engine
 from benethos_mailbox_service.errors import StorageError
 
 from ..postgres_helpers import admin, connect, database, schema

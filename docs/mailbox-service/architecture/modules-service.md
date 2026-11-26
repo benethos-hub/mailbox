@@ -331,7 +331,8 @@ packages/mailbox-service/
                         #   lies (place.py), the file of SQLite as one
                         #   place (file_place.py), a schema on a
                         #   PostgreSQL server as another
-                        #   (server_place.py), a server that is away
+                        #   (server_place.py), how it is reached
+                        #   (server_engine.py), a server that is away
                         #   and when to try again (outage.py), the
                         #   keys of the lock
                         #   of a running service there
