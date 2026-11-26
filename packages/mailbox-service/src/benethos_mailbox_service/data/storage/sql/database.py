@@ -103,6 +103,12 @@ class Database:
                         "a storage move into this database did not finish:"
                         " empty it and move again"
                     )
+        if held > SCHEMA_VERSION:
+            # On SQLite the old steps refuse it first, in the same words.
+            raise StorageError(
+                f"database schema {held} is newer than this version supports "
+                f"({SCHEMA_VERSION}): run a newer version of the service"
+            )
         marked = revisions.mark(conn)
         if marked is None and held == 0:
             return Migrated(0, upto, tuple(revisions.upgrade(conn, upto)))
