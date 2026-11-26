@@ -112,6 +112,14 @@ dependencies = [
     "alembic>=1.14",
 ]
 
+[project.optional-dependencies]
+# PostgreSQL as the storage (MAILBOX_SERVICE_STORAGE=postgres): the driver
+# SQLAlchemy speaks to it through, with libpq and OpenSSL in its wheel.
+# The minimum is the lowest version the suite against a server passed
+# with, without a known vulnerability: the job lowest-service checks it
+# against OSV.
+postgres = ["psycopg[binary]>=3.3"]
+
 [project.urls]
 Homepage = "https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-service#readme"
 Documentation = "https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-service#readme"

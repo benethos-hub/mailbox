@@ -169,7 +169,7 @@ jobs:
     with:
       python-version: "3.11"
       editable: |
-        packages/mailbox-service
+        packages/mailbox-service[postgres]
         packages/mailbox-common[paths,settings]
       requirements: |
         pytest>=9.1.1
