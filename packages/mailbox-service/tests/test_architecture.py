@@ -49,6 +49,7 @@ LIBRARY_HOMES = {
     "keyring": f"{PACKAGE}.data.secrets.keys",
     "sqlite3": f"{PACKAGE}.data.storage.sqlite",
     "sqlalchemy": f"{PACKAGE}.data.storage.sql",
+    "alembic": f"{PACKAGE}.data.storage.sql.revisions",
     "imapclient": f"{PACKAGE}.data.protocols.imap",
     # The errors and the quoting of the standard library beside IMAPClient.
     "imaplib": f"{PACKAGE}.data.protocols.imap",

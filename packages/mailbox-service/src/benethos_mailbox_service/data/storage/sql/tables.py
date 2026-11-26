@@ -20,8 +20,8 @@ from .dialect import count_on_from, insert_or_update
 from .schema import METADATA, changes, meta
 
 # The tables that keep account of the database itself and hold no
-# record: not in the export.
-BOOKKEEPING: frozenset[str] = frozenset()
+# record: not in the export. Alembic's mark of the revisions.
+BOOKKEEPING = frozenset({"alembic_version"})
 
 
 @dataclass(frozen=True, slots=True)

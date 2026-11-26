@@ -320,6 +320,15 @@ account and re-issuing every token.
   early are refused. The message names the table, never a value. The
   export holds what the database holds, and is never written
   unencrypted outside the backup.
+- **The steps of the schema** (2026-11-26). Up to schema 26 they are
+  the old steps in `data/storage/sqlite/migrations/`, closed. From 26 on
+  they are revisions of Alembic in `data/storage/sql/revisions/`, run by
+  the service as it opens its database, each in a transaction of its
+  own, only forward. A new database is made by the first revision, the
+  baseline. A database of an older schema goes through the old steps as
+  before and is marked at the baseline, in the table `alembic_version`.
+  `meta.schema_version` stays the one number of a schema, and a
+  database whose two numbers disagree is refused.
 - **A copy before schema 26** (**decided 2026-11-25**). The step to
   schema 26 builds tables anew. Before it runs, opening a database of an
   older schema keeps a copy of the file beside it,

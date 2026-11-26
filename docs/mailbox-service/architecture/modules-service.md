@@ -324,8 +324,11 @@ packages/mailbox-service/
                         #   connection (database.py), the tables for
                         #   an export (tables.py), the rows of a
                         #   table keyed by id (rows.py) and the
-                        #   repositories, one module per subject.
-                        #   repositories.py opens one of them
+                        #   repositories, one module per subject,
+                        #   sql/revisions/ the steps of the schema from
+                        #   schema 26 on, as revisions of Alembic, run
+                        #   in the process. repositories.py opens one
+                        #   of them
       secrets/          # envelope encryption, key providers, password
                         #   hashes, the vault of the credentials, TOTP,
                         #   passkeys (fido2)

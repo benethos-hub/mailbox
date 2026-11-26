@@ -1,9 +1,10 @@
 """The database file and what hangs on ``sqlite3``: the connection and its
 PRAGMAs, the file readable by its owner alone, the files SQLite keeps
 beside it, the file rewritten once to shrink, the schema migrated
-forward on open by the steps of ``migrations/`` with a copy kept before
-schema ``COPY_BEFORE``, a snapshot of the file, the lock of a running
-service. Every failure of sqlite3 leaves as a MailboxServiceError: a
+forward on open by the old steps of ``migrations/``, up to schema 26,
+with a copy kept before schema ``COPY_BEFORE``, a snapshot of the file,
+the lock of a running service. A new database is left to the revisions
+the caller runs after. Every failure of sqlite3 leaves as a MailboxServiceError: a
 constraint as ConflictError, anything else as StorageError.
 """
 
@@ -50,12 +51,15 @@ class Migrated:
 
 
 def open_file(
-    path: Path | None, *, keep_copy: bool, schema: int
+    path: Path | None, *, keep_copy: bool, schema: int, newest: int
 ) -> tuple[sqlite3.Connection, Migrated | None]:
     """The connection to the database at ``path``, readable by its owner
-    alone, in memory without a path, its schema migrated to ``schema``.
+    alone, in memory without a path, its schema migrated by the old steps
+    to ``schema``, or to their last, schema ``SCHEMA_VERSION``, when
+    ``schema`` lies beyond. A new database for such a schema stays empty.
     What opening did to the schema, None when nothing. ``keep_copy``: a
-    file before ``COPY_BEFORE`` is copied before it is migrated."""
+    file before ``COPY_BEFORE`` is copied before it is migrated.
+    ``newest``: the schema of this version, a file beyond it is refused."""
     if path is not None:
         path.parent.mkdir(parents=True, exist_ok=True)
         _owner_only(path)
@@ -70,7 +74,7 @@ def open_file(
     connection.execute("PRAGMA secure_delete = ON")
     try:
         rewritten = _shrinkable(connection)
-        migrated = _migrate(connection, path, schema, keep_copy, rewritten)
+        migrated = _migrate(connection, path, schema, newest, keep_copy, rewritten)
     except BaseException:
         connection.close()
         raise
@@ -128,26 +132,33 @@ def _migrate(
     connection: sqlite3.Connection,
     path: Path | None,
     upto: int,
+    newest: int,
     keep: bool,
     rewritten: bool,
 ) -> Migrated | None:
     """``rewritten``: the file was rewritten to shrink from now on,
     said with the notes of the schema."""
+    if upto >= SCHEMA_VERSION and not _has_meta(connection):
+        # A new database: the revisions make it, from their baseline on.
+        if upto > newest:
+            raise StorageError(f"there is no way from schema 0 to {upto}")
+        return None
     with _step(connection) as db:
         MIGRATIONS.prepare(db)
     current = schema_version(connection)
-    if current > SCHEMA_VERSION:
+    if current > newest:
         raise StorageError(
             f"database schema {current} is newer than this version supports "
-            f"({SCHEMA_VERSION}): run a newer version of the service"
+            f"({newest}): run a newer version of the service"
         )
-    if not current <= upto <= SCHEMA_VERSION:
+    if not current <= upto <= newest:
         raise StorageError(f"there is no way from schema {current} to {upto}")
+    upto = min(upto, SCHEMA_VERSION)
     kept = None
     if keep and path is not None and 0 < current < COPY_BEFORE:
         kept = _keep_copy(connection, path, current)
     notes: list[str] = []
-    for migration in MIGRATIONS.pending(current)[: upto - current]:
+    for migration in MIGRATIONS.pending(current)[: max(upto - current, 0)]:
         with _step(connection) as db:
             notes += MIGRATIONS.apply(db, migration)
     if kept is not None:
@@ -159,6 +170,14 @@ def _migrate(
     if current < upto or rewritten:
         return Migrated(current, upto, tuple(notes))
     return None
+
+
+def _has_meta(connection: sqlite3.Connection) -> bool:
+    with translated():
+        found = connection.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'meta'"
+        ).fetchone()
+    return found is not None
 
 
 def _keep_copy(connection: sqlite3.Connection, path: Path, current: int) -> str:
@@ -274,13 +293,6 @@ def move_sidecars(target: Path, kept: Path) -> None:
         sidecar = target.with_name(target.name + suffix)
         if sidecar.exists():
             sidecar.replace(kept.with_name(kept.name + suffix))
-
-
-def migrate_file(path: Path) -> None:
-    """Bring the database file at ``path`` to this version's schema. It
-    comes from a backup, which is its copy: none is kept beside it."""
-    connection, _ = open_file(path, keep_copy=False, schema=SCHEMA_VERSION)
-    connection.close()
 
 
 def service_lock(path: Path) -> Path:

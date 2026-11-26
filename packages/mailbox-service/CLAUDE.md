@@ -19,16 +19,27 @@ on it. The client's requests are held to it as well
 
 - Every error response uses the envelope `{"error": {"code", "message"}}`.
 - Lists are paged with an opaque `next_cursor`, never with page numbers.
-- A change to the database schema is a new migration: a class
-  `VNNNN<Subject>` of the base `Migration` in a module
-  `vNNNN_<subject>.py` in
-  `src/benethos_mailbox_service/data/storage/sqlite/migrations/versions/`
-  with the next number, added to the registry `MIGRATIONS` in the
-  `__init__.py` of `migrations/`. The module's docstring says what it
-  does and why. Each statement stands alone, and a step in Python is the
-  method `before`. A migration that shipped in a release is never changed:
-  `RELEASED` in `tests/data/storage/test_sqlite.py` holds the fingerprint
-  of each.
+- A change to the database schema is a new revision of Alembic: a
+  module `rNNNN_<subject>.py` in
+  `src/benethos_mailbox_service/data/storage/sql/revisions/versions/`
+  with the next number as `revision` and the one before as
+  `down_revision`. It ends with `written(NNNN)`, which writes
+  `meta.schema_version`, and `SCHEMA_VERSION` in `revisions/__init__.py`
+  becomes its number. The definitions in `data/storage/sql/schema.py`
+  change with it, and a test holds the two alike. The module's docstring
+  says what it does and why. It runs on SQLite and on PostgreSQL, and
+  only forward. A revision that builds a table anew which others refer
+  to needs care on SQLite, and a test with rows in the tables that refer
+  to it: with foreign keys on, SQLite can delete the rows of a table it
+  drops, and that reaches the tables that refer to it. Measure it with
+  the first such revision.
+- The old steps up to schema 26, classes in
+  `src/benethos_mailbox_service/data/storage/sqlite/migrations/`, are
+  closed: no step is added there.
+- A step that shipped in a release is never changed. `RELEASED` in
+  `tests/data/storage/test_sqlite.py` holds the fingerprint of each old
+  step, `RELEASED_REVISIONS` in `tests/data/storage/test_sql_revisions.py`
+  the one of each revision.
 
 ## The configuration UI
 

@@ -107,6 +107,9 @@ dependencies = [
     # The storage speaks SQL through SQLAlchemy Core (data/storage/sql/),
     # so the database can be exchanged.
     "sqlalchemy>=2.1",
+    # The steps of the schema from schema 26 on, run inside the process
+    # (data/storage/sql/revisions/).
+    "alembic>=1.14",
 ]
 
 [project.urls]
