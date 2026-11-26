@@ -186,3 +186,28 @@ def test_a_read_leaves_no_transaction_open() -> None:
             assert not in_transaction(db)
         finally:
             db.close()
+
+
+def test_a_change_undone_leaves_a_gap_the_feed_reads_past() -> None:
+    """On PostgreSQL a number a rolled back insert took is gone: the feed
+    goes on after the gap and hands out each change once."""
+    with schema() as name:
+        db = database(name)
+        stores = repositories_on(db)
+        stores.accounts.add(
+            Account(id="acc_1", provider=ProviderType.IMAP, email="a@example.com")
+        )
+        try:
+            stores.changes.append([_change(1)])
+            with pytest.raises(RuntimeError), db.transaction():
+                stores.changes.append([_change(2)])
+                raise RuntimeError
+            stores.changes.append([_change(3), _change(4)])
+            read = stores.changes.after(["acc_1"], 0, limit=10)
+            first = read[0].seq
+            later = stores.changes.after(["acc_1"], first, limit=10)
+        finally:
+            db.close()
+    assert [c.record.id for c in read] == ["msg_1", "msg_3", "msg_4"]
+    assert read[1].seq > read[0].seq + 1
+    assert [c.record.id for c in later] == ["msg_3", "msg_4"]
