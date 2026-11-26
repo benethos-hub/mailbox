@@ -51,7 +51,7 @@ and the open questions.
 | Packaging | uv workspace with five distributions (service, client, MCP server, the agents, and what the service, the MCP server and the agents share), hatchling, `src/` layout |
 | Web | FastAPI, uvicorn, pydantic v2, pydantic-settings, prometheus_client (metrics) |
 | UI | Jinja2, htmx and Bootstrap Icons (kept under `static/`), segno (QR codes), fido2 (passkeys) |
-| Storage | SQLite (stdlib `sqlite3`) |
+| Storage | SQLAlchemy Core over SQLite (stdlib `sqlite3`), the default, or PostgreSQL 19 (`psycopg`, the extra `postgres`), the steps of the schema as revisions of Alembic |
 | Crypto | `cryptography` (AES-256-GCM), `keyring` |
 | Mail | IMAPClient, imap-tools (parser), smtplib, poplib, httpx (JMAP, Graph, Gmail), dnspython, defusedxml and publicsuffixlist (autodiscovery), idna |
 | MCP | `mcp` 2.x |

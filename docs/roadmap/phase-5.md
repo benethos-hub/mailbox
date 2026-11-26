@@ -211,6 +211,15 @@ Part of the [roadmap](../ROADMAP.md): phase 5, in progress, and phase 5a, done.
   and Send at in the mail form, the Outbox page. Live-checked in
   `live/mailbox-service/outbox.py`, the stable digest of a Microsoft
   draft in `live/mailbox-service/microsoft.py --outbox-draft`
+- **The storage on SQLAlchemy Core, with PostgreSQL beside SQLite (7.8,
+  9)**, decided 2026-11-25, done: the repositories on SQLAlchemy Core,
+  the steps of the schema from 26 on as revisions of Alembic, the
+  logical export and backup format 3, PostgreSQL 19 as the storage of
+  the service with its settings, `503` with `service_unavailable` while
+  the database is away, backup and restore on it, `storage move`
+  between the two, and the profile `postgres` of the production compose
+  file. Checked by the suite against PostgreSQL in the CI. Its live
+  check: `live/mailbox-service/postgres.py`
 
 Open in this phase, each planned in CONCEPT.md:
 
