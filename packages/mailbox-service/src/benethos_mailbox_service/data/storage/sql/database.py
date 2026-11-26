@@ -60,6 +60,7 @@ class Database:
         schema: int | None = None,
     ) -> None:
         self._path = path
+        self._keep_copy = keep_copy
         upto = SCHEMA_VERSION if schema is None else schema
         self._driver, migrated = file.open_file(
             path, keep_copy=keep_copy, schema=upto, newest=SCHEMA_VERSION
@@ -95,8 +96,7 @@ class Database:
                 held = 0 if stored is None else int(stored)
         marked = revisions.mark(conn)
         if marked is None and held == 0:
-            revisions.upgrade(conn, upto)
-            return Migrated(0, upto)
+            return Migrated(0, upto, tuple(revisions.upgrade(conn, upto)))
         if marked is None:
             revisions.stamp(conn, held)
             marked = held
@@ -107,10 +107,22 @@ class Database:
             )
         if held >= upto:
             return migrated
-        revisions.upgrade(conn, upto)
+        notes = list(() if migrated is None else migrated.notes)
+        notes += self._copy_before(held, upto)
+        notes += revisions.upgrade(conn, upto)
         before = held if migrated is None else migrated.before
-        notes = () if migrated is None else migrated.notes
-        return Migrated(before, upto, notes)
+        return Migrated(before, upto, tuple(notes))
+
+    def _copy_before(self, held: int, upto: int) -> list[str]:
+        """A copy of the file at schema ``held`` when a revision on the
+        way to ``upto`` asks for one, named after the first that does."""
+        if not self._keep_copy or self._path is None:
+            return []
+        asking = [s for s in revisions.pending(held, upto) if s.keeps_copy]
+        if not asking:
+            return []
+        kept = file.keep_copy(self._driver, self._path, held, asking[0].version)
+        return [f"a copy of the database at schema {held} is kept: {kept}"]
 
     @contextmanager
     def connected(self) -> Iterator[sa.Connection]:

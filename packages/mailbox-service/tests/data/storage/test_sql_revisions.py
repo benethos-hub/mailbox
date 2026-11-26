@@ -5,6 +5,7 @@ leaves nothing half done."""
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import re
 import sqlite3
 import textwrap
@@ -90,25 +91,15 @@ def test_a_database_is_marked_without_a_step_run(
     assert "kept" not in _tables(conn)
 
 
-def _numbers() -> list[int]:
-    """The schema of every revision of the service, in order."""
-    found = [
-        int(m.group(1))
-        for path in (revisions.HERE / "versions").glob("*.py")
-        if (m := re.search(r'^revision = "(\d+)"', path.read_text("utf-8"), re.M))
-    ]
-    return sorted(found)
-
-
 def test_the_revisions_go_on_where_the_old_steps_end() -> None:
-    numbers = _numbers()
+    numbers = revisions.numbers()
     assert numbers[0] == revisions.BASELINE == MIGRATIONS.schema_version
     assert numbers == list(range(numbers[0], numbers[-1] + 1))
     assert numbers[-1] == revisions.SCHEMA_VERSION
 
 
 def test_every_revision_writes_its_number_into_meta(conn: sa.Connection) -> None:
-    for number in _numbers():
+    for number in revisions.numbers():
         revisions.upgrade(conn, number)
         assert revisions.mark(conn) == number
         with conn.begin():
@@ -157,13 +148,21 @@ def test_a_database_whose_two_numbers_disagree_is_refused(tmp_path: Path) -> Non
 
 # What each revision of a release runs, as a hash of its module: a
 # database of that release has run it, so it is never changed. A release
-# adds its own. None so far.
+# adds its own. None so far. The base in revision.py is not part of it:
+# a change there that changes what a released step does is a new
+# revision, never an edit.
 RELEASED_REVISIONS: dict[int, str] = {}
 
 
+def _module(number: int) -> Path:
+    [path] = revisions.VERSIONS.glob(f"r{number:04d}_*.py")
+    return path
+
+
 def fingerprint(number: int) -> str:
-    [path] = (revisions.HERE / "versions").glob(f"r{number:04d}_*.py")
-    return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+    return hashlib.sha256(
+        _module(number).read_bytes().replace(b"\r\n", b"\n")
+    ).hexdigest()
 
 
 def test_a_released_revision_is_never_changed() -> None:
@@ -175,8 +174,21 @@ def test_a_released_revision_is_never_changed() -> None:
     assert changed == [], "shipped in a release: make a new revision instead"
 
 
-def test_every_revision_is_named_after_its_number() -> None:
-    for path in (revisions.HERE / "versions").glob("*.py"):
-        named = re.fullmatch(r"r(\d{4})_\w+\.py", path.name)
-        assert named, f"{path.name} is not named rNNNN_<subject>.py"
-        assert f'revision = "{named[1]}"' in path.read_text("utf-8"), path.name
+def test_every_revision_is_a_class_named_after_its_number() -> None:
+    for number in revisions.numbers():
+        path = _module(number)
+        assert re.fullmatch(rf"r{number:04d}_\w+\.py", path.name), path.name
+        spec = importlib.util.spec_from_file_location(path.stem, path)
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        [step] = [
+            v
+            for v in vars(module).values()
+            if isinstance(v, type)
+            and issubclass(v, revisions.Revision)
+            and v is not revisions.Revision
+        ]
+        assert step.version == number, path.name
+        assert step.__name__.startswith(f"R{number:04d}"), path.name
+        assert module.revision == revisions.name_of(number), path.name
