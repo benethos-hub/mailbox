@@ -1,7 +1,8 @@
 #!/bin/sh
 # The first start of Mailbox in operation, the steps of README.md in one
-# run: .env from its template, the master key, the keys in the database,
-# the first administrator, then the start. Needs docker with compose.
+# run: .env from its template, the master key, with the profile postgres
+# the database and its role, the keys in the database, the first
+# administrator, then the start. Needs docker with compose.
 #
 #   sh setup.sh
 #
@@ -27,8 +28,11 @@ fi
 # certificate of your own for MAILBOX_TLS=files.
 mkdir -p caddy.d secrets/mcp secrets/tls
 
-# The master key: a file only the container user (uid 10001) reads.
+# The master key: a file only the container user (uid 10001) reads. The
+# passwords of the database: empty without the profile postgres.
 [ -e secrets/master_key ] || : >secrets/master_key
+[ -e secrets/database_password ] || : >secrets/database_password
+[ -e secrets/database_admin_password ] || : >secrets/database_admin_password
 chmod 700 secrets secrets/mcp
 # Caddy runs as root without capabilities: it reads secrets/tls only if
 # the folder is open to it, and the key only if root owns it.
@@ -38,15 +42,46 @@ if [ -e secrets/tls/server.key ]; then
     docker run --rm -v "$here/secrets/tls:/certs" caddy:2 chown 0 /certs/server.key
 fi
 image=$(docker compose config --images | grep benethos-mailbox-service)
+
+# Owned by the container user, readable by it alone.
+own() {
+    chmod 400 "secrets/$1"
+    docker run --rm --user 0 --entrypoint chown \
+        -v "$here/secrets:/secrets" "$image" 10001 "/secrets/$1"
+}
+password() { head -c 24 /dev/urandom | od -An -tx1 | tr -d ' \n'; }
+
 if [ ! -s secrets/master_key ]; then
     say "Making the master key"
     docker run --rm "$image" keys generate >secrets/master_key
-    chmod 400 secrets/master_key
     # On Linux the container user must own it. The image changes the
     # owner, so this needs no sudo. Docker Desktop ignores it.
-    docker run --rm --user 0 --entrypoint chown \
-        -v "$here/secrets:/secrets" "$image" 10001 /secrets/master_key
+    own master_key
 fi
+
+profiles=$(sed -n 's/^COMPOSE_PROFILES=//p' .env)
+case ",$profiles," in
+*,postgres,*)
+    if [ ! -s secrets/database_admin_password ]; then
+        password >secrets/database_admin_password
+        # The image reads it as its user postgres.
+        chmod 644 secrets/database_admin_password
+    fi
+    if [ ! -s secrets/database_password ]; then
+        say "Making the role mailbox in PostgreSQL"
+        docker compose up -d --wait postgres
+        role=$(password)
+        # On stdin, so the password stands in no list of processes. The
+        # role owns its schema and has no right beyond it.
+        printf '%s\n' \
+            "CREATE ROLE mailbox LOGIN PASSWORD '$role' NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT CONNECTION LIMIT 5;" \
+            "CREATE SCHEMA mailbox AUTHORIZATION mailbox;" |
+            docker compose exec -T postgres psql -q -v ON_ERROR_STOP=1 -U postgres -d mailbox
+        printf '%s' "$role" >secrets/database_password
+        own database_password
+    fi
+    ;;
+esac
 
 say "Creating the keys in the database"
 if made=$(docker compose run --rm -T mailbox-service keys init 2>&1); then

@@ -7,7 +7,8 @@
 #
 # The service listens on the loopback address of the host (CONCEPT 8.1).
 # Only Caddy, with the profile https, listens on every address, on the
-# ports 80 and 443. The MCP server is not here: each client starts one of
+# ports 80 and 443. PostgreSQL, with the profile postgres, listens on no
+# port of the host and reaches nothing outside its network. The MCP server is not here: each client starts one of
 # its own, or instances run beside the service with the profile mcp,
 # from compose.override.yaml (README.md, "Clients").
 
@@ -35,6 +36,15 @@ services:
       - data:/data
     secrets:
       - master_key
+      # The password of the role mailbox, with the profile postgres.
+      # Empty without it.
+      - database_password
+    # With the profile postgres the database is started first. Without
+    # it this is left out.
+    depends_on:
+      postgres:
+        condition: service_healthy
+        required: false
     # Every other setting of the service, MAILBOX_SERVICE_*, if the file
     # exists. Template: service.env.example.
     env_file:
@@ -50,6 +60,7 @@ services:
       MAILBOX_SERVICE_FORWARDED_ALLOW_IPS: ${MAILBOX_SERVICE_FORWARDED_ALLOW_IPS:-172.30.80.200}
     networks:
       - mailbox
+      - database
     read_only: true
     tmpfs:
       - /tmp
@@ -98,14 +109,45 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  # The database on PostgreSQL, with the profile postgres: the service
+  # alone reaches it, in a network without a way out and without a port
+  # on the host. setup.sh makes the role mailbox with a schema of its
+  # own. service.env names it (service.env.example).
+  postgres:
+    profiles: [postgres]
+    image: postgres:19
+    logging: *logging
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mailbox
+      POSTGRES_PASSWORD_FILE: /run/secrets/database_admin_password
+    secrets:
+      - database_admin_password
+    volumes:
+      - database:/var/lib/postgresql
+    networks:
+      - database
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-d", "mailbox"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    security_opt:
+      - no-new-privileges:true
+
 secrets:
   master_key:
     file: ./secrets/master_key
+  database_password:
+    file: ./secrets/database_password
+  database_admin_password:
+    file: ./secrets/database_admin_password
 
 volumes:
   data:
   caddy-data:
   caddy-config:
+  database:
 
 # A fixed address range, so the service can name Caddy's address as the
 # one proxy it believes. Docker hands out the lower half itself, Caddy's
@@ -116,3 +158,6 @@ networks:
       config:
         - subnet: 172.30.80.0/24
           ip_range: 172.30.80.0/25
+  # The service and the database alone, with no way out.
+  database:
+    internal: true

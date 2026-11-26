@@ -31,7 +31,8 @@ it, only `identities` of 8.5 is not built.
 8. **Every route names its right.** `x-permission` in the OpenAPI
    document, checked by a test. A new route cannot slip out unguarded.
    `/health` alone has none: it takes no token and tells only that the
-   service runs and its version.
+   service runs and its version, or, with `503` and
+   `service_unavailable`, that it cannot reach its database.
 9. **Someone is always named.** Every call is made by a user, so the
    audit and the log name one.
 

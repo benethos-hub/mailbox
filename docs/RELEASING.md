@@ -35,10 +35,12 @@ client and the common package.
    newest release the changelog names. At its foot, move the link
    `[Unreleased]` to `compare/vX.Y.Z...HEAD` and add the link
    `[X.Y.Z]`.
-4. Freeze the migrations new in this release: add `fingerprint(N)` of
-   each to `RELEASED` in
-   `packages/mailbox-service/tests/data/storage/test_sqlite.py`, and
-   those of the agents' state file to `RELEASED` in
+4. Freeze the steps of the schema new in this release: add
+   `fingerprint(N)` of each old step, up to schema 26, to `RELEASED` in
+   `packages/mailbox-service/tests/data/storage/test_sqlite.py`, of each
+   revision to `RELEASED_REVISIONS` in
+   `packages/mailbox-service/tests/data/storage/test_sql_revisions.py`,
+   and those of the agents' state file to `RELEASED` in
    `packages/mailbox-agents/tests/store/test_store.py`.
 5. After the squash merge: an annotated tag `vX.Y.Z` on `main`, pushed,
    then `gh release create vX.Y.Z --verify-tag --title X.Y.Z` with the

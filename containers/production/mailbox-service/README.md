@@ -17,11 +17,18 @@ this folder is enough.
 - [HTTPS](#https)
 - [Settings](#settings)
 - [Operation](#operation)
+- [PostgreSQL](#postgresql)
+  - [In this compose file](#in-this-compose-file)
+  - [A server of your own](#a-server-of-your-own)
+  - [Move to PostgreSQL](#move-to-postgresql)
+  - [Backup and restore on PostgreSQL](#backup-and-restore-on-postgresql)
+  - [Set a schema aside](#set-a-schema-aside)
+  - [What the role sees](#what-the-role-sees)
 - [Monitoring with Prometheus](#monitoring-with-prometheus)
 
 | File | What it is |
 |---|---|
-| `compose.yaml` | the service, and Caddy for HTTPS (profile `https`) |
+| `compose.yaml` | the service, Caddy for HTTPS (profile `https`) and PostgreSQL as the database (profile `postgres`) |
 | `.env.example` | template of `.env`: the version, the profiles, the port, the domain, the certificate |
 | `service.env.example` | template of `service.env`: further settings of the service |
 | `Caddyfile` | HTTPS in front, for the profile `https` |
@@ -30,7 +37,7 @@ this folder is enough.
 | `caddy.d/mcp.caddy.example` | template of a route in Caddy to an instance |
 | `caddy.d/metrics.caddy.example` | keeps `/v1/metrics` from the outside at Caddy |
 | `setup.sh` | the first start in one run |
-| `secrets/` | made at the first start, never versioned: `master_key`, `mcp/` the tokens of the instances, `tls/` a certificate of your own |
+| `secrets/` | made at the first start, never versioned: `master_key`, `database_password` and `database_admin_password` with the profile `postgres`, `mcp/` the tokens of the instances, `tls/` a certificate of your own |
 
 Needs Docker with compose 2.24 or newer (`docker compose version`).
 
@@ -318,6 +325,101 @@ dropped first. Should the sync or the delivery of webhooks end with an
 error, the service stops with it, and `restart: unless-stopped` starts
 it anew. For a log collector, `MAILBOX_SERVICE_LOG_FORMAT=json` in
 `service.env` writes each line as one JSON object.
+
+## PostgreSQL
+
+SQLite in the volume `data` is the default and needs nothing. PostgreSQL
+19 or newer holds the records instead, in the container of the profile
+`postgres` or on a server of your own. The service keeps one connection
+of its own for as long as it runs, and holds a lock on it that keeps a
+second service off the same schema. A pooler that shares connections
+per transaction does not keep that lock: connect the service directly.
+The driver comes with the image, and with it libpq and OpenSSL: their
+fixes arrive with a new version of the service, not with the host.
+
+### In this compose file
+
+Before the first start, put `postgres` into `COMPOSE_PROFILES` of
+`.env` and the four lines of `service.env.example` that name the
+database into `service.env`. `setup.sh` then makes the passwords in
+`secrets/`, starts PostgreSQL and makes the role `mailbox` with the
+schema `mailbox` of its own, without further rights and with at most
+five connections. The database has no port on the host and its network
+no way out, so TLS is off there, and the start of the service says so.
+An installation that runs on SQLite already moves its records over as
+below.
+
+### A server of your own
+
+Make a role for the service and a schema of the same name it owns,
+as an administrator of the server:
+
+```sql
+CREATE ROLE mailbox LOGIN PASSWORD '...' NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT CONNECTION LIMIT 5;
+CREATE SCHEMA mailbox AUTHORIZATION mailbox;
+```
+
+`MAILBOX_SERVICE_DATABASE_URL` names it without the password,
+`postgresql://mailbox@db.example.org:5432/<database>`, and the password
+goes into the file `MAILBOX_SERVICE_DATABASE_PASSWORD_FILE` names. The
+service verifies the certificate of a server that is not on the same
+host, against the certificates of the system or the file
+`MAILBOX_SERVICE_DATABASE_CA_FILE` names.
+
+### Move to PostgreSQL
+
+1. Take a backup, as under [Operation](#operation).
+2. Stop the service: `docker compose stop mailbox-service`.
+3. Set up the database, in this compose file or on a server of your
+   own, and put the lines that name it into `service.env`, but leave
+   `MAILBOX_SERVICE_STORAGE` as it is.
+4. Check the records: `docker compose run --rm mailbox-service storage
+   move --to postgres --check`. A value an older version wrote that does
+   not fit its column is named with its table and column. Nothing is
+   written.
+5. Move them: `docker compose run --rm mailbox-service storage move --to
+   postgres`. It copies every record into the empty schema and compares
+   each table. The file `mailbox.db` stays as it is.
+6. Set `MAILBOX_SERVICE_STORAGE=postgres` in `service.env`, then
+   `docker compose up -d`.
+
+`--to sqlite` moves them back, into a `mailbox.db` that is not there
+yet. A move that does not finish leaves a mark, and the service does not
+open that database: set the schema aside and move again.
+
+### Backup and restore on PostgreSQL
+
+`backup` works as under [Operation](#operation) and writes format 3,
+read from one moment while the service runs. `restore` goes into an
+empty schema only, after the service is stopped. A backup made on
+SQLite in format 1 or 2 goes there in two steps: `restore` with
+`MAILBOX_SERVICE_STORAGE=sqlite`, then the move above.
+
+### Set a schema aside
+
+A restore or a move goes into an empty schema. The service never drops
+a schema, and its role cannot make a new one. An administrator of the
+server renames the old one and gives the role a new, empty one. In this
+compose file:
+
+```sh
+docker compose stop mailbox-service
+docker compose exec postgres psql -U postgres -d mailbox \
+  -c "ALTER SCHEMA mailbox RENAME TO mailbox_before" \
+  -c "CREATE SCHEMA mailbox AUTHORIZATION mailbox"
+```
+
+Drop `mailbox_before` once the service runs on the new one and a new
+backup is taken: `DROP SCHEMA mailbox_before CASCADE`.
+
+### What the role sees
+
+The role reads no row outside its schema and cannot end the session of
+another role. It sees the names of the tables of other schemas and of
+the roles, and that other sessions exist, never the text of their
+queries. It could drop its own schema. On a server shared with others,
+that is what each of them sees of the service (measured on PostgreSQL
+19, 2026-11-26).
 
 ## Monitoring with Prometheus
 
