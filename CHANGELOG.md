@@ -14,7 +14,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   service signs in as. `MAILBOX_SERVICE_DATABASE_URL`
   (`postgresql://<role>@<host>:<port>/<database>`, without a password,
   a query or a fragment)
-  and `MAILBOX_SERVICE_DATABASE_PASSWORD_FILE` name it.
+  and `MAILBOX_SERVICE_DATABASE_PASSWORD_FILE` name it. An empty
+  password file is refused.
   `MAILBOX_SERVICE_DATABASE_TLS` is `verify` by default: a host other
   than this one is reached only over TLS with a checked certificate and
   name, against `MAILBOX_SERVICE_DATABASE_CA_FILE` or the authorities of

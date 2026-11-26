@@ -290,6 +290,8 @@ def _database_settings(url: str | None, password_file: Path | None) -> None:
         raise ValueError(
             "storage postgres needs database_url and database_password_file"
         )
+    if _empty(password_file):
+        raise ValueError("database_password_file names an empty file")
     parts = urlsplit(url)
     if parts.scheme != "postgresql":
         raise ValueError(f"database_url must have the form {DATABASE_URL_FORM}")
@@ -318,6 +320,15 @@ def _database_settings(url: str | None, password_file: Path | None) -> None:
             "the role in database_url names the schema too: lower case"
             " letters, digits and underscores"
         )
+
+
+def _empty(path: Path) -> bool:
+    """Whether the file holds nothing but blanks. One that cannot be read
+    is not judged here: opening the database says why."""
+    try:
+        return not files.secret_file(path)
+    except OSError:
+        return False
 
 
 def _named(secret: SecretStr | None, file: Path | None) -> bool:
