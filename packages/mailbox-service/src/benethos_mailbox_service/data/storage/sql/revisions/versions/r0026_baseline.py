@@ -393,4 +393,6 @@ class R0026Baseline(Revision):
         op.bulk_insert(_META, [{"key": "changes_last", "value": "0"}])
 
 
+# What Alembic reads from the module.
 revision, down_revision, upgrade = R0026Baseline.alembic()
+__all__ = ["down_revision", "revision", "upgrade"]
