@@ -11,10 +11,11 @@ from pathlib import Path
 
 import sqlalchemy as sa
 
-from ....errors import ConflictError, StorageError
+from ....errors import StorageError
 from ..migrated import Migrated
 from ..sqlite import file
 from .dialect import sqlite_engine
+from .place import translated_by
 
 
 class FilePlace:
@@ -91,21 +92,8 @@ class FilePlace:
 @contextmanager
 def translated() -> Iterator[None]:
     """The failures of the database as this project's errors, with the
-    text of the driver, which names a table and a column, never a value:
-    the one of SQLAlchemy holds the statement and its values. A failure
-    SQLAlchemy raises before the driver is named by its kind alone. The
-    driver's own errors, from the connection used directly, are
+    text of the driver, which names a table and a column, never a value.
+    The driver's own errors, from the connection used directly, are
     translated by ``file``."""
-    try:
-        with file.translated():
-            yield
-    except sa.exc.IntegrityError as exc:
-        raise ConflictError(f"conflicts with a stored record: {exc.orig}") from None
-    except sa.exc.DBAPIError as exc:
-        raise StorageError(f"the database failed: {exc.orig}") from None
-    except sa.exc.SQLAlchemyError as exc:
-        # Refused before the driver saw it, such as a value that does not
-        # fit its column. Its text, and the one of its cause, can hold the
-        # statement and the value: only the kind is named.
-        cause = getattr(exc, "orig", None) or exc
-        raise StorageError(f"the database failed: {type(cause).__name__}") from None
+    with translated_by(str, str), file.translated():
+        yield

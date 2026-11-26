@@ -41,6 +41,11 @@ containers/
     compose.yaml                 #   ports on 127.0.0.1 only
     setup.sh                     #   makes the server anew
     README.md                    #   how to set it up and use it
+  test-database/                 # PostgreSQL as the database of the
+                                 #   suite against a server
+    compose.yaml                 #   the port on 127.0.0.1 only
+    setup.sh                     #   makes the server anew
+    README.md                    #   how to set it up and run the suite
 ```
 
 | Folder | For | Images |
@@ -48,6 +53,7 @@ containers/
 | `production/mailbox-service/` | running Mailbox, without a clone of the repository | from the GitHub container registry, the version named in `.env` |
 | `development/mailbox-service/` | trying a change in a container | built from this repository |
 | `test-mail-server/` | the adapters against a mail server of our own | Stalwart |
+| `test-database/` | the storage against PostgreSQL | PostgreSQL |
 | `production/mailbox-agents/` | running the agents, without a clone of the repository | from the GitHub container registry, the version named in `.env` |
 | `development/mailbox-agents/` | trying a change of the agents in a container | built from this repository |
 | `live/mailbox-agents/` | the agents' test account | Stalwart, the mailbox service built from this repository (a published release with `MAILBOX_LIVE_SERVICE=published`), LiteLLM with its database, llama.cpp |

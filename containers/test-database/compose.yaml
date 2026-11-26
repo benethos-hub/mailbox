@@ -1,0 +1,26 @@
+# PostgreSQL 19 as the database of the suite against a server, on
+# 127.0.0.1:35432 only, 30000 + the standard port. setup.sh makes it,
+# README.md says how to use it.
+name: mailbox-test-database
+
+services:
+  postgres:
+    image: postgres:19
+    container_name: mailbox-test-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/admin_password
+    secrets:
+      - admin_password
+    ports:
+      - "127.0.0.1:35432:5432"
+    volumes:
+      - data:/var/lib/postgresql
+
+secrets:
+  admin_password:
+    file: ./secrets/admin_password
+
+volumes:
+  data:
+    name: mailbox-test-postgres-data

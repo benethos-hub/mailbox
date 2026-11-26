@@ -40,7 +40,8 @@ alone. Before a change in a package, read its file as well as this one:
 
 - [packages/mailbox-service/CLAUDE.md](packages/mailbox-service/CLAUDE.md):
   the OpenAPI document, the error envelope, paging, migrations, the
-  configuration UI and its check in real browsers
+  configuration UI and its check in real browsers, the suite against
+  PostgreSQL
 - [packages/mailbox-mcp/CLAUDE.md](packages/mailbox-mcp/CLAUDE.md): the
   REST client, the tools and their record
 - [packages/mailbox-client/CLAUDE.md](packages/mailbox-client/CLAUDE.md):
@@ -56,7 +57,7 @@ alone. Before a change in a package, read its file as well as this one:
 - Windows, PowerShell or Bash. Python 3.11-3.15. CI measures the
   coverage on the newest and builds the fresh install with it. A new
   version goes into the CI matrix, `coverage-python`, `UV_PYTHON` of
-  fresh-install and browser, the classifiers, the table of
+  fresh-install, browser and postgres, the classifiers, the table of
   `docs/mailbox-service/CONCEPT.md` 9 and this line at once, as `test_packaging.py`
   checks.
 - Set up: `uv sync` (the workspace dev group holds pytest, ruff, mypy).
@@ -89,6 +90,9 @@ alone. Before a change in a package, read its file as well as this one:
   makes Stalwart in a container anew, with IMAP, POP3, SMTP and JMAP on
   `127.0.0.1:30xxx`, two accounts and a local test CA
   (`containers/test-mail-server/README.md`).
+- A test database of our own: `sh containers/test-database/setup.sh`
+  makes PostgreSQL 19 in a container anew on `127.0.0.1:35432`, for the
+  suite against PostgreSQL (`containers/test-database/README.md`).
 - Live checks: manual scripts in a folder per package under `live/`,
   against the test accounts of
   `live/.env` (not versioned, template `live/.env.example`). What each
@@ -174,7 +178,8 @@ containers/               # images/ (one folder per image), and one folder
                           #   development/ (built from the repository),
                           #   live/ (the agents' mail server, service
                           #   and model gateway of their own),
-                          #   test-mail-server/ (Stalwart for tests).
+                          #   test-mail-server/ (Stalwart for tests),
+                          #   test-database/ (PostgreSQL for tests).
                           #   Each keeps its secrets/ local
 .githooks/                # pre-commit: refuses staged settings, keys,
                           #   state files, lines that look like a
@@ -186,7 +191,7 @@ containers/               # images/ (one folder per image), and one folder
                           #   lowest versions per package, coverage
                           #   badge, CodeQL, hadolint, brand assets),
                           #   fresh install, images, the UI in real
-                          #   browsers,
+                          #   browsers, the storage on PostgreSQL,
                           #   publish.yml: on a release, through the
                           #   organisation's actions, the five packages
                           #   to PyPI, in the order of their dependencies,
@@ -401,6 +406,9 @@ their own: [docs/mailbox-agents/ARCHITECTURE.md](docs/mailbox-agents/ARCHITECTUR
 - The UI in real browsers, the one check that runs its JavaScript: the
   service's [CLAUDE.md](packages/mailbox-service/CLAUDE.md). The default
   run leaves it out, CI's browser job runs it.
+- The storage on PostgreSQL: the service's
+  [CLAUDE.md](packages/mailbox-service/CLAUDE.md). The default run
+  leaves it out as well, CI's postgres job runs it.
 
 Never write a test that reaches a real mail server, and never one that skips
 itself without credentials. Live checks are manual scripts in `live/`, outside

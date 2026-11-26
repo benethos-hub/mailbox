@@ -48,12 +48,17 @@ from benethos_mailbox_service.data.secrets import (
     cipher,
     encode_recovery,
 )
-from benethos_mailbox_service.data.storage import Repositories, open_repositories
+from benethos_mailbox_service.data.storage import (
+    Repositories,
+    open_repositories,
+    repositories_on,
+)
 from benethos_mailbox_service.domain.accounts.service import AccountService
 from benethos_mailbox_service.domain.auth.service import AuthService
 from benethos_mailbox_service.domain.rights import ADMIN_SERVICE, permissions
 from benethos_mailbox_service.domain.rights.access import Access
 
+from . import postgres_helpers
 from .clocks import Clock
 from .imap_fake import FakeMailBox, filled_server, make_message
 from .jmap_fake import HOST, PASSWORD, USER, FakeJmap
@@ -64,7 +69,11 @@ METHODS = {"get", "post", "put", "patch", "delete"}  # of the OpenAPI document
 
 # The UI in real browsers needs the browser dependency group and the
 # browsers themselves: a suite of its own, which CI's browser job runs.
+# So does PostgreSQL, a server for the suite against it, which CI's job
+# postgres runs (containers/test-database).
 collect_ignore = [] if os.environ.get("MAILBOX_BROWSER_TESTS") else ["browser"]
+if not postgres_helpers.wanted():
+    collect_ignore.append("postgres")
 
 
 async def resolve_to_public(host: str, port: int) -> list[str]:
@@ -84,12 +93,24 @@ def forget_secrets() -> None:
     redact.forget()
 
 
-@pytest.fixture(params=["memory", "sqlite"])
+# The stores every test of the repositories runs on: PostgreSQL as well
+# when its suite is wanted.
+STORES = ["memory", "sqlite", *(["postgres"] if postgres_helpers.wanted() else [])]
+
+
+@pytest.fixture(params=STORES)
 def repositories(
     request: pytest.FixtureRequest, tmp_path: Path
 ) -> Iterator[Repositories]:
-    """The repositories of each store, in memory and in SQLite: the one
-    place a test of their behaviour gets them from."""
+    """The repositories of each store, in memory, in SQLite and, with its
+    suite, on PostgreSQL in a schema of the test's own: the one place a
+    test of their behaviour gets them from."""
+    if request.param == "postgres":
+        with postgres_helpers.schema() as name:
+            on_server = postgres_helpers.database(name)
+            yield repositories_on(on_server)
+            on_server.close()
+        return
     opened = open_repositories(request.param, tmp_path / "store.db")
     yield opened
     opened.close()

@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import shutil
 import sqlite3
-import textwrap
 from collections.abc import Callable, Iterator
 from pathlib import Path
 
@@ -20,65 +19,15 @@ from benethos_mailbox_service.data.storage.sql.dialect import sqlite_engine
 from benethos_mailbox_service.data.storage.sql.revisions import revision
 from benethos_mailbox_service.errors import StorageError
 
-# The first revision of each folder: meta, and a table of five items.
-FIRST = """
-    import sqlalchemy as sa
-    from alembic import op
-    from benethos_mailbox_service.data.storage.sql.revisions import Revision
-
-    class R0026Items(Revision):
-        version = 26
-
-        def steps(self):
-            op.create_table("meta", sa.Column("key", sa.Text, primary_key=True),
-                            sa.Column("value", sa.Text))
-            items = op.create_table("items",
-                                    sa.Column("id", sa.Text, primary_key=True),
-                                    sa.Column("name", sa.Text),
-                                    sa.Column("folded", sa.Text))
-            op.bulk_insert(items, [{"id": f"i{n}", "name": f"Name {n}"}
-                                   for n in range(5)])
-
-    revision, down_revision, upgrade = R0026Items.alembic()
-"""
-
-# The second: its class body after the line ``version = 27``.
-SECOND = """
-    import sqlalchemy as sa
-    from alembic import op
-    from benethos_mailbox_service.data.storage.sql.revisions import Revision
-
-    ITEMS = sa.table("items", sa.column("id"), sa.column("name"))
-
-    class R0027Step(Revision):
-        version = 27
-{body}
-
-    revision, down_revision, upgrade = R0027Step.alembic()
-"""
+from ...revision_helpers import second, steps_in
 
 Steps = Callable[[str], Path]
-
-
-def _second(body: str) -> str:
-    """The second revision with ``body`` as its class body."""
-    inner = textwrap.indent(textwrap.dedent(body).strip("\n"), " " * 8)
-    return textwrap.dedent(SECOND.format(body=inner))
 
 
 @pytest.fixture
 def steps_folder(tmp_path: Path) -> Steps:
     """A folder of revisions: the first, and a second of ``body``."""
-
-    def make(body: str) -> Path:
-        folder = tmp_path / "versions"
-        folder.mkdir(exist_ok=True)
-        (folder / "r0026_items.py").write_text(textwrap.dedent(FIRST), encoding="utf-8")
-        second = _second(body)
-        (folder / "r0027_step.py").write_text(second, encoding="utf-8")
-        return folder
-
-    return make
+    return lambda body: steps_in(tmp_path / "versions", body)
 
 
 @pytest.fixture
@@ -217,7 +166,7 @@ def test_a_step_that_asks_for_a_copy_gets_one(
     for baseline in revisions.VERSIONS.glob("r0026_*.py"):
         shutil.copy(baseline, folder / baseline.name)
     (folder / "r0027_copied.py").write_text(
-        _second("""
+        second("""
             keeps_copy = True
 
             def steps(self):

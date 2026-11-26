@@ -1,7 +1,8 @@
 """The storage spoken through SQLAlchemy Core: the types and what differs
 between databases (``dialect``), the tables of the schema (``schema``),
 the database the repositories use (``database``), where a database lies
-(``place``, the file of SQLite in ``file_place``), the rows of a table
+(``place``, the file of SQLite in ``file_place``, a schema on a server in
+``server_place``), the rows of a table
 keyed by ``id`` (``rows``) and the repositories, one module per subject.
 The only package that imports ``sqlalchemy``."""
 

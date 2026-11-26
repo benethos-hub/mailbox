@@ -29,7 +29,8 @@ mailbox-live = { path = "live", editable = true }
 
 [dependency-groups]
 dev = [
-    "benethos-mailbox-service",
+    # With the driver of PostgreSQL, for the suite against a server.
+    "benethos-mailbox-service[postgres]",
     "benethos-mailbox-mcp",
     "benethos-mailbox-client",
     "benethos-mailbox-common[all]",
