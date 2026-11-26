@@ -42,6 +42,15 @@ def password_file(tmp_path: Path) -> Path:
             "must not hold a password",
         ),
         ("postgresql://Svc-1@db.example.org:5432/mailbox", "lower case letters"),
+        (
+            "postgresql://svc@db.example.org:5432/mailbox?password=" + PASSWORD,
+            "must not hold a query",
+        ),
+        (
+            "postgresql://svc@db.example.org:5432/mailbox?sslmode=disable",
+            "must not hold a query",
+        ),
+        ("postgresql://svc@db.example.org:5432/mailbox#" + PASSWORD, "a fragment"),
     ],
     ids=[
         "no url",
@@ -51,6 +60,9 @@ def password_file(tmp_path: Path) -> Path:
         "no port",
         "a password",
         "no plain role",
+        "a password in the query",
+        "a query",
+        "a fragment",
     ],
 )
 def test_a_rule_of_the_database_is_named_without_the_value(

@@ -272,7 +272,9 @@ class Settings(files.FileSettings):
         """The database for a line: the path of its file, or the address
         of its server, which holds no password."""
         if self.storage == "postgres" and self.database_url:
-            return self.database_url
+            parts = urlsplit(self.database_url)
+            host = parts.netloc.rsplit("@", 1)[-1]
+            return f"{parts.scheme}://{parts.username}@{host}{parts.path}"
         return str(self.database_path)
 
 
@@ -295,6 +297,11 @@ def _database_settings(url: str | None, password_file: Path | None) -> None:
         raise ValueError(
             "database_url must not hold a password: name the file that holds"
             " it in database_password_file"
+        )
+    if parts.query or parts.fragment or "?" in url or "#" in url:
+        raise ValueError(
+            "database_url must not hold a query or a fragment: the password"
+            " comes from database_password_file, TLS from database_tls"
         )
     try:
         port = parts.port

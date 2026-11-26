@@ -12,7 +12,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   stays the default: `MAILBOX_SERVICE_STORAGE=postgres` keeps the
   records in a schema on a PostgreSQL server, named after the role the
   service signs in as. `MAILBOX_SERVICE_DATABASE_URL`
-  (`postgresql://<role>@<host>:<port>/<database>`, without a password)
+  (`postgresql://<role>@<host>:<port>/<database>`, without a password,
+  a query or a fragment)
   and `MAILBOX_SERVICE_DATABASE_PASSWORD_FILE` name it.
   `MAILBOX_SERVICE_DATABASE_TLS` is `verify` by default: a host other
   than this one is reached only over TLS with a checked certificate and

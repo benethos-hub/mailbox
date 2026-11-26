@@ -273,7 +273,7 @@ names the settings file it read and the database at start.
 | `MAILBOX_SERVICE_LOG_FORMAT` | `text` | or `json`, each line one JSON object for a log collector, see [Logs](#logs) |
 | `MAILBOX_SERVICE_DATA_DIR` | the data folder, see [Where things live](#where-things-live) | where the database lives |
 | `MAILBOX_SERVICE_STORAGE` | `sqlite` | or `postgres`, a schema on a PostgreSQL server, or `memory`, which keeps nothing |
-| `MAILBOX_SERVICE_DATABASE_URL` | | for `postgres`: the server as `postgresql://<role>@<host>:<port>/<database>`, without a password. The schema is named after the role |
+| `MAILBOX_SERVICE_DATABASE_URL` | | for `postgres`: the server as `postgresql://<role>@<host>:<port>/<database>`, without a password, a query or a fragment. The schema is named after the role |
 | `MAILBOX_SERVICE_DATABASE_PASSWORD_FILE` | | for `postgres`: the file holding the password of the role |
 | `MAILBOX_SERVICE_DATABASE_TLS` | `verify` | for `postgres`: TLS with a checked certificate and name to any host but this one, or `off` for a private network, which the start says |
 | `MAILBOX_SERVICE_DATABASE_CA_FILE` | the system's | for `postgres`: the certificates of the authorities the server's is checked against |
