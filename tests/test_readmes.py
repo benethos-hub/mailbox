@@ -249,6 +249,7 @@ READMES = {
     "containers/README.md": "../",
     "containers/production/mailbox-service/README.md": "../../../",
     "containers/test-mail-server/README.md": "../../",
+    "containers/test-database/README.md": "../../",
     "containers/production/mailbox-agents/README.md": "../../../",
     "containers/live/mailbox-agents/README.md": "../../../",
     "docs/README.md": "../",

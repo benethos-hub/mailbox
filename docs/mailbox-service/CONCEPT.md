@@ -86,6 +86,10 @@ and the open questions.
   `packages/mailbox-service/tests/browser`. The default run leaves it
   out, and the CI job `browser` runs it. It is the one check that runs
   the UI's JavaScript.
+- The storage runs on PostgreSQL 19 in a suite of its own, in
+  `packages/mailbox-service/tests/postgres` and the tests of the
+  repositories, against the server of `containers/test-database`. The
+  default run leaves it out.
 
 ## 11. Roadmap
 

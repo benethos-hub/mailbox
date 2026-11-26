@@ -283,6 +283,12 @@ fix that first, and say so.
   Playwright's browsers and fixtures of its own in its `conftest.py`,
   and it is collected only with `MAILBOX_BROWSER_TESTS=1`
   (CLAUDE.md, Verifying).
+- The storage on PostgreSQL is a suite apart as well,
+  `packages/mailbox-service/tests/postgres/`, with the tests of the
+  repositories run a third time on the server. It needs a server, the
+  one of `containers/test-database/`, and it is collected only when
+  `MAILBOX_POSTGRES_TESTS` names its file. Each test gets a schema of
+  its own and drops it after.
 - What checks the repository across the five packages, the publishing,
   the workflows, the READMEs, the trees of section 3, the project
   layout of CLAUDE.md, the boundaries, the rules for the tests of every

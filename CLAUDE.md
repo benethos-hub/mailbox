@@ -40,7 +40,8 @@ alone. Before a change in a package, read its file as well as this one:
 
 - [packages/mailbox-service/CLAUDE.md](packages/mailbox-service/CLAUDE.md):
   the OpenAPI document, the error envelope, paging, migrations, the
-  configuration UI and its check in real browsers
+  configuration UI and its check in real browsers, the suite against
+  PostgreSQL
 - [packages/mailbox-mcp/CLAUDE.md](packages/mailbox-mcp/CLAUDE.md): the
   REST client, the tools and their record
 - [packages/mailbox-client/CLAUDE.md](packages/mailbox-client/CLAUDE.md):
@@ -89,6 +90,9 @@ alone. Before a change in a package, read its file as well as this one:
   makes Stalwart in a container anew, with IMAP, POP3, SMTP and JMAP on
   `127.0.0.1:30xxx`, two accounts and a local test CA
   (`containers/test-mail-server/README.md`).
+- A test database of our own: `sh containers/test-database/setup.sh`
+  makes PostgreSQL 19 in a container anew on `127.0.0.1:35432`, for the
+  suite against PostgreSQL (`containers/test-database/README.md`).
 - Live checks: manual scripts in a folder per package under `live/`,
   against the test accounts of
   `live/.env` (not versioned, template `live/.env.example`). What each
@@ -174,7 +178,8 @@ containers/               # images/ (one folder per image), and one folder
                           #   development/ (built from the repository),
                           #   live/ (the agents' mail server, service
                           #   and model gateway of their own),
-                          #   test-mail-server/ (Stalwart for tests).
+                          #   test-mail-server/ (Stalwart for tests),
+                          #   test-database/ (PostgreSQL for tests).
                           #   Each keeps its secrets/ local
 .githooks/                # pre-commit: refuses staged settings, keys,
                           #   state files, lines that look like a
@@ -401,6 +406,9 @@ their own: [docs/mailbox-agents/ARCHITECTURE.md](docs/mailbox-agents/ARCHITECTUR
 - The UI in real browsers, the one check that runs its JavaScript: the
   service's [CLAUDE.md](packages/mailbox-service/CLAUDE.md). The default
   run leaves it out, CI's browser job runs it.
+- The storage on PostgreSQL: the service's
+  [CLAUDE.md](packages/mailbox-service/CLAUDE.md). The default run
+  leaves it out as well.
 
 Never write a test that reaches a real mail server, and never one that skips
 itself without credentials. Live checks are manual scripts in `live/`, outside

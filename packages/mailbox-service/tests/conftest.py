@@ -54,6 +54,7 @@ from benethos_mailbox_service.domain.auth.service import AuthService
 from benethos_mailbox_service.domain.rights import ADMIN_SERVICE, permissions
 from benethos_mailbox_service.domain.rights.access import Access
 
+from . import postgres_helpers
 from .clocks import Clock
 from .imap_fake import FakeMailBox, filled_server, make_message
 from .jmap_fake import HOST, PASSWORD, USER, FakeJmap
@@ -64,7 +65,11 @@ METHODS = {"get", "post", "put", "patch", "delete"}  # of the OpenAPI document
 
 # The UI in real browsers needs the browser dependency group and the
 # browsers themselves: a suite of its own, which CI's browser job runs.
+# So does PostgreSQL, a server for the suite against it, which CI's job
+# postgres runs (containers/test-database).
 collect_ignore = [] if os.environ.get("MAILBOX_BROWSER_TESTS") else ["browser"]
+if not postgres_helpers.wanted():
+    collect_ignore.append("postgres")
 
 
 async def resolve_to_public(host: str, port: int) -> list[str]:

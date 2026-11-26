@@ -55,15 +55,17 @@ updates:
         update-types: ["minor", "patch"]
 
   # The images of the compose files: Caddy in production, Stalwart for the
-  # test mail server. Their tags name a line without a digest, so a pull
-  # brings each fix within the line, also to an operator who runs the
-  # compose file. Dependabot raises the tag when a new line comes out,
-  # such as caddy 3 or Stalwart v1.3. A new line of Caddy also changes
-  # setup.sh and the README of containers/production/mailbox-service.
+  # test mail server, PostgreSQL for the test database. Their tags name a
+  # line without a digest, so a pull brings each fix within the line, also
+  # to an operator who runs the compose file. Dependabot raises the tag
+  # when a new line comes out, such as caddy 3 or Stalwart v1.3. A new
+  # line of Caddy also changes setup.sh and the README of
+  # containers/production/mailbox-service.
   - package-ecosystem: "docker-compose"
     directories:
       - "/containers/production/mailbox-service"
       - "/containers/test-mail-server"
+      - "/containers/test-database"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
