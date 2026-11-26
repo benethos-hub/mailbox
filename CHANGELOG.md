@@ -213,6 +213,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- A background loop that meets the database away no longer writes an
+  error each round, every few seconds: the log says it once, and the
+  loop waits until the database is tried again.
 - A failure of the service's own database no longer signs anyone out of
   the UI. The page says the service is not available, and the session
   stays.
