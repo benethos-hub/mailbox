@@ -13,6 +13,8 @@ from sqlalchemy.dialects import postgresql
 from sqlalchemy.schema import CreateTable
 
 from benethos_mailbox_service.data.storage import Database
+from benethos_mailbox_service.data.storage.sql import revisions
+from benethos_mailbox_service.data.storage.sql.dialect import sqlite_engine
 from benethos_mailbox_service.data.storage.sql.schema import METADATA
 from benethos_mailbox_service.data.storage.sql.tables import BOOKKEEPING
 
@@ -30,21 +32,30 @@ def _meta(path: Path) -> list[tuple[str, str]]:
         return sorted(conn.execute("SELECT key, value FROM meta"))
 
 
-def test_three_ways_make_one_schema(tmp_path: Path) -> None:
-    """The baseline on a new database, the old steps up to 26 and the
-    definitions."""
-    Database(tmp_path / "baseline.db").close()
-    at_schema(tmp_path / "old.db", 26).close()
+def _alike(made: dict[str, object], other: dict[str, object]) -> None:
+    assert sorted(made) == sorted(other)
+    for table in other:
+        assert made[table] == other[table], table
+
+
+def test_the_baseline_is_the_schema_the_old_steps_end_at(tmp_path: Path) -> None:
+    driver = sqlite3.connect(tmp_path / "baseline.db", isolation_level=None)
+    engine = sqlite_engine(lambda: driver)
+    with engine.connect() as conn:
+        revisions.upgrade(conn, revisions.BASELINE)
+    engine.dispose()
+    driver.close()
+    at_schema(tmp_path / "old.db", revisions.BASELINE).close()
+    _alike(_shape(tmp_path / "baseline.db"), _shape(tmp_path / "old.db"))
+    assert _meta(tmp_path / "baseline.db") == _meta(tmp_path / "old.db")
+
+
+def test_the_definitions_are_the_schema_of_the_last_revision(tmp_path: Path) -> None:
+    Database(tmp_path / "revised.db").close()
     engine = sa.create_engine(f"sqlite:///{tmp_path / 'described.db'}")
     METADATA.create_all(engine)
     engine.dispose()
-    old = _shape(tmp_path / "old.db")
-    for other in ("baseline.db", "described.db"):
-        made = _shape(tmp_path / other)
-        assert sorted(made) == sorted(old), other
-        for table in old:
-            assert made[table] == old[table], (other, table)
-    assert _meta(tmp_path / "baseline.db") == _meta(tmp_path / "old.db")
+    _alike(_shape(tmp_path / "described.db"), _shape(tmp_path / "revised.db"))
 
 
 def test_on_postgresql_text_compares_byte_for_byte() -> None:

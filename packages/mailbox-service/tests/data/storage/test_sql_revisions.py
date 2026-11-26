@@ -4,6 +4,7 @@ leaves nothing half done."""
 
 from __future__ import annotations
 
+import hashlib
 import re
 import sqlite3
 import textwrap
@@ -152,3 +153,30 @@ def test_a_database_whose_two_numbers_disagree_is_refused(tmp_path: Path) -> Non
     db.close()
     with pytest.raises(StorageError, match="says schema 26 and its revisions 25"):
         Database(path)
+
+
+# What each revision of a release runs, as a hash of its module: a
+# database of that release has run it, so it is never changed. A release
+# adds its own. None so far.
+RELEASED_REVISIONS: dict[int, str] = {}
+
+
+def fingerprint(number: int) -> str:
+    [path] = (revisions.HERE / "versions").glob(f"r{number:04d}_*.py")
+    return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+
+
+def test_a_released_revision_is_never_changed() -> None:
+    changed = [
+        number
+        for number, digest in sorted(RELEASED_REVISIONS.items())
+        if fingerprint(number) != digest
+    ]
+    assert changed == [], "shipped in a release: make a new revision instead"
+
+
+def test_every_revision_is_named_after_its_number() -> None:
+    for path in (revisions.HERE / "versions").glob("*.py"):
+        named = re.fullmatch(r"r(\d{4})_\w+\.py", path.name)
+        assert named, f"{path.name} is not named rNNNN_<subject>.py"
+        assert f'revision = "{named[1]}"' in path.read_text("utf-8"), path.name
