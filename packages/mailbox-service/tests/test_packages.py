@@ -1,6 +1,7 @@
 """The packages of the domain and of the data layer (docs/REFACTORING.md
 4, 8.4): each is imported through its ``__init__.py``, none imports
-another in a circle, and they keep their lines."""
+another in a circle, they keep their lines, and only the storage builds
+a database."""
 
 from __future__ import annotations
 
@@ -179,3 +180,31 @@ def test_our_changes_to_messages_are_made_in_calls() -> None:
     assert not violations, "a change of ours outside calls.py:\n  " + "\n  ".join(
         violations
     )
+
+
+# What only the storage itself builds: a database and the places it lies in.
+STORAGE_INSIDE = {"Database", "ServerPlace", "FilePlace"}
+
+
+def test_only_the_storage_builds_a_database() -> None:
+    """A backup, a restore and a move open their stores through
+    ``data/storage/stores.py``. No module outside ``data/storage`` names
+    the database or a place, so the storage alone picks where it lies."""
+    storage = ROOT / "data" / "storage"
+    violations = [
+        f"{name}:{node.lineno} {found}"
+        for name, path in modules()
+        if not path.is_relative_to(storage)
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8")))
+        if (
+            found := node.id
+            if isinstance(node, ast.Name)
+            else node.attr
+            if isinstance(node, ast.Attribute)
+            else node.name
+            if isinstance(node, ast.alias)
+            else None
+        )
+        in STORAGE_INSIDE
+    ]
+    assert not violations, "the storage built outside it:\n  " + "\n  ".join(violations)

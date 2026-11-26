@@ -63,10 +63,10 @@ from .sql import (
     SqlUserRepository,
     SqlWebhookRepository,
 )
-from .sql.database import Database, migrate_file
+from .sql.database import Database
 from .sql.outage import Availability
 from .sql.revisions import SCHEMA_VERSION
-from .sql.server_place import SET_ASIDE, Server, ServerPlace
+from .sql.server_place import Server, ServerPlace
 from .sql.tables import MOVING, Table
 from .sqlite import (
     inspect_bytes,
@@ -75,6 +75,7 @@ from .sqlite import (
     remove_database_file,
     service_lock,
 )
+from .stores import Claim, claimed, file_claimed, file_store, migrate_file
 from .totp import InMemoryTotpRepository, StoredTotpDevice, TotpRepository
 from .users import (
     InMemoryRoleRepository,
@@ -137,7 +138,6 @@ __all__ = [
     "RoleRepository",
     "MOVING",
     "SCHEMA_VERSION",
-    "SET_ASIDE",
     "Sealed",
     "Server",
     "ServerPlace",
@@ -175,6 +175,10 @@ __all__ = [
     "inspect_bytes",
     "inspect_file",
     "migrate_file",
+    "Claim",
+    "claimed",
+    "file_claimed",
+    "file_store",
     "move_sidecars",
     "open_repositories",
     "repositories_on",

@@ -344,6 +344,9 @@ packages/mailbox-service/
                         #   schema 26 on, as revisions of Alembic, run
                         #   in the process. repositories.py opens one
                         #   of them
+                        #   stores.py the stores a backup, a restore
+                        #   and a move open on their own, and the
+                        #   locks they take
       secrets/          # envelope encryption, key providers, password
                         #   hashes, the vault of the credentials, TOTP,
                         #   passkeys (fido2)

@@ -73,7 +73,9 @@ class Database:
         upto = SCHEMA_VERSION if schema is None else schema
         self._lock = threading.RLock()
         try:
-            self._connection, migrated = self._place.open(upto, SCHEMA_VERSION)
+            opened = self._place.open(upto, SCHEMA_VERSION)
+            self._connection = opened.connection
+            migrated = opened.migrated
             self._engine = self._connection.engine
             with self._place.translated():
                 migrated = self._revised(upto, migrated)
@@ -275,10 +277,3 @@ class Database:
         Another process making one at the same time is refused. A
         database that is not a file has none."""
         return self._place.snapshot_file(self._lock)
-
-
-def migrate_file(path: Path) -> None:
-    """Bring the database file at ``path`` to this version's schema, by
-    the old steps and the revisions. It comes from a backup, which is its
-    copy: none is kept beside it."""
-    Database(path, keep_copy=False).close()

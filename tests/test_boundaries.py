@@ -7,9 +7,10 @@ a field of a dataclass holds no tuple of fixed length.
 What a package offers: every module of a group of mailbox-common; what
 mailbox-client exports, and the answer of each endpoint, which is a
 method of both clients; what a package of the service, the MCP server or
-the agents names in ``__all__``, all of a module it offers so, and the public
+the agents names in ``__all__``, all of a module it offers so, the public
 methods of the domain services the web layer reaches through
-``Services``.
+``Services``, and the public methods of the classes the storage of the
+service offers.
 
 ``ALLOWED`` names what stays as it is, and why. An entry that no longer
 matches fails, so the list cannot grow stale."""
@@ -87,6 +88,49 @@ ALLOWED = {
     # Every agent by its name, a lookup the command line and the
     # readiness check go through.
     "agents contract/registry.py discover": "agents by name",
+    # Lookups of the message index by a key, one implementation each.
+    "service data/storage/index.py InMemoryMessageIndexRepository.by_native": (
+        "entry per native id"
+    ),
+    "service data/storage/index.py InMemoryMessageIndexRepository.folder_states": (
+        "state per folder"
+    ),
+    "service data/storage/index.py InMemoryMessageIndexRepository.thread": (
+        "thread per message id"
+    ),
+    "service data/storage/index.py InMemoryMessageIndexRepository.threads_of": (
+        "thread per message id"
+    ),
+    "service data/storage/index.py MessageIndexRepository.by_native": (
+        "entry per native id"
+    ),
+    "service data/storage/index.py MessageIndexRepository.folder_states": (
+        "state per folder"
+    ),
+    "service data/storage/index.py MessageIndexRepository.thread": (
+        "thread per message id"
+    ),
+    "service data/storage/index.py MessageIndexRepository.threads_of": (
+        "thread per message id"
+    ),
+    "service data/storage/sql/index.py SqlMessageIndexRepository.by_native": (
+        "entry per native id"
+    ),
+    "service data/storage/sql/index.py SqlMessageIndexRepository.folder_states": (
+        "state per folder"
+    ),
+    "service data/storage/sql/index.py SqlMessageIndexRepository.thread": (
+        "thread per message id"
+    ),
+    "service data/storage/sql/index.py SqlMessageIndexRepository.threads_of": (
+        "thread per message id"
+    ),
+    # The three names Alembic reads from the module of a revision.
+    "service data/storage/sql/revisions/revision.py Revision.alembic": "for Alembic",
+    # A sequence of the old steps still due, as a list is.
+    "service data/storage/sqlite/migrations/registry.py MigrationRegistry.pending": (
+        "a sequence"
+    ),
 }
 
 
@@ -177,6 +221,24 @@ def _domain_services() -> Iterator[Offered]:
                         yield Offered("service", cls.module, name, item)
 
 
+def _storage_methods() -> Iterator[Offered]:
+    """The public methods of the classes the storage of the service
+    offers, which the backup, the move and the assembly call."""
+    init = SRC["service"] / "data/storage/__init__.py"
+    for item in _exported("service"):
+        if not (
+            isinstance(item.node, ast.ClassDef)
+            and item.module.startswith("data/storage/")
+        ):
+            continue
+        for node in item.node.body:
+            if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+                if not node.name.startswith("_"):
+                    name = f"{item.name}.{node.name}"
+                    yield Offered("service", item.module, name, node)
+    assert init.is_file()
+
+
 def offered() -> list[Offered]:
     found: list[Offered] = []
     common = SRC["common"]
@@ -195,6 +257,7 @@ def offered() -> list[Offered]:
         found += _defined("client", path, None)
     found += _exported("service")
     found += _domain_services()
+    found += _storage_methods()
     found += _exported("mcp")
     found += _exported("agents")
     unique = {item.key: item for item in found}

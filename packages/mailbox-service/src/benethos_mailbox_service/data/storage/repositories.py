@@ -129,6 +129,11 @@ class Store(Records, Protocol):
         """Write ``rows`` into ``table``, which holds none yet. How many."""
         ...
 
+    def mark_move(self, started: str | None) -> None:
+        """Mark the store as the target of a move or a restore that began
+        at ``started``, or, with None, as one that ended."""
+        ...
+
     @property
     def migrated(self) -> Migrated | None:
         """What opening the store did to its schema, None when nothing."""

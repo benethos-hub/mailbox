@@ -25,21 +25,20 @@ from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
-from benethos_mailbox_common.paths import locks
-
 from ..common.clock import iso, utc_now
-from ..errors import StorageInUseError
+from ..errors import SchemaNotEmptyError, StorageInUseError
 from .export import row_line
 from .storage import (
     MOVING,
     SCHEMA_VERSION,
-    SET_ASIDE,
-    Database,
+    Claim,
     Records,
     Server,
-    ServerPlace,
+    Store,
+    claimed,
+    file_claimed,
+    file_store,
     inspect_file,
-    service_lock,
 )
 
 _FITS: dict[str, type] = {"text": str, "number": int, "bytes": bytes}
@@ -150,7 +149,7 @@ def move_records(source: Path | Server, target: Path | Server) -> Moved:
 
 
 @contextmanager
-def _source(side: Path | Server) -> Iterator[Database]:
+def _source(side: Path | Server) -> Iterator[Store]:
     """The database at ``side``, at this version's schema, locked."""
     if isinstance(side, Path):
         if not side.exists():
@@ -160,38 +159,33 @@ def _source(side: Path | Server) -> Iterator[Database]:
         except ValueError as exc:
             raise MoveError(f"the database at {side} is unsound: {exc}") from None
         with _file_locked(side):
-            db = Database(side, keep_copy=False)
+            db = file_store(side, keep_copy=False)
             try:
                 yield db
             finally:
                 db.close()
         return
-    with _server(side) as place:
-        if not place.tables():
+    with _server(side) as claim:
+        if not claim.tables():
             raise MoveError(f"the schema {side.schema_name} holds no database")
-        _current(place.held_schema())
-        yield Database(place=place)
+        _current(claim.held_schema())
+        yield claim.store()
 
 
 @contextmanager
-def _target(side: Path | Server) -> Iterator[Database]:
+def _target(side: Path | Server) -> Iterator[Store]:
     """A new database at ``side``, empty, locked."""
     if isinstance(side, Path):
         _not_there(side)
         with _file_locked(side):
-            db = Database(side, keep_copy=False)
+            db = file_store(side, keep_copy=False)
             try:
                 yield db
             finally:
                 db.close()
         return
-    with _server(side) as place:
-        if place.tables():
-            raise MoveError(
-                f"the schema {side.schema_name} holds tables: a move goes into"
-                f" an empty schema only. How to set the old one aside: {SET_ASIDE}"
-            )
-        yield Database(place=place)
+    with _server(side, empty="a move") as claim:
+        yield claim.store()
 
 
 def _not_there(path: Path) -> None:
@@ -218,26 +212,27 @@ def _current(schema: int) -> None:
 @contextmanager
 def _file_locked(path: Path) -> Iterator[None]:
     """The lock a running service holds beside its file."""
-    try:
-        with locks.exclusive_lock(service_lock(path)):
-            yield
-    except locks.LockedError:
-        raise _running() from None
+    with ExitStack() as held:
+        try:
+            held.enter_context(file_claimed(path))
+        except StorageInUseError:
+            raise _running() from None
+        yield
 
 
 @contextmanager
-def _server(side: Server) -> Iterator[ServerPlace]:
+def _server(side: Server, *, empty: str | None = None) -> Iterator[Claim]:
     """The schema of ``side``, connected alone, with the lock a running
-    service holds on it. A database opened on it closes with it."""
+    service holds on it, empty when ``empty`` names what goes into it. A
+    database opened on it closes with it."""
     with ExitStack() as held:
-        place = ServerPlace(side)
-        held.callback(place.close)
-        place.open(SCHEMA_VERSION, SCHEMA_VERSION)
         try:
-            held.enter_context(place.claimed())
+            claim = held.enter_context(claimed(side, empty=empty))
         except StorageInUseError:
             raise _running() from None
-        yield place
+        except SchemaNotEmptyError as exc:
+            raise MoveError(str(exc)) from None
+        yield claim
 
 
 def _running() -> MoveError:

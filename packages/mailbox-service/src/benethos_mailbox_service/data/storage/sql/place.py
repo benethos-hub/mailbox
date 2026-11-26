@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterator
 from contextlib import AbstractContextManager, contextmanager
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Protocol
 
@@ -22,10 +23,19 @@ if TYPE_CHECKING:
     from .outage import Availability
 
 
+@dataclass(frozen=True, slots=True)
+class Opened:
+    """What opening a place gives: its one connection, and what its own
+    steps did to the schema, None when nothing."""
+
+    connection: sa.Connection
+    migrated: Migrated | None
+
+
 class Place(Protocol):
     """A database the service opens once and keeps open."""
 
-    def open(self, schema: int, newest: int) -> tuple[sa.Connection, Migrated | None]:
+    def open(self, schema: int, newest: int) -> Opened:
         """The one connection of the process. A place with steps of its
         own before the revisions brings the schema by them towards
         ``schema``, and says what it did, None when nothing. ``newest``:

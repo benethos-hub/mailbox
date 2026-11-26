@@ -23,11 +23,10 @@ import sqlalchemy as sa
 from ....common.hosts import is_loopback_host
 from ....common.names import is_plain_name
 from ....errors import StorageError, StorageInUseError, StorageUnavailableError
-from ..migrated import Migrated
 from . import revisions
 from .dialect import reading_fixed, server_engine
 from .outage import LONGEST_PAUSE, Availability, Outage
-from .place import translated_by
+from .place import Opened, translated_by
 from .schema import meta
 from .server_lock import kept_key, lock_key, new_key, unlock
 from .tables import SERVICE_LOCK, stored_schema
@@ -41,9 +40,6 @@ OLDEST_SERVER = 190000
 NOT_OPEN = "the database is not open"
 # Another service took the lock while the server was away.
 TAKEN = "another service took this database while it was away"
-
-# Where an operator reads how to set a schema that holds tables aside.
-SET_ASIDE = "containers/production/mailbox-service/README.md, Set a schema aside"
 
 
 @dataclass(frozen=True, slots=True)
@@ -100,11 +96,11 @@ class ServerPlace:
         # server was away: this one only ends from then on.
         self._taken = False
 
-    def open(self, schema: int, newest: int) -> tuple[sa.Connection, Migrated | None]:
+    def open(self, schema: int, newest: int) -> Opened:
         """The one connection, made at the first call. A later call, of a
         second database on the same place, hands it on as it is."""
         if self._connection is not None:
-            return self._connection, None
+            return Opened(self._connection, None)
         if schema < revisions.BASELINE:
             raise StorageError(
                 f"a database on a server begins at schema {revisions.BASELINE},"
@@ -118,7 +114,7 @@ class ServerPlace:
             ).scalar()
             self._connection.rollback()
         supported(int(str(version)))
-        return self._connection, None
+        return Opened(self._connection, None)
 
     def _engine_of(self) -> sa.Engine:
         server = self._server

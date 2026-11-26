@@ -22,31 +22,29 @@ import io
 import os
 import shutil
 from collections.abc import Callable, Iterator
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from dataclasses import replace
 from pathlib import Path
 from typing import BinaryIO
 
-from benethos_mailbox_common.paths import locks
-
 from ...common.clock import iso, utc_now
-from ...errors import MailboxServiceError, StorageInUseError
+from ...errors import MailboxServiceError, SchemaNotEmptyError, StorageInUseError
 from ..export import ExportError, read_export, write_export
 from ..files import create_private, free_path
 from ..storage import (
     SCHEMA_VERSION,
-    SET_ASIDE,
-    Database,
+    Claim,
     Records,
     Server,
-    ServerPlace,
     Store,
+    claimed,
+    file_claimed,
+    file_store,
     inspect_bytes,
     inspect_file,
     migrate_file,
     move_sidecars,
     remove_database_file,
-    service_lock,
 )
 from .blocks import (
     BLOCK,
@@ -59,6 +57,8 @@ from .blocks import (
 )
 from .manifest import Manifest, head, read_header
 
+# A running service holds the lock of the database.
+RUNNING = "the service is running on this database: stop it first"
 # The first schema format 3 is written of: its export needs schema 26.
 _FIRST_EXPORTED = 26
 
@@ -233,7 +233,7 @@ def _read_export(
     ``into``, of the schema of the manifest, decrypted block by block and
     never written in plain. Its checksum and rows held to the manifest."""
     try:
-        db = Database(into, schema=manifest.schema_version)
+        db = file_store(into, schema=manifest.schema_version)
     except MailboxServiceError as exc:
         raise BackupError(f"the backup cannot be read back: {exc}") from None
     try:
@@ -269,7 +269,7 @@ def verify_in_memory(source: Path, master_key: bytes) -> Manifest:
         key = backup_key(master_key)
         if manifest.format == 3:
             _exported_schema(manifest)
-            db = Database(schema=manifest.schema_version)
+            db = file_store(schema=manifest.schema_version)
             try:
                 _records_into(file, header, key, source, manifest, db)
             finally:
@@ -341,68 +341,46 @@ def restore_on_server(source: Path, master_key: bytes, server: Server) -> Manife
                 " move it with `storage move --to postgres`"
             )
         _exported_schema(manifest)
-        place = ServerPlace(server)
         # Connected alone, without a revision: the schema is looked at
         # before anything is made in it.
-        try:
-            place.open(manifest.schema_version, SCHEMA_VERSION)
-            with _held(place):
-                if place.tables():
-                    raise BackupError(
-                        f"the schema {server.schema_name} holds tables: a restore"
-                        " goes into an empty schema only. How to set the old one"
-                        f" aside: {SET_ASIDE}"
-                    )
-                _filled(place, file, header, manifest, source, backup_key(master_key))
-        finally:
-            place.close()
+        with ExitStack() as held:
+            try:
+                claim = held.enter_context(
+                    claimed(server, schema=manifest.schema_version, empty="a restore")
+                )
+            except StorageInUseError:
+                raise BackupError(RUNNING) from None
+            except SchemaNotEmptyError as exc:
+                raise BackupError(str(exc)) from None
+            _filled(claim, file, header, manifest, source, backup_key(master_key))
     return manifest
 
 
-@contextmanager
-def _held(place: ServerPlace) -> Iterator[None]:
-    """The lock of a running service, for the restore."""
-    try:
-        serving = place.claimed()
-        serving.__enter__()
-    except StorageInUseError:
-        raise BackupError(
-            "the service is running on this database: stop it first"
-        ) from None
-    try:
-        yield
-    finally:
-        serving.__exit__(None, None, None)
-
-
 def _filled(
-    place: ServerPlace,
+    claim: Claim,
     file: BinaryIO,
     header: bytes,
     manifest: Manifest,
     source: Path,
     key: bytes,
 ) -> None:
-    """The export of the backup into the empty schema of ``place``, at
+    """The export of the backup into the empty schema of ``claim``, at
     the schema of the manifest, then brought forward. Its tables dropped
     again on any failure. Until the records are checked the database
     keeps the mark a move sets, so a restore that dies half way leaves a
     database the service does not open."""
     try:
-        made = Database(place=place, schema=manifest.schema_version)
+        made = claim.store(schema=manifest.schema_version)
         made.mark_move(iso(utc_now()))
         _records_into(file, header, key, source, manifest, made)
         made.mark_move(None)
-        Database(place=place)
+        claim.store()
     except BaseException as exc:
         try:
-            place.drop_tables()
-        except MailboxServiceError:
+            claim.drop_tables()
+        except MailboxServiceError as left:
             if isinstance(exc, Exception):
-                raise BackupError(
-                    f"{exc}. Tables of the restore may be left: how to set the"
-                    f" schema aside: {SET_ASIDE}"
-                ) from None
+                raise BackupError(f"{exc}. {left}") from None
         raise
 
 
@@ -411,7 +389,7 @@ def restore_backup(source: Path, master_key: bytes, target: Path) -> Manifest:
     is kept beside it. The service must not be running."""
     staged = target.with_name(target.name + ".restoring")
     try:
-        with locks.exclusive_lock(service_lock(target)):
+        with file_claimed(target):
             remove_database_file(staged)  # from a restore that crashed
             manifest = read_backup(source, master_key, staged)
             try:
@@ -420,10 +398,8 @@ def restore_backup(source: Path, master_key: bytes, target: Path) -> Manifest:
                 remove_database_file(staged)
                 raise
             _replace(target, staged)
-    except locks.LockedError:
-        raise BackupError(
-            "the service is running on this database: stop it first"
-        ) from None
+    except StorageInUseError:
+        raise BackupError(RUNNING) from None
     return manifest
 
 

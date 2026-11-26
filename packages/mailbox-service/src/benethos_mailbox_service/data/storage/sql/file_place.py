@@ -12,11 +12,10 @@ from pathlib import Path
 import sqlalchemy as sa
 
 from ....errors import StorageError, StorageUnavailableError
-from ..migrated import Migrated
 from ..sqlite import file
 from .dialect import sqlite_engine
 from .outage import Availability
-from .place import translated_by
+from .place import Opened, translated_by
 
 
 class FilePlace:
@@ -31,14 +30,14 @@ class FilePlace:
         self._engine: sa.Engine | None = None
         self._newest = 0
 
-    def open(self, schema: int, newest: int) -> tuple[sa.Connection, Migrated | None]:
+    def open(self, schema: int, newest: int) -> Opened:
         self._newest = newest
         driver, migrated = file.open_file(
             self.path, keep_copy=self._keep_copy, schema=schema, newest=newest
         )
         self.driver = driver
         self._engine = sqlite_engine(lambda: driver)
-        return self._engine.connect(), migrated
+        return Opened(self._engine.connect(), migrated)
 
     def undo(self) -> None:
         with suppress(Exception):
@@ -74,7 +73,7 @@ class FilePlace:
                 ) from None
             snap = FilePlace(snapshot, keep_copy=False)
             try:
-                conn, _ = snap.open(self._newest, self._newest)
+                conn = snap.open(self._newest, self._newest).connection
                 with conn, conn.begin():
                     yield conn
             finally:
