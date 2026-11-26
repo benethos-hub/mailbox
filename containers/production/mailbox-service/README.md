@@ -351,7 +351,7 @@ switches it off, then it answers `404`. Without a token with the right
    `caddy.d/metrics.caddy.example` to `caddy.d/metrics.caddy`, then
    `docker compose up -d`. The token protects the figures either way.
 
-Four alerts to start from come with the service, for `rule_files` of
+Five alerts to start from come with the service, for `rule_files` of
 Prometheus. The service prints them, so they match the figures of its
 version:
 
@@ -377,6 +377,10 @@ Print it again after an update of the service.
   outcome cannot be told. The service does not send it again, and its
   draft stays: a person looks whether it arrived. It clears after 24
   hours.
+- `MailboxNotAnswering`: no figures for five minutes. The service is
+  gone, or it cannot reach its database, which the check of the token
+  of `GET /v1/metrics` needs. `mailbox_storage_outages_total` counts the
+  times the database went away since the start.
 
 The figures live in memory and start again after a restart. Each
 scrape counts against the token's limit like any request and writes a

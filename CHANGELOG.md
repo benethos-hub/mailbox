@@ -29,6 +29,12 @@ adheres to [Semantic Versioning](https://semver.org/).
   doubles from one second to thirty, and goes on without a restart. The
   log says once that the database went away, with the cause, and once
   that it is back (`system.db_away`, `system.db_back`).
+- `mailbox_storage_outages_total` in `GET /v1/metrics` counts the times
+  the database went away since the start, and a fifth alert,
+  `MailboxNotAnswering`, fires when there are no figures for five
+  minutes: the service is gone, or cannot reach its database. A service
+  whose database lock another service took while it was away stops with
+  an error (`system.db_taken`).
 
 - Backup format 3: `benethos-mailbox-service backup --format 3 FILE`
   writes the records as an export, encrypted in blocks as format 2,

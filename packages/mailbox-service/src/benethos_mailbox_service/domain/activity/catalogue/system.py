@@ -132,6 +132,21 @@ class DatabaseBack(Activity):
 
 
 @dataclass(frozen=True, kw_only=True)
+class DatabaseTaken(Activity):
+    """Another service took the database while it was away: this one
+    stops, as two would lose changes."""
+
+    name: ClassVar[str] = "db_taken"
+    level: ClassVar[int] = logging.ERROR
+
+    def says(self) -> str:
+        return (
+            "found another service on the database when it was back, and"
+            " stops: one service per database"
+        )
+
+
+@dataclass(frozen=True, kw_only=True)
 class DatabaseUnencrypted(Activity):
     """The settings switched TLS to the database server off."""
 

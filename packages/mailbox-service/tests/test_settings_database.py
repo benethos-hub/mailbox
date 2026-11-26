@@ -165,10 +165,14 @@ class _Watched:
     migrated = None
 
     def __init__(self) -> None:
-        self.report: Any = None
+        self.reports: list[Any] = []
 
     def watch(self, report: Any) -> None:
-        self.report = report
+        self.reports.append(report)
+
+    def report(self, change: Availability) -> None:
+        for report in self.reports:
+            report(change)
 
     def transaction(self) -> Any:
         return nullcontext()

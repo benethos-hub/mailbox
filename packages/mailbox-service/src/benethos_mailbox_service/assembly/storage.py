@@ -17,11 +17,23 @@ from ..domain.activity import SERVICE, ActivityLog, Audit
 from ..domain.activity import system as said
 
 
+class Outages:
+    """The times the database went away since the service started."""
+
+    def __init__(self) -> None:
+        self.count = 0
+
+    def heard(self, change: Availability) -> None:
+        if change.away:
+            self.count += 1
+
+
 @dataclass(frozen=True)
 class Storage:
     repositories: Repositories
     audit: Audit
     activity: ActivityLog
+    outages: Outages
 
 
 def storage(
@@ -36,8 +48,10 @@ def storage(
     )
     if settings.storage == "postgres" and settings.database_tls == "off":
         activity.record(said.DatabaseUnencrypted(by=SERVICE))
+    outages = Outages()
     if store is not None:
         store.watch(partial(_heard, activity))
+        store.watch(outages.heard)
     migrated = store.migrated if store is not None else None
     if migrated is not None:
         activity.record(
@@ -48,7 +62,7 @@ def storage(
                 notes=migrated.notes,
             )
         )
-    return Storage(repositories, audit, activity)
+    return Storage(repositories, audit, activity, outages)
 
 
 def server_of(settings: Settings) -> Server | None:

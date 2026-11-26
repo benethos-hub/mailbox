@@ -68,7 +68,7 @@ class Place(Protocol):
 
     def watch(self, report: Callable[[Availability], None]) -> None:
         """``report`` hears of each change of whether the database can
-        be reached."""
+        be reached, beside those that heard before."""
         ...
 
     def unavailable(self) -> StorageUnavailableError | None:

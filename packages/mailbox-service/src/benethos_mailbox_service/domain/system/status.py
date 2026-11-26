@@ -85,6 +85,8 @@ class Figures:
     # None when the worker is switched off.
     worker: WorkerState | None
     webhooks: WebhookCounts
+    # The times the database went away since the service started.
+    storage_outages: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -108,11 +110,14 @@ class StatusService:
         outbox: OutboxRepository | None = None,
         clock: Callable[[], datetime] = utc_now,
         storage: Callable[[], StorageUnavailableError | None] | None = None,
+        outages: Callable[[], int] | None = None,
     ) -> None:
         """``outbox`` holds the sends the counts of an account read.
         ``storage`` says, without asking the database, whether it is
-        away: the error a call meets then."""
+        away: the error a call meets then. ``outages``: the times it went
+        away since the start."""
         self._storage = storage
+        self._outages = outages
         self._accounts = accounts
         self._sync = sync
         self._worker = worker
@@ -155,6 +160,7 @@ class StatusService:
             accounts=self._healths(self._accounts.every(access), worker),
             worker=worker,
             webhooks=self._webhooks.counts(access),
+            storage_outages=self._outages() if self._outages is not None else 0,
         )
 
     def healths(
