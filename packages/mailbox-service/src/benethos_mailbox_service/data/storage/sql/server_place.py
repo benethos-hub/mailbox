@@ -28,7 +28,7 @@ from ....errors import StorageError, StorageUnavailableError
 from ..migrated import Migrated
 from . import revisions
 from .dialect import reading_fixed, server_engine
-from .outage import Availability, Outage
+from .outage import LONGEST_PAUSE, Availability, Outage
 from .place import translated_by
 from .schema import meta
 from .tables import SERVICE_LOCK, stored_schema
@@ -40,6 +40,9 @@ _PLAIN_NAME = re.compile(r"[a-z_][a-z0-9_]{0,62}")
 # writes its version as a number: major * 10000 + minor.
 OLDEST_SERVER = 190000
 
+
+# Another service took the lock while the server was away.
+TAKEN = "another service took this database while it was away"
 
 # Where an operator reads how to set a schema that holds tables aside.
 SET_ASIDE = "containers/production/mailbox-service/README.md, Set a schema aside"
@@ -95,6 +98,9 @@ class ServerPlace:
         # The keys of the locks this session holds, taken again on a
         # new session.
         self._held: tuple[int, ...] = ()
+        # Set for good when another service took the lock while the
+        # server was away: this one only ends from then on.
+        self._taken = False
 
     def open(self, schema: int, newest: int) -> tuple[sa.Connection, Migrated | None]:
         """The one connection, made at the first call. A later call, of a
@@ -251,7 +257,10 @@ class ServerPlace:
         """Before each call: at once a StorageUnavailableError while the
         server is away and the pause runs. When it is over, one attempt
         on a new session, as the first was: its search path from the
-        connecting, the lock of a running service taken again."""
+        connecting, the lock of a running service taken again. Once
+        another service took that lock, every call fails."""
+        if self._taken:
+            raise StorageError(TAKEN)
         if not self._outage.away:
             return
         if not self._outage.due():
@@ -269,14 +278,17 @@ class ServerPlace:
             self._failed(exc)
             raise self._outage.unavailable() from None
         seconds = self._outage.mended() or 0.0
+        self._taken = not got
         self._said(Availability(away=False, seconds=seconds, lock_lost=not got))
         if not got:
-            raise StorageError("another service took this database while it was away")
+            raise StorageError(TAKEN)
 
     def watch(self, report: Callable[[Availability], None]) -> None:
         self._reports.append(report)
 
     def unavailable(self) -> StorageUnavailableError | None:
+        if self._taken:
+            return StorageUnavailableError(int(LONGEST_PAUSE), "lock taken")
         return self._outage.unavailable() if self._outage.away else None
 
     def _failed(self, exc: sa.exc.DBAPIError) -> None:
