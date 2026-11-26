@@ -41,6 +41,18 @@ usable unattended for background fetching, so something on the machine has
 to be able to decrypt them. The design makes that *one* key, kept apart from
 the data, rather than a readable file.
 
+On PostgreSQL the database lies with whoever runs the server. The
+service reaches it as a role that owns one schema of its name and has no
+right beyond it, over TLS with a checked certificate unless the settings
+switch that off. What the administrator of the server sees is what the
+service stores: the credentials as ciphertext, the tokens as hashes, the
+rest as it is. Measured on 2026-11-26 against PostgreSQL 19, a role
+reads no row of another schema and cannot end the session of another
+role. It does see the names of the tables of other schemas, the names of
+the roles, and that other sessions exist, never the text of their
+queries. It could drop its own schema. Every role on a shared server
+should therefore be one of a service that may see that much.
+
 ### 7.3 Design: envelope encryption
 
 ```
