@@ -35,7 +35,9 @@ worker counts the passes that end at the same message in a row, and at
 left as a refused one is, with a line `messages.step_failed`, and the
 pass goes on with the next (decided 2026-11-20). A pass that ends
 otherwise starts the count again. A service away as a whole, its version
-too, leaves every message as it is. A pass that fails with an error of
+too, leaves every message as it is. A service that cannot reach its
+database answers `503` everywhere, `/health` included, and is away as a
+whole: the pass ends at the question for its version **(to verify)**. A pass that fails with an error of
 the agent's own, such as a key the gateway refuses, waits as after an
 upstream away, logged as `worker.pass_failed` with its wait (decided
 2026-11-20).

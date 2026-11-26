@@ -12,12 +12,13 @@ from typing import TYPE_CHECKING, Protocol
 
 import sqlalchemy as sa
 
-from ....errors import ConflictError, StorageError
+from ....errors import ConflictError, StorageError, StorageUnavailableError
 
 if TYPE_CHECKING:
     import threading
 
     from ..migrated import Migrated
+    from .outage import Availability
 
 
 class Place(Protocol):
@@ -58,6 +59,21 @@ class Place(Protocol):
     def fixed(self, lock: threading.RLock) -> AbstractContextManager[sa.Connection]:
         """A connection in one transaction on the records at one moment,
         taken while the database is in use, for the time of the block."""
+        ...
+
+    def ready(self) -> None:
+        """Before each call: raises at once when the database is known
+        to be away, else lets the call go to it."""
+        ...
+
+    def watch(self, report: Callable[[Availability], None]) -> None:
+        """``report`` hears of each change of whether the database can
+        be reached."""
+        ...
+
+    def unavailable(self) -> StorageUnavailableError | None:
+        """The error a call meets now, without asking the database: None
+        unless it is known to be away."""
         ...
 
     def translated(self) -> AbstractContextManager[None]:

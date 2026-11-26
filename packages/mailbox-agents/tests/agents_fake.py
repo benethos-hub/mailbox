@@ -186,7 +186,7 @@ class FakeService:
             # it is kept out of ``requests``, which name the calls of /v1.
             self.health_asked += 1
             if self.down:
-                return _error(503, "unavailable")
+                return _error(503, "service_unavailable")
             if self.health_status is not None:
                 return _error(self.health_status, "not_found")
             if self.version is None:
@@ -194,7 +194,7 @@ class FakeService:
             return httpx.Response(200, json={"status": "ok", "version": self.version})
         self.requests.append(request)
         if self.down:
-            return _error(503, "unavailable")
+            return _error(503, "service_unavailable")
         if self.refusal:
             return _error(*self.refusal)
         if self.write_refusal and request.method in ("PATCH", "POST"):
@@ -348,7 +348,7 @@ class FakeService:
         body = json.loads(request.content)
         if self.keyword_failures and body.get("add_keywords"):
             self.keyword_failures -= 1
-            return _error(503, "unavailable")
+            return _error(503, "service_unavailable")
         known = {
             name
             for f in self.folders.get(parts[1], [])

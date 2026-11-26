@@ -364,8 +364,8 @@ async def test_a_tool_error_logs_its_kind(caplog: pytest.LogCaptureFixture) -> N
         ),
         (
             503,
-            {"error": {"code": "unavailable", "message": "starting"}},
-            "starting (unavailable, HTTP 503)",
+            {"error": {"code": "service_unavailable", "message": "starting"}},
+            "starting (service_unavailable, HTTP 503)",
             "unknown",
         ),
     ],

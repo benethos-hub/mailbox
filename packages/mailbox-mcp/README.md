@@ -539,7 +539,7 @@ beside `server_status`, and it lists no account. The tools:
 | `send_draft` | `send` | sends a stored draft, and answers the same as `send_message`. It takes `outbox` and `send_at` as well |
 | `list_outbox` | `send` | the sends of the outbox, newest first, with their state: waiting, sent, failed, cancelled, or `unknown` when whether it went out cannot be told |
 | `cancel_send` | `send` | cancels a send of the outbox that still waits. Its draft stays |
-| `server_status` | – | what runs: the name and version of this server, the transport, Python, the MCP library and the uptime. With `details` the service as this server last saw it: whether it answered and how long ago, its version and whether it matches, whether it took the token, and the tools offered. Offered always, also when the service refuses the token, and asks the service nothing |
+| `server_status` | – | what runs: the name and version of this server, the transport, Python, the MCP library and the uptime. With `details` the service as this server last saw it: whether it answered and how long ago, its version and whether it matches, whether it took the token, unknown where the service answered before it looked at it (a limit on the address, no user yet, or its database away for now), and the tools offered. Offered always, also when the service refuses the token, and asks the service nothing |
 
 Each tool has a title for display and the standard MCP hints. Clients
 can use them to decide when to ask the person before a call.

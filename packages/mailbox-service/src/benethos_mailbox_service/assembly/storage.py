@@ -7,11 +7,12 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
+from functools import partial
 
 from benethos_mailbox_common.log import redact
 
 from ..config import Settings, database_url_parts
-from ..data.storage import Repositories, Server
+from ..data.storage import Availability, Repositories, Server
 from ..domain.activity import SERVICE, ActivityLog, Audit
 from ..domain.activity import system as said
 
@@ -35,6 +36,8 @@ def storage(
     )
     if settings.storage == "postgres" and settings.database_tls == "off":
         activity.record(said.DatabaseUnencrypted(by=SERVICE))
+    if store is not None:
+        store.watch(partial(_heard, activity))
     migrated = store.migrated if store is not None else None
     if migrated is not None:
         activity.record(
@@ -66,3 +69,13 @@ def server_of(settings: Settings) -> Server | None:
         tls=settings.database_tls,
         ca_file=settings.database_ca_file,
     )
+
+
+def _heard(activity: ActivityLog, change: Availability) -> None:
+    """A change of whether the database can be reached, as the log says
+    it: once when it goes, with the kind of the failure, once when it is
+    back. The cause stands here, and nowhere a caller sees."""
+    if change.away:
+        activity.record(said.DatabaseAway(by=SERVICE, cause=change.cause))
+    elif not change.lock_lost:
+        activity.record(said.DatabaseBack(by=SERVICE, seconds=change.seconds))

@@ -13,8 +13,8 @@ from starlette.exceptions import HTTPException
 
 from benethos_mailbox_common.log import redact
 
-from ...errors import MailboxServiceError, RateLimitedError
-from ..errors import status_of
+from ...errors import MailboxServiceError
+from ..errors import retry_after, status_of
 from .schemas import ErrorResponse, OutboxEntry
 
 # What each status means, documented so generated clients know the shape.
@@ -31,7 +31,8 @@ _MEANINGS = {
     "failed (`credential_unreadable`, `storage_error`)",
     501: "The provider cannot do this",
     502: "The provider failed or rejected the credentials",
-    503: "No user exists yet",
+    503: "No user exists yet (`setup_required`), or the service cannot "
+    "reach its database for now (`service_unavailable`), see Retry-After",
 }
 
 
@@ -84,6 +85,13 @@ LINK_ERRORS: dict[int | str, dict[str, Any]] = {
             "(`provider_unavailable`). The link holds: try again before it ends"
         ),
     },
+    503: {
+        "model": ErrorResponse,
+        "description": (
+            "The service cannot reach its database for now "
+            "(`service_unavailable`): the link holds, see Retry-After"
+        ),
+    },
 }
 
 # A grant may narrow sending (CONCEPT 7.5).
@@ -118,10 +126,11 @@ def api_error(exc: MailboxServiceError) -> JSONResponse:
     """A domain error as the API answers it: status and envelope."""
     status = status_of(exc)
     headers = None
+    wait = retry_after(exc)
     if status == 401:
         headers = {"WWW-Authenticate": "Bearer"}
-    elif isinstance(exc, RateLimitedError):
-        headers = {"Retry-After": str(exc.retry_after)}
+    elif wait is not None:
+        headers = {"Retry-After": str(wait)}
     return error_response(status, exc.code, redact.redact(exc.message), headers)
 
 

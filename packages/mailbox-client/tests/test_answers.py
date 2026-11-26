@@ -132,6 +132,28 @@ async def test_every_error_is_a_mailbox_error(make_client: Callable) -> None:
         await client.get_me()
 
 
+async def test_a_service_not_available_says_how_long_to_wait(
+    make_client: Callable,
+) -> None:
+    """The service answers 503 while it cannot reach its database."""
+    client = make_client(
+        lambda _: httpx.Response(
+            503,
+            headers={"Retry-After": "4"},
+            json={
+                "error": {
+                    "code": "service_unavailable",
+                    "message": "the service is not available at the moment",
+                }
+            },
+        )
+    )
+    with pytest.raises(ApiError) as caught:
+        await client.request("GET", "/v1/accounts")
+    assert (caught.value.status, caught.value.code) == (503, "service_unavailable")
+    assert caught.value.retry_after == 4
+
+
 @pytest.mark.parametrize(
     ("status", "headers", "wait"),
     [

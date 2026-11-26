@@ -13,7 +13,11 @@ import pytest
 from benethos_mailbox_service.data.models import Grant
 from benethos_mailbox_service.data.storage import InMemoryLinkRepository, StoredLink
 from benethos_mailbox_service.domain.mailbox import AttachmentLinks
-from benethos_mailbox_service.errors import NotFoundError, ProviderUnavailableError
+from benethos_mailbox_service.errors import (
+    NotFoundError,
+    ProviderUnavailableError,
+    StorageUnavailableError,
+)
 
 from ...conftest import ADMIN
 from .links_helpers import PDF, Linked, linked
@@ -247,3 +251,26 @@ def test_a_mail_server_that_fails_hands_the_link_back(
     assert answer.status_code == 200
     assert answer.content == PDF
     assert link.fetch(plain).json() == GONE
+
+
+def test_a_link_holds_while_the_database_is_away(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """503 with Retry-After, never counted against the address that
+    asks: the link is used once the database is back."""
+    link = linked()
+    plain = link.secret()
+    repository = link.services.repositories.links
+
+    def away(*args: object, **kwargs: object) -> bool:
+        raise StorageUnavailableError(7, "OperationalError (08006)")
+
+    with monkeypatch.context() as patched:
+        patched.setattr(repository, "redeem", away)
+        # More than the failures that lock an address out, fewer than
+        # the requests its limit lets through.
+        for _ in range(12):
+            answer = link.fetch(plain)
+            assert answer.status_code == 503
+            assert answer.headers["Retry-After"] == "7"
+    assert link.fetch(plain).status_code == 200

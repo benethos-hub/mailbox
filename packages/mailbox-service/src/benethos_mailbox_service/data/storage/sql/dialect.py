@@ -182,7 +182,20 @@ def sqlite_engine(connect: Callable[[], Any]) -> sa.Engine:
 
 
 # Seconds an attempt to connect to a database server may take.
-CONNECT_SECONDS = 10
+CONNECT_SECONDS = 5
+# A connection whose server vanished from the network fails instead of
+# waiting for ever: keepalives after 10 seconds of quiet, and data not
+# acknowledged within 15 seconds. Measured on Linux (2026-11-26): a call
+# on a server whose network went away failed after 10.6 seconds with
+# such limits and waited on without them. A server that hangs while
+# its system still answers, such as one paused, holds the call still.
+SILENCE = {
+    "keepalives": 1,
+    "keepalives_idle": 10,
+    "keepalives_interval": 5,
+    "keepalives_count": 3,
+    "tcp_user_timeout": 15000,
+}
 
 
 def server_engine(
@@ -216,6 +229,7 @@ def server_engine(
         connect_args={
             "options": f"-csearch_path={search_path}",
             "connect_timeout": CONNECT_SECONDS,
+            **SILENCE,
             **(tls or {}),
         },
     )

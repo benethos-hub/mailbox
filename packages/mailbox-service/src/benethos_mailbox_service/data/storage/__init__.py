@@ -62,6 +62,7 @@ from .sql import (
     SqlWebhookRepository,
 )
 from .sql.database import Database, migrate_file
+from .sql.outage import Availability
 from .sql.revisions import SCHEMA_VERSION
 from .sql.server_place import Server, ServerPlace
 from .sql.tables import Table
@@ -90,6 +91,7 @@ from .webhooks import (
 )
 
 __all__ = [
+    "Availability",
     "AuditRepository",
     "InMemoryAuditRepository",
     "SqlAuditRepository",

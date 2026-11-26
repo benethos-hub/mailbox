@@ -293,7 +293,7 @@ One envelope for every error the API raises itself:
 | 501 | `not_supported` | capability missing |
 | 500 | `credential_unreadable`, `storage_error`, `internal_error` | a stored credential cannot be decrypted, the service's own database failed, an unexpected failure |
 | 502 | `provider_error`, `provider_auth_failed`, `provider_unavailable` | upstream failed. An auth failure sets the account to `needs_reauth`, an unreachable server to `unreachable` |
-| 503 | `setup_required` | no user exists yet: run `users create-admin` |
+| 503 | `setup_required`, `service_unavailable` | no user exists yet: run `users create-admin`. Or the service cannot reach its database for now, with `Retry-After`: the cause stands in the log alone |
 
 ## 6.8 OpenAPI
 

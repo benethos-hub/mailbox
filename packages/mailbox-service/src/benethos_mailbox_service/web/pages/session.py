@@ -31,7 +31,7 @@ from benethos_mailbox_common.values import secret as secret_values
 from ...common.clock import utc_now
 from ...domain.auth import CODE_TRIES, PENDING, SignedIn
 from ...domain.rights import Access
-from ...errors import MailboxServiceError
+from ...errors import MailboxServiceError, StorageError
 from ..limits import signed_in
 from ..services import get_auth
 from ..state import app_sessions
@@ -330,6 +330,10 @@ def current(request: Request) -> Current:
             factor=session.factor,
             source=client_address(request),
         )
+    except StorageError:
+        # The database failed, not the session: the error page says so,
+        # and the session stays.
+        raise
     except MailboxServiceError:
         # Gone, disabled, or its password changed since the sign-in.
         store_of(request).drop(request.cookies.get(COOKIE))

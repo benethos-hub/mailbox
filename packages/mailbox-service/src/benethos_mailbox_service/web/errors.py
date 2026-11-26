@@ -17,6 +17,7 @@ from ..errors import (
     ProviderError,
     RateLimitedError,
     SetupRequiredError,
+    StorageUnavailableError,
     UnauthorizedError,
 )
 
@@ -35,7 +36,16 @@ STATUS: list[tuple[type[MailboxServiceError], int]] = [
     (CredentialMissingError, 409),
     (CredentialError, 500),
     (SetupRequiredError, 503),
+    (StorageUnavailableError, 503),
 ]
+
+
+def retry_after(error: MailboxServiceError) -> int | None:
+    """The seconds an answer to ``error`` tells the caller to wait in
+    ``Retry-After``: past a limit, and while the database is away."""
+    if isinstance(error, RateLimitedError | StorageUnavailableError):
+        return error.retry_after
+    return None
 
 
 def status_of(error: MailboxServiceError) -> int:

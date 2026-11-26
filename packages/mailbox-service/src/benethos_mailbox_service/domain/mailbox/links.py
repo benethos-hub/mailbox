@@ -32,6 +32,7 @@ from ...errors import (
     ProviderAuthError,
     ProviderError,
     ProviderUnavailableError,
+    StorageUnavailableError,
 )
 from ..activity import SERVICE, ActivityLog, Actor, someone
 from ..activity import mailbox as said
@@ -142,8 +143,9 @@ class AttachmentLinks:
     async def redeem(self, presented: str, source: str) -> AttachmentContent:
         """The attachment of the link whose secret ``presented`` is, used up.
         ``source`` is the client address that asks. Where the mail server
-        fails, ``ProviderUnavailableError`` and the link holds. Anything
-        else is ``NotFoundError``, always the same."""
+        fails, ``ProviderUnavailableError`` and the link holds, and so it
+        does where the database is away (``StorageUnavailableError``).
+        Anything else is ``NotFoundError``, always the same."""
         if self._auth.lockouts.is_locked_out(source):
             raise NotFoundError(LINK_GONE)
         link = (
@@ -188,6 +190,10 @@ class AttachmentLinks:
                         )
                     )
             raise ProviderUnavailableError(LINK_LATER) from None
+        except StorageUnavailableError:
+            # The database is away, not the link: it holds, and the
+            # address that asks has not failed.
+            raise
         except MailboxServiceError as exc:
             raise self._refused(source, link, exc.message) from None
 

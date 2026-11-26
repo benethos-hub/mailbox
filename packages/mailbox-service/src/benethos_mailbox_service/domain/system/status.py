@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 from ...common.clock import utc_now
 from ...data.models import Account, AccountStatus, Webhook
 from ...data.storage import OutboxRepository
-from ...errors import ForbiddenError, MailboxServiceError
+from ...errors import ForbiddenError, MailboxServiceError, StorageUnavailableError
 from ..accounts import AccountService
 from ..rights import Access
 from ..sync import SyncService, SyncState, SyncWorker, WorkerState
@@ -107,14 +107,25 @@ class StatusService:
         webhooks: WebhookService,
         outbox: OutboxRepository | None = None,
         clock: Callable[[], datetime] = utc_now,
+        storage: Callable[[], StorageUnavailableError | None] | None = None,
     ) -> None:
-        """``outbox`` holds the sends the counts of an account read."""
+        """``outbox`` holds the sends the counts of an account read.
+        ``storage`` says, without asking the database, whether it is
+        away: the error a call meets then."""
+        self._storage = storage
         self._accounts = accounts
         self._sync = sync
         self._worker = worker
         self._webhooks = webhooks
         self._outbox = outbox
         self._clock = clock
+
+    def reachable(self) -> None:
+        """Whether the service can answer at all: raises the error of a
+        database known to be away. Asks the database nothing."""
+        away = self._storage() if self._storage is not None else None
+        if away is not None:
+            raise away
 
     def sync_of(self, access: Access, account_id: str) -> SyncState | None:
         """How the account's sync went, None when no pass does anything
