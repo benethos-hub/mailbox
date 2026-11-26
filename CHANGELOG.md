@@ -77,8 +77,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   `MailboxNotAnswering`, fires when there are no figures for five
   minutes: the service is gone, or cannot reach its database. A service
   whose database lock another service took while it was away stops with
-  an error (`system.db_taken`). Until it has stopped it writes nothing
-  more, and every route answers `503`.
+  an error (`system.db_taken`), and `serve` ends with that reason. Until
+  it has stopped it writes nothing more, and every route answers `503`.
 
 - An outbox. `POST /v1/accounts/{id}/send` and
   `POST /v1/accounts/{id}/drafts/{draft_id}/send` take `outbox: true` or

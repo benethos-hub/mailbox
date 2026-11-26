@@ -25,7 +25,7 @@ def create_app(
     services: Services | None = None,
     logbook: LogBook | None = None,
     settings_file: Path | None = None,
-    stop: Callable[[], None] | None = None,
+    stop: Callable[[str], None] | None = None,
 ) -> FastAPI:
     """The app on ``services``, else on services built from ``settings``
     with ``logbook`` behind the log page. ``settings_file`` is where the

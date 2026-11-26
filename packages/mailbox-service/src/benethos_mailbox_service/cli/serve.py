@@ -41,14 +41,14 @@ STARTUP_FAILURE = 3
 
 
 class _Stop:
-    """Ends the server once it runs, and remembers that it did."""
+    """Ends the server once it runs, and remembers why."""
 
     def __init__(self) -> None:
         self.server: Any = None
-        self.asked = False
+        self.reason = ""
 
-    def __call__(self) -> None:
-        self.asked = True
+    def __call__(self, reason: str) -> None:
+        self.reason = reason
         if self.server is not None:
             self.server.should_exit = True
 
@@ -101,8 +101,8 @@ def run(args: argparse.Namespace) -> None:
         server.run()
     if not server.started:
         sys.exit(STARTUP_FAILURE)
-    if stop.asked:
-        raise MailboxServiceError("a background loop ended, the service stopped")
+    if stop.reason:
+        raise MailboxServiceError(stop.reason)
 
 
 def waited(build: Callable[[], T], settings: Settings) -> T:
