@@ -15,7 +15,7 @@ import sqlalchemy as sa
 
 from benethos_mailbox_service.data.models import ApiToken, User
 from benethos_mailbox_service.data.storage import Database, repositories_on
-from benethos_mailbox_service.data.storage.sql.schema import roles
+from benethos_mailbox_service.data.storage.sql.schema import keys, roles
 from benethos_mailbox_service.errors import ConflictError, StorageError
 
 from ...schema_helpers import select
@@ -152,3 +152,15 @@ def test_a_failure_of_the_database_names_no_statement(engine_db: Database) -> No
         conn.execute(sa.select(nowhere).where(nowhere.c.id == "looked-for"))
     assert str(caught.value) == "the database failed: no such table: nowhere"
     _plain(str(caught.value), "looked-for")
+
+
+def test_a_value_that_does_not_fit_its_column_names_no_statement(
+    engine_db: Database,
+) -> None:
+    """SQLAlchemy refuses it before the driver sees it: its error is no
+    error of the database, and its text holds the statement."""
+    unfit = keys.insert().values(key_id="k1", nonce="text-value", ciphertext=b"")
+    with pytest.raises(StorageError) as caught, engine_db.connected() as conn:
+        conn.execute(unfit)
+    assert str(caught.value) == "the database failed: TypeError"
+    _plain(str(caught.value), "text-value", "k1")

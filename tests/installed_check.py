@@ -38,6 +38,7 @@ from __future__ import annotations
 
 import importlib
 import importlib.metadata
+import importlib.resources
 import json
 import os
 import pkgutil
@@ -132,6 +133,13 @@ def service_env(scratch: Path, settings: Path, port: int) -> dict[str, str]:
     }
 
 
+def shipped_alerts() -> int:
+    """The alerts in the file of rules the installed service ships."""
+    rules = importlib.resources.files("benethos_mailbox_service.web.api")
+    text = rules.joinpath("alert_rules.yml").read_text(encoding="utf-8")
+    return text.count("- alert: Mailbox")
+
+
 def command_output(env: dict[str, str], cwd: Path, *args: str) -> str:
     """What a command of the service prints. Keys and passwords come this
     way, so a failure names the command and the exit code and nothing it
@@ -189,9 +197,10 @@ def check_service() -> None:
         one_time = command_output(env, scratch, "users", "create-admin")
         # The rules are a file of the package: the wheel must carry it.
         rules = command_output(env, scratch, "alert-rules")
+        shipped = shipped_alerts()
         check(
-            rules.count("- alert: Mailbox") == 3,
-            "alert-rules printed no three alerts",
+            shipped > 0 and rules.count("- alert: Mailbox") == shipped,
+            f"alert-rules printed not the {shipped} alerts the package ships",
         )
         process = subprocess.Popen(
             [program(SERVICE), "serve"],
