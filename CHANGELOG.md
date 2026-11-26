@@ -185,8 +185,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   SQLite, and moves its schema from schema 26 on with Alembic. Nothing is
   to be done for an update: the database file and its schema stay as
   they are, and it gets a table `alembic_version` beside them.
-- The service image installs publicsuffixlist 1.1.2.20261125 from the
-  lockfile.
+- The images of the service, the MCP server and the agents install
+  httpx 0.29.0 from the lockfile, the service image also
+  publicsuffixlist 1.1.2.20261126.
 - The images build with uv 0.13.10.
 - The database moves to schema 26. The index of messages and the links
   of threads keep their order in a column of their own and are built
