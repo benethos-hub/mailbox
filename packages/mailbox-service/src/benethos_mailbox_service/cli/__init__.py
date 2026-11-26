@@ -8,6 +8,8 @@ import argparse
 from pathlib import Path
 from types import ModuleType
 
+from benethos_mailbox_common.log import redact
+
 from .. import __version__
 from . import alert_rules, backup, keys, openapi, paths, restore, serve, users
 from .common import ENV_FILE_HELP, expected, message, say
@@ -30,7 +32,9 @@ def main(argv: list[str] | None = None) -> int:
     try:
         COMMANDS[args.command].run(args)
     except expected() as exc:
-        say(f"error: {message(exc)}")
+        # A secret the command read, such as the password of the
+        # database, never reaches the terminal.
+        say(redact.redact(f"error: {message(exc)}"))
         return 1
     return 0
 

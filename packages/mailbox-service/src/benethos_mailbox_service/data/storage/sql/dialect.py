@@ -181,6 +181,10 @@ def sqlite_engine(connect: Callable[[], Any]) -> sa.Engine:
     return engine
 
 
+# Seconds an attempt to connect to a database server may take.
+CONNECT_SECONDS = 10
+
+
 def server_engine(
     *,
     host: str,
@@ -209,7 +213,11 @@ def server_engine(
         url,
         poolclass=NullPool,
         hide_parameters=True,
-        connect_args={"options": f"-csearch_path={search_path}", **(tls or {})},
+        connect_args={
+            "options": f"-csearch_path={search_path}",
+            "connect_timeout": CONNECT_SECONDS,
+            **(tls or {}),
+        },
     )
 
 
