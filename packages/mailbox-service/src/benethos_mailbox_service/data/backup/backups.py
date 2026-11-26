@@ -372,7 +372,7 @@ def restore_on_server(source: Path, master_key: bytes, server: Server) -> Manife
 def _held(place: ServerPlace) -> Iterator[None]:
     """The lock of a running service, for the restore."""
     try:
-        serving = place.serving()
+        serving = place.claimed()
         serving.__enter__()
     except MailboxServiceError:
         raise BackupError(

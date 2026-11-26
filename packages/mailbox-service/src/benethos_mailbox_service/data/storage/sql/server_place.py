@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+import secrets
 import threading
 import time
 from collections.abc import Callable, Iterator
@@ -29,7 +30,8 @@ from . import revisions
 from .dialect import reading_fixed, server_engine
 from .outage import Availability, Outage
 from .place import translated_by
-from .tables import stored_schema
+from .schema import meta
+from .tables import SERVICE_LOCK, stored_schema
 
 # A name the server takes without quoting, so it can stand in the
 # search path the connection sets.
@@ -90,8 +92,9 @@ class ServerPlace:
         self._connection: sa.Connection | None = None
         self._outage = Outage(clock)
         self._reports: list[Callable[[Availability], None]] = []
-        # The key of the lock of a running service, while it is held.
-        self._held: int | None = None
+        # The keys of the locks this session holds, taken again on a
+        # new session.
+        self._held: tuple[int, ...] = ()
 
     def open(self, schema: int, newest: int) -> tuple[sa.Connection, Migrated | None]:
         """The one connection, made at the first call. A later call, of a
@@ -157,26 +160,84 @@ class ServerPlace:
     def serving(self) -> Iterator[bool]:
         """Two services on one schema would lose changes of the feed, so
         the second is refused: the lock of the session on its one
-        connection, keyed by the schema, held until the block ends or the
-        connection closes."""
+        connection, held until the block ends or the connection closes.
+        Its key is a random number the schema keeps in ``meta``, which
+        only the role reads, so no other role of the server can take the
+        lock ahead. A schema without a key gets one, made under the lock
+        keyed by the name of the schema, which a restore or a move into
+        the empty schema holds (``claimed``)."""
+        connection = self._open()
+        with self.translated():
+            key = self._service_key(connection)
+        self._held = (key,)
+        try:
+            yield True
+        finally:
+            self._let_go(connection)
+
+    def _service_key(self, connection: sa.Connection) -> int:
+        """The key the schema keeps, its lock taken. Made first when
+        there is none, under the lock keyed by the name."""
+        key = _kept_key(connection)
+        if key is not None:
+            self._take(connection, key)
+            return key
+        named = lock_key(self._server.schema_name)
+        self._take(connection, named)
+        try:
+            key = _kept_key(connection)
+            if key is None:
+                key = _new_key()
+                connection.execute(
+                    sa.insert(meta).values(key=SERVICE_LOCK, value=str(key))
+                )
+                connection.commit()
+            self._take(connection, key)
+        finally:
+            _unlock(connection, named)
+        return key
+
+    @contextmanager
+    def claimed(self) -> Iterator[None]:
+        """The schema for a restore or a move, which works on it alone:
+        the lock keyed by its name, under which a service makes its key,
+        and the lock of a running service where the schema keeps a key.
+        Writes nothing. Refused while a service runs on the schema."""
+        connection = self._open()
+        named = lock_key(self._server.schema_name)
+        with self.translated():
+            self._take(connection, named)
+            self._held = (named,)
+            try:
+                key = _kept_key(connection)
+                if key is not None:
+                    self._take(connection, key)
+                    self._held = (named, key)
+            except BaseException:
+                self._let_go(connection)
+                raise
+        try:
+            yield
+        finally:
+            self._let_go(connection)
+
+    def _open(self) -> sa.Connection:
         if self._connection is None:
             raise StorageError("the database is not open")
-        key = lock_key(self._server.schema_name)
-        with self.translated():
-            got = self._locked(self._connection, key)
-        if not got:
+        return self._connection
+
+    def _take(self, connection: sa.Connection, key: int) -> None:
+        if not self._locked(connection, key):
             raise StorageError(
                 "another service runs on this database: one service per"
                 " schema of a database server"
             )
-        self._held = key
-        try:
-            yield True
-        finally:
-            self._held = None
-            with suppress(Exception), self.translated():
-                self._connection.execute(sa.select(sa.func.pg_advisory_unlock(key)))
-                self._connection.commit()
+
+    def _let_go(self, connection: sa.Connection) -> None:
+        held, self._held = self._held, ()
+        with suppress(Exception), self.translated():
+            for key in held:
+                _unlock(connection, key)
 
     @staticmethod
     def _locked(connection: sa.Connection, key: int) -> bool:
@@ -203,7 +264,7 @@ class ServerPlace:
                 connection.rollback()
             connection.execute(sa.select(sa.literal(1)))
             connection.commit()
-            got = self._held is None or self._locked(connection, self._held)
+            got = all(self._locked(connection, key) for key in self._held)
         except sa.exc.DBAPIError as exc:
             self._failed(exc)
             raise self._outage.unavailable() from None
@@ -363,10 +424,41 @@ def tls_arguments(
 
 
 def lock_key(schema: str) -> int:
-    """The key of the lock a running service holds on ``schema``: a
-    number of 64 bits drawn from its name, the same in every process."""
+    """The key of the lock on ``schema`` while it keeps no key of its
+    own: a number of 64 bits drawn from its name, the same in every
+    process, and for every role that knows the name."""
     digest = hashlib.sha256(f"benethos-mailbox-service:{schema}".encode()).digest()
     return int.from_bytes(digest[:8], "big", signed=True)
+
+
+def _kept_key(connection: sa.Connection) -> int | None:
+    """The key of the lock of a running service the schema keeps, None
+    while it keeps none. Ends the transaction it reads in."""
+    if not sa.inspect(connection).has_table(meta.name):
+        connection.rollback()
+        return None
+    value = connection.execute(
+        sa.select(meta.c.value).where(meta.c.key == SERVICE_LOCK)
+    ).scalar()
+    connection.rollback()
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except ValueError:
+        raise StorageError(
+            f"the value of {SERVICE_LOCK} in meta is no number: delete the row"
+        ) from None
+
+
+def _new_key() -> int:
+    """A key for the lock of a running service, a random number of 64 bits."""
+    return int.from_bytes(secrets.token_bytes(8), "big", signed=True)
+
+
+def _unlock(connection: sa.Connection, key: int) -> None:
+    connection.execute(sa.select(sa.func.pg_advisory_unlock(key)))
+    connection.commit()
 
 
 def _lost(exc: sa.exc.DBAPIError) -> bool:

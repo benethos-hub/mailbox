@@ -22,7 +22,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   the system. `off` goes without TLS and is said at start. `serve`
   waits for the database for up to `MAILBOX_SERVICE_DATABASE_START_WAIT`
   seconds (30). A server older than PostgreSQL 19 is refused, and so is
-  a second service on the same schema. The driver comes with the extra
+  a second service on the same schema. The lock that refuses it is keyed
+  by a random number the schema keeps, so another role of the server
+  cannot hold it ahead. The driver comes with the extra
   `postgres`: `pip install 'benethos-mailbox-service[postgres]'`. The
   image of the service has it. On SQLite nothing changes but the fixes
   below, which hold for a failure of either database.
