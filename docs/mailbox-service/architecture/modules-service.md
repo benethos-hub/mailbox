@@ -28,7 +28,8 @@ packages/mailbox-service/
       users.py          # create-admin, set-password, reset-second-factor
       keys.py           # init, import, generate
       backup.py         # write a backup, verify one
-      restore.py        # replace the database with a backup
+      restore.py        # replace the database with a backup, on a
+                        #   server fill an empty schema
       storage.py        # move the records between SQLite and
                         #   PostgreSQL, or check that they fit
     assembly/           # builds the service, picks implementations,

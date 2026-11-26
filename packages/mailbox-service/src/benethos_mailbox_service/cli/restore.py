@@ -1,5 +1,6 @@
 """``restore FILE``: the database replaced with a backup, the previous
-one kept beside it."""
+file kept beside it. On a database server the backup goes into the
+empty schema of the role."""
 
 from __future__ import annotations
 
@@ -16,7 +17,8 @@ from .common import Commands, UsageError, master_key, read_recovery_key, say
 def add(commands: Commands, option: argparse.ArgumentParser) -> None:
     restore = commands.add_parser(
         "restore",
-        help="replace the database with a backup. Stop the service first.",
+        help="replace the database with a backup, on a server fill an empty"
+        " schema. Stop the service first.",
         parents=[option],
     )
     restore.add_argument("source", type=Path)

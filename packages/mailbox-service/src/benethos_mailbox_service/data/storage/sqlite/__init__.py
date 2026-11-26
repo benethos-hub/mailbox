@@ -1,10 +1,10 @@
-"""SQLite persistence, one module per subject. The only package that imports
+"""The file of SQLite: its connection, the steps of its schema up to 26
+and the files SQLite keeps beside it. The only package that imports
 ``sqlite3``."""
 
 from __future__ import annotations
 
 from .file import (
-    Migrated,
     inspect_bytes,
     inspect_file,
     move_sidecars,
@@ -15,7 +15,6 @@ from .migrations import SCHEMA_VERSION
 
 __all__ = [
     "SCHEMA_VERSION",
-    "Migrated",
     "inspect_bytes",
     "inspect_file",
     "move_sidecars",
