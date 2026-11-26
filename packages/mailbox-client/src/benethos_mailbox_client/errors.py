@@ -22,8 +22,9 @@ class ServiceTimeoutError(MailboxError):
 
 class ApiError(MailboxError):
     """The REST API answered with an error. ``retry_after`` is the seconds
-    its ``Retry-After`` header asks to wait, as a limit answers, else
-    None."""
+    its ``Retry-After`` header asks to wait, as a limit answers and as
+    the service does while it cannot reach its database (503,
+    ``service_unavailable``), else None."""
 
     def __init__(
         self, status: int, code: str, message: str, retry_after: int | None = None
