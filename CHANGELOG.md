@@ -12,15 +12,19 @@ adheres to [Semantic Versioning](https://semver.org/).
   stays the default: `MAILBOX_SERVICE_STORAGE=postgres` keeps the
   records in a schema on a PostgreSQL server, named after the role the
   service signs in as. `MAILBOX_SERVICE_DATABASE_URL`
-  (`postgresql://<role>@<host>:<port>/<database>`, without a password)
-  and `MAILBOX_SERVICE_DATABASE_PASSWORD_FILE` name it.
+  (`postgresql://<role>@<host>:<port>/<database>`, without a password,
+  a query or a fragment)
+  and `MAILBOX_SERVICE_DATABASE_PASSWORD_FILE` name it. An empty
+  password file is refused.
   `MAILBOX_SERVICE_DATABASE_TLS` is `verify` by default: a host other
   than this one is reached only over TLS with a checked certificate and
   name, against `MAILBOX_SERVICE_DATABASE_CA_FILE` or the authorities of
   the system. `off` goes without TLS and is said at start. `serve`
   waits for the database for up to `MAILBOX_SERVICE_DATABASE_START_WAIT`
   seconds (30). A server older than PostgreSQL 19 is refused, and so is
-  a second service on the same schema. The driver comes with the extra
+  a second service on the same schema. The lock that refuses it is keyed
+  by a random number the schema keeps, so another role of the server
+  cannot hold it ahead. The driver comes with the extra
   `postgres`: `pip install 'benethos-mailbox-service[postgres]'`. The
   image of the service has it. On SQLite nothing changes but the fixes
   below, which hold for a failure of either database.
@@ -39,9 +43,13 @@ adheres to [Semantic Versioning](https://semver.org/).
   database a move did not finish is not opened by the service.
 - Backup format 3: `benethos-mailbox-service backup --format 3 FILE`
   writes the records as an export, encrypted in blocks as format 2,
-  independent of the file of the database. `backup FILE` still writes
+  independent of the file of the database. Nothing of the records is
+  written in plain on a disk: they are read twice from the same moment,
+  once for the checksum and once into the backup. `backup FILE` still writes
   format 2. `backup verify` and `restore` read formats 1, 2 and 3 and
   name the format, as does the log line of a backup and a restore.
+  Format 3 is read into the database block by block, with nothing of it
+  in plain beside it.
 - `backup FILE` on PostgreSQL writes format 3, the export of the records,
   read from one moment while the service runs. Format 2, the file of a
   SQLite database, is refused there. `backup verify` there decrypts

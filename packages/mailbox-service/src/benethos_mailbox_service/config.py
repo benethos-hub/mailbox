@@ -272,7 +272,9 @@ class Settings(files.FileSettings):
         """The database for a line: the path of its file, or the address
         of its server, which holds no password."""
         if self.storage == "postgres" and self.database_url:
-            return self.database_url
+            parts = urlsplit(self.database_url)
+            host = parts.netloc.rsplit("@", 1)[-1]
+            return f"{parts.scheme}://{parts.username}@{host}{parts.path}"
         return str(self.database_path)
 
 
@@ -288,6 +290,8 @@ def _database_settings(url: str | None, password_file: Path | None) -> None:
         raise ValueError(
             "storage postgres needs database_url and database_password_file"
         )
+    if _empty(password_file):
+        raise ValueError("database_password_file names an empty file")
     parts = urlsplit(url)
     if parts.scheme != "postgresql":
         raise ValueError(f"database_url must have the form {DATABASE_URL_FORM}")
@@ -295,6 +299,11 @@ def _database_settings(url: str | None, password_file: Path | None) -> None:
         raise ValueError(
             "database_url must not hold a password: name the file that holds"
             " it in database_password_file"
+        )
+    if parts.query or parts.fragment or "?" in url or "#" in url:
+        raise ValueError(
+            "database_url must not hold a query or a fragment: the password"
+            " comes from database_password_file, TLS from database_tls"
         )
     try:
         port = parts.port
@@ -311,6 +320,15 @@ def _database_settings(url: str | None, password_file: Path | None) -> None:
             "the role in database_url names the schema too: lower case"
             " letters, digits and underscores"
         )
+
+
+def _empty(path: Path) -> bool:
+    """Whether the file holds nothing but blanks. One that cannot be read
+    is not judged here: opening the database says why."""
+    try:
+        return not files.secret_file(path)
+    except OSError:
+        return False
 
 
 def _named(secret: SecretStr | None, file: Path | None) -> bool:

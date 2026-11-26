@@ -19,11 +19,17 @@ from __future__ import annotations
 import base64
 import json
 from collections.abc import Iterator, Sequence
-from typing import IO, Any
+from typing import IO, Any, Protocol
 
 from .storage import Records, Store
 
 FORMAT = 1
+
+
+class Sink(Protocol):
+    """Where an export is written: a file, or what sums or encrypts it."""
+
+    def write(self, data: bytes, /) -> object: ...
 
 
 class ExportError(Exception):
@@ -31,7 +37,7 @@ class ExportError(Exception):
     a value of it."""
 
 
-def write_export(store: Records, out: IO[bytes]) -> dict[str, int]:
+def write_export(store: Records, out: Sink) -> dict[str, int]:
     """Every record of ``store`` to ``out``. The rows of each table."""
     counts: dict[str, int] = {}
     _line(out, {"export": FORMAT, "schema": store.schema_version()})
@@ -131,7 +137,7 @@ def row_line(row: Sequence[Any]) -> bytes:
     return _encoded([_value(v) for v in row])
 
 
-def _line(out: IO[bytes], value: object) -> None:
+def _line(out: Sink, value: object) -> None:
     out.write(_encoded(value))
 
 

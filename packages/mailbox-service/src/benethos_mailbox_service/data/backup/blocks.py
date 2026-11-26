@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import hashlib
 import io
-from collections.abc import Iterator
 from pathlib import Path
 from typing import Any, BinaryIO
 
@@ -142,17 +141,42 @@ def exactly(file: BinaryIO, size: int, source: Path) -> bytes:
     return data
 
 
-def blocks_of(file: BinaryIO) -> Iterator[tuple[int, bytes, bool]]:
-    """Each block of the file with its number and whether it is the last.
-    A file that is empty is one empty block."""
-    block = file.read(BLOCK)
-    index = 0
-    while True:
-        after = file.read(BLOCK)
-        yield index, block, not after
-        if not after:
-            return
-        block, index = after, index + 1
+class Sealing:
+    """The plain bytes of a backup as they are written, encrypted into
+    ``out`` block by block, one block in memory at a time. A block is
+    sealed once the next byte is there, so the last one is known as the
+    last. ``close`` seals it: an empty backup is one empty block."""
+
+    def __init__(self, out: BinaryIO, header: bytes, key: bytes) -> None:
+        self._out = out
+        self._header = header
+        self._key = key
+        self._index = 0
+        self._held = bytearray()
+        self._digest = hashlib.sha256()
+
+    def write(self, data: bytes, /) -> int:
+        self._digest.update(data)
+        self._held += data
+        while len(self._held) > BLOCK:
+            self._seal(bytes(self._held[:BLOCK]), last=False)
+            del self._held[:BLOCK]
+        return len(data)
+
+    def close(self) -> None:
+        """Seal the last block."""
+        self._seal(bytes(self._held), last=True)
+        self._held.clear()
+
+    def hexdigest(self) -> str:
+        """The SHA-256 of the plain bytes written."""
+        return self._digest.hexdigest()
+
+    def _seal(self, block: bytes, *, last: bool) -> None:
+        found = cipher.encrypt(self._key, block, aad(self._header, self._index, last))
+        sealed = found.ciphertext
+        self._out.write(found.nonce + mark(last) + length(len(sealed)) + sealed)
+        self._index += 1
 
 
 def aad(header: bytes, index: int, last: bool) -> bytes:

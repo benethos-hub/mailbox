@@ -17,10 +17,12 @@ itself is never in a backup.
 
 from __future__ import annotations
 
+import hashlib
 import io
 import json
 import os
-from collections.abc import Iterator
+import shutil
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
@@ -32,7 +34,6 @@ from ...common.clock import iso, utc_now
 from ...errors import MailboxServiceError
 from ..export import ExportError, read_export, write_export
 from ..files import create_private, free_path
-from ..secrets import cipher
 from ..storage import (
     SCHEMA_VERSION,
     SET_ASIDE,
@@ -55,12 +56,9 @@ from .blocks import (
     MAGIC_3,
     BackupError,
     Decrypting,
-    aad,
+    Sealing,
     backup_key,
-    blocks_of,
     decrypt,
-    length,
-    mark,
     sha256_of,
 )
 
@@ -124,24 +122,35 @@ def _manifest(service_version: str, schema_version: int, format: int) -> Manifes
 def _write_export(
     records: Records, manifest: Manifest, master_key: bytes, target: Path
 ) -> Manifest:
-    """The export of ``records`` as a backup of format 3. The export goes
-    to a file beside ``target`` first, readable by its owner alone and
-    removed afterwards."""
-    staged = target.with_name(target.name + ".export")
-    try:
-        create_private(staged)
-    except OSError as exc:
-        raise BackupError(f"{staged} cannot be written: {exc.strerror}") from None
-    try:
-        with staged.open("ab") as out:
-            rows = write_export(records, out)
-        manifest = replace(manifest, sha256=sha256_of(staged), rows=rows)
-        write_backup(staged, manifest, master_key, target)
-    except OSError as exc:
-        raise BackupError(f"{staged} cannot be written: {exc.strerror}") from None
-    finally:
-        staged.unlink(missing_ok=True)
+    """The export of ``records`` as a backup of format 3, with nothing of
+    it in plain on a disk. A first pass sums and counts the export for the
+    manifest, a second one over the same records encrypts it into
+    ``target``. A second sum that differs removes the backup."""
+    summed = _Summed()
+    rows = write_export(records, summed)
+    manifest = replace(manifest, sha256=summed.hexdigest(), rows=rows)
+
+    def written(out: Sealing) -> None:
+        write_export(records, out)
+
+    if _sealed(manifest, master_key, target, written) != manifest.sha256:
+        target.unlink(missing_ok=True)
+        raise BackupError("the records changed while the backup was written")
     return manifest
+
+
+class _Summed:
+    """A sink that keeps only the SHA-256 of what is written to it."""
+
+    def __init__(self) -> None:
+        self._digest = hashlib.sha256()
+
+    def write(self, data: bytes, /) -> int:
+        self._digest.update(data)
+        return len(data)
+
+    def hexdigest(self) -> str:
+        return self._digest.hexdigest()
 
 
 def write_backup(
@@ -150,24 +159,40 @@ def write_backup(
     """The file at ``source`` as a backup at ``target``, block by block:
     the database in format 2, its export in format 3, as the manifest
     says. A backup that cannot be finished is removed."""
+
+    def written(out: Sealing) -> None:
+        with source.open("rb") as plain:
+            shutil.copyfileobj(plain, out)
+
+    _sealed(manifest, master_key, target, written)
+
+
+def _sealed(
+    manifest: Manifest,
+    master_key: bytes,
+    target: Path,
+    written: Callable[[Sealing], None],
+) -> str:
+    """A backup at ``target`` of what ``written`` writes, encrypted block
+    by block. Returns the SHA-256 of the plain bytes. A backup that cannot
+    be finished is removed."""
     header = _head(manifest)
-    key = backup_key(master_key)
     try:
         create_private(target, header)
     except OSError as exc:
         raise BackupError(f"{target} cannot be written: {exc.strerror}") from None
     try:
-        with source.open("rb") as plain, target.open("ab") as out:
-            for index, block, last in blocks_of(plain):
-                found = cipher.encrypt(key, block, aad(header, index, last))
-                sealed = found.ciphertext
-                out.write(found.nonce + mark(last) + length(len(sealed)) + sealed)
+        with target.open("ab") as out:
+            sealing = Sealing(out, header, backup_key(master_key))
+            written(sealing)
+            sealing.close()
     except OSError as exc:
         target.unlink(missing_ok=True)
         raise BackupError(f"{target} cannot be written: {exc.strerror}") from None
     except BaseException:
         target.unlink(missing_ok=True)
         raise
+    return sealing.hexdigest()
 
 
 def read_backup(source: Path, master_key: bytes, into: Path) -> Manifest:
@@ -178,22 +203,26 @@ def read_backup(source: Path, master_key: bytes, into: Path) -> Manifest:
         file = source.open("rb")
     except OSError as exc:
         raise BackupError(f"{source} cannot be read: {exc.strerror}") from None
+    # The plain export an earlier version wrote beside ``into``, left by
+    # a crash.
+    into.with_name(into.name + ".export").unlink(missing_ok=True)
     with file:
         header, manifest = _header(file, source)
         if manifest.format == 3:
             _exported_schema(manifest)
-        plain = into.with_name(into.name + ".export") if manifest.format == 3 else into
         try:
-            create_private(plain)
+            create_private(into)
         except OSError as exc:
-            raise BackupError(f"{plain} cannot be written: {exc.strerror}") from None
+            raise BackupError(f"{into} cannot be written: {exc.strerror}") from None
         try:
-            with plain.open("ab") as out:
-                digest = decrypt(file, header, backup_key(master_key), out, source)
-            if digest != manifest.sha256:
-                raise BackupError("the backup does not match its checksum")
+            key = backup_key(master_key)
             if manifest.format == 3:
-                _read_export(plain, manifest, into)
+                _read_export(file, header, key, source, manifest, into)
+            else:
+                with into.open("ab") as out:
+                    digest = decrypt(file, header, key, out, source)
+                if digest != manifest.sha256:
+                    raise BackupError("the backup does not match its checksum")
             _check_schema(into, manifest)
         except OSError as exc:
             remove_database_file(into)
@@ -201,9 +230,6 @@ def read_backup(source: Path, master_key: bytes, into: Path) -> Manifest:
         except BaseException:
             remove_database_file(into)
             raise
-        finally:
-            if plain != into:
-                plain.unlink(missing_ok=True)
     return manifest
 
 
@@ -219,22 +245,27 @@ def _exported_schema(manifest: Manifest) -> None:
         )
 
 
-def _read_export(plain: Path, manifest: Manifest, into: Path) -> None:
-    """The export at ``plain`` into a new database at ``into`` of the
-    schema of the manifest, its rows held to the manifest."""
-    try:
-        create_private(into)
-    except OSError as exc:
-        raise BackupError(f"{into} cannot be written: {exc.strerror}") from None
+def _read_export(
+    file: BinaryIO,
+    header: bytes,
+    key: bytes,
+    source: Path,
+    manifest: Manifest,
+    into: Path,
+) -> None:
+    """The export the backup holds into the new database file at
+    ``into``, of the schema of the manifest, decrypted block by block and
+    never written in plain. Its checksum and rows held to the manifest."""
     try:
         db = Database(into, schema=manifest.schema_version)
-        try:
-            with plain.open("rb") as source:
-                rows = read_export(source, db)
-        finally:
-            db.close()
-    except (ExportError, MailboxServiceError) as exc:
+    except MailboxServiceError as exc:
         raise BackupError(f"the backup cannot be read back: {exc}") from None
+    try:
+        plain = Decrypting(file, header, key, source)
+        rows = _read_plain(io.BufferedReader(plain, BLOCK), db)
+        plain.finish(manifest.sha256)
+    finally:
+        db.close()
     if rows != manifest.rows:
         raise BackupError("the backup does not match its manifest")
 
@@ -341,7 +372,7 @@ def restore_on_server(source: Path, master_key: bytes, server: Server) -> Manife
 def _held(place: ServerPlace) -> Iterator[None]:
     """The lock of a running service, for the restore."""
     try:
-        serving = place.serving()
+        serving = place.claimed()
         serving.__enter__()
     except MailboxServiceError:
         raise BackupError(

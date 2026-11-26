@@ -26,6 +26,10 @@ BOOKKEEPING = frozenset({"alembic_version"})
 ROWS_CHUNK = 500
 # The key in ``meta`` that marks a database a move is writing into.
 MOVING = "move_started"
+# The key in ``meta`` that holds the key of the lock of a running service
+# on a database server. It belongs to the schema it was made in: no
+# export, backup or move takes it along.
+SERVICE_LOCK = "service_lock"
 
 
 @dataclass(frozen=True, slots=True)
@@ -154,10 +158,13 @@ def read_chunk(
     conn: sa.Connection, table: Table, after: Sequence[Any] | None, size: int
 ) -> list[tuple[Any, ...]]:
     """Up to ``size`` rows of ``table`` in the order of its key, those
-    after the key ``after``, from the first without it."""
+    after the key ``after``, from the first without it. The key of the
+    lock in ``meta`` is no record."""
     stored = _as_stored(table)
     key = [stored.c[name] for name in table.key]
     query = sa.select(*(stored.c[name] for name in table.columns))
+    if table.name == meta.name:
+        query = query.where(stored.c["key"] != SERVICE_LOCK)
     if after is not None:
         query = query.where(sa.tuple_(*key) > sa.tuple_(*after))
     return [tuple(row) for row in conn.execute(query.order_by(*key).limit(size))]

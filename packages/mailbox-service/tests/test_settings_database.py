@@ -42,6 +42,15 @@ def password_file(tmp_path: Path) -> Path:
             "must not hold a password",
         ),
         ("postgresql://Svc-1@db.example.org:5432/mailbox", "lower case letters"),
+        (
+            "postgresql://svc@db.example.org:5432/mailbox?password=" + PASSWORD,
+            "must not hold a query",
+        ),
+        (
+            "postgresql://svc@db.example.org:5432/mailbox?sslmode=disable",
+            "must not hold a query",
+        ),
+        ("postgresql://svc@db.example.org:5432/mailbox#" + PASSWORD, "a fragment"),
     ],
     ids=[
         "no url",
@@ -51,6 +60,9 @@ def password_file(tmp_path: Path) -> Path:
         "no port",
         "a password",
         "no plain role",
+        "a password in the query",
+        "a query",
+        "a fragment",
     ],
 )
 def test_a_rule_of_the_database_is_named_without_the_value(
@@ -70,6 +82,30 @@ def test_a_rule_of_the_database_is_named_without_the_value(
     assert rule in err
     assert PASSWORD not in err
     assert "db.example.org" not in err
+
+
+@pytest.mark.parametrize("content", ["", " \n"])
+def test_an_empty_password_file_is_refused(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+    content: str,
+) -> None:
+    empty = tmp_path / "database_password"
+    empty.write_text(content, encoding="utf-8")
+    monkeypatch.setenv("MAILBOX_SERVICE_STORAGE", "postgres")
+    monkeypatch.setenv("MAILBOX_SERVICE_DATABASE_PASSWORD_FILE", str(empty))
+    monkeypatch.setenv(
+        "MAILBOX_SERVICE_DATABASE_URL", "postgresql://svc@db.example.org:5432/mailbox"
+    )
+    assert main(["paths"]) == 1
+    assert "database_password_file names an empty file" in capsys.readouterr().err
+    with pytest.raises(ValueError, match="empty file"):
+        Settings(
+            _env_file=None,  # type: ignore[call-arg]
+            database_url="postgresql://svc@db.example.org:5432/mailbox",
+            database_password_file=empty,
+        ).check_database_server()
 
 
 def test_a_password_file_is_needed(monkeypatch: pytest.MonkeyPatch) -> None:

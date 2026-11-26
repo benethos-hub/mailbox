@@ -225,7 +225,7 @@ def _server(side: Server) -> Iterator[ServerPlace]:
         held.callback(place.close)
         place.open(SCHEMA_VERSION, SCHEMA_VERSION)
         try:
-            held.enter_context(place.serving())
+            held.enter_context(place.claimed())
         except MailboxServiceError:
             raise _running() from None
         yield place
