@@ -423,6 +423,12 @@ queries. It could drop its own schema. On a server shared with others,
 that is what each of them sees of the service (measured on PostgreSQL
 19, 2026-11-26).
 
+The lock that keeps a second service off the schema is keyed by a random
+number the schema keeps. Until the first start has made it, and during
+a restore or a move into an empty schema, the key comes from the name
+of the schema, and any role of the same database could hold it. On a
+server shared with others, give each service a database of its own.
+
 ## Monitoring with Prometheus
 
 The service hands its figures to Prometheus at `GET /v1/metrics`: the

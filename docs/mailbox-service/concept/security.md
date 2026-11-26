@@ -53,6 +53,17 @@ the roles, and that other sessions exist, never the text of their
 queries. It could drop its own schema. Every role on a shared server
 should therefore be one of a service that may see that much.
 
+One service runs on a schema at a time. The lock that ensures this is an
+advisory lock of PostgreSQL, which needs no right. Its key is a random
+number the schema keeps in `meta`, which only its role reads (decided
+2026-11-26). While a schema keeps no key yet, the key is drawn from the
+name of the schema: a restore or a move into the empty schema holds it,
+and a starting service holds it while it makes its key. Any role of the
+same database can work that key out and hold it, and then the first
+start of a service on an empty schema, a restore and a move wait for
+it. On a server shared with others, a database of its own for each
+service keeps them apart.
+
 ### 7.3 Design: envelope encryption
 
 ```
