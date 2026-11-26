@@ -59,10 +59,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `restore FILE` on PostgreSQL reads a backup of format 3 into the
   schema of the role, which must hold no table yet, and brings it to
   the schema of this version. It refuses while the service runs on that
-  schema. When it fails, the tables it made are dropped again, never the
-  schema. One that dies half way leaves the mark of a move, and the
-  service does not open that database. A backup of format 1 or 2 is refused there, with the two
-  steps that take it to PostgreSQL: restore it with
+  schema. When it fails, it says why, and the tables it made are
+  dropped again, never the schema: when they cannot be, it says so. One
+  that dies half way leaves the mark of a move, and the service does not
+  open that database. A backup of format 1 or 2 is refused there, with
+  the two steps that take it to PostgreSQL: restore it with
   `MAILBOX_SERVICE_STORAGE=sqlite`, then move it.
 - While the service cannot reach its database server, every route
   answers `503` at once with the code `service_unavailable`, one message

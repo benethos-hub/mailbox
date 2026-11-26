@@ -407,8 +407,15 @@ def _filled(
             raise BackupError("the backup does not match its manifest")
         made.mark_move(None)
         Database(place=place)
-    except BaseException:
-        place.drop_tables()
+    except BaseException as exc:
+        try:
+            place.drop_tables()
+        except MailboxServiceError:
+            if isinstance(exc, Exception):
+                raise BackupError(
+                    f"{exc}. Tables of the restore may be left: how to set the"
+                    f" schema aside: {SET_ASIDE}"
+                ) from None
         raise
 
 

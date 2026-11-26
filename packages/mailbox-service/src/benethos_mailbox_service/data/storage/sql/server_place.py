@@ -324,15 +324,18 @@ class ServerPlace:
 
     def drop_tables(self) -> None:
         """Every table of the schema dropped, the schema itself kept: what
-        a restore made, when it fails. No code drops a schema."""
-        if self._connection is None:
+        a restore made, when it fails. No code drops a schema. A
+        connection closed by the failure is replaced by a new one."""
+        if self._engine is None:
             raise StorageError("the database is not open")
         with self.translated():
-            self._connection.rollback()
-            made = sa.MetaData()
-            made.reflect(self._connection)
-            made.drop_all(self._connection)
-            self._connection.commit()
+            connection = self._connection
+            if connection is None or connection.closed:
+                with self._engine.connect() as fresh:
+                    _drop_all(fresh)
+                return
+            connection.rollback()
+            _drop_all(connection)
 
     @contextmanager
     def fixed(self, lock: threading.RLock) -> Iterator[sa.Connection]:
@@ -441,6 +444,13 @@ def lock_key(schema: str) -> int:
     process, and for every role that knows the name."""
     digest = hashlib.sha256(f"benethos-mailbox-service:{schema}".encode()).digest()
     return int.from_bytes(digest[:8], "big", signed=True)
+
+
+def _drop_all(connection: sa.Connection) -> None:
+    made = sa.MetaData()
+    made.reflect(connection)
+    made.drop_all(connection)
+    connection.commit()
 
 
 def _kept_key(connection: sa.Connection) -> int | None:

@@ -24,7 +24,7 @@ from benethos_mailbox_service.data.secrets import cipher
 from benethos_mailbox_service.data.storage import Database, ServerPlace
 from benethos_mailbox_service.errors import StorageError
 
-from ..postgres_helpers import role, schemas
+from ..postgres_helpers import connect, role, schemas
 
 MASTER = cipher.new_key()
 
@@ -141,4 +141,18 @@ def test_a_restore_that_dies_half_way_is_not_opened(
         monkeypatch.setattr(Database, "fill", fill)
         with pytest.raises(StorageError, match="a move or restore into this database"):
             Database(place=ServerPlace(server))
+    source.close()
+
+
+def test_a_failed_restore_names_its_cause(source: Database, backup: Path) -> None:
+    from psycopg import sql
+
+    with role() as server, connect() as admin:
+        admin.execute(
+            sql.SQL("REVOKE CREATE ON SCHEMA {0} FROM {0}").format(
+                sql.Identifier(server.role)
+            )
+        )
+        with pytest.raises(StorageError, match="InsufficientPrivilege"):
+            restore_on_server(backup, MASTER, server)
     source.close()
