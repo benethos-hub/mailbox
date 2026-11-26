@@ -22,24 +22,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   seconds (30). A server older than PostgreSQL 19 is refused, and so is
   a second service on the same schema. The driver comes with the extra
   `postgres`: `pip install 'benethos-mailbox-service[postgres]'`. The
-  image of the service has it.
-- While the service cannot reach its database server, every route
-  answers `503` at once with the code `service_unavailable`, one message
-  and `Retry-After`, `/health` too. It tries again after a pause that
-  doubles from one second to thirty, and goes on without a restart. The
-  log says once that the database went away, with the cause, and once
-  that it is back (`system.db_away`, `system.db_back`).
-- `mailbox_storage_outages_total` in `GET /v1/metrics` counts the times
-  the database went away since the start, and a fifth alert,
-  `MailboxNotAnswering`, fires when there are no figures for five
-  minutes: the service is gone, or cannot reach its database. A service
-  whose database lock another service took while it was away stops with
-  an error (`system.db_taken`).
-- `backup FILE` on PostgreSQL writes format 3, the export of the records,
-  read from one moment while the service runs. Format 2, the file of a
-  SQLite database, is refused there. `backup verify` there decrypts
-  nothing onto a disk: a backup of format 3 is read block by block into
-  a database in memory, one of format 1 or 2 into memory whole.
+  image of the service has it. On SQLite nothing changes but the fixes
+  below, which hold for a failure of either database.
 - The compose file of `containers/production/mailbox-service` runs
   PostgreSQL 19 with the profile `postgres`, in a network without a way
   out and without a port on the host. `setup.sh` makes the role
@@ -53,6 +37,16 @@ adheres to [Semantic Versioning](https://semver.org/).
   with the table, the column and how many. `--check` does only that.
   After the copy, every table is counted and compared on both sides. A
   database a move did not finish is not opened by the service.
+- Backup format 3: `benethos-mailbox-service backup --format 3 FILE`
+  writes the records as an export, encrypted in blocks as format 2,
+  independent of the file of the database. `backup FILE` still writes
+  format 2. `backup verify` and `restore` read formats 1, 2 and 3 and
+  name the format, as does the log line of a backup and a restore.
+- `backup FILE` on PostgreSQL writes format 3, the export of the records,
+  read from one moment while the service runs. Format 2, the file of a
+  SQLite database, is refused there. `backup verify` there decrypts
+  nothing onto a disk: a backup of format 3 is read block by block into
+  a database in memory, one of format 1 or 2 into memory whole.
 - `restore FILE` on PostgreSQL reads a backup of format 3 into the
   schema of the role, which must hold no table yet, and brings it to
   the schema of this version. It refuses while the service runs on that
@@ -60,12 +54,18 @@ adheres to [Semantic Versioning](https://semver.org/).
   schema. A backup of format 1 or 2 is refused there, with the two
   steps that take it to PostgreSQL: restore it with
   `MAILBOX_SERVICE_STORAGE=sqlite`, then move it.
-
-- Backup format 3: `benethos-mailbox-service backup --format 3 FILE`
-  writes the records as an export, encrypted in blocks as format 2,
-  independent of the file of the database. `backup FILE` still writes
-  format 2. `backup verify` and `restore` read formats 1, 2 and 3 and
-  name the format, as does the log line of a backup and a restore.
+- While the service cannot reach its database server, every route
+  answers `503` at once with the code `service_unavailable`, one message
+  and `Retry-After`, `/health` too. It tries again after a pause that
+  doubles from one second to thirty, and goes on without a restart. The
+  log says once that the database went away, with the cause, and once
+  that it is back (`system.db_away`, `system.db_back`).
+- `mailbox_storage_outages_total` in `GET /v1/metrics` counts the times
+  the database went away since the start, and a fifth alert,
+  `MailboxNotAnswering`, fires when there are no figures for five
+  minutes: the service is gone, or cannot reach its database. A service
+  whose database lock another service took while it was away stops with
+  an error (`system.db_taken`).
 
 - An outbox. `POST /v1/accounts/{id}/send` and
   `POST /v1/accounts/{id}/drafts/{draft_id}/send` take `outbox: true` or
