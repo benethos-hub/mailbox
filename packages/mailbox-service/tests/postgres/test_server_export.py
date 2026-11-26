@@ -7,6 +7,8 @@ from __future__ import annotations
 import io
 from datetime import UTC, datetime
 
+import sqlalchemy as sa
+
 from benethos_mailbox_service.data.export import read_export, write_export
 from benethos_mailbox_service.data.models import ChangeRecord
 from benethos_mailbox_service.data.storage import Database, repositories_on
@@ -56,3 +58,28 @@ def test_a_purged_feed_counts_on_after_an_export(source: Database) -> None:
         finally:
             target.close()
     assert numbers == [5, 7, 12]
+
+
+def test_every_counting_key_counts_on_after_an_export(source: Database) -> None:
+    """The rows keep their numbers, and the sequence behind each counting
+    key hands out a higher one afterwards."""
+    data = _exported(source)
+    counted = {"changes", "message_index", "thread_links", "webhook_attempts"}
+    with schema() as name:
+        target = database(name)
+        try:
+            read_export(io.BytesIO(data), target)
+            with target.connected() as conn:
+                for table in sorted(counted):
+                    top = conn.execute(
+                        sa.text(f"SELECT max(seq) FROM {table}")
+                    ).scalar()
+                    following = conn.execute(
+                        sa.text(
+                            f"SELECT nextval(pg_get_serial_sequence('{table}', 'seq'))"
+                        )
+                    ).scalar()
+                    assert top and following > top, table
+                conn.rollback()
+        finally:
+            target.close()

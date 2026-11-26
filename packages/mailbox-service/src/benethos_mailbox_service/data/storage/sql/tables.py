@@ -105,6 +105,21 @@ def align_changes(conn: sa.Connection) -> None:
         count_on_from(conn, changes, int(last))
 
 
+def align_counter(conn: sa.Connection, table: Table) -> None:
+    """The counting key of ``table``, where it has one, at least at the
+    highest number its rows hold. Rows written with their numbers leave
+    the sequence of PostgreSQL where it was, and it would hand one of
+    them out again."""
+    defined = METADATA.tables[table.name]
+    counted = [c for c in defined.primary_key.columns if c.autoincrement is True]
+    if not counted:
+        return
+    [key] = counted
+    top = conn.execute(sa.select(sa.func.max(key))).scalar()
+    if top is not None:
+        count_on_from(conn, defined, int(top))
+
+
 def read_chunk(
     conn: sa.Connection, table: Table, after: Sequence[Any] | None, size: int
 ) -> list[tuple[Any, ...]]:
