@@ -3,7 +3,8 @@ SQLite to a schema on PostgreSQL or back (``storage move``).
 
 Before anything is written, every value of the source is held to the
 kind of its column: SQLite keeps a text in a column of numbers or of
-bytes, which PostgreSQL refuses or takes as something else. A value that
+bytes, and the character NUL in a text, which PostgreSQL refuses or
+takes as something else. A value that
 does not fit stops the move. The message names the table, the column and
 how many, never a value.
 
@@ -27,7 +28,7 @@ from pathlib import Path
 from benethos_mailbox_common.paths import locks
 
 from ..common.clock import iso, utc_now
-from ..errors import MailboxServiceError
+from ..errors import StorageInUseError
 from .export import row_line
 from .storage import (
     MOVING,
@@ -67,7 +68,7 @@ def misfits(records: Records) -> list[Misfit]:
         counts = [0] * len(fits)
         for row in records.rows(table.name):
             for index, value in enumerate(row):
-                if value is not None and not isinstance(value, fits[index]):
+                if value is not None and not _fits(value, fits[index]):
                     counts[index] += 1
         found += [
             Misfit(table.name, column, count)
@@ -75,6 +76,14 @@ def misfits(records: Records) -> list[Misfit]:
             if count
         ]
     return found
+
+
+def _fits(value: object, kind: type) -> bool:
+    """Whether ``value`` fits a column of ``kind``. A text that holds the
+    character NUL does not: SQLite keeps it, PostgreSQL refuses it."""
+    if not isinstance(value, kind):
+        return False
+    return not (isinstance(value, str) and "\x00" in value)
 
 
 def refused(found: list[Misfit]) -> MoveError:
@@ -226,7 +235,7 @@ def _server(side: Server) -> Iterator[ServerPlace]:
         place.open(SCHEMA_VERSION, SCHEMA_VERSION)
         try:
             held.enter_context(place.claimed())
-        except MailboxServiceError:
+        except StorageInUseError:
             raise _running() from None
         yield place
 

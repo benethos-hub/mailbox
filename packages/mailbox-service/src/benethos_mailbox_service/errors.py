@@ -130,6 +130,10 @@ class StorageError(MailboxServiceError):
     code = "storage_error"
 
 
+class StorageInUseError(StorageError):
+    """A running service holds the lock of the database on a server."""
+
+
 class StorageUnavailableError(StorageError):
     """The service's own database cannot be reached, for now. Its message
     is the same whatever happened: ``cause`` says what, for the log

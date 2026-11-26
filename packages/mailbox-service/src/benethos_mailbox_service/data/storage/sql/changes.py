@@ -115,8 +115,8 @@ def _never_less(key: str, value: Any, dialect: sa.Dialect) -> sa.Executable:
     def kept(excluded: Any) -> dict[str, Any]:
         return {
             "value": greater(
-                sa.cast(meta.c.value, sa.Integer),
-                sa.cast(excluded.value, sa.Integer),
+                sa.cast(meta.c.value, sa.BigInteger),
+                sa.cast(excluded.value, sa.BigInteger),
                 dialect,
             )
         }

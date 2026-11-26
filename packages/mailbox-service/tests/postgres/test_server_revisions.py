@@ -1,7 +1,7 @@
 """The revisions on PostgreSQL: a refused step leaves nothing, a step
 outside a transaction runs what a transaction refuses, and a revision
 that asks for a copy of the database is refused, since a server keeps
-none."""
+none. A database of a schema newer than this version is refused."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ from benethos_mailbox_service.data.storage.sql import revisions
 from benethos_mailbox_service.data.storage.sql.dialect import server_engine
 from benethos_mailbox_service.errors import StorageError
 
-from ..postgres_helpers import admin, database, schema
+from ..postgres_helpers import admin, connect, database, schema
 from ..revision_helpers import second, steps_in
 
 
@@ -163,3 +163,24 @@ def test_a_revision_that_asks_for_a_copy_is_refused(
             assert again.schema_version() == 26
         finally:
             again.close()
+
+
+def test_a_database_of_a_newer_schema_is_refused() -> None:
+    from psycopg import sql
+
+    with schema() as name:
+        database(name).close()
+        with connect() as conn:
+            conn.execute(
+                sql.SQL(
+                    "UPDATE {}.meta SET value = '27' WHERE key = 'schema_version'"
+                ).format(sql.Identifier(name))
+            )
+            conn.execute(
+                sql.SQL("UPDATE {}.alembic_version SET version_num = '0027'").format(
+                    sql.Identifier(name)
+                )
+            )
+        with pytest.raises(StorageError, match="schema 27 is newer") as refused:
+            database(name)
+        assert f"({revisions.SCHEMA_VERSION})" in str(refused.value)

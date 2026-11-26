@@ -391,7 +391,9 @@ open that database: set the schema aside and move again.
 
 `backup` works as under [Operation](#operation) and writes format 3,
 read from one moment while the service runs. `restore` goes into an
-empty schema only, after the service is stopped. A backup made on
+empty schema only, after the service is stopped. A restore that does
+not finish leaves the mark of a move as well: set the schema aside and
+restore again. A backup made on
 SQLite in format 1 or 2 goes there in two steps: `restore` with
 `MAILBOX_SERVICE_STORAGE=sqlite`, then the move above.
 

@@ -96,6 +96,12 @@ def test_a_lock_taken_meanwhile_is_reported() -> None:
                     clock.now += 1
                     with pytest.raises(StorageError, match="another service took"):
                         users.list()
+                    # From then on nothing goes through, and the routes
+                    # answer 503.
+                    with pytest.raises(StorageError, match="another service took"):
+                        users.save(User(id="usr_2", name="two"))
+                    assert db.unavailable() is not None
+                    assert [u.id for u in repositories_on(other).users.list()] == []
         finally:
             db.close()
             other.close()

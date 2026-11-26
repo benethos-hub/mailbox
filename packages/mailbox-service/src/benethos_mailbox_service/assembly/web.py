@@ -25,18 +25,21 @@ def create_app(
     services: Services | None = None,
     logbook: LogBook | None = None,
     settings_file: Path | None = None,
-    stop: Callable[[], None] | None = None,
+    stop: Callable[[str], None] | None = None,
+    held: bool | None = None,
 ) -> FastAPI:
     """The app on ``services``, else on services built from ``settings``
     with ``logbook`` behind the log page. ``settings_file`` is where the
     settings came from, for the log. ``stop`` ends the server, should a
-    background loop end."""
+    background loop end. ``held``: the lock of a running service on the
+    database, taken already by the caller, False when another service
+    marked the file, None when the app is to take it."""
     settings = settings or Settings()
     services = services or build_services(settings, logbook=logbook)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-        async with serving(services, settings, settings_file, stop):
+        async with serving(services, settings, settings_file, stop, held):
             yield
 
     app = FastAPI(

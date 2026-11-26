@@ -1,11 +1,10 @@
 """Encrypted backups of the whole database: ``backups`` writes, reads,
 checks and restores them, ``blocks`` is the file of blocks and its
-encryption."""
+encryption, ``manifest`` the head of the file."""
 
 from __future__ import annotations
 
 from .backups import (
-    Manifest,
     create_backup,
     read_backup,
     restore_backup,
@@ -15,6 +14,7 @@ from .backups import (
     write_backup,
 )
 from .blocks import BLOCK, MAGIC, MAGIC_1, MAGIC_3, BackupError
+from .manifest import Manifest
 
 __all__ = [
     "BLOCK",

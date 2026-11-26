@@ -12,22 +12,24 @@ adheres to [Semantic Versioning](https://semver.org/).
   stays the default: `MAILBOX_SERVICE_STORAGE=postgres` keeps the
   records in a schema on a PostgreSQL server, named after the role the
   service signs in as. `MAILBOX_SERVICE_DATABASE_URL`
-  (`postgresql://<role>@<host>:<port>/<database>`, without a password,
-  a query or a fragment)
-  and `MAILBOX_SERVICE_DATABASE_PASSWORD_FILE` name it. An empty
-  password file is refused.
-  `MAILBOX_SERVICE_DATABASE_TLS` is `verify` by default: a host other
-  than this one is reached only over TLS with a checked certificate and
-  name, against `MAILBOX_SERVICE_DATABASE_CA_FILE` or the authorities of
-  the system. `off` goes without TLS and is said at start. `serve`
-  waits for the database for up to `MAILBOX_SERVICE_DATABASE_START_WAIT`
-  seconds (30). A server older than PostgreSQL 19 is refused, and so is
-  a second service on the same schema. The lock that refuses it is keyed
-  by a random number the schema keeps, so another role of the server
-  cannot hold it ahead. The driver comes with the extra
-  `postgres`: `pip install 'benethos-mailbox-service[postgres]'`. The
-  image of the service has it. On SQLite nothing changes but the fixes
-  below, which hold for a failure of either database.
+  (`postgresql://<role>@<host>:<port>/<database>`, without a password, a
+  query or a fragment) and `MAILBOX_SERVICE_DATABASE_PASSWORD_FILE` name
+  it. An empty password file is refused. `MAILBOX_SERVICE_DATABASE_TLS`
+  is `verify` by default: a host other than this one is reached only
+  over TLS with a checked certificate and name, against
+  `MAILBOX_SERVICE_DATABASE_CA_FILE` or the authorities of the system.
+  `off` goes without TLS and is said at start. `serve` waits for the
+  database for up to `MAILBOX_SERVICE_DATABASE_START_WAIT` seconds (30)
+  while the server cannot be reached. Any other refusal ends it at once.
+  A server older than PostgreSQL 19 is refused, and so are a database a
+  newer version made and a second service on the same schema. The lock
+  that refuses it is keyed by a random number the schema keeps, so
+  another role of the server cannot hold it ahead. A second `serve`
+  ends at once with the reason. The driver comes with
+  the extra `postgres`:
+  `pip install 'benethos-mailbox-service[postgres]'`. The image of the
+  service has it. On SQLite nothing changes but the fixes below, which hold for a
+  failure of either database.
 - The compose file of `containers/production/mailbox-service` runs
   PostgreSQL 19 with the profile `postgres`, in a network without a way
   out and without a port on the host. `setup.sh` makes the role
@@ -38,7 +40,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   The target must be empty, a running service on either side refuses
   it, and the source stays as it is. Before anything is written, every
   value is held to its column: a value that does not fit stops the move,
-  with the table, the column and how many. `--check` does only that.
+  with the table, the column and how many. A text that holds the
+  character NUL does not fit: PostgreSQL refuses it. `--check` does only that.
   After the copy, every table is counted and compared on both sides. A
   database a move did not finish is not opened by the service.
 - Backup format 3: `benethos-mailbox-service backup --format 3 FILE`
@@ -58,9 +61,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `restore FILE` on PostgreSQL reads a backup of format 3 into the
   schema of the role, which must hold no table yet, and brings it to
   the schema of this version. It refuses while the service runs on that
-  schema. When it fails, the tables it made are dropped again, never the
-  schema. A backup of format 1 or 2 is refused there, with the two
-  steps that take it to PostgreSQL: restore it with
+  schema. When it fails, it says why, and the tables it made are
+  dropped again, never the schema: when they cannot be, it says so. One
+  that dies half way leaves the mark of a move, and the service does not
+  open that database. A backup of format 1 or 2 is refused there, with
+  the two steps that take it to PostgreSQL: restore it with
   `MAILBOX_SERVICE_STORAGE=sqlite`, then move it.
 - While the service cannot reach its database server, every route
   answers `503` at once with the code `service_unavailable`, one message
@@ -73,7 +78,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   `MailboxNotAnswering`, fires when there are no figures for five
   minutes: the service is gone, or cannot reach its database. A service
   whose database lock another service took while it was away stops with
-  an error (`system.db_taken`).
+  an error (`system.db_taken`), and `serve` ends with that reason. Until
+  it has stopped it writes nothing more, and every route answers `503`.
 
 - An outbox. `POST /v1/accounts/{id}/send` and
   `POST /v1/accounts/{id}/drafts/{draft_id}/send` take `outbox: true` or
@@ -253,6 +259,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `restore` and `backup verify` refuse a backup whose manifest holds a
+  field of the wrong type, such as the schema as a text, with a message
+  instead of a traceback.
 - A failure of the service's own database while the outbox prepares or
   sends a job no longer ends the job as `failed` with `storage_error`.
   The job stays `sending` and is looked into as one whose outcome is

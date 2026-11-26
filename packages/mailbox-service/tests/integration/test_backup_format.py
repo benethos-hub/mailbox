@@ -50,6 +50,21 @@ SEED = Path(__file__).parents[1] / "data" / "storage" / "seeds" / "schema_25.sql
         (b"hello", "not a backup"),
         (MAGIC + b"no newline", "truncated"),
         (MAGIC + b"{not json}\n", "unreadable manifest"),
+        (
+            MAGIC_3 + b'{"service_version": "1", "schema_version": "27",'
+            b' "created_at": "now", "sha256": "x", "rows": {}}\n',
+            "unreadable manifest",
+        ),
+        (
+            MAGIC_3 + b'{"service_version": "1", "schema_version": 26,'
+            b' "created_at": "now", "sha256": "x", "rows": []}\n',
+            "unreadable manifest",
+        ),
+        (
+            MAGIC + b'{"service_version": "1", "schema_version": true,'
+            b' "created_at": "now", "sha256": "x"}\n',
+            "unreadable manifest",
+        ),
     ],
 )
 def test_broken_files(tmp_path: Path, content: bytes, message: str) -> None:

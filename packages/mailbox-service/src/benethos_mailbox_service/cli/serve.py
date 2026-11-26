@@ -41,14 +41,14 @@ STARTUP_FAILURE = 3
 
 
 class _Stop:
-    """Ends the server once it runs, and remembers that it did."""
+    """Ends the server once it runs, and remembers why."""
 
     def __init__(self) -> None:
         self.server: Any = None
-        self.asked = False
+        self.reason = ""
 
-    def __call__(self) -> None:
-        self.asked = True
+    def __call__(self, reason: str) -> None:
+        self.reason = reason
         if self.server is not None:
             self.server.should_exit = True
 
@@ -72,44 +72,56 @@ def run(args: argparse.Namespace) -> None:
     config = log_config(settings.log_level, book, form=settings.log_format)
     logging.config.dictConfig(config)
     stop = _Stop()
-    # The log names the settings and the database once the app starts.
-    app = waited(
-        lambda: assembly.create_app(
+    services = waited(lambda: assembly.build_services(settings, logbook=book), settings)
+    with contextlib.ExitStack() as running:
+        # Closed at the end also when the server never ran the end of
+        # the app, which closes them otherwise. Closing twice does no harm.
+        running.callback(services.close)
+        # The lock of a running service, taken before the server starts:
+        # a second service on a database server ends here with the
+        # reason, not in the start of the server.
+        held = (
+            None
+            if services.store is None
+            else running.enter_context(services.store.serving())
+        )
+        # The log names the settings and the database once the app starts.
+        app = assembly.create_app(
             settings,
-            logbook=book,
+            services=services,
             settings_file=settings_file(args.env_file),
             stop=stop,
-        ),
-        settings,
-    )
-    # What uvicorn.run does for one process without reload: the server
-    # built here, so a loop that ends can stop it.
-    server = uvicorn.Server(
-        uvicorn.Config(
-            app,
-            host=args.host or settings.host,
-            port=args.port or settings.port,
-            log_config=config,
-            log_level=settings.log_level,
-            forwarded_allow_ips=settings.forwarded_allow_ips,
+            held=held,
         )
-    )
-    stop.server = server
-    # Ctrl-C at a terminal ends serve as it ended uvicorn.run, without a
-    # traceback. The server has shut down by then.
-    with contextlib.suppress(KeyboardInterrupt):
-        server.run()
+        # What uvicorn.run does for one process without reload: the
+        # server built here, so a loop that ends can stop it.
+        server = uvicorn.Server(
+            uvicorn.Config(
+                app,
+                host=args.host or settings.host,
+                port=args.port or settings.port,
+                log_config=config,
+                log_level=settings.log_level,
+                forwarded_allow_ips=settings.forwarded_allow_ips,
+            )
+        )
+        stop.server = server
+        # Ctrl-C at a terminal ends serve as it ended uvicorn.run, without
+        # a traceback. The server has shut down by then.
+        with contextlib.suppress(KeyboardInterrupt):
+            server.run()
     if not server.started:
         sys.exit(STARTUP_FAILURE)
-    if stop.asked:
-        raise MailboxServiceError("a background loop ended, the service stopped")
+    if stop.reason:
+        raise MailboxServiceError(stop.reason)
 
 
 def waited(build: Callable[[], T], settings: Settings) -> T:
     """What ``build`` makes, which opens the database. On a database
     server tried again for up to ``database_start_wait`` seconds while
-    the database cannot be opened, then the last failure, naming the
-    host and the role. Another storage is tried once."""
+    the server cannot be reached, then the last failure, naming the
+    host and the role. Any other refusal ends at once: it would not heal
+    by waiting. Another storage is tried once."""
     if settings.storage != "postgres" or settings.database_url is None:
         return build()
     return _again(build, settings, clock=Waiting.clock, sleep=Waiting.sleep)
@@ -122,18 +134,21 @@ def _again(
     clock: Callable[[], float],
     sleep: Callable[[float], None],
 ) -> T:
-    from ..errors import StorageError
+    from ..errors import StorageError, StorageUnavailableError
 
     end = clock() + settings.database_start_wait
     while True:
         try:
             return build()
-        except StorageError as exc:
+        except StorageUnavailableError as exc:
             if clock() + START_RETRY > end:
                 parts = database_url_parts(settings.database_url or "")
+                failed = (
+                    f"the database failed: {exc.cause}" if exc.cause else exc.message
+                )
                 raise StorageError(
                     f"the database on {parts.hostname} as {parts.username} could not"
                     f" be opened within {settings.database_start_wait} seconds:"
-                    f" {exc.message}"
+                    f" {failed}"
                 ) from None
         sleep(START_RETRY)

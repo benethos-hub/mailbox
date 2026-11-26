@@ -15,8 +15,12 @@ import pytest
 from benethos_mailbox_service.data.export import write_export
 from benethos_mailbox_service.data.models import ChangeRecord
 from benethos_mailbox_service.data.move import MoveError, move_records
-from benethos_mailbox_service.data.storage import Database, repositories_on
-from benethos_mailbox_service.errors import StorageError
+from benethos_mailbox_service.data.storage import (
+    Database,
+    ServerPlace,
+    repositories_on,
+)
+from benethos_mailbox_service.errors import StorageError, StorageUnavailableError
 
 from ..postgres_helpers import database, schema, server
 
@@ -118,5 +122,20 @@ def test_a_move_that_fails_halfway_leaves_a_schema_the_service_refuses(
         with pytest.raises(StorageError, match="the server went away"):
             move_records(tmp_path / "source.db", server(name))
         monkeypatch.undo()
-        with pytest.raises(StorageError, match="a storage move into this database"):
+        with pytest.raises(StorageError, match="a move or restore into this database"):
             database(name)
+
+
+def _away(place: ServerPlace) -> None:
+    """A server that is gone while the lock is asked for."""
+    raise StorageUnavailableError(1, "AdminShutdown (57P01)")
+
+
+def test_a_server_away_at_the_lock_is_no_running_service(
+    source: Database, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source.close()
+    with schema() as name:
+        monkeypatch.setattr(ServerPlace, "claimed", _away)
+        with pytest.raises(StorageUnavailableError):
+            move_records(tmp_path / "source.db", server(name))

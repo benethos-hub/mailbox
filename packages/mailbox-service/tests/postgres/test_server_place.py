@@ -26,7 +26,14 @@ from benethos_mailbox_service.data.storage import (
 from benethos_mailbox_service.data.storage.sql.schema import METADATA
 from benethos_mailbox_service.errors import NotFoundError, StorageError
 
-from ..postgres_helpers import connect, database, in_transaction, role, schema
+from ..postgres_helpers import (
+    connect,
+    database,
+    in_transaction,
+    role,
+    schema,
+    server,
+)
 
 
 def _definitions_differ(conn: sa.Connection) -> list[str]:
@@ -216,3 +223,39 @@ def test_a_change_undone_leaves_a_gap_the_feed_reads_past() -> None:
     assert [c.record.id for c in read] == ["msg_1", "msg_3", "msg_4"]
     assert read[1].seq > read[0].seq + 1
     assert [c.record.id for c in later] == ["msg_3", "msg_4"]
+
+
+def test_undo_on_a_lost_connection_does_not_connect_again() -> None:
+    with schema() as name:
+        place = ServerPlace(server(name))
+        try:
+            conn, _ = place.open(26, 26)
+            connects: list[object] = []
+            sa.event.listen(conn.engine, "connect", lambda *_: connects.append(1))
+            conn.invalidate()
+            place.undo()
+            assert connects == []
+        finally:
+            place.close()
+
+
+def test_the_feed_counts_on_past_the_largest_integer() -> None:
+    from psycopg import sql
+
+    with schema() as name:
+        db = database(name)
+        stores = repositories_on(db)
+        stores.accounts.add(
+            Account(id="acc_1", provider=ProviderType.IMAP, email="a@example.com")
+        )
+        try:
+            with connect() as admin:
+                admin.execute(
+                    sql.SQL(
+                        "SELECT setval(pg_get_serial_sequence({}, 'seq'), {})"
+                    ).format(sql.Literal(f"{name}.changes"), sql.Literal(2**31 - 1))
+                )
+            stores.changes.append([_change(1)])
+            assert stores.changes.last() == 2**31
+        finally:
+            db.close()

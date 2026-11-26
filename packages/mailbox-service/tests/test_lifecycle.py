@@ -44,17 +44,18 @@ async def test_a_loop_that_ends_stops_the_server_once(
 ) -> None:
     broken_dispatcher(services, monkeypatch)
     closed = counted_close(services, monkeypatch)
-    stops: list[bool] = []
+    stops: list[str] = []
     stopped = anyio.Event()
 
-    def stop() -> None:
-        stops.append(True)
+    def stop(reason: str) -> None:
+        stops.append(reason)
         stopped.set()
 
     with caplog.at_level(logging.ERROR), anyio.fail_after(5):
         async with serving(services, settings, None, stop):
             await stopped.wait()
-    assert stops == [True] and closed == [True]
+    assert stops == ["a background loop ended, the service stopped"]
+    assert closed == [True]
     assert any(r.name.endswith("loop_ended") for r in caplog.records)
 
 
@@ -93,12 +94,12 @@ async def test_a_lock_taken_meanwhile_stops_the_server(
 ) -> None:
     store = _Taken()
     held = replace(services, repositories=replace(services.repositories, store=store))
-    stops: list[bool] = []
+    stops: list[str] = []
     with caplog.at_level(logging.ERROR), anyio.fail_after(5):
-        async with serving(held, settings, None, lambda: stops.append(True)):
+        async with serving(held, settings, None, stops.append):
             for report in store.reports:
                 report(Availability(away=False, seconds=3.0, lock_lost=True))
-    assert stops == [True]
+    assert stops == ["another service took this database while it was away"]
     [line] = [r for r in caplog.records if r.name.endswith("db_taken")]
     assert line.levelno == logging.ERROR
     assert "another service" in line.getMessage()

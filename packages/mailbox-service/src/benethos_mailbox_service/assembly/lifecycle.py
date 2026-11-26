@@ -40,15 +40,20 @@ async def serving(
     services: Services,
     settings: Settings,
     settings_file: Path | None,
-    stop: Callable[[], None] | None = None,
+    stop: Callable[[str], None] | None = None,
+    held: bool | None = None,
 ) -> AsyncIterator[None]:
     """While the app serves: the database held, the start and the end in
     the log, the background work running. Should a background loop end,
-    ``stop`` ends the server, and the service stops as it would at a
-    signal. Without ``stop`` the loop's error ends the background work."""
-    with ExitStack() as held:
+    ``stop`` ends the server with the reason, and the service stops as
+    it would at a signal. Without ``stop`` the loop's error ends the
+    background work. ``held``: the lock of a running service, taken by
+    the caller already, or None to take it here."""
+    with ExitStack() as holding:
         store = services.store
-        if store is not None and not held.enter_context(store.serving()):
+        if store is not None and held is None:
+            held = holding.enter_context(store.serving())
+        if store is not None and not held:
             services.activity.record(said.DatabaseShared(by=SERVICE))
         if store is not None:
             store.watch(partial(_taken, services.activity, stop))
@@ -77,7 +82,7 @@ def _purge(services: Services) -> None:
 
 @asynccontextmanager
 async def _running(
-    services: Services, stop: Callable[[], None] | None
+    services: Services, stop: Callable[[str], None] | None
 ) -> AsyncIterator[None]:
     """The background work while the app serves, then every connection
     closed, also when a loop ended with an error."""
@@ -109,7 +114,7 @@ async def _loop(
     activity: ActivityLog,
     by: Actor,
     run: Callable[[], Awaitable[None]],
-    stop: Callable[[], None] | None,
+    stop: Callable[[str], None] | None,
 ) -> None:
     """A background loop, which runs until the service stops. Should it
     end otherwise, the log says so and ``stop`` ends the server: a
@@ -121,11 +126,11 @@ async def _loop(
         activity.record(said.LoopEnded(by=by, error=exc))
         if stop is None:
             raise
-        stop()
+        stop("a background loop ended, the service stopped")
 
 
 def _taken(
-    activity: ActivityLog, stop: Callable[[], None] | None, change: Availability
+    activity: ActivityLog, stop: Callable[[str], None] | None, change: Availability
 ) -> None:
     """Another service took the database while it was away: the log
     says so at ERROR, and ``stop`` ends the server, as when a loop ends."""
@@ -133,4 +138,4 @@ def _taken(
         return
     activity.record(said.DatabaseTaken(by=SERVICE))
     if stop is not None:
-        stop()
+        stop("another service took this database while it was away")
