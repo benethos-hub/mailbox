@@ -24,7 +24,7 @@ from typing import Literal
 import sqlalchemy as sa
 
 from ....common.hosts import is_loopback_host
-from ....errors import StorageError, StorageUnavailableError
+from ....errors import StorageError, StorageInUseError, StorageUnavailableError
 from ..migrated import Migrated
 from . import revisions
 from .dialect import reading_fixed, server_engine
@@ -234,7 +234,7 @@ class ServerPlace:
 
     def _take(self, connection: sa.Connection, key: int) -> None:
         if not self._locked(connection, key):
-            raise StorageError(
+            raise StorageInUseError(
                 "another service runs on this database: one service per"
                 " schema of a database server"
             )

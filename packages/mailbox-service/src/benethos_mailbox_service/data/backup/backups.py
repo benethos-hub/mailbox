@@ -31,7 +31,7 @@ from typing import BinaryIO
 from benethos_mailbox_common.paths import locks
 
 from ...common.clock import iso, utc_now
-from ...errors import MailboxServiceError
+from ...errors import MailboxServiceError, StorageInUseError
 from ..export import ExportError, read_export, write_export
 from ..files import create_private, free_path
 from ..storage import (
@@ -374,7 +374,7 @@ def _held(place: ServerPlace) -> Iterator[None]:
     try:
         serving = place.claimed()
         serving.__enter__()
-    except MailboxServiceError:
+    except StorageInUseError:
         raise BackupError(
             "the service is running on this database: stop it first"
         ) from None

@@ -47,7 +47,8 @@ class Place(Protocol):
 
     def serving(self) -> AbstractContextManager[bool]:
         """Mark the database as used by a running service while the block
-        runs. False when another service marked it already."""
+        runs. A file yields False when another service marked it
+        already, a server raises StorageInUseError."""
         ...
 
     def snapshot_file(self, lock: threading.RLock) -> AbstractContextManager[Path]:

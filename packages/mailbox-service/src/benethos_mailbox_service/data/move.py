@@ -27,7 +27,7 @@ from pathlib import Path
 from benethos_mailbox_common.paths import locks
 
 from ..common.clock import iso, utc_now
-from ..errors import MailboxServiceError
+from ..errors import StorageInUseError
 from .export import row_line
 from .storage import (
     MOVING,
@@ -226,7 +226,7 @@ def _server(side: Server) -> Iterator[ServerPlace]:
         place.open(SCHEMA_VERSION, SCHEMA_VERSION)
         try:
             held.enter_context(place.claimed())
-        except MailboxServiceError:
+        except StorageInUseError:
             raise _running() from None
         yield place
 

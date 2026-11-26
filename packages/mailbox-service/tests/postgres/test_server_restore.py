@@ -22,7 +22,7 @@ from benethos_mailbox_service.data.backup import (
 from benethos_mailbox_service.data.export import write_export
 from benethos_mailbox_service.data.secrets import cipher
 from benethos_mailbox_service.data.storage import Database, ServerPlace
-from benethos_mailbox_service.errors import StorageError
+from benethos_mailbox_service.errors import StorageError, StorageUnavailableError
 
 from ..postgres_helpers import connect, role, schemas
 
@@ -154,5 +154,18 @@ def test_a_failed_restore_names_its_cause(source: Database, backup: Path) -> Non
             )
         )
         with pytest.raises(StorageError, match="InsufficientPrivilege"):
+            restore_on_server(backup, MASTER, server)
+    source.close()
+
+
+def test_a_server_away_at_the_lock_is_no_running_service(
+    source: Database, backup: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def away(place: ServerPlace) -> None:
+        raise StorageUnavailableError(1, "AdminShutdown (57P01)")
+
+    monkeypatch.setattr(ServerPlace, "claimed", away)
+    with role() as server:
+        with pytest.raises(StorageUnavailableError):
             restore_on_server(backup, MASTER, server)
     source.close()

@@ -205,8 +205,9 @@ class Database:
 
     def serving(self) -> AbstractContextManager[bool]:
         """Mark the database as used by a running service, for as long as
-        the block runs, so that a restore refuses to replace it. Yields
-        False when another service marked it already."""
+        the block runs, so that a restore refuses to replace it. A file
+        yields False when another service marked it already, a server
+        raises StorageInUseError."""
         return self._place.serving()
 
     def tables(self) -> list[Table]:
