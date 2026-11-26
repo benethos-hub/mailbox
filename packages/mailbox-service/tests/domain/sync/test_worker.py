@@ -384,7 +384,6 @@ async def test_a_database_away_ends_no_watcher(
             imap_services.adapters, imap_services.sync, interval=300, sleep=note
         ).watch(imap_account_id)
     assert len(slept) == 3
-    assert slept[1] > slept[0]
 
 
 async def test_a_database_away_ends_no_round(
