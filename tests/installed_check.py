@@ -252,7 +252,8 @@ class StandIn(BaseHTTPRequestHandler):
             status, body = 200, {"status": "ok", "version": self.version}
         elif self.path == "/v1/me" and StandIn.trouble:
             message = "the stand-in is in trouble"
-            status, body = 503, {"error": {"code": "unavailable", "message": message}}
+            status = 503
+            body = {"error": {"code": "service_unavailable", "message": message}}
         elif self.path == "/v1/me":
             me = {"user_id": "usr_1", "name": "check", "accounts": [], "operations": []}
             status, body = 200, me

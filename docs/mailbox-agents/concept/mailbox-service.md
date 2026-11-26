@@ -189,7 +189,10 @@ service of their own version (decided 2026-11-22):
   version the agents take and says to run the agents of the service's
   version. It is asked in every pass and not only at the start, since a
   service can be replaced by another release between two passes without
-  one request failing.
+  one request failing. A `503` at `/health` is no other version: it is
+  the service away, as while it cannot reach its database
+  (`service_unavailable`). The pass then ends at the question for the
+  version and waits as for a service away **(to verify)**.
 - **In every stage, with no setting to pass it.** The stage `shadow` is
   refused as well: what it records would be read from a service nobody
   measured. A warning alone would go unread in a process that runs for
