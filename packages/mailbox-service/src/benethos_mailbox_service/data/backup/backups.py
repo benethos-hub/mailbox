@@ -159,10 +159,7 @@ def _sealed(
     by block. Returns the SHA-256 of the plain bytes. A backup that cannot
     be finished is removed."""
     header = head(manifest)
-    try:
-        create_private(target, header)
-    except OSError as exc:
-        raise BackupError(f"{target} cannot be written: {exc.strerror}") from None
+    _private(target, header)
     try:
         with target.open("ab") as out:
             sealing = Sealing(out, header, backup_key(master_key))
@@ -181,21 +178,13 @@ def read_backup(source: Path, master_key: bytes, into: Path) -> Manifest:
     """Decrypt and check a backup into a new database file at ``into``,
     readable by its owner alone. Raises ``BackupError`` on any doubt, and
     leaves no file at ``into`` then."""
-    try:
-        file = source.open("rb")
-    except OSError as exc:
-        raise BackupError(f"{source} cannot be read: {exc.strerror}") from None
     # The plain export an earlier version wrote beside ``into``, left by
     # a crash.
     into.with_name(into.name + ".export").unlink(missing_ok=True)
-    with file:
-        header, manifest = read_header(file, source)
+    with _opened(source) as (file, header, manifest):
         if manifest.format == 3:
             _exported_schema(manifest)
-        try:
-            create_private(into)
-        except OSError as exc:
-            raise BackupError(f"{into} cannot be written: {exc.strerror}") from None
+        _private(into)
         try:
             key = backup_key(master_key)
             if manifest.format == 3:
@@ -243,13 +232,9 @@ def _read_export(
     except MailboxServiceError as exc:
         raise BackupError(f"the backup cannot be read back: {exc}") from None
     try:
-        plain = Decrypting(file, header, key, source)
-        rows = _read_plain(io.BufferedReader(plain, BLOCK), db)
-        plain.finish(manifest.sha256)
+        _records_into(file, header, key, source, manifest, db)
     finally:
         db.close()
-    if rows != manifest.rows:
-        raise BackupError("the backup does not match its manifest")
 
 
 def _check_schema(path: Path, manifest: Manifest) -> None:
@@ -275,24 +260,15 @@ def verify_in_memory(source: Path, master_key: bytes) -> Manifest:
     Format 3 is read block by block into a database in memory of the
     schema of the manifest, format 1 and 2, the file of a database, into
     memory whole. Raises ``BackupError`` on any doubt."""
-    try:
-        file = source.open("rb")
-    except OSError as exc:
-        raise BackupError(f"{source} cannot be read: {exc.strerror}") from None
-    with file:
-        header, manifest = read_header(file, source)
+    with _opened(source) as (file, header, manifest):
         key = backup_key(master_key)
         if manifest.format == 3:
             _exported_schema(manifest)
-            plain = Decrypting(file, header, key, source)
             db = Database(schema=manifest.schema_version)
             try:
-                rows = _read_plain(io.BufferedReader(plain, BLOCK), db)
-                plain.finish(manifest.sha256)
+                _records_into(file, header, key, source, manifest, db)
             finally:
                 db.close()
-            if rows != manifest.rows:
-                raise BackupError("the backup does not match its manifest")
             return manifest
         held = io.BytesIO()
         if decrypt(file, header, key, held, source) != manifest.sha256:
@@ -306,12 +282,45 @@ def verify_in_memory(source: Path, master_key: bytes) -> Manifest:
     return manifest
 
 
-def _read_plain(source: BinaryIO, store: Store) -> dict[str, int]:
-    """The export in ``source`` into ``store``, its failures as a backup's."""
+def _records_into(
+    file: BinaryIO,
+    header: bytes,
+    key: bytes,
+    source: Path,
+    manifest: Manifest,
+    store: Store,
+) -> None:
+    """The export a backup of format 3 holds, decrypted block by block
+    into ``store``, its checksum and rows held to the manifest. Its
+    failures as a backup's."""
+    plain = Decrypting(file, header, key, source)
     try:
-        return read_export(source, store)
+        rows = read_export(io.BufferedReader(plain, BLOCK), store)
     except (ExportError, MailboxServiceError) as exc:
         raise BackupError(f"the backup cannot be read back: {exc}") from None
+    plain.finish(manifest.sha256)
+    if rows != manifest.rows:
+        raise BackupError("the backup does not match its manifest")
+
+
+@contextmanager
+def _opened(source: Path) -> Iterator[tuple[BinaryIO, bytes, Manifest]]:
+    """The backup at ``source`` opened, with its head and manifest read."""
+    try:
+        file = source.open("rb")
+    except OSError as exc:
+        raise BackupError(f"{source} cannot be read: {exc.strerror}") from None
+    with file:
+        header, manifest = read_header(file, source)
+        yield file, header, manifest
+
+
+def _private(path: Path, data: bytes = b"") -> None:
+    """A new file at ``path`` for its owner alone, holding ``data``."""
+    try:
+        create_private(path, data)
+    except OSError as exc:
+        raise BackupError(f"{path} cannot be written: {exc.strerror}") from None
 
 
 def restore_on_server(source: Path, master_key: bytes, server: Server) -> Manifest:
@@ -319,12 +328,7 @@ def restore_on_server(source: Path, master_key: bytes, server: Server) -> Manife
     holds no table yet, then bring it to this version's schema. The lock
     of a running service is taken for it: a service on the schema refuses
     the restore. When it fails, the tables it made go, and only those."""
-    try:
-        file = source.open("rb")
-    except OSError as exc:
-        raise BackupError(f"{source} cannot be read: {exc.strerror}") from None
-    with file:
-        header, manifest = read_header(file, source)
+    with _opened(source) as (file, header, manifest):
         if manifest.format != 3:
             raise BackupError(
                 f"a backup of format {manifest.format} holds the file of a SQLite"
@@ -344,7 +348,7 @@ def restore_on_server(source: Path, master_key: bytes, server: Server) -> Manife
                         " goes into an empty schema only. How to set the old one"
                         f" aside: {SET_ASIDE}"
                     )
-                _filled(place, file, header, manifest, source, master_key)
+                _filled(place, file, header, manifest, source, backup_key(master_key))
         finally:
             place.close()
     return manifest
@@ -372,7 +376,7 @@ def _filled(
     header: bytes,
     manifest: Manifest,
     source: Path,
-    master_key: bytes,
+    key: bytes,
 ) -> None:
     """The export of the backup into the empty schema of ``place``, at
     the schema of the manifest, then brought forward. Its tables dropped
@@ -382,11 +386,7 @@ def _filled(
     try:
         made = Database(place=place, schema=manifest.schema_version)
         made.mark_move(iso(utc_now()))
-        plain = Decrypting(file, header, backup_key(master_key), source)
-        rows = _read_plain(io.BufferedReader(plain, BLOCK), made)
-        plain.finish(manifest.sha256)
-        if rows != manifest.rows:
-            raise BackupError("the backup does not match its manifest")
+        _records_into(file, header, key, source, manifest, made)
         made.mark_move(None)
         Database(place=place)
     except BaseException as exc:
