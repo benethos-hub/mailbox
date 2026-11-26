@@ -125,6 +125,9 @@ ALLOWED = {
     "service data/storage/sql/index.py SqlMessageIndexRepository.threads_of": (
         "thread per message id"
     ),
+    # The driver of the file and what the old steps did, which the place
+    # of the file reads at once and alone.
+    "service data/storage/sqlite/file.py open_file": "read by file_place",
     # The three names Alembic reads from the module of a revision.
     "service data/storage/sql/revisions/revision.py Revision.alembic": "for Alembic",
     # A sequence of the old steps still due, as a list is.

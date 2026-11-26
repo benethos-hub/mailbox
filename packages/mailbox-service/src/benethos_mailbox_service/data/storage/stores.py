@@ -22,10 +22,8 @@ from ...errors import (
     StorageError,
     StorageInUseError,
 )
-from .sql.database import Database
-from .sql.revisions import SCHEMA_VERSION
-from .sql.server_place import Server, ServerPlace
-from .sqlite.file import service_lock
+from .sql import SCHEMA_VERSION, Database, Server, ServerPlace
+from .sqlite import service_lock
 
 # Where an operator reads how to set a schema that holds tables aside.
 SET_ASIDE = (

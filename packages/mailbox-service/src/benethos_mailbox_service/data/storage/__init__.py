@@ -46,6 +46,11 @@ from .repositories import (
 )
 from .sends import InMemorySendLogRepository, SendLogRepository
 from .sql import (
+    SCHEMA_VERSION,
+    Availability,
+    Database,
+    Server,
+    ServerPlace,
     SqlAccountRepository,
     SqlAuditRepository,
     SqlChangeLogRepository,
@@ -62,12 +67,8 @@ from .sql import (
     SqlTotpRepository,
     SqlUserRepository,
     SqlWebhookRepository,
+    Table,
 )
-from .sql.database import Database
-from .sql.outage import Availability
-from .sql.revisions import SCHEMA_VERSION
-from .sql.server_place import Server, ServerPlace
-from .sql.tables import Table
 from .sqlite import (
     inspect_bytes,
     inspect_file,

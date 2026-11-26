@@ -1,7 +1,8 @@
 """The packages of the domain and of the data layer (docs/REFACTORING.md
 4, 8.4): each is imported through its ``__init__.py``, none imports
 another in a circle, they keep their lines, and only the storage builds
-a database."""
+a database. A package below a layer, such as ``storage/sql/``, is
+imported through its ``__init__.py`` as well."""
 
 from __future__ import annotations
 
@@ -30,6 +31,42 @@ def _is_package(part: tuple[str, str]) -> bool:
 
 def _dotted(part: tuple[str, str]) -> str:
     return f"{PACKAGE}.{part[0]}.{part[1]}"
+
+
+# Packages of steps of a schema, one module each, which the package
+# above them collects in order: their modules are imported one by one.
+STEPS = ("storage.sqlite.migrations.versions",)
+
+
+def _inner_package(module: str) -> str | None:
+    """The innermost package below a layer that holds ``module`` and is
+    not ``module`` itself: '...data.storage.sql.database' ->
+    '...data.storage.sql'."""
+    parts = module.split(".")
+    if parts[0] != PACKAGE or len(parts) < 4 or parts[1] not in PACKAGED:
+        return None
+    for end in range(len(parts) - 1, 2, -1):
+        outer = ".".join(parts[:end])
+        if (ROOT.parent.joinpath(*parts[:end]) / "__init__.py").exists():
+            return outer
+    return None
+
+
+def test_a_nested_package_is_imported_through_its_init() -> None:
+    """The same below a package of a layer, such as ``storage/sql/``: a
+    module outside a package takes what it offers from its
+    ``__init__.py``."""
+    violations = []
+    for name, path in modules():
+        own = name if path.name == "__init__.py" else name.rsplit(".", 1)[0]
+        for imported, line in imports(path):
+            outer = _inner_package(imported)
+            if outer is None or outer.endswith(STEPS):
+                continue
+            if own == outer or own.startswith(outer + ".") or imported == outer:
+                continue
+            violations.append(f"{name}:{line} imports {imported}")
+    assert not violations, "a module inside a package:\n  " + "\n  ".join(violations)
 
 
 def test_a_package_is_imported_through_its_init() -> None:

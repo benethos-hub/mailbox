@@ -32,6 +32,10 @@ from .passwords import InMemoryPasswordRepository, PasswordRepository
 from .recovery_codes import InMemoryRecoveryCodeRepository, RecoveryCodeRepository
 from .sends import InMemorySendLogRepository, SendLogRepository
 from .sql import (
+    Availability,
+    Database,
+    Server,
+    ServerPlace,
     SqlAccountRepository,
     SqlAuditRepository,
     SqlChangeLogRepository,
@@ -50,11 +54,8 @@ from .sql import (
     SqlTotpRepository,
     SqlUserRepository,
     SqlWebhookRepository,
+    Table,
 )
-from .sql.database import Database
-from .sql.outage import Availability
-from .sql.server_place import Server, ServerPlace
-from .sql.tables import Table
 from .totp import InMemoryTotpRepository, TotpRepository
 from .users import (
     InMemoryRoleRepository,
