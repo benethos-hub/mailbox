@@ -3,8 +3,10 @@ and the folders a command reads them from and keeps its data in."""
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Literal, Self
+from urllib.parse import SplitResult, urlsplit
 
 from pydantic import Field, SecretStr, field_validator, model_validator
 
@@ -28,7 +30,13 @@ PATH_SETTINGS = (
     "key_file",
     "oauth_microsoft_client_secret_file",
     "oauth_google_client_secret_file",
+    "database_password_file",
+    "database_ca_file",
 )
+# The address of a database server, without its password.
+DATABASE_URL_FORM = "postgresql://<role>@<host>:<port>/<database>"
+# A role, and the schema named after it, as the server takes it unquoted.
+_PLAIN_NAME = re.compile(r"[a-z_][a-z0-9_]{0,62}")
 
 
 class Settings(files.FileSettings):
@@ -65,8 +73,25 @@ class Settings(files.FileSettings):
     # Where the database lives. Without it the data folder that `paths`
     # names. A relative path counts from the folder of the settings file.
     data_dir: Path = DATA_DIR
-    # "memory" keeps nothing across restarts. For tests and trying things out.
-    storage: Literal["sqlite", "memory"] = "sqlite"
+    # "sqlite" keeps the records in a file in the data folder, "postgres"
+    # in a schema on a PostgreSQL server, which the settings database_*
+    # name. "memory" keeps nothing across restarts. For tests and trying
+    # things out.
+    storage: Literal["sqlite", "postgres", "memory"] = "sqlite"
+    # PostgreSQL: the server as postgresql://<role>@<host>:<port>/<database>,
+    # without a password. The schema is named after the role.
+    database_url: str | None = None
+    # PostgreSQL: the file holding the password of the role.
+    database_password_file: Path | None = None
+    # PostgreSQL: "verify" talks to a host other than this one only over
+    # TLS with a checked certificate and name. "off" goes without TLS,
+    # for a private network, and the start says so.
+    database_tls: Literal["verify", "off"] = "verify"
+    # PostgreSQL: the certificates of the authorities the server's is
+    # checked against. Without it those of the system.
+    database_ca_file: Path | None = None
+    # PostgreSQL: seconds serve waits for the database at start.
+    database_start_wait: int = Field(default=30, ge=0)
     # Where the master key comes from.
     key_provider: Literal["keyring", "file", "env"] = "keyring"
     key_file: Path | None = None
@@ -207,6 +232,8 @@ class Settings(files.FileSettings):
                 "and its secret in oauth_google_client_secret or "
                 "oauth_google_client_secret_file"
             )
+        if self.storage == "postgres":
+            _database_settings(self.database_url, self.database_password_file)
         return self
 
     def oauth_microsoft_secret(self) -> SecretStr | None:
@@ -223,9 +250,60 @@ class Settings(files.FileSettings):
             self.oauth_google_client_secret, self.oauth_google_client_secret_file
         )
 
+    def database_password(self) -> SecretStr:
+        """The password of the role on the database server, read from its
+        file now. Empty without one."""
+        if self.database_password_file is None:
+            return SecretStr("")
+        return SecretStr(files.secret_file(self.database_password_file))
+
     @property
     def database_path(self) -> Path:
         return (self.data_dir / "mailbox.db").resolve()
+
+    def database_name(self) -> str:
+        """The database for a line: the path of its file, or the address
+        of its server, which holds no password."""
+        if self.storage == "postgres" and self.database_url:
+            return self.database_url
+        return str(self.database_path)
+
+
+def database_url_parts(url: str) -> SplitResult:
+    """The parts of ``database_url``, which the settings checked."""
+    return urlsplit(url)
+
+
+def _database_settings(url: str | None, password_file: Path | None) -> None:
+    """The rules of storage = postgres. A message names the rule, never
+    what was given, which may hold a password."""
+    if not url or password_file is None:
+        raise ValueError(
+            "storage postgres needs database_url and database_password_file"
+        )
+    parts = urlsplit(url)
+    if parts.scheme != "postgresql":
+        raise ValueError(f"database_url must have the form {DATABASE_URL_FORM}")
+    if parts.password is not None:
+        raise ValueError(
+            "database_url must not hold a password: name the file that holds"
+            " it in database_password_file"
+        )
+    try:
+        port = parts.port
+    except ValueError:
+        port = None
+    role = parts.username or ""
+    database = parts.path.removeprefix("/")
+    if not (role and parts.hostname and database and "/" not in database) or (
+        port is None and ":" in parts.netloc.rsplit("@", 1)[-1]
+    ):
+        raise ValueError(f"database_url must have the form {DATABASE_URL_FORM}")
+    if not _PLAIN_NAME.fullmatch(role):
+        raise ValueError(
+            "the role in database_url names the schema too: lower case"
+            " letters, digits and underscores"
+        )
 
 
 def _named(secret: SecretStr | None, file: Path | None) -> bool:

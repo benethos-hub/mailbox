@@ -3,8 +3,10 @@ of its own for each test, gone after it.
 
 ``MAILBOX_POSTGRES_TESTS`` names the file ``containers/test-database/
 setup.sh`` writes, lines of ``key=value``: ``host``, ``port``, ``user``,
-``database`` and ``password_file``, the file of the administrator's
-password, relative to the folder of the first. Unset, the suite is not
+``database``, ``password_file``, the file of the administrator's
+password, ``ca_file``, the test CA the server's certificate comes from,
+and ``other_ca_file``, one it does not, each relative to the folder of
+the first. Unset, the suite is not
 collected. It lies outside ``MAILBOX_SERVICE_``, which the tests clear.
 The driver is imported only when a test reaches the server: the default
 run needs no extra of the service.
@@ -44,6 +46,8 @@ class Admin:
     user: str
     password: str
     database: str
+    ca_file: Path
+    other_ca_file: Path
 
 
 def admin() -> Admin:
@@ -61,6 +65,8 @@ def admin() -> Admin:
         user=found["user"],
         password=password.strip(),
         database=found["database"],
+        ca_file=path.parent / found["ca_file"],
+        other_ca_file=path.parent / found["other_ca_file"],
     )
 
 

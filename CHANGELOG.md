@@ -8,6 +8,22 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- PostgreSQL 19 as the storage of the service, beside SQLite, which
+  stays the default: `MAILBOX_SERVICE_STORAGE=postgres` keeps the
+  records in a schema on a PostgreSQL server, named after the role the
+  service signs in as. `MAILBOX_SERVICE_DATABASE_URL`
+  (`postgresql://<role>@<host>:<port>/<database>`, without a password)
+  and `MAILBOX_SERVICE_DATABASE_PASSWORD_FILE` name it.
+  `MAILBOX_SERVICE_DATABASE_TLS` is `verify` by default: a host other
+  than this one is reached only over TLS with a checked certificate and
+  name, against `MAILBOX_SERVICE_DATABASE_CA_FILE` or the authorities of
+  the system. `off` goes without TLS and is said at start. `serve`
+  waits for the database for up to `MAILBOX_SERVICE_DATABASE_START_WAIT`
+  seconds (30). A server older than PostgreSQL 19 is refused, and so is
+  a second service on the same schema. The driver comes with the extra
+  `postgres`: `pip install 'benethos-mailbox-service[postgres]'`. The
+  image of the service has it.
+
 - Backup format 3: `benethos-mailbox-service backup --format 3 FILE`
   writes the records as an export, encrypted in blocks as format 2,
   independent of the file of the database. `backup FILE` still writes

@@ -104,6 +104,20 @@ class DatabaseShared(Activity):
 
 
 @dataclass(frozen=True, kw_only=True)
+class DatabaseUnencrypted(Activity):
+    """The settings switched TLS to the database server off."""
+
+    name: ClassVar[str] = "db_unencrypted"
+    level: ClassVar[int] = logging.WARNING
+
+    def says(self) -> str:
+        return (
+            "talks to the database server without TLS, as"
+            " MAILBOX_SERVICE_DATABASE_TLS=off says: only on a private network"
+        )
+
+
+@dataclass(frozen=True, kw_only=True)
 class RecoveryKeyShown(Activity):
     """The master key written out went to a person's screen."""
 

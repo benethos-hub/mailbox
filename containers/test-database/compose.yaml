@@ -1,6 +1,6 @@
 # PostgreSQL 19 as the database of the suite against a server, on
-# 127.0.0.1:35432 only, 30000 + the standard port. setup.sh makes it,
-# README.md says how to use it.
+# 127.0.0.1:35432 only, 30000 + the standard port, with TLS from a test
+# CA of its own. setup.sh makes it, README.md says how to use it.
 name: mailbox-test-database
 
 services:
@@ -16,6 +16,26 @@ services:
       - "127.0.0.1:35432:5432"
     volumes:
       - data:/var/lib/postgresql
+      - ./secrets/tls:/tls:ro
+    # PostgreSQL takes a key only its own user reads: a copy of it, made
+    # so, before the image's own start.
+    entrypoint:
+      - sh
+      - -c
+      - >-
+        install -d -o postgres -m 0700 /run/tls &&
+        install -o postgres -m 0600 /tls/server.key /run/tls/server.key &&
+        install -o postgres -m 0644 /tls/server.pem /run/tls/server.pem &&
+        exec docker-entrypoint.sh "$$@"
+      - postgres
+    command:
+      - postgres
+      - -c
+      - ssl=on
+      - -c
+      - ssl_cert_file=/run/tls/server.pem
+      - -c
+      - ssl_key_file=/run/tls/server.key
 
 secrets:
   admin_password:

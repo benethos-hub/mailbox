@@ -112,3 +112,14 @@ def address_problem(email: str) -> str | None:
     if written is None or not is_host_name(written, dotted=False):
         return "not a valid email domain"
     return None
+
+
+def is_loopback_host(host: str) -> bool:
+    """Whether ``host`` is this computer: localhost or a loopback
+    address."""
+    if host.lower() == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False

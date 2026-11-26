@@ -54,7 +54,7 @@ from ..domain.users import (
 from ..domain.webhooks import Retries, WebhookDispatcher, WebhookService
 from . import providers, secrets
 from .services import Services
-from .storage import storage
+from .storage import server_of, storage
 
 
 def build_services(
@@ -76,7 +76,9 @@ def build_services(
     replaces the key provider the settings name, ``clock`` the time of
     every service. ``logbook`` holds the log lines the log page shows:
     ``serve`` hands in the one its log writes to."""
-    repositories = open_repositories(settings.storage, settings.database_path)
+    repositories = open_repositories(
+        settings.storage, settings.database_path, server_of(settings)
+    )
     try:
         records = storage(repositories, settings, clock)
         base = _Base(settings, repositories, records.activity, clock)

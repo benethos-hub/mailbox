@@ -52,7 +52,7 @@ async def serving(
             said.ServiceStarted(
                 by=SERVICE,
                 settings=str(settings_file) if settings_file else None,
-                database=str(settings.database_path) if store else None,
+                database=settings.database_name() if store else None,
                 schema=store.schema_version() if store else None,
             )
         )

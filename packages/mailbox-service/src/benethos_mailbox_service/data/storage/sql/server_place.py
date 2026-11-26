@@ -10,15 +10,18 @@ reads a fixed state and holds no writer up.
 
 from __future__ import annotations
 
+import hashlib
 import re
 import threading
 from collections.abc import Iterator
-from contextlib import AbstractContextManager, contextmanager, nullcontext, suppress
+from contextlib import AbstractContextManager, contextmanager, suppress
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 
 import sqlalchemy as sa
 
+from ....common.hosts import is_loopback_host
 from ....errors import StorageError
 from ..migrated import Migrated
 from . import revisions
@@ -28,12 +31,18 @@ from .place import translated_by
 # A name the server takes without quoting, so it can stand in the
 # search path the connection sets.
 _PLAIN_NAME = re.compile(r"[a-z_][a-z0-9_]{0,62}")
+# The oldest server the service runs on (2026-11-25), as the server
+# writes its version as a number: major * 10000 + minor.
+OLDEST_SERVER = 190000
 
 
 @dataclass(frozen=True, slots=True)
 class Server:
     """Where the database is and who the service is there. ``schema``
-    is named after ``role`` unless given."""
+    is named after ``role`` unless given. ``tls``: "verify" talks to a
+    host other than this one only over TLS with a checked certificate
+    and name, against the authorities of ``ca_file`` or else those of
+    the system. "off" goes without TLS."""
 
     host: str
     port: int
@@ -41,6 +50,8 @@ class Server:
     role: str
     password: str
     schema: str | None = None
+    tls: Literal["verify", "off"] = "verify"
+    ca_file: Path | None = None
 
     @property
     def schema_name(self) -> str:
@@ -76,20 +87,37 @@ class ServerPlace:
         self._engine = self._engine_of()
         with translated():
             self._connection = self._engine.connect()
+            version = self._connection.execute(
+                sa.select(sa.func.current_setting("server_version_num"))
+            ).scalar()
+            self._connection.rollback()
+        supported(int(str(version)))
         return self._connection, None
 
     def _engine_of(self) -> sa.Engine:
         server = self._server
-        engine = server_engine(
+        try:
+            engine = self._driven(server)
+        except ImportError:
+            raise StorageError(
+                "storage postgres needs the extra postgres of the service:"
+                " pip install 'benethos-mailbox-service[postgres]'"
+            ) from None
+        sa.event.listen(engine, "handle_error", _not_of_the_driver)
+        return engine
+
+    @staticmethod
+    def _driven(server: Server) -> sa.Engine:
+        """The engine, which loads the driver."""
+        return server_engine(
             host=server.host,
             port=server.port,
             database=server.database,
             role=server.role,
             password=server.password,
             search_path=server.schema_name,
+            tls=tls_arguments(server.host, server.tls, server.ca_file),
         )
-        sa.event.listen(engine, "handle_error", _not_of_the_driver)
-        return engine
 
     def undo(self) -> None:
         with suppress(Exception):
@@ -106,8 +134,31 @@ class ServerPlace:
     def shrink(self) -> None:
         """The server gives back what deletions freed by itself."""
 
-    def serving(self) -> AbstractContextManager[bool]:
-        return nullcontext(True)
+    @contextmanager
+    def serving(self) -> Iterator[bool]:
+        """Two services on one schema would lose changes of the feed, so
+        the second is refused: the lock of the session on its one
+        connection, keyed by the schema, held until the block ends or the
+        connection closes."""
+        if self._connection is None:
+            raise StorageError("the database is not open")
+        key = lock_key(self._server.schema_name)
+        with translated():
+            got = self._connection.execute(
+                sa.select(sa.func.pg_try_advisory_lock(key))
+            ).scalar()
+            self._connection.commit()
+        if not got:
+            raise StorageError(
+                "another service runs on this database: one service per"
+                " schema of a database server"
+            )
+        try:
+            yield True
+        finally:
+            with suppress(Exception), translated():
+                self._connection.execute(sa.select(sa.func.pg_advisory_unlock(key)))
+                self._connection.commit()
 
     def snapshot_file(self, lock: threading.RLock) -> AbstractContextManager[Path]:
         raise StorageError("a database on a server has no file")
@@ -167,3 +218,43 @@ def _not_of_the_driver(context: sa.engine.ExceptionContext) -> BaseException | N
             f"the database failed: {type(context.original_exception).__name__}"
         )
     return None
+
+
+def supported(version: int) -> None:
+    """Refuse a server older than ``OLDEST_SERVER``, by the number it
+    gives as ``server_version_num``."""
+    if version < OLDEST_SERVER:
+        raise StorageError(
+            f"the database server is PostgreSQL {_shown(version)}:"
+            f" this version needs PostgreSQL {_shown(OLDEST_SERVER)} or newer"
+        )
+
+
+def _shown(version: int) -> str:
+    major, minor = divmod(version, 10000)
+    return f"{major}.{minor}"
+
+
+def tls_arguments(
+    host: str, tls: Literal["verify", "off"], ca_file: Path | None
+) -> dict[str, str]:
+    """What libpq is told of TLS. With "verify" a host other than this
+    one is reached only over TLS whose certificate and name are checked
+    (verify-full), against ``ca_file`` or the authorities of the system.
+    This host itself is reached over TLS where the server offers it,
+    without the demand. With "off" never over TLS."""
+    if tls == "off":
+        return {"sslmode": "disable"}
+    if is_loopback_host(host):
+        return {"sslmode": "prefer"}
+    return {
+        "sslmode": "verify-full",
+        "sslrootcert": "system" if ca_file is None else str(ca_file),
+    }
+
+
+def lock_key(schema: str) -> int:
+    """The key of the lock a running service holds on ``schema``: a
+    number of 64 bits drawn from its name, the same in every process."""
+    digest = hashlib.sha256(f"benethos-mailbox-service:{schema}".encode()).digest()
+    return int.from_bytes(digest[:8], "big", signed=True)

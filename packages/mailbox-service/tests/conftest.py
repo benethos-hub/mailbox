@@ -48,11 +48,7 @@ from benethos_mailbox_service.data.secrets import (
     cipher,
     encode_recovery,
 )
-from benethos_mailbox_service.data.storage import (
-    Repositories,
-    open_repositories,
-    repositories_on,
-)
+from benethos_mailbox_service.data.storage import Repositories, open_repositories
 from benethos_mailbox_service.domain.accounts.service import AccountService
 from benethos_mailbox_service.domain.auth.service import AuthService
 from benethos_mailbox_service.domain.rights import ADMIN_SERVICE, permissions
@@ -107,8 +103,10 @@ def repositories(
     test of their behaviour gets them from."""
     if request.param == "postgres":
         with postgres_helpers.schema() as name:
-            on_server = postgres_helpers.database(name)
-            yield repositories_on(on_server)
+            on_server = open_repositories(
+                "postgres", tmp_path / "store.db", postgres_helpers.server(name)
+            )
+            yield on_server
             on_server.close()
         return
     opened = open_repositories(request.param, tmp_path / "store.db")

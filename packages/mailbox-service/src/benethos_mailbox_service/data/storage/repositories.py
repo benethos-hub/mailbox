@@ -1,6 +1,7 @@
 """The repositories together: ``Repositories`` holds one of each on the
 same store, and ``open_repositories`` is the one place that picks the
-implementation: in memory for tests and ``storage = memory``, else SQLite.
+implementation: in memory for tests and ``storage = memory``, a file of
+SQLite for ``sqlite``, a schema on a server for ``postgres``.
 """
 
 from __future__ import annotations
@@ -11,6 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal, Protocol
 
+from ...errors import StorageError
 from .accounts import AccountRepository, InMemoryAccountRepository
 from .audit import AuditRepository, InMemoryAuditRepository
 from .changes import ChangeLogRepository, InMemoryChangeLogRepository
@@ -50,6 +52,7 @@ from .sql import (
     SqlWebhookRepository,
 )
 from .sql.database import Database
+from .sql.server_place import Server, ServerPlace
 from .sql.tables import Table
 from .totp import InMemoryTotpRepository, TotpRepository
 from .users import (
@@ -151,30 +154,41 @@ class Repositories:
 
 
 def open_repositories(
-    storage: Literal["memory", "sqlite"], database_path: Path
+    storage: Literal["memory", "sqlite", "postgres"],
+    database_path: Path,
+    server: Server | None = None,
 ) -> Repositories:
-    if storage == "memory":
-        return Repositories(
-            accounts=InMemoryAccountRepository(),
-            users=InMemoryUserRepository(),
-            roles=InMemoryRoleRepository(),
-            tokens=InMemoryTokenRepository(),
-            passwords=InMemoryPasswordRepository(),
-            totp=InMemoryTotpRepository(),
-            passkeys=InMemoryPasskeyRepository(),
-            recovery_codes=InMemoryRecoveryCodeRepository(),
-            keys=InMemoryKeyRepository(),
-            credentials=InMemoryCredentialRepository(),
-            index=InMemoryMessageIndexRepository(),
-            idempotency=InMemoryIdempotencyRepository(),
-            sends=InMemorySendLogRepository(),
-            changes=InMemoryChangeLogRepository(),
-            webhooks=InMemoryWebhookRepository(),
-            audit=InMemoryAuditRepository(),
-            links=InMemoryLinkRepository(),
-            outbox=InMemoryOutboxRepository(),
-        )
-    return repositories_on(Database(database_path))
+    """The repositories of ``storage``: in memory, the file of SQLite at
+    ``database_path``, or the schema on the server ``server`` names. Any
+    other storage opens nothing."""
+    if storage == "sqlite":
+        return repositories_on(Database(database_path))
+    if storage == "postgres":
+        if server is None:
+            raise StorageError("storage postgres needs the server of its database")
+        return repositories_on(Database(place=ServerPlace(server)))
+    if storage != "memory":
+        raise StorageError(f"there is no storage {storage}")
+    return Repositories(
+        accounts=InMemoryAccountRepository(),
+        users=InMemoryUserRepository(),
+        roles=InMemoryRoleRepository(),
+        tokens=InMemoryTokenRepository(),
+        passwords=InMemoryPasswordRepository(),
+        totp=InMemoryTotpRepository(),
+        passkeys=InMemoryPasskeyRepository(),
+        recovery_codes=InMemoryRecoveryCodeRepository(),
+        keys=InMemoryKeyRepository(),
+        credentials=InMemoryCredentialRepository(),
+        index=InMemoryMessageIndexRepository(),
+        idempotency=InMemoryIdempotencyRepository(),
+        sends=InMemorySendLogRepository(),
+        changes=InMemoryChangeLogRepository(),
+        webhooks=InMemoryWebhookRepository(),
+        audit=InMemoryAuditRepository(),
+        links=InMemoryLinkRepository(),
+        outbox=InMemoryOutboxRepository(),
+    )
 
 
 def repositories_on(db: Database) -> Repositories:

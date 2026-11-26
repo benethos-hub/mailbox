@@ -3,15 +3,30 @@
 Should a background loop end, the server stops and the command ends with
 an error, so a supervisor such as ``restart: unless-stopped`` starts the
 service anew instead of leaving it answering without its sync and its
-webhooks."""
+webhooks. On a database server, ``serve`` waits for the database at
+start, a while: a server and its database often start together."""
 
 from __future__ import annotations
 
 import argparse
-from typing import Any
+import time
+from collections.abc import Callable
+from typing import Any, TypeVar
 
-from ..config import load_settings, settings_file
+from ..config import Settings, database_url_parts, load_settings, settings_file
 from .common import Commands
+
+T = TypeVar("T")
+# Seconds between two attempts to reach the database at start.
+START_RETRY = 2.0
+
+
+class Waiting:
+    """The clock and the pause of the waiting at start: a test moves
+    them, and nothing else."""
+
+    clock: Callable[[], float] = staticmethod(time.monotonic)
+    sleep: Callable[[float], None] = staticmethod(time.sleep)
 
 
 def add(commands: Commands, option: argparse.ArgumentParser) -> None:
@@ -58,8 +73,14 @@ def run(args: argparse.Namespace) -> None:
     logging.config.dictConfig(config)
     stop = _Stop()
     # The log names the settings and the database once the app starts.
-    app = assembly.create_app(
-        settings, logbook=book, settings_file=settings_file(args.env_file), stop=stop
+    app = waited(
+        lambda: assembly.create_app(
+            settings,
+            logbook=book,
+            settings_file=settings_file(args.env_file),
+            stop=stop,
+        ),
+        settings,
     )
     # What uvicorn.run does for one process without reload: the server
     # built here, so a loop that ends can stop it.
@@ -82,3 +103,37 @@ def run(args: argparse.Namespace) -> None:
         sys.exit(STARTUP_FAILURE)
     if stop.asked:
         raise MailboxServiceError("a background loop ended, the service stopped")
+
+
+def waited(build: Callable[[], T], settings: Settings) -> T:
+    """What ``build`` makes, which opens the database. On a database
+    server tried again for up to ``database_start_wait`` seconds while
+    the database cannot be opened, then the last failure, naming the
+    host and the role. Another storage is tried once."""
+    if settings.storage != "postgres" or settings.database_url is None:
+        return build()
+    return _again(build, settings, clock=Waiting.clock, sleep=Waiting.sleep)
+
+
+def _again(
+    build: Callable[[], T],
+    settings: Settings,
+    *,
+    clock: Callable[[], float],
+    sleep: Callable[[float], None],
+) -> T:
+    from ..errors import StorageError
+
+    end = clock() + settings.database_start_wait
+    while True:
+        try:
+            return build()
+        except StorageError as exc:
+            if clock() + START_RETRY > end:
+                parts = database_url_parts(settings.database_url or "")
+                raise StorageError(
+                    f"the database on {parts.hostname} as {parts.username} could not"
+                    f" be opened within {settings.database_start_wait} seconds:"
+                    f" {exc.message}"
+                ) from None
+        sleep(START_RETRY)

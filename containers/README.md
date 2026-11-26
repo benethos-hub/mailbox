@@ -111,7 +111,8 @@ version as the PyPI packages:
 | release marked as a pre-release | its version only |
 | started by hand on `main` (Actions, Publish, Run workflow) | `edge` |
 
-- The service image holds the service and the common package, the MCP
+- The service image holds the service, with the driver of PostgreSQL
+  (its extra `postgres`), and the common package, the MCP
   image the MCP server, the client and the common package, the agents'
   image the agents, the client and the common package. Each is installed
   from `uv.lock` without the development tools.

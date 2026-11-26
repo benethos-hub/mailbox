@@ -26,7 +26,9 @@ WORKDIR /src
 # The workspace needs every member's pyproject.toml. The lockfile pins all.
 COPY pyproject.toml uv.lock ./
 COPY packages packages
-RUN uv sync --frozen --no-dev --no-editable --package benethos-mailbox-service
+# With the driver of PostgreSQL, so the image runs on either database.
+RUN uv sync --frozen --no-dev --no-editable --package benethos-mailbox-service \
+        --extra postgres
 
 # --- runtime -------------------------------------------------------------------
 FROM python:3.15-slim@sha256:63bb298d2b7b88f176f51b5189f54ce6535c997682ea70885d2132f5d473a8a5

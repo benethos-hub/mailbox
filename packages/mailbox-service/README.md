@@ -234,7 +234,7 @@ benethos-mailbox-service paths
 | What | Where |
 |---|---|
 | settings | the environment, or `.env` in the settings folder (the environment wins) |
-| the database | `mailbox.db` in the data folder, readable by its owner only |
+| the database | `mailbox.db` in the data folder, readable by its owner only, or a schema on a PostgreSQL server (`MAILBOX_SERVICE_STORAGE=postgres`) |
 | the master key | the OS credential store (keyring), or a file or variable (see `MAILBOX_SERVICE_KEY_PROVIDER`) |
 
 The keyring is the default and the safest place. A key file is for a
@@ -272,7 +272,12 @@ names the settings file it read and the database at start.
 | `MAILBOX_SERVICE_LOG_LEVEL` | `INFO` | `critical`, `error`, `warning`, `info`, `debug` or `trace`, see [Logs](#logs) |
 | `MAILBOX_SERVICE_LOG_FORMAT` | `text` | or `json`, each line one JSON object for a log collector, see [Logs](#logs) |
 | `MAILBOX_SERVICE_DATA_DIR` | the data folder, see [Where things live](#where-things-live) | where the database lives |
-| `MAILBOX_SERVICE_STORAGE` | `sqlite` | or `memory`, which keeps nothing |
+| `MAILBOX_SERVICE_STORAGE` | `sqlite` | or `postgres`, a schema on a PostgreSQL server, or `memory`, which keeps nothing |
+| `MAILBOX_SERVICE_DATABASE_URL` | | for `postgres`: the server as `postgresql://<role>@<host>:<port>/<database>`, without a password. The schema is named after the role |
+| `MAILBOX_SERVICE_DATABASE_PASSWORD_FILE` | | for `postgres`: the file holding the password of the role |
+| `MAILBOX_SERVICE_DATABASE_TLS` | `verify` | for `postgres`: TLS with a checked certificate and name to any host but this one, or `off` for a private network, which the start says |
+| `MAILBOX_SERVICE_DATABASE_CA_FILE` | the system's | for `postgres`: the certificates of the authorities the server's is checked against |
+| `MAILBOX_SERVICE_DATABASE_START_WAIT` | `30` | for `postgres`: seconds `serve` waits for the database at start |
 | `MAILBOX_SERVICE_KEY_PROVIDER` | `keyring` | where the master key lives: `keyring`, `file` or `env` |
 | `MAILBOX_SERVICE_KEY_FILE` | | the key file, for `file`. Outside the data folder |
 | `MAILBOX_SERVICE_MASTER_KEY` | | the recovery key, for `env` |
