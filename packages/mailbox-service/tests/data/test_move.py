@@ -5,6 +5,7 @@ a value."""
 from __future__ import annotations
 
 import io
+import sqlite3
 from pathlib import Path
 from typing import Any
 
@@ -178,3 +179,21 @@ def test_a_source_of_an_older_schema_is_refused_unchanged(tmp_path: Path) -> Non
     with pytest.raises(MoveError, match="start the service on it once"):
         move_records(tmp_path / "old.db", tmp_path / "to.db")
     assert (tmp_path / "old.db").read_bytes() == before
+
+
+def test_a_text_with_nul_does_not_fit(tmp_path: Path) -> None:
+    path = tmp_path / "nul.db"
+    _fitting(path).close()
+    raw = sqlite3.connect(path)
+    raw.execute(
+        "UPDATE users SET name = 'a' || char(0) || 'secret-name'"
+        " WHERE rowid = (SELECT min(rowid) FROM users)"
+    )
+    raw.commit()
+    raw.close()
+    db = Database(path)
+    with db.view() as records:
+        found = misfits(records)
+    db.close()
+    assert found == [Misfit("users", "name", 1)]
+    assert "secret-name" not in str(refused(found))

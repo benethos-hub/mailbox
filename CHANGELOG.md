@@ -39,7 +39,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   The target must be empty, a running service on either side refuses
   it, and the source stays as it is. Before anything is written, every
   value is held to its column: a value that does not fit stops the move,
-  with the table, the column and how many. `--check` does only that.
+  with the table, the column and how many. A text that holds the
+  character NUL does not fit: PostgreSQL refuses it. `--check` does only that.
   After the copy, every table is counted and compared on both sides. A
   database a move did not finish is not opened by the service.
 - Backup format 3: `benethos-mailbox-service backup --format 3 FILE`
