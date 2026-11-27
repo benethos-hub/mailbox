@@ -31,7 +31,7 @@ class _Refusing:
 
 
 @pytest.fixture
-def path(tmp_path: Path) -> Path:
+def closed(tmp_path: Path) -> Path:
     path = path_for(tmp_path, "counting")
     with Store.open(path) as store:
         store.set_progress(NOW)
@@ -39,13 +39,13 @@ def path(tmp_path: Path) -> Path:
 
 
 def test_a_reader_opens_a_cleanly_closed_file_as_immutable(
-    path: Path, monkeypatch: pytest.MonkeyPatch
+    closed: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    assert not path.with_name(path.name + "-wal").exists()
+    assert not closed.with_name(closed.name + "-wal").exists()
     refusing = _Refusing()
     monkeypatch.setattr(sqlite3, "connect", refusing)
 
-    with Store.open(path, read_only=True) as reader:
+    with Store.open(closed, read_only=True) as reader:
         assert reader.progress() == NOW
 
     assert [uri.rsplit("?", 1)[1] for uri in refusing.uris] == [
@@ -55,13 +55,13 @@ def test_a_reader_opens_a_cleanly_closed_file_as_immutable(
 
 
 def test_a_reader_beside_a_wal_does_not_try_again(
-    path: Path, monkeypatch: pytest.MonkeyPatch
+    closed: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    path.with_name(path.name + "-wal").write_bytes(b"")
+    closed.with_name(closed.name + "-wal").write_bytes(b"")
     refusing = _Refusing()
     monkeypatch.setattr(sqlite3, "connect", refusing)
 
     with pytest.raises(StateFileError, match="unable to open"):
-        Store.open(path, read_only=True)
+        Store.open(closed, read_only=True)
 
     assert len(refusing.uris) == 1
