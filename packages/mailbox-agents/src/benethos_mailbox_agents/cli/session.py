@@ -23,6 +23,7 @@ from ..runtime.loop import Worker
 from ..runtime.model import NoModel
 from ..runtime.readiness import start
 from ..settings import PREFIX, Settings
+from ..settings.database import shown_database
 from ..sources.mailbox import Mailbox, connect
 from ..store import Store, earlier_file, path_for
 from ..telemetry.otlp import open_spans
@@ -33,6 +34,8 @@ __all__ = [
     "former_file",
     "now",
     "session",
+    "state_place",
+    "state_reader",
     "upstreams",
 ]
 
@@ -109,6 +112,26 @@ async def upstreams(
                 )
             )
         yield mailbox, gateway
+
+
+def state_reader(name: str, settings: Settings) -> Store | None:
+    """The state of the agent ``name`` for a reader beside the running
+    agent: in its database on a server for storage postgres, else in its
+    state file. None while there is none yet."""
+    if settings.storage == "postgres":
+        return Store.read_server(settings.database_server())
+    path = path_for(settings.data_dir, state_name(name, settings.instance))
+    if not path.is_file():
+        return None
+    return Store.open(path, read_only=True)
+
+
+def state_place(name: str, settings: Settings) -> str:
+    """Where the state of the agent ``name`` lies, never a password."""
+    if settings.storage == "postgres" and settings.database_url:
+        return shown_database(settings.database_url)
+    path = path_for(settings.data_dir, state_name(name, settings.instance))
+    return str(path.resolve())
 
 
 def _store_of(agent: Agent, settings: Settings) -> Store:

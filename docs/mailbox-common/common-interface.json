@@ -320,6 +320,7 @@
       "server_engine",
       "server_lock",
       "server_place",
+      "server_provision",
       "server_rights",
       "server_url",
       "shape",
@@ -1102,6 +1103,48 @@
     },
     "translated_server": {
       "signature": "(errors: 'Errors') -> 'AbstractContextManager[None]'"
+    }
+  },
+  "benethos_mailbox_common.storage.server_provision": {
+    "Instance": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "role": {
+          "type": "str"
+        },
+        "database": {
+          "type": "str"
+        },
+        "reader": {
+          "type": "str"
+        },
+        "login": {
+          "type": "str"
+        }
+      }
+    },
+    "Provided": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "made": {
+          "type": "tuple[str, ...]"
+        }
+      }
+    },
+    "instance_statements": {
+      "signature": "(instance: 'Instance', errors: 'Errors') -> 'list[str]'"
+    },
+    "make_instance": {
+      "signature": "(admin: 'Server', instance: 'Instance', password: 'str', shape: 'Shape') -> 'Provided'"
+    },
+    "reading_statements": {
+      "signature": "(instance: 'Instance') -> 'list[str]'"
     }
   },
   "benethos_mailbox_common.storage.server_rights": {

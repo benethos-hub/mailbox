@@ -38,6 +38,23 @@ adheres to [Semantic Versioning](https://semver.org/).
   waited for as an upstream (`StateUnavailableError`), and the health
   check fails while it is. A worker whose database another agent took
   in the meantime ends.
+- `benethos-mailbox-agents`: `storage provision --agent <name>` prints
+  what an administrator of a PostgreSQL server runs once for the
+  database of an agent and instance: its role, its database, closed to
+  every other role, and the roles `agents_read` and `agents_cockpit` the
+  cockpit reads with. With `--apply`, `--admin-url` and
+  `--admin-password-file` it runs that itself and sets the password of
+  the role, so the agent starts on it. Role and database are those of
+  `MAILBOX_AGENTS_DATABASE_URL`, or else `agent_<agent>_<instance>`.
+- `benethos-mailbox-agents`: `storage move --agent <name>` copies the
+  state file of an agent and instance into the empty database
+  `MAILBOX_AGENTS_DATABASE_URL` names and compares every table on both
+  sides. The file stays as it was. With `--check` it only checks that
+  every value fits its column.
+- `benethos-mailbox-agents`: `status`, `paths`, `health` and `report`
+  read the state on the server with `MAILBOX_AGENTS_STORAGE=postgres`
+  and say where it lies: the database, its host, port and schema, never
+  a password. `status` names the state file of each agent as well.
 - `benethos-mailbox-agents`: the state file stands on the storage of
   `benethos-mailbox-common`, as the database of the service does. A
   state file is brought to schema 5 when its agent starts, with a copy

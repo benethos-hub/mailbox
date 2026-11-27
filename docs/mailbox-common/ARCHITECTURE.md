@@ -69,6 +69,10 @@ packages/mailbox-common/
                         #   reaches a program's database on a server
       server_url.py     # URL_FORM, url_problem, server_at: the address of a
                         #   server in a setting
+      server_provision.py  # Instance, Provided, instance_statements,
+                        #   reading_statements, make_instance: the role and
+                        #   the database of an instance, made by an
+                        #   administrator
       server_lock.py    # the keys of the advisory locks of a schema
       outage.py         # Availability, Outage: a server away, the pause
       tables.py         # Table, the tables of the schema for an export,

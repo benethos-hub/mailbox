@@ -44,6 +44,16 @@ def server_problem(
     return None
 
 
+def shown_database(url: str) -> str:
+    """Where a state on the server ``url`` names lies, ``url`` without a
+    problem, for a line of a command: never a password."""
+    named = server_url.server_at(url, "")
+    return (
+        f"the database {named.database} on {named.host}:{named.port},"
+        f" schema {named.schema_name}"
+    )
+
+
 def server_of(
     url: str | None,
     path: Path | None,

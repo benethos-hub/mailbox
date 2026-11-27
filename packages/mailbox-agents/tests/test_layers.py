@@ -106,7 +106,7 @@ CONFINED: dict[str, frozenset[str]] = {
             "telemetry/otlp.py",
             "contract/actor.py",
             *("agents/categorization/lists.py", "agents/categorization/summary.py"),
-            *("cli/__init__.py", "cli/commands.py", "cli/report.py"),
+            *("cli/__init__.py", "cli/commands.py", "cli/report.py", "cli/storage.py"),
             *("cockpit/app.py", "cockpit/security.py", "cockpit/views.py"),
         }
     ),

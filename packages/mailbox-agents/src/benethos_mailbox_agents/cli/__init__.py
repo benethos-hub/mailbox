@@ -26,7 +26,7 @@ from ..errors import (
     ServiceVersionError,
 )
 from ..settings import DEFAULT_ENV_FILE, PREFIX, load_settings
-from . import commands
+from . import commands, storage
 
 __all__ = ["PROG", "build_parser", "main"]
 
@@ -136,6 +136,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     found = sub.add_parser("paths", help="where the settings and the state files are")
     found.set_defaults(handler=commands.paths)
+
+    storage.add(sub)
     return parser
 
 
