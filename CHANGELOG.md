@@ -305,6 +305,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   again is held to the agent's model calls per message for the day,
   then told `limit_reached`. Before, each question was a new call, and
   a peer could use up the worker's calls of the day.
+- `benethos-mailbox-agents`: the export of spans over OTLP takes no
+  proxy and no bundle of authorities from the environment, as the
+  client and the gateway take none. Before, `HTTPS_PROXY` held for it
+  and `REQUESTS_CA_BUNDLE` took the place of `MAILBOX_AGENTS_CA_FILE`.
 - `restore` and `backup verify` refuse a backup whose manifest holds a
   field of the wrong type, such as the schema as a text, with a message
   instead of a traceback.

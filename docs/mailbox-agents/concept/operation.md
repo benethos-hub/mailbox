@@ -54,7 +54,11 @@ Part of the [concept](../CONCEPT.md).
   Langfuse: its values are secrets, masked in every error text and never
   logged. The endpoint is https, or http to this machine, or anywhere
   with `OTLP_ALLOW_HTTP`, as the headers may hold a key. `CA_FILE` holds
-  for it as for the upstreams. One trace per message and process: a span
+  for it as for the upstreams. Like them, the export takes no proxy and
+  no bundle of authorities from the environment. The variables
+  `OTEL_EXPORTER_OTLP_*` of OpenTelemetry are not settings of the agents:
+  leave them unset, as the exporter would still read some of them, such
+  as further headers. One trace per message and process: a span
   `message` with the agent and its instance, the account and message ids, the attempt and
   the state the message is left in, below it `decision` with its source,
   its model calls and why it was refused, below that a span per part the

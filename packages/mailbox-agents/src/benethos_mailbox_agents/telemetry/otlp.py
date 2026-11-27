@@ -17,6 +17,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from urllib.parse import urlsplit
 
+import requests
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.resources import Resource
@@ -129,6 +130,15 @@ def _provider(agent: str, exporter: SpanExporter, *, batch: bool) -> TracerProvi
     return provider
 
 
+def _session() -> requests.Session:
+    """The session the exporter sends with. It takes nothing from the
+    environment, as the client and the gateway take nothing: no proxy, no
+    other bundle of authorities in place of ``CA_FILE``, no ``.netrc``."""
+    session = requests.Session()
+    session.trust_env = False
+    return session
+
+
 @contextmanager
 def open_spans(
     settings: Settings, agent: str, *, exporter: SpanExporter | None = None
@@ -145,6 +155,7 @@ def open_spans(
             endpoint=_check_url(settings.otlp_endpoint or "", settings.otlp_allow_http),
             headers=_headers(settings.otlp_headers_file),
             certificate_file=str(settings.ca_file) if settings.ca_file else None,
+            session=_session(),
         )
     spans = OtlpSpans(_provider(agent, exporter, batch=batch))
     try:

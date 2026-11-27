@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import requests
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
     InMemorySpanExporter,
 )
@@ -145,6 +146,39 @@ def test_without_an_endpoint_no_spans_go_out() -> None:
         assert spans is NO_SPANS
         with spans.span("message", message_id="m1") as span:
             span.set("state", "done")
+
+
+TEST_CA = Path(__file__).resolve().parents[1] / "data" / "test-ca.pem"
+
+
+def test_the_export_takes_no_proxy_and_no_bundle_from_the_environment(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("HTTPS_PROXY", "http://proxy.example.test:3128")
+    monkeypatch.setenv("REQUESTS_CA_BUNDLE", str(tmp_path / "elsewhere.pem"))
+    sent: list[dict[str, Any]] = []
+
+    def send(
+        self: requests.Session, request: requests.PreparedRequest, **kwargs: Any
+    ) -> requests.Response:
+        sent.append(kwargs)
+        answer = requests.Response()
+        answer.status_code = 200
+        answer._content = b""
+        return answer
+
+    monkeypatch.setattr(requests.Session, "send", send)
+    endpoint = "https://otel.example/v1/traces"
+
+    with open_spans(
+        settings(otlp_endpoint=endpoint, ca_file=TEST_CA), "categorization"
+    ) as spans:
+        with spans.span("message", message_id="m1"):
+            pass
+
+    assert sent
+    assert all(not kwargs["proxies"] for kwargs in sent)
+    assert all(kwargs["verify"] == str(TEST_CA) for kwargs in sent)
 
 
 @pytest.mark.parametrize(
