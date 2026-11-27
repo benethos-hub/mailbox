@@ -5,6 +5,7 @@ live."""
 
 from __future__ import annotations
 
+import sqlite3
 import threading
 from collections.abc import Callable, Iterator
 from contextlib import AbstractContextManager, contextmanager, suppress
@@ -32,7 +33,7 @@ class FilePlace:
         self.path = path
         self._shape = shape
         self._keep_copy = keep_copy
-        self._driver: sqlite_file.Driver | None = None
+        self._driver: sqlite3.Connection | None = None
         self._engine: sa.Engine | None = None
         self._newest = 0
 

@@ -27,9 +27,6 @@ from .errors import Errors, StorageError
 from .migrated import Migrated
 from .shape import Shape
 
-# The connection of the driver, for the one place that holds it.
-Driver = sqlite3.Connection
-
 # What SQLite keeps beside a database: its rollback journal, its write
 # ahead log and the index of the shared memory.
 SIDECARS = ("-journal", "-wal", "-shm")
