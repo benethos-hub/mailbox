@@ -11,6 +11,7 @@ mail. See docs/mailbox-agents/concept/state.md.
 
 from __future__ import annotations
 
+import time
 from collections.abc import Callable
 from contextlib import ExitStack
 from datetime import datetime
@@ -169,15 +170,21 @@ class Store(_Messages, _Steps, _Actions, _Items, _Calls, _Profile):
         read_only: bool = False,
         readers: tuple[str, ...] = (),
         setting: str = "",
+        clock: Callable[[], float] = time.monotonic,
     ) -> Store:
         """Open the state in the schema of the role of ``server``, in a
         database of its own. A writer makes the schema where it is
         missing, brings it to the schema of this version, takes the lock
         of a running agent, so a second writer is refused, and gives the
         database to ``readers`` alone, ``setting`` naming them in an
-        error. A reader needs it at the schema of this version."""
+        error. A reader needs it at the schema of this version. A server
+        that is away is kept so by ``clock`` in seconds: every call fails
+        at once with ``StateUnavailableError`` until the next attempt is
+        due."""
         name = f"{server.database}/{server.schema_name}"
-        place = server_place.ServerPlace(server, SHAPE, make_schema=not read_only)
+        place = server_place.ServerPlace(
+            server, SHAPE, clock, make_schema=not read_only
+        )
         try:
             with _named(name):
                 if read_only:

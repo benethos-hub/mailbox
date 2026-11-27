@@ -17,7 +17,11 @@ from benethos_mailbox_agents.contract import (
     Route,
     Trigger,
 )
-from benethos_mailbox_agents.errors import MailboxUnavailableError, StateFileError
+from benethos_mailbox_agents.errors import (
+    MailboxUnavailableError,
+    StateFileError,
+    StateUnavailableError,
+)
 from benethos_mailbox_agents.records import Event, MailMessage
 from benethos_mailbox_agents.runtime.health import check, window
 from benethos_mailbox_agents.runtime.loop import Worker
@@ -113,6 +117,32 @@ async def test_a_state_file_error_ends_the_loop(
 
     with pytest.raises(StateFileError):
         await asyncio.wait_for(run.run(asyncio.Event()), timeout=5)
+
+
+async def test_a_database_of_the_state_away_does_not_end_the_loop(
+    world: Wired, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The pass ends, the loop waits without its progress and tries
+    again, as for an upstream away."""
+    run = worker(world, poll_seconds=0.01, backoff_ceiling_seconds=0.02)
+    stop = asyncio.Event()
+    passes: list[float] = []
+
+    async def away() -> float:
+        passes.append(time.monotonic())
+        if len(passes) == 3:
+            stop.set()
+        raise StateUnavailableError(1, "AdminShutdown (57P01)")
+
+    def no_progress(at: datetime) -> None:
+        raise StateUnavailableError(1, "AdminShutdown (57P01)")
+
+    monkeypatch.setattr(run, "run_pass", away)
+    monkeypatch.setattr(world.store, "set_progress", no_progress)
+
+    await asyncio.wait_for(run.run(stop), timeout=5)
+
+    assert len(passes) == 3
 
 
 async def test_a_config_error_does_not_end_the_loop(world: Wired) -> None:

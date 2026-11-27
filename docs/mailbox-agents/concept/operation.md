@@ -25,6 +25,8 @@ Part of the [concept](../CONCEPT.md).
   (`3 * POLL_SECONDS + GATEWAY_TIMEOUT_SECONDS`), and 1 otherwise. It reads
   the state file beside the running agent. A process that is alive and
   stuck is unhealthy. One whose gateway is away is not, its loop goes on.
+  One whose database of the state on a server is away is, since the loop
+  can write no progress while it waits for it.
 - **Metrics:** an HTTP endpoint in the Prometheus text format on
   `METRICS_PORT`, served with the `prometheus-client` package (decided
   2026-11-17), one registry per process: `mailbox_agents_info` with agent,

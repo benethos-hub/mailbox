@@ -33,7 +33,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   `MAILBOX_AGENTS_DATABASE_READERS` names, its future tables too, and
   takes it from those it no longer names. A reader the server does not
   know stops the start. `MAILBOX_AGENTS_PROMPT_RETENTION_DAYS` above zero
-  does not start with it.
+  does not start with it. A server that is away is waited for as an
+  upstream (`StateUnavailableError`), and the health check fails while
+  it is. A worker whose database another agent took in the meantime
+  ends.
 - `benethos-mailbox-agents`: the state file stands on the storage of
   `benethos-mailbox-common`, as the database of the service does. A
   state file is brought to schema 5 when its agent starts, with a copy

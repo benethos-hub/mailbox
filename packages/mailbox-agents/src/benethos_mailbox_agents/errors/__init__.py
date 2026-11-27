@@ -28,6 +28,7 @@ from .state_file import (
     StateConflictError,
     StateFileError,
     StateInUseError,
+    StateUnavailableError,
 )
 from .unavailable import UnavailableError
 
@@ -48,6 +49,7 @@ __all__ = [
     "StateConflictError",
     "StateFileError",
     "StateInUseError",
+    "StateUnavailableError",
     "UnavailableError",
     "describe_invalid",
 ]

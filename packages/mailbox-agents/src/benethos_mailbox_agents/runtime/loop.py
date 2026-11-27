@@ -7,13 +7,16 @@ that are due, asks the agent on the tick what is due, and stores the
 cursor last. A crash repeats work and skips no mail. A mailbox service that
 is away leaves every message where it is, a gateway that is away only
 those that ask a model, and the next pass waits twice as long, up to the
-ceiling. A service of another version
-ends the loop. See docs/mailbox-agents/concept/runtime.md.
+ceiling. A database of the state on a server that is away ends the pass
+the same way. A service of another version, a state file that fails and
+a database another agent took while it was away end the loop.
+See docs/mailbox-agents/concept/runtime.md.
 """
 
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import time
 from collections.abc import Callable
 from datetime import date, datetime, timedelta
@@ -29,6 +32,7 @@ from ..errors import (
     MessageGoneError,
     ServiceVersionError,
     StateFileError,
+    StateUnavailableError,
     UnavailableError,
 )
 from ..logbook import feed, record, worker
@@ -468,5 +472,8 @@ class Worker:
             try:
                 await asyncio.wait_for(stop.wait(), timeout=step)
             except TimeoutError:
-                self.store.set_progress(self._now())
+                # A database of the state that is away takes no progress:
+                # the health check then says so.
+                with contextlib.suppress(StateUnavailableError):
+                    self.store.set_progress(self._now())
             left -= step
