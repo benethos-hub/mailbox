@@ -15,6 +15,7 @@ from benethos_mailbox_agents.records import (
     FolderRef,
     MailMessage,
     MessageRef,
+    Profile,
     StepResult,
 )
 
@@ -75,3 +76,30 @@ def test_a_step_result_round_trips_as_json() -> None:
 def test_a_step_is_one_of_the_three() -> None:
     with pytest.raises(ValidationError):
         StepResult(step="other", at=datetime(2026, 11, 17, tzinfo=UTC))
+
+
+PROFILE = {
+    "agent": "counting",
+    "instance": None,
+    "agent_version": "1",
+    "package_version": "0.11.1",
+    "stage": "shadow",
+    "accounts": (),
+    "keyword": "agent-counting",
+    "poll_seconds": 60.0,
+    "gateway_timeout_seconds": 120.0,
+    "model_alias": "",
+    "prompt_version": "",
+    "started": datetime(2026, 11, 27, tzinfo=UTC),
+}
+
+
+def test_a_profile_refuses_a_field_it_does_not_know() -> None:
+    assert Profile(**PROFILE).agent == "counting"
+    with pytest.raises(ValidationError):
+        Profile(**PROFILE, service_url="https://mail.example.org")
+
+
+def test_a_profile_refuses_a_time_without_its_zone() -> None:
+    with pytest.raises(ValidationError):
+        Profile(**{**PROFILE, "started": datetime(2026, 11, 27)})  # noqa: DTZ001

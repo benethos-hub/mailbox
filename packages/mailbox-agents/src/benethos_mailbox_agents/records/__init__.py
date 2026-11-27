@@ -19,6 +19,7 @@ from .mail import (
     MessageRef,
     Thread,
 )
+from .profile import Profile
 
 __all__ = [
     "DISCARD_ROLES",
@@ -41,6 +42,7 @@ __all__ = [
     "NotClassified",
     "NotClassifiedReason",
     "OpenItem",
+    "Profile",
     "Step",
     "StepResult",
     "Thread",
