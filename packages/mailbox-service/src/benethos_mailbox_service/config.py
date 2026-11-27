@@ -231,7 +231,7 @@ class Settings(files.FileSettings):
                 "and its secret in oauth_google_client_secret or "
                 "oauth_google_client_secret_file"
             )
-        if self.storage == "postgres":
+        if self.on_server:
             _database_settings(self.database_url, self.database_password_file)
         return self
 
@@ -264,13 +264,18 @@ class Settings(files.FileSettings):
         return SecretStr(files.secret_file(self.database_password_file))
 
     @property
+    def on_server(self) -> bool:
+        """Whether the records lie on a database server, not in a file."""
+        return self.storage == "postgres"
+
+    @property
     def database_path(self) -> Path:
         return (self.data_dir / "mailbox.db").resolve()
 
     def database_name(self) -> str:
         """The database for a line: the path of its file, or the address
         of its server, which holds no password."""
-        if self.storage == "postgres" and self.database_url:
+        if self.on_server and self.database_url:
             parts = urlsplit(self.database_url)
             host = parts.netloc.rsplit("@", 1)[-1]
             return f"{parts.scheme}://{parts.username}@{host}{parts.path}"

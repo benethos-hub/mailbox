@@ -46,7 +46,7 @@ def storage(
     activity = ActivityLog(
         clock, audit, transaction=store.transaction if store is not None else None
     )
-    if settings.storage == "postgres" and settings.database_tls == "off":
+    if settings.on_server and settings.database_tls == "off":
         activity.record(said.DatabaseUnencrypted(by=SERVICE))
     outages = Outages()
     if store is not None:
@@ -69,7 +69,7 @@ def server_of(settings: Settings) -> Server | None:
     """The database server the settings name, for storage = postgres,
     with the password of its role read now and kept from every log
     line. None for another storage."""
-    if settings.storage != "postgres" or settings.database_url is None:
+    if not settings.on_server or settings.database_url is None:
         return None
     return database_server(settings)
 

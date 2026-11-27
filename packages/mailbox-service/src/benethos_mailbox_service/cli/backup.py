@@ -66,7 +66,7 @@ def _verify(target: list[str], recovery_key: bool, env_file: Path | None) -> Non
         raise UsageError("use `backup verify FILE`")
     settings = load_settings(env_file)
     master = read_recovery_key() if recovery_key else master_key(settings)
-    if settings.storage == "postgres":
+    if settings.on_server:
         # No file beside a database on a server: nothing on a disk.
         manifest = verify_in_memory(Path(target[1]), master)
     else:
@@ -89,7 +89,7 @@ def _write(target: list[str], env_file: Path | None, chosen: int | None) -> None
     if len(target) != 1:
         raise UsageError("use `backup FILE` or `backup verify FILE`")
     settings = stored(load_settings(env_file), "backups")
-    format = _format(settings.storage, chosen)
+    format = _format(settings.on_server, chosen)
     with opened(settings) as services:
         if services.store is None:
             raise UsageError(f"backups need {STORED}")
@@ -116,10 +116,10 @@ def _write(target: list[str], env_file: Path | None, chosen: int | None) -> None
     )
 
 
-def _format(storage: str, chosen: int | None) -> int:
-    """The format of a backup of ``storage``: 2 by default on SQLite, 3
-    on a database server, which has no file for format 2."""
-    if storage != "postgres":
+def _format(on_server: bool, chosen: int | None) -> int:
+    """The format of a backup: 2 by default on SQLite, 3 on a database
+    server, which has no file for format 2."""
+    if not on_server:
         return chosen or 2
     if chosen == 2:
         raise UsageError(
