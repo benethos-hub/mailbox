@@ -16,6 +16,9 @@ account and the service are printed before the check reads or writes.
 - ``checks``: the run of the checks, a check skipped, the agent
   ``categorization`` over the test account and the keywords it sets, and the
   labels a state file holds.
+- ``test_database``: the test database of containers/test-database/, its
+  administrator, what a check made dropped, and its container stopped.
+  Imported as ``agents_common.test_database`` by the check that needs it.
 
 The live scripts import this package beside them, as ``agents_common``,
 and the invented mail of containers/live/mailbox-agents/mail.py through
