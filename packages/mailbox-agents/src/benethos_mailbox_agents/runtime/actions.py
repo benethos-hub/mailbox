@@ -372,24 +372,25 @@ class Executor:
         """What became of the action in an earlier pass, when that settles
         it: a forward drafted after all, or the same action recorded."""
         if executed:
-            return Outcome.PRESENT if await self._drafted_unseen(request) else None
+            return await self._drafting(request)
         if not self._recorded_before(request, argument):
             return None
         if request.action is Action.CREATE_FOLDER:
             self._recorded_folders.add((request.ref.account_id, argument))
         return Outcome.RECORDED
 
-    async def _drafted_unseen(self, request: ActionRequest) -> bool:
-        """Whether a forward recorded and not taken was drafted after all,
-        its answer lost: then it counts as taken and is not drafted again."""
+    async def _drafting(self, request: ActionRequest) -> Outcome | None:
+        """A forward about to be drafted: present when one whose answer was
+        lost lies among the drafts, refused past the drafts of the day."""
         if request.action is not Action.DRAFT_FORWARD:
-            return False
-        if not drafts.unsettled(self._store, request):
-            return False
-        if not await self._mailbox.forward_drafted(request.ref, request.recipients):
-            return False
-        self._store.mark_taken(request.ref, Action.DRAFT_FORWARD.value)
-        return True
+            return None
+        try:
+            found = await drafts.before(
+                self.agent, self._store, self._mailbox, request, self._now()
+            )
+        except ActionRefusedError as exc:
+            return self._refused(request, exc)
+        return Outcome.PRESENT if found else None
 
     def _recorded_before(self, request: ActionRequest, argument: str) -> bool:
         """Whether the same action is recorded for the message already, in

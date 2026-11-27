@@ -4,6 +4,7 @@ once per message, within the drafts of a day, never sent."""
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from typing import ClassVar
 
 import pytest
@@ -124,6 +125,23 @@ async def test_the_drafts_of_a_day_are_limited(actions_world: Wired) -> None:
     actions_world.clock.advance(days=1)
     assert await run([forward(refs[21])]) == [Outcome.DONE]
     assert len(drafted(actions_world)) == 21
+
+
+async def test_past_the_drafts_of_a_day_a_held_forward_is_still_recorded(
+    actions_world: Wired,
+) -> None:
+    refs = [MessageRef(account_id=ACCOUNT, message_id=f"n{i}") for i in range(21)]
+    for ref in refs:
+        actions_world.service.add(wire_message(ref.message_id), change=None)
+    run = executor(actions_world)
+    for ref in refs[:20]:
+        assert await run([forward(ref)]) == [Outcome.DONE]
+    held = replace(forward(refs[20]), held=True)
+
+    assert await run([held]) == [Outcome.RECORDED]
+
+    [row] = actions_world.store.actions(refs[20])
+    assert (row.action, row.executed) == ("draft_forward", False)
 
 
 @pytest.mark.parametrize("folder", ["sent", "drafts"])

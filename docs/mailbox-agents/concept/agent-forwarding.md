@@ -82,7 +82,9 @@ No agent sends, in any stage.
   state file made anew knows none of the forwards before, so a `backfill`
   then drafts a second one for mail that still carries its keyword.
 - **At most 20 a day.** Beyond them the action is refused and logged, and
-  the message ends.
+  the message ends. Only the forwards drafted count, and a forward only
+  recorded, in a stage below `suggest` or held by its sender check, is
+  recorded past them as well.
 - **A forward drafted whose answer did not come** is looked up among the
   drafts: when it is there, it counts as drafted.
 

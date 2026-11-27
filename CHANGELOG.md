@@ -335,6 +335,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `benethos-mailbox-agents`: the backfill after an expired feed takes
   up a message the agent skipped before, such as one given a keyword an
   actor waits for while the feed expired. Before, it stayed `skipped`.
+- `benethos-mailbox-agents`: past the 20 forwards of a day, a forward
+  that would only be recorded, held by its sender check or in a stage
+  below `suggest`, is still recorded. Before, it was refused and left no
+  trace.
 - `restore` and `backup verify` refuse a backup whose manifest holds a
   field of the wrong type, such as the schema as a text, with a message
   instead of a traceback.
