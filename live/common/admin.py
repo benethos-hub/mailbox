@@ -28,6 +28,14 @@ class Admin:
     token: str
 
 
+@dataclass(frozen=True)
+class Made:
+    """A user made for a check, and its token."""
+
+    user_id: str
+    token: str
+
+
 def csrf_of(html: str) -> str:
     found = re.search(r'name="csrf_token" value="([^"]+)"', html)
     return found.group(1) if found else ""
@@ -74,18 +82,28 @@ def bootstrap(env: dict[str, str], url: str) -> Admin:
                 "repeat_password": own,
             },
         )
-        users = browser.get("/ui/users").text
-        user_id = re.search(r'href="/ui/users/(usr_[0-9a-f]+)"', users)
-        if "Password changed." not in changed.text or user_id is None:
-            sys.exit("bootstrap: the password or the user page did not work")
-        made_token = browser.post(
-            f"/ui/users/{user_id.group(1)}/tokens",
-            data={"csrf_token": csrf_of(users), "name": "live check"},
-        )
-        token = re.search(r'<code class="secret"[^>]*>([^<]+)</code>', made_token.text)
-        if token is None:
-            sys.exit("bootstrap: no token on the user page")
-    return Admin("admin", own, token.group(1))
+        if "Password changed." not in changed.text:
+            sys.exit("bootstrap: the password did not change")
+        token = ui_token(browser, "live check")
+    return Admin("admin", own, token)
+
+
+def ui_token(browser: httpx.Client, name: str, *, days: int | None = None) -> str:
+    """A token of the first user the UI lists, made on its page as an
+    operator would, by a browser signed in as that user. ``days`` limits
+    how long it lasts."""
+    users = browser.get("/ui/users").text
+    user_id = re.search(r'href="/ui/users/(usr_[0-9a-f]+)"', users)
+    if user_id is None:
+        sys.exit("ui token: the UI lists no user")
+    form = {"csrf_token": csrf_of(users), "name": name}
+    if days is not None:
+        form["days"] = str(days)
+    made = browser.post(f"/ui/users/{user_id.group(1)}/tokens", data=form)
+    token = re.search(r'<code class="secret"[^>]*>([^<]+)</code>', made.text)
+    if token is None:
+        sys.exit("ui token: no token on the user page")
+    return token.group(1)
 
 
 def user_token(
@@ -98,8 +116,30 @@ def user_token(
     folders: list[str] | None = None,
 ) -> str:
     """A user with ``allow`` on the accounts, narrowed as a grant narrows,
-    and a token for it. User names are unique, so each gets a random
-    end."""
+    and a token for it."""
+    return made_user(
+        mailbox,
+        account_ids,
+        allow,
+        recipients=recipients,
+        max_sends_per_day=max_sends_per_day,
+        folders=folders,
+    ).token
+
+
+def made_user(
+    mailbox: SyncMailboxClient,
+    account_ids: list[str],
+    allow: list[str],
+    *,
+    name: str = "",
+    recipients: list[str] | None = None,
+    max_sends_per_day: int | None = None,
+    folders: list[str] | None = None,
+) -> Made:
+    """What :func:`user_token` makes, with the id of the user, for a check
+    that deletes it again. User names are unique, so each gets a random
+    end after ``name``, by default one of its rights."""
     grant = Grant(
         tuple(account_ids),
         tuple(allow),
@@ -107,10 +147,10 @@ def user_token(
         max_sends_per_day=max_sends_per_day,
         folders=tuple(folders) if folders is not None else None,
     )
-    user = mailbox.create_user(
-        f"live check {'+'.join(allow)} {secrets.token_hex(3)}", grants=[grant]
-    )
-    return mailbox.create_token(user.id, "live").secret.get_secret_value()
+    named = name or f"live check {'+'.join(allow)}"
+    user = mailbox.create_user(f"{named} {secrets.token_hex(3)}", grants=[grant])
+    token = mailbox.create_token(user.id, "live").secret.get_secret_value()
+    return Made(user.id, token)
 
 
 def admin_token(services: Services, name: str = "live") -> str:
