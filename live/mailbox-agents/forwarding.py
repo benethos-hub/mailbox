@@ -25,8 +25,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import re
-import secrets
 import sys
 import tempfile
 from collections.abc import Awaitable, Callable
@@ -46,7 +44,7 @@ from agents_common import (  # beside this script
     snapshot,
     worker,
 )
-from common.admin import csrf_of, ui_sign_in
+from common.admin import made_user, ui_sign_in, ui_token
 from pydantic import SecretStr
 
 from benethos_mailbox_agents.agents.forwarding.agent import Forwarding
@@ -54,7 +52,7 @@ from benethos_mailbox_agents.records import MessageRef
 from benethos_mailbox_agents.settings import Settings
 from benethos_mailbox_agents.sources.mailbox import Mailbox
 from benethos_mailbox_agents.store import Store
-from benethos_mailbox_client import Grant, SyncMailboxClient
+from benethos_mailbox_client import SyncMailboxClient
 
 # The invoices of the invented mail by the local part of their Message-ID.
 INVOICES = ("inv-cloudhost-1", "inv-telco-1")
@@ -148,19 +146,7 @@ def _admin_token(url: str) -> str:
     operator would."""
     with httpx.Client(base_url=url, timeout=60, follow_redirects=True) as browser:
         ui_sign_in(browser, "admin", _admin_password())
-        users = browser.get("/ui/users").text
-        user = re.search(r'href="/ui/users/(usr_[0-9a-f]+)"', users)
-        if user is None:
-            raise AssertionError("the UI lists no administrator")
-        page = browser.get(f"/ui/users/{user.group(1)}?tab=access").text
-        made = browser.post(
-            f"/ui/users/{user.group(1)}/tokens",
-            data={"csrf_token": csrf_of(page), "name": "live forwarding", "days": "1"},
-        )
-        token = re.search(r'<code class="secret"[^>]*>(mbx_[A-Za-z0-9_-]+)', made.text)
-        if token is None:
-            raise AssertionError("the UI showed no token")
-        return token.group(1)
+        return ui_token(browser, "live forwarding", days=1)
 
 
 async def setup(live: Live) -> str:
@@ -174,12 +160,11 @@ async def setup(live: Live) -> str:
         t for t in live.admin.list_tokens(me.user_id) if t.name == "live forwarding"
     ]
     live.admin_token = (me.user_id, mine[-1].id)
-    user = live.admin.create_user(
-        f"live forwarding {secrets.token_hex(3)}",
-        grants=[Grant((live.account(),), ("mail.read", "drafts"))],
+    user = made_user(
+        live.admin, [live.account()], ["mail.read", "drafts"], name="live forwarding"
     )
-    live.user_id = user.id
-    secret = live.admin.create_token(user.id, "live").secret.get_secret_value()
+    live.user_id = user.user_id
+    secret = user.token
     live.forwarder = live.settings.model_copy(
         update={"service_token": SecretStr(secret), "service_token_file": None}
     )

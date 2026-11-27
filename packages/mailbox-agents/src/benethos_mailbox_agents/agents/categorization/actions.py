@@ -33,7 +33,6 @@ __all__ = [
     "Keyword",
     "Move",
     "MoveBelow",
-    "Placed",
     "Stage",
     "held_by_stage",
 ]

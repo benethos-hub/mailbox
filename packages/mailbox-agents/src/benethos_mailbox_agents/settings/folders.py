@@ -31,20 +31,6 @@ DEFAULT_ENV_FILE = Path("config") / APP / ".env"
 DATA_DIR = Path("data") / APP
 # Names another settings file, as --env-file does on the command line.
 ENV_FILE_VARIABLE = "MAILBOX_AGENTS_ENV_FILE"
-# The settings that hold a path. A relative one counts from the folder of
-# the settings file, outside the layout of the repository.
-PATH_SETTINGS = (
-    "data_dir",
-    "categorization_file",
-    "filing_file",
-    "forwarding_file",
-    "inquiries_patterns_file",
-    "ca_file",
-    "service_token_file",
-    "gateway_key_file",
-    "otlp_headers_file",
-    "a2a_token_file",
-)
 
 
 # Where a command reads its settings and keeps its state files.
@@ -80,6 +66,11 @@ class _Paths(files.FileSettings):
     gateway_key_file: str | None = None
     otlp_headers_file: str | None = None
     a2a_token_file: str | None = None
+
+
+# The settings that hold a path. A relative one counts from the folder of
+# the settings file, outside the layout of the repository.
+PATH_SETTINGS = tuple(_Paths.model_fields)
 
 
 def rebased(where: Folders, given: dict[str, Any]) -> dict[str, Any]:

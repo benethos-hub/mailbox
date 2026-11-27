@@ -366,12 +366,13 @@ def test_the_check_finds_more_than_prefix_taken_from_the_settings(
     ids=lambda p: p.relative_to(SOURCE).as_posix(),
 )
 def test_the_discard_roles_are_spelt_once(path: Path) -> None:
-    """The trash, junk and spam are named in records/mail.py alone, so the
-    executor and an agent cannot come to differ on them."""
+    """The trash, junk and spam, and the drafts and sent mail, are named as
+    a set of roles in records/mail.py alone, so the executor and an agent
+    cannot come to differ on them. In a set, a tuple or a list."""
     for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
-        if isinstance(node, ast.Set):
+        if isinstance(node, ast.Set | ast.Tuple | ast.List):
             values = {e.value for e in node.elts if isinstance(e, ast.Constant)}
-            assert "trash" not in values, (
+            assert not values & {"trash", "drafts"}, (
                 f"{path.name} names the roles on line {node.lineno}"
             )
 

@@ -23,7 +23,7 @@ from ..runtime.readiness import start
 from ..settings import PREFIX, Settings
 from ..sources.mailbox import Mailbox, connect
 from ..store import Store, earlier_file, path_for
-from ..telemetry import open_spans
+from ..telemetry.otlp import open_spans
 
 __all__ = [
     "TRANSPORTS",

@@ -40,6 +40,7 @@ from ...contract import (
     Classifier,
     Context,
     Limits,
+    Placed,
     Requires,
     Route,
     Shown,
@@ -47,14 +48,12 @@ from ...contract import (
     Trigger,
 )
 from ...errors import ConfigError
-from ...records import Decision, Event, FolderRef, MailMessage
+from ...records import DISCARD_ROLES, Decision, Event, FolderRef, MailMessage
 from ...settings import PREFIX
-from .actions import Placed
 from .alone import alone
 from .dimensions import Chain
 from .groups import NONE
 from .lists import Listed, circles, load_chain, used
-from .lists import list_digest as _version
 from .plan import (
     classify,
     classify_rules,
@@ -66,7 +65,7 @@ from .plan import (
 from .recognizers import PROMPT, Choice
 from .summary import fates, parts_of
 
-__all__ = ["NONE", "PROMPT", "Categorization", "_version"]
+__all__ = ["NONE", "PROMPT", "Categorization"]
 
 # The senders in no group a report names at most, as candidates.
 CANDIDATES = 10
@@ -225,7 +224,7 @@ class Categorization(Classifier):
         With ``on.keywords`` one that carries a keyword the list waits for,
         its own keyword or not, but none in the trash, junk or spam."""
         if self._waited_for(message):
-            return not any(message.in_role(r) for r in ("trash", "junk", "spam"))
+            return not any(f.role in DISCARD_ROLES for f in message.folders)
         if self.chain.on.arrival is None or message.has_keyword(self.keyword):
             return False
         if message.in_role("inbox"):

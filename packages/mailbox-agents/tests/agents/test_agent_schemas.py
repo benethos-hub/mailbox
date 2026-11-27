@@ -24,7 +24,6 @@ from benethos_mailbox_agents.records import (
     MessageRef,
 )
 from benethos_mailbox_agents.runtime.model import _texts
-from benethos_mailbox_agents.runtime.readiness import uses_model
 
 # The Claude API compiles a schema of structured output with at most this
 # many parameters whose type is a union, nullable ones among them, and
@@ -74,7 +73,11 @@ def _too_long(name: str) -> tuple[type[BaseModel], dict[str, Any]]:
     raise AssertionError(f"give {name} an answer here that copies the mail")
 
 
-ASKING = sorted(name for name, cls in discover().items() if uses_model(cls))
+# The agents whose limits allow a model call, as Agent.asks_model asks by
+# default: those that may ask a model in some configuration.
+ASKING = sorted(
+    name for name, cls in discover().items() if cls.limits.model_calls_per_message > 0
+)
 
 
 def _unions(node: Any, defs: dict[str, Any]) -> int:

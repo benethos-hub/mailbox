@@ -23,9 +23,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ...contract import Action, ActionRequest, Context
+from ...contract import Action, ActionRequest, Context, Placed
 from ...records import LABEL, Decision, Evidence, MailMessage
-from .actions import ACTIONS, ChainAction, Move, MoveBelow, Placed, held_by_stage
+from .actions import ACTIONS, ChainAction, Move, MoveBelow, held_by_stage
 from .dimensions import Category, Chain, Dimension, Step
 from .groups import NONE
 from .recognizers import RECOGNIZERS, Choice

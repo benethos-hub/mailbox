@@ -119,7 +119,7 @@ class Forwarding(Actor):
 
     def summarize(self, shown: list[Shown]) -> list[str]:
         """Per rule, as ``rule-<n>``, how many forwards were drafted, only
-        recorded, and none."""
+        recorded, and left without one."""
         counted: dict[str, Counter[str]] = {}
         for item in shown:
             label = item.decision.label

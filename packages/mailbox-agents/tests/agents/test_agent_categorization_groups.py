@@ -10,13 +10,13 @@ from typing import Any
 
 import pytest
 
-from benethos_mailbox_agents.agents.categorization.agent import _version
 from benethos_mailbox_agents.agents.categorization.groups import (
     MAX_ADDRESS,
     Groups,
     Kind,
     load_groups,
 )
+from benethos_mailbox_agents.agents.categorization.lists import list_digest
 from benethos_mailbox_agents.errors import ConfigError
 
 from .categorization_helpers import groups, refused
@@ -395,4 +395,4 @@ def test_the_version_of_a_list_stays_the_same_value() -> None:
             ]
         }
     )
-    assert _version(listed) == "list-9c732a913e57"
+    assert list_digest(listed) == "list-9c732a913e57"

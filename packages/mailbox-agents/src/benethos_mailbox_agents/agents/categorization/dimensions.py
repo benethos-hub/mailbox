@@ -28,7 +28,7 @@ from pydantic import (
     model_validator,
 )
 
-from ...contract import KEYWORD_FORM, is_pattern, waits_for
+from ...contract import KEYWORD_FORM, from_top, is_pattern, waits_for
 from .actions import ACTIONS, Keyword, Move, MoveBelow, Stage
 from .groups import (
     NONE,
@@ -36,7 +36,6 @@ from .groups import (
     Match,
     candidates_in,
     check_rules,
-    from_top,
     match_in,
 )
 

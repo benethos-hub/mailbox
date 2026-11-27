@@ -5,14 +5,15 @@ from __future__ import annotations
 
 import json
 from dataclasses import replace
-from typing import ClassVar
+from typing import ClassVar, cast, get_args
 
 import pytest
 
-from benethos_mailbox_agents.contract import Action, ActionRequest, Limits
+from benethos_mailbox_agents.contract import Action, ActionRequest, ForwardForm, Limits
 from benethos_mailbox_agents.errors import MailboxUnavailableError
 from benethos_mailbox_agents.records import MessageRef
 from benethos_mailbox_agents.runtime.actions import Executor, Outcome
+from benethos_mailbox_agents.runtime.drafts import FORMS
 
 from ..agents_fake import ACCOUNT, wire_message
 from ..agents_helpers import Wired, settings
@@ -33,7 +34,8 @@ def forward(ref: MessageRef = REF, *to: str, form: str = "inline") -> ActionRequ
         Action.DRAFT_FORWARD,
         ref,
         recipients=to or TO,
-        forward_as=form,
+        # Any text, as an agent of its own may ask one the runtime refuses.
+        forward_as=cast(ForwardForm, form),
         why="rule",
     )
 
@@ -53,6 +55,10 @@ def drafted(world: Wired) -> list[dict[str, object]]:
         for r in world.service.requests
         if r.method == "POST" and r.url.path.endswith("/drafts")
     ]
+
+
+def test_the_runtime_takes_the_forms_the_contract_names() -> None:
+    assert set(get_args(ForwardForm)) == FORMS == {"inline", "attachment"}
 
 
 async def test_shadow_records_the_forward_and_drafts_none(actions_world: Wired) -> None:

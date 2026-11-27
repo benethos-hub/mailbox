@@ -28,7 +28,7 @@ from ..evaluation.report import build, render, write
 from ..evaluation.run import evaluate as run_evaluation
 from ..logbook import process, record
 from ..peers import Card, Server
-from ..runtime.classify import Classifier
+from ..runtime.classify import PeerClassifier
 from ..runtime.health import check
 from ..runtime.readiness import MAILBOX_SETTINGS, folder_lines, readiness, start
 from ..settings import PREFIX, Settings, folders
@@ -116,7 +116,7 @@ async def _peers(found: Session, settings: Settings) -> AsyncIterator[None]:
     """The entrance for peers over A2A beside the worker, on its port,
     stopped when the worker stops."""
     token = settings.secret("a2a_token")
-    classifier = Classifier(
+    classifier = PeerClassifier(
         found.agent,
         reader=found.mailbox,
         gateway=found.gateway,

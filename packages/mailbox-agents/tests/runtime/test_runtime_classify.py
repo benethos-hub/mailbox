@@ -20,7 +20,7 @@ from benethos_mailbox_agents.records import (
     NotClassified,
     StepResult,
 )
-from benethos_mailbox_agents.runtime.classify import Classifier, _ReadItems, told
+from benethos_mailbox_agents.runtime.classify import PeerClassifier, _ReadItems, told
 from benethos_mailbox_agents.runtime.items import StoredItems
 
 from ..agents_fake import ACCOUNT, wire_message
@@ -34,8 +34,8 @@ def ref(message_id: str) -> MessageRef:
     return MessageRef(account_id=ACCOUNT, message_id=message_id)
 
 
-def classifier(world: Wired, agent: Echo | None = None) -> Classifier:
-    return Classifier(
+def classifier(world: Wired, agent: Echo | None = None) -> PeerClassifier:
+    return PeerClassifier(
         agent or Echo(settings()),
         reader=world.mailbox,
         gateway=world.gateway,

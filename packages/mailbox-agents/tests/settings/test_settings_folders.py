@@ -5,6 +5,7 @@ operating system. Every folder is one of the test's."""
 from __future__ import annotations
 
 from pathlib import Path
+from typing import get_args
 
 import pytest
 
@@ -12,9 +13,11 @@ from benethos_mailbox_agents.settings import (
     DATA_DIR,
     DEFAULT_ENV_FILE,
     PREFIX,
+    Settings,
     folders,
     load_settings,
 )
+from benethos_mailbox_agents.settings.folders import PATH_SETTINGS
 from benethos_mailbox_common.paths import folders as system
 
 
@@ -96,3 +99,15 @@ def test_without_the_layout_the_folders_of_the_system_are_taken(
 
     assert folders().origin == "system"
     assert load_settings().data_dir == system_data
+
+
+def test_every_setting_of_a_path_counts_from_the_settings_file() -> None:
+    """A new setting of a path in ``Settings`` needs its line in ``_Paths``
+    as well, or a relative one would not count from the settings file."""
+    holds_a_path = {
+        name
+        for name, field in Settings.model_fields.items()
+        if field.annotation is Path or Path in get_args(field.annotation)
+    }
+
+    assert set(PATH_SETTINGS) == holds_a_path

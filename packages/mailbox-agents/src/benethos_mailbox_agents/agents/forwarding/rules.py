@@ -20,7 +20,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from ...contract import KEYWORD_FORM, is_pattern, waits_for
+from ...contract import KEYWORD_FORM, ForwardForm, is_pattern, waits_for
 from ...errors import ConfigError, describe_invalid
 
 __all__ = ["On", "Rule", "Rules", "load_rules"]
@@ -57,7 +57,7 @@ class Rule(BaseModel):
 
     keywords: tuple[str, ...] = Field(min_length=1, max_length=10)
     to: tuple[str, ...] = Field(min_length=1, max_length=5)
-    forward_as: Literal["inline", "attachment"] = "inline"
+    forward_as: ForwardForm = "inline"
     sender_check: Literal["required", "off"] = "required"
 
     @field_validator("keywords")

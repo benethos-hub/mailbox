@@ -1,8 +1,10 @@
 """Every example list in the repository parses with the loader it is for,
-and the copies the production setup carries are the same as their sources."""
+the copies the production setup carries are the same as their sources,
+and the production setup has a service for every agent."""
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -13,6 +15,7 @@ from benethos_mailbox_agents.agents.forwarding.rules import (
     load_rules as load_forwarding,
 )
 from benethos_mailbox_agents.agents.inquiries.patterns import load_patterns
+from benethos_mailbox_agents.contract import discover
 
 from .agents_helpers import ROOT
 
@@ -63,3 +66,16 @@ def test_a_production_example_is_the_one_under_config(path: Path) -> None:
 
 def test_every_production_example_is_found() -> None:
     assert len(PRODUCTION) >= 2
+
+
+def test_the_production_setup_has_a_service_for_every_agent() -> None:
+    """A new agent needs its service in the compose file of the production
+    setup and its settings example beside it, or an operator cannot run it."""
+    setup = ROOT / "containers" / "production" / "mailbox-agents"
+    compose = (setup / "compose.yaml").read_text(encoding="utf-8")
+    services = compose.split("\nservices:\n", 1)[1].split("\nvolumes:\n", 1)[0]
+    named = set(re.findall(r"^  ([a-z_]+):$", services, re.MULTILINE))
+
+    assert named == set(discover())
+    for name in named:
+        assert (setup / "agents" / name / ".env.example").is_file(), name

@@ -13,10 +13,11 @@ text.
 from __future__ import annotations
 
 from datetime import datetime
+from typing import get_args
 
-from ..contract import Action, ActionRequest, Agent
+from ..contract import Action, ActionRequest, Agent, ForwardForm
 from ..errors import ActionRefusedError
-from ..records import MailMessage
+from ..records import OWN_ROLES, MailMessage
 from ..store import Store
 from .model import start_of_day
 from .outcomes import Plan
@@ -25,11 +26,7 @@ from .writer import Writer
 __all__ = ["FORMS", "admissible", "before", "plan"]
 
 # The forms of a forward, as the mailbox service takes them.
-FORMS = frozenset({"inline", "attachment"})
-
-# The folders a message to forward may not lie in: the owner's own mail,
-# being written or sent.
-_OWN_ROLES = frozenset({"drafts", "sent"})
+FORMS = frozenset(get_args(ForwardForm))
 
 
 def admissible(agent: Agent, request: ActionRequest) -> None:
@@ -75,7 +72,7 @@ def plan(
     """The forward as planned: its form and addresses as the argument,
     nothing before it. None when a forward of the message was drafted
     already. Refused for a message in the drafts or sent mail."""
-    if any(folder.role in _OWN_ROLES for folder in message.folders):
+    if any(folder.role in OWN_ROLES for folder in message.folders):
         raise ActionRefusedError("no forward of a message in the drafts or sent mail")
     done = any(
         row.action == Action.DRAFT_FORWARD.value and row.executed

@@ -19,6 +19,7 @@ from typing import Any
 
 from benethos_mailbox_common.values import secret
 
+from ...contract import list_version
 from ...errors import ConfigError, describe_invalid
 from .dimensions import Category, Chain, Dimension
 from .groups import READERS, Groups
@@ -132,8 +133,7 @@ def read_chain(data: Any) -> Listed:
         base = list_digest(groups)
     else:
         chain = Chain.model_validate(data)
-        normal = json.dumps(chain.model_dump(mode="json"), sort_keys=True)
-        base = "list-" + secret.digest(normal)[:12]
+        base = list_version(chain)
     _check_names(chain)
     extra = [r for r in used(chain) if r.name not in _IN_PROMPT]
     version = base + "".join(f"-{r.name}-{r.version}" for r in extra)
