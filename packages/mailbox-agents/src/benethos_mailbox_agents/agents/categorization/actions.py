@@ -13,14 +13,18 @@ the rest of the agent. See docs/mailbox-agents/concept/agent-categorization.md.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from typing import Any, ClassVar, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from ...contract import KEYWORD_FORM, Action, ActionRequest
-from ...records import FolderRef, MailMessage, MessageRef
-from .groups import folder_path, from_top
+from ...contract import (
+    KEYWORD_FORM,
+    Action,
+    ActionRequest,
+    Placed,
+    folder_path,
+    from_top,
+)
 
 __all__ = [
     "ACTIONS",
@@ -63,32 +67,6 @@ def held_by_stage(stage: Stage | None, action: Action) -> bool:
         return False
     ranked = _RANKS_AS.get(stage, stage)
     return STAGES.index(ranked) < STAGES.index(_RUNS_FROM[action])
-
-
-@dataclass(frozen=True, slots=True)
-class Placed:
-    """Where a message lies and what it carries, as an action sees it:
-    its ids, its folders by path and role, its keywords. Nothing it says,
-    nothing of its sender."""
-
-    ref: MessageRef
-    folders: tuple[FolderRef, ...]
-    keywords: tuple[str, ...]
-
-    @classmethod
-    def of(cls, message: MailMessage) -> Placed:
-        return cls(ref=message.ref, folders=message.folders, keywords=message.keywords)
-
-    @property
-    def in_inbox(self) -> bool:
-        return any(folder.role == "inbox" for folder in self.folders)
-
-    @property
-    def own_folder(self) -> str | None:
-        """The path of the folder it lies in when that folder has no role,
-        as one the owner made, else None."""
-        found = [folder for folder in self.folders if folder.role is None]
-        return found[0].path if len(self.folders) == 1 and found else None
 
 
 class Params(BaseModel):

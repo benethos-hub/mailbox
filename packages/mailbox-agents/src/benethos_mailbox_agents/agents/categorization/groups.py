@@ -51,6 +51,7 @@ from pydantic import (
     model_validator,
 )
 
+from ...contract import folder_path, from_top
 from ...errors import ConfigError, describe_invalid
 
 __all__ = [
@@ -241,21 +242,6 @@ class Entry(BaseModel):
                 f"group {self.name!r}: the name of a group with a topic is one "
                 "line, without control characters"
             )
-
-
-def folder_path(value: str) -> str:
-    """``value`` when it is names between /, none empty, . or .., else a
-    ValueError."""
-    parts = value.split("/")
-    if any(not p.strip() or p in (".", "..") or p != p.strip() for p in parts):
-        raise ValueError("a folder is names between /, none empty, . or ..")
-    return value
-
-
-def from_top(path: str) -> tuple[str, ...]:
-    """``path`` and every folder above it, the top first."""
-    parts = path.split("/")
-    return tuple("/".join(parts[: i + 1]) for i in range(len(parts)))
 
 
 class Group(Entry):

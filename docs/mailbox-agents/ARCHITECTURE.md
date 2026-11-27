@@ -107,7 +107,9 @@ packages/mailbox-agents/src/benethos_mailbox_agents/
                   # and what a line may never carry (docs/mailbox-agents/LOGGING.md)
   contract/       # Agent (ABC), Action, Trigger, Limits, Requires, the
                   # Context an agent is handed with its protocols Model,
-                  # Reader and Items, the registry of agents, prompt loading
+                  # Reader and Items, the registry of agents, prompt loading,
+                  # and what two kinds of agent share: Placed, the path of
+                  # a folder, the keywords a list waits for
   records/        # the models passed between layers: MessageRef, Decision,
                   # Evidence, StepResult, OpenItem, Classified and
                   # NotClassified, and what an agent sees of

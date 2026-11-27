@@ -20,8 +20,11 @@ from .agent import (
     state_name,
 )
 from .context import Context, Items, Model, Reader
+from .paths import folder_path, from_top
+from .placed import Placed
 from .prompts import load_prompt
 from .registry import discover, load_agent
+from .waiting import is_pattern, waits_for
 
 __all__ = [
     "KEYWORD_FORM",
@@ -33,6 +36,7 @@ __all__ = [
     "Items",
     "Limits",
     "Model",
+    "Placed",
     "Reader",
     "Requires",
     "Route",
@@ -41,7 +45,11 @@ __all__ = [
     "TracePart",
     "Trigger",
     "discover",
+    "folder_path",
+    "from_top",
+    "is_pattern",
     "load_agent",
     "load_prompt",
     "state_name",
+    "waits_for",
 ]
