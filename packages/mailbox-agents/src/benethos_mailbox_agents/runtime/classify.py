@@ -75,16 +75,19 @@ class _ReadItems:
 
 
 def told(agent: Agent, decision: Decision) -> Classified:
-    """What a peer is told of ``decision``: no quote, no detail."""
+    """What a peer is told of ``decision``: no quote, no detail. Its
+    fields only when they are categories of the owner's list, never a
+    value taken from the mail."""
     found = {item.field: item.found is True for item in decision.evidence}
+    fields = dict(decision.fields) if agent.peer_fields else {}
     return Classified(
         agent=agent.label,
         version=agent.prompt_version or agent.version,
         label=decision.label,
         source=decision.source,
-        fields=dict(decision.fields),
+        fields=fields,
         found={LABEL: found.get(LABEL, True)}
-        | {name: found.get(name, True) for name in decision.fields},
+        | {name: found.get(name, True) for name in fields},
         refused=decision.refused,
     )
 

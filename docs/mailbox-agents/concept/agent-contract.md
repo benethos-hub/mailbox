@@ -64,6 +64,7 @@ that writes one of the methods the base puts together.
 | `prompt_version` | the version of the prompt its model step runs under. Read from the instance: `categorization` sets it from its list |
 | `skip_marked` | whether a message that carries its keyword and that its state file does not know is `skipped` before baseline and model. Off by default |
 | `report_labels`, `report_fields` | the labels and field names an evaluation report names in plain text, its own fixed ones. Any other, such as the name of a group of `categorization`, becomes `label-<n>` or `field-<n>` there (decided 2026-11-19). None by default |
+| `peer_fields` | whether the fields of a decision are categories of the owner's list, which a peer over A2A may be told ([a2a.md](a2a.md)). Off by default, as a field may hold a value taken from the mail |
 
 **Marked mail a state file does not know (decided 2026-11-19).** An agent
 that declares `skip_marked` leaves a message alone that carries its keyword

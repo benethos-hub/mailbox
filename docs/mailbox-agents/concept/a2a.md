@@ -63,7 +63,10 @@ skill and the token it wants. It names no category of a list.
   that the agent itself would not take. Both are told
   `message_refused`.
 - **It tells nothing of the mail.** No subject, sender, text or quote,
-  only the categories and whether a quote backs each. The categories
+  only the categories and whether a quote backs each. The fields of a
+  decision are told only by an agent whose fields are categories of the
+  list, `categorization` alone today. `inquiries`, whose fields hold
+  values taken from the mail, tells the label and no field. The categories
   are the owner's words: a peer that asks is told them, and a gateway in
   between may log them, LiteLLM among them.
 - **It costs no more than the limits allow.** A decision the worker

@@ -9,6 +9,8 @@ from pathlib import Path
 
 import pytest
 
+from benethos_mailbox_agents.agents.categorization.agent import Categorization
+from benethos_mailbox_agents.agents.inquiries.agent import Inquiries
 from benethos_mailbox_agents.contract import Limits
 from benethos_mailbox_agents.errors import ContractError
 from benethos_mailbox_agents.records import (
@@ -18,7 +20,7 @@ from benethos_mailbox_agents.records import (
     NotClassified,
     StepResult,
 )
-from benethos_mailbox_agents.runtime.classify import Classifier, _ReadItems
+from benethos_mailbox_agents.runtime.classify import Classifier, _ReadItems, told
 from benethos_mailbox_agents.runtime.items import StoredItems
 
 from ..agents_fake import ACCOUNT, wire_message
@@ -150,6 +152,47 @@ async def test_a_message_the_agent_would_not_take_is_refused(tmp_path: Path) -> 
 
         assert found == NotClassified(agent="echo", reason="message_refused")
         assert world.fake_gateway.requests == []
+
+
+RATE = "95 EUR per hour"
+
+
+async def test_a_value_taken_from_the_mail_is_not_told(tmp_path: Path) -> None:
+    agent = Inquiries(settings())
+    async with wired(tmp_path) as world:
+        world.service.add(wire_message("m1", subject="Hi", text=f"Rate {RATE}."))
+        stored = Decision(label="inquiry", source="model", fields={"rate": RATE})
+        world.store.add_step(
+            ref("m1"),
+            StepResult(
+                step="decision",
+                prompt_version=agent.prompt_version,
+                result=stored.model_dump(mode="json"),
+                duration_ms=1,
+                at=world.clock(),
+            ),
+            "alias",
+        )
+
+        found = await classifier(world, agent).classify(ref("m1"))
+
+    assert isinstance(found, Classified) and found.label == "inquiry"
+    assert found.fields == {}
+    assert "rate" not in found.found
+    assert RATE not in json.dumps(found.model_dump(mode="json"))
+
+
+def test_the_categories_of_a_list_are_told() -> None:
+    class Listed(Echo):
+        peer_fields = True
+
+    decision = Decision(label="Telco", source="model", fields={"kind": "Invoice"})
+
+    found = told(Listed(settings()), decision)
+
+    assert Categorization.peer_fields
+    assert found.fields == {"kind": "Invoice"}
+    assert found.found == {"label": True, "kind": True}
 
 
 async def test_a_classification_opens_closes_and_restarts_no_item(
