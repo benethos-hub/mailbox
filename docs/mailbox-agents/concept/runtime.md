@@ -8,9 +8,10 @@ version: one of another version than the agents' ends the worker
 
 1. Read the feed from the stored cursor. On the first pass, start from the
    state of now. On `410` take a new state and run `backfill` over
-   `BACKFILL_DAYS`. The backfill takes up new messages only, so each open
-   item is then observed as if it were updated: a change in the gap, such
-   as a marked invoice moved into a folder, is not lost.
+   `BACKFILL_DAYS`. The backfill takes up new messages, and `skipped` ones
+   anew, as the gap may have given one a keyword an actor waits for. Each
+   open item is then observed as if it were updated: a change in the gap,
+   such as a marked invoice moved into a folder, is not lost.
 2. For each event the agent routes to `decide`, record the message as
    `pending`. Hand each one routed to `observe` to the agent at once. One
    deleted since closes its open item as `message_gone`.

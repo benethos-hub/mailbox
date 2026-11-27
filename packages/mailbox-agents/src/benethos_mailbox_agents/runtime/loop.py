@@ -233,9 +233,11 @@ class Worker:
         except ChangesExpiredError:
             record(feed.Expired(agent=self.agent.label))
             fresh = await self._mailbox.start(self.accounts)
-            await self._backfill(self.settings.backfill_days)
-            # The backfill takes up new messages only. An update in the gap
-            # of a message the agent follows is seen by observing it now.
+            # New messages, and skipped ones the gap may have changed, such
+            # as one given a keyword an actor waits for. No other known
+            # message: an update in the gap of a message the agent follows
+            # is seen by observing it now.
+            await self._backfill(self.settings.backfill_days, skipped=True)
             for item in self.store.open_items():
                 await self._observe(item.ref)
             return fresh, []
@@ -391,7 +393,9 @@ class Worker:
         await self._mailbox.ensure_matching()
         return await self._backfill(days, again=again)
 
-    async def _backfill(self, days: int, *, again: bool = False) -> int:
+    async def _backfill(
+        self, days: int, *, again: bool = False, skipped: bool = False
+    ) -> int:
         since = (self._now() - timedelta(days=days)).date()
         now = self._now()
         added = 0
@@ -402,7 +406,9 @@ class Worker:
             if route is Route.DECIDE or (
                 route is Route.OBSERVE and await self._waited_for(ref)
             ):
-                added += self.store.enqueue(ref, now, again=again)
+                added += self.store.enqueue(
+                    ref, now, again=again, again_skipped=skipped
+                )
         record(feed.Backfilled(agent=self.agent.label, messages=added, days=days))
         return added
 

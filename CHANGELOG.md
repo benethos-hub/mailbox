@@ -332,6 +332,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   whose move went through while the keyword did not. Before, the next
   attempt found the message in its folder, left it without the keyword,
   and every later update took it up again.
+- `benethos-mailbox-agents`: the backfill after an expired feed takes
+  up a message the agent skipped before, such as one given a keyword an
+  actor waits for while the feed expired. Before, it stayed `skipped`.
 - `restore` and `backup verify` refuse a backup whose manifest holds a
   field of the wrong type, such as the schema as a text, with a message
   instead of a traceback.

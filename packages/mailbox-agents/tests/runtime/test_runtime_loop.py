@@ -165,6 +165,25 @@ async def test_an_expired_cursor_starts_anew_and_backfills(world: Wired) -> None
     assert state_of(world, "m1") == "done"
 
 
+async def test_an_expired_cursor_takes_up_a_skipped_message_again(
+    world: Wired,
+) -> None:
+    run = worker(world)
+    await run.run_pass()
+    world.service.add(wire_message("m1", folder_ids=["inv"], subject="Your invoice"))
+    await run.run_pass()
+    assert state_of(world, "m1") == "skipped"
+    # Put into the inbox while the feed expires: no event reaches the agent.
+    world.service.messages[(ACCOUNT, "m1")]["folder_ids"] = ["inbox"]
+    world.store.set_cursor("stale", world.clock())
+    world.service.expired.add("stale")
+    world.fake_gateway.answer(MATCH)
+
+    await run.run_pass()
+
+    assert state_of(world, "m1") == "done"
+
+
 async def test_backfill_again_takes_a_decided_message_up_anew(world: Wired) -> None:
     world.service.add(wire_message("m1", subject="Your invoice"), change=None)
     run = worker(world)
