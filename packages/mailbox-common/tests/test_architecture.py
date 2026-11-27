@@ -33,6 +33,7 @@ LIBRARY_HOMES: dict[str, set[str]] = {
         "storage.server_engine",
         "storage.server_lock",
         "storage.server_place",
+        "storage.server_provision",
         "storage.server_rights",
         "storage.shape",
         "storage.tables",

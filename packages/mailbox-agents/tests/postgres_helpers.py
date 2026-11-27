@@ -119,3 +119,16 @@ def instance() -> Iterator[Server]:
                 conn.execute(
                     sql.SQL("DROP DATABASE IF EXISTS {} WITH (FORCE)").format(made)
                 )
+
+
+def admin_url() -> str:
+    """The address of the administrator, without the password."""
+    who = _admin()
+    return f"postgresql://{who['user']}@{who['host']}:{who['port']}/{who['database']}"
+
+
+def admin_password_file(folder: Path) -> Path:
+    """A file in ``folder`` that holds the password of the administrator."""
+    path = folder / "admin_password"
+    path.write_text(_admin()["password"], encoding="utf-8")
+    return path
