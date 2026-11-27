@@ -11,6 +11,7 @@ mail. See docs/mailbox-agents/concept/state.md.
 
 from __future__ import annotations
 
+import time
 from collections.abc import Callable
 from contextlib import ExitStack
 from datetime import datetime
@@ -20,7 +21,14 @@ from typing import TypeVar
 
 import sqlalchemy as sa
 
-from benethos_mailbox_common.storage import database, dialect, locks, migrated
+from benethos_mailbox_common.storage import (
+    database,
+    dialect,
+    locks,
+    migrated,
+    server_place,
+    server_rights,
+)
 
 from ..errors import ConfigError, StateFileError
 from .actions import _Actions
@@ -98,6 +106,20 @@ def _unlock(held: ExitStack) -> None:
     held.close()
 
 
+def _at_this_schema(held: int) -> None:
+    """A reader takes the state at the schema of this version alone."""
+    newest = SHAPE.newest
+    if held > newest:
+        raise ConfigError(
+            f"the state is at schema version {held}, this program knows {newest}"
+        )
+    if held < newest:
+        raise ConfigError(
+            f"the state is at schema version {held}, this program reads {newest}:"
+            " start the agent once, which brings it forward"
+        )
+
+
 class Store(_Messages, _Steps, _Actions, _Items, _Calls, _Profile):
     """The state file of one agent."""
 
@@ -114,6 +136,8 @@ class Store(_Messages, _Steps, _Actions, _Items, _Calls, _Profile):
         self._lock = lock
         # What opening did to the file, None when it was current.
         self.migrated: Migrated | None = db.migrated
+        # On a server: what the start did to the rights of the database.
+        self.rights: server_rights.Rights | None = None
 
     # -- opening ----------------------------------------------------------------
 
@@ -138,11 +162,59 @@ class Store(_Messages, _Steps, _Actions, _Items, _Calls, _Profile):
             raise
         return cls(db, False, lock, path.name)
 
+    @classmethod
+    def open_server(
+        cls,
+        server: server_place.Server,
+        *,
+        read_only: bool = False,
+        readers: tuple[str, ...] = (),
+        setting: str = "",
+        clock: Callable[[], float] = time.monotonic,
+    ) -> Store:
+        """Open the state in the schema of the role of ``server``, in a
+        database of its own. A writer makes the schema where it is
+        missing, brings it to the schema of this version, takes the lock
+        of a running agent, so a second writer is refused, and gives the
+        database to ``readers`` alone, ``setting`` naming them in an
+        error. A reader needs it at the schema of this version. A server
+        that is away is kept so by ``clock`` in seconds: every call fails
+        at once with ``StateUnavailableError`` until the next attempt is
+        due."""
+        name = f"{server.database}/{server.schema_name}"
+        place = server_place.ServerPlace(
+            server, SHAPE, clock, make_schema=not read_only
+        )
+        try:
+            with _named(name):
+                if read_only:
+                    place.open(SHAPE.newest, SHAPE.newest)
+                    _at_this_schema(place.held_schema())
+                db = database.Database(SHAPE, place=place)
+        except BaseException:
+            place.close()
+            raise
+        lock = ExitStack()
+        rights = None
+        try:
+            with _named(name):
+                if not read_only:
+                    lock.enter_context(db.serving())
+                    rights = place.secured(readers, setting)
+        except BaseException:
+            lock.close()
+            db.close()
+            raise
+        store = cls(db, read_only, lock, name)
+        store.rights = rights
+        return store
+
     def close(self) -> None:
-        self._db.close()
+        # The lock first: on a server it is let go on the connection.
         if self._lock is not None:
             _unlock(self._lock)
             self._lock = None
+        self._db.close()
 
     def __enter__(self) -> Store:
         return self

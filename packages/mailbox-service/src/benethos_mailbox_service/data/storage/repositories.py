@@ -6,6 +6,7 @@ SQLite for ``sqlite``, a schema on a server for ``postgres``.
 
 from __future__ import annotations
 
+import dataclasses
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -94,6 +95,9 @@ class Repositories:
     outbox: OutboxRepository
     # The store behind them, for backups and for closing. None in memory.
     store: Store | None = None
+    # On a server: whether its database is closed to every other role.
+    # None for another storage.
+    database_closed: bool | None = None
 
     def close(self) -> None:
         if self.store is not None:
@@ -113,7 +117,14 @@ def open_repositories(
     if storage == "postgres":
         if server is None:
             raise StorageError("storage postgres needs the server of its database")
-        return repositories_on(Database(place=ServerPlace(server)))
+        place = ServerPlace(server)
+        db = Database(place=place)
+        try:
+            closed = place.close_to_others()
+        except BaseException:
+            db.close()
+            raise
+        return dataclasses.replace(repositories_on(db), database_closed=closed)
     if storage != "memory":
         raise StorageError(f"there is no storage {storage}")
     return Repositories(

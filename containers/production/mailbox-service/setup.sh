@@ -72,10 +72,13 @@ case ",$profiles," in
         docker compose up -d --wait postgres
         role=$(password)
         # On stdin, so the password stands in no list of processes. The
-        # role owns its schema and has no right beyond it.
+        # role owns its schema and has no right beyond it, and the
+        # database is closed to every other role.
         printf '%s\n' \
             "CREATE ROLE mailbox LOGIN PASSWORD '$role' NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT CONNECTION LIMIT 5;" \
-            "CREATE SCHEMA mailbox AUTHORIZATION mailbox;" |
+            "CREATE SCHEMA mailbox AUTHORIZATION mailbox;" \
+            "REVOKE CONNECT, TEMPORARY ON DATABASE mailbox FROM PUBLIC;" \
+            "GRANT CONNECT ON DATABASE mailbox TO mailbox;" |
             docker compose exec -T postgres psql -q -v ON_ERROR_STOP=1 -U postgres -d mailbox
         printf '%s' "$role" >secrets/database_password
         own database_password

@@ -82,6 +82,24 @@ def test_a_package_needs_another_of_its_own_version(
     assert any(re.fullmatch(pin, need) for need in needs_of(package))
 
 
+def test_the_programs_bring_the_driver_of_postgresql() -> None:
+    """The service and the agents bring the driver with their extra
+    ``postgres``, at the minimum of the common package's, their images
+    install it, the job lowest-agents audits it, and the job postgres
+    runs the suites of the three against the server."""
+    driver = project_of(COMMON)["optional-dependencies"]["postgres"]
+    ci = _ci()
+    job = re.search(r"^  postgres:\n(.*?)(?=^  [\w-]+:\n|^  # )", ci, re.M | re.S)
+    assert job is not None
+    for package in (SERVICE, AGENTS, COMMON):
+        assert f"{package.relative_to(ROOT).as_posix()}/tests" in job[1]
+    for package in (SERVICE, AGENTS):
+        assert project_of(package)["optional-dependencies"]["postgres"] == driver
+        image = ROOT / "containers/images" / package.name / "Dockerfile"
+        assert "--extra postgres" in image.read_text("utf-8")
+    assert "packages/mailbox-agents[postgres]" in ci
+
+
 def test_a_pin_inside_the_workspace_is_exact() -> None:
     """Every dependency on another package of the workspace names its
     version with ``==``."""

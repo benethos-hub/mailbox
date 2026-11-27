@@ -111,26 +111,48 @@ async def upstreams(
         yield mailbox, gateway
 
 
+def _store_of(agent: Agent, settings: Settings) -> Store:
+    """The state the agent writes: in a database of its own on a server
+    for storage postgres, else in its state file, which does not start
+    anew beside one at the place before or under a former name."""
+    if settings.storage == "postgres":
+        return Store.open_server(
+            settings.database_server(),
+            readers=tuple(settings.database_readers),
+            setting=f"{PREFIX}DATABASE_READERS",
+        )
+    path = path_for(settings.data_dir, agent.state_name)
+    earlier = earlier_file(settings.data_dir, agent.state_name)
+    if earlier is not None:
+        raise ConfigError(
+            f"the state file of {agent.label} lies at {earlier.resolve()}, "
+            f"the agents keep it at {path.resolve()} now: move it there, "
+            f"or set {PREFIX}DATA_DIR to its folder"
+        )
+    former = former_file(settings.data_dir, type(agent), settings.instance)
+    if former is not None:
+        raise ConfigError(
+            f"the state file of {agent.label} lies at {former.resolve()}, "
+            f"under a former name of the agent: rename it to {path.resolve()}"
+        )
+    return Store.open(path)
+
+
 @asynccontextmanager
 async def session(cls: type[Agent], settings: Settings) -> AsyncIterator[Session]:
     agent = start(cls, settings)
     async with AsyncExitStack() as stack:
         mailbox, gateway = await stack.enter_async_context(upstreams(agent, settings))
-        path = path_for(settings.data_dir, agent.state_name)
-        earlier = earlier_file(settings.data_dir, agent.state_name)
-        if earlier is not None:
-            raise ConfigError(
-                f"the state file of {agent.label} lies at {earlier.resolve()}, "
-                f"the agents keep it at {path.resolve()} now: move it there, "
-                f"or set {PREFIX}DATA_DIR to its folder"
+        store = stack.enter_context(_store_of(agent, settings))
+        if store.rights is not None:
+            record(
+                process.DatabaseClosed(
+                    agent=agent.label,
+                    owner=store.rights.owner,
+                    readers=len(store.rights.readers),
+                    revoked=len(store.rights.revoked),
+                )
             )
-        former = former_file(settings.data_dir, type(agent), settings.instance)
-        if former is not None:
-            raise ConfigError(
-                f"the state file of {agent.label} lies at {former.resolve()}, "
-                f"under a former name of the agent: rename it to {path.resolve()}"
-            )
-        store = stack.enter_context(Store.open(path))
         if store.migrated is not None:
             found = store.migrated
             record(

@@ -15,6 +15,10 @@ from benethos_mailbox_common.paths import folders as system
 
 from .agents_fake import FakeGateway, FakeService
 from .agents_helpers import Wired, wired
+from .postgres_helpers import wanted
+
+# The tests against a PostgreSQL server, collected only with its switch.
+collect_ignore = [] if wanted() else ["postgres"]
 
 
 @pytest.fixture(autouse=True)

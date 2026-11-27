@@ -20,6 +20,7 @@ this folder is enough.
 - [PostgreSQL](#postgresql)
   - [In this compose file](#in-this-compose-file)
   - [A server of your own](#a-server-of-your-own)
+  - [The database closed to other roles](#the-database-closed-to-other-roles)
   - [Move to PostgreSQL](#move-to-postgresql)
   - [Backup and restore on PostgreSQL](#backup-and-restore-on-postgresql)
   - [Set a schema aside](#set-a-schema-aside)
@@ -344,7 +345,8 @@ Before the first start, put `postgres` into `COMPOSE_PROFILES` of
 database into `service.env`. `setup.sh` then makes the passwords in
 `secrets/`, starts PostgreSQL and makes the role `mailbox` with the
 schema `mailbox` of its own, without further rights and with at most
-five connections. The database has no port on the host and its network
+five connections, and closes the database to every other role. The
+database has no port on the host and its network
 no way out, so TLS is off there, and the start of the service says so.
 An installation that runs on SQLite already moves its records over as
 below.
@@ -365,6 +367,25 @@ goes into the file `MAILBOX_SERVICE_DATABASE_PASSWORD_FILE` names. The
 service verifies the certificate of a server that is not on the same
 host, against the certificates of the system or the file
 `MAILBOX_SERVICE_DATABASE_CA_FILE` names.
+
+### The database closed to other roles
+
+Every role of a server may connect to a new database and make temporary
+tables in it. On the database of the service it would see the names of
+its schemas and tables. Where the role of the service owns its
+database, the service takes that right from every other role at each
+start. Where it does not, each start warns (`system.db_open`) until
+an administrator closes the database, which an installation made before
+this also does once:
+
+```sql
+REVOKE CONNECT, TEMPORARY ON DATABASE mailbox FROM PUBLIC;
+GRANT CONNECT ON DATABASE mailbox TO mailbox;
+```
+
+Another role that shares the database on purpose gets in again with
+`GRANT CONNECT ON DATABASE mailbox TO <role>;`. The service leaves a
+right given to a role by name as it is.
 
 ### Move to PostgreSQL
 

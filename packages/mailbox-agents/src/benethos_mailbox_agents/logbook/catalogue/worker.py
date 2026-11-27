@@ -42,8 +42,8 @@ class PassFailed(Failure):
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class UpstreamAway(Failure):
-    """The mailbox service or the gateway did not answer. The loop waits
-    ``wait`` seconds and tries again."""
+    """The mailbox service, the gateway or the database of the state did
+    not answer. The loop waits ``wait`` seconds and tries again."""
 
     name: ClassVar[str] = "upstream_away"
 

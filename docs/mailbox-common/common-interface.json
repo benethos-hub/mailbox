@@ -320,6 +320,8 @@
       "server_engine",
       "server_lock",
       "server_place",
+      "server_rights",
+      "server_url",
       "shape",
       "sqlite_file",
       "stored",
@@ -1037,13 +1039,16 @@
       ],
       "methods": {
         "__init__": {
-          "signature": "(self, server: 'Server', shape: 'Shape', clock: 'Callable[[], float]' = <built-in function monotonic>) -> 'None'"
+          "signature": "(self, server: 'Server', shape: 'Shape', clock: 'Callable[[], float]' = <built-in function monotonic>, *, make_schema: 'bool' = False) -> 'None'"
         },
         "claimed": {
           "signature": "(self) -> 'Iterator[None]'"
         },
         "close": {
           "signature": "(self) -> 'None'"
+        },
+        "close_to_others": {
+          "signature": "(self) -> 'bool'"
         },
         "drop_tables": {
           "signature": "(self) -> 'None'"
@@ -1062,6 +1067,9 @@
         },
         "ready": {
           "signature": "(self) -> 'None'"
+        },
+        "secured": {
+          "signature": "(self, readers: 'Sequence[str]', setting: 'str') -> 'server_rights.Rights'"
         },
         "serving": {
           "signature": "(self) -> 'Iterator[bool]'"
@@ -1094,6 +1102,45 @@
     },
     "translated_server": {
       "signature": "(errors: 'Errors') -> 'AbstractContextManager[None]'"
+    }
+  },
+  "benethos_mailbox_common.storage.server_rights": {
+    "Rights": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "owner": {
+          "type": "bool"
+        },
+        "readers": {
+          "type": "tuple[str, ...]"
+        },
+        "revoked": {
+          "type": "tuple[str, ...]"
+        }
+      }
+    },
+    "close_database": {
+      "signature": "(connection: 'sa.Connection') -> 'bool'"
+    },
+    "own_schema": {
+      "signature": "(connection: 'sa.Connection', schema: 'str', errors: 'Errors') -> 'bool'"
+    },
+    "secure": {
+      "signature": "(connection: 'sa.Connection', schema: 'str', readers: 'Sequence[str]', errors: 'Errors', *, setting: 'str') -> 'Rights'"
+    }
+  },
+  "benethos_mailbox_common.storage.server_url": {
+    "URL_FORM": {
+      "value": "postgresql://<role>@<host>:<port>/<database>"
+    },
+    "server_at": {
+      "signature": "(url: 'str', password: 'str', *, tls: \"Literal['verify', 'off']\" = 'verify', ca_file: 'Path | None' = None) -> 'Server'"
+    },
+    "url_problem": {
+      "signature": "(url: 'str', setting: 'str' = 'database_url') -> 'str | None'"
     }
   },
   "benethos_mailbox_common.storage.shape": {

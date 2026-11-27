@@ -56,6 +56,18 @@ without it (2026-11-19). A mailbox service of another version ends
 it with a `ServiceVersionError` and exit code 2, as it ends `run` and
 `backfill`.
 
+A database of the state on a PostgreSQL server that is away is waited
+for as an upstream: the call fails at once with a
+`StateUnavailableError`, of the family `UnavailableError`, the pass ends
+without deciding or changing anything more, and the loop waits as after
+an upstream away, logged as `worker.upstream_away`. While it waits it
+writes no progress, so the health check fails. The storage of
+mailbox-common tries the server again after a pause of one second,
+doubled after each failed attempt up to thirty, on a new session that
+takes the lock of the writer again. When another agent took that lock
+in the meantime, the worker ends with a `StateFileError`, as for a state
+file that fails (2026-11-27).
+
 Message states: `pending`, `skipped` (not admitted, marked before the
 state file for an agent that declares `skip_marked`, which an update
 without the keyword makes `pending` again, or gone from the

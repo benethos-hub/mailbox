@@ -53,6 +53,14 @@ the roles, and that other sessions exist, never the text of their
 queries. It could drop its own schema. Every role on a shared server
 should therefore be one of a service that may see that much.
 
+Measured on 2026-11-27, any role of the server could also connect to the
+database of the service, see the names of its schemas and make a
+temporary table there, without reading a row. Since then the service
+takes `CONNECT` and `TEMPORARY` from `PUBLIC` at each start where its
+role owns the database. Where it does not, the start warns, and an
+administrator closes the database
+([containers/production/mailbox-service/README.md](../../../containers/production/mailbox-service/README.md)).
+
 One service runs on a schema at a time. The lock that ensures this is an
 advisory lock of PostgreSQL, which needs no right. Its key is a random
 number the schema keeps in `meta`, which only its role reads (decided

@@ -195,6 +195,23 @@ def test_tls_switched_off_is_said_at_start(
     assert all(r.levelno == logging.WARNING for r in said)
 
 
+@pytest.mark.parametrize(("closed", "warned"), [(False, True), (True, False)])
+def test_a_database_open_to_others_is_said_at_start(
+    caplog: pytest.LogCaptureFixture, closed: bool, warned: bool
+) -> None:
+    repositories = replace(
+        open_repositories("memory", Path("unused.db")), database_closed=closed
+    )
+    with caplog.at_level(logging.WARNING):
+        storage(
+            repositories,
+            Settings(_env_file=None),  # type: ignore[call-arg]
+            lambda: datetime(2026, 11, 27, tzinfo=UTC),
+        )
+    said = [r for r in caplog.records if "open to every role" in r.getMessage()]
+    assert [r.levelno for r in said] == ([logging.WARNING] if warned else [])
+
+
 class _Watched:
     """A store as the assembly sees it, whose changes the test makes."""
 

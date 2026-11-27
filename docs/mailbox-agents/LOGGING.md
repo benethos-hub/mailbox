@@ -171,6 +171,7 @@ operator's filters. It writes under the logger
 | `process.started` | INFO | the worker started, with the agent's version and stage |
 | `process.stopped` | INFO | the worker stopped, and why |
 | `process.migrated` | INFO | the state file was made or migrated, with the notes of its steps |
+| `process.database_closed` | INFO | on a server: the database closed to every other role where the agent's role owns it, and how many roles may read it, or that it does not own it |
 | `process.metrics_serving` | INFO | the metrics are served on a port |
 | `process.a2a_serving` | INFO | the entrance for peers over A2A is served on a port |
 | `process.cockpit_serving` | INFO | the cockpit is served on a port, and whether it shows ids alone as no token of the mailbox service is set |
