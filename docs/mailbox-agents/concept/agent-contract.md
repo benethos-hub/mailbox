@@ -7,7 +7,8 @@ Every agent package defines exactly one concrete `Agent` subclass in its
 The class attributes are validated on instantiation.
 
 **Two kinds of agent.** An agent is a classifier or an actor, a subclass of `Classifier` or of
-`Actor`, both subclasses of `Agent`.
+`Actor`, both subclasses of `Agent`. The registry refuses an agent that is
+neither.
 
 | Kind | What it reads | A model | What it writes |
 |---|---|---|---|

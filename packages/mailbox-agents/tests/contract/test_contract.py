@@ -155,11 +155,11 @@ def test_the_actions_of_the_contract_spec_are_the_code() -> None:
 
 
 AGENT_SOURCE = """
-from benethos_mailbox_agents.contract import Action, Agent, Route, Trigger
+from benethos_mailbox_agents.contract import Action, Agent, Classifier, Route, Trigger
 from benethos_mailbox_agents.records import Decision
 
 
-class {cls}(Agent):
+class {cls}(Classifier):
     name = "{name}"
     version = "1"
     description = "found by the registry"
@@ -224,6 +224,21 @@ def test_a_module_with_two_agents_is_refused(
     importlib.invalidate_caches()
 
     with pytest.raises(ContractError, match="defines 2 agent classes"):
+        discover(package)
+
+
+def test_an_agent_neither_classifier_nor_actor_is_refused(
+    package: str, tmp_path: Path
+) -> None:
+    source = AGENT_SOURCE.format(cls="Reader", name="reader")
+    source = source.replace("class Reader(Classifier):", "class Reader(Agent):")
+    (tmp_path / package / "reader").mkdir()
+    (tmp_path / package / "reader" / "__init__.py").write_text("", encoding="utf-8")
+    (tmp_path / package / "reader" / "agent.py").write_text(source, encoding="utf-8")
+
+    importlib.invalidate_caches()
+
+    with pytest.raises(ContractError, match="a Classifier or an Actor"):
         discover(package)
 
 

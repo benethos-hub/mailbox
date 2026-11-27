@@ -12,7 +12,9 @@ import inspect
 import pkgutil
 
 from ..errors import ContractError
+from .actor import Actor
 from .agent import Agent
+from .classifier import Classifier
 
 __all__ = ["AGENTS_PACKAGE", "discover", "load_agent"]
 
@@ -33,6 +35,8 @@ def _agent_class(module_name: str) -> type[Agent]:
         raise ContractError(
             f"{module_name} defines {len(found)} agent classes, one is required"
         )
+    if not issubclass(found[0], (Classifier, Actor)):
+        raise ContractError(f"{module_name}: an agent is a Classifier or an Actor")
     return found[0]
 
 

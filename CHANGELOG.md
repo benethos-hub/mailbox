@@ -230,7 +230,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 - `benethos-mailbox-agents`: every agent is a classifier, a subclass
   of `Classifier`, which reads a message and answers a question about
-  it. An agent of its own keeps working: `Agent` is unchanged.
+  it, or an actor, a subclass of `Actor`. An agent of its own is one of
+  the two: the registry refuses one built on `Agent` alone.
 - `benethos-mailbox-agents`: the middle stage is called `suggest`:
   `MAILBOX_AGENTS_STAGE=suggest`. It does what `keyword` did, and
   `keyword` is still taken and read as `suggest`.
