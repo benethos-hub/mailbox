@@ -272,7 +272,8 @@ async def test_a_sender_added_to_the_list_reaches_a_message_decided_before(
 async def test_a_changed_list_is_decided_anew(
     listed_world: Wired, tmp_path: Path
 ) -> None:
-    from benethos_mailbox_agents.cli.report import collect, summary
+    from benethos_mailbox_agents.cli.report import summary
+    from benethos_mailbox_agents.runtime.review import collect
 
     without = [g for g in GROUPS if g["name"] != "Hosting"]
     first = Categorization(
@@ -301,7 +302,8 @@ async def test_the_report_shows_the_baseline_of_the_changed_list(
 ) -> None:
     """A backfill under a changed list runs the rules anew beside the
     decision, so the report shows no baseline of the list before."""
-    from benethos_mailbox_agents.cli.report import collect, render
+    from benethos_mailbox_agents.cli.report import render
+    from benethos_mailbox_agents.runtime.review import collect
 
     without = [g for g in GROUPS if g["name"] != "Hosting"]
     first = Categorization(
@@ -445,7 +447,8 @@ def test_summarize_per_group_candidates_and_alike(tmp_path: Path) -> None:
 async def test_the_report_ends_with_the_groups(
     listed_world: Wired, tmp_path: Path
 ) -> None:
-    from benethos_mailbox_agents.cli.report import collect, render, summary
+    from benethos_mailbox_agents.cli.report import render, summary
+    from benethos_mailbox_agents.runtime.review import collect
 
     for message_id in ("hosting", "unknown"):
         await run(listed_world, message_id, agent(tmp_path))

@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 import pytest
 
 from benethos_mailbox_agents.cli import main
-from benethos_mailbox_agents.cli.report import Entry, render, summary
+from benethos_mailbox_agents.cli.report import render, summary
 from benethos_mailbox_agents.contract import Action, Shown, ShownAction
 from benethos_mailbox_agents.records import (
     LABEL,
@@ -17,6 +17,7 @@ from benethos_mailbox_agents.records import (
     MailMessage,
     MessageRef,
 )
+from benethos_mailbox_agents.runtime.review import Entry
 from benethos_mailbox_agents.store import ActionRow, MessageRow
 
 from ..agents_fake import ACCOUNT, FakeService, wire_message

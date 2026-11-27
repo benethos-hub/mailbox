@@ -12,6 +12,7 @@ from benethos_mailbox_agents.cli import main
 from benethos_mailbox_agents.errors import ConfigError
 from benethos_mailbox_agents.runtime.metrics import Metrics
 from benethos_mailbox_agents.settings import PREFIX, Settings
+from benethos_mailbox_agents.store import Store
 
 from ..agents_fake import FakeService, wire_message
 from ..agents_helpers import configure
@@ -86,3 +87,23 @@ def test_an_instance_names_the_keyword_the_metrics_and_the_lines() -> None:
 def test_a_wrong_instance_is_refused(name: str) -> None:
     with pytest.raises((ConfigError, ValueError)):
         Settings(instance=name)
+
+
+def test_a_run_writes_the_profile_of_the_agent(
+    service: FakeService, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    configure(monkeypatch)
+    data = tmp_path / "data"
+    monkeypatch.setenv(f"{PREFIX}DATA_DIR", str(data))
+    monkeypatch.setenv(f"{PREFIX}INSTANCE", "partner")
+    monkeypatch.setenv(f"{PREFIX}POLL_SECONDS", "42.5")
+    monkeypatch.setenv(f"{PREFIX}STAGE", "suggest")
+
+    assert main(["run", "--agent", "counting"]) == 0
+
+    with Store.open(data / "counting-partner.db", read_only=True) as store:
+        profile = store.profile()
+    assert profile is not None
+    assert (profile.agent, profile.instance) == ("counting", "partner")
+    assert (profile.stage, profile.poll_seconds) == ("suggest", 42.5)
+    assert profile.keyword == "agent-counted-partner"

@@ -16,14 +16,18 @@ from datetime import datetime, timedelta
 from ..settings import Settings
 from ..store import Store
 
-__all__ = ["Health", "check", "window"]
+__all__ = ["Health", "check", "window", "window_of"]
 
 
 def window(settings: Settings) -> timedelta:
     """How old the last sign of progress may be."""
-    return timedelta(
-        seconds=3 * settings.poll_seconds + settings.gateway_timeout_seconds
-    )
+    return window_of(settings.poll_seconds, settings.gateway_timeout_seconds)
+
+
+def window_of(poll_seconds: float, gateway_timeout_seconds: float) -> timedelta:
+    """How old the last sign of progress of a worker with these numbers
+    may be, for a reader that has them from the worker's profile."""
+    return timedelta(seconds=3 * poll_seconds + gateway_timeout_seconds)
 
 
 @dataclass(frozen=True)

@@ -13,10 +13,12 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from .. import __version__
 from ..contract import Agent, state_name
 from ..errors import ConfigError
 from ..llm.gateway import Gateway
 from ..logbook import process, record
+from ..records import Profile
 from ..runtime.loop import Worker
 from ..runtime.model import NoModel
 from ..runtime.readiness import start
@@ -139,6 +141,23 @@ async def session(cls: type[Agent], settings: Settings) -> AsyncIterator[Session
                     notes=found.notes,
                 )
             )
+        # For a reader from outside, which holds none of these settings.
+        store.set_profile(
+            Profile(
+                agent=agent.name,
+                instance=agent.instance,
+                agent_version=agent.version,
+                package_version=__version__,
+                stage=settings.stage,
+                accounts=tuple(settings.accounts),
+                keyword=agent.keyword,
+                poll_seconds=settings.poll_seconds,
+                gateway_timeout_seconds=settings.gateway_timeout_seconds,
+                model_alias=gateway.model,
+                prompt_version=agent.prompt_version,
+                started=now(),
+            )
+        )
         spans = stack.enter_context(open_spans(settings, agent.name))
         worker = Worker(
             agent=agent,

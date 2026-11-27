@@ -16,6 +16,7 @@ from .registry import MigrationRegistry
 from .versions.v0001_state_file import V0001StateFile
 from .versions.v0002_keyword_recorded_stage import V0002KeywordRecordedStage
 from .versions.v0003_stage_suggest import V0003StageSuggest
+from .versions.v0004_profile import V0004Profile
 
 __all__ = ["MIGRATIONS", "SCHEMA_VERSION", "Migration", "MigrationRegistry"]
 
@@ -23,5 +24,6 @@ MIGRATIONS = MigrationRegistry(
     V0001StateFile(),
     V0002KeywordRecordedStage(),
     V0003StageSuggest(),
+    V0004Profile(),
 )
 SCHEMA_VERSION = MIGRATIONS.schema_version
