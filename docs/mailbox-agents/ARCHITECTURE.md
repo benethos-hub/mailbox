@@ -64,8 +64,10 @@ top-level module.
 Of the other packages of the repository, the agents take the client,
 in `sources/mailbox.py` alone, and `mailbox-common` with its extras
 `paths` and `settings`: the lines of the log, the masking of secrets,
-text, settings from a file and the folders of the operating system for
-settings and state files, as the service and the MCP server have them. The
+the digest of a secret, text, pauses, the plain text and the addresses
+of a mail, settings from a file, the folders of the operating system for
+settings and state files and the lock of a state file, as the service
+and the MCP server have them. The
 table `CONFINED` of `test_layers.py` names the modules that import each.
 
 ## The rules of the repository
@@ -140,8 +142,11 @@ packages/mailbox-agents/src/benethos_mailbox_agents/
                   # steps, versions/ a module per step
   runtime/        # worker loop, feed reader, tick, step runner, the model
                   # calls of one message, open items over the state file,
-                  # the read-only mailbox, action executor, readiness,
-                  # health, metrics, a classification for a peer
+                  # the read-only mailbox, action executor, the mailbox
+                  # it writes to (writer.py), what becomes of an action
+                  # (outcomes.py), the draft of a forward (drafts.py),
+                  # readiness, health, metrics, a classification for a
+                  # peer
   evaluation/     # the gold format, the run, scoring per label and per
                   # field, the report
   agents/         # one package per agent. agent.py holds its one
