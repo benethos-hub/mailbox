@@ -66,8 +66,6 @@ __all__ = [
     "Match",
     "candidates_in",
     "check_rules",
-    "folder_path",
-    "from_top",
     "load_groups",
     "match_in",
 ]

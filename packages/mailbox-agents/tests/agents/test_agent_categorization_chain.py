@@ -17,12 +17,17 @@ from benethos_mailbox_agents.agents.categorization.actions import (
     ChainAction,
     KeywordParams,
     Params,
-    Placed,
 )
 from benethos_mailbox_agents.agents.categorization.dimensions import Dimension
 from benethos_mailbox_agents.agents.categorization.plan import DISPLACED
 from benethos_mailbox_agents.agents.categorization.recognizers import Choice, Recognizer
-from benethos_mailbox_agents.contract import Action, ActionRequest, Shown, ShownAction
+from benethos_mailbox_agents.contract import (
+    Action,
+    ActionRequest,
+    Placed,
+    Shown,
+    ShownAction,
+)
 from benethos_mailbox_agents.records import Decision, FolderRef, MailMessage
 
 from .categorization_chain_helpers import (

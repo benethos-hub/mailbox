@@ -40,6 +40,7 @@ from ...contract import (
     Classifier,
     Context,
     Limits,
+    Placed,
     Requires,
     Route,
     Shown,
@@ -49,12 +50,10 @@ from ...contract import (
 from ...errors import ConfigError
 from ...records import Decision, Event, FolderRef, MailMessage
 from ...settings import PREFIX
-from .actions import Placed
 from .alone import alone
 from .dimensions import Chain
 from .groups import NONE
 from .lists import Listed, circles, load_chain, used
-from .lists import list_digest as _version
 from .plan import (
     classify,
     classify_rules,
@@ -66,7 +65,7 @@ from .plan import (
 from .recognizers import PROMPT, Choice
 from .summary import fates, parts_of
 
-__all__ = ["NONE", "PROMPT", "Categorization", "_version"]
+__all__ = ["NONE", "PROMPT", "Categorization"]
 
 # The senders in no group a report names at most, as candidates.
 CANDIDATES = 10

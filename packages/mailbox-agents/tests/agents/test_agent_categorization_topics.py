@@ -10,8 +10,8 @@ import pytest
 from pydantic import ValidationError
 
 from benethos_mailbox_agents.agents import categorization as categorization_agent
-from benethos_mailbox_agents.agents.categorization.agent import _version
 from benethos_mailbox_agents.agents.categorization.groups import Group, Groups
+from benethos_mailbox_agents.agents.categorization.lists import list_digest
 from benethos_mailbox_agents.agents.categorization.schema import answer_for, system_for
 from benethos_mailbox_agents.contract import load_prompt
 
@@ -124,10 +124,10 @@ def test_a_name_without_a_topic_is_not_held_to_one_line() -> None:
 def test_a_topic_and_how_far_it_goes_change_the_version() -> None:
     plain = {"name": "Alpha", "folder": "Alpha", "senders": ["*@client.example"]}
     versions = {
-        _version(groups(plain)),
-        _version(groups({**plain, "topic": TOPIC})),
-        _version(groups({**plain, "topic": TOPIC + " too"})),
-        _version(groups({**plain, "topic": TOPIC, "by_topic": "act"})),
+        list_digest(groups(plain)),
+        list_digest(groups({**plain, "topic": TOPIC})),
+        list_digest(groups({**plain, "topic": TOPIC + " too"})),
+        list_digest(groups({**plain, "topic": TOPIC, "by_topic": "act"})),
     }
 
     assert len(versions) == 4
