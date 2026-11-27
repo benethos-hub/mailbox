@@ -95,7 +95,7 @@ Rollout stage, per agent, in `MAILBOX_AGENTS_STAGE`:
 | Stage | What the agent does |
 |---|---|
 | `shadow` | records what it would do, changes nothing |
-| `suggest` | sets its keyword, moves nothing |
+| `suggest` | sets its keyword, drafts a forward, moves nothing |
 | `full` | every action it declares |
 
 The middle stage is called `suggest` (decided 2026-11-27): in it an

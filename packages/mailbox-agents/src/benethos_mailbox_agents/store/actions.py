@@ -59,6 +59,16 @@ class _Actions(_Rows):
         service then refused."""
         self._write("DELETE FROM actions WHERE id = ?", action_id)
 
+    def executed_since(self, action: str, since: datetime) -> int:
+        """How many actions ``action`` were carried out from ``since`` on."""
+        row = self._one(
+            "SELECT COUNT(*) FROM actions WHERE action = ? AND executed = 1 "
+            "AND at >= ?",
+            action,
+            _text(since),
+        )
+        return int(row[0])
+
     def actions(self, ref: MessageRef | None = None) -> list[ActionRow]:
         """The actions of a message, or of all, in the order they ran."""
         rows = (
