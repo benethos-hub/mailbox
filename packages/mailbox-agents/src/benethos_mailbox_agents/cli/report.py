@@ -9,65 +9,17 @@ reaches the log. See docs/mailbox-agents/concept/runtime.md.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-
 from benethos_mailbox_common.mail import addresses
 from benethos_mailbox_common.values import text as text_values
 
-from ..contract import Action, Agent, Reader, Shown, ShownAction
-from ..errors import MailboxRefusedError
-from ..records import Decision, MailMessage, StepResult
+from ..contract import Action, Agent, Shown, ShownAction
+from ..records import Decision, MailMessage
+from ..runtime.review import Entry, collect
 from ..settings import Settings
-from ..store import ActionRow, MessageRow, Store, path_for
+from ..store import ActionRow, Store, path_for
 from .session import mailbox_for
 
-__all__ = ["Entry", "collect", "render", "report", "summary"]
-
-
-@dataclass
-class Entry:
-    """One message of the report."""
-
-    row: MessageRow
-    message: MailMessage | None
-    decision: Decision | None
-    model: str
-    baseline: Decision | None
-    actions: list[ActionRow] = field(default_factory=list)
-
-
-def _latest(steps: list[StepResult], step: str) -> tuple[Decision | None, str]:
-    """The decision of the last ``step`` of ``steps``, and its model."""
-    found = [s for s in steps if s.step == step]
-    if not found:
-        return None, ""
-    return Decision.model_validate(found[-1].result), found[-1].model
-
-
-async def collect(
-    store: Store,
-    mailbox: Reader | None,
-    *,
-    limit: int,
-    state: str | None = None,
-) -> list[Entry]:
-    """The newest ``limit`` messages, in ``state`` if named, each with its
-    subject and sender fetched now unless ``mailbox`` is None."""
-    entries = []
-    for row in store.messages(state, limit):
-        message = None
-        if mailbox is not None:
-            try:
-                message = await mailbox.message(row.ref)
-            except MailboxRefusedError:
-                message = None
-        steps = store.steps(row.ref)
-        decision, model = _latest(steps, "decision")
-        baseline, _ = _latest(steps, "baseline")
-        entries.append(
-            Entry(row, message, decision, model, baseline, store.actions(row.ref))
-        )
-    return entries
+__all__ = ["render", "report", "summary"]
 
 
 def _sender(message: MailMessage) -> str:

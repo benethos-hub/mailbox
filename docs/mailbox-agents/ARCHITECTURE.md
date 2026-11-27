@@ -139,8 +139,8 @@ packages/mailbox-agents/src/benethos_mailbox_agents/
                   # is set
   store/          # SQLite, one file per agent: store.py opens and
                   # migrates it, rows.py is what its parts stand on,
-                  # messages.py, steps.py, actions.py, items.py and
-                  # calls.py are a part each, migrations/ the schema's
+                  # messages.py, steps.py, actions.py, items.py,
+                  # calls.py and profile.py are a part each, migrations/ the schema's
                   # steps, versions/ a module per step
   runtime/        # worker loop, feed reader, tick, step runner, the model
                   # calls of one message, open items over the state file,
@@ -148,7 +148,8 @@ packages/mailbox-agents/src/benethos_mailbox_agents/
                   # it writes to (writer.py), what becomes of an action
                   # (outcomes.py), the draft of a forward (drafts.py),
                   # readiness, health, metrics, a classification for a
-                  # peer
+                  # peer, what an agent decided and did for a person to
+                  # review (review.py)
   evaluation/     # the gold format, the run, scoring per label and per
                   # field, the report
   agents/         # one package per agent. agent.py holds its one
