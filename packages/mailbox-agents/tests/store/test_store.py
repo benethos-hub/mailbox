@@ -446,6 +446,36 @@ def test_a_file_of_an_earlier_schema_is_brought_forward(path: Path) -> None:
     assert "keyword_recorded_stage" in {row[1] for row in columns}
 
 
+def test_the_former_word_of_the_middle_stage_is_written_as_suggest(path: Path) -> None:
+    """A file of schema 2 names the middle stage keyword. After the
+    migration it says suggest, so an action recorded only is not recorded
+    again in suggest, and the keyword of an item is not tried again."""
+    path.parent.mkdir(parents=True)
+    at = NOW.isoformat()
+    with closing(sqlite3.connect(path)) as raw, raw:
+        for number in (1, 2):
+            for statement in MIGRATIONS.step(number).statements:
+                raw.execute(inspect.cleandoc(statement))
+        raw.execute("PRAGMA user_version = 2")
+        for stage in ("shadow", "keyword"):
+            raw.execute(
+                "INSERT INTO actions (account_id, message_id, action, argument, "
+                "before, stage, executed, at) VALUES (?, ?, ?, ?, ?, ?, 0, ?)",
+                ("acc", "m1", "add_keyword", "agent-x", "{}", stage, at),
+            )
+        raw.execute(
+            "INSERT INTO open_items (account_id, message_id, opened, due, "
+            "keyword_recorded_stage) VALUES ('acc', 'm1', ?, ?, 'keyword')",
+            (at, at),
+        )
+
+    with Store.open(path) as store:
+        assert store.migrated == Migrated(2, SCHEMA_VERSION)
+        assert [row.stage for row in store.actions(REF)] == ["shadow", "suggest"]
+        assert store.due_items(NOW + timedelta(days=1), "suggest") == []
+        assert len(store.due_items(NOW + timedelta(days=1), "full")) == 1
+
+
 @pytest.mark.parametrize("read_only", [True, False])
 def test_a_file_that_is_no_state_file_is_named(tmp_path: Path, read_only: bool) -> None:
     path = tmp_path / "counting.db"
