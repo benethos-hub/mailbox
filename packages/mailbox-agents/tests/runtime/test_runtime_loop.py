@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timedelta
+from pathlib import Path
 
 import httpx
 import pytest
 
+from benethos_mailbox_agents.agents.categorization.agent import Categorization
 from benethos_mailbox_agents.contract import (
     Action,
     ActionRequest,
@@ -162,6 +165,25 @@ async def test_an_expired_cursor_starts_anew_and_backfills(world: Wired) -> None
     assert state_of(world, "m1") == "done"
 
 
+async def test_an_expired_cursor_takes_up_a_skipped_message_again(
+    world: Wired,
+) -> None:
+    run = worker(world)
+    await run.run_pass()
+    world.service.add(wire_message("m1", folder_ids=["inv"], subject="Your invoice"))
+    await run.run_pass()
+    assert state_of(world, "m1") == "skipped"
+    # Put into the inbox while the feed expires: no event reaches the agent.
+    world.service.messages[(ACCOUNT, "m1")]["folder_ids"] = ["inbox"]
+    world.store.set_cursor("stale", world.clock())
+    world.service.expired.add("stale")
+    world.fake_gateway.answer(MATCH)
+
+    await run.run_pass()
+
+    assert state_of(world, "m1") == "done"
+
+
 async def test_backfill_again_takes_a_decided_message_up_anew(world: Wired) -> None:
     world.service.add(wire_message("m1", subject="Your invoice"), change=None)
     run = worker(world)
@@ -185,6 +207,42 @@ async def test_backfill_of_an_agent_that_wants_no_folder(world: Wired) -> None:
     pending = {row.ref.message_id for row in world.store.messages("pending", 100)}
     assert "filed" not in pending
     assert "in-inbox" in pending
+
+
+WAITS_FOR_KEYWORDS = {
+    "on": {"keywords": ["agent-categorized-bookkeeping"]},
+    "dimensions": [
+        {
+            "name": "kind",
+            "categories": [
+                {
+                    "name": "Invoice",
+                    "keywords": ["agent-invoice"],
+                    "then": [{"move": "Invoices"}],
+                }
+            ],
+        }
+    ],
+}
+
+
+async def test_backfill_takes_up_mail_a_list_of_keywords_waits_for(
+    world: Wired, tmp_path: Path
+) -> None:
+    path = tmp_path / "categorization.json"
+    path.write_text(json.dumps(WAITS_FOR_KEYWORDS), encoding="utf-8")
+    agent = Categorization(settings(stage="full", categorization_file=path))
+    agent.prepare()
+    keywords = ["agent-categorized-bookkeeping", "agent-invoice"]
+    world.service.add(wire_message("m1", keywords=keywords), change=None)
+    world.service.add(wire_message("m2"), change=None)
+    run = worker(world, agent)
+
+    assert await run.backfill(7, again=True) == 1
+    await run.drain()
+
+    assert world.service.messages[(ACCOUNT, "m1")]["folder_ids"] == ["inv"]
+    assert world.store.message(ref("m2")) is None
 
 
 class Ticking(Echo):

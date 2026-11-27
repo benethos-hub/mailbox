@@ -218,7 +218,7 @@ class FakeService:
             ("POST", "folders"): self._create_folder,
             ("GET", "me"): self._me,
             ("POST", "drafts"): lambda r, p: drafts.made(self.messages, p[1], r),
-            ("GET", "drafts"): lambda r, p: drafts.listed(self.messages, p[1]),
+            ("GET", "drafts"): lambda r, p: drafts.listed(self.messages, p[1], r),
         }.get((request.method, _kind(parts)))
         if route is None:
             return _error(404, "not_found", "no such path")

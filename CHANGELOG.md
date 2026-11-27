@@ -310,6 +310,41 @@ adheres to [Semantic Versioning](https://semver.org/).
   proxy and no bundle of authorities from the environment, as the
   client and the gateway take none. Before, `HTTPS_PROXY` held for it
   and `REQUESTS_CA_BUNDLE` took the place of `MAILBOX_AGENTS_CA_FILE`.
+- `benethos-mailbox-agents`: a forward whose draft was made while the
+  answer did not come, and the service could not be asked right after,
+  is no longer drafted a second time. The next pass asks the service
+  first and counts the draft as made.
+- `benethos-mailbox-agents`: whether a forward is drafted already is
+  looked up in every page of the drafts, not in the first alone.
+- `benethos-mailbox-agents`: `filing` files mail under the owner's
+  folder with a `below` of two names or more, such as `Archive/2026`.
+  Before, the folder in between was refused and the mail stayed where
+  it was.
+- `benethos-mailbox-agents`: `backfill`, and the backfill after an
+  expired feed, take up the mail an instance of `categorization` that
+  waits for keywords alone waits for, when it carries them already.
+  Before, such an instance took up nothing in a backfill.
+- `benethos-mailbox-agents`: a keyword with half of a surrogate pair,
+  which cannot be written as UTF-8, is read with U+FFFD in its place,
+  as every other text of a mail. Before, it ended the worker when the
+  state file was written, again after each start.
+- `benethos-mailbox-agents`: `filing` sets its keyword on a message
+  whose move went through while the keyword did not. Before, the next
+  attempt found the message in its folder, left it without the keyword,
+  and every later update took it up again.
+- `benethos-mailbox-agents`: the backfill after an expired feed takes
+  up a message the agent skipped before, such as one given a keyword an
+  actor waits for while the feed expired. Before, it stayed `skipped`.
+- `benethos-mailbox-agents`: past the 20 forwards of a day, a forward
+  that would only be recorded, held by its sender check or in a stage
+  below `suggest`, is still recorded. Before, it was refused and left no
+  trace.
+- `benethos-mailbox-agents`: `check` finds a circle of `categorization`
+  lists that one closes with its own keyword after a `move_below`, as it
+  finds one closed after a `move`.
+- The agents refuse a mailbox service at `http://` on another machine
+  naming their own settings, `MAILBOX_AGENTS_SERVICE_URL` and
+  `MAILBOX_AGENTS_SERVICE_ALLOW_HTTP`, not those of the client.
 - `restore` and `backup verify` refuse a backup whose manifest holds a
   field of the wrong type, such as the schema as a text, with a message
   instead of a traceback.

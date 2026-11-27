@@ -314,7 +314,7 @@ class Mailbox:
                 cc=_addresses(found.cc),
                 date=found.date,
                 received=found.received,
-                keywords=tuple(found.keywords),
+                keywords=tuple(map(sound, found.keywords)),
                 # The text part, else the visible text of the HTML part,
                 # as the mail page and the MCP server read it.
                 text=plaintext.mail_text(
@@ -350,7 +350,7 @@ class Mailbox:
                         to=_addresses(item.to),
                         date=item.date,
                         received=item.received,
-                        keywords=tuple(item.keywords),
+                        keywords=tuple(map(sound, item.keywords)),
                     )
                 )
             return Thread(id=found.id, messages=tuple(messages))
@@ -420,18 +420,21 @@ class Mailbox:
 
     async def forward_drafted(self, ref: MessageRef, recipients: Iterable[str]) -> bool:
         """Whether a forward of the message to exactly ``recipients`` lies
-        among the drafts of its account, on their first page."""
+        among the drafts of its account, page by page."""
         wanted = sorted(address.casefold() for address in recipients)
-        found = await _call(self._client.list_drafts(ref.account_id))
-        for draft in found.items:
-            if sorted(a.email.casefold() for a in draft.to) != wanted:
-                continue
-            whole = await _call(self._client.get_message(ref.account_id, draft.id))
-            named = whole.reference
-            forwards = (ref.message_id, "forward")
-            if named and (named.message_id, named.action) == forwards:
-                return True
-        return False
+        forwards = (ref.message_id, "forward")
+        cursor: str | None = None
+        while True:
+            found = await _call(self._client.list_drafts(ref.account_id, cursor=cursor))
+            for draft in found.items:
+                if sorted(a.email.casefold() for a in draft.to) != wanted:
+                    continue
+                whole = await _call(self._client.get_message(ref.account_id, draft.id))
+                named = whole.reference
+                if named and (named.message_id, named.action) == forwards:
+                    return True
+            if not (cursor := found.next_cursor):
+                return False
 
 
 def _with_paths(found: list[wire.Folder]) -> dict[str, FolderRef]:
@@ -482,6 +485,8 @@ async def connect(
             base_url=base_url, token=token, transport=transport, allow_http=allow_http
         )
     except ConfigurationError as exc:
-        raise ConfigError(f"the mailbox service: {exc}") from None
+        # The client names its own settings, the agents read theirs.
+        named = str(exc).replace("MAILBOX_SERVICE_", "MAILBOX_AGENTS_SERVICE_")
+        raise ConfigError(f"the mailbox service: {named}") from None
     async with Mailbox(client) as mailbox:
         yield mailbox

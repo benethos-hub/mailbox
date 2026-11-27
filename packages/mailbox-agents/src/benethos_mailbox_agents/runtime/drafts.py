@@ -20,8 +20,9 @@ from ..records import MailMessage
 from ..store import Store
 from .model import start_of_day
 from .outcomes import Plan
+from .writer import Writer
 
-__all__ = ["FORMS", "admissible", "plan"]
+__all__ = ["FORMS", "admissible", "before", "plan"]
 
 # The forms of a forward, as the mailbox service takes them.
 FORMS = frozenset({"inline", "attachment"})
@@ -44,6 +45,26 @@ def admissible(agent: Agent, request: ActionRequest) -> None:
         raise ActionRefusedError("a forward is inline or an attachment")
 
 
+async def before(
+    agent: Agent, store: Store, mailbox: Writer, request: ActionRequest, now: datetime
+) -> bool:
+    """For a forward about to be drafted: whether one recorded and not
+    taken lies among the drafts after all, its answer lost. It then counts
+    as taken. Refused past the drafts of the day, which count only the
+    forwards drafted, not those only recorded."""
+    unsettled = any(
+        row.action == Action.DRAFT_FORWARD.value and not row.executed
+        for row in store.actions(request.ref)
+    )
+    if unsettled and await mailbox.forward_drafted(request.ref, request.recipients):
+        store.mark_taken(request.ref, Action.DRAFT_FORWARD.value)
+        return True
+    today = store.executed_since(Action.DRAFT_FORWARD.value, start_of_day(now))
+    if today >= agent.limits.drafts_per_day:
+        raise ActionRefusedError("the forwards of the day are drafted")
+    return False
+
+
 def plan(
     agent: Agent,
     store: Store,
@@ -53,8 +74,7 @@ def plan(
 ) -> Plan | None:
     """The forward as planned: its form and addresses as the argument,
     nothing before it. None when a forward of the message was drafted
-    already. Refused for a message in the drafts or sent mail, and past
-    the drafts of the day."""
+    already. Refused for a message in the drafts or sent mail."""
     if any(folder.role in _OWN_ROLES for folder in message.folders):
         raise ActionRefusedError("no forward of a message in the drafts or sent mail")
     done = any(
@@ -63,9 +83,6 @@ def plan(
     )
     if done:
         return None
-    today = store.executed_since(Action.DRAFT_FORWARD.value, start_of_day(now))
-    if today >= agent.limits.drafts_per_day:
-        raise ActionRefusedError("the forwards of the day are drafted")
     addresses = ",".join(sorted(a.casefold() for a in request.recipients))
     argument = f"{request.forward_as}:{addresses}"
     return Plan(argument, {}, argument)

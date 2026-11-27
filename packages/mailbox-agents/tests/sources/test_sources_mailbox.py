@@ -149,6 +149,18 @@ async def test_the_text_is_the_text_part_else_the_visible_html(
     assert found.text == read
 
 
+async def test_a_keyword_with_a_lone_surrogate_is_read_replaced(
+    fake_service: FakeService, mailbox: Mailbox
+) -> None:
+    keywords = ["agent-invoice", f"{chr(0xD800)}x"]
+    fake_service.add(wire_message("m1", thread_id="t", keywords=keywords))
+
+    found = await mailbox.message(REF)
+    [in_thread] = (await mailbox.thread(ACCOUNT, "t")).messages
+
+    assert found.keywords == in_thread.keywords == ("agent-invoice", "�x")
+
+
 async def test_a_new_folder_is_asked_for_again(
     fake_service: FakeService, mailbox: Mailbox
 ) -> None:
@@ -320,9 +332,12 @@ async def test_the_environment_sets_no_proxy(monkeypatch: pytest.MonkeyPatch) ->
 
 
 async def test_http_to_another_machine_needs_allowing() -> None:
-    with pytest.raises(ConfigError, match="mailbox service"):
+    with pytest.raises(ConfigError, match="mailbox service") as refused:
         async with connect("http://mailbox.example.test", "token-value"):
             pass
+    # The settings the agents read, not those of the client.
+    assert "MAILBOX_AGENTS_SERVICE_ALLOW_HTTP" in str(refused.value)
+    assert " MAILBOX_SERVICE_" not in str(refused.value)
 
     async with connect(
         "http://mailbox.example.test", "token-value", allow_http=True

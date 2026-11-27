@@ -54,6 +54,17 @@ class _Actions(_Rows):
         """Note that the action recorded as ``action_id`` was taken."""
         self._write("UPDATE actions SET executed = 1 WHERE id = ?", action_id)
 
+    def mark_taken(self, ref: MessageRef, action: str) -> None:
+        """Note that the actions ``action`` of a message, recorded and not
+        taken, were taken after all: their answer did not come."""
+        self._write(
+            "UPDATE actions SET executed = 1 WHERE account_id = ? "
+            "AND message_id = ? AND action = ? AND executed = 0",
+            ref.account_id,
+            ref.message_id,
+            action,
+        )
+
     def drop_action(self, action_id: int) -> None:
         """Remove an action recorded before it was taken that the mailbox
         service then refused."""

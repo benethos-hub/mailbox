@@ -4,6 +4,7 @@ once per message, within the drafts of a day, never sent."""
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from typing import ClassVar
 
 import pytest
@@ -126,6 +127,23 @@ async def test_the_drafts_of_a_day_are_limited(actions_world: Wired) -> None:
     assert len(drafted(actions_world)) == 21
 
 
+async def test_past_the_drafts_of_a_day_a_held_forward_is_still_recorded(
+    actions_world: Wired,
+) -> None:
+    refs = [MessageRef(account_id=ACCOUNT, message_id=f"n{i}") for i in range(21)]
+    for ref in refs:
+        actions_world.service.add(wire_message(ref.message_id), change=None)
+    run = executor(actions_world)
+    for ref in refs[:20]:
+        assert await run([forward(ref)]) == [Outcome.DONE]
+    held = replace(forward(refs[20]), held=True)
+
+    assert await run([held]) == [Outcome.RECORDED]
+
+    [row] = actions_world.store.actions(refs[20])
+    assert (row.action, row.executed) == ("draft_forward", False)
+
+
 @pytest.mark.parametrize("folder", ["sent", "drafts"])
 async def test_no_forward_of_the_owners_own_mail(
     actions_world: Wired, folder: str
@@ -156,6 +174,35 @@ async def test_a_draft_whose_answer_did_not_come_counts_once(
     [row] = actions_world.store.actions(REF)
     assert row.executed
     assert await run([forward()]) == [Outcome.PRESENT]
+    assert len(drafted(actions_world)) == 1
+
+
+async def test_a_draft_whose_answer_and_check_were_lost_is_not_made_again(
+    actions_world: Wired, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    mailbox = actions_world.mailbox
+    made = mailbox.draft_forward
+
+    async def lost(*args: object, **kwargs: object) -> str:
+        await made(*args, **kwargs)  # type: ignore[arg-type]
+        raise MailboxUnavailableError("the answer did not come")
+
+    async def away(*args: object, **kwargs: object) -> bool:
+        raise MailboxUnavailableError("the service is away")
+
+    monkeypatch.setattr(mailbox, "draft_forward", lost)
+    monkeypatch.setattr(mailbox, "forward_drafted", away)
+    run = executor(actions_world)
+    with pytest.raises(MailboxUnavailableError):
+        await run([forward()])
+    monkeypatch.undo()
+    [row] = actions_world.store.actions(REF)
+    assert not row.executed
+
+    assert await run([forward()]) == [Outcome.PRESENT]
+
+    [row] = actions_world.store.actions(REF)
+    assert row.executed
     assert len(drafted(actions_world)) == 1
 
 

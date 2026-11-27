@@ -144,12 +144,13 @@ def circles(chains: Mapping[str, Chain], sign: str) -> list[list[str]]:
     """The circles among the lists of several instances, each list by the
     name of its instance: one sets a keyword another waits for, and so on
     back to the first. ``sign`` is the agent's keyword, which an instance
-    sets with ``-<instance>`` after it with a move or with ``mark_done``.
+    sets with ``-<instance>`` after it with a move, a move below or
+    ``mark_done``.
     Each circle once, from the instance first in ``chains``."""
     sets: dict[str, set[str]] = {}
     for name, chain in chains.items():
         found = set(chain.keywords())
-        if chain.mark_done or chain.folders():
+        if chain.mark_done or chain.folders() or chain.belows():
             found.add(f"{sign}-{name}")
         sets[name] = found
     after = {

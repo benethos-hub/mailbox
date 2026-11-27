@@ -27,20 +27,29 @@ class MessageRow:
 class _Messages(_Rows):
     """The messages an agent takes up, and their state."""
 
-    def enqueue(self, ref: MessageRef, now: datetime, *, again: bool = False) -> bool:
+    def enqueue(
+        self,
+        ref: MessageRef,
+        now: datetime,
+        *,
+        again: bool = False,
+        again_skipped: bool = False,
+    ) -> bool:
         """Record ``ref`` as ``pending``. A message already known is left
         as it is, unless ``again``, which makes it ``pending`` anew for a
-        backfill under a new prompt or model. Answers whether it is now
+        backfill under a new prompt or model, or ``again_skipped``, which
+        does so for a message ``skipped`` alone. Answers whether it is now
         pending because of this call."""
         stamp = _text(now)
-        if again:
+        if again or again_skipped:
             changed = self._write(
                 "INSERT INTO messages (account_id, message_id, state, attempts, "
                 "next_attempt, created, updated) VALUES (?, ?, 'pending', 0, ?, ?, ?) "
                 "ON CONFLICT (account_id, message_id) DO UPDATE SET "
                 "state = 'pending', attempts = 0, "
                 "next_attempt = excluded.next_attempt, "
-                "updated = excluded.updated WHERE state != 'pending'",
+                "updated = excluded.updated WHERE "
+                + ("state != 'pending'" if again else "state = 'skipped'"),
                 ref.account_id,
                 ref.message_id,
                 stamp,

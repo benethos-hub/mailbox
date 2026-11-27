@@ -8,9 +8,10 @@ version: one of another version than the agents' ends the worker
 
 1. Read the feed from the stored cursor. On the first pass, start from the
    state of now. On `410` take a new state and run `backfill` over
-   `BACKFILL_DAYS`. The backfill takes up new messages only, so each open
-   item is then observed as if it were updated: a change in the gap, such
-   as a marked invoice moved into a folder, is not lost.
+   `BACKFILL_DAYS`. The backfill takes up new messages, and `skipped` ones
+   anew, as the gap may have given one a keyword an actor waits for. Each
+   open item is then observed as if it were updated: a change in the gap,
+   such as a marked invoice moved into a folder, is not lost.
 2. For each event the agent routes to `decide`, record the message as
    `pending`. Hand each one routed to `observe` to the agent at once. One
    deleted since closes its open item as `message_gone`.
@@ -113,7 +114,7 @@ changed until the evaluation was run again.
 |---|---|
 | `worker --agent <name>` | runs one agent pass after pass until SIGTERM or SIGINT |
 | `run --agent <name>` | one pass, then the counts per state |
-| `backfill --agent <name> [--days N]` | takes the messages of the last days up anew and runs them: those of the inbox and of sent mail, and those of the folders the agent wants besides, such as the folders an instance of `categorization` with `"on": {"arrival": "folders"}` takes up. It runs until no message is due, and stops with exit code 1 after the first round that found the gateway away |
+| `backfill --agent <name> [--days N]` | takes the messages of the last days up anew and runs them: those of the inbox and of sent mail, and those of the folders the agent wants besides, such as the folders an instance of `categorization` with `"on": {"arrival": "folders"}` takes up. A message the agent only observes when it arrives is taken up when it carries a keyword the agent waits for already, as an update would take it up. It runs until no message is due, and stops with exit code 1 after the first round that found the gateway away |
 | `report --agent <name> [--limit N] [--state S] [--offline]` | [report](#report) |
 | `eval --agent <name> --gold <file> [--recognizer R] [--reports DIR]` | [evaluation](evaluation.md), with `--recognizer` one part of the agent scored alone |
 | `check --agent <name> INSTANCE=FILE...` | reads the configuration of several instances together and names each circle of lists that set each other off, exit code 1 when there is one, else 0 |

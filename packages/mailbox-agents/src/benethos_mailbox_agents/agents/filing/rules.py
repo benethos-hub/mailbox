@@ -148,15 +148,21 @@ class Rules(BaseModel):
         """Where a message with ``keywords`` goes. From the inbox to the
         ``move`` of the first rule with a move that fits, with the
         ``below`` of the first rule with a below that fits under it. From a
-        folder of the owner, ``own_folder``, only below it. Else nowhere."""
+        folder of the owner, ``own_folder``, only below it, unless it is
+        that target already: a move that went through while its keyword
+        did not, which is then set. Else nowhere."""
         carried = frozenset(keyword.casefold() for keyword in keywords)
         fitting = [(n, r) for n, r in enumerate(self.rules, 1) if r.fits(carried)]
         moved = next(((n, r.move) for n, r in fitting if r.move), None)
         under = next(((n, r.below) for n, r in fitting if r.below), None)
-        if in_inbox and moved is not None:
-            if under is None:
-                return Target(moved[1], move=moved[0])
-            return Target(_under(moved[1], under[1]), move=moved[0], below=under[0])
+        if moved is not None:
+            whole = (
+                Target(moved[1], move=moved[0])
+                if under is None
+                else Target(_under(moved[1], under[1]), move=moved[0], below=under[0])
+            )
+            if in_inbox or own_folder == whole.path:
+                return whole
         if not in_inbox and own_folder is not None and under is not None:
             return Target(_under(own_folder, under[1]), below=under[0])
         return None
@@ -175,8 +181,13 @@ class Rules(BaseModel):
         return frozenset(found)
 
     def belows(self) -> frozenset[str]:
-        """Every folder a below names."""
-        return frozenset(rule.below for rule in self.rules if rule.below)
+        """Every folder a below names, with those above it, relative to
+        the folder it is made in."""
+        found: set[str] = set()
+        for rule in self.rules:
+            if rule.below:
+                found.update(from_top(rule.below))
+        return frozenset(found)
 
 
 def load_rules(path: Path) -> Rules:

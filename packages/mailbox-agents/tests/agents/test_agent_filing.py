@@ -11,7 +11,8 @@ import pytest
 
 from benethos_mailbox_agents.agents.filing.agent import Filing
 from benethos_mailbox_agents.contract import discover
-from benethos_mailbox_agents.errors import ConfigError
+from benethos_mailbox_agents.errors import ConfigError, MailboxUnavailableError
+from benethos_mailbox_agents.records import MessageRef
 
 from ..agents_fake import ACCOUNT, wire_message
 from ..agents_helpers import (
@@ -148,6 +149,45 @@ async def test_below_the_folder_of_the_owner_it_lies_in(tmp_path: Path) -> None:
 
         assert [f["name"] for f in world.service.made()] == ["Invoices"]
         assert _folder_of(world, "m1") == ["Invoices/Telco/Invoices"]
+
+
+async def test_a_below_of_two_names_is_made_under_the_owner_s_folder(
+    tmp_path: Path,
+) -> None:
+    rules = {"rules": [{"keywords": [INVOICE], "below": "Archive/2026"}]}
+    async with wired(tmp_path) as world:
+        world.service.add(
+            wire_message("m1", folder_ids=["inv-telco"], keywords=[INVOICE]),
+            change=None,
+        )
+
+        assert await run(world, "m1", agent(tmp_path, rules=rules)) == "done"
+
+        assert [f["name"] for f in world.service.made()] == ["Archive", "2026"]
+        assert _folder_of(world, "m1") == ["Invoices/Telco/Archive/2026"]
+        assert "agent-filed" in mail(world, "m1")["keywords"]
+
+
+async def test_a_keyword_the_service_failed_after_the_move_is_set_again(
+    tmp_path: Path,
+) -> None:
+    rules = {"rules": [{"keywords": [INVOICE], "move": "Invoices"}]}
+    async with wired(tmp_path) as world:
+        world.service.add(wire_message("m1", keywords=[INVOICE]), change=None)
+        world.service.keyword_failures = 1
+        filer = worker(world, agent(tmp_path, rules=rules))
+        world.store.enqueue(
+            MessageRef(account_id=ACCOUNT, message_id="m1"), world.clock()
+        )
+
+        with pytest.raises(MailboxUnavailableError):
+            await filer.process_due()
+        assert _folder_of(world, "m1") == ["Invoices"]
+
+        await filer.process_due()
+
+        assert mail(world, "m1")["keywords"] == [INVOICE, "agent-filed"]
+        assert _folder_of(world, "m1") == ["Invoices"]
 
 
 @pytest.mark.parametrize(

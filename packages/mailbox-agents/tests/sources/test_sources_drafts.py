@@ -76,6 +76,17 @@ async def test_a_forward_drafted_is_found_by_its_recipients_and_reference(
     assert not await mailbox.forward_drafted(REF, TO[:1])
 
 
+async def test_a_forward_drafted_is_found_past_the_first_page(
+    fake_service: FakeService, mailbox: Mailbox
+) -> None:
+    for number in range(1, 52):
+        fake_service.add(wire_message(f"m{number}"))
+        ref = MessageRef(account_id=ACCOUNT, message_id=f"m{number}")
+        await mailbox.draft_forward(ref, TO, "inline")
+
+    assert await mailbox.forward_drafted(REF, TO)
+
+
 async def test_an_account_without_drafts_refuses_it(
     fake_service: FakeService, mailbox: Mailbox
 ) -> None:

@@ -52,12 +52,24 @@ def made(
 
 
 def listed(
-    messages: dict[tuple[str, str], dict[str, Any]], account: str
+    messages: dict[tuple[str, str], dict[str, Any]],
+    account: str,
+    request: httpx.Request,
 ) -> httpx.Response:
-    """The drafts of ``account``, one page."""
+    """The drafts of ``account``, the newest first, in pages of ``limit``,
+    50 by default, as the service lists them."""
     items = [
         m
         for (a, _), m in messages.items()
         if a == account and m["folder_ids"] == ["drafts"]
-    ]
-    return httpx.Response(200, json={"items": items, "next_cursor": None})
+    ][::-1]
+    cursor = int(request.url.params.get("cursor", "0"))
+    limit = int(request.url.params.get("limit", "50"))
+    more = cursor + limit < len(items)
+    return httpx.Response(
+        200,
+        json={
+            "items": items[cursor : cursor + limit],
+            "next_cursor": str(cursor + limit) if more else None,
+        },
+    )

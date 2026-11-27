@@ -359,6 +359,13 @@ class _Broken(Migration):
     statements = ("CREATE TABLE fine (x INTEGER)", "CREATE TABLE broken (")
 
 
+def test_a_text_that_is_not_utf_8_is_a_state_file_error(store: Store) -> None:
+    lone = MessageRef(account_id="acc", message_id=f"m{chr(0xD800)}")
+
+    with pytest.raises(StateFileError, match="not valid UTF-8"):
+        store.enqueue(lone, NOW)
+
+
 def test_a_failed_migration_leaves_the_file_as_it_was(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
