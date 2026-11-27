@@ -137,6 +137,10 @@ packages/mailbox-agents/src/benethos_mailbox_agents/
     a2a.py        # the only module importing a2a-sdk, Starlette and
                   # uvicorn: the entrance over A2A, served when a port
                   # is set
+  cockpit/        # the pages of what every agent did, read-only, started
+                  # by hand: sources.py where the state files are,
+                  # views.py what a page shows of them, static/ a copy of
+                  # the stylesheet of the service
   store/          # SQLite, one file per agent: store.py opens and
                   # migrates it, rows.py is what its parts stand on,
                   # messages.py, steps.py, actions.py, items.py,

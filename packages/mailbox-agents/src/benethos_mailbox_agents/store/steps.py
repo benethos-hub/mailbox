@@ -65,6 +65,20 @@ class _Steps(_Rows):
         )
         return int(row[0])
 
+    def labels_since(self, since: datetime) -> dict[str, int]:
+        """How many decisions named each label since ``since``. A message
+        decided twice, as by ``backfill``, counts twice."""
+        rows = self._all(
+            "SELECT result FROM steps WHERE step = ? AND at >= ?",
+            "decision",
+            _text(since),
+        )
+        found: dict[str, int] = {}
+        for (result,) in rows:
+            label = str(json.loads(result).get("label", ""))
+            found[label] = found.get(label, 0) + 1
+        return dict(sorted(found.items()))
+
     def model_calls_for(self, ref: MessageRef, since: datetime) -> int:
         """How many model calls were made for one message since ``since``."""
         row = self._one(

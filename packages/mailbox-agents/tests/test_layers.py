@@ -56,10 +56,17 @@ MAY_IMPORT: dict[str, frozenset[str]] = {
     "evaluation": frozenset({"errors", "records", "contract", "store", "runtime"}),
     # The entrance over A2A: it is handed what classifies a message.
     "peers": frozenset({"errors", "records", "settings"}),
+    # The pages of what every agent did, read from the state files through
+    # the store, the review of the runtime and the window of its health.
+    "cockpit": frozenset(
+        {"errors", "logbook", "settings", "records", "contract", "store"}
+        | {"sources", "runtime"}
+    ),
     # The top: it wires the upstreams, the state file and the runtime.
     "cli": frozenset(
         {"errors", "logbook", "settings", "records", "contract", "store"}
         | {"sources", "llm", "runtime", "evaluation", "telemetry", "peers"}
+        | {"cockpit"}
     ),
     "__main__": frozenset({"cli"}),
 }
@@ -104,6 +111,7 @@ CONFINED: dict[str, frozenset[str]] = {
             "cli/__init__.py",
             "cli/commands.py",
             "cli/report.py",
+            "cockpit/views.py",
         }
     ),
     "httpx": frozenset({"sources/mailbox.py", "llm/gateway.py"}),
