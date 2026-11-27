@@ -96,6 +96,32 @@ def _made(path: Path, make: Callable[[], T]) -> T:
         ) from None
 
 
+def _reader(path: Path) -> sqlite3.Connection:
+    """A connection that reads the file at ``path`` and never writes it.
+
+    A reader in a folder it may not write, such as the volume of a
+    stopped agent mounted read-only, cannot make the ``-shm`` file a
+    file in WAL mode wants once the writer closed it cleanly and took
+    ``-wal`` and ``-shm`` away. Then, and only while no ``-wal`` lies
+    beside the file, it opens the file as immutable: SQLite takes no
+    lock and reads no WAL. Should the writer start in that moment, a
+    read may see an earlier state or fail. The file is never changed.
+    """
+    uri = f"{path.resolve().as_uri()}?mode=ro"
+    try:
+        connection = sqlite3.connect(uri, uri=True, isolation_level=None)
+        try:
+            connection.execute("PRAGMA user_version").fetchone()
+        except BaseException:
+            connection.close()
+            raise
+        return connection
+    except sqlite3.OperationalError:
+        if path.with_name(path.name + "-wal").exists():
+            raise
+    return sqlite3.connect(f"{uri}&immutable=1", uri=True, isolation_level=None)
+
+
 def _unlock(held: ExitStack) -> None:
     held.close()
 
@@ -122,19 +148,15 @@ class Store(_Messages, _Steps, _Actions, _Items, _Calls, _Profile):
     @classmethod
     def open(cls, path: Path, *, read_only: bool = False) -> Store:
         """Open the file at ``path``. A writer creates it and runs the
-        migrations it lacks. A reader needs it to exist and to be current.
-        A writer holds a lock beside the file until it is closed, so a
-        second writer, such as ``run`` beside a running ``worker``, is
-        refused."""
+        migrations it lacks. A reader needs it to exist and refuses only a
+        schema newer than this program knows. A writer holds a lock
+        beside the file until it is closed, so a second writer, such as
+        ``run`` beside a running ``worker``, is refused."""
         if read_only:
             if not path.is_file():
                 raise ConfigError(f"no state file {path.name}")
             with _sqlite(path.name):
-                connection = sqlite3.connect(
-                    f"{path.resolve().as_uri()}?mode=ro",
-                    uri=True,
-                    isolation_level=None,
-                )
+                connection = _reader(path)
             lock = None
         else:
             _made(path, lambda: path.parent.mkdir(parents=True, exist_ok=True))
