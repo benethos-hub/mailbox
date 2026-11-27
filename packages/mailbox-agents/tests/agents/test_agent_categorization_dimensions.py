@@ -154,7 +154,7 @@ def test_the_version_follows_the_list(tmp_path: Path) -> None:
             lambda c: c["dimensions"][0]["categories"][0]["then"].__setitem__(
                 0, {"move": "Providers/Bank", "stage": "most"}
             ),
-            "'shadow', 'keyword' or 'full'",
+            "'shadow', 'suggest', 'keyword' or 'full'",
         ),
     ],
 )

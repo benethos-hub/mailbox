@@ -53,7 +53,7 @@ __all__ = [
 # What each stage carries out. The rest is recorded only.
 STAGE_ALLOWS: dict[str, frozenset[Action]] = {
     "shadow": frozenset(),
-    "keyword": frozenset({Action.ADD_KEYWORD, Action.REMOVE_KEYWORD}),
+    "suggest": frozenset({Action.ADD_KEYWORD, Action.REMOVE_KEYWORD}),
     "full": frozenset(Action),
 }
 

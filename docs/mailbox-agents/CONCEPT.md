@@ -120,7 +120,7 @@ on one runtime, and each process runs one of them.
 
 - **Shadow first.** A new agent, and one whose prompt or model changed,
   starts in the stage `shadow`: it records what it would do and changes
-  nothing. `keyword` sets keywords, `full` also moves. A change of stage on
+  nothing. `suggest` sets keywords, `full` also moves. A change of stage on
   a real mailbox is the owner's decision ([runtime](concept/runtime.md)).
 - **A model that reads mail has no tools.** It answers in a fixed schema,
   code acts on the answer ([agent contract](concept/agent-contract.md)).

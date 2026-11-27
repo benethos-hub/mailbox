@@ -131,7 +131,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   `keyword`. Of several moves the category of the highest `priority`
   wins. A list of `groups` is read as one dimension and keeps its
   version. Two recognizers of a list may ask the model, each once per
-  message. An entry of `then` may name a `stage`, `shadow`, `keyword` or
+  message. An entry of `then` may name a `stage`, `shadow`, `suggest` or
   `full`: below the stage of the agent it is recorded only.
   `"on": {"arrival": "folders"}` takes up mail that arrives in a
   folder without a role as well, such as one a rule of the mail server
@@ -205,6 +205,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `benethos-mailbox-agents`: the middle stage is called `suggest`:
+  `MAILBOX_AGENTS_STAGE=suggest`. It does what `keyword` did, and
+  `keyword` is still taken and read as `suggest`.
 - A link to an attachment holds while the service cannot reach its
   database: its route answers `503` with `Retry-After`, and the attempt
   does not count against the address that asks.

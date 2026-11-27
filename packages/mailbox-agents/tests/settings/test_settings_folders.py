@@ -70,7 +70,7 @@ def test_the_variable_names_the_file_as_the_option_does(
 
     found = load_settings()
 
-    assert found.stage == "keyword"
+    assert found.stage == "suggest"
     assert found.data_dir == tmp_path / DATA_DIR
 
 

@@ -195,7 +195,7 @@ async def test_a_log_line_names_no_group(
 # -- the stages -----------------------------------------------------------------
 
 
-@pytest.mark.parametrize("stage", ["shadow", "keyword"])
+@pytest.mark.parametrize("stage", ["shadow", "suggest"])
 async def test_below_full_the_folders_and_the_move_are_recorded(
     listed_world: Wired, tmp_path: Path, stage: str
 ) -> None:
@@ -211,10 +211,10 @@ async def test_below_full_the_folders_and_the_move_are_recorded(
     ]
 
 
-async def test_in_keyword_the_keyword_is_recorded_and_not_set(
+async def test_in_suggest_the_keyword_is_recorded_and_not_set(
     listed_world: Wired, tmp_path: Path
 ) -> None:
-    assert await run(listed_world, "hosting", agent(tmp_path, "keyword")) == "done"
+    assert await run(listed_world, "hosting", agent(tmp_path, "suggest")) == "done"
 
     assert listed_world.service.writes() == []
     assert mail(listed_world, "hosting")["keywords"] == []

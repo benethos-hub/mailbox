@@ -34,16 +34,22 @@ __all__ = [
     "held_by_stage",
 ]
 
-Stage = Literal["shadow", "keyword", "full"]
+# The stage of an entry as written. keyword is the word of the middle stage
+# before 2026-11-27: it is kept as written, so the digest of a list, its
+# version, stays the same, and it ranks as suggest.
+Stage = Literal["shadow", "suggest", "keyword", "full"]
 
 # The stages from the least to the most an agent may do.
-STAGES: tuple[Stage, ...] = ("shadow", "keyword", "full")
+STAGES: tuple[Stage, ...] = ("shadow", "suggest", "full")
+
+# The word each stage of an entry stands for.
+_RANKS_AS: dict[Stage, Stage] = {"keyword": "suggest"}
 
 # The least stage that carries out each action, as the executor's table
-# says: a keyword from ``keyword`` on, a folder and a move in ``full``.
+# says: a keyword from ``suggest`` on, a folder and a move in ``full``.
 _RUNS_FROM: dict[Action, Stage] = {
-    Action.ADD_KEYWORD: "keyword",
-    Action.REMOVE_KEYWORD: "keyword",
+    Action.ADD_KEYWORD: "suggest",
+    Action.REMOVE_KEYWORD: "suggest",
     Action.CREATE_FOLDER: "full",
     Action.MOVE_TO_FOLDER: "full",
 }
@@ -55,7 +61,8 @@ def held_by_stage(stage: Stage | None, action: Action) -> bool:
     of the agent allows, it never raises it."""
     if stage is None:
         return False
-    return STAGES.index(stage) < STAGES.index(_RUNS_FROM[action])
+    ranked = _RANKS_AS.get(stage, stage)
+    return STAGES.index(ranked) < STAGES.index(_RUNS_FROM[action])
 
 
 @dataclass(frozen=True, slots=True)

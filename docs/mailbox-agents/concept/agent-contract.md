@@ -153,7 +153,7 @@ also when `backfill` takes it up anew. It is a settled state, not a
 refusal: the line `actions.kept` says so at INFO, no failure is counted,
 however often an update asks for the move again (2026-11-19). The folders
 the move would need are not made either, so no empty folder is left behind
-it. A move only recorded in `shadow` or `keyword` does not count. A message
+it. A move only recorded in `shadow` or `suggest` does not count. A message
 moved by hand never wanders back in a later pass. The actions of one
 message are taken in order, and after a refused move or folder, or a move
 not taken, the rest are not taken.

@@ -49,7 +49,7 @@ async def test_shadow_records_and_changes_nothing(actions_world: Wired) -> None:
 
 
 async def test_keyword_sets_the_keyword_and_moves_nothing(actions_world: Wired) -> None:
-    await executor(actions_world, "keyword")([ADD, MOVE])
+    await executor(actions_world, "suggest")([ADD, MOVE])
 
     assert actions_world.service.writes() == [(PATH, {"add_keywords": ["echo"]})]
     assert [a.executed for a in actions_world.store.actions(REF)] == [True, False]
@@ -87,9 +87,9 @@ async def test_an_action_recorded_in_another_stage_is_recorded_again(
     actions_world: Wired,
 ) -> None:
     await executor(actions_world, "shadow")([MOVE])
-    await executor(actions_world, "keyword")([MOVE])
+    await executor(actions_world, "suggest")([MOVE])
 
-    assert [a.stage for a in actions_world.store.actions(REF)] == ["shadow", "keyword"]
+    assert [a.stage for a in actions_world.store.actions(REF)] == ["shadow", "suggest"]
 
 
 async def test_removing_a_keyword_that_is_not_there_does_nothing(

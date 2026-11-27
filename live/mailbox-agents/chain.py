@@ -8,9 +8,9 @@ mail back.
         [--env-file containers/live/mailbox-agents/secrets/agent.env]
 
 It runs the example lists of containers/live/mailbox-agents/chain/, each
-instance with a state file of its own: ``partner`` in ``keyword`` over the
+instance with a state file of its own: ``partner`` in ``suggest`` over the
 inbox of the last weeks, which sets a keyword per partner and its sign,
-``bookkeeping`` in ``keyword``, which asks the model of the settings whether
+``bookkeeping`` in ``suggest``, which asks the model of the settings whether
 each message is an invoice and sets ``agent-invoice`` and its sign, and
 ``filing`` in ``full``, which waits for the sign of ``bookkeeping`` in the feed
 and moves the mail of a partner, an invoice below it into ``Invoices``.
@@ -58,7 +58,7 @@ from benethos_mailbox_agents.store import Store
 
 LISTS = LIVE / "chain"
 # Each instance, its stage, and whether it asks the model.
-INSTANCES = (("partner", "keyword"), ("bookkeeping", "keyword"), ("filing", "full"))
+INSTANCES = (("partner", "suggest"), ("bookkeeping", "suggest"), ("filing", "full"))
 # The partners of the example list, by sender.
 PARTNERS = {
     "billing@cloudhost.example": "cloudhost",

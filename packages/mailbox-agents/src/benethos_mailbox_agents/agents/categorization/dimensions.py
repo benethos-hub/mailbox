@@ -69,7 +69,7 @@ class Step(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def _read(cls, value: Any) -> Any:
-        """``{"move": "Providers/Bank", "stage": "keyword"}``: one action by
+        """``{"move": "Providers/Bank", "stage": "suggest"}``: one action by
         its name, its value, and a stage."""
         if not isinstance(value, dict) or "action" in value:
             return value

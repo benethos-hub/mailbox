@@ -122,8 +122,8 @@ async def chain(tmp_path: Path) -> AsyncIterator[Chain]:
         with ExitStack() as stack:
             workers: dict[str, Worker] = {}
             for name, listed, stage in (
-                ("partner", PARTNER, "keyword"),
-                ("bookkeeping", BOOKKEEPING, "keyword"),
+                ("partner", PARTNER, "suggest"),
+                ("bookkeeping", BOOKKEEPING, "suggest"),
                 ("filing", FILING, "full"),
             ):
                 path = tmp_path / f"{name}.json"

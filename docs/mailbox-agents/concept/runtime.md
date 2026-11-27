@@ -95,8 +95,14 @@ Rollout stage, per agent, in `MAILBOX_AGENTS_STAGE`:
 | Stage | What the agent does |
 |---|---|
 | `shadow` | records what it would do, changes nothing |
-| `keyword` | sets its keyword, moves nothing |
+| `suggest` | sets its keyword, moves nothing |
 | `full` | every action it declares |
+
+The middle stage is called `suggest` (decided 2026-11-27): in it an
+agent leaves something the owner sees and takes back in one step, and
+moves or sends nothing. Its word before was `keyword`, which is still
+taken and read as `suggest`, and a state file is migrated to the new
+word ([state](state.md)).
 
 A new agent starts in `shadow`, and so does one whose prompt or model
 changed until the evaluation was run again.

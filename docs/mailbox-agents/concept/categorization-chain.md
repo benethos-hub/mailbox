@@ -78,7 +78,7 @@ a change to the rest (decided 2026-11-25).
        "by_topic": "act",
        "then": [{"move_below": "Invoices"}, {"keyword": "agent-invoice"}]},
       {"name": "Notice", "topic": "Notices of a provider about a change of its terms",
-       "then": [{"keyword": "agent-notice", "stage": "keyword"}]}
+       "then": [{"keyword": "agent-notice", "stage": "suggest"}]}
     ]}
   ]
 }
@@ -98,7 +98,7 @@ a change to the rest (decided 2026-11-25).
 | `recognize` | a recognizer of section 1 | one of the register |
 | `priority` | how its move ranks against the moves of other dimensions (section 3) | a whole number, 0 when left out |
 | `then` | what follows from it, each entry one action with its value, and a `stage` | one `move` and one `move_below` at most |
-| `stage` of an entry | the stage it runs in at most: `shadow`, `keyword`, `full` (section 4) | the stage of the agent when left out |
+| `stage` of an entry | the stage it runs in at most: `shadow`, `suggest`, `full` (section 4). `keyword`, the former word of `suggest`, is still taken | the stage of the agent when left out |
 
 A list of `groups` alone is read as one dimension called `group`, each
 group a category whose `then` moves to its folder. It keeps the digest and
@@ -157,14 +157,17 @@ one of the highest priority counts. When either the move or the
 
 An entry of `then` may name a stage. It only lowers what the stage of the
 agent allows, it never raises it: below the stage an action needs, the
-action is recorded only (decided 2026-11-25).
+action is recorded only (decided 2026-11-25). An entry that says
+`keyword`, the word of the middle stage before 2026-11-27, is read as
+`suggest` and keeps its word in the list, so the version of the list
+stays.
 
 | Agent | Entry | A keyword | A move |
 |---|---|---|---|
 | `full` | none | set | made |
-| `full` | `"stage": "keyword"` | set | recorded |
+| `full` | `"stage": "suggest"` | set | recorded |
 | `full` | `"stage": "shadow"` | recorded | recorded |
-| `keyword` | any | set, unless `shadow` | recorded |
+| `suggest` | any | set, unless `shadow` | recorded |
 | `shadow` | any | recorded | recorded |
 
 ## 5. Mail that arrives in a folder
@@ -232,7 +235,7 @@ and may correct (decided 2026-11-25). The example of the live setup,
   it, so `filing` moves once, after `bookkeeping` decided, below the folder of
   the partner. Without `mark_done` the keyword comes with a move alone.
 - **`shadow` sets no keyword.** An instance others wait for runs in
-  `keyword` at least, or the next never starts. In `keyword` its moves
+  `suggest` at least, or the next never starts. In `suggest` its moves
   are recorded, its keywords set.
 - **No circle.** A list never waits for a keyword it sets itself, and an
   instance does not start when its list waits for its own keyword. Across
