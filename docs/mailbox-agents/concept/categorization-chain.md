@@ -301,9 +301,9 @@ nothing of it applies, as POP3 has no folders.
 
 ## 9. Not part of it
 
-- Forwarding a message: an action without a way back, for the
-  [agent contract](agent-contract.md) first, with the mailbox service's
-  outbox.
+- Forwarding a message. A forward as a draft is the action
+  `draft_forward` of the [agent contract](agent-contract.md), which the
+  actor `forwarding` takes, not `categorization` (2026-11-27).
 - Labels on Gmail in place of keywords.
 - A threshold on how sure a recognizer is. The field `confidence` of a
   `Choice` is there and stays empty, until a gold set is large enough to

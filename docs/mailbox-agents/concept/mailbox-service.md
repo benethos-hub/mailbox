@@ -13,6 +13,7 @@ Operation names below are the service's `operationId`s.
 | Set or remove a keyword, move to a folder | `update_message` |
 | The folders of an account, read anew in every pass: a renamed folder keeps its id with Microsoft, Gmail and JMAP **(to verify)** | `list_folders` |
 | Make a folder, below a parent or at the top | `create_folder` |
+| A forward of a message as a draft, and whether one is there already | `create_draft` with a `reference` to forward, `list_drafts` and `get_message` |
 | The messages received since a day, for `backfill` | `list_all_messages`, once for the inbox and once for sent mail |
 | The messages of one folder since a day, for `backfill` | `list_messages` of one account, the folder by its id |
 | The accounts to look in for those folders, and for the folders `status` checks, without `ACCOUNTS` | `get_me` |

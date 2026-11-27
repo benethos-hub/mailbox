@@ -104,7 +104,9 @@ agent against a labelled set of mail, and exposing health and metrics.
 
 **Deliberately gated rather than excluded:** writing a reply as a draft. It
 needs a right the first agents do not get, and it comes after the agents
-that only read and sort have been measured.
+that only read and sort have been measured. A forward as a draft is
+built: the actor `forwarding` puts one into the drafts folder and sends
+nothing (2026-11-27).
 
 ## Naming
 

@@ -6,7 +6,7 @@ Three locks, in three places, none of which the model can reach:
 
 | Where | What it stops |
 |---|---|
-| The mailbox service | sending, deleting for good, drafts: the agent's user has no right to them |
+| The mailbox service | sending and deleting for good: no agent's user has a right to them. Drafts: only the user of an actor that declares `draft_forward` has the right |
 | The model gateway | a model outside the agent's list, spending past its budget |
 | The runtime | every action the agent did not declare, the trash among them, a folder made or a keyword set that its configuration does not name |
 
@@ -54,7 +54,10 @@ Further rules:
   field whose quote is not found is dropped, and a label whose quote is
   not found is recorded and not acted on. A confidence the model reports
   about itself is not used.
-- **Reversible only.** Every action records what was there before.
+- **Reversible only.** Every action records what was there before. Two
+  have no way back by an agent and change no message: `create_folder`
+  and `draft_forward`, whose folder or draft the owner removes. No
+  agent sends (decided 2026-11-27).
 - **Secrets never travel.** The service token and the gateway key are never
   logged, never stored in the state file and redacted from error text.
 - **Nothing of a mail in a log line.** A line names ids, states, counts and
