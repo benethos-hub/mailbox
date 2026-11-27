@@ -25,6 +25,9 @@ Part of the [concept](../CONCEPT.md).
   `live/mailbox-agents/chain.py` runs three instances of `categorization` that
   hand a message on by keywords through the feed, a partner keyword set
   by hand among it, and puts every message back without their keywords.
+  `live/mailbox-agents/filing.py` runs the actor `filing` in `shadow` and
+  in `full` on keywords it sets as a person would, a message put back by
+  hand among it, and puts every message back.
   `live/mailbox-agents/peers.py` asks the entrance for peers over A2A,
   directly and through LiteLLM, and changes no mail.
   The model gateway belongs to it (decided 2026-11-17): LiteLLM with Claude

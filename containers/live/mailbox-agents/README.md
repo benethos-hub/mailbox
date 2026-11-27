@@ -292,6 +292,7 @@ prompt and no answer.
 uv run python live/mailbox-agents/agents_smoke.py
 uv run python live/mailbox-agents/categorization.py
 uv run python live/mailbox-agents/chain.py
+uv run python live/mailbox-agents/filing.py
 uv run benethos-mailbox-agents --env-file containers/live/mailbox-agents/secrets/agent.env status
 uv run benethos-mailbox-agents --env-file containers/live/mailbox-agents/secrets/agent.env run --agent counting
 ```
