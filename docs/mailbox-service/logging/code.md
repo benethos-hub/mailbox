@@ -114,6 +114,7 @@ and that each is listed here.
 | `system.db_taken` | another service took the database while it was away: this one stops |
 | `system.db_back` | the database server answers again, after so many seconds |
 | `system.db_unencrypted` | the database server is reached without TLS, as the settings say |
+| `system.db_open` | the database on a server is open to every role of the server: the role of the service does not own it, so it cannot close it |
 | `system.recovery_shown` | the recovery key was shown |
 | `system.log_read` | the service log was read |
 | `system.keys_created` | the host created the keys |

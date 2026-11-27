@@ -104,6 +104,22 @@ class DatabaseShared(Activity):
 
 
 @dataclass(frozen=True, kw_only=True)
+class DatabaseOpen(Activity):
+    """The database on a server is open to every role of the server:
+    the role of the service does not own it, so it cannot close it."""
+
+    name: ClassVar[str] = "db_open"
+    level: ClassVar[int] = logging.WARNING
+
+    def says(self) -> str:
+        return (
+            "found its database open to every role of the server: the role"
+            " of the service does not own it, so an administrator closes it"
+            " (containers/production/mailbox-service/README.md)"
+        )
+
+
+@dataclass(frozen=True, kw_only=True)
 class DatabaseAway(Activity):
     """The database server cannot be reached: once, when it goes."""
 

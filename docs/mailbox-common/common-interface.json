@@ -1047,6 +1047,9 @@
         "close": {
           "signature": "(self) -> 'None'"
         },
+        "close_to_others": {
+          "signature": "(self) -> 'bool'"
+        },
         "drop_tables": {
           "signature": "(self) -> 'None'"
         },

@@ -48,6 +48,8 @@ def storage(
     )
     if settings.on_server and settings.database_tls == "off":
         activity.record(said.DatabaseUnencrypted(by=SERVICE))
+    if repositories.database_closed is False:
+        activity.record(said.DatabaseOpen(by=SERVICE))
     outages = Outages()
     if store is not None:
         store.watch(partial(_heard, activity))

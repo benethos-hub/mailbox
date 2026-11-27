@@ -97,17 +97,20 @@ def secure(
 
 def close_database(connection: sa.Connection) -> bool:
     """CONNECT and TEMPORARY of the database taken from PUBLIC, where the
-    role owns it. Whether it does."""
-    owner = _owns_database(connection)
-    if owner:
+    role owns it and is no superuser. Whether the database is closed to
+    other roles now, by this or by an administrator before."""
+    if _owns_database(connection):
         database = connection.dialect.identifier_preparer.quote(
             _current_database(connection)
         )
         connection.exec_driver_sql(
             f"REVOKE CONNECT, TEMPORARY ON DATABASE {database} FROM PUBLIC"
         )
+    open_to_all = connection.exec_driver_sql(
+        "SELECT has_database_privilege('public', current_database(), 'CONNECT')"
+    ).scalar()
     connection.commit()
-    return owner
+    return not open_to_all
 
 
 def _plain(name: str, errors: Errors) -> None:
@@ -135,10 +138,13 @@ def _current_database(connection: sa.Connection) -> str:
 
 
 def _owns_database(connection: sa.Connection) -> bool:
-    """Whether the role that signed in owns its database."""
+    """Whether the role that signed in owns its database, and is no
+    superuser: a superuser owns what it administers, and closing that
+    would shut out every other role of the server."""
     owned = connection.exec_driver_sql(
-        "SELECT pg_get_userbyid(datdba) = current_user FROM pg_database"
-        " WHERE datname = current_database()"
+        "SELECT pg_get_userbyid(d.datdba) = current_user AND NOT r.rolsuper"
+        " FROM pg_database d, pg_roles r"
+        " WHERE d.datname = current_database() AND r.rolname = current_user"
     ).scalar()
     return bool(owned)
 

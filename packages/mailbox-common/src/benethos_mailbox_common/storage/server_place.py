@@ -126,6 +126,13 @@ class ServerPlace:
                 )
         return Opened(self._connection, None)
 
+    def close_to_others(self) -> bool:
+        """The database closed to every other role, where the role of the
+        program owns it: whether it is closed now."""
+        connection = self._open()
+        with self.translated():
+            return server_rights.close_database(connection)
+
     def secured(self, readers: Sequence[str], setting: str) -> server_rights.Rights:
         """The database closed to every other role and given to
         ``readers`` to read, as ``server_rights.secure`` says. ``setting``

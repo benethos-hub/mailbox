@@ -286,6 +286,13 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `benethos-mailbox-service`: on PostgreSQL the service closes its
+  database to every other role at each start, where its role owns the
+  database: `CONNECT` and `TEMPORARY` are taken from `PUBLIC`. After the
+  update another role no longer gets into that database. Where its role
+  does not own the database and no administrator closed it, each start
+  warns (`system.db_open`). The `setup.sh` of the production
+  compose file closes the database of a new installation.
 - `benethos-mailbox-agents`: every agent is a classifier, a subclass
   of `Classifier`, which reads a message and answers a question about
   it, or an actor, a subclass of `Actor`. An agent of its own is one of
