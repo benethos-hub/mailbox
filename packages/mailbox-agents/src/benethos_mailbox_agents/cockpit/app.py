@@ -11,7 +11,6 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
-from pathlib import Path
 from typing import Annotated, Any
 
 from fastapi import Depends, FastAPI, Form, HTTPException, Request
@@ -56,10 +55,10 @@ class _SignInRequiredError(Exception):
 
 @dataclass
 class Cockpit:
-    """What the pages read: the data folder, the secret to sign in with,
-    the mailbox service when it is set, and the clock."""
+    """What the pages read: the sources of the instances, the secret to
+    sign in with, the mailbox service when it is set, and the clock."""
 
-    data_dir: Path
+    places: tuple[sources.Source, ...]
     secret: str
     mailbox: views.MailboxFactory | None
     now: Callable[[], datetime]
@@ -102,8 +101,8 @@ def _source(request: Request) -> str:
     return request.client.host if request.client is not None else ""
 
 
-def _file(request: Request, name: str) -> sources.StateFile:
-    found = sources.find(_cockpit(request).data_dir, name)
+def _file(request: Request, name: str) -> sources.Instance:
+    found = sources.find(_cockpit(request).places, name)
     if found is None:
         raise HTTPException(404)
     return found
@@ -112,7 +111,7 @@ def _file(request: Request, name: str) -> sources.StateFile:
 async def overview(request: Request, session: Viewer) -> HTMLResponse:
     cockpit = _cockpit(request)
     now = cockpit.now()
-    rows = [views.row(file, now) for file in sources.found(cockpit.data_dir)]
+    rows = [views.row(file, now) for file in sources.every(cockpit.places)]
     return render(request, "pages/overview.html", rows=rows, session=session)
 
 

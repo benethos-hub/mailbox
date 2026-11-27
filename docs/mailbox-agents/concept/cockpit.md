@@ -17,6 +17,11 @@ It only reads. It writes no state file, changes no mail, asks no model
 and holds no token of an agent. It reads a state file through the
 methods of the store alone, opened read-only for one request.
 
+It finds the instances through sources behind one seam: a source names
+its instances, and each opens its state for reading and says whether its
+writer stopped. The pages do not know which source an instance comes
+from. A name a source before took already is not shown a second time.
+
 Decided on 2026-11-27:
 
 - It stands apart from the pages of the mailbox service, a command of

@@ -1,18 +1,61 @@
-"""Where the cockpit finds the state files: in the data folder and in
-its direct folders, one folder per volume of an agent.
+"""Where the cockpit finds the instances it shows, behind one seam: a
+source names its instances, and each opens its state for reading and
+says whether its writer stopped. The pages do not know which source an
+instance comes from.
 
-A page never takes a path from its address. It names an instance, and
-the name is looked up among the files found here, so an unknown name or
-one with ``..`` in it finds nothing.
+The first source is the state files: in the data folder and in its
+direct folders, one folder per volume of an agent.
+
+A page never takes a path or an address from its own address. It names
+an instance, and the name is looked up among those the sources found,
+so an unknown name or one with ``..`` in it finds nothing.
 """
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Protocol
 
-__all__ = ["StateFile", "find", "found", "stopped"]
+from ..store import Store
+
+__all__ = [
+    "Files",
+    "Instance",
+    "Source",
+    "StateFile",
+    "every",
+    "find",
+    "found",
+    "stopped",
+]
+
+
+class Instance(Protocol):
+    """An instance of an agent as the cockpit shows it."""
+
+    @property
+    def name(self) -> str:
+        """The name the cockpit shows it under and finds it by."""
+        ...
+
+    def open(self) -> Store:
+        """Its state, for reading beside the running agent."""
+        ...
+
+    def stopped(self) -> bool:
+        """Whether its writer is known to have stopped."""
+        ...
+
+
+class Source(Protocol):
+    """Where instances are found."""
+
+    def found(self) -> Sequence[Instance]:
+        """Every instance found now, by name. One that cannot be read is
+        found all the same: its page says why."""
+        ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -23,6 +66,38 @@ class StateFile:
 
     name: str
     path: Path
+
+    def open(self) -> Store:
+        return Store.open(self.path, read_only=True)
+
+    def stopped(self) -> bool:
+        return stopped(self.path)
+
+
+@dataclass(frozen=True, slots=True)
+class Files:
+    """The state files in ``data_dir`` and its direct folders."""
+
+    data_dir: Path
+
+    def found(self) -> Sequence[Instance]:
+        return found(self.data_dir)
+
+
+def every(sources: Sequence[Source]) -> list[Instance]:
+    """The instances of every source, by name. A name a source before
+    took already is not shown twice: the later one is left out, so a
+    page never opens another instance than the one its name showed."""
+    taken: dict[str, Instance] = {}
+    for source in sources:
+        for instance in source.found():
+            taken.setdefault(instance.name, instance)
+    return sorted(taken.values(), key=lambda instance: instance.name)
+
+
+def find(sources: Sequence[Source], name: str) -> Instance | None:
+    """The instance shown as ``name``, None when there is none."""
+    return next((found for found in every(sources) if found.name == name), None)
 
 
 def _files(data_dir: Path) -> Iterator[Path]:
@@ -49,11 +124,6 @@ def found(data_dir: Path) -> list[StateFile]:
         names.add(name)
         files.append(StateFile(name, path))
     return sorted(files, key=lambda file: file.name)
-
-
-def find(data_dir: Path, name: str) -> StateFile | None:
-    """The state file shown as ``name``, None when there is none."""
-    return next((file for file in found(data_dir) if file.name == name), None)
 
 
 def stopped(path: Path) -> bool:

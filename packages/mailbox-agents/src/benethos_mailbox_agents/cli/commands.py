@@ -19,6 +19,7 @@ from benethos_mailbox_common.values import text as text_values
 from .. import peers
 from ..cockpit.app import Cockpit, make_app
 from ..cockpit.server import serve
+from ..cockpit.sources import Files
 from ..contract import Agent, discover, load_agent, state_name
 from ..errors import (
     ConfigError,
@@ -408,7 +409,9 @@ def cockpit(args: argparse.Namespace, settings: Settings) -> int:
     mailbox = None
     if not settings.missing(MAILBOX_SETTINGS):
         mailbox = functools.partial(mailbox_for, settings)
-    found = Cockpit(data_dir=settings.data_dir, secret=given, mailbox=mailbox, now=now)
+    found = Cockpit(
+        places=(Files(settings.data_dir),), secret=given, mailbox=mailbox, now=now
+    )
     asyncio.run(
         serve(
             make_app(found),
