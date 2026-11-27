@@ -351,6 +351,7 @@ class Mailbox:
                 ),
                 message_id_header=found.message_id_header,
                 in_reply_to=found.in_reply_to,
+                sender_check=found.sender_check.result,
             )
 
     async def thread(self, account_id: str, thread_id: str) -> Thread:

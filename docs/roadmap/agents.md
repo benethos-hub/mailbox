@@ -46,7 +46,7 @@ classifies a message, read only, behind a token
 | Step | Content |
 |---|---|
 | On a real mailbox | Each agent in `shadow` on its owner's account, measured against a gold set of labelled mail ([evaluation](../mailbox-agents/concept/evaluation.md)), then `suggest`, then `full`. Each change of stage is the owner's decision |
-| Verified senders | A switch for a group of `categorization` that moves only mail whose sender the receiving server verified. The mailbox service names that result per message since 0.8.0, and the agents do not read it yet ([categorization](../mailbox-agents/concept/agent-categorization.md)) |
+| Verified senders | A switch for a group of `categorization` that moves only mail whose sender the receiving server verified. The mailbox service names that result per message since 0.8.0, and the agents read it since 2026-11-27. The switch for `categorization` is open ([categorization](../mailbox-agents/concept/agent-categorization.md)) |
 | Embeddings | Recognising a repeated inquiry by embeddings, stored in the state file |
 | External agent server | Handing a message to an external agent server over HTTP, and reply drafts |
 | Daily overview | A daily overview of what every agent did, read from the state files by a process of its own, with no model involved |

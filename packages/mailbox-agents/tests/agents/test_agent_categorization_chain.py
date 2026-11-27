@@ -261,7 +261,10 @@ async def test_of_two_moves_the_priority_decides_and_a_held_winner_holds(
 def test_an_action_sees_no_subject_no_sender_and_no_text() -> None:
     names = {f.name for f in dataclasses.fields(Placed)}
 
-    assert names == {"ref", "folders", "keywords"}
+    assert names == {"ref", "folders", "keywords", "sender_check", "from_address"}
+    hidden = next(f for f in dataclasses.fields(Placed) if f.name == "from_address")
+    assert not hidden.repr
+    assert not hidden.compare
 
 
 class Flag(ChainAction):

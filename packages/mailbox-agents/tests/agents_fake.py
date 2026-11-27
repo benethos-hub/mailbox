@@ -53,9 +53,13 @@ def wire_message(
     thread_id: str | None = None,
     keywords: list[str] | None = None,
     date: str = "2026-11-17T08:00:00+00:00",
+    sender_check: str | None = None,
 ) -> dict[str, Any]:
-    """A message as the service answers ``get_message``."""
+    """A message as the service answers ``get_message``. Without
+    ``sender_check`` the answer has none, as one of an older service."""
+    checked = {} if sender_check is None else {"sender_check": {"result": sender_check}}
     return {
+        **checked,
         "id": message_id,
         "account_id": account_id,
         "thread_id": thread_id,
