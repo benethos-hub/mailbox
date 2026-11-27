@@ -17,6 +17,10 @@ them, is refused all the same.
 
 Further rules:
 
+- **An actor reads nothing of a mail.** It sees where a message lies,
+  its keywords and its sender check, and asks no model. The code holds
+  this, the contract refuses an actor with a model call
+  ([agent contract](agent-contract.md)).
 - **Mail content is data.** The request names it as the content of a mail
   and never as an instruction, and the step that reads it has no tools.
 - **The sender is not proof.** From is not authenticated. A move that

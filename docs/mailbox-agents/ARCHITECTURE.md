@@ -105,7 +105,8 @@ packages/mailbox-agents/src/benethos_mailbox_agents/
                   # settings file and the state files are
   logbook/        # every line on stderr as an activity of its catalogue,
                   # and what a line may never carry (docs/mailbox-agents/LOGGING.md)
-  contract/       # Agent (ABC), Action, Trigger, Limits, Requires, the
+  contract/       # Agent (ABC) and its two kinds Classifier and Actor,
+                  # Action, Trigger, Limits, Requires, the
                   # Context an agent is handed with its protocols Model,
                   # Reader and Items, the registry of agents, prompt loading,
                   # and what two kinds of agent share: Placed, the path of
