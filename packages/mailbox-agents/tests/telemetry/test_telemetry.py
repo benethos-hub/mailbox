@@ -5,6 +5,8 @@ them: docs/mailbox-agents/concept/operation.md."""
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -18,8 +20,8 @@ from benethos_mailbox_agents.agents.categorization.agent import Categorization
 from benethos_mailbox_agents.errors import ConfigError
 from benethos_mailbox_agents.records import Decision, MessageRef
 from benethos_mailbox_agents.runtime.loop import Worker
-from benethos_mailbox_agents.telemetry import NO_SPANS, open_spans
-from benethos_mailbox_agents.telemetry.otlp import _check_url, _headers
+from benethos_mailbox_agents.telemetry import NO_SPANS
+from benethos_mailbox_agents.telemetry.otlp import _check_url, _headers, open_spans
 
 from ..agents_fake import ACCOUNT, wire_message
 from ..agents_helpers import mail, settings, wired
@@ -232,3 +234,21 @@ def test_a_none_of_the_model_is_named_as_the_model_s(tmp_path: Path) -> None:
 
     assert [dict(p.attributes)["source"] for p in parts] == ["code", "model"]
     assert dict(parts[1].attributes)["category"] == "none"
+
+
+def test_the_runtime_loads_no_sdk_of_opentelemetry() -> None:
+    """Only the command line imports ``otlp``: the runtime alone, in a fresh
+    process, loads nothing of the SDK and no protobuf."""
+    loaded = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import sys, benethos_mailbox_agents.runtime.loop; "
+            "print(sorted(n for n in sys.modules if n.startswith('opentelemetry')))",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    assert loaded.stdout.strip() == "[]"
