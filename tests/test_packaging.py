@@ -53,6 +53,15 @@ def test_the_license_is_the_repositorys(package: Path) -> None:
     assert project_of(package)["license-files"] == ["LICENSE"]
 
 
+def test_the_stylesheet_of_the_cockpit_is_the_services() -> None:
+    """The cockpit of the agents looks like the pages of the service. A
+    wheel carries files of its own folder alone, so it holds a copy."""
+    service = SERVICE / "src/benethos_mailbox_service/web/pages"
+    cockpit = AGENTS / "src/benethos_mailbox_agents/cockpit"
+    sheet = "static/css/app.css"
+    assert (cockpit / sheet).read_bytes() == (service / sheet).read_bytes()
+
+
 def test_the_packages_share_one_version() -> None:
     versions = {project_of(package)["version"] for package in PACKAGES}
     assert len(versions) == 1, versions

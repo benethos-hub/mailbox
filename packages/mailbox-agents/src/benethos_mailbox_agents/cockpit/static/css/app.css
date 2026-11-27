@@ -1,0 +1,725 @@
+/* The configuration UI: one stylesheet, no build step.
+ *
+ * Every colour and every spacing comes from the variables below, so one
+ * change takes effect everywhere. Dark mode follows the system setting.
+ * A missing value is shown as a dash, never as an empty cell.
+ */
+
+:root {
+  color-scheme: light dark;
+
+  /* Light and bluish (docs/mailbox-service/UI.md, section 7). Every text colour keeps
+   * 4.5:1 against every background it is used on: a test checks it. */
+  --bg: #f9fbfe;
+  --surface: #ffffff;
+  --surface-2: #eef3fa;
+  --border: #dde5f0;
+  --border-strong: #c9d3e1;
+
+  --text: #14213d;
+  --text-muted: #56657e;
+  --text-faint: #5f6e86;
+
+  --accent: #2560c8;
+  --accent-soft: #e8f0fc;
+  --on-accent: #ffffff;
+  --ok: #13703f;
+  --ok-soft: #e5f5ec;
+  --bad: #b5301c;
+  --err-soft: #fdefed;
+  --warn: #955204;
+  --warn-soft: #fdf5e8;
+
+  --radius: 10px;
+  --radius-sm: 6px;
+  --gap: 16px;
+  --pad: 20px;
+  --row: 40px;
+  --sidebar: 224px;
+
+  --shadow: 0 1px 2px rgba(20, 33, 61, .05), 0 1px 3px rgba(20, 33, 61, .04);
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1420;
+    --surface: #171d2b;
+    --surface-2: #1f2736;
+    --border: #2c3648;
+    --border-strong: #3a4659;
+
+    --text: #e6ebf5;
+    --text-muted: #9aa8bf;
+    --text-faint: #8391a8;
+
+    --accent: #6ea0ff;
+    --accent-soft: #1d2c4a;
+    --on-accent: #0f1420;
+    --ok: #4ac98a;
+    --ok-soft: #173326;
+    --bad: #f0776a;
+    --err-soft: #3a1f1f;
+    --warn: #e0a458;
+    --warn-soft: #33291a;
+
+    --shadow: none;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* --- frame ----------------------------------------------------------------- */
+
+.layout { display: flex; min-height: 100vh; }
+
+.sidebar {
+  width: var(--sidebar);
+  flex: 0 0 var(--sidebar);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: var(--pad) 12px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+
+.brand {
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 8px 4px;
+  font-size: 17px; font-weight: 650; letter-spacing: -.01em;
+}
+/* The project's icon in the sidebar. */
+.mark { display: block; flex: 0 0 auto; }
+
+.nav { display: flex; flex-direction: column; gap: 2px; }
+.nav a {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 14px;
+}
+.nav a:hover { background: var(--surface-2); color: var(--text); text-decoration: none; }
+.nav a.active { background: var(--accent-soft); color: var(--accent); font-weight: 550; }
+.nav .i { opacity: .85; }
+.nav .section {
+  padding: 14px 10px 4px;
+  font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--text-faint);
+}
+
+.sidebar .spacer { flex: 1; }
+.brand .fold { margin-left: auto; }
+
+/* A dot beside an entry: something there waits for a person. */
+.nav .dot {
+  width: 8px; height: 8px; margin-left: auto;
+  border-radius: 50%;
+  background: var(--bad);
+  flex: 0 0 auto;
+}
+
+/* The account menu in the foot: one button, the menu opens above it. */
+.account-menu { position: relative; padding-top: 10px; border-top: 1px solid var(--border); }
+.account-menu > summary { list-style: none; }
+.account-menu > summary::-webkit-details-marker { display: none; }
+.account {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 8px;
+  border: 1px solid transparent; border-radius: var(--radius-sm);
+  cursor: pointer; font-size: 14px;
+}
+.account:hover, .account-menu[open] > .account { background: var(--surface-2); border-color: var(--border); }
+.account .who { flex: 1; min-width: 0; }
+.account .name { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 550; }
+.account .role { display: block; font-size: 11px; color: var(--text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account > .i { color: var(--text-faint); }
+.avatar {
+  width: 28px; height: 28px; flex: 0 0 auto;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  background: var(--accent-soft); color: var(--accent);
+  font-size: 13px; font-weight: 650;
+}
+.account-menu .menu {
+  position: absolute; left: 0; right: 0; bottom: calc(100% + 6px); z-index: 30;
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong); border-radius: var(--radius);
+  box-shadow: 0 6px 18px rgba(20, 33, 61, .14);
+}
+.account-menu .head {
+  padding: 6px 10px 8px; margin-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px; color: var(--text-faint);
+}
+.account-menu .head strong { display: block; color: var(--text); font-size: 13px; }
+.account-menu .item {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 7px 10px;
+  border: 0; border-radius: var(--radius-sm);
+  background: none; color: var(--text);
+  font-size: 14px; text-align: left;
+}
+.account-menu .item:hover { background: var(--surface-2); text-decoration: none; }
+.account-menu .item .i { color: var(--text-muted); margin: 0; }
+.account-menu .item .hint { margin-left: auto; font-size: 12px; color: var(--text-faint); }
+.account-menu .item.out, .account-menu .item.out .i { color: var(--bad); }
+.account-menu .sep { height: 1px; margin: 4px 6px; background: var(--border); }
+
+/* Folded: the sidebar is a narrow bar of icons, each word its tooltip. */
+.nav-folded { --sidebar: 64px; }
+.nav-folded .sidebar { padding-inline: 10px; }
+.nav-folded .brand { flex-direction: column; padding: 0; }
+.nav-folded .brand .fold { margin-left: 0; }
+.nav-folded .brand-name, .nav-folded .nav .label, .nav-folded .nav .section,
+.nav-folded .account .who, .nav-folded .account > .i { display: none; }
+.nav-folded .nav a { position: relative; justify-content: center; padding: 10px 0; }
+.nav-folded .nav .dot { position: absolute; top: 6px; right: 8px; }
+.nav-folded .account { justify-content: center; padding: 6px 0; }
+.nav-folded .account-menu .menu { right: auto; width: 220px; }
+
+.content { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+.topbar {
+  display: flex; align-items: center; gap: var(--gap);
+  padding: 14px var(--pad);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  position: sticky; top: 0; z-index: 20;
+}
+.topbar h1 { margin: 0; font-size: 18px; font-weight: 620; letter-spacing: -.01em; }
+.topbar .sub { color: var(--text-muted); font-size: 13px; }
+.crumbs { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; }
+.crumbs .sep { color: var(--text-faint); }
+.crumbs [aria-current] { color: var(--text); }
+.topbar .right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+
+main { padding: var(--pad); display: flex; flex-direction: column; gap: var(--gap); }
+
+footer {
+  margin-top: auto;
+  padding: 14px var(--pad);
+  border-top: 1px solid var(--border);
+  color: var(--text-faint);
+  font-size: 12px;
+}
+
+/* --- cards ----------------------------------------------------------------- */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.card > header {
+  display: flex; align-items: baseline; gap: 10px;
+  padding: 14px var(--pad);
+  border-bottom: 1px solid var(--border);
+}
+.card > header:last-child { border-bottom: 0; }
+.card > header h2 { margin: 0; font-size: 15px; font-weight: 600; }
+.card > header .meta { color: var(--text-muted); font-size: 13px; }
+.card > header .right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.card .body { padding: var(--pad); }
+.card .body.tight { padding: 0; }
+.card .body + .body { border-top: 1px solid var(--border); }
+.danger-zone > header h2 { color: var(--bad); }
+.card .body.list-bar { border-bottom: 1px solid var(--border); }
+
+/* The form at a row of a list, or at its head (docs/mailbox-service/UI.md 4.2): folded
+ * until its button opens it, shown at once where the script does not run. */
+tr.row-form > td { background: var(--surface-2); padding: 12px var(--pad) 14px; }
+tr.row-form:hover { background: none; }
+div.row-form { display: grid; gap: 8px; padding: 10px 12px 12px; background: var(--surface-2); }
+div.row-form form { display: grid; gap: 8px; }
+div.row-form .form-actions { margin-top: 4px; }
+.js .row-form:not(.open) { display: none; }
+.row-form .toolbar .field { min-width: 180px; }
+.row-form .hint { display: block; margin-top: 8px; font-size: 12px; color: var(--text-faint); }
+
+/* A form in a dialog of its own: its fields under the question. Where
+ * the script does not run, it shows in the page. */
+dialog.form-dialog form { padding: 0 var(--pad); }
+dialog.form-dialog .form-grid { grid-template-columns: 1fr; }
+dialog.form-dialog .buttons { padding-inline: 0; }
+html:not(.js) dialog.form-dialog {
+  display: block; position: static;
+  width: auto; margin: 0 0 var(--gap);
+  box-shadow: none;
+}
+/* Without the script the dialogs and row forms stand open: the buttons
+   that open and close them would do nothing. */
+html:not(.js) [data-dialog], html:not(.js) [data-close], html:not(.js) [data-toggle] {
+  display: none;
+}
+
+/* The bar above a list whose rows can be ticked for a batch. */
+.batch-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px var(--pad); border-bottom: 1px solid var(--border); }
+.batch-bar .label { color: var(--text-muted); font-size: 13px; }
+
+/* The tabs of a detail page or a list: links, the one shown underlined.
+   The line under them is a shadow inside, so the underline covers it and
+   nothing sticks out to scroll. */
+.tabs {
+  display: flex; gap: 4px; box-shadow: inset 0 -1px 0 var(--border);
+  overflow-x: auto; overflow-y: hidden;
+}
+.tabs a {
+  padding: 8px 14px;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted); font-size: 14px; white-space: nowrap;
+}
+.tabs a:hover { color: var(--text); text-decoration: none; }
+.tabs a.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 550; }
+
+/* A card that folds: its header is the summary. */
+details.card > summary.card-summary {
+  display: flex; align-items: baseline; gap: 10px;
+  padding: 14px var(--pad);
+  cursor: pointer;
+}
+details.card[open] > summary.card-summary { border-bottom: 1px solid var(--border); }
+details.card > summary.card-summary h2 { display: inline; margin: 0; font-size: 15px; font-weight: 600; }
+
+/* A workflow in steps, one under the other (docs/mailbox-service/UI.md, 6.1). */
+.step-title { margin: 8px 0 0; font-size: 15px; font-weight: 600; }
+.card.way > header h2 { color: var(--accent); }
+
+/* Label and value, one pair per line. */
+dl.facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; margin: 0; }
+dl.facts dt { color: var(--text-muted); font-size: 13px; }
+dl.facts dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+
+/* --- tables ---------------------------------------------------------------- */
+
+.table-scroll { overflow-x: auto; }
+
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+
+thead th {
+  position: sticky; top: 0; z-index: 5;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border-strong);
+  padding: 9px 12px;
+  text-align: left;
+  font-size: 12px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .04em;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+tbody td {
+  height: var(--row);
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover { background: var(--surface-2); }
+
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.name { font-weight: 500; }
+td.actions { text-align: right; white-space: nowrap; }
+td.tick, th.tick { width: 1%; }
+td .sub { display: block; color: var(--text-faint); font-size: 12px; font-weight: 400; }
+tr.unread td.name { font-weight: 650; }
+
+/* --- small parts ----------------------------------------------------------- */
+
+/* Read out by a screen reader, not shown. */
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.tag {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 11px; font-weight: 550;
+  border: 1px solid var(--border-strong);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.tag.ok { border-color: transparent; background: var(--ok-soft); color: var(--ok); }
+.tag.bad { border-color: transparent; background: var(--err-soft); color: var(--bad); }
+.tag.warn { border-color: transparent; background: var(--warn-soft); color: var(--warn); }
+.tag.accent { border-color: transparent; background: var(--accent-soft); color: var(--accent); }
+.tag .i { width: 11px; height: 11px; vertical-align: -1px; }
+.chip .i { width: 11px; height: 11px; }
+
+.muted { color: var(--text-muted); }
+.faint { color: var(--text-faint); }
+.mono { font-family: var(--mono); font-size: 13px; }
+.ok { color: var(--ok); }
+.bad { color: var(--bad); }
+
+.notice {
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  background: var(--ok-soft);
+  color: var(--ok);
+  font-size: 14px;
+}
+
+.notice.warn { background: var(--warn-soft); border-color: transparent; color: var(--warn); }
+.notice.err { background: var(--err-soft); border-color: transparent; color: var(--bad); }
+
+.empty { padding: 32px var(--pad); text-align: center; color: var(--text-muted); }
+
+.card .body > p:first-child { margin-top: 0; }
+.card .body > p:last-child { margin-bottom: 0; }
+
+/* Lines to act on, each with its link, e.g. what needs attention. */
+ul.lines { list-style: none; margin: 0 0 12px; padding: 0; }
+ul.lines li {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px;
+  padding: 8px 0; border-bottom: 1px solid var(--border);
+}
+ul.lines li:last-child { border-bottom: 0; }
+
+/* A secret shown once, e.g. a new token: selectable in one piece. */
+.secret {
+  display: block;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  font-family: var(--mono); font-size: 13px;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+/* A secret and the button that copies it. */
+.secret-line { display: flex; align-items: flex-start; gap: 8px; }
+.secret-line > .secret { flex: 1; min-width: 0; }
+
+/* A QR code to scan: white around it in either theme, its pixels sharp. */
+.qr {
+  display: block;
+  width: 225px; max-width: 100%; height: auto;
+  margin-bottom: 12px;
+  image-rendering: pixelated;
+}
+
+/* Recovery codes, in two columns. */
+ul.codes {
+  list-style: none; margin: 0;
+  display: grid; grid-template-columns: repeat(2, max-content); gap: 4px 32px;
+}
+
+/* The body of a mail, as text: its own line breaks, long lines wrapped. */
+.mail-body {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: 14px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* --- controls -------------------------------------------------------------- */
+
+/* An element the script shows when it can, e.g. a passkey's button. */
+[hidden] { display: none !important; }
+
+button, .btn {
+  font: inherit;
+  padding: 7px 13px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-block;
+}
+button:hover, .btn:hover { background: var(--surface-2); text-decoration: none; }
+button.primary, .btn.primary {
+  background: var(--accent); border-color: var(--accent); color: var(--on-accent);
+}
+button.primary:hover, .btn.primary:hover { filter: brightness(1.08); background: var(--accent); }
+button.danger { color: var(--bad); border-color: var(--bad); }
+button.danger:hover { background: var(--err-soft); }
+button.link {
+  padding: 0; border: 0; background: none;
+  color: var(--accent); font-size: inherit;
+}
+button.link:hover { background: none; text-decoration: underline; }
+button.ghost { border-color: transparent; background: transparent; color: var(--text-muted); }
+button.ghost:hover { background: var(--surface-2); color: var(--text); }
+button.small, .btn.small { padding: 4px 9px; font-size: 13px; }
+
+/* A red button that is filled: the one a dialog asks for. */
+button.danger.solid { background: var(--bad); border-color: var(--bad); color: var(--on-accent); }
+button.danger.solid:hover { filter: brightness(1.08); background: var(--bad); }
+
+/* An icon of the sprite (docs/mailbox-service/UI.md 7), in the colour of the text around it. */
+.i {
+  width: 16px; height: 16px;
+  fill: currentColor;
+  vertical-align: -3px;
+  flex: 0 0 auto;
+}
+button .i, .btn .i { margin-right: 2px; }
+
+/* A button that is an icon alone, its word the tooltip: quiet until
+ * pointed at, so a row of them does not shout. */
+button.icon-btn, .btn.icon-btn {
+  padding: 5px 7px;
+  border-color: transparent; background: transparent;
+  color: var(--text-muted);
+}
+button.icon-btn .i, .btn.icon-btn .i { margin-right: 0; }
+button.icon-btn:hover, .btn.icon-btn:hover { background: var(--surface-2); color: var(--text); border-color: var(--border); }
+button.icon-btn.danger:hover { background: var(--err-soft); color: var(--bad); }
+.icon-btn .word { display: none; }
+form.inline { display: inline; }
+
+input, select, textarea {
+  font: inherit;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  min-width: 0;
+}
+textarea { width: 100%; min-height: 8em; resize: vertical; }
+input:focus, select:focus, textarea:focus, button:focus-visible, a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.toolbar .grow { flex: 1; min-width: 160px; }
+.toolbar label, .toolbar > span { color: var(--text-muted); font-size: 13px; }
+
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field label, .field .label { font-size: 12px; color: var(--text-muted); }
+.field label.check { font-size: 13px; color: var(--text); }
+.field .hint { font-size: 12px; color: var(--text-faint); }
+.form-grid {
+  display: grid; gap: 12px var(--gap);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+.form-grid .wide { grid-column: 1 / -1; }
+.field .field-error { font-size: 13px; color: var(--bad); }
+.field.invalid input, .field.invalid select, .field.invalid textarea { border-color: var(--bad); }
+.form-actions { display: flex; gap: 8px; align-items: center; margin-top: var(--gap); }
+
+/* The second step of a form: one method at a time, the others listed
+   after "Try another way" (components/factor.html). */
+.factor-step {
+  display: flex; flex-direction: column; gap: 6px; grid-column: 1 / -1;
+  border: 0; padding: 0; margin: 0; min-width: 0; max-width: 26rem;
+}
+.factor-step > legend { padding: 0; font-size: 13px; font-weight: 600; color: var(--text); }
+.factor-step > .hint { font-size: 13px; color: var(--text-muted); margin: 0; }
+.factor-setup { margin-top: var(--gap); max-width: 26rem; }
+input.code { font-family: var(--mono); letter-spacing: .08em; }
+.factor-pass {
+  display: flex; gap: 10px; align-items: center; padding: 10px 12px;
+  border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-2);
+}
+.factor-pass strong { display: block; font-size: 14px; font-weight: 600; }
+.factor-pass .hint { font-size: 12px; color: var(--text-muted); }
+.factor-status { padding: 8px 12px; font-size: 13px; margin: 0; }
+.factor-other { align-self: flex-start; font-size: 13px; padding: 8px 0; }
+.factor-choices { display: flex; flex-direction: column; gap: 6px; }
+.factor-choices .label { font-size: 12px; color: var(--text-muted); }
+.factor-choices button { text-align: left; white-space: normal; }
+.factor-choices button .hint { display: block; font-size: 12px; color: var(--text-faint); }
+
+.check { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text); }
+.check input { margin: 0; }
+.checks { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+
+/* A grant: one line to read, and one block of the editor. */
+.grant { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.grant + .grant { margin-top: 6px; }
+.grant-row {
+  display: grid; gap: 12px;
+  margin: 0 0 var(--gap); padding: 12px var(--gap) var(--gap);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+.grant-row > legend { padding: 0 6px; font-size: 13px; font-weight: 600; }
+
+/* The grants in their editor: a line each, its fields under it. A grant
+ * marked for removal is struck through until the form is saved. */
+.grant-lines { display: grid; gap: 8px; margin-top: 8px; }
+.grant-tools { display: flex; }
+.grant-line { border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.grant-head { display: flex; align-items: flex-start; gap: 8px; padding: 8px 10px; }
+.grant-head > .grant { flex: 1; min-width: 0; }
+.grant-actions { display: flex; flex: 0 0 auto; }
+.grant-line > .row-form { border-top: 1px solid var(--border); }
+.grant-line > .row-form .grant-row { margin: 0; border: 0; padding: 0; }
+.grant-line:has(input[name$="_remove"]:checked) .grant { text-decoration: line-through; opacity: .55; }
+.grant-line:has(input[name$="_remove"]:checked) label.icon-btn { background: var(--err-soft); color: var(--bad); }
+#grant-new .grant-row { margin: 0; }
+label.icon-btn { display: inline-block; cursor: pointer; padding: 5px 7px; border-radius: var(--radius-sm); border: 1px solid transparent; color: var(--text-muted); }
+label.icon-btn:hover { background: var(--err-soft); color: var(--bad); }
+label.icon-btn:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.fold { margin-top: var(--gap); border-top: 1px solid var(--border); padding-top: 12px; }
+.fold > summary { cursor: pointer; font-size: 13px; color: var(--text-muted); }
+.fold > summary:hover { color: var(--text); }
+.fold > .form-grid { margin-top: 12px; }
+
+/* --- mail ------------------------------------------------------------------ */
+
+.mail-layout { display: grid; gap: var(--gap); grid-template-columns: 220px minmax(0, 1fr); align-items: start; }
+.folders ul { list-style: none; margin: 0; padding: 6px; }
+.folders a {
+  display: flex; gap: 6px; align-items: center;
+  padding: 5px 8px; border-radius: var(--radius-sm);
+  color: var(--text); font-size: 13px; overflow-wrap: anywhere;
+}
+.folders a:hover { background: var(--surface-2); text-decoration: none; }
+.folders a.active { background: var(--surface-2); font-weight: 600; }
+.folders .grow { flex: 1; }
+.folders .folder-line { display: flex; align-items: center; gap: 2px; }
+.folders .folder-line > a { flex: 1; min-width: 0; }
+.folders .folder-actions { display: flex; flex: 0 0 auto; }
+.folders .row-form { margin: 4px 0 6px; border-radius: var(--radius-sm); }
+.folders .count { font-size: 12px; color: var(--text-muted); }
+.folders .depth-1 a { padding-left: 20px; }
+.folders .depth-2 a { padding-left: 32px; }
+.folders .depth-3 a { padding-left: 44px; }
+.folders .depth-4 a { padding-left: 56px; }
+/* --- the filter bar ------------------------------------------------------- */
+
+.filter-bar .fold { margin-top: 10px; }
+.filter-bar .fold .field { margin-top: 12px; }
+.filter-bar .fold > .checks { margin-top: 12px; }
+.chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--accent-soft); color: var(--accent);
+  font-size: 13px;
+}
+.chip:hover { text-decoration: none; filter: brightness(.97); }
+/* The keywords of a message: chips, each with its x, and the field to add. */
+.body.keywords { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.chip button.icon-btn { padding: 0 2px; color: inherit; }
+.chip button.icon-btn:hover { background: none; border-color: transparent; }
+a.btn.ghost { border-color: transparent; background: transparent; color: var(--text-muted); }
+
+/* Shows that htmx is loading, without letting the page jump. */
+.htmx-request { opacity: .55; transition: opacity .12s; }
+
+/* --- the sign-in page ------------------------------------------------------ */
+
+.signin {
+  min-height: 100vh;
+  display: flex; flex-direction: column; gap: 24px;
+  align-items: center; justify-content: center;
+  padding: var(--pad);
+}
+.signin .card { width: min(440px, 100%); }
+/* The project's logo above the card: dark mode takes the light word mark. */
+.signin .logo img { display: block; height: 72px; width: auto; }
+
+/* --- the question before a form, and what was done ------------------------ */
+
+dialog.ask {
+  width: min(440px, calc(100% - 32px));
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 6px 24px rgba(20, 33, 61, .18);
+}
+dialog.ask::backdrop { background: rgba(15, 20, 32, .45); }
+dialog.ask .body { padding: var(--pad) var(--pad) 8px; }
+dialog.ask h2 { margin: 0 0 8px; font-size: 16px; font-weight: 620; }
+dialog.ask p { margin: 0; color: var(--text-muted); font-size: 14px; }
+dialog.ask .buttons { display: flex; justify-content: flex-end; gap: 8px; padding: 12px var(--pad) var(--pad); }
+
+.toast {
+  position: fixed; left: 50%; bottom: 24px; z-index: 50;
+  transform: translateX(-50%);
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--text); color: var(--bg);
+  font-size: 13px;
+}
+
+/* --- narrow windows -------------------------------------------------------- */
+
+@media (max-width: 860px) {
+  .mail-layout { grid-template-columns: 1fr; }
+  .layout { flex-direction: column; }
+  .sidebar {
+    width: auto; flex: none; height: auto; position: static;
+    flex-direction: row; align-items: center; gap: 8px;
+    border-right: 0; border-bottom: 1px solid var(--border);
+    padding: 10px 12px;
+  }
+  .sidebar .spacer, .nav .section, .brand .fold { display: none; }
+  /* The entries scroll, the brand and the account menu stay in place. */
+  .nav { flex-direction: row; flex: 1; min-width: 0; overflow-x: auto; }
+  .nav a { white-space: nowrap; }
+  /* The account menu sits at the end of the bar, as its avatar alone. */
+  .account-menu { padding-top: 0; border-top: 0; flex: 0 0 auto; }
+  .account .who, .account > .i { display: none; }
+  .account-menu .menu { position: fixed; left: auto; right: 12px; bottom: auto; top: 56px; width: 240px; }
+  /* A bar folds no further. */
+  .nav-folded .brand { flex-direction: row; }
+  .nav-folded .brand-name, .nav-folded .nav .label { display: inline; }
+  .nav-folded .nav a { padding: 8px 10px; }
+}
+
+/* On a phone the description of a card stands in a line of its own
+ * under the title, its count and its action. */
+@media (max-width: 560px) {
+  .card > header { flex-wrap: wrap; }
+  .card > header .right { order: 1; }
+  .card > header .meta:not(.count) { order: 2; flex-basis: 100%; }
+}
+
+/* Where no tooltip shows, an icon that is not plain on its own gets its
+ * word back. */
+@media (max-width: 860px), (hover: none) {
+  .icon-btn .word { display: inline; margin-left: 4px; font-size: 13px; }
+
+}
+
+/* A line of the service log: its own line breaks, a traceback kept. */
+.log-line {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: var(--mono);
+  font-size: 13px;
+}
