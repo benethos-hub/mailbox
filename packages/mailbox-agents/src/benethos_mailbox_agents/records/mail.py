@@ -21,6 +21,7 @@ __all__ = [
     "EventType",
     "FolderRef",
     "MailMessage",
+    "OWN_ROLES",
     "MessageRef",
     "Thread",
 ]
@@ -74,6 +75,10 @@ class Attachment(_Record):
 # below or looks in: a move there is a deletion, and a message there is not
 # the owner's to file.
 DISCARD_ROLES = frozenset({"trash", "junk", "spam"})
+
+# The roles of the folders of the owner's own mail, being written or sent:
+# no actor takes a message there, and no forward is drafted of one.
+OWN_ROLES = frozenset({"drafts", "sent"})
 
 
 class FolderRef(_Record):

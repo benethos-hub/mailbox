@@ -23,7 +23,7 @@ from pydantic import BaseModel
 from benethos_mailbox_common.values import secret
 
 from ..errors import ContractError
-from ..records import DISCARD_ROLES, Decision, MailMessage
+from ..records import DISCARD_ROLES, OWN_ROLES, Decision, MailMessage
 from .agent import ActionRequest, Agent, Limits, Route, Trigger
 from .context import Context
 from .placed import Placed
@@ -32,7 +32,7 @@ __all__ = ["PASSED_BY", "Actor", "list_version"]
 
 # The folders an actor never acts in: the owner discarded the mail there,
 # or it is the owner's own, being written or sent.
-PASSED_BY = DISCARD_ROLES | {"drafts", "sent"}
+PASSED_BY = DISCARD_ROLES | OWN_ROLES
 
 # The methods the base puts together from rule and act. An actor that
 # wrote one of them would read the mail itself or ask a model.

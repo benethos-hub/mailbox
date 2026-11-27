@@ -48,7 +48,7 @@ from ...contract import (
     Trigger,
 )
 from ...errors import ConfigError
-from ...records import Decision, Event, FolderRef, MailMessage
+from ...records import DISCARD_ROLES, Decision, Event, FolderRef, MailMessage
 from ...settings import PREFIX
 from .alone import alone
 from .dimensions import Chain
@@ -224,7 +224,7 @@ class Categorization(Classifier):
         With ``on.keywords`` one that carries a keyword the list waits for,
         its own keyword or not, but none in the trash, junk or spam."""
         if self._waited_for(message):
-            return not any(message.in_role(r) for r in ("trash", "junk", "spam"))
+            return not any(f.role in DISCARD_ROLES for f in message.folders)
         if self.chain.on.arrival is None or message.has_keyword(self.keyword):
             return False
         if message.in_role("inbox"):

@@ -9,6 +9,7 @@ from .items import KEYWORD_REMOVED, MESSAGE_DISCARDED, MESSAGE_GONE, OpenItem
 from .mail import (
     DISCARD_ROLES,
     EVENTS,
+    OWN_ROLES,
     Address,
     Attachment,
     Event,
@@ -26,6 +27,7 @@ __all__ = [
     "LABEL",
     "MESSAGE_DISCARDED",
     "MESSAGE_GONE",
+    "OWN_ROLES",
     "Address",
     "Attachment",
     "Classified",
