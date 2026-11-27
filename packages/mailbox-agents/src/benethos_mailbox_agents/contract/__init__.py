@@ -4,7 +4,7 @@ docs/mailbox-agents/concept/agent-contract.md."""
 
 from __future__ import annotations
 
-from .actor import Actor, list_version
+from .actor import PASSED_BY, Actor, list_version
 from .agent import (
     KEYWORD_FORM,
     REVERSED_BY,
@@ -30,6 +30,7 @@ from .waiting import is_pattern, waits_for
 
 __all__ = [
     "KEYWORD_FORM",
+    "PASSED_BY",
     "REVERSED_BY",
     "Action",
     "Actor",

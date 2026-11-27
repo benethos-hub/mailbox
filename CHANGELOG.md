@@ -292,6 +292,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   mailbox service, what an account cannot do such as a keyword on
   Gmail or POP3, is a refusal of that action. Before, it counted as
   the service away, ended the pass and came again with every message.
+- `benethos-mailbox-agents`: a peer over A2A is refused a message of an
+  account outside `MAILBOX_AGENTS_ACCOUNTS`, before anything is read,
+  and one in the trash, junk, spam, drafts or sent mail that the agent
+  itself would not take. Both are told `message_refused`. Before, the
+  agent read and classified any mail the service user could read.
 - `restore` and `backup verify` refuse a backup whose manifest holds a
   field of the wrong type, such as the schema as a text, with a message
   instead of a traceback.

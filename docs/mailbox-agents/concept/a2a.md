@@ -57,6 +57,11 @@ skill and the token it wants. It names no category of a list.
   as `eval` does, and never asks the agent's effect. Nothing is moved,
   marked or made. The decision is not stored, and an open item the
   agent would open is refused.
+- **It reads no more than the worker would.** A message of an account
+  outside `ACCOUNTS`, when it names some, is refused before anything is
+  read. So is a message in the trash, junk, spam, drafts or sent mail
+  that the agent itself would not take. Both are told
+  `message_refused`.
 - **It tells nothing of the mail.** No subject, sender, text or quote,
   only the categories and whether a quote backs each. The categories
   are the owner's words: a peer that asks is told them, and a gateway in

@@ -18,7 +18,7 @@ import asyncio
 from collections.abc import Callable, Sequence
 from datetime import datetime
 
-from ..contract import Agent, Reader
+from ..contract import PASSED_BY, Agent, Reader
 from ..errors import (
     AnswerRefusedError,
     ContractError,
@@ -143,7 +143,17 @@ class Classifier:
         )
 
     async def _decision(self, ref: MessageRef) -> Decision:
+        accounts = self.agent.settings.accounts
+        if accounts and ref.account_id not in accounts:
+            raise MailboxRefusedError(
+                "the account is not one the agent works on", reason="not_admitted"
+            )
         message = await self._reader.message(ref)
+        passed = any(folder.role in PASSED_BY for folder in message.folders)
+        if passed and not self.agent.admit(message):
+            raise MailboxRefusedError(
+                "the message is not one the agent takes", reason="not_admitted"
+            )
         stored = self._store.step(
             ref, "decision", self.agent.prompt_version, self._gateway.model
         )

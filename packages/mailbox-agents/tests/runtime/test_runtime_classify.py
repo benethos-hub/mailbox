@@ -126,6 +126,32 @@ async def test_the_limits_of_the_day_hold_for_a_peer(tmp_path: Path) -> None:
         assert world.fake_gateway.requests == []
 
 
+async def test_an_account_outside_the_settings_is_refused_unread(
+    tmp_path: Path,
+) -> None:
+    other = MessageRef(account_id="acc2", message_id="m1")
+    async with wired(tmp_path) as world:
+        world.service.add(wire_message("m1", account_id="acc2", text=f"{QUOTE}."))
+        agent = Echo(settings(accounts=[ACCOUNT]))
+
+        found = await classifier(world, agent).classify(other)
+
+        assert found == NotClassified(agent="echo", reason="message_refused")
+        assert not any("/messages/" in r.url.path for r in world.service.requests)
+        assert world.fake_gateway.requests == []
+
+
+async def test_a_message_the_agent_would_not_take_is_refused(tmp_path: Path) -> None:
+    async with wired(tmp_path) as world:
+        world.service.add(wire_message("m1", folder_ids=["drafts"], text=f"{QUOTE}."))
+        world.fake_gateway.answer({"label": "match", "quote": QUOTE})
+
+        found = await classifier(world).classify(ref("m1"))
+
+        assert found == NotClassified(agent="echo", reason="message_refused")
+        assert world.fake_gateway.requests == []
+
+
 async def test_a_classification_opens_closes_and_restarts_no_item(
     tmp_path: Path,
 ) -> None:
