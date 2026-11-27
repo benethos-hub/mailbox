@@ -80,13 +80,16 @@ def insert_or_set(
     key: Sequence[str],
     values: Callable[[Any], Mapping[str, Any]],
     dialect: sa.Dialect,
+    *,
+    where: sa.ColumnElement[bool] | None = None,
 ) -> Insert:
     """INSERT that, where a row of the same ``key`` is there, sets what
     ``values`` makes of the row the INSERT would have added instead: its
-    columns are those of the argument, ``excluded`` in both databases."""
+    columns are those of the argument, ``excluded`` in both databases.
+    ``where``: only a row there that holds to it is set, else none."""
     statement = _upsert(table, dialect)
     return statement.on_conflict_do_update(
-        index_elements=list(key), set_=dict(values(statement.excluded))
+        index_elements=list(key), set_=dict(values(statement.excluded)), where=where
     )
 
 
