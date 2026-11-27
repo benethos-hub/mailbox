@@ -8,15 +8,16 @@ import threading
 from collections.abc import Callable, Iterator
 from contextlib import AbstractContextManager, contextmanager, suppress
 from pathlib import Path
+from typing import Any
 
 import sqlalchemy as sa
+from sqlalchemy.pool import StaticPool
 
 from ....errors import StorageError, StorageUnavailableError
-from ..migrated import Migrated
 from ..sqlite import file
-from .dialect import sqlite_engine
+from .dialect import SQLITE, begin
 from .outage import Availability
-from .place import translated_by
+from .place import Opened, translated_by
 
 
 class FilePlace:
@@ -27,40 +28,40 @@ class FilePlace:
     def __init__(self, path: Path | None, *, keep_copy: bool = True) -> None:
         self.path = path
         self._keep_copy = keep_copy
-        self.driver: file.Driver | None = None
+        self._driver: file.Driver | None = None
         self._engine: sa.Engine | None = None
         self._newest = 0
 
-    def open(self, schema: int, newest: int) -> tuple[sa.Connection, Migrated | None]:
+    def open(self, schema: int, newest: int) -> Opened:
         self._newest = newest
         driver, migrated = file.open_file(
             self.path, keep_copy=self._keep_copy, schema=schema, newest=newest
         )
-        self.driver = driver
+        self._driver = driver
         self._engine = sqlite_engine(lambda: driver)
-        return self._engine.connect(), migrated
+        return Opened(self._engine.connect(), migrated)
 
     def undo(self) -> None:
         with suppress(Exception):
-            if self.driver is not None and self.driver.in_transaction:
-                self.driver.rollback()
+            if self._driver is not None and self._driver.in_transaction:
+                self._driver.rollback()
 
     def keep_copy(self, held: int, before: int) -> str | None:
-        if not self._keep_copy or self.path is None or self.driver is None:
+        if not self._keep_copy or self.path is None or self._driver is None:
             return None
-        return file.keep_copy(self.driver, self.path, held, before)
+        return file.keep_copy(self._driver, self.path, held, before)
 
     def shrink(self) -> None:
-        if self.driver is not None:
-            file.shrink(self.driver)
+        if self._driver is not None:
+            file.shrink(self._driver)
 
     def serving(self) -> AbstractContextManager[bool]:
         return file.serving(self.path)
 
     def snapshot_file(self, lock: threading.RLock) -> AbstractContextManager[Path]:
-        if self.driver is None:
+        if self._driver is None:
             raise StorageError("the database is not open")
-        return file.snapshot(self.driver, self.path, lock)
+        return file.snapshot(self._driver, self.path, lock)
 
     @contextmanager
     def fixed(self, lock: threading.RLock) -> Iterator[sa.Connection]:
@@ -74,7 +75,7 @@ class FilePlace:
                 ) from None
             snap = FilePlace(snapshot, keep_copy=False)
             try:
-                conn, _ = snap.open(self._newest, self._newest)
+                conn = snap.open(self._newest, self._newest).connection
                 with conn, conn.begin():
                     yield conn
             finally:
@@ -95,8 +96,8 @@ class FilePlace:
     def close(self) -> None:
         if self._engine is not None:
             self._engine.dispose()
-        if self.driver is not None:
-            self.driver.close()
+        if self._driver is not None:
+            self._driver.close()
 
 
 @contextmanager
@@ -107,3 +108,17 @@ def translated() -> Iterator[None]:
     translated by ``file``."""
     with translated_by(str, str), file.translated():
         yield
+
+
+def sqlite_engine(connect: Callable[[], Any]) -> sa.Engine:
+    """An engine on the one SQLite connection ``connect`` gives, for the
+    whole process. A transaction begins as ``begin`` says. No value of a
+    statement reaches the text of an error."""
+    engine = sa.create_engine(
+        f"{SQLITE}://",
+        creator=connect,
+        poolclass=StaticPool,
+        hide_parameters=True,
+    )
+    sa.event.listen(engine, "begin", begin)
+    return engine

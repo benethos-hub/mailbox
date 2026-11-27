@@ -33,6 +33,9 @@ MOVING = "move_started"
 # on a database server. It belongs to the schema it was made in: no
 # export, backup or move takes it along.
 SERVICE_LOCK = "service_lock"
+# The rows of ``meta`` that keep account of the database itself and hold
+# no record: not in an export, a backup or the sums of a move.
+UNRECORDED = (MOVING, SERVICE_LOCK)
 
 
 @dataclass(frozen=True, slots=True)
@@ -155,13 +158,13 @@ def read_chunk(
     conn: sa.Connection, table: Table, after: Sequence[Any] | None, size: int
 ) -> list[tuple[Any, ...]]:
     """Up to ``size`` rows of ``table`` in the order of its key, those
-    after the key ``after``, from the first without it. The key of the
-    lock in ``meta`` is no record."""
+    after the key ``after``, from the first without it. The mark of a
+    move and the key of the lock in ``meta`` are no records."""
     stored = _as_stored(table)
     key = [stored.c[name] for name in table.key]
     query = sa.select(*(stored.c[name] for name in table.columns))
     if table.name == meta.name:
-        query = query.where(stored.c["key"] != SERVICE_LOCK)
+        query = query.where(stored.c["key"].not_in(UNRECORDED))
     if after is not None:
         query = query.where(sa.tuple_(*key) > sa.tuple_(*after))
     return [tuple(row) for row in conn.execute(query.order_by(*key).limit(size))]

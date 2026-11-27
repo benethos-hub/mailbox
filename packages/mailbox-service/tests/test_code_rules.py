@@ -300,6 +300,22 @@ def test_no_test_of_the_domain_calls_an_adapter_itself() -> None:
 TESTS = Path(__file__).resolve().parent
 
 
+# Where a database keeps its engine and the connection of its driver:
+# a test reaches them through schema_helpers.py alone.
+BENEATH = {"_place", "_driver", "_engine", "driver_connection"}
+
+
+def test_only_the_schema_helpers_reach_beneath_a_database() -> None:
+    found = [
+        f"{path.relative_to(TESTS).as_posix()}:{node.lineno} {node.attr}"
+        for path in sorted(TESTS.rglob("*.py"))
+        if path.name != "schema_helpers.py"
+        for node in ast.walk(ast.parse(path.read_text("utf-8")))
+        if isinstance(node, ast.Attribute) and node.attr in BENEATH
+    ]
+    assert found == [], "a test reaches beneath a database:\n  " + "\n  ".join(found)
+
+
 def test_no_test_imports_a_class_of_the_database() -> None:
     found = []
     for path in sorted(TESTS.rglob("*.py")):
@@ -315,9 +331,20 @@ def test_no_test_imports_a_class_of_the_database() -> None:
     )
 
 
-# The one module under data/storage/sql/ that names a database.
+# The one module under data/storage/sql/ that names a database: how SQL
+# differs between them. How each is reached lies with its place.
 DIALECT_HOME = "dialect.py"
 DIALECTS = {"sqlite", "postgresql"}
+# What only reaching a database server names: its functions, its codes
+# of failure, its TLS and the connection of its driver.
+SERVER_WORDS = re.compile(r"\bpg_\w+|\bsqlstate\b|\bsslmode\b|\bdriver_connection\b")
+# The modules that reach the server, and the SQL that differs on it.
+SERVER_HOMES = {
+    "data/storage/sql/dialect.py",
+    "data/storage/sql/server_engine.py",
+    "data/storage/sql/server_lock.py",
+    "data/storage/sql/server_place.py",
+}
 
 
 def test_only_the_dialect_module_names_a_database() -> None:
@@ -349,6 +376,27 @@ def test_only_the_dialect_module_names_a_database() -> None:
     assert found == [], "a database named outside sql/dialect.py:\n  " + "\n  ".join(
         found
     )
+
+
+def test_only_the_place_of_a_server_reaches_it() -> None:
+    found = []
+    for path in sorted(ROOT.rglob("*.py")):
+        name = path.relative_to(ROOT).as_posix()
+        if name in SERVER_HOMES:
+            continue
+        for node in ast.walk(ast.parse(path.read_text("utf-8"))):
+            text = (
+                node.value
+                if isinstance(node, ast.Constant) and isinstance(node.value, str)
+                else node.attr
+                if isinstance(node, ast.Attribute)
+                else node.id
+                if isinstance(node, ast.Name)
+                else None
+            )
+            if text is not None and SERVER_WORDS.search(text):
+                found.append(f"{name}:{node.lineno}")
+    assert found == [], "the server reached outside its place:\n  " + "\n  ".join(found)
 
 
 # Where SQL stands as text: the file of the database and the old chain

@@ -14,7 +14,7 @@ from sqlalchemy.schema import CreateTable
 
 from benethos_mailbox_service.data.storage import Database
 from benethos_mailbox_service.data.storage.sql import revisions
-from benethos_mailbox_service.data.storage.sql.dialect import sqlite_engine
+from benethos_mailbox_service.data.storage.sql.file_place import sqlite_engine
 from benethos_mailbox_service.data.storage.sql.schema import METADATA
 from benethos_mailbox_service.data.storage.sql.tables import BOOKKEEPING
 

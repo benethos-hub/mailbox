@@ -1,6 +1,9 @@
-"""The one module under ``sql/`` that names a database: the types of the
-columns, and where SQLite and PostgreSQL write differently. Everything
-else under ``sql/`` speaks SQLAlchemy Core alone.
+"""How SQL differs between SQLite and PostgreSQL: the types of the
+columns, and where the two write differently. The one module under
+``sql/`` that names a database in its SQL. How each database is reached
+lies with its place: ``file_place`` for SQLite, ``server_place`` and
+``server_engine`` for PostgreSQL. Everything else under ``sql/`` speaks
+SQLAlchemy Core alone.
 
 Text is compared byte for byte on both: SQLite does so, and PostgreSQL
 is told so by the collation ``C``. The service compares times as ISO
@@ -14,7 +17,6 @@ from typing import Any, TypeVar
 
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql, sqlite
-from sqlalchemy.pool import NullPool, StaticPool
 
 T = TypeVar("T")
 # An INSERT that knows what to do about a row already there.
@@ -165,74 +167,6 @@ def _insert(table: sa.Table, dialect: sa.Dialect) -> Insert:
     if dialect.name == POSTGRESQL:
         return postgresql.insert(table)
     return sqlite.insert(table)
-
-
-def sqlite_engine(connect: Callable[[], Any]) -> sa.Engine:
-    """An engine on the one SQLite connection ``connect`` gives, for the
-    whole process. A transaction begins as ``begin`` says. No value of a
-    statement reaches the text of an error."""
-    engine = sa.create_engine(
-        f"{SQLITE}://",
-        creator=connect,
-        poolclass=StaticPool,
-        hide_parameters=True,
-    )
-    sa.event.listen(engine, "begin", begin)
-    return engine
-
-
-# Seconds an attempt to connect to a database server may take.
-CONNECT_SECONDS = 5
-# A connection whose server vanished from the network fails instead of
-# waiting for ever: keepalives after 10 seconds of quiet, and data not
-# acknowledged within 15 seconds. Measured on Linux (2026-11-26): a call
-# on a server whose network went away failed after 10.6 seconds with
-# such limits and waited on without them. A server that hangs while
-# its system still answers, such as one paused, holds the call still.
-SILENCE = {
-    "keepalives": 1,
-    "keepalives_idle": 10,
-    "keepalives_interval": 5,
-    "keepalives_count": 3,
-    "tcp_user_timeout": 15000,
-}
-
-
-def server_engine(
-    *,
-    host: str,
-    port: int,
-    database: str,
-    role: str,
-    password: str,
-    search_path: str,
-    tls: Mapping[str, str] | None = None,
-) -> sa.Engine:
-    """An engine on PostgreSQL through psycopg, signed in as ``role``, its
-    connections in the schema ``search_path``, a plain name, with what
-    libpq is told of TLS in ``tls``. Each
-    connection is its own and closes when it is closed: the service keeps
-    one for its life, and a view of one moment takes a second. No value
-    of a statement reaches the text of an error."""
-    url = sa.URL.create(
-        f"{POSTGRESQL}+psycopg",
-        username=role,
-        password=password,
-        host=host,
-        port=port,
-        database=database,
-    )
-    return sa.create_engine(
-        url,
-        poolclass=NullPool,
-        hide_parameters=True,
-        connect_args={
-            "options": f"-csearch_path={search_path}",
-            "connect_timeout": CONNECT_SECONDS,
-            **SILENCE,
-            **(tls or {}),
-        },
-    )
 
 
 def reading_fixed(connection: sa.Connection) -> sa.Connection:

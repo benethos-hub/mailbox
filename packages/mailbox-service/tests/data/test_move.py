@@ -174,3 +174,14 @@ def test_a_text_with_nul_does_not_fit(tmp_path: Path) -> None:
     db.close()
     assert found == [Misfit("users", "name", 1)]
     assert "secret-name" not in str(refused(found))
+
+
+def test_the_mark_of_a_move_is_no_record(tmp_path: Path) -> None:
+    db = Database(tmp_path / "marked.db")
+    db.mark_move("2026-11-26T00:00:00Z")
+    keys = {row[0] for row in db.rows("meta")}
+    with db.view() as records:
+        seen = {row[0] for row in records.rows("meta")}
+    db.close()
+    assert "schema_version" in keys
+    assert "move_started" not in keys | seen

@@ -134,6 +134,11 @@ class StorageInUseError(StorageError):
     """A running service holds the lock of the database on a server."""
 
 
+class SchemaNotEmptyError(StorageError):
+    """A schema on a server that holds tables, where a restore or a move
+    goes into an empty one only."""
+
+
 class StorageUnavailableError(StorageError):
     """The service's own database cannot be reached, for now. Its message
     is the same whatever happened: ``cause`` says what, for the log

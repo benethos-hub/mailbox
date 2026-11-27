@@ -8,6 +8,8 @@ import sqlalchemy as sa
 
 from benethos_mailbox_service.data.storage import Database
 
+from ...schema_helpers import driver, engine
+
 
 class Disk:
     """A disk under a database that fails a COMMIT, as a full one does:
@@ -18,9 +20,9 @@ class Disk:
         self._failing: list[sa.Engine] = []
 
     def fail_commit(self, db: Database) -> None:
-        engine = db._engine
-        sa.event.listen(engine, "commit", _fail)
-        self._failing.append(engine)
+        found = engine(db)
+        sa.event.listen(found, "commit", _fail)
+        self._failing.append(found)
 
     def mend(self) -> None:
         while self._failing:
@@ -28,7 +30,7 @@ class Disk:
 
     @staticmethod
     def in_transaction(db: Database) -> bool:
-        return bool(db._place.driver.in_transaction)
+        return bool(driver(db).in_transaction)
 
 
 def _fail(connection: sa.Connection) -> None:
@@ -39,5 +41,5 @@ def traced(db: Database) -> list[str]:
     """Every statement the database runs from now on, as the driver sees
     it."""
     said: list[str] = []
-    db._place.driver.set_trace_callback(said.append)
+    driver(db).set_trace_callback(said.append)
     return said

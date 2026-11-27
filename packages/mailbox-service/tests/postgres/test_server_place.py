@@ -29,11 +29,11 @@ from benethos_mailbox_service.errors import NotFoundError, StorageError
 from ..postgres_helpers import (
     connect,
     database,
-    in_transaction,
     role,
     schema,
     server,
 )
+from ..schema_helpers import in_transaction
 
 
 def _definitions_differ(conn: sa.Connection) -> list[str]:
@@ -229,7 +229,7 @@ def test_undo_on_a_lost_connection_does_not_connect_again() -> None:
     with schema() as name:
         place = ServerPlace(server(name))
         try:
-            conn, _ = place.open(26, 26)
+            conn = place.open(26, 26).connection
             connects: list[object] = []
             sa.event.listen(conn.engine, "connect", lambda *_: connects.append(1))
             conn.invalidate()

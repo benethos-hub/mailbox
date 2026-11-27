@@ -32,6 +32,10 @@ from .passwords import InMemoryPasswordRepository, PasswordRepository
 from .recovery_codes import InMemoryRecoveryCodeRepository, RecoveryCodeRepository
 from .sends import InMemorySendLogRepository, SendLogRepository
 from .sql import (
+    Availability,
+    Database,
+    Server,
+    ServerPlace,
     SqlAccountRepository,
     SqlAuditRepository,
     SqlChangeLogRepository,
@@ -50,11 +54,8 @@ from .sql import (
     SqlTotpRepository,
     SqlUserRepository,
     SqlWebhookRepository,
+    Table,
 )
-from .sql.database import Database
-from .sql.outage import Availability
-from .sql.server_place import Server, ServerPlace
-from .sql.tables import Table
 from .totp import InMemoryTotpRepository, TotpRepository
 from .users import (
     InMemoryRoleRepository,
@@ -127,6 +128,11 @@ class Store(Records, Protocol):
         self, table: str, columns: Sequence[str], rows: Iterable[Sequence[Any]]
     ) -> int:
         """Write ``rows`` into ``table``, which holds none yet. How many."""
+        ...
+
+    def mark_move(self, started: str | None) -> None:
+        """Mark the store as the target of a move or a restore that began
+        at ``started``, or, with None, as one that ended."""
         ...
 
     @property

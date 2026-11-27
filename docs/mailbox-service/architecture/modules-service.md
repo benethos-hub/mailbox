@@ -331,7 +331,8 @@ packages/mailbox-service/
                         #   lies (place.py), the file of SQLite as one
                         #   place (file_place.py), a schema on a
                         #   PostgreSQL server as another
-                        #   (server_place.py), a server that is away
+                        #   (server_place.py), how it is reached
+                        #   (server_engine.py), a server that is away
                         #   and when to try again (outage.py), the
                         #   keys of the lock
                         #   of a running service there
@@ -344,6 +345,9 @@ packages/mailbox-service/
                         #   schema 26 on, as revisions of Alembic, run
                         #   in the process. repositories.py opens one
                         #   of them
+                        #   stores.py the stores a backup, a restore
+                        #   and a move open on their own, and the
+                        #   locks they take
       secrets/          # envelope encryption, key providers, password
                         #   hashes, the vault of the credentials, TOTP,
                         #   passkeys (fido2)

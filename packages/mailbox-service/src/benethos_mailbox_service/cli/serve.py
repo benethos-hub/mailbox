@@ -122,7 +122,7 @@ def waited(build: Callable[[], T], settings: Settings) -> T:
     the server cannot be reached, then the last failure, naming the
     host and the role. Any other refusal ends at once: it would not heal
     by waiting. Another storage is tried once."""
-    if settings.storage != "postgres" or settings.database_url is None:
+    if not settings.on_server or settings.database_url is None:
         return build()
     return _again(build, settings, clock=Waiting.clock, sleep=Waiting.sleep)
 

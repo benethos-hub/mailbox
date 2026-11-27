@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from benethos_mailbox_service.data.storage.sql.server_place import tls_arguments
+from benethos_mailbox_service.data.storage.sql.server_engine import tls_arguments
 
 
 @pytest.mark.parametrize("host", ["db.example.org", "192.0.2.7", "::ffff:192.0.2.7"])
