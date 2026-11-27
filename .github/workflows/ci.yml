@@ -393,13 +393,14 @@ jobs:
           for agent in counting awaiting_reply inquiries categorization filing forwarding; do
             touch "containers/production/mailbox-agents/agents/$agent/.env"
           done
+          touch containers/production/mailbox-agents/cockpit/.env
           docker compose -f containers/development/mailbox-agents/compose.yaml \
             --profile categorization config --format json > /tmp/development.json
           docker compose -f containers/production/mailbox-agents/compose.yaml \
             --env-file containers/production/mailbox-agents/.env.example \
             --profile counting --profile awaiting_reply \
             --profile inquiries --profile categorization --profile filing \
-            --profile forwarding \
+            --profile forwarding --profile cockpit \
             config --format json > /tmp/production.json
           python3 - <<'PY'
           import json
@@ -409,7 +410,7 @@ jobs:
               services = json.load(open(f"/tmp/{folder}.json"))["services"]
               assert services, f"the agents' {folder} compose file defines no services"
               if folder == "production":
-                  assert set(services) == AGENTS, f"production runs {sorted(services)}"
+                  assert set(services) == AGENTS | {"cockpit"}, f"production runs {sorted(services)}"
               for name, service in services.items():
                   where = f"{folder}/mailbox-agents: {name}"
                   for port in service.get("ports") or []:

@@ -7,6 +7,8 @@
 #   docker compose --profile categorization up -d   an agent that asks a model,
 #                                                   with the gateway in ./.env
 #   docker compose exec counting benethos-mailbox-agents report --agent counting
+#   docker compose --profile cockpit up -d cockpit  the cockpit, by hand, with
+#                                                   its secret in ./secrets/
 #   docker compose down -v                          stop, and forget the volumes
 #
 # Why each setting is what it is: ../../production/mailbox-agents/compose.yaml.
@@ -89,6 +91,27 @@ services:
       timeout: 10s
       start_period: 30s
       retries: 3
+
+  # The read-only pages of what both agents did, started by hand and never
+  # again by itself, with the secret of ./secrets/cockpit_secret, which is
+  # not versioned. It shows subject and sender with the token of the test
+  # account.
+  cockpit:
+    <<: *agent
+    restart: "no"
+    profiles: ["cockpit"]
+    command: ["cockpit"]
+    environment:
+      <<: *environment
+      MAILBOX_AGENTS_DATA_DIR: /state
+      MAILBOX_AGENTS_COCKPIT_HOST: 0.0.0.0
+      MAILBOX_AGENTS_COCKPIT_SECRET_FILE: /run/secrets/cockpit_secret
+    volumes:
+      - counting-data:/state/counting:ro
+      - categorization-data:/state/categorization:ro
+      - ./secrets:/run/secrets:ro
+    ports:
+      - "127.0.0.1:${MAILBOX_AGENTS_COCKPIT_PORT:-9490}:9480"
 
 networks:
   live:

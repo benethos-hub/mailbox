@@ -191,7 +191,7 @@ live/mailbox-agents/    # run by hand, outside testpaths, against the test
                         # agents_smoke.py read-only, categorization.py,
                         # chain.py the instances, filing.py and
                         # forwarding.py the actors, peers.py
-                        # the entrance over A2A, gold.py the gold files from its
+                        # the entrance over A2A, cockpit.py the cockpit, gold.py the gold files from its
                         # labels, agents_common/ what they share
 containers/
   images/mailbox-agents/Dockerfile

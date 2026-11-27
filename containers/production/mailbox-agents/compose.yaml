@@ -9,6 +9,8 @@
 #   docker compose logs -f counting                follow what it says
 #   docker compose exec counting benethos-mailbox-agents report --agent counting
 #   docker compose down                            stop everything
+#   docker compose --profile cockpit up -d         start the cockpit by hand
+#   docker compose --profile cockpit stop cockpit  and stop it again
 #
 # One service per agent, each behind a profile of its own name, so a plain
 # `up` starts nothing and an agent runs only where it was asked for. Each
@@ -172,6 +174,30 @@ services:
       timeout: 10s
       start_period: 120s
       retries: 3
+
+  # The read-only pages of what every agent did, started by hand and
+  # never again by itself. It reads the volume of each agent read-only,
+  # and starts only with its secret. docs/mailbox-agents/concept/cockpit.md
+  cockpit:
+    <<: *agent
+    restart: "no"
+    profiles: ["cockpit"]
+    command: ["cockpit"]
+    env_file: ./cockpit/.env
+    environment:
+      MAILBOX_AGENTS_DATA_DIR: /state
+      MAILBOX_AGENTS_COCKPIT_HOST: 0.0.0.0
+      MAILBOX_AGENTS_COCKPIT_SECRET_FILE: /run/secrets/cockpit_secret
+    volumes:
+      - awaiting-reply-data:/state/awaiting_reply:ro
+      - categorization-data:/state/categorization:ro
+      - counting-data:/state/counting:ro
+      - filing-data:/state/filing:ro
+      - forwarding-data:/state/forwarding:ro
+      - inquiries-data:/state/inquiries:ro
+      - ./secrets/cockpit:/run/secrets:ro
+    ports:
+      - "127.0.0.1:${MAILBOX_AGENTS_COCKPIT_PORT:-9480}:9480"
 
 volumes:
   awaiting-reply-data:

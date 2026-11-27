@@ -6,6 +6,7 @@ This folder is all it needs, no clone of the repository.
 **Contents**
 
 - [Set it up](#set-it-up)
+- [The cockpit](#the-cockpit)
 - [Update](#update)
 - [What is where](#what-is-where)
 
@@ -60,6 +61,40 @@ Every agent starts in the stage its `.env` names, `shadow` in the
 template. Review what it would have done with `report` before you change
 its stage.
 
+## The cockpit
+
+A read-only page of what every agent did, read from the state files,
+started by hand and never again by itself
+([cockpit.md](../../../docs/mailbox-agents/concept/cockpit.md)). It
+reads the volume of each agent read-only and changes nothing.
+
+1. Copy `cockpit/.env.example` to `cockpit/.env`.
+2. Put its secret into `secrets/cockpit/`. Whoever holds it signs in and
+   sees everything the state files hold, quotes of mail among it:
+
+   ```sh
+   mkdir -p secrets/cockpit
+   openssl rand -base64 32 | tr -d '\n' > secrets/cockpit/cockpit_secret
+   chmod 400 secrets/cockpit/* && sudo chown -R 10001 secrets/cockpit
+   ```
+
+3. For subject and sender beside the ids, give it a user of its own in
+   the mailbox service with `mail.read` alone, its token as
+   `secrets/cockpit/service_token`, and the two lines of
+   `cockpit/.env.example` for it. Without them it shows the ids.
+4. Start it, open `http://127.0.0.1:9480`, and stop it when you are done:
+
+   ```sh
+   docker compose --profile cockpit up -d cockpit
+   docker compose --profile cockpit stop cockpit
+   ```
+
+It may start before an agent has run: the agent still writes to its
+volume (measured on 2026-11-27), and the cockpit shows no state file for
+it until then. It shows an agent as `healthy`, `silent` or `stopped`. One
+killed without a clean stop reads as running until the window of its
+health has passed, then as `silent`.
+
 ## Update
 
 Change `MAILBOX_VERSION` in `.env`, then:
@@ -85,3 +120,4 @@ an update you may want to undo.
 | its token and key | `secrets/<agent>/`, mounted read-only at `/run/secrets` |
 | its metrics | `127.0.0.1:947x/metrics`, the port in `.env` |
 | its log | `docker compose logs <agent>`, five files of 10 MB at most |
+| the cockpit | `127.0.0.1:9480`, its settings in `cockpit/.env`, its secret in `secrets/cockpit/` |

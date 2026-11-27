@@ -70,12 +70,14 @@ def test_every_production_example_is_found() -> None:
 
 def test_the_production_setup_has_a_service_for_every_agent() -> None:
     """A new agent needs its service in the compose file of the production
-    setup and its settings example beside it, or an operator cannot run it."""
+    setup and its settings example beside it, or an operator cannot run it.
+    The cockpit is the one service besides them."""
     setup = ROOT / "containers" / "production" / "mailbox-agents"
     compose = (setup / "compose.yaml").read_text(encoding="utf-8")
     services = compose.split("\nservices:\n", 1)[1].split("\nvolumes:\n", 1)[0]
     named = set(re.findall(r"^  ([a-z_]+):$", services, re.MULTILINE))
 
-    assert named == set(discover())
-    for name in named:
+    assert named == {*discover(), "cockpit"}
+    for name in named - {"cockpit"}:
         assert (setup / "agents" / name / ".env.example").is_file(), name
+    assert (setup / "cockpit" / ".env.example").is_file()
