@@ -144,6 +144,11 @@ async def test_a_message_not_classified_is_told_why() -> None:
         {"account_id": "", "message_id": "m1"},
         {"account_id": "acc1", "message_id": 7},
         {"account_id": "acc1", "message_id": "m" * 2000},
+        {"account_id": "..", "message_id": "x"},
+        {"account_id": "acc1", "message_id": "."},
+        {"account_id": "acc1", "message_id": "a/b"},
+        {"account_id": "acc1", "message_id": "a\\b"},
+        {"account_id": "acc\n1", "message_id": "m1"},
     ],
 )
 async def test_anything_but_the_two_ids_is_refused_unasked(data: Any) -> None:
