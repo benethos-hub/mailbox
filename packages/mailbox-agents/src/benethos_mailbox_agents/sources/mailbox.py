@@ -485,6 +485,8 @@ async def connect(
             base_url=base_url, token=token, transport=transport, allow_http=allow_http
         )
     except ConfigurationError as exc:
-        raise ConfigError(f"the mailbox service: {exc}") from None
+        # The client names its own settings, the agents read theirs.
+        named = str(exc).replace("MAILBOX_SERVICE_", "MAILBOX_AGENTS_SERVICE_")
+        raise ConfigError(f"the mailbox service: {named}") from None
     async with Mailbox(client) as mailbox:
         yield mailbox

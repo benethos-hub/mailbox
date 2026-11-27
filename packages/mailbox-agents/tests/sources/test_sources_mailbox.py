@@ -332,9 +332,12 @@ async def test_the_environment_sets_no_proxy(monkeypatch: pytest.MonkeyPatch) ->
 
 
 async def test_http_to_another_machine_needs_allowing() -> None:
-    with pytest.raises(ConfigError, match="mailbox service"):
+    with pytest.raises(ConfigError, match="mailbox service") as refused:
         async with connect("http://mailbox.example.test", "token-value"):
             pass
+    # The settings the agents read, not those of the client.
+    assert "MAILBOX_AGENTS_SERVICE_ALLOW_HTTP" in str(refused.value)
+    assert " MAILBOX_SERVICE_" not in str(refused.value)
 
     async with connect(
         "http://mailbox.example.test", "token-value", allow_http=True

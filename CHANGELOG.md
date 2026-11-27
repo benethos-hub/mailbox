@@ -342,6 +342,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `benethos-mailbox-agents`: `check` finds a circle of `categorization`
   lists that one closes with its own keyword after a `move_below`, as it
   finds one closed after a `move`.
+- The agents refuse a mailbox service at `http://` on another machine
+  naming their own settings, `MAILBOX_AGENTS_SERVICE_URL` and
+  `MAILBOX_AGENTS_SERVICE_ALLOW_HTTP`, not those of the client.
 - `restore` and `backup verify` refuse a backup whose manifest holds a
   field of the wrong type, such as the schema as a text, with a message
   instead of a traceback.
