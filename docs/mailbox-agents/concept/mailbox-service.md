@@ -26,6 +26,11 @@ white space only, or is missing, the visible text of its HTML part takes
 its place, with `mail_text` of `mailbox-common`, as the mail page of the
 service and the MCP server read it. Hidden elements, scripts and styles
 are left out (2026-11-22).
+A message carries `sender_check`, what the account's receiving server
+stated about the domain of its sender: `pass`, `fail` or `unknown`,
+and `unknown` when the answer has none. Another value is an answer that
+is not what the API describes, a refusal (2026-11-27). No agent acts on
+it yet.
 `list_all_messages` without a folder lists the inbox alone (measured
 2026-11-17 against 0.7.5), so a backfill names each folder role it wants.
 

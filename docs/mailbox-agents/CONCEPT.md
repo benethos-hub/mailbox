@@ -58,7 +58,10 @@ A set of small agents that work on a mailbox continuously: each one looks at
 mail as it arrives or leaves, decides one narrow question about it, and takes
 one reversible action. The first ones track sent mail that is still
 waiting for a reply, recognise project inquiries, and file the mail of
-listed senders into folders and recognise invoices among it.
+listed senders into folders and recognise invoices among it. Each is a
+classifier, which reads a message and answers a question about it. An
+actor acts on mail by its keywords instead, without a model and without
+reading what a mail says ([agent contract](concept/agent-contract.md)).
 
 The agents reach mail only through the REST API of a mailbox service, with
 its Python client `benethos-mailbox-client`. They reach a language model only

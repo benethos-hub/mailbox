@@ -28,7 +28,7 @@ from pydantic import (
     model_validator,
 )
 
-from ...contract import KEYWORD_FORM
+from ...contract import KEYWORD_FORM, is_pattern, waits_for
 from .actions import ACTIONS, Keyword, Move, MoveBelow, Stage
 from .groups import (
     NONE,
@@ -221,7 +221,7 @@ class On(BaseModel):
     @classmethod
     def _patterns(cls, value: tuple[str, ...]) -> tuple[str, ...]:
         for pattern in value:
-            if not KEYWORD_FORM.fullmatch(pattern.removesuffix("*")):
+            if not is_pattern(pattern):
                 raise ValueError(
                     "a keyword of on is lower case letters, digits and dashes, "
                     "a * at its end for every keyword it starts"
@@ -236,11 +236,7 @@ class On(BaseModel):
 
     def waits_for(self, keyword: str) -> bool:
         """Whether ``keyword`` is one the list waits for, case aside."""
-        found = keyword.casefold()
-        return any(
-            found.startswith(p[:-1]) if p.endswith("*") else found == p
-            for p in self.keywords
-        )
+        return waits_for(self.keywords, keyword)
 
 
 class Chain(BaseModel):

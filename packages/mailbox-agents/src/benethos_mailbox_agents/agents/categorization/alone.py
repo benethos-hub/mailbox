@@ -10,7 +10,15 @@ action. See docs/mailbox-agents/concept/categorization-chain.md.
 
 from __future__ import annotations
 
-from ...contract import ActionRequest, Agent, Context, Limits, Route, Trigger
+from ...contract import (
+    ActionRequest,
+    Agent,
+    Classifier,
+    Context,
+    Limits,
+    Route,
+    Trigger,
+)
 from ...errors import ConfigError
 from ...records import LABEL, Decision, Evidence, MailMessage
 from .choice import Choice
@@ -48,7 +56,7 @@ def _decision(choice: Choice | None, source: str) -> Decision:
     )
 
 
-class InvoiceAlone(Agent):
+class InvoiceAlone(Classifier):
     """The recognizer invoice of categorization alone."""
 
     name = "categorization"

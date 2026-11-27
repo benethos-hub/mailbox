@@ -6,6 +6,52 @@ Every agent package defines exactly one concrete `Agent` subclass in its
 `agent.py`. A package under `agents/` without `agent.py` is not an agent.
 The class attributes are validated on instantiation.
 
+**Two kinds of agent.** An agent is a classifier or an actor, a subclass of `Classifier` or of
+`Actor`, both subclasses of `Agent`.
+
+| Kind | What it reads | A model | What it writes |
+|---|---|---|---|
+| `Classifier` | the message, its text among it | where its limits allow | `baseline`, `decide`, `effect` and the rest of the methods below |
+| `Actor` | the message as `Placed` alone | never | `waits_for`, `rule`, `act`, and `takes` if it wants |
+
+A classifier reads a message and answers a question about it, with
+rules or with the model. `awaiting_reply`, `inquiries`, `categorization`
+and `counting` are classifiers. An actor acts on mail by its keywords,
+by a list its owner wrote, with no model and without reading what a
+mail says. Actors are agents of their own, not instances of
+`categorization` (decided 2026-11-25). `categorization` keeps its
+moves until an actor that files mail has proven itself in `shadow` and
+Gmail is reached through labels: until then there are two ways to the
+same move (decided 2026-11-27).
+
+An actor sees a message as `Placed`:
+
+| `Placed` shows | |
+|---|---|
+| `ref` | the ids of account and message |
+| `folders` | its folders by path and role, `in_inbox`, `own_folder` |
+| `keywords` | the keywords it carries |
+| `sender_check` | what the receiving server stated about the domain of its sender: `pass`, `fail` or `unknown` |
+| `sent_by(addresses)` | whether it came from one of `addresses`, yes or no. The address itself is out of `repr` and of a comparison |
+
+Never its subject, text, sender or the names of its attachments. The
+code keeps this narrow view, not a right of the mailbox service: the
+service has no right to read the metadata of a mail alone.
+
+The base `Actor` puts the methods of `Agent` together from `rule` and
+`act`. `admit` takes a message that carries a keyword `waits_for`
+names, lies in none of the trash, junk, spam, drafts or sent mail, and
+that `takes` takes. `baseline` and `decide` answer `rule`, `effect`
+answers `act`, `decide_again` answers `admit`, and `refresh` works the
+rule out anew. `message.created` is decided and `message.updated`
+observed, so a new message without a waited keyword ends `skipped`,
+an update that shows one takes it up again, and `backfill` reaches
+mail that carries one. A decision is labelled `rule-<n>` by the place
+of its rule, from 1, or `none`, and the version of its list is a
+digest of it (`list_version`), so a changed list is new work. The
+contract refuses an actor whose limits allow a model call, and one
+that writes one of the methods the base puts together.
+
 | Attribute | Meaning |
 |---|---|
 | `name`, `version`, `description` | identity. `name` equals the package name |

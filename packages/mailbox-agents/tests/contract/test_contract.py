@@ -18,6 +18,7 @@ from benethos_mailbox_agents.contract import (
     Action,
     ActionRequest,
     Agent,
+    Classifier,
     Context,
     Limits,
     Requires,
@@ -356,3 +357,16 @@ def test_the_context_holds_what_the_spec_names() -> None:
     names = [field.name for field in dataclasses.fields(Context)]
 
     assert names == ["model", "reader", "items", "now"]
+
+
+@pytest.mark.parametrize(
+    "name", ["awaiting_reply", "categorization", "counting", "inquiries"]
+)
+def test_the_agents_that_read_mail_are_classifiers(name: str) -> None:
+    assert issubclass(discover()[name], Classifier)
+
+
+def test_a_recognizer_scored_alone_is_a_classifier() -> None:
+    from benethos_mailbox_agents.agents.categorization.alone import InvoiceAlone
+
+    assert issubclass(InvoiceAlone, Classifier)

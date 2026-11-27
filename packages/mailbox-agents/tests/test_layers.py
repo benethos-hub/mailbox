@@ -98,6 +98,7 @@ CONFINED: dict[str, frozenset[str]] = {
             "sources/mailbox.py",
             "store/store.py",
             "telemetry/otlp.py",
+            "contract/actor.py",
             "agents/categorization/agent.py",
             "agents/categorization/lists.py",
             "cli/__init__.py",

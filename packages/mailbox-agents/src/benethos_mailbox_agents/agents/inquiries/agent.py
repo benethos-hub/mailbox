@@ -15,7 +15,7 @@ from functools import cached_property
 from ...contract import (
     Action,
     ActionRequest,
-    Agent,
+    Classifier,
     Context,
     Limits,
     Route,
@@ -30,7 +30,7 @@ from .schema import FIELDS, Inquiry, parts, render
 __all__ = ["Inquiries"]
 
 
-class Inquiries(Agent):
+class Inquiries(Classifier):
     name = "inquiries"
     version = "2"
     description = "Marks project inquiries."

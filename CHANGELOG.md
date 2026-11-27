@@ -111,6 +111,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   `list_outbox`, `get_outbox_job` and `cancel_send` read and cancel the
   jobs. `send_message` and `send_draft` are unchanged. `SendRecord`
   names the job of an attempt in `outbox_job_id`.
+- `benethos-mailbox-agents`: the kind `Actor` beside `Classifier`, for
+  an agent that acts on mail by its keywords, sees a message only as
+  `Placed` and asks no model.
 - `benethos-mailbox-agents`: a group of the list of `categorization` may name a
   `topic`, one line on the mail that belongs to it, and with it
   `by_topic`, `record` or `act`. For a message in the inbox that no
@@ -205,6 +208,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `benethos-mailbox-agents`: every agent is a classifier, a subclass
+  of `Classifier`, which reads a message and answers a question about
+  it. An agent of its own keeps working: `Agent` is unchanged.
 - `benethos-mailbox-agents`: the middle stage is called `suggest`:
   `MAILBOX_AGENTS_STAGE=suggest`. It does what `keyword` did, and
   `keyword` is still taken and read as `suggest`.

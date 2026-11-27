@@ -22,7 +22,7 @@ from functools import cached_property
 from ...contract import (
     Action,
     ActionRequest,
-    Agent,
+    Classifier,
     Context,
     Limits,
     Route,
@@ -65,7 +65,7 @@ def _when(message: MailMessage, fallback: datetime) -> datetime:
     return message.date or message.received or fallback
 
 
-class AwaitingReply(Agent):
+class AwaitingReply(Classifier):
     name = "awaiting_reply"
     version = "2"
     description = "Marks sent mail that still waits for an answer after its deadline."

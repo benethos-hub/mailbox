@@ -9,6 +9,7 @@ from datetime import date
 import httpx
 import pytest
 
+from benethos_mailbox_agents.contract import Placed
 from benethos_mailbox_agents.errors import (
     ChangesExpiredError,
     ConfigError,
@@ -98,6 +99,33 @@ async def test_a_message_with_its_folders_by_path(
     assert found.attachments[0].filename == "R-1.pdf"
     assert found.keywords == ("$seen",)
     assert found.text == "Hello."
+
+
+@pytest.mark.parametrize(
+    ("checked", "found"), [("pass", "pass"), ("fail", "fail"), (None, "unknown")]
+)
+async def test_a_message_carries_what_its_sender_check_says(
+    fake_service: FakeService, mailbox: Mailbox, checked: str | None, found: str
+) -> None:
+    fake_service.add(wire_message("m1", sender_check=checked))
+
+    message = await mailbox.message(REF)
+
+    assert message.sender_check == found
+    placed = Placed.of(message)
+    assert placed.sender_check == found
+    assert placed.sent_by(["Someone@Example.test"])
+    assert not placed.sent_by(["other@example.test"])
+    assert "someone" not in repr(placed)
+
+
+async def test_a_sender_check_the_api_does_not_describe_is_a_refusal(
+    fake_service: FakeService, mailbox: Mailbox
+) -> None:
+    fake_service.add(wire_message("m1", sender_check="maybe"))
+
+    with pytest.raises(MailboxRefusedError, match="not what the API describes"):
+        await mailbox.message(REF)
 
 
 async def test_a_message_without_text_has_an_empty_one(

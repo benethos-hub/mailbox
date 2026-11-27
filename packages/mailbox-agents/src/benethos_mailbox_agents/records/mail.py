@@ -105,6 +105,9 @@ class MailMessage(_Record):
     attachments: tuple[Attachment, ...] = ()
     message_id_header: str | None = None
     in_reply_to: str | None = None
+    # What the account's receiving server stated about the domain of the
+    # sender, as the service answers it. unknown when it cannot tell.
+    sender_check: Literal["pass", "fail", "unknown"] = "unknown"
 
     def in_role(self, role: str) -> bool:
         """Whether the message is in a folder of ``role``, such as ``inbox``."""

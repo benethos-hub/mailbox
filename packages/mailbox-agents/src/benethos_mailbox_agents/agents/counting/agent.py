@@ -11,7 +11,7 @@ from __future__ import annotations
 from ...contract import (
     Action,
     ActionRequest,
-    Agent,
+    Classifier,
     Context,
     Limits,
     Route,
@@ -22,7 +22,7 @@ from ...records import Decision, MailMessage
 __all__ = ["Counting"]
 
 
-class Counting(Agent):
+class Counting(Classifier):
     name = "counting"
     version = "1"
     description = "Counts the messages that arrive or are sent. No model, no action."
