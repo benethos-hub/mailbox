@@ -18,7 +18,9 @@ from typing import Any, ClassVar, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from ...contract import (
+    FORMER_STAGES,
     KEYWORD_FORM,
+    STAGE_ALLOWS,
     Action,
     ActionRequest,
     Placed,
@@ -28,7 +30,6 @@ from ...contract import (
 
 __all__ = [
     "ACTIONS",
-    "STAGES",
     "ChainAction",
     "Keyword",
     "Move",
@@ -42,30 +43,15 @@ __all__ = [
 # version, stays the same, and it ranks as suggest.
 Stage = Literal["shadow", "suggest", "keyword", "full"]
 
-# The stages from the least to the most an agent may do.
-STAGES: tuple[Stage, ...] = ("shadow", "suggest", "full")
-
-# The word each stage of an entry stands for.
-_RANKS_AS: dict[Stage, Stage] = {"keyword": "suggest"}
-
-# The least stage that carries out each action, as the executor's table
-# says: a keyword from ``suggest`` on, a folder and a move in ``full``.
-_RUNS_FROM: dict[Action, Stage] = {
-    Action.ADD_KEYWORD: "suggest",
-    Action.REMOVE_KEYWORD: "suggest",
-    Action.CREATE_FOLDER: "full",
-    Action.MOVE_TO_FOLDER: "full",
-}
-
 
 def held_by_stage(stage: Stage | None, action: Action) -> bool:
-    """Whether an entry with ``stage`` holds ``action``: its stage is below
-    the one that carries the action out. A stage only lowers what the stage
-    of the agent allows, it never raises it."""
+    """Whether an entry with ``stage`` holds ``action``: its stage does not
+    carry the action out, by the table of the executor. A stage only lowers
+    what the stage of the agent allows, it never raises it."""
     if stage is None:
         return False
-    ranked = _RANKS_AS.get(stage, stage)
-    return STAGES.index(ranked) < STAGES.index(_RUNS_FROM[action])
+    ranked = FORMER_STAGES.get(stage, stage)
+    return action not in STAGE_ALLOWS[ranked]
 
 
 class Params(BaseModel):

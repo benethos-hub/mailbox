@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
-from typing import ClassVar, Literal
+from typing import ClassVar
 
 from ..errors import ConfigError, ContractError
 from ..records import (
@@ -26,19 +26,15 @@ from ..records import (
     EventType,
     FolderRef,
     MailMessage,
-    MessageRef,
 )
 from ..settings import KEYWORD_FORM, Settings
+from .actions import Action, ActionRequest
 from .context import Context
 
 __all__ = [
     "KEYWORD_FORM",
     "NAME_PATTERN",
-    "REVERSED_BY",
-    "Action",
-    "ActionRequest",
     "Agent",
-    "ForwardForm",
     "Limits",
     "Requires",
     "Route",
@@ -49,30 +45,6 @@ __all__ = [
 ]
 
 NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
-
-
-class Action(StrEnum):
-    """The actions that exist. A new one is added to
-    docs/mailbox-agents/concept/agent-contract.md first, with how it is taken back."""
-
-    ADD_KEYWORD = "add_keyword"
-    REMOVE_KEYWORD = "remove_keyword"
-    MOVE_TO_FOLDER = "move_to_folder"
-    CREATE_FOLDER = "create_folder"
-    DRAFT_FORWARD = "draft_forward"
-
-
-# How each action is taken back. A move is taken back by a move to the
-# folder recorded before it. A folder made is taken back by the owner, as
-# deleting a folder needs a right no agent has: None. So is a forward
-# drafted, which lies in the owner's drafts folder.
-REVERSED_BY: dict[Action, Action | None] = {
-    Action.ADD_KEYWORD: Action.REMOVE_KEYWORD,
-    Action.REMOVE_KEYWORD: Action.ADD_KEYWORD,
-    Action.MOVE_TO_FOLDER: Action.MOVE_TO_FOLDER,
-    Action.CREATE_FOLDER: None,
-    Action.DRAFT_FORWARD: None,
-}
 
 
 class Route(StrEnum):
@@ -125,36 +97,6 @@ class Requires:
     field names in :class:`~benethos_mailbox_agents.settings.Settings`."""
 
     settings: tuple[str, ...] = ()
-
-
-# The forms of a forward drafted: the message quoted with its attachments,
-# or the message as a file.
-ForwardForm = Literal["inline", "attachment"]
-
-
-@dataclass(frozen=True, slots=True)
-class ActionRequest:
-    """One action an agent asks the runtime to take.
-
-    ``keyword`` for the keyword actions, ``folder`` for a move and for a
-    folder to make: the path of the folder, ``/`` between the names. The
-    runtime resolves it, refuses a move into a folder that does not exist,
-    and makes only a folder the agent may make, see :meth:`Agent.may_create`.
-    ``held`` asks for the action to be recorded only, as in ``shadow``,
-    whatever the stage: for a group or rule its configuration holds.
-    ``recipients`` and ``forward_as`` for a forward drafted: the
-    addresses, each one :meth:`Agent.recipients` names, and the form,
-    ``inline`` or ``attachment``.
-    """
-
-    action: Action
-    ref: MessageRef
-    keyword: str | None = None
-    folder: str | None = None
-    why: str = field(default="", compare=False)
-    held: bool = False
-    recipients: tuple[str, ...] = ()
-    forward_as: ForwardForm | None = None
 
 
 @dataclass(frozen=True, slots=True)

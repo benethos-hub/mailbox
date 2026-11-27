@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from .folders import DATA_DIR, DEFAULT_ENV_FILE, Folders, folders
 from .model import (
+    FORMER_STAGES,
     KEYWORD_FORM,
     PREFIX,
     Settings,
@@ -23,6 +24,7 @@ from .model import (
 __all__ = [
     "DATA_DIR",
     "DEFAULT_ENV_FILE",
+    "FORMER_STAGES",
     "KEYWORD_FORM",
     "PREFIX",
     "Folders",

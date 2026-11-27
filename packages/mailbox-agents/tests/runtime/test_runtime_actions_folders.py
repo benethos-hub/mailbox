@@ -10,10 +10,10 @@ from typing import get_args
 import httpx
 import pytest
 
-from benethos_mailbox_agents.contract import Action, ActionRequest
+from benethos_mailbox_agents.contract import STAGE_ALLOWS, Action, ActionRequest
 from benethos_mailbox_agents.errors import MessageGoneError
 from benethos_mailbox_agents.records import FolderRef
-from benethos_mailbox_agents.runtime.actions import STAGE_ALLOWS, Executor, Outcome
+from benethos_mailbox_agents.runtime.actions import Executor, Outcome
 from benethos_mailbox_agents.settings import Stage
 
 from ..agents_fake import ACCOUNT

@@ -11,8 +11,13 @@ from typing import Any
 
 import pytest
 
+from benethos_mailbox_agents.agents.categorization.actions import (
+    ACTIONS,
+    held_by_stage,
+)
 from benethos_mailbox_agents.agents.categorization.agent import Categorization
 from benethos_mailbox_agents.agents.categorization.lists import read_chain
+from benethos_mailbox_agents.contract import Action
 
 from ..agents_fake import wire_message
 from ..agents_helpers import Wired, actions, mail, run, settings, wired
@@ -127,3 +132,20 @@ def test_an_entry_keeps_its_stage_as_written_so_the_version_stays() -> None:
 
     assert read_chain(chain).version == "list-a3a10179de13"
     assert read_chain(listed(move_stage="suggest")).version != "list-a3a10179de13"
+
+
+# What an entry of each stage holds of the actions of the chain, as the
+# table of the chain says: a keyword from suggest on, a folder and a move in
+# full. keyword is the former word of suggest.
+HOLDS = {
+    "shadow": {Action.ADD_KEYWORD, Action.CREATE_FOLDER, Action.MOVE_TO_FOLDER},
+    "suggest": {Action.CREATE_FOLDER, Action.MOVE_TO_FOLDER},
+    "keyword": {Action.CREATE_FOLDER, Action.MOVE_TO_FOLDER},
+    "full": set(),
+}
+
+
+@pytest.mark.parametrize("stage", sorted(HOLDS))
+def test_a_stage_of_an_entry_holds_what_the_table_says(stage: Any) -> None:
+    for action in {p for chained in ACTIONS.values() for p in chained.primitives}:
+        assert held_by_stage(stage, action) == (action in HOLDS[stage]), action
