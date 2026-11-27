@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import functools
 import signal
 import tempfile
 from collections.abc import AsyncIterator
@@ -16,6 +17,8 @@ from typing import Any
 from benethos_mailbox_common.values import text as text_values
 
 from .. import peers
+from ..cockpit.app import Cockpit, make_app
+from ..cockpit.server import serve
 from ..contract import Agent, discover, load_agent, state_name
 from ..errors import (
     ConfigError,
@@ -46,6 +49,8 @@ from .session import (
 
 __all__ = [
     "backfill",
+    "check_lists",
+    "cockpit",
     "evaluate",
     "health",
     "paths",
@@ -356,6 +361,28 @@ def health(args: argparse.Namespace, settings: Settings) -> int:
         return 1
     print(f"{name}: {'healthy' if found.healthy else 'unhealthy'}, {found.reason}")
     return 0 if found.healthy else 1
+
+
+# -- cockpit --------------------------------------------------------------------------
+
+
+def cockpit(args: argparse.Namespace, settings: Settings) -> int:
+    """Serve the cockpit until stopped. Without its secret it does not
+    start, and without the mailbox service it shows the ids alone."""
+    given = settings.secret("cockpit_secret")
+    mailbox = None
+    if not settings.missing(MAILBOX_SETTINGS):
+        mailbox = functools.partial(mailbox_for, settings)
+    found = Cockpit(data_dir=settings.data_dir, secret=given, mailbox=mailbox, now=now)
+    asyncio.run(
+        serve(
+            make_app(found),
+            settings.cockpit_host,
+            settings.cockpit_port,
+            named=mailbox is not None,
+        )
+    )
+    return 0
 
 
 # -- eval -----------------------------------------------------------------------------

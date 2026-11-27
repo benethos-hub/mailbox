@@ -100,8 +100,8 @@ for the tests (13).
 ```
 packages/mailbox-agents/src/benethos_mailbox_agents/
   cli/            # the console script: worker, run, backfill, report, eval,
-                  # check, status, paths, health, and the wiring of one
-                  # session
+                  # check, status, paths, health, cockpit, and the wiring
+                  # of one session
   __main__.py     # enables `python -m benethos_mailbox_agents`
   errors/         # the error hierarchy, one module per error, its texts
                   #   masked with redact of mailbox-common
@@ -143,8 +143,9 @@ packages/mailbox-agents/src/benethos_mailbox_agents/
                   # and the sign-in, with templates.py the only modules
                   # importing FastAPI, templates.py the only one importing
                   # Jinja2, security.py the sessions, the count of failed
-                  # sign-ins and the headers, templates/ the pages,
-                  # static/ a copy of the stylesheet of the service
+                  # sign-ins and the headers, server.py the only module
+                  # importing uvicorn, templates/ the pages, static/ a
+                  # copy of the stylesheet of the service
   store/          # SQLite, one file per agent: store.py opens and
                   # migrates it, rows.py is what its parts stand on,
                   # messages.py, steps.py, actions.py, items.py,

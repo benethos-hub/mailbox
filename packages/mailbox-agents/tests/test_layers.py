@@ -112,7 +112,8 @@ CONFINED: dict[str, frozenset[str]] = {
     "requests": frozenset({"telemetry/otlp.py"}),
     # The entrance over A2A and the server that opens its port, the one
     # socket besides the metrics, which prometheus_client opens.
-    **dict.fromkeys(("a2a", "starlette", "uvicorn"), frozenset({"peers/a2a.py"})),
+    **dict.fromkeys(("a2a", "starlette"), frozenset({"peers/a2a.py"})),
+    "uvicorn": frozenset({"peers/a2a.py", "cockpit/server.py"}),
     # The pages of the cockpit, on the framework of the mailbox service.
     "fastapi": frozenset({"cockpit/app.py", "cockpit/templates.py"}),
     "jinja2": frozenset({"cockpit/templates.py"}),

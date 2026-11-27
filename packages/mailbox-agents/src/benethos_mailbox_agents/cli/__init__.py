@@ -128,6 +128,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     found.set_defaults(handler=commands.check_lists)
 
+    found = sub.add_parser(
+        "cockpit",
+        help="serve the read-only pages of what every agent did, until stopped",
+    )
+    found.set_defaults(handler=commands.cockpit)
+
     found = sub.add_parser("paths", help="where the settings and the state files are")
     found.set_defaults(handler=commands.paths)
     return parser
