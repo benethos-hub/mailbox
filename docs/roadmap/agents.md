@@ -41,6 +41,11 @@ Since 2026-11-25 an agent answers another agent over A2A how it
 classifies a message, read only, behind a token
 ([peers over A2A](../mailbox-agents/concept/a2a.md)).
 
+Since 2026-11-27 an agent is a classifier or an actor. The first
+actor, `filing`, files mail into folders by its keywords, by a list,
+with no model and nothing of what a mail says
+([filing](../mailbox-agents/concept/agent-filing.md)).
+
 ### Next
 
 | Step | Content |

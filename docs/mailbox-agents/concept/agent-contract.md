@@ -87,6 +87,7 @@ others do not:
 | `awaiting_reply` | off | it watches its marked mail to take the keyword off |
 | `counting` | off | it sets no keyword |
 | `categorization` | off | its own rule is stricter: `admit` refuses every message in the inbox that carries its keyword |
+| `filing` | off | its own rule is stricter: `takes` refuses every message that carries its keyword |
 
 **An agent's keyword is `agent-<word>` (decided 2026-11-18).** A keyword
 in that form is recognisable as set by an agent, shares no name with a
@@ -103,6 +104,7 @@ that is not lower case letters, digits and dashes, the same form
 | `inquiries` | `agent-inquiry` |
 | `categorization` | `agent-categorized` |
 | `counting` | `agent-counted`, never set |
+| `filing` | `agent-filed` |
 
 `MAILBOX_AGENTS_KEYWORD` names another keyword for one deployment.
 

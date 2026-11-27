@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from benethos_mailbox_agents.agents.categorization.lists import load_chain
+from benethos_mailbox_agents.agents.filing.rules import load_rules
 from benethos_mailbox_agents.agents.inquiries.patterns import load_patterns
 
 from .agents_helpers import ROOT
@@ -22,6 +23,7 @@ EXAMPLES = sorted(
 LOADERS = {
     "inquiries": load_patterns,
     "categorization": load_chain,
+    "filing": load_rules,
 }
 
 

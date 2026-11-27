@@ -108,11 +108,15 @@ class Settings(files.FileSettings):
     # --- categorization, docs/mailbox-agents/concept/agent-categorization.md
     categorization_file: Path | None = None
 
+    # --- filing, docs/mailbox-agents/concept/agent-filing.md -----------------
+    filing_file: Path | None = None
+
     @field_validator(
         "ca_file",
         "keyword",
         "instance",
         "categorization_file",
+        "filing_file",
         "inquiries_patterns_file",
         "otlp_endpoint",
         "otlp_headers_file",

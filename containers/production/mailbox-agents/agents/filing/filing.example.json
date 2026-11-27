@@ -1,0 +1,28 @@
+{
+  "on": {
+    "keywords": [
+      "agent-partner-*",
+      "agent-invoice"
+    ]
+  },
+  "rules": [
+    {
+      "keywords": [
+        "agent-partner-cloudhost"
+      ],
+      "move": "Providers/CloudHost"
+    },
+    {
+      "keywords": [
+        "agent-partner-telco"
+      ],
+      "move": "Providers/Telco"
+    },
+    {
+      "keywords": [
+        "agent-invoice"
+      ],
+      "below": "Invoices"
+    }
+  ]
+}

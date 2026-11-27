@@ -111,6 +111,14 @@ adheres to [Semantic Versioning](https://semver.org/).
   `list_outbox`, `get_outbox_job` and `cancel_send` read and cancel the
   jobs. `send_message` and `send_draft` are unchanged. `SendRecord`
   names the job of an attempt in `outbox_job_id`.
+- `benethos-mailbox-agents`: the agent `filing`, an actor that files
+  mail into folders by the keywords it carries, by a list
+  (`MAILBOX_AGENTS_FILING_FILE`, `filing.example.json`): from the inbox
+  to the folder of the first rule with a `move`, below it the folder of
+  the first rule with a `below`, and from a folder of the owner only
+  below it. It asks no model, moves a message once and marks it
+  `agent-filed`. A profile `filing` in the production compose file,
+  metrics on 9471.
 - `benethos-mailbox-agents`: the kind `Actor` beside `Classifier`, for
   an agent that acts on mail by its keywords, sees a message only as
   `Placed` and asks no model.

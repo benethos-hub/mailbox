@@ -129,6 +129,7 @@ def test_a_broken_state_file_is_named_and_the_others_still_listed(
         "counting",
         "inquiries",
         "categorization",
+        "filing",
     ):
         assert name in starts
     assert "last progress: 20" in out
@@ -178,6 +179,7 @@ def test_a_state_file_of_a_newer_schema_is_named_and_unhealthy(
         "counting",
         "inquiries",
         "categorization",
+        "filing",
     ):
         assert name in starts
 

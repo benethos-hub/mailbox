@@ -18,7 +18,9 @@ This folder is all it needs, no clone of the repository.
    `agents/categorization/categorization.json`, its groups, made after
    `categorization.example.json`, and `inquiries` needs
    `agents/inquiries/inquiries.json`, its sender domains and phrases, made
-   after `inquiries.example.json`. `counting` asks no model and has no
+   after `inquiries.example.json`, and `filing` needs
+   `agents/filing/filing.json`, its rules, made after
+   `filing.example.json`. `counting` and `filing` ask no model and have no
    `gateway_key`. `categorization` asks one only when a group of its list has a
    topic: then it needs the gateway settings in its `.env`, as
    `agents/categorization/.env.example` shows, and a `gateway_key`.

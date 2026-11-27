@@ -15,6 +15,7 @@
         |   awaiting_reply  + SQLite |   one state file per agent
         |   inquiries       + SQLite |
         |   counting        + SQLite |
+        |   filing          + SQLite |
         +-------------+--------------+
                       | OpenAI-compatible HTTP, one key per agent
         +-------------v--------------+
