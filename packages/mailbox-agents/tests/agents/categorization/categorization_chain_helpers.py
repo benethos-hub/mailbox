@@ -23,7 +23,7 @@ from benethos_mailbox_agents.records import (
     MessageRef,
 )
 
-from ..agents_helpers import settings
+from ...agents_helpers import settings
 
 T = TypeVar("T", bound=BaseModel)
 

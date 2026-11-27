@@ -25,7 +25,7 @@ from contextlib import suppress
 from dataclasses import replace
 from datetime import datetime
 
-from ..contract import Action, ActionRequest, Agent
+from ..contract import STAGE_ALLOWS, Action, ActionRequest, Agent
 from ..errors import (
     ActionRefusedError,
     MailboxAgentError,
@@ -44,22 +44,10 @@ from .writer import Writer
 
 __all__ = [
     "FORBIDDEN_ROLES",
-    "STAGE_ALLOWS",
     "Executor",
     "Outcome",
     "in_another_case",
 ]
-
-# What each stage carries out. The rest is recorded only.
-STAGE_ALLOWS: dict[str, frozenset[Action]] = {
-    "shadow": frozenset(),
-    # What the owner sees and takes back in one step: a keyword, a forward
-    # in the drafts folder.
-    "suggest": frozenset(
-        {Action.ADD_KEYWORD, Action.REMOVE_KEYWORD, Action.DRAFT_FORWARD}
-    ),
-    "full": frozenset(Action),
-}
 
 # Folders no agent moves a message into: a move there is a deletion.
 FORBIDDEN_ROLES = DISCARD_ROLES

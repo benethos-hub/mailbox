@@ -14,8 +14,8 @@ from benethos_mailbox_agents.agents.categorization.agent import Categorization
 from benethos_mailbox_agents.errors import GatewayUnavailableError
 from benethos_mailbox_agents.records import MessageRef
 
-from ..agents_fake import ACCOUNT, wire_message
-from ..agents_helpers import (
+from ...agents_fake import ACCOUNT, wire_message
+from ...agents_helpers import (
     Wired,
     actions,
     decision,

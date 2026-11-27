@@ -12,7 +12,7 @@ it as read, beside the versions of the recognizers it uses besides
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -22,7 +22,7 @@ from benethos_mailbox_common.values import secret
 from ...contract import list_version
 from ...errors import ConfigError, describe_invalid
 from .dimensions import Category, Chain, Dimension
-from .groups import READERS, Groups
+from .groups import Groups
 from .recognizers import RECOGNIZERS, Recognizer
 
 __all__ = [
@@ -177,6 +177,15 @@ def circles(chains: Mapping[str, Chain], sign: str) -> list[list[str]]:
     for name in chains:
         walk([name])
     return found_circles
+
+
+def _read_json(text: str) -> Any:
+    return json.loads(text)
+
+
+# The readers by suffix. JSON, as the other lists of this project. Another
+# format is one entry here.
+READERS: dict[str, Callable[[str], Any]] = {".json": _read_json}
 
 
 def load_chain(path: Path) -> Listed:

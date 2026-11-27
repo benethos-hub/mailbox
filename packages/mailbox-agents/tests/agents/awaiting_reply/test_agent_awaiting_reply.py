@@ -21,7 +21,7 @@ from benethos_mailbox_agents.agents.awaiting_reply.text import (
 )
 from benethos_mailbox_agents.records import Address, MailMessage
 
-from ..agents_fake import ACCOUNT
+from ...agents_fake import ACCOUNT
 from .awaiting_reply_helpers import (
     ASK,
     PARTNER,

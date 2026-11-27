@@ -4,14 +4,18 @@ docs/mailbox-agents/concept/agent-contract.md."""
 
 from __future__ import annotations
 
+from .actions import (
+    FORMER_STAGES,
+    REVERSED_BY,
+    STAGE_ALLOWS,
+    Action,
+    ActionRequest,
+    ForwardForm,
+)
 from .actor import PASSED_BY, Actor, list_version
 from .agent import (
     KEYWORD_FORM,
-    REVERSED_BY,
-    Action,
-    ActionRequest,
     Agent,
-    ForwardForm,
     Limits,
     Requires,
     Route,
@@ -30,9 +34,11 @@ from .registry import discover, load_agent
 from .waiting import is_pattern, waits_for
 
 __all__ = [
+    "FORMER_STAGES",
     "KEYWORD_FORM",
     "PASSED_BY",
     "REVERSED_BY",
+    "STAGE_ALLOWS",
     "Action",
     "Actor",
     "ActionRequest",

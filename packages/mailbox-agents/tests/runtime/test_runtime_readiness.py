@@ -150,3 +150,17 @@ def test_the_gateway_is_named_with_the_mailbox_service() -> None:
         "MAILBOX_AGENTS_SERVICE_TOKEN",
         *GATEWAY,
     )
+
+
+class Circling(Echo):
+    """Waits for keywords that start with its own."""
+
+    def waits_for(self, keyword: str) -> bool:
+        return keyword.startswith(self.keyword)
+
+
+def test_an_agent_that_waits_for_its_own_keyword_is_not_ready() -> None:
+    found = readiness(Circling, settings(**MAILBOX))
+
+    assert not found.ready
+    assert found.problem == "the list of echo waits for the agent's own keyword"

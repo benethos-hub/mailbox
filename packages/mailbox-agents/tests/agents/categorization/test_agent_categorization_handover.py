@@ -14,8 +14,9 @@ import pytest
 from benethos_mailbox_agents.agents.categorization.agent import Categorization
 from benethos_mailbox_agents.cli import main
 from benethos_mailbox_agents.errors import ConfigError
+from benethos_mailbox_agents.runtime.readiness import start
 
-from ..agents_helpers import settings
+from ...agents_helpers import settings
 from .categorization_chain_helpers import (
     Scripted,
     categorization,
@@ -220,5 +221,13 @@ def test_a_list_waiting_for_its_own_keyword_does_not_start(tmp_path: Path) -> No
     path = tmp_path / "self.json"
     path.write_text(json.dumps(listed), encoding="utf-8")
 
-    with pytest.raises(ConfigError, match="it would set itself off"):
-        Categorization(settings(categorization_file=path, instance="self")).prepare()
+    with pytest.raises(ConfigError, match="waits for the agent's own keyword"):
+        start(
+            Categorization,
+            settings(
+                categorization_file=path,
+                instance="self",
+                service_url="https://mailbox.example.test",
+                service_token="t",
+            ),
+        )

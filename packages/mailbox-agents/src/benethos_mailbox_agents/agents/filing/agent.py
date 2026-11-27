@@ -54,14 +54,8 @@ class Filing(Actor):
     # -- what it reads besides its settings -----------------------------------
 
     def prepare(self) -> None:
-        """Read the list now, so a wrong one stops the start. A list that
-        waits for the agent's own keyword is refused: it would set itself
-        off."""
-        if self.rules.waits_for(self.keyword):
-            raise ConfigError(
-                "the filing list waits for the agent's own keyword: it would "
-                "set itself off"
-            )
+        """Read the list now, so a wrong one stops the start."""
+        _ = self.rules
 
     @cached_property
     def rules(self) -> Rules:

@@ -1,5 +1,6 @@
 """What ``report`` and a span say of ``categorization``: per dimension and
-category what became of its messages, and the dimensions of a decision.
+category what became of its messages, the senders a report names as
+candidates for the list, and the dimensions of a decision.
 
 A category with a move counts its messages as moved, recorded, recorded
 by topic, held or not moved, as before the chain. A move that lost to the
@@ -14,6 +15,8 @@ from __future__ import annotations
 
 from collections import Counter
 
+from benethos_mailbox_common.values import text as text_values
+
 from ...contract import Action, Shown, TracePart
 from ...records import LABEL, Decision
 from .actions import Keyword
@@ -22,7 +25,10 @@ from .groups import NONE
 from .lists import GROUP
 from .plan import BY_CODE, DISPLACED, key
 
-__all__ = ["FATES", "fates", "parts_of"]
+__all__ = ["CANDIDATES", "FATES", "candidates", "fates", "parts_of"]
+
+# The senders in no group a report names at most, as candidates.
+CANDIDATES = 10
 
 # The fates in the order a line names them.
 FATES = (
@@ -130,3 +136,37 @@ def parts_of(chain: Chain, decision: Decision) -> list[TracePart]:
             attributes["quote_found"] = bool(quotes[field])
         found.append(TracePart("dimension", attributes))
     return found
+
+
+def candidates(shown: list[Shown]) -> list[str]:
+    """The senders in no category of the first dimension that wrote most
+    often, as candidates for the list, and the senders left alone because
+    two categories name them alike."""
+    lines: list[str] = []
+    # A sender two groups with a topic name, which the model left in
+    # none, is in the list already: no candidate.
+    unknown = Counter(
+        item.sender.lower()
+        for item in shown
+        if item.sender
+        and item.decision.details.get("match") == "none"
+        and item.decision.details.get("among") != "senders"
+    )
+    if unknown:
+        lines.append("senders in no group, candidates for the list:")
+        lines += [
+            f"  {sender} ({text_values.plural(count, 'message')})"
+            for sender, count in unknown.most_common(CANDIDATES)
+        ]
+    alike = Counter(
+        (item.sender.lower(), item.decision.details.get("groups", ""))
+        for item in shown
+        if item.sender and item.decision.details.get("match") == "ambiguous"
+    )
+    if alike:
+        lines.append("left alone, two groups name the sender alike:")
+        lines += [
+            f"  {sender}: {groups} ({text_values.plural(count, 'message')})"
+            for (sender, groups), count in alike.most_common()
+        ]
+    return lines

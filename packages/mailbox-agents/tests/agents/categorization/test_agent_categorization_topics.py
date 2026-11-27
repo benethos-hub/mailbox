@@ -10,12 +10,12 @@ import pytest
 from pydantic import ValidationError
 
 from benethos_mailbox_agents.agents import categorization as categorization_agent
-from benethos_mailbox_agents.agents.categorization.groups import Group, Groups
+from benethos_mailbox_agents.agents.categorization.dimensions import Category, Dimension
 from benethos_mailbox_agents.agents.categorization.lists import list_digest
 from benethos_mailbox_agents.agents.categorization.schema import answer_for, system_for
 from benethos_mailbox_agents.contract import load_prompt
 
-from .categorization_helpers import groups, refused
+from .categorization_helpers import dimension, groups, refused
 
 TOPIC = "Mail about the project Alpha: the offer and the weekly status"
 
@@ -137,8 +137,8 @@ BETA = "Mail about the project Beta: the migration of the shop"
 
 
 @pytest.fixture
-def mixed() -> Groups:
-    return groups(
+def mixed() -> Dimension:
+    return dimension(
         {"name": "Bank", "folder": "Bank", "senders": ["*@bank-one.example"]},
         _topical(senders=["*@client.example"], by_topic="act"),
         {
@@ -158,21 +158,23 @@ def mixed() -> Groups:
     )
 
 
-def _names(found: tuple[Group, ...]) -> list[str]:
-    return [group.name for group in found]
+def _names(found: tuple[Category, ...]) -> list[str]:
+    return [category.name for category in found]
 
 
-def test_one_group_by_its_sender_leaves_the_choice_to_the_code(mixed: Groups) -> None:
+def test_one_group_by_its_sender_leaves_the_choice_to_the_code(
+    mixed: Dimension,
+) -> None:
     assert mixed.candidates("service@bank-one.example") == ()
 
 
 def test_groups_alike_by_their_sender_each_with_a_topic_are_the_choice(
-    mixed: Groups,
+    mixed: Dimension,
 ) -> None:
     assert _names(mixed.candidates("office@client.example")) == ["Alpha", "Beta"]
 
 
-def test_groups_alike_one_without_a_topic_leave_no_choice(mixed: Groups) -> None:
+def test_groups_alike_one_without_a_topic_leave_no_choice(mixed: Dimension) -> None:
     assert mixed.candidates("billing@host.example") == ()
 
 
@@ -180,7 +182,7 @@ def test_groups_alike_one_without_a_topic_leave_no_choice(mixed: Groups) -> None
     "address", ["stranger@elsewhere.example", "", None, "a" * 330 + "@client.example"]
 )
 def test_no_group_by_the_sender_leaves_every_group_with_a_topic(
-    mixed: Groups, address: str | None
+    mixed: Dimension, address: str | None
 ) -> None:
     assert _names(mixed.candidates(address)) == [
         "Alpha",
@@ -191,21 +193,21 @@ def test_no_group_by_the_sender_leaves_every_group_with_a_topic(
 
 
 def test_a_list_without_a_topic_never_asks_a_model() -> None:
-    listed = groups(
+    listed = dimension(
         {"name": "A", "folder": "A", "senders": ["*@a.example"]},
         {"name": "B", "folder": "B", "senders": ["x*@a.example", "x@b.example"]},
     )
 
-    assert not listed.asks_model
+    assert not listed.topical
     for address in ("x@a.example", "x@b.example", "x@c.example", None):
         assert listed.candidates(address) == ()
 
 
-def test_a_list_with_a_topic_may_ask_a_model(mixed: Groups) -> None:
-    assert mixed.asks_model
+def test_a_list_with_a_topic_may_ask_a_model(mixed: Dimension) -> None:
+    assert mixed.topical
 
 
-def test_a_group_is_found_by_its_name(mixed: Groups) -> None:
+def test_a_group_is_found_by_its_name(mixed: Dimension) -> None:
     found = mixed.named("Beta")
 
     assert found is not None and found.topic == BETA
@@ -214,7 +216,7 @@ def test_a_group_is_found_by_its_name(mixed: Groups) -> None:
 
 
 def test_the_system_text_names_each_group_to_choose_from_in_a_line(
-    mixed: Groups,
+    mixed: Dimension,
 ) -> None:
     prompt = load_prompt(categorization_agent.__name__, "system", "v1")
     choice = mixed.candidates("office@client.example")

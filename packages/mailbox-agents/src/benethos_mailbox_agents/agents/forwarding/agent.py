@@ -55,11 +55,7 @@ class Forwarding(Actor):
 
     def prepare(self) -> None:
         """Read the list now, so a wrong one stops the start."""
-        if self.rules.waits_for(self.keyword):
-            raise ConfigError(
-                "the forwarding list waits for the agent's own keyword: it "
-                "would set itself off"
-            )
+        _ = self.rules
 
     @cached_property
     def rules(self) -> Rules:

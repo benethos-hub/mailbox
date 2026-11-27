@@ -51,6 +51,10 @@ def _prepared(cls: type[Agent], settings: Settings) -> Agent | ConfigError | Non
         _own_keyword(cls, settings)
         agent = cls(settings)
         agent.prepare()
+        if agent.waits_for(agent.keyword):
+            raise ConfigError(
+                f"the list of {agent.label} waits for the agent's own keyword"
+            )
     except (ConfigError, ContractError) as exc:
         return ConfigError(exc.message)
     return agent

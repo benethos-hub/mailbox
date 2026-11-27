@@ -13,9 +13,10 @@ from benethos_mailbox_agents.agents.filing.agent import Filing
 from benethos_mailbox_agents.contract import discover
 from benethos_mailbox_agents.errors import ConfigError, MailboxUnavailableError
 from benethos_mailbox_agents.records import MessageRef
+from benethos_mailbox_agents.runtime.readiness import start
 
-from ..agents_fake import ACCOUNT, wire_message
-from ..agents_helpers import (
+from ...agents_fake import ACCOUNT, wire_message
+from ...agents_helpers import (
     Wired,
     actions,
     decision,
@@ -230,8 +231,16 @@ async def test_an_account_that_cannot_do_it_leaves_the_pass_going(
 def test_a_list_that_waits_for_its_own_keyword_is_refused(tmp_path: Path) -> None:
     rules = {"on": {"keywords": ["agent-*"]}, "rules": RULES["rules"]}
 
-    with pytest.raises(ConfigError, match="agent.s own keyword"):
-        agent(tmp_path, rules=rules).prepare()
+    with pytest.raises(ConfigError, match="waits for the agent's own keyword"):
+        path = agent(tmp_path, rules=rules).settings.filing_file
+        start(
+            Filing,
+            settings(
+                filing_file=path,
+                service_url="https://mailbox.example.test",
+                service_token="t",
+            ),
+        )
 
 
 def test_without_its_list_it_does_not_start(tmp_path: Path) -> None:

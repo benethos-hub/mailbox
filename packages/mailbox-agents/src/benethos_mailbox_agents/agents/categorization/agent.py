@@ -26,12 +26,9 @@ dimension. See docs/mailbox-agents/concept/agent-categorization.md.
 
 from __future__ import annotations
 
-from collections import Counter
 from collections.abc import Mapping
 from functools import cached_property
 from pathlib import Path
-
-from benethos_mailbox_common.values import text as text_values
 
 from ...contract import (
     Action,
@@ -55,25 +52,16 @@ from .dimensions import Chain
 from .groups import NONE
 from .lists import Listed, circles, load_chain, used
 from .plan import (
-    classify,
-    classify_rules,
+    decide,
+    decide_by_rules,
     found_in,
     refreshed,
     requests_for,
-    to_decision,
 )
-from .recognizers import PROMPT, Choice
-from .summary import fates, parts_of
+from .recognizers import PROMPT
+from .summary import candidates, fates, parts_of
 
 __all__ = ["NONE", "PROMPT", "Categorization"]
-
-# The senders in no group a report names at most, as candidates.
-CANDIDATES = 10
-
-
-def _runs(when: Mapping[str, tuple[str, ...]], chosen: Mapping[str, str]) -> bool:
-    """Whether ``when`` holds for the categories ``chosen`` so far."""
-    return all(chosen.get(name) in allowed for name, allowed in when.items())
 
 
 class Categorization(Classifier):
@@ -110,13 +98,11 @@ class Categorization(Classifier):
 
     def prepare(self) -> None:
         """Read the list now, so a wrong one stops the start, and with it
-        the version the decision is stored under. A list that waits for
-        the agent's own keyword is refused: it would set itself off."""
-        if self.chain.on.waits_for(self.keyword):
-            raise ConfigError(
-                "the categorization list: on.keywords names the agent's own keyword: "
-                "it would set itself off"
-            )
+        the version the decision is stored under."""
+        _ = self.listed
+
+    def waits_for(self, keyword: str) -> bool:
+        return self.chain.on.waits_for(keyword)
 
     @cached_property
     def listed(self) -> Listed:
@@ -234,31 +220,13 @@ class Categorization(Classifier):
         )
 
     def baseline(self, message: MailMessage) -> Decision:
-        chosen: dict[str, str] = {}
-        choices: list[Choice | None] = []
-        for dimension in self.chain.dimensions:
-            if not _runs(dimension.when, chosen):
-                choices.append(None)
-                continue
-            found = classify_rules(dimension, message)
-            chosen[dimension.name] = found.category
-            choices.append(found)
-        return to_decision(self.chain, choices)
+        return decide_by_rules(self.chain, message)
 
     async def decide(self, message: MailMessage, context: Context) -> Decision:
         """The sender rules where they settle it, with no call. Else the
         model, once per recognizer that asks it, among the categories to
         choose from."""
-        chosen: dict[str, str] = {}
-        choices: list[Choice | None] = []
-        for dimension in self.chain.dimensions:
-            if not _runs(dimension.when, chosen):
-                choices.append(None)
-                continue
-            found = await classify(dimension, message, context)
-            chosen[dimension.name] = found.category
-            choices.append(found)
-        return to_decision(self.chain, choices)
+        return await decide(self.chain, message, context)
 
     async def effect(
         self, decision: Decision, message: MailMessage, context: Context
@@ -274,31 +242,4 @@ class Categorization(Classifier):
         senders in no category of the first dimension that wrote most often,
         as candidates for the list, and the senders left alone because two
         categories name them alike."""
-        lines = fates(self.chain, shown)
-        # A sender two groups with a topic name, which the model left in
-        # none, is in the list already: no candidate.
-        unknown = Counter(
-            item.sender.lower()
-            for item in shown
-            if item.sender
-            and item.decision.details.get("match") == "none"
-            and item.decision.details.get("among") != "senders"
-        )
-        if unknown:
-            lines.append("senders in no group, candidates for the list:")
-            lines += [
-                f"  {sender} ({text_values.plural(count, 'message')})"
-                for sender, count in unknown.most_common(CANDIDATES)
-            ]
-        alike = Counter(
-            (item.sender.lower(), item.decision.details.get("groups", ""))
-            for item in shown
-            if item.sender and item.decision.details.get("match") == "ambiguous"
-        )
-        if alike:
-            lines.append("left alone, two groups name the sender alike:")
-            lines += [
-                f"  {sender}: {groups} ({text_values.plural(count, 'message')})"
-                for (sender, groups), count in alike.most_common()
-            ]
-        return lines
+        return fates(self.chain, shown) + candidates(shown)
