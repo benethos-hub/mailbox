@@ -111,6 +111,12 @@ adheres to [Semantic Versioning](https://semver.org/).
   `list_outbox`, `get_outbox_job` and `cancel_send` read and cancel the
   jobs. `send_message` and `send_draft` are unchanged. `SendRecord`
   names the job of an attempt in `outbox_job_id`.
+- `benethos-mailbox-agents`: the state file keeps the profile of its
+  agent: `worker`, `run` and `backfill` write the stage, the accounts,
+  the keyword, the poll and gateway seconds, the model alias and the
+  versions when they start, so a process that reads the file from
+  outside knows what it belongs to. A writer migrates the file to
+  schema 4 when it opens it.
 - `benethos-mailbox-agents`: the agent `forwarding`, an actor that
   drafts a forward of mail by its keywords and sends nothing
   (`MAILBOX_AGENTS_FORWARDING_FILE`, `forwarding.example.json`): to the

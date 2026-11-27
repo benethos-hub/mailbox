@@ -88,6 +88,12 @@ Rules:
   an exclusive lock on `<agent>.db.lock` beside it while the file is open,
   so `run` or `backfill` beside a running `worker` is refused. Readers
   such as `status` and `report` stay free (decided 2026-11-17).
+- **The profile at the start.** `worker`, `run` and `backfill` write the
+  profile of the agent into its state file when they open it: the stage,
+  the accounts, the keyword, the poll and gateway seconds, the model
+  alias and the versions ([state](state.md)). A reader from outside, such
+  as the cockpit, holds none of these settings. `eval` and the live
+  checks write none.
 - **A new prompt or model does not rewrite history.** `backfill` runs old
   messages again under the new version and keeps both results.
 
