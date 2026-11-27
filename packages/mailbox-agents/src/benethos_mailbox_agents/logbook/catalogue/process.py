@@ -54,6 +54,31 @@ class Migrated(Activity):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class DatabaseClosed(Activity):
+    """At the start on a server: the database closed to every other role
+    where the agent's role owns it, CONNECT taken from ``revoked`` roles
+    it no longer names, and the read given to ``readers`` roles. No name
+    of a role."""
+
+    name: ClassVar[str] = "database_closed"
+
+    owner: bool
+    readers: int
+    revoked: int
+
+    def says(self) -> str:
+        if self.owner:
+            return (
+                f"closed its database to every other role, {self.readers} may"
+                f" read it, {self.revoked} no longer"
+            )
+        return (
+            f"gave {self.readers} roles the read of its database, which it"
+            " does not own, so others may connect to it"
+        )
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class MetricsServing(Activity):
     name: ClassVar[str] = "metrics_serving"
 

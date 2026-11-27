@@ -133,6 +133,10 @@ LINES: list[tuple[Activity, str]] = [
         "a began serving peers over A2A on port 9470",
     ),
     (
+        process.DatabaseClosed(agent="a", owner=True, readers=1, revoked=0),
+        "a closed its database to every other role, 1 may read it, 0 no longer",
+    ),
+    (
         process.CockpitServing(agent="cockpit", port=9480, named=False),
         "cockpit began serving its pages on port 9480: ids only, as no token of "
         "the mailbox service is set",

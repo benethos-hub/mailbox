@@ -21,6 +21,19 @@ adheres to [Semantic Versioning](https://semver.org/).
   raises its own errors, or the subclasses a program names in
   `errors.Errors`, as the service does with its own. The lock of one
   writer, `locks`, moved from `paths` into it.
+- `benethos-mailbox-agents`: the state of an agent can lie on a
+  PostgreSQL server, in a database of its own per agent and instance:
+  `MAILBOX_AGENTS_STORAGE=postgres` with `MAILBOX_AGENTS_DATABASE_URL`
+  (`postgresql://<role>@<host>:<port>/<database>`, without a password),
+  `MAILBOX_AGENTS_DATABASE_PASSWORD_FILE`, `MAILBOX_AGENTS_DATABASE_TLS`
+  and `MAILBOX_AGENTS_DATABASE_CA_FILE`, as the service takes them. The
+  schema of the role is made where it is missing, a second writer is
+  refused. At each start a role that owns its database closes it to
+  every other role and gives the read to the roles
+  `MAILBOX_AGENTS_DATABASE_READERS` names, its future tables too, and
+  takes it from those it no longer names. A reader the server does not
+  know stops the start. `MAILBOX_AGENTS_PROMPT_RETENTION_DAYS` above zero
+  does not start with it.
 - `benethos-mailbox-agents`: the state file stands on the storage of
   `benethos-mailbox-common`, as the database of the service does. A
   state file is brought to schema 5 when its agent starts, with a copy

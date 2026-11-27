@@ -60,7 +60,7 @@ class _Messages(_Rows):
         with self._conn() as conn:
             if not (again or again_skipped):
                 skipping = dialect.insert_or_skip(messages, conn.dialect)
-                return bool(conn.execute(skipping.values(row)).rowcount)
+                return _taken(conn, skipping.values(row))
             statement = dialect.insert_or_set(
                 messages,
                 ["account_id", "message_id"],
@@ -73,7 +73,7 @@ class _Messages(_Rows):
                 conn.dialect,
                 where=_m.state != "pending" if again else _m.state == "skipped",
             )
-            return bool(conn.execute(statement.values(row)).rowcount)
+            return _taken(conn, statement.values(row))
 
     def message(self, ref: MessageRef) -> MessageRow | None:
         with self._conn() as conn:
@@ -136,6 +136,12 @@ class _Messages(_Rows):
         query = sa.select(sa.func.min(_m.created)).where(_m.state == "pending")
         with self._conn() as conn:
             return _time(conn.execute(query).scalar())
+
+
+def _taken(conn: sa.Connection, statement: dialect.Insert) -> bool:
+    """Whether ``statement`` wrote the row: the row it gives back, as each
+    database tells it alike, where the count of rows does not."""
+    return conn.execute(statement.returning(_m.message_id)).first() is not None
 
 
 def _select() -> sa.Select[Any]:
