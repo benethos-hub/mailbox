@@ -68,6 +68,12 @@ dependencies = [
     "requests>=2.34.2",
     "pydantic>=2.14.3",
     "uvicorn>=0.54.0",
+    # The cockpit, pages read from the state files and started by hand,
+    # on the framework of the mailbox service.
+    "fastapi>=0.165.0",
+    "jinja2>=3.1.6",
+    # The form of the cockpit's sign-in.
+    "python-multipart>=0.0.34",
 ]
 
 [project.urls]
