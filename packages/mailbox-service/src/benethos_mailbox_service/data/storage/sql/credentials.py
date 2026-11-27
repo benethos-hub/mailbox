@@ -6,9 +6,10 @@ from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
 
+from benethos_mailbox_common.storage import dialect
+
 from ....common.clock import iso, parse_iso, utc_now
 from ..credentials import EncryptedCredential, WrappedKey
-from .dialect import insert_or_update
 from .rows import changed
 from .schema import credentials, keys, meta
 
@@ -52,7 +53,7 @@ class SqlKeyRepository:
                 )
             )
             conn.execute(
-                insert_or_update(meta, ["key"], None, conn.dialect).values(
+                dialect.insert_or_update(meta, ["key"], None, conn.dialect).values(
                     key=_ACTIVE, value=key.key_id
                 )
             )
@@ -65,7 +66,7 @@ class SqlCredentialRepository:
     def put(self, credential: EncryptedCredential) -> None:
         with self._db.connected() as conn:
             conn.execute(
-                insert_or_update(
+                dialect.insert_or_update(
                     credentials, ["account_id", "field"], None, conn.dialect
                 ).values(
                     account_id=credential.account_id,

@@ -14,14 +14,14 @@ from typing import Any
 import sqlalchemy as sa
 from alembic import op
 
-from benethos_mailbox_service.data.storage.sql.dialect import (
+from benethos_mailbox_service.data.storage.sql.revisions import (
     BYTES,
     COUNTED,
     NUMBER,
     TEXT,
+    Revision,
     counter,
 )
-from benethos_mailbox_service.data.storage.sql.revisions import Revision
 
 # The rows of meta a new database has: the feed has handed out no number.
 _META = sa.table("meta", sa.column("key"), sa.column("value"))

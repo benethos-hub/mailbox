@@ -20,10 +20,10 @@ from typing import Literal
 
 import sqlalchemy as sa
 
-from ....common.names import is_plain_name
+from benethos_mailbox_common.storage import dialect, names
+
 from ....errors import StorageError, StorageInUseError, StorageUnavailableError
 from . import revisions
-from .dialect import reading_fixed
 from .outage import LONGEST_PAUSE, Availability, Outage
 from .place import Opened, translated_by
 from .schema import meta
@@ -79,7 +79,7 @@ class ServerPlace:
     def __init__(
         self, server: Server, clock: Callable[[], float] = time.monotonic
     ) -> None:
-        if not is_plain_name(server.schema_name):
+        if not names.is_plain_name(server.schema_name):
             raise StorageError(
                 "the schema of the database is not a plain name:"
                 " lower case letters, digits and underscores"
@@ -347,7 +347,7 @@ class ServerPlace:
         engine = self._engine_open()
         self.ready()
         with self.translated():
-            conn = reading_fixed(engine.connect())
+            conn = dialect.reading_fixed(engine.connect())
         with conn, conn.begin():
             yield conn
 

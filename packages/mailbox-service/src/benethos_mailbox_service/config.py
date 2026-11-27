@@ -12,8 +12,7 @@ from pydantic import Field, SecretStr, field_validator, model_validator
 # Named apart from folders() below.
 from benethos_mailbox_common.paths import folders as system
 from benethos_mailbox_common.settings import files
-
-from .common.names import is_plain_name
+from benethos_mailbox_common.storage import names
 
 APP = "benethos-mailbox-service"
 # The layout of the repository, relative to the working directory. The
@@ -319,7 +318,7 @@ def _database_settings(url: str | None, password_file: Path | None) -> None:
         port is None and ":" in parts.netloc.rsplit("@", 1)[-1]
     ):
         raise ValueError(f"database_url must have the form {DATABASE_URL_FORM}")
-    if not is_plain_name(role):
+    if not names.is_plain_name(role):
         raise ValueError(
             "the role in database_url names the schema too: lower case"
             " letters, digits and underscores"

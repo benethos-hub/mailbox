@@ -58,10 +58,13 @@ packages/mailbox-service/
                         #   OAuth too
       clock.py          # utc_now, the default clock of the services,
                         #   iso and parse_iso: a time as text, in UTC,
+                        #   the three from storage of mailbox-common,
                         #   start_of_day and parse_day: a day as the
                         #   UI shows it, local
       ratelimit.py      # pacing: a token bucket and a backoff
-      hosts.py          # host names in one form: ASCII, Unicode, syntax
+      hosts.py          # host names in one form: ASCII, Unicode, syntax,
+                        #   is_loopback_host from storage of
+                        #   mailbox-common
       urls.py           # URLs read one way: host_of, is_loopback,
                         #   path_and_query
       retention.py      # Retention: how long records are kept, when the
@@ -69,8 +72,6 @@ packages/mailbox-service/
       bounded.py        # trim: tables in memory with a cap
       locks.py          # KeyedLocks: one lock per key, for the services
       chunks.py         # batched: a sequence in slices
-      names.py          # is_plain_name: a role or schema the database
-                        #   server takes without quoting
     web/                # PRESENTATION: HTTP only, FastAPI lives here
       __init__.py       # install: both front ends, errors to the right one
       services.py       # the domain services as dependencies, for both
@@ -316,15 +317,14 @@ packages/mailbox-service/
                         #   memory: store.py what it holds, where
                         #   tests look, messages, folders, drafts
       storage/          # own records, one module per subject, table.py
-                        #   for the in-memory ones, migrated.py what
-                        #   opening did to a schema, sqlite/ the file of
+                        #   for the in-memory ones, sqlite/ the file of
                         #   the database, its connection, the steps of
                         #   its schema and the files SQLite keeps beside
                         #   it (file.py), sqlite/migrations/ the base, the registry,
                         #   versions/ one class per schema version,
                         #   sql/ what is spoken through SQLAlchemy
-                        #   Core: the types and what differs between
-                        #   databases (dialect.py), the tables of
+                        #   Core, its types from storage of
+                        #   mailbox-common, the tables of
                         #   schema 26 (schema.py), the database the
                         #   repositories use, an engine on the one
                         #   connection (database.py), where a database
@@ -361,10 +361,6 @@ packages/mailbox-service/
       move.py           # the move of the records between SQLite and
                         #   PostgreSQL: every value held to its column
                         #   first, then copied, compared and marked
-      files.py          # files for the owner alone (0600): database, backup, key.
-                        #   The lock that tells a running service
-                        #   from a stopped one is paths.locks of
-                        #   mailbox-common
       logbook.py        # the newest log lines in memory, for the log page
       discovery/        # autodiscovery sources and their helpers:
                         #   base.py the protocol of a source, the

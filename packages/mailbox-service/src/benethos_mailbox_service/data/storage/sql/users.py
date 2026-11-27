@@ -9,9 +9,10 @@ from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
 
+from benethos_mailbox_common.storage import dialect
+
 from ....common.clock import iso, parse_iso
 from ...models import ApiToken, Grant, Role, User
-from .dialect import insert_or_update
 from .rows import SqlRows, changed, next_position
 from .schema import roles, tokens, users
 
@@ -27,7 +28,7 @@ class SqlUserRepository(SqlRows[User]):
         # A user saved again keeps its place.
         with self._db.connected() as conn:
             conn.execute(
-                insert_or_update(
+                dialect.insert_or_update(
                     users,
                     ["id"],
                     [
@@ -91,7 +92,7 @@ class SqlRoleRepository(SqlRows[Role]):
         # A role saved again keeps its place.
         with self._db.connected() as conn:
             conn.execute(
-                insert_or_update(
+                dialect.insert_or_update(
                     roles, ["id"], ["service", "grants"], conn.dialect
                 ).values(
                     id=role.id,
@@ -142,7 +143,7 @@ class SqlTokenRepository:
         # A token saved again keeps the time it was made.
         with self._db.connected() as conn:
             conn.execute(
-                insert_or_update(
+                dialect.insert_or_update(
                     tokens,
                     ["id"],
                     [

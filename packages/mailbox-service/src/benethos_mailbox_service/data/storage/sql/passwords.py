@@ -7,9 +7,10 @@ from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
 
+from benethos_mailbox_common.storage import dialect
+
 from ....common.clock import iso, parse_iso
 from ..passwords import StoredPassword
-from .dialect import insert_or_update
 from .rows import changed
 from .schema import passwords
 
@@ -40,7 +41,9 @@ class SqlPasswordRepository:
     def set(self, user_id: str, stored: StoredPassword) -> None:
         with self._db.connected() as conn:
             conn.execute(
-                insert_or_update(passwords, ["user_id"], None, conn.dialect).values(
+                dialect.insert_or_update(
+                    passwords, ["user_id"], None, conn.dialect
+                ).values(
                     user_id=user_id,
                     hash=stored.hash,
                     must_change=int(stored.must_change),

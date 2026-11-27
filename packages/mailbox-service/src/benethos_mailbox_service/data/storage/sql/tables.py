@@ -16,8 +16,9 @@ from typing import Any
 
 import sqlalchemy as sa
 
+from benethos_mailbox_common.storage import dialect
+
 from ....errors import StorageError
-from .dialect import count_on_from, insert_or_update
 from .schema import METADATA, changes, meta
 
 # The tables that keep account of the database itself and hold no
@@ -136,7 +137,7 @@ def align_changes(conn: sa.Connection) -> None:
         sa.select(meta.c.value).where(meta.c.key == CHANGES_LAST)
     ).scalar()
     if last is not None:
-        count_on_from(conn, changes, int(last))
+        dialect.count_on_from(conn, changes, int(last))
 
 
 def align_counter(conn: sa.Connection, table: Table) -> None:
@@ -151,7 +152,7 @@ def align_counter(conn: sa.Connection, table: Table) -> None:
     [key] = counted
     top = conn.execute(sa.select(sa.func.max(key))).scalar()
     if top is not None:
-        count_on_from(conn, defined, int(top))
+        dialect.count_on_from(conn, defined, int(top))
 
 
 def read_chunk(
@@ -208,7 +209,9 @@ def fill_table(
         raise StorageError(f"the table {table.name} is not empty")
     statement: sa.Insert = sa.insert(stored)
     if table.name == meta.name:
-        statement = insert_or_update(meta, table.key, list(columns), conn.dialect)
+        statement = dialect.insert_or_update(
+            meta, table.key, list(columns), conn.dialect
+        )
     count = 0
     stream = iter(rows)
     while part := list(islice(stream, ROWS_CHUNK)):

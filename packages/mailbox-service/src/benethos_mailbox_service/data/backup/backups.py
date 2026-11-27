@@ -27,10 +27,11 @@ from dataclasses import replace
 from pathlib import Path
 from typing import BinaryIO
 
+from benethos_mailbox_common.storage import files
+
 from ...common.clock import iso, utc_now
 from ...errors import MailboxServiceError, SchemaNotEmptyError, StorageInUseError
 from ..export import ExportError, read_export, write_export
-from ..files import create_private, free_path
 from ..storage import (
     SCHEMA_VERSION,
     Claim,
@@ -323,7 +324,7 @@ def _opened(source: Path) -> Iterator[tuple[BinaryIO, bytes, Manifest]]:
 def _private(path: Path, data: bytes = b"") -> None:
     """A new file at ``path`` for its owner alone, holding ``data``."""
     try:
-        create_private(path, data)
+        files.create_private(path, data)
     except OSError as exc:
         raise BackupError(f"{path} cannot be written: {exc.strerror}") from None
 
@@ -414,13 +415,15 @@ def _replace(target: Path, staged: Path) -> None:
         raise
     if target.exists():
         stamp = utc_now().strftime("%Y%m%dT%H%M%SZ")
-        kept = free_path(target.with_name(f"{target.name}.before-restore-{stamp}"))
+        kept = files.free_path(
+            target.with_name(f"{target.name}.before-restore-{stamp}")
+        )
         try:
             # A second name for the old file: the database stays in place
             # until the new one replaces it in one step.
             os.link(target, kept)
         except FileExistsError:
-            raise  # taken since free_path looked: never replace a kept copy
+            raise  # taken since files.free_path looked: never replace a kept copy
         except OSError:
             target.replace(kept)  # a file system without hard links
         move_sidecars(target, kept)

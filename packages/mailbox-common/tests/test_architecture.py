@@ -19,6 +19,10 @@ LIBRARY_HOMES: dict[str, set[str]] = {
     # pydantic comes with pydantic-settings, for a validator of a field.
     "pydantic": {"settings.files"},
     "pydantic_settings": {"settings.files"},
+    # The group storage checks for its libraries first, then each module
+    # that speaks SQL.
+    "sqlalchemy": {"storage.__init__", "storage.dialect"},
+    "alembic": {"storage.__init__"},
 }
 
 

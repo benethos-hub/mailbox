@@ -13,7 +13,7 @@ from typing import Any
 
 import sqlalchemy as sa
 
-from .dialect import BYTES, COUNTED, NUMBER, TEXT, counter
+from benethos_mailbox_common.storage import dialect
 
 METADATA = sa.MetaData()
 
@@ -21,31 +21,31 @@ METADATA = sa.MetaData()
 def _key(name: str) -> sa.Column[Any]:
     """A key of text. SQLite keeps it without NOT NULL, as the migrations
     made it."""
-    return sa.Column(name, TEXT, primary_key=True, nullable=True)
+    return sa.Column(name, dialect.TEXT, primary_key=True, nullable=True)
 
 
 def _part(name: str) -> sa.Column[Any]:
     """A column of a key of several."""
-    return sa.Column(name, TEXT, primary_key=True, nullable=False)
+    return sa.Column(name, dialect.TEXT, primary_key=True, nullable=False)
 
 
 def _str(
     name: str, *, required: bool = False, default: str | None = None
 ) -> sa.Column[Any]:
-    return sa.Column(name, TEXT, nullable=not required, server_default=default)
+    return sa.Column(name, dialect.TEXT, nullable=not required, server_default=default)
 
 
 def _int(name: str, *, required: bool = False, zero: bool = False) -> sa.Column[Any]:
     return sa.Column(
         name,
-        NUMBER,
+        dialect.NUMBER,
         nullable=not required,
         server_default=sa.literal_column("0") if zero else None,
     )
 
 
 def _bytes(name: str) -> sa.Column[Any]:
-    return sa.Column(name, BYTES, nullable=False)
+    return sa.Column(name, dialect.BYTES, nullable=False)
 
 
 def _ref(name: str, target: str, *, cascade: bool = True) -> sa.Column[Any]:
@@ -53,7 +53,7 @@ def _ref(name: str, target: str, *, cascade: bool = True) -> sa.Column[Any]:
     when ``cascade``."""
     return sa.Column(
         name,
-        TEXT,
+        dialect.TEXT,
         sa.ForeignKey(target, ondelete="CASCADE" if cascade else None),
         nullable=False,
     )
@@ -116,7 +116,7 @@ keys = sa.Table(
     # time itself.
     sa.Column(
         "created_at",
-        TEXT,
+        dialect.TEXT,
         nullable=False,
         server_default=sa.func.current_timestamp(),
     ),
@@ -163,7 +163,7 @@ sends = sa.Table(
 changes = sa.Table(
     "changes",
     METADATA,
-    counter("seq"),
+    dialect.counter("seq"),
     _ref("account_id", "accounts.id"),
     _str("message_id", required=True),
     _str("type", required=True),
@@ -171,7 +171,7 @@ changes = sa.Table(
     _str("folder_id"),
     sa.Index("changes_at", "at"),
     sa.Index("changes_account", "account_id", "seq"),
-    **COUNTED,
+    **dialect.COUNTED,
 )
 
 credentials = sa.Table(
@@ -179,7 +179,7 @@ credentials = sa.Table(
     METADATA,
     sa.Column(
         "account_id",
-        TEXT,
+        dialect.TEXT,
         sa.ForeignKey("accounts.id", ondelete="CASCADE"),
         primary_key=True,
         nullable=False,
@@ -196,7 +196,7 @@ folder_states = sa.Table(
     METADATA,
     sa.Column(
         "account_id",
-        TEXT,
+        dialect.TEXT,
         sa.ForeignKey("accounts.id", ondelete="CASCADE"),
         primary_key=True,
         nullable=False,
@@ -210,7 +210,7 @@ idempotency = sa.Table(
     METADATA,
     sa.Column(
         "account_id",
-        TEXT,
+        dialect.TEXT,
         sa.ForeignKey("accounts.id", ondelete="CASCADE"),
         primary_key=True,
         nullable=False,
@@ -227,7 +227,7 @@ idempotency = sa.Table(
 message_index = sa.Table(
     "message_index",
     METADATA,
-    counter("seq"),
+    dialect.counter("seq"),
     _ref("account_id", "accounts.id"),
     _str("id", required=True),
     _str("native_id", required=True),
@@ -239,7 +239,7 @@ message_index = sa.Table(
     sa.Index("message_index_header", "account_id", "header"),
     sa.Index("message_index_thread", "account_id", "thread_id"),
     sa.Index("message_index_folder", "account_id", "folder_id"),
-    **COUNTED,
+    **dialect.COUNTED,
 )
 
 outbox = sa.Table(
@@ -273,7 +273,7 @@ passkeys = sa.Table(
     _key("id"),
     _ref("user_id", "users.id"),
     _str("name", required=True),
-    sa.Column("credential_id", BYTES, nullable=False, unique=True),
+    sa.Column("credential_id", dialect.BYTES, nullable=False, unique=True),
     _bytes("credential"),
     _int("sign_count", required=True, zero=True),
     _str("created_at", required=True),
@@ -286,7 +286,7 @@ passwords = sa.Table(
     METADATA,
     sa.Column(
         "user_id",
-        TEXT,
+        dialect.TEXT,
         sa.ForeignKey("users.id", ondelete="CASCADE"),
         primary_key=True,
         nullable=True,
@@ -302,7 +302,7 @@ recovery_codes = sa.Table(
     METADATA,
     sa.Column(
         "user_id",
-        TEXT,
+        dialect.TEXT,
         sa.ForeignKey("users.id", ondelete="CASCADE"),
         primary_key=True,
         nullable=False,
@@ -315,13 +315,13 @@ recovery_codes = sa.Table(
 thread_links = sa.Table(
     "thread_links",
     METADATA,
-    counter("seq"),
+    dialect.counter("seq"),
     _ref("account_id", "accounts.id"),
     _str("header", required=True),
     _str("thread_id", required=True),
     sa.UniqueConstraint("account_id", "header"),
     sa.Index("thread_links_thread", "account_id", "thread_id"),
-    **COUNTED,
+    **dialect.COUNTED,
 )
 
 tokens = sa.Table(
@@ -330,7 +330,7 @@ tokens = sa.Table(
     _key("id"),
     _ref("user_id", "users.id"),
     _str("name", required=True),
-    sa.Column("token_hash", TEXT, nullable=False, unique=True),
+    sa.Column("token_hash", dialect.TEXT, nullable=False, unique=True),
     _str("created_at", required=True),
     _str("expires_at"),
     _str("last_used_at"),
@@ -375,7 +375,7 @@ attachment_links = sa.Table(
     "attachment_links",
     METADATA,
     _key("id"),
-    sa.Column("secret_hash", TEXT, nullable=False, unique=True),
+    sa.Column("secret_hash", dialect.TEXT, nullable=False, unique=True),
     _ref("account_id", "accounts.id"),
     _str("message_id", required=True),
     _str("attachment_id", required=True),
@@ -389,7 +389,7 @@ attachment_links = sa.Table(
 webhook_attempts = sa.Table(
     "webhook_attempts",
     METADATA,
-    counter("seq"),
+    dialect.counter("seq"),
     _ref("webhook_id", "webhooks.id"),
     _str("delivery_id", required=True),
     _str("at", required=True),
@@ -397,5 +397,5 @@ webhook_attempts = sa.Table(
     _int("status"),
     _str("error"),
     sa.Index("webhook_attempts_webhook", "webhook_id", "seq"),
-    **COUNTED,
+    **dialect.COUNTED,
 )

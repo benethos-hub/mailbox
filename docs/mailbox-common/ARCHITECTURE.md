@@ -45,6 +45,18 @@ packages/mailbox-common/
                         #   named, never what was given
                         #   secret_file: a secret from a file
                         #   Names: a list of names between commas
+    storage/            # the storage of a program (SQLAlchemy, Alembic)
+      dialect.py        # the types of the columns, and where SQLite and
+                        #   PostgreSQL write differently: upserts,
+                        #   greater, in_chunks, begin_at_once,
+                        #   count_on_from, reading_fixed
+      migrated.py       # Migrated: what opening did to a schema
+      files.py          # create_private, free_path: files for their
+                        #   owner alone (0600), never over another
+      clock.py          # utc_now, iso and parse_iso: a time as text,
+                        #   in UTC, as a database keeps it
+      names.py          # is_plain_name: a role or schema a server takes
+                        #   without quoting, is_loopback_host
     values/             # values written one way
       canonical.py      # JSON: compact to send, canonical to hash
       pauses.py         # doubled: a pause that doubles up to a ceiling
@@ -75,8 +87,11 @@ packages/mailbox-common/
   or the library is heavy. Tests and CI install every extra, and CI
   runs the package once without any.
 - **The pin is exact.** The service, the MCP server and the agents
-  depend on `benethos-mailbox-common[paths,settings]==X.Y.Z`, the version of
-  the release.
+  depend on `benethos-mailbox-common[...]==X.Y.Z`, the version of the
+  release, with the extras each needs: the service
+  `[paths,settings,storage]`, the MCP server and the agents
+  `[paths,settings]`. The extra `postgres` is the driver of PostgreSQL
+  for the group `storage`, named after the database, not the library.
   So groups, paths and extras may change inside a release, and an
   operator never types an extra.
 - **A new module** goes into the group of its concern, with its test in

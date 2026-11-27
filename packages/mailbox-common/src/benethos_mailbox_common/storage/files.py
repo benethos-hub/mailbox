@@ -1,6 +1,6 @@
-"""Files the data layer writes for its owner alone.
+"""Files a program writes for its owner alone.
 
-The database, a backup and a key file each hold secrets or their hashes.
+A database, a backup and a key file each hold secrets or their hashes.
 They are created readable by their owner only (0600), never over an
 existing file. Windows has no such modes, but there the exclusive
 create still holds. The lock file that tells a running service from a

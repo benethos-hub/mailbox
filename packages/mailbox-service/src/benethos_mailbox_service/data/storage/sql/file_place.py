@@ -13,9 +13,10 @@ from typing import Any
 import sqlalchemy as sa
 from sqlalchemy.pool import StaticPool
 
+from benethos_mailbox_common.storage import dialect
+
 from ....errors import StorageError, StorageUnavailableError
 from ..sqlite import file
-from .dialect import SQLITE, begin
 from .outage import Availability
 from .place import Opened, translated_by
 
@@ -112,13 +113,13 @@ def translated() -> Iterator[None]:
 
 def sqlite_engine(connect: Callable[[], Any]) -> sa.Engine:
     """An engine on the one SQLite connection ``connect`` gives, for the
-    whole process. A transaction begins as ``begin`` says. No value of a
+    whole process. A transaction begins as ``dialect.begin_at_once`` says. No value of a
     statement reaches the text of an error."""
     engine = sa.create_engine(
-        f"{SQLITE}://",
+        f"{dialect.SQLITE}://",
         creator=connect,
         poolclass=StaticPool,
         hide_parameters=True,
     )
-    sa.event.listen(engine, "begin", begin)
+    sa.event.listen(engine, "begin", dialect.begin_at_once)
     return engine

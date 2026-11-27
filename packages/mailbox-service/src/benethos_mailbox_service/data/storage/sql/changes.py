@@ -10,10 +10,11 @@ from typing import TYPE_CHECKING, Any
 
 import sqlalchemy as sa
 
+from benethos_mailbox_common.storage import dialect
+
 from ....common.clock import iso, parse_iso
 from ...models import ChangeRecord
 from ..changes import LoggedChange
-from .dialect import greater, in_chunks, insert_or_set
 from .rows import changed
 from .schema import changes, meta
 from .tables import CHANGES_LAST
@@ -59,7 +60,7 @@ class SqlChangeLogRepository:
         if types is not None and not kinds:
             return []
         found: list[LoggedChange] = []
-        for chunk in in_chunks(account_ids):
+        for chunk in dialect.in_chunks(account_ids):
             where = [_c.seq > seq, _c.account_id.in_(chunk)]
             if kinds:
                 where.append(_c.type.in_(kinds))
@@ -109,20 +110,22 @@ class SqlChangeLogRepository:
         changed(self._db, sa.delete(changes).where(_c.account_id == account_id))
 
 
-def _never_less(key: str, value: Any, dialect: sa.Dialect) -> sa.Executable:
+def _never_less(key: str, value: Any, spoken: sa.Dialect) -> sa.Executable:
     """``meta`` at ``key`` set to ``value``, a number, but never to less
     than it holds."""
 
     def kept(excluded: Any) -> dict[str, Any]:
         return {
-            "value": greater(
+            "value": dialect.greater(
                 sa.cast(meta.c.value, sa.BigInteger),
                 sa.cast(excluded.value, sa.BigInteger),
-                dialect,
+                spoken,
             )
         }
 
-    return insert_or_set(meta, ["key"], kept, dialect).values(key=key, value=value)
+    return dialect.insert_or_set(meta, ["key"], kept, spoken).values(
+        key=key, value=value
+    )
 
 
 def _logged(row: sa.RowMapping) -> LoggedChange:

@@ -1,13 +1,13 @@
 """How SQL differs between SQLite and PostgreSQL: the types of the
-columns, and where the two write differently. The one module under
-``sql/`` that names a database in its SQL. How each database is reached
-lies with its place: ``file_place`` for SQLite, ``server_place`` and
-``server_engine`` for PostgreSQL. Everything else under ``sql/`` speaks
-SQLAlchemy Core alone.
+columns, and where the two write differently. The one module of the
+group that names a database in its SQL. How each database is reached
+lies with its place: ``file_place`` and ``sqlite_file`` for SQLite,
+``server_place`` and ``server_engine`` for PostgreSQL. Everything else
+speaks SQLAlchemy Core alone.
 
 Text is compared byte for byte on both: SQLite does so, and PostgreSQL
-is told so by the collation ``C``. The service compares times as ISO
-text and sorts by ids, which must come out the same on both.
+is told so by the collation ``C``. Times are compared as ISO text and
+ids sorted, which must come out the same on both.
 """
 
 from __future__ import annotations
@@ -84,7 +84,7 @@ def insert_or_set(
     """INSERT that, where a row of the same ``key`` is there, sets what
     ``values`` makes of the row the INSERT would have added instead: its
     columns are those of the argument, ``excluded`` in both databases."""
-    statement = _insert(table, dialect)
+    statement = _upsert(table, dialect)
     return statement.on_conflict_do_update(
         index_elements=list(key), set_=dict(values(statement.excluded))
     )
@@ -93,7 +93,7 @@ def insert_or_set(
 def insert_or_skip(table: sa.Table, dialect: sa.Dialect) -> Insert:
     """INSERT that leaves out a row that would break any condition of
     being unique, and goes on."""
-    return _insert(table, dialect).on_conflict_do_nothing()
+    return _upsert(table, dialect).on_conflict_do_nothing()
 
 
 def greater(
@@ -114,9 +114,9 @@ def in_chunks(values: Iterable[T]) -> Iterator[list[T]]:
         yield unique[start : start + IN_CHUNK]
 
 
-def begin(connection: sa.Connection) -> None:
+def begin_at_once(connection: sa.Connection) -> None:
     """How a transaction begins. On SQLite at once as a writer, so two
-    transactions never meet halfway: the one place under ``sql/`` that
+    transactions never meet halfway: the one place of the group that
     hands the driver a statement as text."""
     if connection.dialect.name == SQLITE:
         connection.exec_driver_sql("BEGIN IMMEDIATE")
@@ -163,7 +163,7 @@ def _sequence_on_from(connection: sa.Connection, table: sa.Table, last: int) -> 
         connection.execute(sa.select(sa.func.setval(str(found), last)))
 
 
-def _insert(table: sa.Table, dialect: sa.Dialect) -> Insert:
+def _upsert(table: sa.Table, dialect: sa.Dialect) -> Insert:
     if dialect.name == POSTGRESQL:
         return postgresql.insert(table)
     return sqlite.insert(table)

@@ -22,7 +22,19 @@ from alembic.config import Config
 from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
 
+from benethos_mailbox_common.storage import dialect
+
 from .revision import BASELINE, NOTES, Revision, name_of
+
+# The types a revision writes its tables with, from where a revision
+# takes them.
+BYTES, COUNTED, NUMBER, TEXT = (
+    dialect.BYTES,
+    dialect.COUNTED,
+    dialect.NUMBER,
+    dialect.TEXT,
+)
+counter = dialect.counter
 
 HERE = Path(__file__).parent
 # The revisions of the service.
@@ -118,10 +130,15 @@ def _run(
 
 __all__ = [
     "BASELINE",
+    "BYTES",
+    "COUNTED",
     "HERE",
+    "NUMBER",
     "SCHEMA_VERSION",
+    "TEXT",
     "VERSIONS",
     "Revision",
+    "counter",
     "mark",
     "name_of",
     "numbers",

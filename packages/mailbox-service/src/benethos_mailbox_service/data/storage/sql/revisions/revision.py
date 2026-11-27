@@ -27,8 +27,9 @@ from typing import Any, ClassVar
 import sqlalchemy as sa
 from alembic import op
 
+from benethos_mailbox_common.storage import dialect
+
 from .....errors import StorageError
-from ..dialect import TEXT, insert_or_update
 
 # The schema the first revision makes, the last step of the old chain.
 BASELINE = 26
@@ -43,8 +44,8 @@ NOTES = "notes"
 _META = sa.Table(
     "meta",
     sa.MetaData(),
-    sa.Column("key", TEXT, primary_key=True),
-    sa.Column("value", TEXT),
+    sa.Column("key", dialect.TEXT, primary_key=True),
+    sa.Column("value", dialect.TEXT),
 )
 
 
@@ -142,7 +143,7 @@ class Revision(ABC):
         self.check()
         bind = op.get_bind()
         bind.execute(
-            insert_or_update(_META, ["key"], ["value"], bind.dialect).values(
+            dialect.insert_or_update(_META, ["key"], ["value"], bind.dialect).values(
                 key="schema_version", value=str(self.version)
             )
         )

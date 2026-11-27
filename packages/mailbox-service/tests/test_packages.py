@@ -163,7 +163,7 @@ LINES = {
         {"secrets"},
         {"storage", "providers", "discovery"},
         {"protocols"},
-        {"mail", "files"},
+        {"mail"},
         {"models", "logbook"},
     ),
 }

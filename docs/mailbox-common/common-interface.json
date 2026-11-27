@@ -310,6 +310,118 @@
       "signature": "(path: 'Path') -> 'str'"
     }
   },
+  "benethos_mailbox_common.storage": {
+    "__all__": [
+      "clock",
+      "dialect",
+      "files",
+      "migrated",
+      "names"
+    ]
+  },
+  "benethos_mailbox_common.storage.clock": {
+    "iso": {
+      "signature": "(value: 'datetime | None') -> 'str | None'"
+    },
+    "parse_iso": {
+      "signature": "(value: 'str | None') -> 'datetime | None'"
+    },
+    "utc_now": {
+      "signature": "() -> 'datetime'"
+    }
+  },
+  "benethos_mailbox_common.storage.dialect": {
+    "BYTES": {
+      "source": "sa.LargeBinary()"
+    },
+    "COUNTED": {
+      "source": "{\"sqlite_autoincrement\": True}"
+    },
+    "IN_CHUNK": {
+      "value": 500
+    },
+    "Insert": {
+      "source": "sqlite.Insert | postgresql.Insert"
+    },
+    "NUMBER": {
+      "source": "sa.Integer().with_variant(sa.BigInteger(), POSTGRESQL)"
+    },
+    "POSTGRESQL": {
+      "value": "postgresql"
+    },
+    "SQLITE": {
+      "value": "sqlite"
+    },
+    "T": {
+      "source": "TypeVar(\"T\")"
+    },
+    "TEXT": {
+      "source": "sa.Text().with_variant(sa.Text(collation=\"C\"), POSTGRESQL)"
+    },
+    "begin_at_once": {
+      "signature": "(connection: 'sa.Connection') -> 'None'"
+    },
+    "count_on_from": {
+      "signature": "(connection: 'sa.Connection', table: 'sa.Table', last: 'int') -> 'None'"
+    },
+    "counter": {
+      "signature": "(name: 'str') -> 'sa.Column[int]'"
+    },
+    "greater": {
+      "signature": "(first: 'sa.ColumnElement[Any]', second: 'sa.ColumnElement[Any]', dialect: 'sa.Dialect') -> 'sa.ColumnElement[Any]'"
+    },
+    "in_chunks": {
+      "signature": "(values: 'Iterable[T]') -> 'Iterator[list[T]]'"
+    },
+    "insert_or_set": {
+      "signature": "(table: 'sa.Table', key: 'Sequence[str]', values: 'Callable[[Any], Mapping[str, Any]]', dialect: 'sa.Dialect') -> 'Insert'"
+    },
+    "insert_or_skip": {
+      "signature": "(table: 'sa.Table', dialect: 'sa.Dialect') -> 'Insert'"
+    },
+    "insert_or_update": {
+      "signature": "(table: 'sa.Table', key: 'Sequence[str]', update: 'Sequence[str] | None', dialect: 'sa.Dialect') -> 'Insert'"
+    },
+    "reading_fixed": {
+      "signature": "(connection: 'sa.Connection') -> 'sa.Connection'"
+    }
+  },
+  "benethos_mailbox_common.storage.files": {
+    "create_private": {
+      "signature": "(path: 'Path', data: 'bytes' = b'') -> 'None'"
+    },
+    "free_path": {
+      "signature": "(path: 'Path') -> 'Path'"
+    }
+  },
+  "benethos_mailbox_common.storage.migrated": {
+    "Migrated": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "before": {
+          "type": "int"
+        },
+        "after": {
+          "type": "int"
+        },
+        "notes": {
+          "type": "tuple[str, ...]",
+          "default": "()"
+        }
+      }
+    }
+  },
+  "benethos_mailbox_common.storage.names": {
+    "is_loopback_host": {
+      "signature": "(host: 'str') -> 'bool'"
+    },
+    "is_plain_name": {
+      "signature": "(text: 'str') -> 'bool'"
+    }
+  },
   "benethos_mailbox_common.values": {
     "__all__": [
       "canonical",

@@ -8,6 +8,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `benethos-mailbox-common`: the group `storage`, the storage of a
+  program on SQLAlchemy Core for a file of SQLite and a schema on a
+  PostgreSQL server, with the extra `storage` (SQLAlchemy, Alembic) and
+  the extra `postgres` (the driver of PostgreSQL). `all` brings both.
+  The service takes its types, its times as text and its files for
+  their owner alone from it.
 - PostgreSQL 19 as the storage of the service, beside SQLite, which
   stays the default: `MAILBOX_SERVICE_STORAGE=postgres` keeps the
   records in a schema on a PostgreSQL server, named after the role the

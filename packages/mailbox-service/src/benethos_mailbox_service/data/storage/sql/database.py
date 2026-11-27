@@ -23,9 +23,10 @@ from typing import Any
 
 import sqlalchemy as sa
 
+from benethos_mailbox_common.storage import migrated
+
 from ....common.clock import iso
 from ....errors import StorageError, StorageUnavailableError
-from ..migrated import Migrated
 from . import revisions
 from .file_place import FilePlace
 from .outage import Availability
@@ -46,6 +47,8 @@ from .tables import (
     stored_schema,
     table_named,
 )
+
+Migrated = migrated.Migrated
 
 
 class Database:

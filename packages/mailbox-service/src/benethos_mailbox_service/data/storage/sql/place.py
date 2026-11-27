@@ -19,7 +19,8 @@ from ....errors import ConflictError, StorageError, StorageUnavailableError
 if TYPE_CHECKING:
     import threading
 
-    from ..migrated import Migrated
+    from benethos_mailbox_common.storage import migrated
+
     from .outage import Availability
 
 
@@ -29,7 +30,7 @@ class Opened:
     steps did to the schema, None when nothing."""
 
     connection: sa.Connection
-    migrated: Migrated | None
+    migrated: migrated.Migrated | None
 
 
 class Place(Protocol):

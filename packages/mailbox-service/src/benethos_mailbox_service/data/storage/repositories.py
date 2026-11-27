@@ -12,6 +12,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal, Protocol
 
+from benethos_mailbox_common.storage import migrated
+
 from ...errors import StorageError, StorageUnavailableError
 from .accounts import AccountRepository, InMemoryAccountRepository
 from .audit import AuditRepository, InMemoryAuditRepository
@@ -25,7 +27,6 @@ from .credentials import (
 from .idempotency import IdempotencyRepository, InMemoryIdempotencyRepository
 from .index import InMemoryMessageIndexRepository, MessageIndexRepository
 from .links import InMemoryLinkRepository, LinkRepository
-from .migrated import Migrated
 from .outbox import InMemoryOutboxRepository, OutboxRepository
 from .passkeys import InMemoryPasskeyRepository, PasskeyRepository
 from .passwords import InMemoryPasswordRepository, PasswordRepository
@@ -136,7 +137,7 @@ class Store(Records, Protocol):
         ...
 
     @property
-    def migrated(self) -> Migrated | None:
+    def migrated(self) -> migrated.Migrated | None:
         """What opening the store did to its schema, None when nothing."""
         ...
 

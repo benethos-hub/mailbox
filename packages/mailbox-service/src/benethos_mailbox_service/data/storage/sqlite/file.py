@@ -21,11 +21,10 @@ from contextlib import ExitStack, contextmanager, suppress
 from pathlib import Path
 
 from benethos_mailbox_common.paths import locks
+from benethos_mailbox_common.storage import files, migrated
 
 from ....common.clock import utc_now
 from ....errors import ConflictError, StorageError
-from ...files import create_private, free_path
-from ..migrated import Migrated
 from .migrations import MIGRATIONS, SCHEMA_VERSION
 
 # The connection of the driver, for the one place under sql/ that holds it.
@@ -45,7 +44,7 @@ _INCREMENTAL = 2
 
 def open_file(
     path: Path | None, *, keep_copy: bool, schema: int, newest: int
-) -> tuple[sqlite3.Connection, Migrated | None]:
+) -> tuple[sqlite3.Connection, migrated.Migrated | None]:
     """The connection to the database at ``path``, readable by its owner
     alone, in memory without a path, its schema migrated by the old steps
     to ``schema``, or to their last, schema ``SCHEMA_VERSION``, when
@@ -128,7 +127,7 @@ def _migrate(
     newest: int,
     keep: bool,
     rewritten: bool,
-) -> Migrated | None:
+) -> migrated.Migrated | None:
     """``rewritten``: the file was rewritten to shrink from now on,
     said with the notes of the schema."""
     if upto >= SCHEMA_VERSION and not _has_meta(connection):
@@ -161,7 +160,7 @@ def _migrate(
             "the file was rewritten once: from now on it shrinks after deletions"
         )
     if current < upto or rewritten:
-        return Migrated(current, upto, tuple(notes))
+        return migrated.Migrated(current, upto, tuple(notes))
     return None
 
 
@@ -185,9 +184,11 @@ def keep_copy(
     StorageError when it cannot be written, and then nothing is
     migrated."""
     stamp = utc_now().strftime("%Y%m%dT%H%M%SZ")
-    kept = free_path(path.with_name(f"{path.name}.before-schema-{before}-{stamp}"))
+    kept = files.free_path(
+        path.with_name(f"{path.name}.before-schema-{before}-{stamp}")
+    )
     try:
-        create_private(kept)
+        files.create_private(kept)
     except OSError as exc:
         raise _not_copied(current, before, exc) from None
     try:
@@ -237,7 +238,7 @@ def snapshot(
     try:
         with locks.exclusive_lock(target.with_name(target.name + ".lock")):
             remove_database_file(target)
-            create_private(target)
+            files.create_private(target)
             try:
                 with lock, translated():
                     _copy(connection, target)
@@ -305,7 +306,7 @@ def _owner_only(path: Path) -> None:
     one that others may read is narrowed. SQLite gives its journal files
     the mode of the database. Windows has no such modes."""
     if not path.exists():
-        create_private(path)
+        files.create_private(path)
     if os.name == "posix" and stat.S_IMODE(path.stat().st_mode) & 0o077:
         path.chmod(0o600)
 

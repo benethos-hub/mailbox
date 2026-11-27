@@ -7,9 +7,10 @@ from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
 
+from benethos_mailbox_common.storage import dialect
+
 from ....common.clock import iso, parse_iso
 from ..idempotency import StoredResult
-from .dialect import insert_or_update
 from .rows import changed
 from .schema import idempotency
 
@@ -52,7 +53,7 @@ class SqlIdempotencyRepository:
         # A result stored again under the same key replaces the one before.
         with self._db.connected() as conn:
             conn.execute(
-                insert_or_update(idempotency, _KEY, None, conn.dialect).values(
+                dialect.insert_or_update(idempotency, _KEY, None, conn.dialect).values(
                     account_id=account_id,
                     user_id=user_id,
                     key=key,
