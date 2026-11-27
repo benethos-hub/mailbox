@@ -7,6 +7,8 @@ each class onto one, so the domain and the data layer stay free of HTTP.
 
 from __future__ import annotations
 
+from benethos_mailbox_common.storage import errors as storage_errors
+
 
 class MailboxServiceError(Exception):
     """Base class of every anticipated failure."""
@@ -25,7 +27,7 @@ class MailboxServiceError(Exception):
         return self
 
 
-class NotFoundError(MailboxServiceError):
+class NotFoundError(MailboxServiceError, storage_errors.NotFoundError):
     code = "not_found"
 
 
@@ -88,7 +90,7 @@ class CredentialMissingError(CredentialError):
     code = "credential_missing"
 
 
-class ConflictError(MailboxServiceError):
+class ConflictError(MailboxServiceError, storage_errors.ConflictError):
     """The record collides with what is stored: an id or a unique value
     taken, or a reference to a record that is gone."""
 
@@ -124,22 +126,22 @@ class SendLimitError(RateLimitedError):
     code = "send_limit_reached"
 
 
-class StorageError(MailboxServiceError):
+class StorageError(MailboxServiceError, storage_errors.StorageError):
     """The service's own storage failed: busy, damaged or unreadable."""
 
     code = "storage_error"
 
 
-class StorageInUseError(StorageError):
+class StorageInUseError(StorageError, storage_errors.StorageInUseError):
     """A running service holds the lock of the database on a server."""
 
 
-class SchemaNotEmptyError(StorageError):
+class SchemaNotEmptyError(StorageError, storage_errors.SchemaNotEmptyError):
     """A schema on a server that holds tables, where a restore or a move
     goes into an empty one only."""
 
 
-class StorageUnavailableError(StorageError):
+class StorageUnavailableError(StorageError, storage_errors.StorageUnavailableError):
     """The service's own database cannot be reached, for now. Its message
     is the same whatever happened: ``cause`` says what, for the log
     alone, and ``retry_after`` the seconds until the next attempt."""

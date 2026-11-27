@@ -314,6 +314,7 @@
     "__all__": [
       "clock",
       "dialect",
+      "errors",
       "files",
       "migrated",
       "names"
@@ -384,6 +385,87 @@
     },
     "reading_fixed": {
       "signature": "(connection: 'sa.Connection') -> 'sa.Connection'"
+    }
+  },
+  "benethos_mailbox_common.storage.errors": {
+    "ConflictError": {
+      "bases": [
+        "builtins.Exception"
+      ]
+    },
+    "Errors": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "failed": {
+          "type": "Callable[[str], StorageError]",
+          "default": "<class 'benethos_mailbox_common.storage.errors.StorageError'>"
+        },
+        "conflict": {
+          "type": "Callable[[str], ConflictError]",
+          "default": "<class 'benethos_mailbox_common.storage.errors.ConflictError'>"
+        },
+        "missing": {
+          "type": "Callable[[str, str], NotFoundError]",
+          "default": "<bound method NotFoundError.of of <class 'benethos_mailbox_common.storage.errors.NotFoundError'>>"
+        },
+        "in_use": {
+          "type": "Callable[[str], StorageInUseError]",
+          "default": "<class 'benethos_mailbox_common.storage.errors.StorageInUseError'>"
+        },
+        "not_empty": {
+          "type": "Callable[[str], SchemaNotEmptyError]",
+          "default": "<class 'benethos_mailbox_common.storage.errors.SchemaNotEmptyError'>"
+        },
+        "unavailable": {
+          "type": "Callable[[int, str], StorageUnavailableError]",
+          "default": "<bound method StorageUnavailableError.after of <class 'benethos_mailbox_common.storage.errors.StorageUnavailableError'>>"
+        }
+      }
+    },
+    "NotFoundError": {
+      "bases": [
+        "builtins.Exception"
+      ],
+      "methods": {
+        "of": {
+          "signature": "(cls, what: 'str', name: 'str') -> 'NotFoundError'"
+        }
+      }
+    },
+    "OWN": {
+      "source": "Errors()"
+    },
+    "SchemaNotEmptyError": {
+      "bases": [
+        "benethos_mailbox_common.storage.errors.StorageError"
+      ]
+    },
+    "StorageError": {
+      "bases": [
+        "builtins.Exception"
+      ]
+    },
+    "StorageInUseError": {
+      "bases": [
+        "benethos_mailbox_common.storage.errors.StorageError"
+      ]
+    },
+    "StorageUnavailableError": {
+      "bases": [
+        "benethos_mailbox_common.storage.errors.StorageError"
+      ],
+      "annotations": {
+        "cause": "str",
+        "retry_after": "int"
+      },
+      "methods": {
+        "after": {
+          "signature": "(cls, retry_after: 'int', cause: 'str' = '') -> 'StorageUnavailableError'"
+        }
+      }
     }
   },
   "benethos_mailbox_common.storage.files": {

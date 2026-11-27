@@ -13,7 +13,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   PostgreSQL server, with the extra `storage` (SQLAlchemy, Alembic) and
   the extra `postgres` (the driver of PostgreSQL). `all` brings both.
   The service takes its types, its times as text and its files for
-  their owner alone from it.
+  their owner alone from it. The group raises its own errors, or the
+  subclasses a program names in `errors.Errors`, as the service does
+  with its own.
 - PostgreSQL 19 as the storage of the service, beside SQLite, which
   stays the default: `MAILBOX_SERVICE_STORAGE=postgres` keeps the
   records in a schema on a PostgreSQL server, named after the role the

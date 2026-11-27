@@ -51,6 +51,9 @@ packages/mailbox-common/
                         #   greater, in_chunks, begin_at_once,
                         #   count_on_from, reading_fixed
       migrated.py       # Migrated: what opening did to a schema
+      errors.py         # the errors of the storage, and Errors: which
+                        #   classes a program has it raise, its own
+                        #   subclasses of them
       files.py          # create_private, free_path: files for their
                         #   owner alone (0600), never over another
       clock.py          # utc_now, iso and parse_iso: a time as text,

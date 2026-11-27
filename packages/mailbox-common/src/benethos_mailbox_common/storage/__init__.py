@@ -17,8 +17,8 @@ except ModuleNotFoundError as missing:
         name=missing.name,
     ) from missing
 
-from . import clock, dialect, files, migrated, names
+from . import clock, dialect, errors, files, migrated, names
 
 del alembic, sqlalchemy
 
-__all__ = ["clock", "dialect", "files", "migrated", "names"]
+__all__ = ["clock", "dialect", "errors", "files", "migrated", "names"]
