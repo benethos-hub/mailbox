@@ -420,18 +420,21 @@ class Mailbox:
 
     async def forward_drafted(self, ref: MessageRef, recipients: Iterable[str]) -> bool:
         """Whether a forward of the message to exactly ``recipients`` lies
-        among the drafts of its account, on their first page."""
+        among the drafts of its account, page by page."""
         wanted = sorted(address.casefold() for address in recipients)
-        found = await _call(self._client.list_drafts(ref.account_id))
-        for draft in found.items:
-            if sorted(a.email.casefold() for a in draft.to) != wanted:
-                continue
-            whole = await _call(self._client.get_message(ref.account_id, draft.id))
-            named = whole.reference
-            forwards = (ref.message_id, "forward")
-            if named and (named.message_id, named.action) == forwards:
-                return True
-        return False
+        forwards = (ref.message_id, "forward")
+        cursor: str | None = None
+        while True:
+            found = await _call(self._client.list_drafts(ref.account_id, cursor=cursor))
+            for draft in found.items:
+                if sorted(a.email.casefold() for a in draft.to) != wanted:
+                    continue
+                whole = await _call(self._client.get_message(ref.account_id, draft.id))
+                named = whole.reference
+                if named and (named.message_id, named.action) == forwards:
+                    return True
+            if not (cursor := found.next_cursor):
+                return False
 
 
 def _with_paths(found: list[wire.Folder]) -> dict[str, FolderRef]:
