@@ -36,6 +36,8 @@ __all__ = [
     "Found",
     "classify",
     "classify_rules",
+    "decide",
+    "decide_by_rules",
     "found_in",
     "key",
     "requests_for",
@@ -116,6 +118,38 @@ def _stored(decision: Decision, index: int, dimension: Dimension) -> Choice | No
     field = LABEL if index == 0 else dimension.name
     quote = next((e.quote for e in decision.evidence if e.field == field), None)
     return Choice(name, details, quote=quote or None, by_model=True)
+
+
+def decide_by_rules(chain: Chain, message: MailMessage) -> Decision:
+    """The decision of the chain without a model: each dimension whose
+    ``when`` holds for the categories chosen before it, answered by its
+    rules."""
+    chosen: dict[str, str] = {}
+    choices: list[Choice | None] = []
+    for dimension in chain.dimensions:
+        if not _runs(dimension, chosen):
+            choices.append(None)
+            continue
+        found = classify_rules(dimension, message)
+        chosen[dimension.name] = found.category
+        choices.append(found)
+    return to_decision(chain, choices)
+
+
+async def decide(chain: Chain, message: MailMessage, context: Context) -> Decision:
+    """The decision of the chain: for each dimension that runs, the rules
+    where they settle it, with no call, else the model, once per recognizer
+    that asks it, among the categories to choose from."""
+    chosen: dict[str, str] = {}
+    choices: list[Choice | None] = []
+    for dimension in chain.dimensions:
+        if not _runs(dimension, chosen):
+            choices.append(None)
+            continue
+        found = await classify(dimension, message, context)
+        chosen[dimension.name] = found.category
+        choices.append(found)
+    return to_decision(chain, choices)
 
 
 def refreshed(chain: Chain, stored: Decision, message: MailMessage) -> Decision:
