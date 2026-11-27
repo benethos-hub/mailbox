@@ -149,6 +149,18 @@ async def test_the_text_is_the_text_part_else_the_visible_html(
     assert found.text == read
 
 
+async def test_a_keyword_with_a_lone_surrogate_is_read_replaced(
+    fake_service: FakeService, mailbox: Mailbox
+) -> None:
+    keywords = ["agent-invoice", f"{chr(0xD800)}x"]
+    fake_service.add(wire_message("m1", thread_id="t", keywords=keywords))
+
+    found = await mailbox.message(REF)
+    [in_thread] = (await mailbox.thread(ACCOUNT, "t")).messages
+
+    assert found.keywords == in_thread.keywords == ("agent-invoice", "�x")
+
+
 async def test_a_new_folder_is_asked_for_again(
     fake_service: FakeService, mailbox: Mailbox
 ) -> None:

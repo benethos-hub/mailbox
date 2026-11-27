@@ -314,7 +314,7 @@ class Mailbox:
                 cc=_addresses(found.cc),
                 date=found.date,
                 received=found.received,
-                keywords=tuple(found.keywords),
+                keywords=tuple(map(sound, found.keywords)),
                 # The text part, else the visible text of the HTML part,
                 # as the mail page and the MCP server read it.
                 text=plaintext.mail_text(
@@ -350,7 +350,7 @@ class Mailbox:
                         to=_addresses(item.to),
                         date=item.date,
                         received=item.received,
-                        keywords=tuple(item.keywords),
+                        keywords=tuple(map(sound, item.keywords)),
                     )
                 )
             return Thread(id=found.id, messages=tuple(messages))

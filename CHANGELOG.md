@@ -324,6 +324,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   expired feed, take up the mail an instance of `categorization` that
   waits for keywords alone waits for, when it carries them already.
   Before, such an instance took up nothing in a backfill.
+- `benethos-mailbox-agents`: a keyword with half of a surrogate pair,
+  which cannot be written as UTF-8, is read with U+FFFD in its place,
+  as every other text of a mail. Before, it ended the worker when the
+  state file was written, again after each start.
 - `restore` and `backup verify` refuse a backup whose manifest holds a
   field of the wrong type, such as the schema as a text, with a message
   instead of a traceback.
