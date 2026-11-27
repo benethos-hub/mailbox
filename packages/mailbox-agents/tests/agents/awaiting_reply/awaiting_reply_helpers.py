@@ -12,9 +12,9 @@ from benethos_mailbox_agents.agents.awaiting_reply.agent import AwaitingReply
 from benethos_mailbox_agents.records import MessageRef
 from benethos_mailbox_agents.runtime.loop import Worker
 
-from ..agents_fake import ACCOUNT, wire_message
-from ..agents_helpers import Wired, settings, wired
-from ..clocks import Clock
+from ...agents_fake import ACCOUNT, wire_message
+from ...agents_helpers import Wired, settings, wired
+from ...clocks import Clock
 
 ME = "me@example.test"
 

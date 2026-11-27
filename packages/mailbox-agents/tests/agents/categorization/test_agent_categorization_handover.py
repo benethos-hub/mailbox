@@ -16,7 +16,7 @@ from benethos_mailbox_agents.cli import main
 from benethos_mailbox_agents.errors import ConfigError
 from benethos_mailbox_agents.runtime.readiness import start
 
-from ..agents_helpers import settings
+from ...agents_helpers import settings
 from .categorization_chain_helpers import (
     Scripted,
     categorization,

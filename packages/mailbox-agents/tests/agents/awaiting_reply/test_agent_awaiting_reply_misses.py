@@ -11,7 +11,7 @@ from benethos_mailbox_agents.agents.awaiting_reply.schema import (
 )
 from benethos_mailbox_agents.records import Address, MailMessage
 
-from ..agents_fake import ACCOUNT, wire_message
+from ...agents_fake import ACCOUNT, wire_message
 from .awaiting_reply_helpers import (
     ASK,
     ME,

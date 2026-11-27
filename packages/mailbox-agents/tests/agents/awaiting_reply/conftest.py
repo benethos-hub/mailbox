@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from ..agents_helpers import wired
+from ...agents_helpers import wired
 from .awaiting_reply_helpers import World
 
 

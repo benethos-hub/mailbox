@@ -16,8 +16,8 @@ from benethos_mailbox_agents.errors import ConfigError
 from benethos_mailbox_agents.records import Decision
 from benethos_mailbox_agents.runtime.readiness import start
 
-from ..agents_fake import wire_message
-from ..agents_helpers import Wired, actions, decision, run, settings, wired, worker
+from ...agents_fake import wire_message
+from ...agents_helpers import Wired, actions, decision, run, settings, wired, worker
 
 INVOICE = "agent-invoice"
 TO = "books@example.org"

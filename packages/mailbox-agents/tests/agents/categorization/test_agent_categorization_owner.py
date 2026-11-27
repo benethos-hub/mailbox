@@ -16,8 +16,8 @@ import pytest
 from benethos_mailbox_agents.agents.categorization.agent import Categorization
 from benethos_mailbox_agents.records import Event, FolderRef, MessageRef
 
-from ..agents_fake import ACCOUNT, wire_message
-from ..agents_helpers import Wired, actions, mail, run, settings, wired
+from ...agents_fake import ACCOUNT, wire_message
+from ...agents_helpers import Wired, actions, mail, run, settings, wired
 
 CHAIN: dict[str, Any] = {
     "dimensions": [

@@ -10,8 +10,8 @@ import httpx
 from benethos_mailbox_agents.agents.awaiting_reply.agent import AwaitingReply
 from benethos_mailbox_agents.runtime.loop import Worker
 
-from ..agents_fake import ACCOUNT
-from ..agents_helpers import settings, wired
+from ...agents_fake import ACCOUNT
+from ...agents_helpers import settings, wired
 from .awaiting_reply_helpers import (
     ASK,
     QUESTION,

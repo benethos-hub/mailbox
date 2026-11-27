@@ -15,8 +15,8 @@ from benethos_mailbox_agents.errors import ConfigError, MailboxUnavailableError
 from benethos_mailbox_agents.records import MessageRef
 from benethos_mailbox_agents.runtime.readiness import start
 
-from ..agents_fake import ACCOUNT, wire_message
-from ..agents_helpers import (
+from ...agents_fake import ACCOUNT, wire_message
+from ...agents_helpers import (
     Wired,
     actions,
     decision,

@@ -336,17 +336,15 @@ def test_each_agent_has_its_spec_and_its_settings_for_operation(name: str) -> No
 
 
 def _of_one_agent() -> list[tuple[Path, str]]:
-    """Each test file of one agent, test_agent_<name> or below, with the
-    agent. A test of all agents, such as test_agent_schemas.py, is none."""
-    found = []
-    for path in sorted((PACKAGE_DIR / "tests" / "agents").glob("test_agent_*.py")):
-        for name in sorted(discover(), key=len, reverse=True):
-            if path.stem == f"test_agent_{name}" or path.stem.startswith(
-                f"test_agent_{name}_"
-            ):
-                found.append((path, name))
-                break
-    return found
+    """Each test file of one agent, in tests/agents/<name>/ as its source is
+    in agents/<name>/, with the agent. A test of all agents, such as
+    test_agent_schemas.py beside the folders, is none."""
+    agents = set(discover())
+    return [
+        (path, path.parent.name)
+        for path in sorted((PACKAGE_DIR / "tests" / "agents").glob("*/test_*.py"))
+        if path.parent.name in agents
+    ]
 
 
 OF_ONE_AGENT = _of_one_agent()

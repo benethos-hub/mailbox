@@ -19,8 +19,8 @@ from benethos_mailbox_agents.agents.categorization.agent import Categorization
 from benethos_mailbox_agents.agents.categorization.lists import read_chain
 from benethos_mailbox_agents.contract import Action
 
-from ..agents_fake import wire_message
-from ..agents_helpers import Wired, actions, mail, run, settings, wired
+from ...agents_fake import wire_message
+from ...agents_helpers import Wired, actions, mail, run, settings, wired
 
 
 def listed(keyword_stage: str | None = None, move_stage: str | None = None) -> Any:

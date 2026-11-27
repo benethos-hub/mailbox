@@ -20,8 +20,8 @@ from benethos_mailbox_agents.records import Decision, Event, MessageRef
 from benethos_mailbox_agents.runtime.loop import Worker
 from benethos_mailbox_agents.store import Store
 
-from ..agents_fake import ACCOUNT, wire_message
-from ..agents_helpers import Wired, mail, settings, wired
+from ...agents_fake import ACCOUNT, wire_message
+from ...agents_helpers import Wired, mail, settings, wired
 
 QUOTE = "please find attached the invoice for November"
 
