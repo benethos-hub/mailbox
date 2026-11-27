@@ -51,7 +51,9 @@ own text.
   stays in the inbox.
 - **From a folder of the owner,** one without a role: only below that
   folder, by the first rule with a below. A `move` does not take mail out
-  of a folder the owner or a rule of the mail server put it in.
+  of a folder the owner or a rule of the mail server put it in. A message
+  that lies where its rules from the inbox lead already, such as one whose
+  move went through while its keyword did not, gets the keyword.
 - **Anywhere else** it stays.
 
 With the example, a message in the inbox that carries

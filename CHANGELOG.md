@@ -328,6 +328,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   which cannot be written as UTF-8, is read with U+FFFD in its place,
   as every other text of a mail. Before, it ended the worker when the
   state file was written, again after each start.
+- `benethos-mailbox-agents`: `filing` sets its keyword on a message
+  whose move went through while the keyword did not. Before, the next
+  attempt found the message in its folder, left it without the keyword,
+  and every later update took it up again.
 - `restore` and `backup verify` refuse a backup whose manifest holds a
   field of the wrong type, such as the schema as a text, with a message
   instead of a traceback.
