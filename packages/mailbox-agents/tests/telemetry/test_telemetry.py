@@ -239,13 +239,12 @@ def test_a_none_of_the_model_is_named_as_the_model_s(tmp_path: Path) -> None:
 def test_the_runtime_loads_no_sdk_of_opentelemetry() -> None:
     """Only the command line imports ``otlp``: the runtime alone, in a fresh
     process, loads nothing of the SDK and no protobuf."""
+    probe = (
+        "import sys, benethos_mailbox_agents.runtime.loop; "
+        "print(sorted(n for n in sys.modules if n.startswith('opentelemetry')))"
+    )
     loaded = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            "import sys, benethos_mailbox_agents.runtime.loop; "
-            "print(sorted(n for n in sys.modules if n.startswith('opentelemetry')))",
-        ],
+        [sys.executable, "-c", probe],
         capture_output=True,
         text=True,
         check=True,
