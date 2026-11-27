@@ -122,6 +122,7 @@ that is not lower case letters, digits and dashes, the same form
 | `observe(message, context)` | for an event routed to `observe`: the actions it calls for, no model |
 | `tick(now, context)` | for agents with deadlines: what is due |
 | `prepare()` | reads what the agent needs beyond its settings, such as a list in a file |
+| `waits_for(keyword)` | whether the agent waits for a keyword, case aside, as a list that hands over by keywords does. Code only. None by default. An agent that waits for its own keyword would set itself off: `status` names it, and it does not start (2026-11-27) |
 | `asks_model()` | whether the agent, as configured, asks a model and needs the gateway. Asked after `prepare()`. By default whether its limits allow a call. `categorization` asks one only when a recognizer of its list does: a category with a topic, or one that names the recognizer `invoice` (2026-11-25) |
 | `backfill_folder(folder)` | whether `backfill` takes up the messages of this folder besides the inbox and sent mail. No folder by default |
 | `folders_needed()` | the folders its configuration names and expects to be there, which `status` looks up. None by default |

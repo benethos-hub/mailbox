@@ -110,13 +110,11 @@ class Categorization(Classifier):
 
     def prepare(self) -> None:
         """Read the list now, so a wrong one stops the start, and with it
-        the version the decision is stored under. A list that waits for
-        the agent's own keyword is refused: it would set itself off."""
-        if self.chain.on.waits_for(self.keyword):
-            raise ConfigError(
-                "the categorization list: on.keywords names the agent's own keyword: "
-                "it would set itself off"
-            )
+        the version the decision is stored under."""
+        _ = self.listed
+
+    def waits_for(self, keyword: str) -> bool:
+        return self.chain.on.waits_for(keyword)
 
     @cached_property
     def listed(self) -> Listed:

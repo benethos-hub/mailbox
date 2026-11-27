@@ -299,6 +299,12 @@ class Agent(ABC):
         before the agent starts, and by ``status``."""
         return None
 
+    def waits_for(self, keyword: str) -> bool:
+        """Whether the agent waits for ``keyword``, case aside, as a list
+        that hands over by keywords does. None by default. An agent that
+        waits for its own keyword would set itself off: it does not start."""
+        return False
+
     def asks_model(self) -> bool:
         """Whether this agent, as configured, asks a model, so it needs the
         gateway. Asked after :meth:`prepare`. By default whether its limits

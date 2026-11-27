@@ -14,6 +14,7 @@ from benethos_mailbox_agents.agents.forwarding.agent import Forwarding
 from benethos_mailbox_agents.contract import Action, Shown, ShownAction, discover
 from benethos_mailbox_agents.errors import ConfigError
 from benethos_mailbox_agents.records import Decision
+from benethos_mailbox_agents.runtime.readiness import start
 
 from ..agents_fake import wire_message
 from ..agents_helpers import Wired, actions, decision, run, settings, wired, worker
@@ -177,6 +178,24 @@ def test_its_recipients_are_those_of_its_list(tmp_path: Path) -> None:
 def test_without_its_list_it_does_not_start() -> None:
     with pytest.raises(ConfigError, match="MAILBOX_AGENTS_FORWARDING_FILE"):
         Forwarding(settings()).prepare()
+
+
+# The settings of the mailbox service, so start() asks for nothing else.
+SERVICE = {"service_url": "https://mailbox.example.test", "service_token": "t"}
+
+
+def test_a_list_that_waits_for_its_own_keyword_does_not_start(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "forwarding.json"
+    rules = {
+        "on": {"keywords": ["agent-*"]},
+        "rules": [{"keywords": [INVOICE], "to": [TO]}],
+    }
+    path.write_text(json.dumps(rules), encoding="utf-8")
+
+    with pytest.raises(ConfigError, match="waits for the agent's own keyword"):
+        start(Forwarding, settings(forwarding_file=path, **SERVICE))
 
 
 def test_the_report_counts_per_rule(tmp_path: Path) -> None:
