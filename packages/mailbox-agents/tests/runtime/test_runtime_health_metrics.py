@@ -13,7 +13,7 @@ import pytest
 
 from benethos_mailbox_agents.cli import main
 from benethos_mailbox_agents.errors import ConfigError
-from benethos_mailbox_agents.runtime.health import check, window
+from benethos_mailbox_agents.runtime.health import check, window, window_of
 from benethos_mailbox_agents.runtime.loop import Worker
 from benethos_mailbox_agents.runtime.metrics import Metrics
 
@@ -27,6 +27,12 @@ def test_the_window_is_three_polls_and_a_model_call() -> None:
     found = settings(poll_seconds=60, gateway_timeout_seconds=120)
 
     assert window(found) == timedelta(seconds=300)
+
+
+def test_the_window_of_two_numbers_is_the_window_of_the_settings() -> None:
+    found = settings(poll_seconds=7.5, gateway_timeout_seconds=30)
+
+    assert window_of(7.5, 30) == window(found) == timedelta(seconds=52.5)
 
 
 async def test_healthy_while_the_loop_makes_progress(world: Wired) -> None:
