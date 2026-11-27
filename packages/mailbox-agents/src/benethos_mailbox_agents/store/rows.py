@@ -28,11 +28,16 @@ def _time(text: str | None) -> datetime | None:
 def _sqlite(name: str) -> Iterator[None]:
     """A :class:`StateFileError` for any error of sqlite, naming the file
     and what sqlite said: the store is the one home of sqlite3, and no
-    caller knows its errors."""
+    caller knows its errors. So is a text it cannot write as UTF-8, which
+    it raises outside its own errors, named without the text."""
     try:
         yield
     except sqlite3.Error as exc:
         raise StateFileError(f"the state file {name or ''}: {exc}") from None
+    except UnicodeEncodeError:
+        raise StateFileError(
+            f"the state file {name or ''}: a text that is not valid UTF-8"
+        ) from None
 
 
 class _Rows:
