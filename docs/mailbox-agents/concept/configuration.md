@@ -21,7 +21,7 @@ may be given as a file with the suffix `_FILE`. An empty line, such as
 | `MODEL` | the alias the gateway resolves |
 | `CA_FILE` | a file of PEM certificates of the authorities https to the service and the gateway trusts, in place of the public roots, for an upstream with a certificate of an own CA (2026-11-19). Read at the start: a missing file or one without a certificate stops it. Unset: the roots of certifi. `SSL_CERT_FILE` and the proxy variables are never read |
 | `ACCOUNTS` | the accounts to work on, comma separated, all the user may read when unset |
-| `STAGE` | `shadow`, `keyword` or `full`, `shadow` when unset |
+| `STAGE` | `shadow`, `suggest` or `full`, `shadow` when unset. `keyword`, the word of `suggest` before 2026-11-27, is read as `suggest` |
 | `KEYWORD` | the keyword the agent sets, the agent's own default when unset. Lower case letters, digits and dashes, such as `agent-invoice` (2026-11-19). It belongs in the env file of one agent: an agent whose keyword is another agent's default does not start, and `status` warns when it is set |
 | `INSTANCE` | one of several processes of one agent, each with a list of its own, such as `partner` for `categorization` (2026-11-25). Its state file is `<agent>-<instance>.db`, its default keyword the agent's with `-<instance>` after it, its log lines, `status` and `report` name it `<agent>/<instance>`, its metrics name it in `mailbox_agents_info`. Lower case letters, digits and dashes, a letter first, at most 40. Unset: the agent alone, as before |
 | `POLL_SECONDS`, `TICK_SECONDS` | how often the feed is read and the clock asked, `60` and `900` when unset |

@@ -98,7 +98,7 @@ What the project is for: [the repository's README](https://github.com/benethos-h
   its own SQLite state file. The state file holds ids and decisions, never
   the text of a mail.
 - A new agent starts in the stage `shadow`, where it only records what it
-  would do. The stages `keyword` and `full` follow after it was measured
+  would do. The stages `suggest` and `full` follow after it was measured
   against labelled mail.
 
 ## Install

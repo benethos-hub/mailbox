@@ -42,7 +42,7 @@ What the agents rely on:
   the provider reports it, for IMAP with CONDSTORE. `awaiting_reply` depends
   on this ([awaiting reply](agent-awaiting-reply.md)).
 - Keywords are not available on every provider **(to verify per account
-  before an agent is switched to the keyword stage)**. At Stalwart over
+  before an agent is switched to the stage `suggest`)**. At Stalwart over
   IMAP they are: measured 2026-11-17 against 0.7.5, a keyword set and
   taken off again, and 2026-11-20 against 0.8.0 and 2026-11-21 against
   0.9.0, where `live/mailbox-agents/categorization.py` and `live/mailbox-agents/invoices.py`, removed with the agent `invoices`, set an agent's
@@ -157,7 +157,7 @@ of the test account. The runtime refuses only the trash, junk and spam as
 a target by itself, so an agent moves a message into drafts only where
 its settings name that folder: a target of the categorization list. In the stage `full` such a move
 meets the `400` and is logged as refused and not recorded, as any refused
-action. In `shadow` and `keyword` it is recorded and the service is not
+action. In `shadow` and `suggest` it is recorded and the service is not
 asked.
 
 ## The version of the service

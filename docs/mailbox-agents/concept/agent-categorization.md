@@ -237,7 +237,7 @@ another.
 | Stage | Folder creation | Move | Keyword |
 |---|---|---|---|
 | `shadow` | recorded | recorded | recorded |
-| `keyword` | recorded | recorded | recorded. It goes with the move, so the stage acts like `shadow` |
+| `suggest` | recorded | recorded | recorded. It goes with the move, so the stage acts like `shadow` |
 | `full` | made | made, but for a held group and for a group chosen by its topic that does not act on it | set, but for a held group and for a group chosen by its topic that does not act on it |
 
 `by_topic` adds to the stage, it does not replace it: below `full`
