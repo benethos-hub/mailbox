@@ -56,7 +56,6 @@ from agents_common.test_database import (
 )
 from common.accounts import read_env
 
-from benethos_mailbox_agents.cli.storage import LOGIN, READER, suggested_name
 from benethos_mailbox_agents.cockpit import sources
 from benethos_mailbox_agents.settings import PREFIX, Settings
 from benethos_mailbox_agents.store import Store
@@ -64,6 +63,9 @@ from benethos_mailbox_common.storage.server_place import Server
 from benethos_mailbox_service.data.storage import open_repositories
 
 DAYS = "30"
+# The read role and the role of the cockpit storage provision makes.
+READER = "agents_read"
+LOGIN = "agents_cockpit"
 # How long the test database stays stopped, and how long the worker may
 # take to write its progress once it is back.
 AWAY_SECONDS = 15
@@ -85,7 +87,9 @@ class Live:
         return f"live-{self.tag}-{letter}"
 
     def name(self, letter: str) -> str:
-        return suggested_name("counting", self.instance(letter))
+        """The role and the database of instance ``letter``, as
+        storage provision names them where the settings name none."""
+        return f"agent_counting_live_{self.tag}_{letter}"
 
     def server(self, letter: str) -> Server:
         name = self.name(letter)
