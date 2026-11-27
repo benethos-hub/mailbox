@@ -185,10 +185,13 @@ async def test_what_was_before_is_recorded_before_the_action(
     assert (move.action, move.before) == ("move_to_folder", {"folders": ["inbox"]})
 
 
+@pytest.mark.parametrize("refusal", [(422, "keyword_refused"), (501, "not_supported")])
 async def test_a_write_the_service_refuses_is_not_recorded(
-    actions_world: Wired,
+    actions_world: Wired, refusal: tuple[int, str]
 ) -> None:
-    actions_world.service.write_refusal = (422, "keyword_refused")
+    """A 501 not_supported too: a keyword on an account without keywords
+    is refused, the service is not away."""
+    actions_world.service.write_refusal = refusal
 
     assert await executor(actions_world)([ADD]) == [Outcome.REFUSED]
     assert actions_world.store.actions() == []

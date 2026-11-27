@@ -31,6 +31,12 @@ stated about the domain of its sender: `pass`, `fail` or `unknown`,
 and `unknown` when the answer has none. Another value is an answer that
 is not what the API describes, a refusal (2026-11-27). No agent acts on
 it yet.
+An answer from `500` on and a `429` count as the service away: the pass
+ends and the runtime waits. A `501` with the code `not_supported` is
+not: it says what an account cannot do, a keyword on Gmail or POP3, a
+draft on an account without a drafts folder. It is a refusal of that
+request, logged as refused and not recorded, the message ends and the
+pass goes on (2026-11-27).
 `list_all_messages` without a folder lists the inbox alone (measured
 2026-11-17 against 0.7.5), so a backfill names each folder role it wants.
 

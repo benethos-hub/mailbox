@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import ssl
-from collections.abc import AsyncIterator
 from datetime import date
 
 import httpx
@@ -27,21 +26,6 @@ REF = MessageRef(account_id=ACCOUNT, message_id="m1")
 # Brackets nested deeper than any parser's stack holds: 20 000 raise a
 # RecursionError on Windows, not on Linux from Python 3.14.
 DEEP = 1_000_000
-
-
-@pytest.fixture
-def fake_service() -> FakeService:
-    return FakeService()
-
-
-@pytest.fixture
-async def mailbox(fake_service: FakeService) -> AsyncIterator[Mailbox]:
-    async with connect(
-        "https://mailbox.example.test",
-        "token-value",
-        transport=fake_service.transport(),
-    ) as opened:
-        yield opened
 
 
 async def test_the_feed_from_a_state_with_pages_followed(

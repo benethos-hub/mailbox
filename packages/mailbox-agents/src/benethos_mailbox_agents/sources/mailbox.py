@@ -73,7 +73,11 @@ async def _call(pending: Awaitable[T]) -> T:
     except ApiError as exc:
         if exc.status == 410 and exc.code == "changes_expired":
             raise ChangesExpiredError("the feed state has expired") from None
-        if exc.status >= 500 or exc.status == 429:
+        # What an account cannot do, a keyword on Gmail or POP3 or a draft
+        # without a drafts folder: a refusal of this request, the service
+        # is there.
+        unsupported = exc.status == 501 and exc.code == "not_supported"
+        if (exc.status >= 500 or exc.status == 429) and not unsupported:
             raise MailboxUnavailableError(
                 f"the mailbox service answered {exc.status} ({exc.code})"
             ) from None
