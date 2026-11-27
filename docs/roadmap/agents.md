@@ -54,6 +54,18 @@ read-only pages, read from the state files by a process of its own,
 started by hand and behind a secret, as a prototype
 ([cockpit](../mailbox-agents/concept/cockpit.md)).
 
+Since 2026-11-27 the state of an agent can lie on PostgreSQL, in a
+database of its own for each agent and instance, on the storage layer of
+`mailbox-common` the service stands on as well. The agent closes its
+database to every other role at each start and gives the read to the
+roles it names. `storage provision` makes the role and the database,
+`storage move` copies a state file over, `status`, `paths`, `health`
+and `report` read either, and the cockpit reads the servers it names
+with a role of its own. The mailbox service closes its own database the
+same way. Checked by the suites against PostgreSQL in the CI, its live
+check: `live/mailbox-agents/postgres_state.py`
+([state](../mailbox-agents/concept/state.md)).
+
 ### Next
 
 | Step | Content |

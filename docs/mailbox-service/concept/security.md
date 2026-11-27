@@ -60,6 +60,11 @@ takes `CONNECT` and `TEMPORARY` from `PUBLIC` at each start where its
 role owns the database. Where it does not, the start warns, and an
 administrator closes the database
 ([containers/production/mailbox-service/README.md](../../../containers/production/mailbox-service/README.md)).
+The agents keep their states in databases of their own on a server,
+one for each agent and instance, closed the same way at each start.
+Checked on 2026-11-27 by `live/mailbox-agents/postgres_state.py`: the
+role of one instance reaches neither the database of another nor the
+one of the service.
 
 One service runs on a schema at a time. The lock that ensures this is an
 advisory lock of PostgreSQL, which needs no right. Its key is a random
