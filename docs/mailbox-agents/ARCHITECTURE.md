@@ -160,6 +160,8 @@ packages/mailbox-agents/src/benethos_mailbox_agents/
                   # message through the chain, summary.py its report,
                   # schema.py, prompts/ the choice by a topic and the
                   # recognizer invoice
+    filing/       # rules.py the list of keywords and folders, agent.py
+                  # the actor that files by it
 packages/mailbox-agents/tests/  # offline: REST and gateway through
                                 # httpx.MockTransport
 live/mailbox-agents/    # run by hand, outside testpaths, against the test
