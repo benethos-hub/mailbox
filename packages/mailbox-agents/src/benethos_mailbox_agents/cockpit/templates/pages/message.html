@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% from "parts.html" import facts %}
+{% set result = detail.result %}
+{% block title %}{{ result.message_id }} · {{ row.name }} · {{ APP_NAME }}{% endblock %}
+{% block heading %}{{ result.subject if result.subject is not none else result.message_id }}{% endblock %}
+{% block subheading %}<div class="sub crumbs"><a href="/">Agents</a><span class="sep">/</span><a href="/agents/{{ row.link }}">{{ row.name }}</a><span class="sep">/</span><span aria-current="page">{{ result.message_id }}</span></div>{% endblock %}
+{% block content %}
+<section class="card">
+  <header><h2>Message</h2></header>
+  <div class="body">
+    <dl class="facts">
+      <dt>Account</dt><dd class="mono">{{ result.account_id }}</dd>
+      <dt>Message</dt><dd class="mono">{{ result.message_id }}</dd>
+      {% if named %}<dt>From</dt><dd>{{ result.sender | or_missing }}</dd><dt>Subject</dt><dd>{{ result.subject | or_missing }}</dd>{% endif %}
+      <dt>Taken up</dt><dd>{{ result.created | when }}</dd>
+      <dt>State</dt><dd>{{ result.state }}</dd>
+    </dl>
+  </div>
+</section>
+<section class="card">
+  <header><h2>Decision</h2></header>
+  <div class="body">
+    {% if result.label %}
+    <dl class="facts">
+      <dt>Label</dt><dd>{{ result.label }}</dd>
+      <dt>Source</dt><dd>{{ result.source }}</dd>
+      <dt>Model</dt><dd>{{ result.model | or_missing }}</dd>
+      <dt>Refused</dt><dd>{{ result.refused | or_missing }}</dd>
+      <dt>Baseline</dt><dd>{{ result.baseline | or_missing }}</dd>
+    </dl>
+    {% else %}
+    <p class="muted">No decision recorded.</p>
+    {% endif %}
+  </div>
+</section>
+{% if detail.fields or detail.details %}
+<section class="card">
+  <header><h2>Fields and details</h2></header>
+  <div class="body">{{ facts(detail.fields + detail.details) }}</div>
+</section>
+{% endif %}
+{% if detail.evidence %}
+<section class="card">
+  <header><h2>Evidence</h2></header>
+  <div class="body tight">
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Field</th><th>Value</th><th>Quote</th><th>Found in the mail</th></tr></thead>
+        <tbody>
+          {% for quote in detail.evidence %}
+          <tr><td>{{ quote.field }}</td><td>{{ quote.value | or_missing }}</td><td>{{ quote.quote | or_missing }}</td><td>{{ {True: "found", False: "not found"}.get(quote.found, "not checked") }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+{% endif %}
+<section class="card">
+  <header><h2>Steps</h2></header>
+  <div class="body tight">
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Step</th><th>Prompt version</th><th>Model</th><th class="num">Tokens in</th><th class="num">Tokens out</th><th class="num">Milliseconds</th><th>At</th></tr></thead>
+        <tbody>
+          {% for step in detail.steps %}
+          <tr><td>{{ step.step }}</td><td>{{ step.prompt_version | or_missing }}</td><td>{{ step.model | or_missing }}</td><td class="num">{{ step.tokens_in }}</td><td class="num">{{ step.tokens_out }}</td><td class="num">{{ step.duration_ms }}</td><td>{{ step.at | when }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+<section class="card">
+  <header><h2>Actions</h2></header>
+  <div class="body tight">
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Action</th><th>Argument</th><th>Stage</th><th>Carried out</th><th>At</th></tr></thead>
+        <tbody>
+          {% for act in result.actions %}
+          <tr><td>{{ act.action }}</td><td>{{ act.argument | or_missing }}</td><td>{{ act.stage }}</td><td>{{ "yes" if act.executed else "no, recorded" }}</td><td>{{ act.at | when }}</td></tr>
+          {% else %}
+          <tr><td colspan="5" class="faint">none</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+{% endblock %}

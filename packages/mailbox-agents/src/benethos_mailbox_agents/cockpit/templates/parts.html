@@ -1,0 +1,19 @@
+{# The small parts the pages share. #}
+{% macro state_tag(state) -%}
+{% set kinds = {"healthy": "ok", "silent": "warn", "unreadable": "bad"} %}
+<span class="tag {{ kinds.get(state, '') }}">{{ state }}</span>
+{%- endmacro %}
+
+{% macro counts(found) -%}
+{% for count in found if count.count %}<span class="tag">{{ count.name }} {{ count.count }}</span> {% else %}<span class="faint">none</span>{% endfor %}
+{%- endmacro %}
+
+{% macro facts(found) -%}
+<dl class="facts">
+  {% for fact in found %}<dt>{{ fact.name }}</dt><dd>{{ fact.value | or_missing }}</dd>{% endfor %}
+</dl>
+{%- endmacro %}
+
+{% macro acts(found) -%}
+{% for act in found %}<span class="tag {{ 'ok' if act.executed else '' }}">{{ act.action }} {{ act.argument }} · {{ act.stage }}{{ ", done" if act.executed else ", recorded" }}</span> {% else %}<span class="faint">none</span>{% endfor %}
+{%- endmacro %}

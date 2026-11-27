@@ -4,11 +4,14 @@ one message."""
 from __future__ import annotations
 
 import inspect
+import re
 import sqlite3
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager, closing
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+
+from fastapi.testclient import TestClient
 
 from benethos_mailbox_agents.contract import Reader
 from benethos_mailbox_agents.records import (
@@ -23,6 +26,8 @@ from benethos_mailbox_agents.store import MIGRATIONS, Store
 
 NOW = datetime(2026, 11, 27, 12, 0, tzinfo=UTC)
 REF = MessageRef(account_id="acc1", message_id="m1")
+# The secret of the cockpit in the tests.
+SECRET = "cockpit-secret-value"  # pragma: allowlist secret
 # A subject that would move a terminal and open a script, were it drawn
 # as it is.
 SUBJECT = "Your invoice\x1b[2J <script>alert(1)</script>"
@@ -116,3 +121,13 @@ class _Mailbox:
 async def mailbox() -> AsyncIterator[Reader]:
     """The mailbox service, answering every message with :data:`SUBJECT`."""
     yield _Mailbox()
+
+
+def signed_in(client: TestClient) -> TestClient:
+    """``client`` with a session of the cockpit."""
+    page = client.get("/login")
+    nonce = re.search(r'name="nonce" value="([^"]+)"', page.text)
+    assert nonce is not None
+    answer = client.post("/login", data={"secret": SECRET, "nonce": nonce[1]})
+    assert answer.headers["location"] == "/"
+    return client

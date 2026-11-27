@@ -15,6 +15,7 @@ from collections.abc import Callable
 from contextlib import AbstractAsyncContextManager
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from urllib.parse import quote
 
 from benethos_mailbox_common.values import text as text_values
 
@@ -53,6 +54,11 @@ def _e(text: str | None) -> str:
     return text_values.escaped(text or "")
 
 
+def _link(value: str) -> str:
+    """``value`` as one part of an address, a slash in it as well."""
+    return quote(value, safe="")
+
+
 @dataclass(frozen=True, slots=True)
 class Fact:
     name: str
@@ -78,9 +84,11 @@ class Item:
 
 @dataclass(frozen=True, slots=True)
 class Row:
-    """One instance: a line of the overview, and the head of its page."""
+    """One instance: a line of the overview, and the head of its page.
+    ``link`` is its name as a part of an address."""
 
     name: str
+    link: str
     agent: str
     kind: str
     stage: str
@@ -108,10 +116,12 @@ class Act:
 @dataclass(frozen=True, slots=True)
 class Result:
     """One message an agent took up, with subject and sender when the
-    mailbox service could be asked."""
+    mailbox service could be asked. ``link`` is the address of its page
+    below the page of its instance, made from the ids as they are."""
 
     account_id: str
     message_id: str
+    link: str
     created: datetime
     state: str
     sender: str | None
@@ -220,7 +230,15 @@ def row(file: StateFile, now: datetime) -> Row:
             items = tuple(_item(item) for item in store.open_items())
     except (ConfigError, StateFileError) as exc:
         return Row(
-            _e(file.name), "", "", "", "", "unreadable", None, problem=_e(exc.message)
+            name=_e(file.name),
+            link=_link(file.name),
+            agent="",
+            kind="",
+            stage="",
+            version="",
+            state="unreadable",
+            progress=None,
+            problem=_e(exc.message),
         )
     agent, kind, description, stage, version = _e(file.name), "", "", "", ""
     facts: tuple[Fact, ...] = ()
@@ -230,6 +248,7 @@ def row(file: StateFile, now: datetime) -> Row:
         facts = _facts(profile, description)
     return Row(
         name=_e(file.name),
+        link=_link(file.name),
         agent=_e(agent),
         kind=kind,
         stage=_e(stage),
@@ -261,6 +280,7 @@ def _result(entry: Entry) -> Result:
     return Result(
         account_id=_e(entry.row.ref.account_id),
         message_id=_e(entry.row.ref.message_id),
+        link=f"{_link(entry.row.ref.account_id)}/{_link(entry.row.ref.message_id)}",
         created=entry.row.created,
         state=entry.row.state,
         sender=_sender(entry.message),
