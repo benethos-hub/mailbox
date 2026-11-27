@@ -9,6 +9,9 @@ import pytest
 
 from benethos_mailbox_agents.agents.categorization.lists import load_chain
 from benethos_mailbox_agents.agents.filing.rules import load_rules
+from benethos_mailbox_agents.agents.forwarding.rules import (
+    load_rules as load_forwarding,
+)
 from benethos_mailbox_agents.agents.inquiries.patterns import load_patterns
 
 from .agents_helpers import ROOT
@@ -24,6 +27,7 @@ LOADERS = {
     "inquiries": load_patterns,
     "categorization": load_chain,
     "filing": load_rules,
+    "forwarding": load_forwarding,
 }
 
 

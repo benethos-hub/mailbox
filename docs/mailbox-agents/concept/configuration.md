@@ -44,8 +44,8 @@ as a header of HTTP carries it, and any other stops the start, naming the
 setting and never the value.
 
 Settings of one agent, such as
-`REPLY_DAYS`, `INQUIRIES_PATTERNS_FILE`, `CATEGORIZATION_FILE` and
-`FILING_FILE`, are named in
+`REPLY_DAYS`, `INQUIRIES_PATTERNS_FILE`, `CATEGORIZATION_FILE`,
+`FILING_FILE` and `FORWARDING_FILE`, are named in
 the agent's file, `agent-<name>.md` beside this one.
 
 ## Where the settings and the state files are
@@ -59,8 +59,8 @@ As the service finds its own (2026-11-22), first found first:
 | else, installed alone | `.env` in the config folder of the operating system | the data folder of the operating system |
 
 Outside the layout of the repository a relative path in the settings,
-`DATA_DIR`, `CATEGORIZATION_FILE`, `FILING_FILE`, `INQUIRIES_PATTERNS_FILE`,
-`CA_FILE` and the
+`DATA_DIR`, `CATEGORIZATION_FILE`, `FILING_FILE`, `FORWARDING_FILE`,
+`INQUIRIES_PATTERNS_FILE`, `CA_FILE` and the
 `_FILE` of a secret, counts from the folder of the settings file. In it,
 it counts from the working directory. A container sets `DATA_DIR` to
 `/data`. `paths` names what applies.

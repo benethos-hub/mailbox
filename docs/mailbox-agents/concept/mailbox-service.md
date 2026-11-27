@@ -157,6 +157,7 @@ Rights. Each agent has a user of its own in the service:
 | `categorization` | `mail.read`, `mail.write` | `drafts`, send, `mail.delete` |
 | `counting` | `mail.read` | `mail.write`, `drafts`, send, `mail.delete` |
 | `filing` | `mail.read`, `mail.write` | `drafts`, send, `mail.delete` |
+| `forwarding` | `mail.read`, `drafts` | `mail.write`, send, `mail.delete` |
 
 `counting` changes nothing, so `mail.read` is all it needs. Measured
 2026-11-20 against 0.8.0 on the test account: `status`, `backfill`, `run`

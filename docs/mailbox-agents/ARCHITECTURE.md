@@ -16,6 +16,7 @@
         |   inquiries       + SQLite |
         |   counting        + SQLite |
         |   filing          + SQLite |
+        |   forwarding      + SQLite |
         +-------------+--------------+
                       | OpenAI-compatible HTTP, one key per agent
         +-------------v--------------+
@@ -164,6 +165,8 @@ packages/mailbox-agents/src/benethos_mailbox_agents/
                   # recognizer invoice
     filing/       # rules.py the list of keywords and folders, agent.py
                   # the actor that files by it
+    forwarding/   # rules.py the list of keywords and addresses,
+                  # agent.py the actor that drafts a forward by it
 packages/mailbox-agents/tests/  # offline: REST and gateway through
                                 # httpx.MockTransport
 live/mailbox-agents/    # run by hand, outside testpaths, against the test

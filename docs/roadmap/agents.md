@@ -44,7 +44,10 @@ classifies a message, read only, behind a token
 Since 2026-11-27 an agent is a classifier or an actor. The first
 actor, `filing`, files mail into folders by its keywords, by a list,
 with no model and nothing of what a mail says
-([filing](../mailbox-agents/concept/agent-filing.md)).
+([filing](../mailbox-agents/concept/agent-filing.md)). The second,
+`forwarding`, drafts a forward of mail by its keywords, to the
+addresses of its list, and sends nothing
+([forwarding](../mailbox-agents/concept/agent-forwarding.md)).
 
 ### Next
 

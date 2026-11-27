@@ -111,6 +111,18 @@ adheres to [Semantic Versioning](https://semver.org/).
   `list_outbox`, `get_outbox_job` and `cancel_send` read and cancel the
   jobs. `send_message` and `send_draft` are unchanged. `SendRecord`
   names the job of an attempt in `outbox_job_id`.
+- `benethos-mailbox-agents`: the agent `forwarding`, an actor that
+  drafts a forward of mail by its keywords and sends nothing
+  (`MAILBOX_AGENTS_FORWARDING_FILE`, `forwarding.example.json`): to the
+  addresses of the first rule that fits, `inline` or as an
+  `attachment`, once per message and at most 20 a day. A message whose
+  sender check failed, or did not pass where the rule asks for it, is
+  recorded only, and none goes back to its sender. It drafts in
+  `suggest` and `full`, its user needs `mail.read` and `drafts`. A
+  profile `forwarding` in the production compose file, metrics on 9475.
+- `benethos-mailbox-agents`: the action `draft_forward` of the agent
+  contract, which only an actor may declare, to the addresses its
+  `recipients()` names.
 - `benethos-mailbox-agents`: the agent `filing`, an actor that files
   mail into folders by the keywords it carries, by a list
   (`MAILBOX_AGENTS_FILING_FILE`, `filing.example.json`): from the inbox
