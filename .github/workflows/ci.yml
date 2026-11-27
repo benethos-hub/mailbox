@@ -374,7 +374,7 @@ jobs:
           docker run --rm --network none --entrypoint python benethos-mailbox-agents:ci -c "
           from benethos_mailbox_agents.contract import discover
           names = sorted(discover())
-          assert names == ['awaiting_reply', 'categorization', 'counting', 'inquiries'], names
+          assert names == ['awaiting_reply', 'categorization', 'counting', 'filing', 'inquiries'], names
           print('OK: the image runs as 10001 and holds', ', '.join(names))
           "
 
@@ -390,7 +390,7 @@ jobs:
           set -euo pipefail
           mkdir -p containers/live/mailbox-agents/secrets
           touch containers/live/mailbox-agents/secrets/agent.env
-          for agent in counting awaiting_reply inquiries categorization; do
+          for agent in counting awaiting_reply inquiries categorization filing; do
             touch "containers/production/mailbox-agents/agents/$agent/.env"
           done
           docker compose -f containers/development/mailbox-agents/compose.yaml \
@@ -398,12 +398,12 @@ jobs:
           docker compose -f containers/production/mailbox-agents/compose.yaml \
             --env-file containers/production/mailbox-agents/.env.example \
             --profile counting --profile awaiting_reply \
-            --profile inquiries --profile categorization \
+            --profile inquiries --profile categorization --profile filing \
             config --format json > /tmp/production.json
           python3 - <<'PY'
           import json
 
-          AGENTS = {"counting", "awaiting_reply", "inquiries", "categorization"}
+          AGENTS = {"counting", "awaiting_reply", "inquiries", "categorization", "filing"}
           for folder in ("development", "production"):
               services = json.load(open(f"/tmp/{folder}.json"))["services"]
               assert services, f"the agents' {folder} compose file defines no services"

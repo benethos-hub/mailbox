@@ -107,6 +107,28 @@ services:
       start_period: 120s
       retries: 3
 
+  # An actor: asks no model and reads nothing of what a mail says.
+  filing:
+    <<: *agent
+    profiles: ["filing"]
+    command: ["worker", "--agent", "filing"]
+    env_file: ./agents/filing/.env
+    environment:
+      MAILBOX_AGENTS_SERVICE_TOKEN_FILE: /run/secrets/service_token
+      MAILBOX_AGENTS_FILING_FILE: /config/filing.json
+    volumes:
+      - filing-data:/data
+      - ./agents/filing:/config:ro
+      - ./secrets/filing:/run/secrets:ro
+    ports:
+      - "127.0.0.1:${MAILBOX_AGENTS_FILING_METRICS_PORT:-9471}:9464"
+    healthcheck:
+      test: ["CMD", "benethos-mailbox-agents", "health", "--agent", "filing"]
+      interval: 60s
+      timeout: 10s
+      start_period: 120s
+      retries: 3
+
   # Changes nothing and asks no model: a deployment checked end to end
   # before an agent that may change a message is started.
   counting:
@@ -133,3 +155,4 @@ volumes:
   inquiries-data:
   categorization-data:
   counting-data:
+  filing-data:

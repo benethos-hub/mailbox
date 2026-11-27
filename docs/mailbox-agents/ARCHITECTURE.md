@@ -15,6 +15,7 @@
         |   awaiting_reply  + SQLite |   one state file per agent
         |   inquiries       + SQLite |
         |   counting        + SQLite |
+        |   filing          + SQLite |
         +-------------+--------------+
                       | OpenAI-compatible HTTP, one key per agent
         +-------------v--------------+
@@ -160,12 +161,15 @@ packages/mailbox-agents/src/benethos_mailbox_agents/
                   # message through the chain, summary.py its report,
                   # schema.py, prompts/ the choice by a topic and the
                   # recognizer invoice
+    filing/       # rules.py the list of keywords and folders, agent.py
+                  # the actor that files by it
 packages/mailbox-agents/tests/  # offline: REST and gateway through
                                 # httpx.MockTransport
 live/mailbox-agents/    # run by hand, outside testpaths, against the test
                         # account of containers/live/mailbox-agents/:
                         # agents_smoke.py read-only, categorization.py,
-                        # chain.py the instances, peers.py
+                        # chain.py the instances, filing.py the
+                        # actor filing, peers.py
                         # the entrance over A2A, gold.py the gold files from its
                         # labels, agents_common/ what they share
 containers/

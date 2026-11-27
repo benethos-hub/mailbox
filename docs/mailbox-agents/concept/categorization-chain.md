@@ -251,6 +251,12 @@ and may correct (decided 2026-11-25). The example of the live setup,
   the refusal **(to verify)**. There one instance with `when` is the
   way.
 
+The agent [filing](agent-filing.md) does what the instance `filing`
+does, as an actor of its own: it waits for keywords and moves by a
+list of rules, with no model. Both stay side by side until the agent
+has proven itself in `shadow` and Gmail is reached through labels
+(decided 2026-11-27).
+
 ### The recognizer `invoice` in place of `invoices`
 
 The recognizer `invoice` asks the question of the agent `invoices` with

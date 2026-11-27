@@ -8,7 +8,9 @@
 > versions of 0.11.0 on 2026-11-23, and the recognizer `invoice` of
 > `categorization` beside `invoices` on 2026-11-25. None changed anything, and none acts
 > on a real mailbox yet. The agent `invoices` was removed on 2026-11-25:
-> its question is the recognizer `invoice` of `categorization`.** A statement about another system that nobody has checked
+> its question is the recognizer `invoice` of `categorization`. The actor
+> `filing` is built since 2026-11-27 and ran only against the test
+> account.** A statement about another system that nobody has checked
 > yet is marked **(to verify)**, and a choice that is still open is listed
 > in [the agents' roadmap](../roadmap/agents.md#open-questions) rather than written as fact.
 
@@ -42,6 +44,7 @@ code.
 | `awaiting_reply` | does this sent message wait for an answer? | built, version 2, prompt `v2` | [agent-awaiting-reply.md](concept/agent-awaiting-reply.md) |
 | `inquiries` | is this a project inquiry, and what does it say? | built, version 2, prompt `v4` | [agent-inquiries.md](concept/agent-inquiries.md) |
 | `categorization` | which category of its list does the message belong to, in each dimension of the list, and what follows from it? | built, version 3: dimensions run in order, the sender rules in code, a model only for a message they do not settle and only where a category has a topic (2026-11-24), what follows from a category named in its list, the recognizer `invoice`, and instances that hand a message on by keywords (2026-11-25). An instance with the recognizer `invoice` takes the place of the agent `invoices`, removed on 2026-11-25 | [agent-categorization.md](concept/agent-categorization.md) |
+| `filing` | none of its own, an actor: which folder does its list name for the keywords of the message? | built, version 1, no model, nothing of what a mail says (2026-11-27) | [agent-filing.md](concept/agent-filing.md) |
 
 ## Beside the concept
 
