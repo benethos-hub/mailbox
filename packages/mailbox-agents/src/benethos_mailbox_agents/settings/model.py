@@ -12,8 +12,10 @@ from pydantic import Field, SecretStr, ValidationError, field_validator, model_v
 
 from benethos_mailbox_common.log import redact
 from benethos_mailbox_common.settings import files
+from benethos_mailbox_common.storage import server_place
 
 from ..errors import ConfigError
+from .database import server_of, server_problem
 from .folders import DATA_DIR, folders, rebased
 
 # The form a keyword must have, MAILBOX_AGENTS_KEYWORD and an agent's
@@ -84,6 +86,14 @@ class Settings(files.FileSettings):
     # --- state, metrics, log ---------------------------------------------------
     data_dir: Path = DATA_DIR
     prompt_retention_days: int = Field(default=0, ge=0)
+    # The state on a PostgreSQL server, docs/mailbox-agents/concept/state.md:
+    # a file of SQLite unless storage is postgres.
+    storage: Literal["sqlite", "postgres"] = "sqlite"
+    database_url: str | None = None
+    database_password_file: Path | None = None
+    database_tls: Literal["verify", "off"] = "verify"
+    database_ca_file: Path | None = None
+    database_readers: files.Names = Field(default_factory=list)
     metrics_port: int = Field(default=0, ge=0, le=65535)
     # Spans over OTLP and HTTP, docs/mailbox-agents/concept/operation.md:
     # off unless an endpoint is set.
@@ -135,6 +145,9 @@ class Settings(files.FileSettings):
         "a2a_url",
         "a2a_token_file",
         "cockpit_secret_file",
+        "database_url",
+        "database_password_file",
+        "database_ca_file",
         mode="before",
     )
     @classmethod
@@ -220,6 +233,31 @@ class Settings(files.FileSettings):
                     )
                 redact.note(value)
         return self
+
+    @model_validator(mode="after")
+    def _on_a_server(self) -> Settings:
+        """The rules of a state on a PostgreSQL server."""
+        problem = server_problem(
+            storage=self.storage,
+            url=self.database_url,
+            password_file=self.database_password_file,
+            readers=self.database_readers,
+            retention_days=self.prompt_retention_days,
+        )
+        if problem is not None:
+            raise ValueError(problem)
+        return self
+
+    def database_server(self) -> server_place.Server:
+        """The server of a state on PostgreSQL, the password of its role
+        read now."""
+        return server_of(
+            self.database_url,
+            self.database_password_file,
+            tls=self.database_tls,
+            ca_file=self.database_ca_file,
+            setting=f"{PREFIX}DATABASE_PASSWORD_FILE",
+        )
 
     def missing(self, names: tuple[str, ...]) -> list[str]:
         """The settings among ``names`` that are not set, as their full
