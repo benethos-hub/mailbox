@@ -98,8 +98,8 @@ noticing. Every change is measured against that.
 | Mail provider | `data/providers/base.py` (`Reads`, which every adapter implements, and `Writes`, `Deletes`, `Drafts`, `Sends`, `KeepsSent`, `FindsSent`, `Watches`, `Deltas`, `FlagChanges`, `Threads`, `Summaries`, `Places`, `ServerNames` for what it may do beyond, `PROTOCOLS` for the protocol behind each capability. `Capability` and `Abilities` of `data/models/accounts.py`, answered by each adapter's `abilities()` from its server), registry in `data/providers/registry.py`. The domain checks what each operation needs and answers 501 for a lack (`domain/accounts/abilities.py`, `NEEDS`) | memory, imap, microsoft, pop3, jmap, gmail | another protocol or library, e.g. `aioimaplib` for IMAPClient |
 | Sending | `data/protocols/smtp.py` (`SmtpSession`), and `data/providers/sender.py` (`SmtpSender`), which adapters without sending of their own (IMAP, POP3) hold | stdlib smtplib | e.g. aiosmtplib |
 | Web layer | `web/` | FastAPI, Jinja2 for the UI | another framework, as long as the OpenAPI document stays the same |
-| Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `PasswordRepository`, `KeyRepository`, `CredentialRepository`, `MessageIndexRepository`, `IdempotencyRepository`, `SendLogRepository`, `OutboxRepository`, `ChangeLogRepository`, `WebhookRepository`, `AuditRepository`, `LinkRepository`, `TotpRepository`, `RecoveryCodeRepository`, `PasskeyRepository`) | in-memory, SQLite and PostgreSQL through SQLAlchemy Core (`data/storage/sql/`: the types and what differs between databases in `dialect.py`, the tables in `schema.py`, the repositories), the file, its connection and the old steps of the schema on `sqlite3` (`data/storage/sqlite/`), PostgreSQL through psycopg | another database |
-| Where a database lies | `Place` in `data/storage/sql/place.py`: the one connection, undoing a failed transaction, the copy before a revision, shrinking, the mark of a running service, a view of one moment, the snapshot file, whether the database can be reached (`ready`, `watch`, `unavailable`), translating the failures of the driver, closing | the file of SQLite (`FilePlace` in `data/storage/sql/file_place.py`, the one module under `sql/` that reaches `sqlite/`), a schema on a PostgreSQL server (`ServerPlace` in `data/storage/sql/server_place.py`) | another database server |
+| Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `PasswordRepository`, `KeyRepository`, `CredentialRepository`, `MessageIndexRepository`, `IdempotencyRepository`, `SendLogRepository`, `OutboxRepository`, `ChangeLogRepository`, `WebhookRepository`, `AuditRepository`, `LinkRepository`, `TotpRepository`, `RecoveryCodeRepository`, `PasskeyRepository`) | in-memory, SQLite and PostgreSQL through SQLAlchemy Core (`data/storage/sql/`: the shape of the service in `database.py`, the tables in `schema.py`, the repositories), the old steps of the schema of the file on `sqlite3` (`data/storage/sqlite/`), the layer beneath them in the group `storage` of `mailbox-common` (the types and what differs between databases in `dialect.py`, the file of SQLite in `sqlite_file.py`), PostgreSQL through psycopg | another database |
+| Where a database lies | `Place` in `storage/place.py` of `mailbox-common`: the one connection, undoing a failed transaction, the copy before a revision, shrinking, the mark of a running service, a view of one moment, the snapshot file, whether the database can be reached (`ready`, `watch`, `unavailable`), translating the failures of the driver, closing | the file of SQLite (`FilePlace` in `storage/file_place.py`), a schema on a PostgreSQL server (`ServerPlace` in `storage/server_place.py`), both of `mailbox-common`. `data/storage/sql/database.py` is the one module of the service's `sql/` that reaches its `sqlite/`, for the old steps | another database server |
 | Autodiscovery source | `data/discovery/` (`DiscoverySource`) | presets, ISP autoconfig, JMAP well-known and SRV, ISPDB, MX (planned: Microsoft realm, SRV for IMAP and SMTP, guessing) | any further lookup, or one switched off |
 | HTTP | `data/protocols/http/` (`SafeFetcher`, `ApiClient`, `ServerClient`) | httpx | another HTTP client |
 | OAuth token source | `TokenSource` in `data/providers/base.py`, made in `data/protocols/oauth/tokens.py`, each OAuth provider's endpoints and scopes in its own directory, reached through `sign_in` in the registry | refresh token in the vault, access token in memory | another token store |
@@ -120,19 +120,22 @@ number of the change feed and the active key are kept in `meta`, user
 names are unique by a column and not by a collation, and the search of
 sends needs no function of the service inside SQL. Since 2026-11-26
 every repository speaks SQLAlchemy Core, and SQL as text stands only
-beside the file of the database (`tests/test_code_rules.py`). Where
-SQLite and another database write differently stands in
-`data/storage/sql/dialect.py`: inserting or updating, inserting or
-leaving out, the greater of two values, how a transaction begins, the
-counter of the change feed after an import. How each database is
-reached lies with its place: the engine of SQLite in `file_place.py`,
-the engine of PostgreSQL, its TLS and its time limits in
-`server_engine.py`, its lock in `server_lock.py`, and the rest of the
-server in `server_place.py`. The names of the server itself, its
-functions, its codes of failure, its TLS and the connection of its
-driver, stand in these alone (`tests/test_code_rules.py`).
+beside the file of the database (`tests/test_code_rules.py`). Since
+2026-11-27 the layer beneath the repositories is the group `storage`
+of `mailbox-common`, which the agents take as well: the service hands
+it its shape (`data/storage/sql/database.py`) and keeps its tables, its
+repositories, its revisions and the old steps of its file. Where
+SQLite and another database write differently stands in `dialect.py`
+of the group: inserting or updating, inserting or leaving out, the
+greater of two values, how a transaction begins, the counter of a
+table after an import. How each database is reached lies with its
+place: the engine of SQLite in `file_place.py`, the engine of
+PostgreSQL, its TLS and its time limits in `server_engine.py`, its lock
+in `server_lock.py`, and the rest of the server in `server_place.py`.
+The names of the server itself, its functions, its codes of failure,
+its TLS and the connection of its driver, stand in these alone.
 Since 2026-11-26 `Database` reaches the file through its place
-(`data/storage/sql/place.py`). Everything above the place, the
+(`place.py` of the group). Everything above the place, the
 transactions, the revisions from schema 26 on, the repositories and
 the export, is the same for every database. What a place gives
 `Database`: the one connection and what opening did to the schema,

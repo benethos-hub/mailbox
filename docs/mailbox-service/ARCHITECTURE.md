@@ -156,8 +156,10 @@ names as IDNA 2008) and `mailbox-common`, that FastAPI stays in
 `web/` (and `assembly/web.py`), that providers are reached through the registry,
 that the domain picks no storage implementation, that the database is
 reached through `data/storage/` alone, that `data/storage/sql/` reaches
-`data/storage/sqlite/` in `file_place.py` alone, and that the files SQLite
-keeps beside a database are named in `data/storage/sqlite/` alone.
+`data/storage/sqlite/` in `database.py` alone, and that the files SQLite
+keeps beside a database are named in `data/storage/sqlite/` alone. The
+file itself, its places and the revisions are the group `storage` of
+`mailbox-common`, handed the shape of the service.
 `tests/test_code_rules.py`
 checks that the data layer logs nothing above `DEBUG` and the domain
 nothing but activities, that a broad `except` raises or records, the
