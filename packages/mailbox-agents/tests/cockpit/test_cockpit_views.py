@@ -27,9 +27,22 @@ def test_the_files_of_the_folder_and_its_folders_are_found(tmp_path: Path) -> No
         "inquiries",
         "other-counting",
     ]
-    assert sources.find(tmp_path, "inquiries") == found[1]
-    assert sources.find(tmp_path, "../inquiries") is None
+    files = (sources.Files(tmp_path),)
+    assert sources.find(files, "inquiries") == found[1]
+    assert sources.find(files, "../inquiries") is None
     assert sources.found(tmp_path / "none") == []
+
+
+def test_a_name_two_sources_find_is_shown_once(tmp_path: Path) -> None:
+    filled(tmp_path / "one" / "counting.db")
+    filled(tmp_path / "two" / "counting.db")
+    places = (sources.Files(tmp_path / "one"), sources.Files(tmp_path / "two"))
+
+    found = sources.every(places)
+
+    assert [(file.name, file) for file in found] == [
+        ("counting", sources.StateFile("counting", tmp_path / "one" / "counting.db"))
+    ]
 
 
 def test_every_file_is_a_row_and_none_is_an_error(tmp_path: Path) -> None:

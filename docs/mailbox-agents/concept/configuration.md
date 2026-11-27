@@ -42,6 +42,8 @@ may be given as a file with the suffix `_FILE`. An empty line, such as
 | `OTLP_ALLOW_HTTP` | http to another machine as well, `false` when unset |
 | `A2A_PORT`, `A2A_HOST`, `A2A_URL`, `A2A_TOKEN`, `A2A_TOKEN_FILE` | the entrance for peers over A2A, off unless a port is set, and then only with a token ([peers over A2A](a2a.md)) |
 | `COCKPIT_HOST`, `COCKPIT_PORT`, `COCKPIT_SECRET`, `COCKPIT_SECRET_FILE` | the cockpit, started by hand, on `127.0.0.1:9480` when unset, and only with its secret ([cockpit](cockpit.md)) |
+| `COCKPIT_DATABASE_URLS` | the PostgreSQL servers whose states the cockpit reads, comma separated, each as `postgresql://<role>@<host>:<port>/<database>`: the role of the cockpit and the database it signs in to first. TLS as `DATABASE_TLS` and `DATABASE_CA_FILE` say. Empty when unset: the state files alone ([cockpit](cockpit.md)) |
+| `COCKPIT_DATABASE_PASSWORD_FILE` | the file holding the password of the role of the cockpit, never logged. Needed with `COCKPIT_DATABASE_URLS` |
 | `LOG_LEVEL` | `DEBUG`, `INFO`, `WARNING` or `ERROR`, `INFO` when unset |
 
 `SERVICE_TOKEN_FILE`, `GATEWAY_KEY_FILE`, `A2A_TOKEN_FILE` and

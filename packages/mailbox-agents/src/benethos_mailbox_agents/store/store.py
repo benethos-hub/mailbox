@@ -215,7 +215,7 @@ class Store(_Messages, _Steps, _Actions, _Items, _Calls, _Profile):
         beside the running agent, at the schema of this version. None
         while it holds nothing: no agent has started on it yet."""
         name = f"{server.database}/{server.schema_name}"
-        place = server_place.ServerPlace(server, SHAPE)
+        place = server_place.ServerPlace(server, SHAPE, read_only=True)
         try:
             with _named(name):
                 place.open(SHAPE.newest, SHAPE.newest)

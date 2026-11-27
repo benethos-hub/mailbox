@@ -51,6 +51,12 @@ adheres to [Semantic Versioning](https://semver.org/).
   `MAILBOX_AGENTS_DATABASE_URL` names and compares every table on both
   sides. The file stays as it was. With `--check` it only checks that
   every value fits its column.
+- `benethos-mailbox-agents`: the cockpit reads the states on the
+  PostgreSQL servers `MAILBOX_AGENTS_COCKPIT_DATABASE_URLS` names, with
+  the password of its role in `MAILBOX_AGENTS_COCKPIT_DATABASE_PASSWORD_FILE`:
+  each database whose owner gave its read role the read, on a
+  connection that only reads. A server that is away is a row with its
+  reason.
 - `benethos-mailbox-agents`: `status`, `paths`, `health` and `report`
   read the state on the server with `MAILBOX_AGENTS_STORAGE=postgres`
   and say where it lies: the database, its host, port and schema, never

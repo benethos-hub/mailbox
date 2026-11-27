@@ -20,12 +20,12 @@ from urllib.parse import quote
 from benethos_mailbox_common.values import text as text_values
 
 from ..contract import Actor, Reader, discover
-from ..errors import ConfigError, StateFileError
+from ..errors import ConfigError, StateFileError, UnavailableError
 from ..records import Decision, MailMessage, MessageRef, OpenItem, Profile
 from ..runtime.health import window_of
 from ..runtime.review import Entry, collect, entry
 from ..store import ActionRow, Store
-from .sources import StateFile, stopped
+from .sources import Instance
 
 __all__ = [
     "Act",
@@ -194,9 +194,9 @@ def _facts(profile: Profile, description: str) -> tuple[Fact, ...]:
 
 
 def _state(
-    file: StateFile, profile: Profile | None, progress: datetime | None, now: datetime
+    found: Instance, profile: Profile | None, progress: datetime | None, now: datetime
 ) -> str:
-    if stopped(file.path):
+    if found.stopped():
         return "stopped"
     if profile is None:
         return "no profile yet"
@@ -216,10 +216,10 @@ def _item(item: OpenItem) -> Item:
     )
 
 
-def row(file: StateFile, now: datetime) -> Row:
-    """The instance of ``file`` as the overview and its page show it."""
+def row(file: Instance, now: datetime) -> Row:
+    """The instance ``file`` as the overview and its page show it."""
     try:
-        with Store.open(file.path, read_only=True) as store:
+        with file.open() as store:
             profile = store.profile()
             progress = store.progress()
             counts = store.counts()
@@ -228,7 +228,7 @@ def row(file: StateFile, now: datetime) -> Row:
             calls = store.model_calls_since(day)
             due = len(store.due_items(now))
             items = tuple(_item(item) for item in store.open_items())
-    except (ConfigError, StateFileError) as exc:
+    except (ConfigError, StateFileError, UnavailableError) as exc:
         return Row(
             name=_e(file.name),
             link=_link(file.name),
@@ -306,7 +306,7 @@ async def _entries(
 
 
 async def results(
-    file: StateFile,
+    file: Instance,
     mailbox: MailboxFactory | None,
     *,
     limit: int,
@@ -314,7 +314,7 @@ async def results(
 ) -> list[Result]:
     """The newest ``limit`` messages of ``file``, in ``state`` if named,
     with subject and sender only when ``mailbox`` is given."""
-    with Store.open(file.path, read_only=True) as store:
+    with file.open() as store:
         entries = await _entries(store, mailbox, limit=limit, state=state)
     return [_result(entry) for entry in entries]
 
@@ -345,11 +345,11 @@ def _detail(entry: Entry, steps: list[StepLine]) -> Detail:
 
 
 async def message(
-    file: StateFile, ref: MessageRef, mailbox: MailboxFactory | None
+    file: Instance, ref: MessageRef, mailbox: MailboxFactory | None
 ) -> Detail | None:
     """One message of ``file`` with its decision, its evidence, its steps
     and its actions. None when the agent never took it up."""
-    with Store.open(file.path, read_only=True) as store:
+    with file.open() as store:
         found = store.message(ref)
         if found is None:
             return None

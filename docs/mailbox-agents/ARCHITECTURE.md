@@ -138,7 +138,8 @@ packages/mailbox-agents/src/benethos_mailbox_agents/
                   # uvicorn: the entrance over A2A, served when a port
                   # is set
   cockpit/        # the pages of what every agent did, read-only, started
-                  # by hand: sources.py where the state files are,
+                  # by hand: sources.py the seam of the sources of the
+                  # instances, the state files the first of them,
                   # views.py what a page shows of them, app.py the pages
                   # and the sign-in, with templates.py the only modules
                   # importing FastAPI, templates.py the only one importing
@@ -149,6 +150,7 @@ packages/mailbox-agents/src/benethos_mailbox_agents/
   store/          # the state file, one database per agent on the
                   # storage of mailbox-common: store.py opens it,
                   # reader.py to read alone, shape.py what it is,
+                  # catalogue.py the states a reader finds on a server,
                   # schema.py its tables, rows.py what its parts stand
                   # on, messages.py, steps.py, actions.py, items.py,
                   # calls.py and profile.py are a part each, file.py the

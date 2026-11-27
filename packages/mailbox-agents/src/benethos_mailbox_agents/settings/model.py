@@ -12,7 +12,7 @@ from pydantic import Field, SecretStr, ValidationError, field_validator, model_v
 
 from benethos_mailbox_common.log import redact
 from benethos_mailbox_common.settings import files
-from benethos_mailbox_common.storage import server_place
+from benethos_mailbox_common.storage import server_place, server_url
 
 from ..errors import ConfigError
 from .database import server_of, server_problem
@@ -113,6 +113,11 @@ class Settings(files.FileSettings):
     cockpit_port: int = Field(default=9480, ge=0, le=65535)
     cockpit_secret: SecretStr | None = None
     cockpit_secret_file: Path | None = None
+    # The servers whose states the cockpit reads, as
+    # postgresql://<role>@<host>:<port>/<database>: its role and the
+    # database it signs in to first. One password for them, in a file.
+    cockpit_database_urls: files.Names = Field(default_factory=list)
+    cockpit_database_password_file: Path | None = None
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
     # --- awaiting_reply, docs/mailbox-agents/concept/agent-awaiting-reply.md ----------
@@ -148,6 +153,7 @@ class Settings(files.FileSettings):
         "database_url",
         "database_password_file",
         "database_ca_file",
+        "cockpit_database_password_file",
         mode="before",
     )
     @classmethod
@@ -246,7 +252,29 @@ class Settings(files.FileSettings):
         )
         if problem is not None:
             raise ValueError(problem)
+        for url in self.cockpit_database_urls:
+            problem = server_url.url_problem(url, "cockpit_database_urls")
+            if problem is not None:
+                raise ValueError(problem)
+        if self.cockpit_database_urls and self.cockpit_database_password_file is None:
+            raise ValueError(
+                "cockpit_database_urls needs cockpit_database_password_file"
+            )
         return self
+
+    def cockpit_servers(self) -> list[server_place.Server]:
+        """The servers the cockpit reads, the password of its role read
+        now. TLS as ``DATABASE_TLS`` and ``DATABASE_CA_FILE`` say."""
+        return [
+            server_of(
+                url,
+                self.cockpit_database_password_file,
+                tls=self.database_tls,
+                ca_file=self.database_ca_file,
+                setting=f"{PREFIX}COCKPIT_DATABASE_PASSWORD_FILE",
+            )
+            for url in self.cockpit_database_urls
+        ]
 
     def database_server(self) -> server_place.Server:
         """The server of a state on PostgreSQL, the password of its role

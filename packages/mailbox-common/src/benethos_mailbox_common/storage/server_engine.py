@@ -39,13 +39,18 @@ def server_engine(
     password: str,
     search_path: str,
     tls: Mapping[str, str] | None = None,
+    read_only: bool = False,
 ) -> sa.Engine:
     """An engine on PostgreSQL through psycopg, signed in as ``role``, its
     connections in the schema ``search_path``, a plain name, with what
     libpq is told of TLS in ``tls``. Each
     connection is its own and closes when it is closed: a program keeps
-    one for its life, and a view of one moment takes a second. No value
+    one for its life, and a view of one moment takes a second. With
+    ``read_only`` every transaction of a connection only reads. No value
     of a statement reaches the text of an error."""
+    options = f"-csearch_path={search_path}"
+    if read_only:
+        options += " -cdefault_transaction_read_only=on"
     url = sa.URL.create(
         f"{dialect.POSTGRESQL}+psycopg",
         username=role,
@@ -59,7 +64,7 @@ def server_engine(
         poolclass=NullPool,
         hide_parameters=True,
         connect_args={
-            "options": f"-csearch_path={search_path}",
+            "options": options,
             "connect_timeout": CONNECT_SECONDS,
             **SILENCE,
             **(tls or {}),

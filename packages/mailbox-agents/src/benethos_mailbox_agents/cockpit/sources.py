@@ -1,18 +1,71 @@
-"""Where the cockpit finds the state files: in the data folder and in
-its direct folders, one folder per volume of an agent.
+"""Where the cockpit finds the instances it shows, behind one seam: a
+source names its instances, and each opens its state for reading and
+says whether its writer stopped. The pages do not know which source an
+instance comes from.
 
-A page never takes a path from its address. It names an instance, and
-the name is looked up among the files found here, so an unknown name or
-one with ``..`` in it finds nothing.
+The first source is the state files: in the data folder and in its
+direct folders, one folder per volume of an agent. The second is the
+PostgreSQL servers the settings name: each state there its role may
+read, found by the store, read on a short connection that only reads,
+without a lock and without a step of the schema. A database that
+answers with another schema, or a server that is away, is an instance
+whose page says why. No file says whether a writer there stopped: an
+instance without fresh progress is silent.
+
+A page never takes a path or an address from its own address. It names
+an instance, and the name is looked up among those the sources found,
+so an unknown name or one with ``..`` in it finds nothing.
 """
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Protocol
 
-__all__ = ["StateFile", "find", "found", "stopped"]
+from ..errors import ConfigError, MailboxAgentError
+from ..store import Store
+from ..store.catalogue import Server, states_on
+
+__all__ = [
+    "Files",
+    "Instance",
+    "OnServer",
+    "Servers",
+    "Source",
+    "StateFile",
+    "every",
+    "find",
+    "found",
+    "stopped",
+]
+
+
+class Instance(Protocol):
+    """An instance of an agent as the cockpit shows it."""
+
+    @property
+    def name(self) -> str:
+        """The name the cockpit shows it under and finds it by."""
+        ...
+
+    def open(self) -> Store:
+        """Its state, for reading beside the running agent."""
+        ...
+
+    def stopped(self) -> bool:
+        """Whether its writer is known to have stopped."""
+        ...
+
+
+class Source(Protocol):
+    """Where instances are found."""
+
+    def found(self) -> Sequence[Instance]:
+        """Every instance found now, by name. One that cannot be read is
+        found all the same: its page says why."""
+        ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -23,6 +76,75 @@ class StateFile:
 
     name: str
     path: Path
+
+    def open(self) -> Store:
+        return Store.open(self.path, read_only=True)
+
+    def stopped(self) -> bool:
+        return stopped(self.path)
+
+
+@dataclass(frozen=True, slots=True)
+class Files:
+    """The state files in ``data_dir`` and its direct folders."""
+
+    data_dir: Path
+
+    def found(self) -> Sequence[Instance]:
+        return found(self.data_dir)
+
+
+@dataclass(frozen=True, slots=True)
+class OnServer:
+    """A state on a server, or what could not be read there: ``server``
+    reaches it, ``error`` says why there is none."""
+
+    name: str
+    server: Server | None = None
+    error: MailboxAgentError | None = None
+
+    def open(self) -> Store:
+        if self.error is not None:
+            raise self.error
+        if self.server is None:
+            raise ConfigError("the state was not found")
+        found = Store.read_server(self.server)
+        if found is None:
+            raise ConfigError("the database holds no state yet")
+        return found
+
+    def stopped(self) -> bool:
+        return False
+
+
+@dataclass(frozen=True, slots=True)
+class Servers:
+    """The states the role of each of ``servers`` may read on it."""
+
+    servers: tuple[Server, ...]
+
+    def found(self) -> Sequence[Instance]:
+        return [
+            OnServer(item.name, item.server, item.error)
+            for server in self.servers
+            for item in states_on(server)
+        ]
+
+
+def every(sources: Sequence[Source]) -> list[Instance]:
+    """The instances of every source, by name. A name a source before
+    took already is not shown twice: the later one is left out, so a
+    page never opens another instance than the one its name showed."""
+    taken: dict[str, Instance] = {}
+    for source in sources:
+        for instance in source.found():
+            taken.setdefault(instance.name, instance)
+    return sorted(taken.values(), key=lambda instance: instance.name)
+
+
+def find(sources: Sequence[Source], name: str) -> Instance | None:
+    """The instance shown as ``name``, None when there is none."""
+    return next((found for found in every(sources) if found.name == name), None)
 
 
 def _files(data_dir: Path) -> Iterator[Path]:
@@ -49,11 +171,6 @@ def found(data_dir: Path) -> list[StateFile]:
         names.add(name)
         files.append(StateFile(name, path))
     return sorted(files, key=lambda file: file.name)
-
-
-def find(data_dir: Path, name: str) -> StateFile | None:
-    """The state file shown as ``name``, None when there is none."""
-    return next((file for file in found(data_dir) if file.name == name), None)
 
 
 def stopped(path: Path) -> bool:

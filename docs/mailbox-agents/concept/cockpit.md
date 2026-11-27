@@ -17,6 +17,11 @@ It only reads. It writes no state file, changes no mail, asks no model
 and holds no token of an agent. It reads a state file through the
 methods of the store alone, opened read-only for one request.
 
+It finds the instances through sources behind one seam: a source names
+its instances, and each opens its state for reading and says whether its
+writer stopped. The pages do not know which source an instance comes
+from. A name a source before took already is not shown a second time.
+
 Decided on 2026-11-27:
 
 - It stands apart from the pages of the mailbox service, a command of
@@ -46,13 +51,36 @@ shows its name and counts and says "no profile yet".
 A file that cannot be read, is no state file, or is of a newer schema, is
 a row with its reason, never an error of the page.
 
+### On a PostgreSQL server
+
+With `COCKPIT_DATABASE_URLS` the cockpit reads the servers it names as
+well, signed in with a role of its own, such as `agents_cockpit`, a
+member of the read role `agents_read` that `storage provision` makes
+(2026-11-27). On each server it finds every database the role may
+connect to, and in it each schema where it may read the table
+`profile`: that is an instance. Only an owner gives it that, by naming
+the read role in `DATABASE_READERS`, which the agent grants at each
+start. A database whose owner did not, or the database of the service,
+which it closes to every other role, is not found. The instance is
+named by its database, with its schema after it where the database
+holds several.
+
+It reads on a short connection of its own for each instance and
+request, whose transactions only read, without a lock and without a step
+of the schema. A database that answers with another schema, or a server
+that is away, is a row with its reason. No file says whether a writer
+there stopped: an instance without fresh progress is `silent`.
+
+Every role of a server sees the names of all its databases. The read
+role sees no row of a database it was not given.
+
 ## The state of an instance
 
 | State | When |
 |---|---|
 | `healthy` | a writer holds the file and its last progress is within the window of its health, worked out from the numbers of its profile |
 | `silent` | a writer holds the file and its last progress is older |
-| `stopped` | no writer holds the file |
+| `stopped` | no writer holds the file. Never on a server |
 | `no profile yet` | a writer holds the file, which has no profile |
 | `unreadable` | the file cannot be read, with the reason |
 
@@ -118,8 +146,8 @@ as HTML, and no template marks a text as safe.
 
 ## Its limits
 
-- One machine: it reads the state files it can reach on its disk or its
-  volumes.
+- One machine for the files: it reads the state files it can reach on
+  its disk or its volumes, and the servers `COCKPIT_DATABASE_URLS` names.
 - No paging and no search: the newest results, 50 by default, 200 at
   most.
 - Nothing to change: no stage, no list, no pause.
