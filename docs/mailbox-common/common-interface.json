@@ -320,6 +320,7 @@
       "server_engine",
       "server_lock",
       "server_place",
+      "server_url",
       "shape",
       "sqlite_file",
       "stored",
@@ -1094,6 +1095,17 @@
     },
     "translated_server": {
       "signature": "(errors: 'Errors') -> 'AbstractContextManager[None]'"
+    }
+  },
+  "benethos_mailbox_common.storage.server_url": {
+    "URL_FORM": {
+      "value": "postgresql://<role>@<host>:<port>/<database>"
+    },
+    "server_at": {
+      "signature": "(url: 'str', password: 'str', *, tls: \"Literal['verify', 'off']\" = 'verify', ca_file: 'Path | None' = None) -> 'Server'"
+    },
+    "url_problem": {
+      "signature": "(url: 'str', setting: 'str' = 'database_url') -> 'str | None'"
     }
   },
   "benethos_mailbox_common.storage.shape": {

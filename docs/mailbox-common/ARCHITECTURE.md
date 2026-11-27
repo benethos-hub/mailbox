@@ -65,6 +65,8 @@ packages/mailbox-common/
       server_place.py   # Server, ServerPlace: a schema on PostgreSQL,
                         #   its version, its lock, away and back
       server_engine.py  # the engine on psycopg, tls_arguments
+      server_url.py     # URL_FORM, url_problem, server_at: the address of a
+                        #   server in a setting
       server_lock.py    # the keys of the advisory locks of a schema
       outage.py         # Availability, Outage: a server away, the pause
       tables.py         # Table, the tables of the schema for an export,

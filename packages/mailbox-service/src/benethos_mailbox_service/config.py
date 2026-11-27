@@ -12,7 +12,7 @@ from pydantic import Field, SecretStr, field_validator, model_validator
 # Named apart from folders() below.
 from benethos_mailbox_common.paths import folders as system
 from benethos_mailbox_common.settings import files
-from benethos_mailbox_common.storage import names
+from benethos_mailbox_common.storage import server_url
 
 APP = "benethos-mailbox-service"
 # The layout of the repository, relative to the working directory. The
@@ -33,8 +33,6 @@ PATH_SETTINGS = (
     "database_password_file",
     "database_ca_file",
 )
-# The address of a database server, without its password.
-DATABASE_URL_FORM = "postgresql://<role>@<host>:<port>/<database>"
 
 
 class Settings(files.FileSettings):
@@ -295,34 +293,9 @@ def _database_settings(url: str | None, password_file: Path | None) -> None:
         )
     if _empty(password_file):
         raise ValueError("database_password_file names an empty file")
-    parts = urlsplit(url)
-    if parts.scheme != "postgresql":
-        raise ValueError(f"database_url must have the form {DATABASE_URL_FORM}")
-    if parts.password is not None:
-        raise ValueError(
-            "database_url must not hold a password: name the file that holds"
-            " it in database_password_file"
-        )
-    if parts.query or parts.fragment or "?" in url or "#" in url:
-        raise ValueError(
-            "database_url must not hold a query or a fragment: the password"
-            " comes from database_password_file, TLS from database_tls"
-        )
-    try:
-        port = parts.port
-    except ValueError:
-        port = None
-    role = parts.username or ""
-    database = parts.path.removeprefix("/")
-    if not (role and parts.hostname and database and "/" not in database) or (
-        port is None and ":" in parts.netloc.rsplit("@", 1)[-1]
-    ):
-        raise ValueError(f"database_url must have the form {DATABASE_URL_FORM}")
-    if not names.is_plain_name(role):
-        raise ValueError(
-            "the role in database_url names the schema too: lower case"
-            " letters, digits and underscores"
-        )
+    problem = server_url.url_problem(url)
+    if problem is not None:
+        raise ValueError(problem)
 
 
 def _empty(path: Path) -> bool:
