@@ -7,6 +7,7 @@ This folder is all it needs, no clone of the repository.
 
 - [Set it up](#set-it-up)
 - [The cockpit](#the-cockpit)
+- [On PostgreSQL](#on-postgresql)
 - [Update](#update)
 - [What is where](#what-is-where)
 
@@ -94,6 +95,64 @@ volume (measured on 2026-11-27), and the cockpit shows no state file for
 it until then. It shows an agent as `healthy`, `silent` or `stopped`. One
 killed without a clean stop reads as running until the window of its
 health has passed, then as `silent`.
+
+## On PostgreSQL
+
+The state of an agent can lie in a database of its own on a PostgreSQL
+server of yours, version 19 or newer, in place of its volume: one
+database and one role for each agent and instance
+([state.md](../../../docs/mailbox-agents/concept/state.md)). This
+compose file brings no server, as it brings no mailbox service.
+
+1. Make the role and the database of the agent. `storage provision`
+   prints what an administrator of the server runs once, with the
+   names `agent_<agent>`, or those of `MAILBOX_AGENTS_DATABASE_URL`
+   when its `.env` names one, and once per server the read role
+   `agents_read` and the role of the cockpit `agents_cockpit`:
+
+   ```sh
+   docker compose --profile counting run --rm --no-deps counting storage provision --agent counting
+   ```
+
+   With `--apply --admin-url postgresql://<admin>@<host>:<port>/postgres
+   --admin-password-file /run/secrets/database_admin_password` it runs
+   them itself and sets the password of the role. Put the file of the
+   administrator into `secrets/<agent>/` for that one call, and take it
+   out again after it.
+2. Put the password of the role into `secrets/<agent>/database_password`,
+   readable by uid 10001 alone as the token is, and the lines of
+   `agents/<agent>/.env.example` under "On PostgreSQL" into its `.env`.
+   `MAILBOX_AGENTS_PROMPT_RETENTION_DAYS` stays `0`: the text of a model
+   call is never kept on a server.
+3. An agent that ran on its volume moves its state over. Stop it, check
+   that every value fits, move it, and start it on the database:
+
+   ```sh
+   docker compose --profile counting stop counting
+   docker compose --profile counting run --rm --no-deps counting storage move --agent counting --check
+   docker compose --profile counting run --rm --no-deps counting storage move --agent counting
+   docker compose --profile counting up -d
+   ```
+
+   The move compares every table on both sides and leaves the volume as
+   it was. `MAILBOX_AGENTS_STORAGE=postgres` must be in the `.env` for
+   the start, not for the move.
+
+At each start the agent closes its database to every other role of the
+server and gives the read to the roles `MAILBOX_AGENTS_DATABASE_READERS`
+names, `agents_read` for the cockpit, and takes it from a role it no
+longer names. `status` and `paths` say where the state lies, and
+`health` reads it there.
+
+For the cockpit, give `agents_cockpit` a password as the administrator,
+put it into `secrets/cockpit/database_password`, and name the server in
+`cockpit/.env`, as `cockpit/.env.example` shows. It finds every
+database whose agent gives `agents_read` the read, and shows the state
+files of the volumes beside them.
+
+The volume of an agent on a server holds no state. Back up each
+database on its own, with `pg_dump --format=custom` as its role or as
+the administrator, and keep the dumps as you keep the volumes.
 
 ## Update
 

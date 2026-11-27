@@ -2,9 +2,30 @@
 
 Part of the [concept](../CONCEPT.md).
 
-One SQLite file per agent, or per instance of one, on the storage of
+One database per agent, or per instance of one, on the storage of
 `mailbox-common`, with numbered steps of its schema that are never
-changed once released.
+changed once released: a file of SQLite in `DATA_DIR` by default, or
+with `STORAGE=postgres` a database of its own on a PostgreSQL server
+(2026-11-27). The tables, the steps and what a reader may do are the
+same on both.
+
+**On a server.** Each agent and instance has a database of its own and
+a role that owns it, and the state lies in the schema named after the
+role. `storage provision` prints what an administrator runs once for
+them, or runs it, and `storage move` copies a state file into an empty
+database ([runtime](runtime.md#commands)). A writer makes the schema
+where it is missing, brings it to the schema of its version and holds
+an advisory lock, so a second writer is refused. At each start a role
+that owns its database takes `CONNECT` and `TEMPORARY` from `PUBLIC`,
+closing it to every other role of the server, and gives `CONNECT`,
+`USAGE` of its schema and `SELECT` on its tables, those to come
+included, to the roles `DATABASE_READERS` names. It takes them from a
+role it no longer names. A reader, such as `status`, `health`, `report`
+or the cockpit, reads at the schema of its version alone, without a
+lock and without a step, on a connection whose transactions only read.
+A server that is away is waited for as an upstream
+([runtime](runtime.md)). `PROMPT_RETENTION_DAYS` must be `0`: the text
+of a model call is never kept on a server (decided 2026-11-25).
 
 | Table | Holds |
 |---|---|

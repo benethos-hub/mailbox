@@ -11,12 +11,12 @@
                       | REST, benethos-mailbox-client
         +-------------+--------------+
         | mailbox-agents             |   one image,
-        |   categorization  + SQLite |   one process per agent,
-        |   awaiting_reply  + SQLite |   one state file per agent
-        |   inquiries       + SQLite |
-        |   counting        + SQLite |
-        |   filing          + SQLite |
-        |   forwarding      + SQLite |
+        |   categorization  + state  |   one process per agent,
+        |   awaiting_reply  + state  |   one state per agent: a file
+        |   inquiries       + state  |   of SQLite, or a database of
+        |   counting        + state  |   its own on PostgreSQL
+        |   filing          + state  |
+        |   forwarding      + state  |
         +-------------+--------------+
                       | OpenAI-compatible HTTP, one key per agent
         +-------------v--------------+
@@ -246,10 +246,12 @@ assets/mailbox-agents/  # brand/icon.svg and architecture/architecture.html,
   and nothing is lost or decided without the model.
 - **asyncio throughout** (decided 2026-11-17). The async class of the
   mailbox client, an async httpx client for the gateway, one event loop per
-  process. Calls to SQLite are short and serialized.
-- **A state file can be read by another process.** It runs in WAL mode and
+  process. Calls to the state are short and serialized.
+- **A state can be read by another process.** A file runs in WAL mode and
   its schema is part of the concept ([state](concept/state.md)), so a
   later overview of what every agent did ([roadmap](../roadmap/agents.md)) reads the
   files without the agents knowing of it. Another process of the same
   user, that is: the command line sets the umask to 077, so a state file
-  is readable by its owner only (decided 2026-11-17).
+  is readable by its owner only (decided 2026-11-17). On a server the
+  agent closes its database at each start and gives the read to the
+  roles it names alone ([state](concept/state.md)).

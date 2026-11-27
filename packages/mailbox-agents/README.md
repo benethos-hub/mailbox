@@ -96,8 +96,9 @@ What the project is for: [the repository's README](https://github.com/benethos-h
   what a rule says, whether a quote from the model is really in the mail,
   and which action follows.
 - Every agent runs in a process of its own, with its own credentials and
-  its own SQLite state file. The state file holds ids and decisions, never
-  the text of a mail.
+  its own state: a file of SQLite, or a database of its own on a
+  PostgreSQL server with the extra `postgres`. The state holds ids and
+  decisions, never the text of a mail.
 - `benethos-mailbox-agents cockpit`, started by hand, shows what every
   agent did on read-only pages, read from the state files, behind a
   secret.

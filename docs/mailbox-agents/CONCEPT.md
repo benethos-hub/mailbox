@@ -28,7 +28,7 @@ code.
 | [The model gateway](concept/model-gateway.md) | The OpenAI-compatible gateway, structured output, local and hosted models. |
 | [The agent contract](concept/agent-contract.md) | `Agent`, its triggers, actions and limits, the context it is handed. |
 | [Runtime](concept/runtime.md) | The worker loop, the steps of a message, stages, the commands and `report`. |
-| [State](concept/state.md) | The SQLite state file, its tables and migrations. |
+| [State](concept/state.md) | The state of an agent, a file of SQLite or a database on PostgreSQL, its tables and its steps. |
 | [Safety](concept/safety.md) | Untrusted mail, evidence, sender rules, reversibility, secrets. |
 | [Evaluation](concept/evaluation.md) | Gold sets, scoring, reports of numbers only. |
 | [Configuration](concept/configuration.md) | Every setting. |
@@ -84,7 +84,7 @@ against labelled mail, not an impression.
 **In scope:** reading the change feed of the mailbox service, selecting the
 messages an agent cares about, classifying a message with rules and with one
 model call, two at most for `categorization`, extracting fields from it, setting and removing a keyword, moving
-a message to a folder, keeping per-agent state in SQLite, measuring every
+a message to a folder, keeping per-agent state in SQLite or on PostgreSQL, measuring every
 agent against a labelled set of mail, and exposing health and metrics.
 
 **Out of scope (non-goals):**
