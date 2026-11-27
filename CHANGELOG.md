@@ -46,6 +46,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   `--admin-password-file` it runs that itself and sets the password of
   the role, so the agent starts on it. Role and database are those of
   `MAILBOX_AGENTS_DATABASE_URL`, or else `agent_<agent>_<instance>`.
+- `benethos-mailbox-agents`: `storage move --agent <name>` copies the
+  state file of an agent and instance into the empty database
+  `MAILBOX_AGENTS_DATABASE_URL` names and compares every table on both
+  sides. The file stays as it was. With `--check` it only checks that
+  every value fits its column.
 - `benethos-mailbox-agents`: the state file stands on the storage of
   `benethos-mailbox-common`, as the database of the service does. A
   state file is brought to schema 5 when its agent starts, with a copy

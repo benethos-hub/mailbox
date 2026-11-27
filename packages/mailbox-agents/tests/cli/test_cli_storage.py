@@ -92,3 +92,11 @@ def test_apply_needs_an_administrator_and_a_server(
     assert main(argv) == 2
 
     assert said in capsys.readouterr().err
+
+
+def test_a_move_needs_the_database_it_goes_into(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert main(["storage", "move", "--agent", "counting"]) == 2
+
+    assert f"{PREFIX}DATABASE_URL names" in capsys.readouterr().err
