@@ -26,6 +26,8 @@ from benethos_mailbox_service.data.storage.sql.dialect import (
     insert_or_update,
 )
 
+from ...schema_helpers import driver_of
+
 TABLE = sa.Table(
     "probe",
     sa.MetaData(),
@@ -147,7 +149,7 @@ def test_in_chunks_keeps_each_value_once_in_its_order() -> None:
 def test_a_transaction_begins_as_a_writer_on_sqlite(engine: sa.Engine) -> None:
     said: list[str] = []
     with engine.connect() as conn:
-        conn.connection.driver_connection.set_trace_callback(said.append)  # type: ignore[union-attr]
+        driver_of(conn).set_trace_callback(said.append)
         begin(conn)
         conn.exec_driver_sql("ROLLBACK")
     assert said[0] == "BEGIN IMMEDIATE"

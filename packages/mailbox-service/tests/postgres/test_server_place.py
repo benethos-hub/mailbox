@@ -29,11 +29,11 @@ from benethos_mailbox_service.errors import NotFoundError, StorageError
 from ..postgres_helpers import (
     connect,
     database,
-    in_transaction,
     role,
     schema,
     server,
 )
+from ..schema_helpers import in_transaction
 
 
 def _definitions_differ(conn: sa.Connection) -> list[str]:

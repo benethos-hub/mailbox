@@ -300,6 +300,22 @@ def test_no_test_of_the_domain_calls_an_adapter_itself() -> None:
 TESTS = Path(__file__).resolve().parent
 
 
+# Where a database keeps its engine and the connection of its driver:
+# a test reaches them through schema_helpers.py alone.
+BENEATH = {"_place", "_driver", "_engine", "driver_connection"}
+
+
+def test_only_the_schema_helpers_reach_beneath_a_database() -> None:
+    found = [
+        f"{path.relative_to(TESTS).as_posix()}:{node.lineno} {node.attr}"
+        for path in sorted(TESTS.rglob("*.py"))
+        if path.name != "schema_helpers.py"
+        for node in ast.walk(ast.parse(path.read_text("utf-8")))
+        if isinstance(node, ast.Attribute) and node.attr in BENEATH
+    ]
+    assert found == [], "a test reaches beneath a database:\n  " + "\n  ".join(found)
+
+
 def test_no_test_imports_a_class_of_the_database() -> None:
     found = []
     for path in sorted(TESTS.rglob("*.py")):

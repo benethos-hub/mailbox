@@ -76,7 +76,6 @@ class Database:
             opened = self._place.open(upto, SCHEMA_VERSION)
             self._connection = opened.connection
             migrated = opened.migrated
-            self._engine = self._connection.engine
             with self._place.translated():
                 migrated = self._revised(upto, migrated)
         except BaseException:

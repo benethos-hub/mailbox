@@ -15,6 +15,7 @@ from benethos_mailbox_service.data.storage import Database, Server, ServerPlace
 from benethos_mailbox_service.data.storage.sql.server_engine import tls_arguments
 
 from ..postgres_helpers import admin, schema
+from ..schema_helpers import driver_of
 
 # A name in the certificate of the test server, and one that is not.
 NAMED = "db.mailbox.test"
@@ -84,9 +85,11 @@ def test_the_place_on_this_host(tls: Literal["verify", "off"], encrypted: bool) 
         )
         try:
             with db.connected() as conn:
-                found = conn.connection.driver_connection.execute(  # type: ignore[union-attr]
-                    "SELECT ssl FROM pg_stat_ssl WHERE pid = pg_backend_pid()"
-                ).fetchone()
+                found = (
+                    driver_of(conn)
+                    .execute("SELECT ssl FROM pg_stat_ssl WHERE pid = pg_backend_pid()")
+                    .fetchone()
+                )
         finally:
             db.close()
     assert found is not None and bool(found[0]) is encrypted

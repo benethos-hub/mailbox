@@ -13,6 +13,8 @@ from collections.abc import Iterable, Sequence
 from pathlib import Path
 from typing import Any
 
+import sqlalchemy as sa
+
 from benethos_mailbox_service.data.export import write_export
 from benethos_mailbox_service.data.storage import Database, Records
 from benethos_mailbox_service.data.storage.sqlite.file import translated
@@ -65,14 +67,14 @@ def at_schema(path: Path, version: int) -> sqlite3.Connection:
 def select(db: Database, sql: str, params: Sequence[Any] = ()) -> list[Any]:
     """The rows ``sql`` reads from ``db``, each by name and by place."""
     with translated():
-        rows: list[Any] = _driver(db).execute(sql, tuple(params)).fetchall()
+        rows: list[Any] = driver(db).execute(sql, tuple(params)).fetchall()
         return rows
 
 
 def value(db: Database, sql: str, params: Sequence[Any] = ()) -> Any:
     """The first value of the first row ``sql`` reads, or None."""
     with translated():
-        row = _driver(db).execute(sql, tuple(params)).fetchone()
+        row = driver(db).execute(sql, tuple(params)).fetchone()
     return None if row is None else row[0]
 
 
@@ -80,21 +82,36 @@ def run(db: Database, sql: str, params: Sequence[Any] = ()) -> int:
     """``sql`` on ``db``, in the transaction open or in one of its own.
     The rows it changed."""
     with translated():
-        changed: int = _driver(db).execute(sql, tuple(params)).rowcount
+        changed: int = driver(db).execute(sql, tuple(params)).rowcount
         return changed
 
 
 def run_many(db: Database, sql: str, rows: Iterable[Sequence[Any]]) -> None:
     """``sql`` once for each of ``rows``, in one transaction."""
     with db.transaction(), translated():
-        _driver(db).executemany(sql, rows)
+        driver(db).executemany(sql, rows)
 
 
-def _driver(db: Database) -> sqlite3.Connection:
-    """The connection of the driver beneath ``db``: the one place a test
-    knows where it sits."""
-    driver: sqlite3.Connection = db._place.driver
-    return driver
+def driver(db: Database) -> sqlite3.Connection:
+    """The connection of the driver beneath ``db``, a file of SQLite: the
+    one place a test knows where it sits."""
+    found: sqlite3.Connection = db._place._driver  # type: ignore[attr-defined]
+    return found
+
+
+def engine(db: Database) -> sa.Engine:
+    """The engine of SQLAlchemy beneath ``db``."""
+    return db._connection.engine
+
+
+def in_transaction(db: Database) -> bool:
+    """Whether the one connection of ``db`` is inside a transaction."""
+    return bool(db._connection.in_transaction())
+
+
+def driver_of(conn: sa.Connection) -> Any:
+    """The connection of the driver beneath ``conn``."""
+    return conn.connection.driver_connection
 
 
 def shape(conn: sqlite3.Connection) -> dict[str, Any]:

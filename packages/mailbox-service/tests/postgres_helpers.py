@@ -170,12 +170,6 @@ def role() -> Iterator[Server]:
             conn.execute(sql.SQL("DROP ROLE IF EXISTS {}").format(made))
 
 
-def in_transaction(db: Database) -> bool:
-    """Whether the one connection of ``db`` is inside a transaction: the
-    one place a test knows where it sits."""
-    return bool(db._connection.in_transaction())
-
-
 def service_on(
     server: Server, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *, storage: str
 ) -> None:
