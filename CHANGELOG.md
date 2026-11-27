@@ -339,6 +339,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   that would only be recorded, held by its sender check or in a stage
   below `suggest`, is still recorded. Before, it was refused and left no
   trace.
+- `benethos-mailbox-agents`: `check` finds a circle of `categorization`
+  lists that one closes with its own keyword after a `move_below`, as it
+  finds one closed after a `move`.
 - `restore` and `backup verify` refuse a backup whose manifest holds a
   field of the wrong type, such as the schema as a text, with a message
   instead of a traceback.

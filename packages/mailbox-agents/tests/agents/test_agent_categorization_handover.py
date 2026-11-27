@@ -192,6 +192,24 @@ def test_the_sign_of_an_instance_closes_a_circle_too(tmp_path: Path) -> None:
     assert Categorization.check_together(paths) == ["a circle: a -> b -> a"]
 
 
+def test_the_sign_of_a_list_that_moves_below_alone_closes_a_circle(
+    tmp_path: Path,
+) -> None:
+    below = [{"move_below": "Invoices"}]
+    category = {"name": "Any", "keywords": ["agent-q"], "then": below}
+    waits_for_b = {
+        "on": {"keywords": ["agent-categorized-b"]},
+        "dimensions": [{"name": "kind", "categories": [category]}],
+    }
+    waits_for_a = {**waits_for_b, "on": {"keywords": ["agent-categorized-a"]}}
+    paths = {}
+    for name, listed in (("a", waits_for_b), ("b", waits_for_a)):
+        paths[name] = tmp_path / f"{name}.json"
+        paths[name].write_text(json.dumps(listed), encoding="utf-8")
+
+    assert Categorization.check_together(paths) == ["a circle: a -> b -> a"]
+
+
 def test_a_list_waiting_for_its_own_keyword_does_not_start(tmp_path: Path) -> None:
     listed = {
         "on": {"keywords": ["agent-categorized-*"]},
