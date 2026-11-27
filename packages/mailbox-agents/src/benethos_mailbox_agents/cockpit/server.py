@@ -41,7 +41,13 @@ async def serve(application: Any, host: str, port: int, *, named: bool) -> None:
             raise _refused(port)
         await asyncio.sleep(0.02)
     record(process.CockpitServing(agent=NAME, port=port, named=named))
-    await task
+    try:
+        await asyncio.shield(task)
+    except asyncio.CancelledError:
+        # Stopped from outside: the server closes its port before it ends.
+        server.should_exit = True
+        await task
+        raise
 
 
 async def _serve(server: uvicorn.Server, port: int) -> None:

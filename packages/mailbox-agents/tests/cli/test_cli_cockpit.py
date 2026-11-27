@@ -70,6 +70,7 @@ async def test_the_cockpit_serves_its_pages_and_says_so(
     port = _free_port()
     app = make_app(Cockpit(tmp_path, SECRET, None, Clock()))
     task = asyncio.create_task(serve(app, "127.0.0.1", port, named=False))
+    answer: httpx.Response | None = None
     try:
         async with httpx.AsyncClient() as client:
             for _ in range(250):
@@ -77,6 +78,7 @@ async def test_the_cockpit_serves_its_pages_and_says_so(
                     answer = await client.get(f"http://127.0.0.1:{port}/login")
                     break
                 await asyncio.sleep(0.02)
+        assert answer is not None
         assert answer.status_code == 200
         assert "Sign in to the cockpit" in answer.text
     finally:
@@ -85,4 +87,6 @@ async def test_the_cockpit_serves_its_pages_and_says_so(
             await task
 
     assert f"cockpit began serving its pages on port {port}: ids only" in caplog.text
+    with socket.socket() as again:
+        again.bind(("127.0.0.1", port))
     assert SECRET not in caplog.text
