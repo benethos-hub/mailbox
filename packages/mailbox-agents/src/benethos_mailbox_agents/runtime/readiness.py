@@ -27,18 +27,11 @@ __all__ = [
     "readiness",
     "required",
     "start",
-    "uses_model",
 ]
 
 # What every agent needs, and what an agent that asks the model needs too.
 MAILBOX_SETTINGS = ("service_url", "service_token")
 MODEL_SETTINGS = ("gateway_url", "gateway_key", "model")
-
-
-def uses_model(agent: type[Agent]) -> bool:
-    """Whether the limits of ``agent`` allow a model call: whether it may
-    ask a model in some configuration."""
-    return agent.limits.model_calls_per_message > 0
 
 
 def required(agent: type[Agent], asks_model: bool) -> tuple[str, ...]:
