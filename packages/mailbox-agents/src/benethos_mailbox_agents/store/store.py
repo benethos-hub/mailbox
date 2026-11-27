@@ -112,7 +112,7 @@ def _reader(path: Path) -> sqlite3.Connection:
         connection = sqlite3.connect(uri, uri=True, isolation_level=None)
         try:
             connection.execute("PRAGMA user_version").fetchone()
-        except BaseException:
+        except sqlite3.Error:
             connection.close()
             raise
         return connection
