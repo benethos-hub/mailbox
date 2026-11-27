@@ -30,7 +30,7 @@ may be given as a file with the suffix `_FILE`. An empty line, such as
 | `BACKFILL_DAYS` | the days the command `backfill` takes up without `--days`, and the window taken up after an expired feed state, `7` when unset |
 | `DATA_DIR` | where the state files live, one `<agent>.db` per agent. Unset: the data folder of where the settings come from, below |
 | `PROMPT_RETENTION_DAYS` | [state](state.md), `0` when unset |
-| `STORAGE` | where the state lies: `sqlite`, a file in `DATA_DIR`, when unset, or `postgres`, a database of its own on a PostgreSQL server ([state](state.md)). With `postgres` `PROMPT_RETENTION_DAYS` must be `0` (decided 2026-11-25) |
+| `STORAGE` | where the state lies: `sqlite`, a file in `DATA_DIR`, when unset, or `postgres`, a database of its own on a PostgreSQL server ([state](state.md)), with the driver of the extra `postgres`, which the image brings. With `postgres` `PROMPT_RETENTION_DAYS` must be `0` (decided 2026-11-25) |
 | `DATABASE_URL` | `postgres`: the server as `postgresql://<role>@<host>:<port>/<database>`, without a password. The schema is named after the role |
 | `DATABASE_PASSWORD_FILE` | `postgres`: the file holding the password of the role, never logged |
 | `DATABASE_TLS` | `postgres`: `verify` talks to a host other than this one only over TLS with a checked certificate and name, `off` goes without TLS. `verify` when unset |

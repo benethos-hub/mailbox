@@ -34,7 +34,9 @@ WORKDIR /src
 # so /opt/venv is self-contained and can simply be copied.
 COPY pyproject.toml uv.lock ./
 COPY packages packages
-RUN uv sync --frozen --no-dev --no-editable --package benethos-mailbox-agents
+# With the driver of PostgreSQL, so the image keeps the state on either.
+RUN uv sync --frozen --no-dev --no-editable --package benethos-mailbox-agents \
+        --extra postgres
 
 # ---- runtime ---------------------------------------------------------------
 FROM python:3.15-slim@sha256:63bb298d2b7b88f176f51b5189f54ce6535c997682ea70885d2132f5d473a8a5 AS runtime

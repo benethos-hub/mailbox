@@ -76,6 +76,13 @@ dependencies = [
     "python-multipart>=0.0.34",
 ]
 
+[project.optional-dependencies]
+# The state on PostgreSQL (MAILBOX_AGENTS_STORAGE=postgres): the driver
+# SQLAlchemy speaks to it through, with libpq and OpenSSL in its wheel,
+# at the minimum of the extra postgres of mailbox-common. The job
+# lowest-agents checks it against OSV.
+postgres = ["psycopg[binary]>=3.3.9"]
+
 [project.urls]
 Homepage = "https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-agents#readme"
 Documentation = "https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-agents#readme"

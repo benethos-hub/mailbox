@@ -138,8 +138,10 @@ jobs:
         run: uv run --frozen --group browser pytest packages/mailbox-service/tests/browser -p no:cacheprovider -n 0
 
   # The storage on PostgreSQL 19, the Debian image: the tests of the
-  # repositories a third time, on the server, and the folder
-  # tests/postgres/ of the service. Each test takes a schema of its own.
+  # repositories a third time, on the server, and the folders
+  # tests/postgres/ of the service and of the agents. Each test of the
+  # service takes a schema of its own, each of the agents a database and
+  # a role of its own. The common package runs beside them.
   # The server is the one of containers/test-database, with TLS from its
   # test CA, made by its setup.sh: it lives as long as the job, its
   # password and its CA with it.
@@ -158,8 +160,12 @@ jobs:
       - name: The test database
         run: sh containers/test-database/setup.sh
 
-      - name: The service against PostgreSQL
-        run: uv run --frozen pytest packages/mailbox-service/tests -p no:cacheprovider
+      - name: The service, the common package and the agents against PostgreSQL
+        run: >-
+          uv run --frozen pytest -p no:cacheprovider
+          packages/mailbox-service/tests
+          packages/mailbox-common/tests
+          packages/mailbox-agents/tests
 
   # The other side of fresh-install: the lowest versions pyproject.toml
   # allows, on the oldest supported Python, without the lockfile. An
@@ -228,7 +234,7 @@ jobs:
       python-version: "3.11"
       editable: |
         packages/mailbox-client
-        packages/mailbox-agents
+        packages/mailbox-agents[postgres]
         packages/mailbox-common[paths,settings,storage]
       requirements: |
         pytest>=9.1.1
