@@ -37,6 +37,7 @@ from ...contract import (
     Action,
     ActionRequest,
     Agent,
+    Classifier,
     Context,
     Limits,
     Requires,
@@ -76,7 +77,7 @@ def _runs(when: Mapping[str, tuple[str, ...]], chosen: Mapping[str, str]) -> boo
     return all(chosen.get(name) in allowed for name, allowed in when.items())
 
 
-class Categorization(Agent):
+class Categorization(Classifier):
     name = "categorization"
     version = "3"
     description = (

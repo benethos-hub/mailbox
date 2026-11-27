@@ -19,6 +19,7 @@ from .agent import (
     Trigger,
     state_name,
 )
+from .classifier import Classifier
 from .context import Context, Items, Model, Reader
 from .paths import folder_path, from_top
 from .placed import Placed
@@ -32,6 +33,7 @@ __all__ = [
     "Action",
     "ActionRequest",
     "Agent",
+    "Classifier",
     "Context",
     "Items",
     "Limits",
