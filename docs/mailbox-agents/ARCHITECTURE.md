@@ -31,7 +31,7 @@ How one message passes through one agent:
 trigger          selection        decision                  effect
 ---------------------------------------------------------------------------
 change feed  ->  code: is    ->   1. baseline (rules)   ->  shadow
-tick (clock)     this mine?       2. model, one call,       keyword
+tick (clock)     this mine?       2. model, one call,       suggest
                                      schema, no tools       full
                                   3. check in code:
                                      schema, evidence

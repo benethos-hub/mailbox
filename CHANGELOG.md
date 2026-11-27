@@ -205,6 +205,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `benethos-mailbox-agents`: the middle stage is called `suggest`:
+  `MAILBOX_AGENTS_STAGE=suggest`. It does what `keyword` did, and
+  `keyword` is still taken and read as `suggest`.
 - A link to an attachment holds while the service cannot reach its
   database: its route answers `503` with `Retry-After`, and the attempt
   does not count against the address that asks.

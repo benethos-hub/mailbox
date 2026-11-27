@@ -33,15 +33,27 @@ def test_the_defaults() -> None:
 
 
 def test_from_the_environment(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("MAILBOX_AGENTS_STAGE", "keyword")
+    monkeypatch.setenv("MAILBOX_AGENTS_STAGE", "suggest")
     monkeypatch.setenv("MAILBOX_AGENTS_ACCOUNTS", "acc1, acc2,")
     monkeypatch.setenv("MAILBOX_AGENTS_LOG_LEVEL", "debug")
 
     found = load_settings()
 
-    assert found.stage == "keyword"
+    assert found.stage == "suggest"
     assert found.accounts == ["acc1", "acc2"]
     assert found.log_level == "DEBUG"
+
+
+def test_the_former_word_of_the_middle_stage_is_read_as_suggest(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("MAILBOX_AGENTS_STAGE", "keyword")
+
+    assert load_settings().stage == "suggest"
+
+    monkeypatch.setenv("MAILBOX_AGENTS_STAGE", "partial")
+    with pytest.raises(errors.ConfigError, match="STAGE"):
+        load_settings()
 
 
 def test_from_a_named_env_file(tmp_path: Path) -> None:

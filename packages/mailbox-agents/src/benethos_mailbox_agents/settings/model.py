@@ -28,7 +28,11 @@ PREFIX = "MAILBOX_AGENTS_"
 # dashes, a letter first, at most 40.
 INSTANCE_FORM = re.compile(r"[a-z][a-z0-9-]{0,39}")
 
-Stage = Literal["shadow", "keyword", "full"]
+Stage = Literal["shadow", "suggest", "full"]
+
+# The word the middle stage had before 2026-11-27, still taken and read as
+# suggest, so a deployment written before goes on unchanged.
+FORMER_STAGES = {"keyword": "suggest"}
 
 
 class Settings(files.FileSettings):
@@ -132,6 +136,13 @@ class Settings(files.FileSettings):
         if value is not None:
             _context(value)
         return value
+
+    @field_validator("stage", mode="before")
+    @classmethod
+    def _former_stage(cls, value: Any) -> Any:
+        """``keyword``, the word of the middle stage before 2026-11-27, is
+        read as ``suggest``."""
+        return FORMER_STAGES.get(value, value) if isinstance(value, str) else value
 
     @field_validator("log_level", mode="before")
     @classmethod

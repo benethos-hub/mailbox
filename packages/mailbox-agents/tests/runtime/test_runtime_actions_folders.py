@@ -96,7 +96,7 @@ async def test_an_agent_makes_no_folder_unless_it_says_so(actions_world: Wired) 
     assert actions_world.service.made() == []
 
 
-@pytest.mark.parametrize("stage", ["shadow", "keyword"])
+@pytest.mark.parametrize("stage", ["shadow", "suggest"])
 async def test_a_folder_is_recorded_only_below_full(
     actions_world: Wired, stage: str
 ) -> None:
@@ -294,7 +294,7 @@ def test_every_stage_has_a_row() -> None:
     assert set(STAGE_ALLOWS) == set(get_args(Stage))
 
 
-@pytest.mark.parametrize("stage", ["shadow", "keyword"])
+@pytest.mark.parametrize("stage", ["shadow", "suggest"])
 async def test_after_a_move_recorded_only_the_rest_is_recorded_only(
     actions_world: Wired, stage: str
 ) -> None:

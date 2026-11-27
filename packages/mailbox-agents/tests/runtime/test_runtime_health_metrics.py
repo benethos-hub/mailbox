@@ -48,7 +48,7 @@ def sample(metrics: Metrics, name: str, **labels: str) -> float | None:
 
 async def test_a_pass_fills_the_metrics(world: Wired) -> None:
     worker = Worker(
-        agent=Echo(settings(stage="keyword")),
+        agent=Echo(settings(stage="suggest")),
         store=world.store,
         mailbox=world.mailbox,
         gateway=world.gateway,
@@ -85,7 +85,7 @@ async def test_a_pass_fills_the_metrics(world: Wired) -> None:
             "mailbox_agents_info",
             agent="echo",
             version="1",
-            stage="keyword",
+            stage="suggest",
             instance="",
         )
         == 1
@@ -99,7 +99,7 @@ async def test_an_answer_past_the_text_limit_is_refused_and_counted(
     """A quote longer than ``Limits.answer_text`` would copy the mail into
     the state file: refused as not fitting the schema, as before."""
     worker = Worker(
-        agent=Echo(settings(stage="keyword")),
+        agent=Echo(settings(stage="suggest")),
         store=world.store,
         mailbox=world.mailbox,
         gateway=world.gateway,
