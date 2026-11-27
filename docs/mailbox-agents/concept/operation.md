@@ -44,6 +44,11 @@ Part of the [concept](../CONCEPT.md).
   the metrics in the process of the worker and stopped with it, only
   with `A2A_TOKEN` ([peers over A2A](a2a.md)). A port another process
   holds ends `worker` with exit code 2, naming `A2A_PORT`.
+- **Cockpit:** `benethos-mailbox-agents cockpit`, started by hand, reads
+  the state files of every agent and serves read-only pages of them on
+  `COCKPIT_PORT`, only with `COCKPIT_SECRET` ([cockpit](cockpit.md)). It
+  writes no access log. A port another process holds ends it with exit
+  code 2, naming `COCKPIT_PORT`.
 - **Spans:** over OpenTelemetry, off unless `OTLP_ENDPOINT` is set
   (decided 2026-11-25). Then each process exports over OTLP and HTTP to
   `<endpoint>/v1/traces`, so the target is a setting and any that takes

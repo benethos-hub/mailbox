@@ -126,6 +126,7 @@ changed until the evaluation was run again.
 | `check --agent <name> INSTANCE=FILE...` | reads the configuration of several instances together and names each circle of lists that set each other off, exit code 1 when there is one, else 0 |
 | `health --agent <name>` | exit 0 while the loop makes progress, [operation](operation.md) |
 | `status` | the version of the mailbox service and whether it matches the agents', then for each agent whether it is ready, which setting it misses, the folders that matter to it and a folder it expects that is missing or there in another case only, in each account `ACCOUNTS` names or else in each account the user is granted, its counts and its last progress |
+| `cockpit` | the read-only pages of what every agent did, until SIGINT or SIGTERM, only with its secret ([cockpit](cockpit.md)) |
 | `paths` | the settings file, the data folder and each state file, and a state file at the place before ([configuration](configuration.md#where-the-settings-and-the-state-files-are)) |
 
 `--env-file` names the settings file for every command. An error to

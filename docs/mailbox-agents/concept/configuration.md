@@ -35,9 +35,11 @@ may be given as a file with the suffix `_FILE`. An empty line, such as
 | `OTLP_HEADERS_FILE` | a file of headers for it, one `name=value` per line, such as a key. Never logged |
 | `OTLP_ALLOW_HTTP` | http to another machine as well, `false` when unset |
 | `A2A_PORT`, `A2A_HOST`, `A2A_URL`, `A2A_TOKEN`, `A2A_TOKEN_FILE` | the entrance for peers over A2A, off unless a port is set, and then only with a token ([peers over A2A](a2a.md)) |
+| `COCKPIT_HOST`, `COCKPIT_PORT`, `COCKPIT_SECRET`, `COCKPIT_SECRET_FILE` | the cockpit, started by hand, on `127.0.0.1:9480` when unset, and only with its secret ([cockpit](cockpit.md)) |
 | `LOG_LEVEL` | `DEBUG`, `INFO`, `WARNING` or `ERROR`, `INFO` when unset |
 
-`SERVICE_TOKEN_FILE`, `GATEWAY_KEY_FILE` and `A2A_TOKEN_FILE` name the
+`SERVICE_TOKEN_FILE`, `GATEWAY_KEY_FILE`, `A2A_TOKEN_FILE` and
+`COCKPIT_SECRET_FILE` name the
 file a secret is read from. A secret given directly wins over its file. The file is read as
 UTF-8, a mark of UTF-8 at its start left out. A secret is printable ASCII,
 as a header of HTTP carries it, and any other stops the start, naming the

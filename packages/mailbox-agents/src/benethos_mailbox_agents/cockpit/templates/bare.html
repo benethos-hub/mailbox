@@ -1,0 +1,20 @@
+{# The shell of a page outside the frame: signing in, and an error. #}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}{{ APP_NAME }}{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/app.css" />
+  </head>
+  <body>
+    <div class="signin">
+      <section class="card">
+        <header><h2>{% block heading %}{{ APP_NAME }}{% endblock %}</h2></header>
+        <div class="body">
+          {% block content %}{% endblock %}
+        </div>
+      </section>
+    </div>
+  </body>
+</html>

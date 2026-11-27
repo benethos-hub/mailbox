@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% from "parts.html" import state_tag, counts, facts, acts %}
+{% block title %}{{ row.name }} · {{ APP_NAME }}{% endblock %}
+{% block heading %}{{ row.name }}{% endblock %}
+{% block subheading %}<div class="sub crumbs"><a href="/">Agents</a><span class="sep">/</span><span aria-current="page">{{ row.name }}</span></div>{% endblock %}
+{% block content %}
+<section class="card">
+  <header><h2>Profile</h2><div class="right">{{ state_tag(row.state) }}</div></header>
+  <div class="body">
+    {% if row.problem %}
+    <div class="notice err" role="alert">{{ row.problem }}</div>
+    {% elif row.facts %}
+    {{ facts(row.facts) }}
+    {% else %}
+    <p class="muted">No profile yet: the worker has not started since the update.</p>
+    {% endif %}
+  </div>
+</section>
+{% if not row.problem %}
+<section class="card">
+  <header><h2>Counts</h2></header>
+  <div class="body">
+    <dl class="facts">
+      <dt>Messages</dt><dd>{{ counts(row.counts) }}</dd>
+      <dt>Decisions, last 24 hours</dt><dd>{{ counts(row.labels) }}</dd>
+      <dt>Model calls since midnight UTC</dt><dd>{{ row.model_calls }}</dd>
+      <dt>Last progress</dt><dd>{{ row.progress | when }}</dd>
+    </dl>
+  </div>
+</section>
+{% if row.items %}
+<section class="card">
+  <header><h2>Open items</h2><div class="right"><span class="tag">{{ row.due }} due</span></div></header>
+  <div class="body tight">
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Message</th><th>Opened</th><th>Due</th><th>Keyword set</th></tr></thead>
+        <tbody>
+          {% for item in row.items %}
+          <tr><td class="mono">{{ item.account_id }} · {{ item.message_id }}</td><td>{{ item.opened | when }}</td><td>{{ item.due | when }}</td><td>{{ "yes" if item.keyword_set else "no" }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+{% endif %}
+<section class="card">
+  <header>
+    <h2>Newest results</h2>
+    <div class="right">
+      <a href="/agents/{{ row.link }}">all</a>
+      {% for name in states %}<a href="/agents/{{ row.link }}?state={{ name }}">{{ name }}</a>{% endfor %}
+    </div>
+  </header>
+  {% if not named %}<div class="body"><div class="notice warn" role="status">Subject and sender are shown with a token of the mailbox service only. Without it, the ids.</div></div>{% endif %}
+  <div class="body tight">
+    {% if results %}
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Taken up</th><th>Message</th><th>State</th><th>Decision</th><th>Baseline</th><th>Actions</th></tr></thead>
+        <tbody>
+          {% for result in results %}
+          <tr>
+            <td>{{ result.created | when }}</td>
+            <td class="name"><a href="/agents/{{ row.link }}/messages/{{ result.link }}">{{ result.subject if result.subject is not none else result.message_id }}</a><span class="sub">{{ result.sender if result.sender is not none else result.account_id }}</span></td>
+            <td>{{ result.state }}</td>
+            <td>{{ result.label | or_missing }}{% if result.label %}<span class="sub">{{ result.source }}{{ ", " ~ result.model if result.model else "" }}{{ ", refused: " ~ result.refused if result.refused else "" }}</span>{% endif %}</td>
+            <td>{{ result.baseline | or_missing }}</td>
+            <td>{{ acts(result.actions) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="empty">Nothing recorded{{ " in " ~ state if state else "" }} yet.</p>
+    {% endif %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}

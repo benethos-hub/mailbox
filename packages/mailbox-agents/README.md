@@ -98,6 +98,9 @@ What the project is for: [the repository's README](https://github.com/benethos-h
 - Every agent runs in a process of its own, with its own credentials and
   its own SQLite state file. The state file holds ids and decisions, never
   the text of a mail.
+- `benethos-mailbox-agents cockpit`, started by hand, shows what every
+  agent did on read-only pages, read from the state files, behind a
+  secret.
 - A new agent starts in the stage `shadow`, where it only records what it
   would do. The stages `suggest` and `full` follow after it was measured
   against labelled mail.

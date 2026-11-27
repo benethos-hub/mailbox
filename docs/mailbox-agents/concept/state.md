@@ -17,7 +17,11 @@ once released.
 | `profile` | one row the worker writes when it starts, for a reader from outside such as the cockpit: the agent, its instance, the versions of the agent, the package and the prompt, the stage, the accounts, the keyword in effect, the poll and gateway seconds, the model alias and when it started. No secret, no text of a list and no address. Added by migration 4 (2026-11-27) |
 
 The schema version is the file's `user_version`. A reader opens the file
-read-only and refuses one newer than it knows.
+read-only and refuses one newer than it knows. A reader in a folder it
+may not write, such as the volume of a stopped agent mounted read-only,
+cannot open a file whose writer closed it cleanly in WAL mode: it opens
+it once more as immutable, while no `-wal` lies beside it, and never
+changes it.
 
 **Migrations (decided 2026-11-18).** Each step of the schema is a class
 `VNNNN<Subject>` of `Migration` in its own module

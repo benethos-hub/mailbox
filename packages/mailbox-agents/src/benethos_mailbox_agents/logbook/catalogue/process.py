@@ -71,3 +71,19 @@ class A2AServing(Activity):
 
     def says(self) -> str:
         return f"began serving peers over A2A on port {self.port}"
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class CockpitServing(Activity):
+    name: ClassVar[str] = "cockpit_serving"
+
+    port: int
+    named: bool
+
+    def says(self) -> str:
+        return f"began serving its pages on port {self.port}"
+
+    def why(self) -> str | None:
+        if self.named:
+            return None
+        return "ids only, as no token of the mailbox service is set"

@@ -97,6 +97,12 @@ class Settings(files.FileSettings):
     a2a_url: str | None = None
     a2a_token: SecretStr | None = None
     a2a_token_file: Path | None = None
+    # The cockpit, docs/mailbox-agents/concept/cockpit.md: started by hand,
+    # and only with its secret.
+    cockpit_host: str = "127.0.0.1"
+    cockpit_port: int = Field(default=9480, ge=0, le=65535)
+    cockpit_secret: SecretStr | None = None
+    cockpit_secret_file: Path | None = None
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
     # --- awaiting_reply, docs/mailbox-agents/concept/agent-awaiting-reply.md ----------
@@ -128,6 +134,7 @@ class Settings(files.FileSettings):
         "gateway_key_file",
         "a2a_url",
         "a2a_token_file",
+        "cockpit_secret_file",
         mode="before",
     )
     @classmethod
@@ -189,7 +196,7 @@ class Settings(files.FileSettings):
         with the mark of UTF-8 an editor puts there. A secret is printable
         ASCII, as a header of HTTP carries it: any other is refused by the
         name of its setting, never with its value."""
-        for name in ("service_token", "gateway_key", "a2a_token"):
+        for name in ("service_token", "gateway_key", "a2a_token", "cockpit_secret"):
             setting = f"{PREFIX}{name.upper()}"
             given: SecretStr | None = getattr(self, name)
             if given is not None and not given.get_secret_value():
@@ -225,7 +232,10 @@ class Settings(files.FileSettings):
         of certifi."""
         return None if self.ca_file is None else _context(self.ca_file)
 
-    def secret(self, name: Literal["service_token", "gateway_key", "a2a_token"]) -> str:
+    def secret(
+        self,
+        name: Literal["service_token", "gateway_key", "a2a_token", "cockpit_secret"],
+    ) -> str:
         """The value of a secret, or a :class:`ConfigError` naming it."""
         found: SecretStr | None = getattr(self, name)
         if found is None:

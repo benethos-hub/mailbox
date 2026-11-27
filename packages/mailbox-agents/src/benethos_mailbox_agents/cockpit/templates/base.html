@@ -1,0 +1,31 @@
+{# The frame of a page of the cockpit: no script, no style of its own,
+   nothing from elsewhere. #}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}{{ APP_NAME }}{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/app.css" />
+  </head>
+  <body>
+    <div class="content">
+      <header class="topbar">
+        <div>
+          <h1>{% block heading %}{{ APP_NAME }}{% endblock %}</h1>
+          {% block subheading %}{% endblock %}
+        </div>
+        <div class="right">
+          <form class="inline" method="post" action="/logout">
+            <input type="hidden" name="token" value="{{ session.token }}" />
+            <button class="ghost" type="submit">Sign out</button>
+          </form>
+        </div>
+      </header>
+      <main>
+        {% block content %}{% endblock %}
+      </main>
+      <footer>benethos-mailbox-agents {{ VERSION }}, the cockpit, read-only</footer>
+    </div>
+  </body>
+</html>

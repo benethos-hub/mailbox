@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% from "parts.html" import state_tag, counts %}
+{% block title %}Overview · {{ APP_NAME }}{% endblock %}
+{% block heading %}Agents{% endblock %}
+{% block subheading %}<div class="sub">Every state file in the data folder, read now. Decisions of the last 24 hours, model calls since midnight UTC.</div>{% endblock %}
+{% block content %}
+<section class="card">
+  <div class="body tight">
+    {% if rows %}
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>Instance</th><th>Kind</th><th>Stage</th><th>Version</th><th>State</th><th>Last progress</th><th>Messages</th><th>Decisions</th><th class="num">Model calls</th><th class="num">Due</th></tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+          <tr>
+            <td class="name"><a href="/agents/{{ row.link }}">{{ row.name }}</a>{% if row.agent and row.agent != row.name %}<span class="sub">{{ row.agent }}</span>{% endif %}</td>
+            <td>{{ row.kind | or_missing }}</td>
+            <td>{{ row.stage | or_missing }}</td>
+            <td>{{ row.version | or_missing }}</td>
+            <td>{{ state_tag(row.state) }}{% if row.problem %}<span class="sub">{{ row.problem }}</span>{% endif %}</td>
+            <td>{{ row.progress | when }}</td>
+            <td>{{ counts(row.counts) }}</td>
+            <td>{{ counts(row.labels) }}</td>
+            <td class="num">{{ row.model_calls }}</td>
+            <td class="num">{{ row.due }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="empty">No state file in the data folder yet.</p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

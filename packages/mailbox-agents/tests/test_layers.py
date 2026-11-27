@@ -56,10 +56,15 @@ MAY_IMPORT: dict[str, frozenset[str]] = {
     "evaluation": frozenset({"errors", "records", "contract", "store", "runtime"}),
     # The entrance over A2A: it is handed what classifies a message.
     "peers": frozenset({"errors", "records", "settings"}),
+    # The pages of what every agent did, read through the store and runtime.
+    "cockpit": frozenset(
+        {"errors", "logbook", "settings", "records", "contract", "store"}
+        | {"sources", "runtime"}
+    ),
     # The top: it wires the upstreams, the state file and the runtime.
     "cli": frozenset(
         {"errors", "logbook", "settings", "records", "contract", "store"}
-        | {"sources", "llm", "runtime", "evaluation", "telemetry", "peers"}
+        | {"sources", "llm", "runtime", "evaluation", "telemetry", "peers", "cockpit"}
     ),
     "__main__": frozenset({"cli"}),
 }
@@ -88,22 +93,17 @@ CONFINED: dict[str, frozenset[str]] = {
     "benethos_mailbox_common": frozenset(
         {
             "errors/base.py",
-            "logbook/output.py",
-            "logbook/activity.py",
-            "logbook/catalogue/feed.py",
-            "logbook/catalogue/worker.py",
+            *("logbook/output.py", "logbook/activity.py"),
+            *("logbook/catalogue/feed.py", "logbook/catalogue/worker.py"),
             "runtime/steps.py",
-            "settings/folders.py",
-            "settings/model.py",
+            *("settings/folders.py", "settings/model.py"),
             "sources/mailbox.py",
             "store/store.py",
             "telemetry/otlp.py",
             "contract/actor.py",
-            "agents/categorization/lists.py",
-            "agents/categorization/summary.py",
-            "cli/__init__.py",
-            "cli/commands.py",
-            "cli/report.py",
+            *("agents/categorization/lists.py", "agents/categorization/summary.py"),
+            *("cli/__init__.py", "cli/commands.py", "cli/report.py"),
+            *("cockpit/app.py", "cockpit/security.py", "cockpit/views.py"),
         }
     ),
     "httpx": frozenset({"sources/mailbox.py", "llm/gateway.py"}),
@@ -112,7 +112,11 @@ CONFINED: dict[str, frozenset[str]] = {
     "requests": frozenset({"telemetry/otlp.py"}),
     # The entrance over A2A and the server that opens its port, the one
     # socket besides the metrics, which prometheus_client opens.
-    **dict.fromkeys(("a2a", "starlette", "uvicorn"), frozenset({"peers/a2a.py"})),
+    **dict.fromkeys(("a2a", "starlette"), frozenset({"peers/a2a.py"})),
+    "uvicorn": frozenset({"peers/a2a.py", "cockpit/server.py"}),
+    # The pages of the cockpit, on the framework of the mailbox service.
+    "fastapi": frozenset({"cockpit/app.py", "cockpit/templates.py"}),
+    "jinja2": frozenset({"cockpit/templates.py"}),
     # Its one home is the group settings of mailbox-common.
     "pydantic_settings": frozenset(),
     # The TLS context of the own CA: read in the settings, used by the two

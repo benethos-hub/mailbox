@@ -1,0 +1,16 @@
+{% extends "bare.html" %}
+{% block title %}Sign in · {{ APP_NAME }}{% endblock %}
+{% block heading %}Sign in to the cockpit{% endblock %}
+{% block content %}
+{% if notice %}<div class="notice" role="status">{{ notice }}</div>{% endif %}
+<form method="post" action="/login">
+  <input type="hidden" name="nonce" value="{{ nonce }}" />
+  <div class="field">
+    <label for="f-secret">Secret</label>
+    <input id="f-secret" name="secret" type="password" autocomplete="current-password" required autofocus />
+  </div>
+  <div class="form-actions">
+    <button class="primary" type="submit">Sign in</button>
+  </div>
+</form>
+{% endblock %}

@@ -66,6 +66,7 @@ class _Paths(files.FileSettings):
     gateway_key_file: str | None = None
     otlp_headers_file: str | None = None
     a2a_token_file: str | None = None
+    cockpit_secret_file: str | None = None
 
 
 # The settings that hold a path. A relative one counts from the folder of

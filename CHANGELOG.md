@@ -111,6 +111,17 @@ adheres to [Semantic Versioning](https://semver.org/).
   `list_outbox`, `get_outbox_job` and `cancel_send` read and cancel the
   jobs. `send_message` and `send_draft` are unchanged. `SendRecord`
   names the job of an attempt in `outbox_job_id`.
+- `benethos-mailbox-agents`: the command `cockpit`, a page of what every
+  agent did, read-only and started by hand. It reads the state files in
+  `MAILBOX_AGENTS_DATA_DIR` and its folders: per instance its profile,
+  state, counts, decisions and open items, the newest results, and one
+  message with its evidence, steps and actions. It starts only with
+  `MAILBOX_AGENTS_COCKPIT_SECRET` or `MAILBOX_AGENTS_COCKPIT_SECRET_FILE`,
+  which a person signs in with, and serves on
+  `MAILBOX_AGENTS_COCKPIT_HOST` and `MAILBOX_AGENTS_COCKPIT_PORT`
+  (`127.0.0.1:9480`). Subject and sender show only with the settings of
+  the mailbox service, else the ids. The package depends on `fastapi`,
+  `jinja2` and `python-multipart` for it.
 - `benethos-mailbox-agents`: the state file keeps the profile of its
   agent: `worker`, `run` and `backfill` write the stage, the accounts,
   the keyword, the poll and gateway seconds, the model alias and the

@@ -21,7 +21,9 @@ each agent.
    state file either.
 3. **One module per upstream.** `sources/mailbox.py` is the only module
    that imports `benethos_mailbox_client`, `llm/gateway.py` the only one
-   that talks to the model gateway. `tests/test_layers.py` holds the
+   that talks to the model gateway. The cockpit reaches the mailbox
+   service only through a reader the command line hands it, and the
+   state files only through the store. `tests/test_layers.py` holds the
    import order: a new top-level module or subpackage needs a row there.
 4. **A model that reads mail has no tools.** It returns a value in a
    fixed schema. Acting on the value is code, and the code checks the

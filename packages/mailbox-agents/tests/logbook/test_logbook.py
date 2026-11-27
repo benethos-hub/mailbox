@@ -133,6 +133,11 @@ LINES: list[tuple[Activity, str]] = [
         "a began serving peers over A2A on port 9470",
     ),
     (
+        process.CockpitServing(agent="cockpit", port=9480, named=False),
+        "cockpit began serving its pages on port 9480: ids only, as no token of "
+        "the mailbox service is set",
+    ),
+    (
         worker.PassDone(agent="a", seconds=0.5, pending=1),
         "a finished a pass in 0.50s with 1 message pending",
     ),

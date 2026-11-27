@@ -49,6 +49,11 @@ with no model and nothing of what a mail says
 addresses of its list, and sends nothing
 ([forwarding](../mailbox-agents/concept/agent-forwarding.md)).
 
+Since 2026-11-27 the command `cockpit` shows what every agent did on
+read-only pages, read from the state files by a process of its own,
+started by hand and behind a secret, as a prototype
+([cockpit](../mailbox-agents/concept/cockpit.md)).
+
 ### Next
 
 | Step | Content |
@@ -57,7 +62,7 @@ addresses of its list, and sends nothing
 | Verified senders | A switch for a group of `categorization` that moves only mail whose sender the receiving server verified. The mailbox service names that result per message since 0.8.0, and the agents read it since 2026-11-27. The switch for `categorization` is open ([categorization](../mailbox-agents/concept/agent-categorization.md)) |
 | Embeddings | Recognising a repeated inquiry by embeddings, stored in the state file |
 | External agent server | Handing a message to an external agent server over HTTP, and reply drafts |
-| Daily overview | A daily overview of what every agent did, read from the state files by a process of its own, with no model involved |
+| Daily overview | A daily summary of what every agent did that reaches the owner, with no model involved. The pages to read it from are the cockpit, built 2026-11-27 |
 
 Ideas not scheduled: newsletters to a folder by the `List-Unsubscribe`
 header, a keyword for mail that names a deadline, a mark for mail from

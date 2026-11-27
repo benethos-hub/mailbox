@@ -15,7 +15,7 @@ from ..errors import MailboxRefusedError
 from ..records import Decision, MailMessage, StepResult
 from ..store import ActionRow, MessageRow, Store
 
-__all__ = ["Entry", "collect"]
+__all__ = ["Entry", "collect", "entry"]
 
 
 @dataclass
@@ -38,6 +38,21 @@ def _latest(steps: list[StepResult], step: str) -> tuple[Decision | None, str]:
     return Decision.model_validate(found[-1].result), found[-1].model
 
 
+async def entry(store: Store, mailbox: Reader | None, row: MessageRow) -> Entry:
+    """The message of ``row`` with what the agent decided and did, its
+    subject and sender fetched now unless ``mailbox`` is None."""
+    message = None
+    if mailbox is not None:
+        try:
+            message = await mailbox.message(row.ref)
+        except MailboxRefusedError:
+            message = None
+    steps = store.steps(row.ref)
+    decision, model = _latest(steps, "decision")
+    baseline, _ = _latest(steps, "baseline")
+    return Entry(row, message, decision, model, baseline, store.actions(row.ref))
+
+
 async def collect(
     store: Store,
     mailbox: Reader | None,
@@ -47,18 +62,4 @@ async def collect(
 ) -> list[Entry]:
     """The newest ``limit`` messages, in ``state`` if named, each with its
     subject and sender fetched now unless ``mailbox`` is None."""
-    entries = []
-    for row in store.messages(state, limit):
-        message = None
-        if mailbox is not None:
-            try:
-                message = await mailbox.message(row.ref)
-            except MailboxRefusedError:
-                message = None
-        steps = store.steps(row.ref)
-        decision, model = _latest(steps, "decision")
-        baseline, _ = _latest(steps, "baseline")
-        entries.append(
-            Entry(row, message, decision, model, baseline, store.actions(row.ref))
-        )
-    return entries
+    return [await entry(store, mailbox, row) for row in store.messages(state, limit)]
