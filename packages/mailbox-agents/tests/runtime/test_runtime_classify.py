@@ -195,6 +195,24 @@ def test_the_categories_of_a_list_are_told() -> None:
     assert found.found == {"label": True, "kind": True}
 
 
+async def test_a_message_asked_again_counts_against_its_limit(tmp_path: Path) -> None:
+    class Single(Echo):
+        limits = Limits(model_calls_per_message=1, model_calls_per_day=5)
+
+    async with wired(tmp_path) as world:
+        world.service.add(wire_message("m1", subject="Hi", text=f"Here is {QUOTE}."))
+        world.fake_gateway.answer({"label": "match", "quote": QUOTE})
+        world.fake_gateway.answer({"label": "match", "quote": QUOTE})
+        asked = classifier(world, Single(settings()))
+
+        first = await asked.classify(ref("m1"))
+        second = await asked.classify(ref("m1"))
+
+        assert isinstance(first, Classified)
+        assert second == NotClassified(agent="echo", reason="limit_reached")
+        assert len(world.fake_gateway.requests) == 1
+
+
 async def test_a_classification_opens_closes_and_restarts_no_item(
     tmp_path: Path,
 ) -> None:

@@ -301,6 +301,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   and one in the trash, junk, spam, drafts or sent mail that the agent
   itself would not take. Both are told `message_refused`. Before, the
   agent read and classified any mail the service user could read.
+- `benethos-mailbox-agents`: a peer that asks for the same message
+  again is held to the agent's model calls per message for the day,
+  then told `limit_reached`. Before, each question was a new call, and
+  a peer could use up the worker's calls of the day.
 - `restore` and `backup verify` refuse a backup whose manifest holds a
   field of the wrong type, such as the schema as a text, with a message
   instead of a traceback.

@@ -6,7 +6,8 @@ it, and the agent's effect is never asked. A decision the worker stored
 for the message under the same prompt version and model is taken as it
 is, refreshed like the worker refreshes it. Otherwise the agent decides,
 its evidence checked, and its model calls are kept in its state file as
-the worker keeps them, where they count against its limits of the day.
+the worker keeps them, where they count against its limits of the day:
+the calls for one message in a day against its limit per message.
 Nothing else is written: the decision is not stored, and an open item
 the agent would open is refused. One message
 at a time. See docs/mailbox-agents/concept/a2a.md.
@@ -38,7 +39,7 @@ from ..records import (
 )
 from ..store import Store
 from .items import StoredItems
-from .model import Asker
+from .model import Asker, start_of_day
 from .reader import ReadOnlyMailbox
 from .steps import decide_checked, make_calls, make_context
 
@@ -162,6 +163,13 @@ class Classifier:
         )
         if stored is not None:
             return self.agent.refresh(Decision.model_validate(stored.result), message)
+        # A decision for a peer is not stored: its calls of the day count
+        # against the limit per message, as one message's would.
+        made = self._store.model_calls_for(ref, start_of_day(self._now()))
+        if made >= self.agent.limits.model_calls_per_message:
+            raise LimitReachedError(
+                "the message had the model calls it may have today", per_day=False
+            )
         calls = make_calls(
             self.agent, gateway=self._gateway, store=self._store, ref=ref, now=self._now
         )
