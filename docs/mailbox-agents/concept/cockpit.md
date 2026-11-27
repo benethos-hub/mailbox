@@ -65,6 +65,15 @@ or that stopped while the cockpit read it, reads as running, and as
 write, such as a volume mounted read-only, opens a cleanly closed file as
 immutable ([state](state.md)).
 
+**Measured on 2026-11-27** with the image of the agents built from the
+repository, a writer and the cockpit in two containers, the volume
+mounted read-only in the cockpit. A writer that runs shows as `healthy`.
+After `docker stop` it shows as `stopped` and is still read. After
+`docker kill` it shows as running until its window has passed. When the
+cockpit starts first, Docker makes the volume owned by root, and the
+agent that mounts it at `/data` later still writes to it: Docker gives
+the empty volume the owner of `/data` in the image, uid 10001.
+
 ## Signing in
 
 `COCKPIT_SECRET` or `COCKPIT_SECRET_FILE` holds the secret. Without it
