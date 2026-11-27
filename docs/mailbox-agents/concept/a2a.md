@@ -45,6 +45,12 @@ that could not be classified is told why, with `reason` one of
 `unavailable`. Anything but the two ids in one data part is refused
 before anything is read.
 
+An actor answers a peer as well (2026-11-27), such as `filing` or
+`forwarding` with a port set. It asks no model. Its label is the place
+of the rule that fits, `rule-<n>`, or `none`, with the source
+`baseline`. It tells no field, and never the text of a rule: no
+keyword, folder or address of the owner's list.
+
 The entrance speaks A2A 1.0 and, on the same endpoint, 0.3. A request of
 1.0 names its version in the header `A2A-Version: 1.0`. Without it the
 request counts as one of 0.3. The agent card lies at

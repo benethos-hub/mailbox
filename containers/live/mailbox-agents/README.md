@@ -350,7 +350,7 @@ Prometheus scrapes the metrics of a `worker`, which serves them at the
 port `MAILBOX_AGENTS_METRICS_PORT` names, 38900 in `agent.env`, on every
 address of this machine. `run` and `backfill` serve none: they end
 before a scrape. A second worker at the same time takes the next port,
-up to 38904, set in the shell:
+up to 38905, one for each of the six agents, set in the shell:
 
 ```
 MAILBOX_AGENTS_METRICS_PORT=38901 uv run benethos-mailbox-agents --env-file containers/live/mailbox-agents/secrets/agent.env worker --agent counting
