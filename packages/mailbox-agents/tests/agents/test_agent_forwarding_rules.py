@@ -92,6 +92,13 @@ def test_a_rule_as_read_with_its_defaults(tmp_path: Path) -> None:
     assert found.recipients() == {"books@example.org"}
 
 
+def test_an_address_named_twice_is_kept_once() -> None:
+    to = ["books@example.org", "desk@example.org", "Books@Example.org"]
+    found = Rules.model_validate({"rules": [{"keywords": ["agent-invoice"], "to": to}]})
+
+    assert found.rules[0].to == ("books@example.org", "desk@example.org")
+
+
 def test_the_first_rule_that_fits_holds() -> None:
     found = Rules.model_validate(
         {

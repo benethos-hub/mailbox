@@ -35,7 +35,7 @@ forward be drafted?
 | `on.keywords` | the keywords the list waits for, a `*` at the end for every keyword it starts. Without `on`, every keyword of its rules | lower case letters, digits and dashes, 1 to 50 |
 | `rules` | the rules in order, the first that fits holds | 1 to 50 |
 | `keywords` of a rule | the keywords a message carries, all of them | lower case letters, digits and dashes, 1 to 10 |
-| `to` | the addresses of the forward | 1 to 5, each one `@` between two parts, no white space, at most 254 characters, compared in lower case |
+| `to` | the addresses of the forward | 1 to 5, each one `@` between two parts, no white space, at most 254 characters, compared in lower case, one named twice kept once |
 | `forward_as` | `inline`, the message quoted with its attachments, or `attachment`, the message as a file | `inline` when left out |
 | `sender_check` | `required`: a draft only when the sender check of the message passed, `off`: also when it is `unknown` | `required` when left out |
 

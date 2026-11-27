@@ -70,7 +70,8 @@ class Rule(BaseModel):
     @field_validator("to")
     @classmethod
     def _addresses(cls, value: tuple[str, ...]) -> tuple[str, ...]:
-        """Each address with one @ and no white space, kept in lower case."""
+        """Each address with one @ and no white space, kept in lower case
+        and once, in the order of the list."""
         for address in value:
             local, at, domain = address.partition("@")
             if (
@@ -83,7 +84,7 @@ class Rule(BaseModel):
                     "an address of to is one @ between two parts, no white "
                     f"space, at most {_LONGEST} characters"
                 )
-        return tuple(address.casefold() for address in value)
+        return tuple(dict.fromkeys(address.casefold() for address in value))
 
     def fits(self, carried: frozenset[str]) -> bool:
         """Whether a message that carries ``carried``, in lower case,
