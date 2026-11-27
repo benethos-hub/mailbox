@@ -30,6 +30,8 @@ SOURCE = Path(benethos_mailbox_agents.__file__).parent
 # which every module may read ``__version__`` from. Each row allows what the
 # layer uses and no more. A change that needs another layer adds it here on
 # purpose.
+# What the runtime, the cockpit and the command line all stand on.
+_BASE = frozenset({"errors", "logbook", "settings", "records", "contract", "store"})
 MAY_IMPORT: dict[str, frozenset[str]] = {
     "errors": frozenset(),
     "logbook": frozenset(),
@@ -44,10 +46,7 @@ MAY_IMPORT: dict[str, frozenset[str]] = {
     # The spans, behind one module.
     "telemetry": frozenset({"errors", "records", "settings"}),
     # The runtime holds every piece below it and hands an agent its context.
-    "runtime": frozenset(
-        {"errors", "logbook", "settings", "records", "contract", "store"}
-        | {"llm", "telemetry"}
-    ),
+    "runtime": _BASE | {"llm", "telemetry"},
     # An agent sees the contract and the records, never the client, the
     # gateway, the state file or the runtime that holds them. settings for
     # PREFIX alone, which an agent's messages name settings by.
@@ -57,17 +56,17 @@ MAY_IMPORT: dict[str, frozenset[str]] = {
     # The entrance over A2A: it is handed what classifies a message.
     "peers": frozenset({"errors", "records", "settings"}),
     # The pages of what every agent did, read through the store and runtime.
-    "cockpit": frozenset(
-        {"errors", "logbook", "settings", "records", "contract", "store"}
-        | {"sources", "runtime"}
-    ),
+    "cockpit": _BASE | {"sources", "runtime"},
     # The top: it wires the upstreams, the state file and the runtime.
-    "cli": frozenset(
-        {"errors", "logbook", "settings", "records", "contract", "store"}
-        | {"sources", "llm", "runtime", "evaluation", "telemetry", "peers", "cockpit"}
-    ),
+    "cli": _BASE
+    | {"sources", "llm", "runtime", "evaluation", "telemetry", "peers", "cockpit"},
     "__main__": frozenset({"cli"}),
 }
+
+_STORE = "store/{}.py".format
+# The parts of the state file that speak SQLAlchemy, and its baseline.
+_PARTS = ("actions", "calls", "items", "messages", "profile", "reader", "rows", "steps")
+_BASELINE = "revisions/versions/r0005_baseline"
 
 # A dependency some modules may import and no other: the modules that are
 # its interface to the rest of the package.
@@ -83,10 +82,12 @@ CONFINED: dict[str, frozenset[str]] = {
             "logbook/catalogue/messages.py",
         }
     ),
-    # A step of the schema is handed the connection to run its statements on.
-    "sqlite3": frozenset(
-        {"store/store.py", "store/rows.py", "store/migrations/migration.py"}
-    ),
+    # The state file before its revisions and to read: an old step is
+    # handed the connection to run its statements on.
+    "sqlite3": frozenset(map(_STORE, ("file", "reader", "migrations/migration"))),
+    # The parts of the state file, its tables, its baseline.
+    "sqlalchemy": frozenset(map(_STORE, (*_PARTS, "schema", "store", _BASELINE))),
+    "alembic": frozenset({_STORE(_BASELINE)}),
     "benethos_mailbox_client": frozenset({"sources/mailbox.py"}),
     # What the programs of Mailbox share: the lines of the log, the masking
     # of secrets, text and settings.
@@ -98,7 +99,10 @@ CONFINED: dict[str, frozenset[str]] = {
             "runtime/steps.py",
             *("settings/folders.py", "settings/model.py"),
             "sources/mailbox.py",
-            "store/store.py",
+            "errors/state_file.py",
+            *map(_STORE, ("file", "items", "messages", "profile", "reader", "rows")),
+            *map(_STORE, ("schema", "shape", "store", "revisions/__init__")),
+            _STORE("revisions/revision"),
             "telemetry/otlp.py",
             "contract/actor.py",
             *("agents/categorization/lists.py", "agents/categorization/summary.py"),

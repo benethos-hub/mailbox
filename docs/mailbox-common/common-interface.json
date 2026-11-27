@@ -442,7 +442,7 @@
       "signature": "(values: 'Iterable[T]') -> 'Iterator[list[T]]'"
     },
     "insert_or_set": {
-      "signature": "(table: 'sa.Table', key: 'Sequence[str]', values: 'Callable[[Any], Mapping[str, Any]]', dialect: 'sa.Dialect') -> 'Insert'"
+      "signature": "(table: 'sa.Table', key: 'Sequence[str]', values: 'Callable[[Any], Mapping[str, Any]]', dialect: 'sa.Dialect', *, where: 'sa.ColumnElement[bool] | None' = None) -> 'Insert'"
     },
     "insert_or_skip": {
       "signature": "(table: 'sa.Table', dialect: 'sa.Dialect') -> 'Insert'"

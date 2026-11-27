@@ -23,10 +23,11 @@ from .mailbox_refused import MailboxRefusedError
 from .mailbox_unavailable import MailboxUnavailableError
 from .message_gone import MessageGoneError
 from .service_version import ServiceVersionError
-from .state_file import StateFileError
+from .state_file import STATE_ERRORS, StateConflictError, StateFileError
 from .unavailable import UnavailableError
 
 __all__ = [
+    "STATE_ERRORS",
     "ActionRefusedError",
     "AnswerRefusedError",
     "ChangesExpiredError",
@@ -39,6 +40,7 @@ __all__ = [
     "MailboxUnavailableError",
     "MessageGoneError",
     "ServiceVersionError",
+    "StateConflictError",
     "StateFileError",
     "UnavailableError",
     "describe_invalid",

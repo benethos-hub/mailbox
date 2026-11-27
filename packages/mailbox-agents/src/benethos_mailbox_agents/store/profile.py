@@ -7,17 +7,15 @@ from __future__ import annotations
 import json
 from decimal import Decimal
 
+import sqlalchemy as sa
+
+from benethos_mailbox_common.storage import dialect
+
 from ..records import Profile
 from .rows import _Rows, _text, _time
+from .schema import profile as table
 
-# The schema version that brought the table, migration 4.
-_SINCE = 4
-
-_COLUMNS = (
-    "agent, instance, agent_version, package_version, stage, accounts, "
-    "keyword, poll_seconds, gateway_timeout_seconds, model_alias, "
-    "prompt_version, started"
-)
+_p = table.c
 
 
 def _decimal(seconds: float) -> str:
@@ -28,46 +26,46 @@ def _decimal(seconds: float) -> str:
 class _Profile(_Rows):
     def set_profile(self, profile: Profile) -> None:
         """Keep ``profile`` as the one row, in place of the one before."""
-        updates = ", ".join(
-            f"{column} = excluded.{column}" for column in _COLUMNS.split(", ")
-        )
-        self._write(
-            f"INSERT INTO profile (id, {_COLUMNS}) "
-            "VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
-            f"ON CONFLICT (id) DO UPDATE SET {updates}",
-            profile.agent,
-            profile.instance,
-            profile.agent_version,
-            profile.package_version,
-            profile.stage,
-            json.dumps(list(profile.accounts)),
-            profile.keyword,
-            _decimal(profile.poll_seconds),
-            _decimal(profile.gateway_timeout_seconds),
-            profile.model_alias,
-            profile.prompt_version,
-            _text(profile.started),
-        )
+        values = {
+            "id": 1,
+            "agent": profile.agent,
+            "instance": profile.instance,
+            "agent_version": profile.agent_version,
+            "package_version": profile.package_version,
+            "stage": profile.stage,
+            "accounts": json.dumps(list(profile.accounts)),
+            "keyword": profile.keyword,
+            "poll_seconds": _decimal(profile.poll_seconds),
+            "gateway_timeout_seconds": _decimal(profile.gateway_timeout_seconds),
+            "model_alias": profile.model_alias,
+            "prompt_version": profile.prompt_version,
+            "started": _text(profile.started),
+        }
+        with self._conn() as conn:
+            conn.execute(
+                dialect.insert_or_update(table, ["id"], None, conn.dialect).values(
+                    values
+                )
+            )
 
     def profile(self) -> Profile | None:
-        """The profile the worker wrote, None for a file older than the
-        table or one no worker has started on since."""
-        if self.version < _SINCE:
-            return None
-        row = self._one(f"SELECT {_COLUMNS} FROM profile WHERE id = 1")
+        """The profile the worker wrote, None for a file no worker has
+        started on since the table came."""
+        with self._conn() as conn:
+            row = conn.execute(sa.select(table).where(_p.id == 1)).mappings().first()
         if row is None:
             return None
         return Profile(
-            agent=row[0],
-            instance=row[1],
-            agent_version=row[2],
-            package_version=row[3],
-            stage=row[4],
-            accounts=tuple(json.loads(row[5])),
-            keyword=row[6],
-            poll_seconds=float(row[7]),
-            gateway_timeout_seconds=float(row[8]),
-            model_alias=row[9],
-            prompt_version=row[10],
-            started=_time(row[11]),
+            agent=row["agent"],
+            instance=row["instance"],
+            agent_version=row["agent_version"],
+            package_version=row["package_version"],
+            stage=row["stage"],
+            accounts=tuple(json.loads(row["accounts"])),
+            keyword=row["keyword"],
+            poll_seconds=float(row["poll_seconds"]),
+            gateway_timeout_seconds=float(row["gateway_timeout_seconds"]),
+            model_alias=row["model_alias"],
+            prompt_version=row["prompt_version"],
+            started=_time(row["started"]),
         )

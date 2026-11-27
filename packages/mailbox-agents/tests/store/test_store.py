@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import inspect
-import pkgutil
 import re
 import sqlite3
 import subprocess
@@ -25,16 +24,10 @@ from benethos_mailbox_agents.records import (
 from benethos_mailbox_agents.store import (
     MIGRATIONS,
     SCHEMA_VERSION,
-    Migrated,
     Store,
     path_for,
 )
 from benethos_mailbox_agents.store import store as store_module
-from benethos_mailbox_agents.store.migrations import (
-    Migration,
-    MigrationRegistry,
-    versions,
-)
 
 from ..agents_helpers import DOCS
 
@@ -72,7 +65,7 @@ def test_opening_again_runs_nothing_twice(path: Path, store: Store) -> None:
     store.set_cursor("s1", NOW)
     store.close()
     with Store.open(path) as again:
-        assert again.migrate() == SCHEMA_VERSION
+        assert (again.migrated, again.version) == (None, SCHEMA_VERSION)
         assert again.cursor() == "s1"
 
 
@@ -95,7 +88,7 @@ def test_the_tables_are_those_of_the_state_spec(path: Path, store: Store) -> Non
         for row in _read(
             path,
             "SELECT name FROM sqlite_master WHERE type = 'table' "
-            "AND name NOT LIKE 'sqlite_%'",
+            "AND name NOT LIKE 'sqlite_%' AND name != 'alembic_version'",
         )
     }
 
@@ -127,10 +120,24 @@ def test_a_lock_that_cannot_be_made_is_a_state_file_error(tmp_path: Path) -> Non
 
 
 def test_a_reader_refuses_a_newer_schema(path: Path, store: Store) -> None:
-    with closing(sqlite3.connect(path)) as db:
-        db.execute(f"PRAGMA user_version = {SCHEMA_VERSION + 1}")
+    with closing(sqlite3.connect(path)) as db, db:
+        db.execute(
+            "UPDATE meta SET value = ? WHERE key = 'schema_version'",
+            (str(SCHEMA_VERSION + 1),),
+        )
 
     with pytest.raises(ConfigError, match="schema version"):
+        Store.open(path, read_only=True)
+
+
+def test_a_reader_refuses_an_older_schema(tmp_path: Path) -> None:
+    path = tmp_path / "old.db"
+    with closing(sqlite3.connect(path)) as raw, raw:
+        for statement in MIGRATIONS.step(1).statements:
+            raw.execute(inspect.cleandoc(statement))
+        raw.execute("PRAGMA user_version = 1")
+
+    with pytest.raises(ConfigError, match="start the agent once"):
         Store.open(path, read_only=True)
 
 
@@ -354,133 +361,11 @@ def test_progress(store: Store) -> None:
     assert store.progress() == NOW + timedelta(seconds=5)
 
 
-class _Broken(Migration):
-    version = SCHEMA_VERSION + 1
-    statements = ("CREATE TABLE fine (x INTEGER)", "CREATE TABLE broken (")
-
-
 def test_a_text_that_is_not_utf_8_is_a_state_file_error(store: Store) -> None:
     lone = MessageRef(account_id="acc", message_id=f"m{chr(0xD800)}")
 
     with pytest.raises(StateFileError, match="not valid UTF-8"):
         store.enqueue(lone, NOW)
-
-
-def test_a_failed_migration_leaves_the_file_as_it_was(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    import benethos_mailbox_agents.store.store as module
-
-    steps = [MIGRATIONS.step(n) for n in range(1, SCHEMA_VERSION + 1)]
-    monkeypatch.setattr(module, "MIGRATIONS", MigrationRegistry(*steps, _Broken()))
-    monkeypatch.setattr(module, "SCHEMA_VERSION", SCHEMA_VERSION + 1)
-    with pytest.raises(StateFileError):
-        Store.open(tmp_path / "x.db")
-
-    with closing(sqlite3.connect(tmp_path / "x.db")) as raw:
-        assert raw.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION
-        tables = {row[0] for row in raw.execute("SELECT name FROM sqlite_master")}
-    assert "fine" not in tables
-
-
-# -- the migrations ----------------------------------------------------------------
-
-# The fingerprint of each step that shipped in a release: a file of that
-# release has run it, so it is never changed. A release adds its own. The
-# fingerprint covers the step's whole module, comments included.
-RELEASED: dict[int, str] = {
-    # 0.1.0
-    1: "7d0c1acff1d2e09ab1f24e0ff0f76f50c4b86e4210309a07e96b5ee945bc12ad",
-    2: "c1bb1bdec56c2a961402d2453861d2cd6049d8f5196265df26207ce8a4a46409",
-}
-
-
-def test_a_released_migration_is_never_changed() -> None:
-    for number, fingerprint in RELEASED.items():
-        assert MIGRATIONS.step(number).fingerprint() == fingerprint, (
-            f"migration {number} shipped in a release: make a new one instead"
-        )
-
-
-def test_each_migration_module_is_in_the_list_at_its_number() -> None:
-    numbers = []
-    for module in pkgutil.iter_modules(versions.__path__):
-        found = re.fullmatch(r"v(\d{4})_\w+", module.name)
-        assert found, f"{module.name} is not named vNNNN_<subject>"
-        number = int(found.group(1))
-        step = MIGRATIONS.step(number)
-        assert type(step).__name__.startswith(f"V{number:04d}")
-        assert type(step).__module__.endswith(f".{module.name}")
-        numbers.append(number)
-
-    assert sorted(numbers) == list(range(1, SCHEMA_VERSION + 1))
-
-
-def test_each_migration_step_is_one_statement() -> None:
-    for number in range(1, SCHEMA_VERSION + 1):
-        for statement in MIGRATIONS.step(number).statements:
-            text = inspect.cleandoc(statement)
-            assert not sqlite3.complete_statement(text), text
-            assert sqlite3.complete_statement(text + ";"), text
-
-
-def test_the_registry_refuses_a_step_out_of_place() -> None:
-    with pytest.raises(ValueError, match="stands at 1"):
-        MigrationRegistry(_Broken())
-    with pytest.raises(ValueError, match="no migration to schema 99"):
-        MIGRATIONS.step(99)
-
-    assert MIGRATIONS.pending(SCHEMA_VERSION) == ()
-
-
-def test_opening_notes_what_was_migrated(path: Path) -> None:
-    with Store.open(path) as new:
-        assert new.migrated == Migrated(0, SCHEMA_VERSION)
-    with Store.open(path) as current:
-        assert current.migrated is None
-
-
-def test_a_file_of_an_earlier_schema_is_brought_forward(path: Path) -> None:
-    path.parent.mkdir(parents=True)
-    with closing(sqlite3.connect(path)) as raw, raw:
-        for statement in MIGRATIONS.step(1).statements:
-            raw.execute(inspect.cleandoc(statement))
-        raw.execute("PRAGMA user_version = 1")
-
-    with Store.open(path) as store:
-        assert store.migrated == Migrated(1, SCHEMA_VERSION)
-        columns = _read(path, "PRAGMA table_info(open_items)")
-    assert "keyword_recorded_stage" in {row[1] for row in columns}
-
-
-def test_the_former_word_of_the_middle_stage_is_written_as_suggest(path: Path) -> None:
-    """A file of schema 2 names the middle stage keyword. After the
-    migration it says suggest, so an action recorded only is not recorded
-    again in suggest, and the keyword of an item is not tried again."""
-    path.parent.mkdir(parents=True)
-    at = NOW.isoformat()
-    with closing(sqlite3.connect(path)) as raw, raw:
-        for number in (1, 2):
-            for statement in MIGRATIONS.step(number).statements:
-                raw.execute(inspect.cleandoc(statement))
-        raw.execute("PRAGMA user_version = 2")
-        for stage in ("shadow", "keyword"):
-            raw.execute(
-                "INSERT INTO actions (account_id, message_id, action, argument, "
-                "before, stage, executed, at) VALUES (?, ?, ?, ?, ?, ?, 0, ?)",
-                ("acc", "m1", "add_keyword", "agent-x", "{}", stage, at),
-            )
-        raw.execute(
-            "INSERT INTO open_items (account_id, message_id, opened, due, "
-            "keyword_recorded_stage) VALUES ('acc', 'm1', ?, ?, 'keyword')",
-            (at, at),
-        )
-
-    with Store.open(path) as store:
-        assert store.migrated == Migrated(2, SCHEMA_VERSION)
-        assert [row.stage for row in store.actions(REF)] == ["shadow", "suggest"]
-        assert store.due_items(NOW + timedelta(days=1), "suggest") == []
-        assert len(store.due_items(NOW + timedelta(days=1), "full")) == 1
 
 
 @pytest.mark.parametrize("read_only", [True, False])

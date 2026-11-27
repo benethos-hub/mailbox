@@ -146,11 +146,15 @@ packages/mailbox-agents/src/benethos_mailbox_agents/
                   # sign-ins and the headers, server.py the only module
                   # importing uvicorn, templates/ the pages, static/ a
                   # copy of the stylesheet of the service
-  store/          # SQLite, one file per agent: store.py opens and
-                  # migrates it, rows.py is what its parts stand on,
-                  # messages.py, steps.py, actions.py, items.py,
-                  # calls.py and profile.py are a part each, migrations/ the schema's
-                  # steps, versions/ a module per step
+  store/          # the state file, one database per agent on the
+                  # storage of mailbox-common: store.py opens it,
+                  # reader.py to read alone, shape.py what it is,
+                  # schema.py its tables, rows.py what its parts stand
+                  # on, messages.py, steps.py, actions.py, items.py,
+                  # calls.py and profile.py are a part each, file.py the
+                  # old steps of the file up to schema 5 in migrations/,
+                  # versions/ a module per step, revisions/ the steps
+                  # from schema 5 on
   runtime/        # worker loop, feed reader, tick, step runner, the model
                   # calls of one message, open items over the state file,
                   # the read-only mailbox, action executor, the mailbox

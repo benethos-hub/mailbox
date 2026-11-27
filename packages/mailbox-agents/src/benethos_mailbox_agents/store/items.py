@@ -6,8 +6,15 @@ from collections.abc import Sequence
 from datetime import datetime
 from typing import Any
 
+import sqlalchemy as sa
+
+from benethos_mailbox_common.storage import dialect
+
 from ..records import KEYWORD_REMOVED, MessageRef, OpenItem
 from .rows import _Rows, _text, _time
+from .schema import open_items
+
+_i = open_items.c
 
 
 class _Items(_Rows):
@@ -19,120 +26,141 @@ class _Items(_Rows):
         """Open an item for a message that has none. An item there already,
         open or closed, stays as it is, so taking a message up again opens
         nothing that a reply or a person closed."""
-        self._write(
-            "INSERT INTO open_items (account_id, message_id, thread_id, opened, due) "
-            "VALUES (?, ?, ?, ?, ?) ON CONFLICT (account_id, message_id) DO NOTHING",
-            ref.account_id,
-            ref.message_id,
-            thread_id,
-            _text(now),
-            _text(due),
-        )
+        with self._conn() as conn:
+            conn.execute(
+                dialect.insert_or_skip(open_items, conn.dialect).values(
+                    account_id=ref.account_id,
+                    message_id=ref.message_id,
+                    thread_id=thread_id,
+                    opened=_text(now),
+                    due=_text(due),
+                )
+            )
 
     def restart_item(self, ref: MessageRef, due: datetime, now: datetime) -> None:
         """Start an item again with a new deadline, its keyword off, unless a
         person closed it by taking the keyword off."""
-        self._write(
-            "UPDATE open_items SET opened = ?, due = ?, keyword_set = 0, "
-            "keyword_recorded_stage = NULL, closed = NULL, reason = NULL "
-            "WHERE account_id = ? AND message_id = ? "
-            "AND (reason IS NULL OR reason != ?)",
-            _text(now),
-            _text(due),
-            ref.account_id,
-            ref.message_id,
-            KEYWORD_REMOVED,
-        )
+        with self._conn() as conn:
+            conn.execute(
+                sa.update(open_items)
+                .where(
+                    *_of(ref),
+                    sa.or_(_i.reason.is_(None), _i.reason != KEYWORD_REMOVED),
+                )
+                .values(
+                    opened=_text(now),
+                    due=_text(due),
+                    keyword_set=0,
+                    keyword_recorded_stage=None,
+                    closed=None,
+                    reason=None,
+                )
+            )
 
     def item(self, ref: MessageRef) -> OpenItem | None:
-        row = self._one(
-            _ITEM_SQL + " WHERE account_id = ? AND message_id = ?",
-            ref.account_id,
-            ref.message_id,
-        )
+        with self._conn() as conn:
+            row = conn.execute(_select().where(*_of(ref))).first()
         return _item(row) if row else None
 
     def items_in_thread(self, account_id: str, thread_id: str) -> list[OpenItem]:
         """The open items of a thread, closed ones left out."""
-        rows = self._all(
-            _ITEM_SQL + " WHERE account_id = ? AND thread_id = ? AND closed IS NULL "
-            "ORDER BY opened",
-            account_id,
-            thread_id,
+        query = (
+            _select()
+            .where(
+                _i.account_id == account_id,
+                _i.thread_id == thread_id,
+                _i.closed.is_(None),
+            )
+            .order_by(_i.opened)
         )
-        return [_item(row) for row in rows]
+        return self._items(query)
 
     def open_items(self) -> list[OpenItem]:
         """The items not closed, the oldest first."""
-        rows = self._all(_ITEM_SQL + " WHERE closed IS NULL ORDER BY opened")
-        return [_item(row) for row in rows]
+        return self._items(_select().where(_i.closed.is_(None)).order_by(_i.opened))
 
     def due_items(self, now: datetime, stage: str | None = None) -> list[OpenItem]:
         """Open items past their deadline that do not carry the keyword yet,
         those already recorded in ``stage`` left out."""
-        rows = self._all(
-            _ITEM_SQL + " WHERE closed IS NULL AND keyword_set = 0 AND due <= ? "
-            "AND (keyword_recorded_stage IS NULL OR keyword_recorded_stage IS NOT ?) "
-            "ORDER BY due",
-            _text(now),
-            stage,
+        query = (
+            _select()
+            .where(
+                _i.closed.is_(None),
+                _i.keyword_set == 0,
+                _i.due <= _text(now),
+                sa.or_(
+                    _i.keyword_recorded_stage.is_(None),
+                    _i.keyword_recorded_stage.is_distinct_from(stage),
+                ),
+            )
+            .order_by(_i.due)
         )
-        return [_item(row) for row in rows]
+        return self._items(query)
 
     def marked_closed_items(self, reasons: Sequence[str]) -> list[OpenItem]:
         """Closed items whose keyword is still noted as set, closed for one
         of ``reasons``."""
         if not reasons:
             return []
-        marks = ", ".join("?" for _ in reasons)
-        rows = self._all(
-            _ITEM_SQL + " WHERE closed IS NOT NULL AND keyword_set = 1 "
-            f"AND reason IN ({marks}) ORDER BY closed",
-            *reasons,
+        query = (
+            _select()
+            .where(
+                _i.closed.is_not(None),
+                _i.keyword_set == 1,
+                _i.reason.in_(list(reasons)),
+            )
+            .order_by(_i.closed)
         )
-        return [_item(row) for row in rows]
+        return self._items(query)
 
     def mark_keyword(self, ref: MessageRef, keyword_set: bool) -> None:
-        self._write(
-            "UPDATE open_items SET keyword_set = ? WHERE account_id = ? "
-            "AND message_id = ?",
-            int(keyword_set),
-            ref.account_id,
-            ref.message_id,
-        )
+        with self._conn() as conn:
+            conn.execute(
+                sa.update(open_items)
+                .where(*_of(ref))
+                .values(keyword_set=int(keyword_set))
+            )
 
     def record_keyword_stage(self, ref: MessageRef, stage: str) -> None:
         """Note that the keyword of an item was recorded in ``stage`` and not
         set."""
-        self._write(
-            "UPDATE open_items SET keyword_recorded_stage = ? WHERE account_id = ? "
-            "AND message_id = ?",
-            stage,
-            ref.account_id,
-            ref.message_id,
-        )
+        with self._conn() as conn:
+            conn.execute(
+                sa.update(open_items)
+                .where(*_of(ref))
+                .values(keyword_recorded_stage=stage)
+            )
 
     def close_item(self, ref: MessageRef, reason: str, now: datetime) -> bool:
         """Close an open item. Answers whether one was open."""
-        return (
-            self._write(
-                "UPDATE open_items SET closed = ?, reason = ? WHERE account_id = ? "
-                "AND message_id = ? AND closed IS NULL",
-                _text(now),
-                reason,
-                ref.account_id,
-                ref.message_id,
-            )
-            > 0
-        )
+        with self._conn() as conn:
+            closed = conn.execute(
+                sa.update(open_items)
+                .where(*_of(ref), _i.closed.is_(None))
+                .values(closed=_text(now), reason=reason)
+            ).rowcount
+        return closed > 0
+
+    def _items(self, query: sa.Select[Any]) -> list[OpenItem]:
+        with self._conn() as conn:
+            return [_item(row) for row in conn.execute(query)]
 
 
-# The columns each kind of row is read with, in the order of its reader
-# below.
-_ITEM_SQL = (
-    "SELECT account_id, message_id, thread_id, opened, due, keyword_set, closed, "
-    "reason FROM open_items"
-)
+def _select() -> sa.Select[Any]:
+    return sa.select(
+        _i.account_id,
+        _i.message_id,
+        _i.thread_id,
+        _i.opened,
+        _i.due,
+        _i.keyword_set,
+        _i.closed,
+        _i.reason,
+    )
+
+
+def _of(ref: MessageRef) -> tuple[sa.ColumnElement[bool], ...]:
+    return (_i.account_id == ref.account_id, _i.message_id == ref.message_id)
 
 
 def _item(row: Any) -> OpenItem:

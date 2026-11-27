@@ -6,8 +6,11 @@ import json
 from datetime import datetime
 from typing import Any
 
+import sqlalchemy as sa
+
 from ..records import MessageRef
-from .rows import _Rows, _text
+from .rows import _named, _Rows, _text
+from .schema import calls
 
 
 class _Calls(_Rows):
@@ -16,26 +19,28 @@ class _Calls(_Rows):
     def add_call(
         self, ref: MessageRef, request: Any, answer: Any, now: datetime
     ) -> None:
-        self._write(
-            "INSERT INTO calls (account_id, message_id, request, answer, at) "
-            "VALUES (?, ?, ?, ?, ?)",
-            ref.account_id,
-            ref.message_id,
-            # Escaped, so a lone surrogate in what the gateway answered
-            # cannot end the write.
-            json.dumps(request),
-            json.dumps(answer),
-            _text(now),
-        )
+        with self._conn() as conn:
+            conn.execute(
+                sa.insert(calls).values(
+                    account_id=ref.account_id,
+                    message_id=ref.message_id,
+                    # Escaped, so a lone surrogate in what the gateway
+                    # answered cannot end the write.
+                    request=json.dumps(request),
+                    answer=json.dumps(answer),
+                    at=_text(now),
+                )
+            )
 
     def purge_calls(self, before: datetime) -> int:
         """Delete the kept calls older than ``before``. Answers how many.
-        After a deletion the write-ahead log is written back and emptied, so
-        the deleted text is gone from it as well."""
-        purged = self._write("DELETE FROM calls WHERE at < ?", _text(before))
-        if purged:
-            self._one("PRAGMA wal_checkpoint(TRUNCATE)")
-        return purged
+        After a deletion the file shrinks and its write-ahead log is
+        written back and emptied, so the deleted text is gone from both."""
+        with _named(self._name):
+            return self._db.purge(calls, "at", before)
 
     def count_calls(self) -> int:
-        return int(self._one("SELECT COUNT(*) FROM calls")[0])
+        with self._conn() as conn:
+            return int(
+                conn.execute(sa.select(sa.func.count()).select_from(calls)).scalar_one()
+            )

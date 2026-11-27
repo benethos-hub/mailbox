@@ -129,13 +129,18 @@ def _shrinkable(connection: sqlite3.Connection, errors: Errors) -> bool:
 
 def shrink(connection: sqlite3.Connection, errors: Errors) -> None:
     """Give the pages a deletion freed back to the file system, so the
-    file follows what it holds. Cheap when there is nothing to give
-    back. Not inside a transaction: the caller waits for the next call."""
+    file follows what it holds, and empty the write-ahead log of a file
+    in WAL mode. Cheap when there is nothing to give back. Not inside a
+    transaction: the caller waits for the next call."""
     with translated_sqlite(errors):
         # The pragma gives one page back per step. ``executescript``
         # steps until it is done. ``execute`` stops after the first
         # step on Python 3.11, and nothing to speak of happens.
         connection.executescript("PRAGMA incremental_vacuum;")
+        # A file in WAL mode keeps the freed pages in its log until it is
+        # written back: then they are gone from both. Nothing for another
+        # mode.
+        connection.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchall()
 
 
 @contextmanager

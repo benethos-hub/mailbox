@@ -21,6 +21,13 @@ adheres to [Semantic Versioning](https://semver.org/).
   raises its own errors, or the subclasses a program names in
   `errors.Errors`, as the service does with its own. The lock of one
   writer, `locks`, moved from `paths` into it.
+- `benethos-mailbox-agents`: the state file stands on the storage of
+  `benethos-mailbox-common`, as the database of the service does. A
+  state file is brought to schema 5 when its agent starts, with a copy
+  kept beside it first: step 5 adds the table `meta`, and from there on
+  the steps are revisions of Alembic. A reader, such as `report`,
+  `status`, `health` or the cockpit, refuses a state file of an older
+  schema as well as one of a newer: start the agent once first.
 - `benethos-mailbox-agents`: depends on the extra `storage` of
   `benethos-mailbox-common`, which brings SQLAlchemy and Alembic, for the
   lock of its state file.
