@@ -4,6 +4,7 @@ docs/mailbox-agents/concept/agent-contract.md."""
 
 from __future__ import annotations
 
+from .actor import Actor, list_version
 from .agent import (
     KEYWORD_FORM,
     REVERSED_BY,
@@ -31,6 +32,7 @@ __all__ = [
     "KEYWORD_FORM",
     "REVERSED_BY",
     "Action",
+    "Actor",
     "ActionRequest",
     "Agent",
     "Classifier",
@@ -50,6 +52,7 @@ __all__ = [
     "folder_path",
     "from_top",
     "is_pattern",
+    "list_version",
     "load_agent",
     "load_prompt",
     "state_name",

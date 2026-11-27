@@ -27,6 +27,7 @@ INVENTED = Path(__file__).resolve().parent / "data" / "invented.json"
 FOLDERS = [
     {"id": "inbox", "name": "INBOX", "role": "inbox"},
     {"id": "sent", "name": "Sent", "role": "sent"},
+    {"id": "drafts", "name": "Drafts", "role": "drafts"},
     {"id": "trash", "name": "Trash", "role": "trash"},
     {"id": "trash-sub", "name": "Sub", "role": None, "parent_id": "trash"},
     {"id": "junk", "name": "Junk", "role": "junk"},
