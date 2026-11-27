@@ -57,7 +57,7 @@ that writes one of the methods the base puts together.
 | `name`, `version`, `description` | identity. `name` equals the package name |
 | `triggers` | the feed events it wants, each with its route, `decide` or `observe`, and whether it wants the tick |
 | `actions` | the actions it may take, from the list below |
-| `limits` | model calls per message and per day, and the longest quote or value an answer may hold, 300 characters |
+| `limits` | model calls per message and per day, the longest quote or value an answer may hold, 300 characters, and the forwards it may draft per day, none by default |
 | `requires` | settings that must be present before it starts |
 | `default_keyword` | the keyword it sets when `MAILBOX_AGENTS_KEYWORD` is unset |
 | `former_names` | the names it had before: it does not start beside a state file of one, and `status` names one. None by default, `sorting` for `categorization` (2026-11-25) |
@@ -88,6 +88,7 @@ others do not:
 | `counting` | off | it sets no keyword |
 | `categorization` | off | its own rule is stricter: `admit` refuses every message in the inbox that carries its keyword |
 | `filing` | off | its own rule is stricter: `takes` refuses every message that carries its keyword |
+| `forwarding` | off | it sets no keyword, its state file holds what it forwarded |
 
 **An agent's keyword is `agent-<word>` (decided 2026-11-18).** A keyword
 in that form is recognisable as set by an agent, shares no name with a
@@ -105,6 +106,7 @@ that is not lower case letters, digits and dashes, the same form
 | `categorization` | `agent-categorized` |
 | `counting` | `agent-counted`, never set |
 | `filing` | `agent-filed` |
+| `forwarding` | `agent-forwarded`, never set |
 
 `MAILBOX_AGENTS_KEYWORD` names another keyword for one deployment.
 
@@ -123,6 +125,7 @@ that is not lower case letters, digits and dashes, the same form
 | `folders_needed()` | the folders its configuration names and expects to be there, which `status` looks up. None by default |
 | `describe_folders(folders)` | for `status`: a line for each folder of an account that matters to it, such as one it looks in and what it does there. `folders` are the account's folders by path. Folder names only. Asked of an agent whose `folders_needed()` names one, nothing by default |
 | `keywords()` | the keywords the runtime may set and take off for it: its own, and those its configuration names, such as the keywords of the list of `categorization` (decided 2026-11-25). Code only, never from an answer of the model. Its own by default |
+| `recipients()` | the addresses the runtime may draft a forward to for it, in lower case: from its configuration, never from a mail or an answer of the model. None by default (2026-11-27) |
 | `may_create(path, folders)` | whether the runtime may make the folder at `path` for it: one its configuration names. `folders` are the account's folders by path, so an answer may rest on the folder above and its role. Code only, no folder by default |
 | `decide_again(message)` | after `observe`: whether the message is decided again, taken up anew as `backfill` does, such as one given a keyword the agent waits for. Code only. No by default (2026-11-25) |
 | `refresh(stored, message)` | a decision stored before, as it holds for the message now: what code decides may be worked out anew, never what the model answered. The runtime asks it before it reuses a stored decision. Unchanged by default (2026-11-25) |
@@ -154,9 +157,24 @@ The actions that exist:
 | `remove_keyword` | `add_keyword` |
 | `move_to_folder` | a move back, the previous folder is recorded |
 | `create_folder` | none by an agent: deleting a folder needs a right no agent has. The owner removes an empty one |
+| `draft_forward` | none by an agent: the draft lies in the owner's drafts folder, where the owner deletes it. It changes no message and sends nothing |
 
 An agent declares which of them it uses, and the runtime carries out no
 other. A new action is added here first, with how it is taken back.
+
+**A forward as a draft (decided 2026-11-27).** `draft_forward` puts a
+forward of a message into the drafts folder of its account, to the
+addresses the agent names, and sends nothing. It has no way back by an
+agent, as `create_folder` has none, and is accepted for the same
+reason: it changes no message. The runtime takes it only on these
+terms: it is declared, the account is one the agent works on, every
+address is one that `recipients()` of the agent names, from its
+configuration and never from a mail or an answer of a model, the form
+is `inline` or `attachment`, the message lies in none of the trash,
+junk, spam, drafts or sent mail, there is no forward drafted for it
+yet, and no more drafts were made today than `limits` allows. The
+stages `suggest` and `full` take it. Sending is not built: no agent
+sends.
 
 The runtime carries out an action only on these terms: it is declared, a
 keyword is one the agent names in `keywords()`, its own or one its

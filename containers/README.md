@@ -173,7 +173,7 @@ another machine:
 
 | Folder | Ports | Compose project |
 |---|---|---|
-| `production/mailbox-agents/` | metrics on 9470 to 9474, 127.0.0.1 | `benethos-mailbox-agents` |
+| `production/mailbox-agents/` | metrics on 9470 to 9475, 127.0.0.1 | `benethos-mailbox-agents` |
 | `development/mailbox-agents/` | metrics on 9480 to 9482, 127.0.0.1 | `benethos-mailbox-agents-dev` |
 | `live/mailbox-agents/` | 38080, 38081, 38400, 38465, 38993, 127.0.0.1 | `mailbox-agents-live` |
 

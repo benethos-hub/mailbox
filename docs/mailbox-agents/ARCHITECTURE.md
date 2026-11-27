@@ -16,6 +16,7 @@
         |   inquiries       + SQLite |
         |   counting        + SQLite |
         |   filing          + SQLite |
+        |   forwarding      + SQLite |
         +-------------+--------------+
                       | OpenAI-compatible HTTP, one key per agent
         +-------------v--------------+
@@ -120,6 +121,7 @@ packages/mailbox-agents/src/benethos_mailbox_agents/
   sources/
     mailbox.py    # the only module importing benethos_mailbox_client
     versions.py   # which versions of the service the agents take
+    answers.py    # an answer made sound, a record of what the API describes
   llm/
     gateway.py    # the only module that talks to the model gateway
     evidence.py   # whether a quote is in the mail the model was given
@@ -163,13 +165,15 @@ packages/mailbox-agents/src/benethos_mailbox_agents/
                   # recognizer invoice
     filing/       # rules.py the list of keywords and folders, agent.py
                   # the actor that files by it
+    forwarding/   # rules.py the list of keywords and addresses,
+                  # agent.py the actor that drafts a forward by it
 packages/mailbox-agents/tests/  # offline: REST and gateway through
                                 # httpx.MockTransport
 live/mailbox-agents/    # run by hand, outside testpaths, against the test
                         # account of containers/live/mailbox-agents/:
                         # agents_smoke.py read-only, categorization.py,
-                        # chain.py the instances, filing.py the
-                        # actor filing, peers.py
+                        # chain.py the instances, filing.py and
+                        # forwarding.py the actors, peers.py
                         # the entrance over A2A, gold.py the gold files from its
                         # labels, agents_common/ what they share
 containers/

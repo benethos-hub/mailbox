@@ -28,6 +28,10 @@ Part of the [concept](../CONCEPT.md).
   `live/mailbox-agents/filing.py` runs the actor `filing` in `shadow` and
   in `full` on keywords it sets as a person would, a message put back by
   hand among it, and puts every message back.
+  `live/mailbox-agents/forwarding.py` makes a user with `mail.read` and
+  `drafts` through the administration of the service, runs the actor
+  `forwarding` under it in `shadow` and in `suggest`, and deletes its
+  drafts, the user and its token again. It sends nothing.
   `live/mailbox-agents/peers.py` asks the entrance for peers over A2A,
   directly and through LiteLLM, and changes no mail.
   The model gateway belongs to it (decided 2026-11-17): LiteLLM with Claude

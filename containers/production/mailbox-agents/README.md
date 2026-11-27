@@ -20,8 +20,10 @@ This folder is all it needs, no clone of the repository.
    `agents/inquiries/inquiries.json`, its sender domains and phrases, made
    after `inquiries.example.json`, and `filing` needs
    `agents/filing/filing.json`, its rules, made after
-   `filing.example.json`. `counting` and `filing` ask no model and have no
-   `gateway_key`. `categorization` asks one only when a group of its list has a
+   `filing.example.json`, and `forwarding` needs
+   `agents/forwarding/forwarding.json`, made after
+   `forwarding.example.json`. `counting`, `filing` and `forwarding` ask
+   no model and have no `gateway_key`. `categorization` asks one only when a group of its list has a
    topic: then it needs the gateway settings in its `.env`, as
    `agents/categorization/.env.example` shows, and a `gateway_key`.
 3. Put the agent's secrets into `secrets/<name>/`, one file each,
@@ -36,7 +38,8 @@ This folder is all it needs, no clone of the repository.
 
    Each agent has a user of its own in the mailbox service, with
    `mail.read` and `mail.write` on the accounts it works on and nothing
-   else, `counting` with `mail.read` alone, and each that asks a model a
+   else, `counting` with `mail.read` alone, `forwarding` with `mail.read`
+   and `drafts`, never `mail.write` and never send, and each that asks a model a
    key of its own at the gateway. See
    [mailbox-service.md](../../../docs/mailbox-agents/concept/mailbox-service.md)
    and [model-gateway.md](../../../docs/mailbox-agents/concept/model-gateway.md).

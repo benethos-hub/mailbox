@@ -13,6 +13,7 @@ Operation names below are the service's `operationId`s.
 | Set or remove a keyword, move to a folder | `update_message` |
 | The folders of an account, read anew in every pass: a renamed folder keeps its id with Microsoft, Gmail and JMAP **(to verify)** | `list_folders` |
 | Make a folder, below a parent or at the top | `create_folder` |
+| A forward of a message as a draft, and whether one is there already | `create_draft` with a `reference` to forward, `list_drafts` and `get_message` |
 | The messages received since a day, for `backfill` | `list_all_messages`, once for the inbox and once for sent mail |
 | The messages of one folder since a day, for `backfill` | `list_messages` of one account, the folder by its id |
 | The accounts to look in for those folders, and for the folders `status` checks, without `ACCOUNTS` | `get_me` |
@@ -31,6 +32,26 @@ stated about the domain of its sender: `pass`, `fail` or `unknown`,
 and `unknown` when the answer has none. Another value is an answer that
 is not what the API describes, a refusal (2026-11-27). No agent acts on
 it yet.
+A forward is drafted with `create_draft`: the addresses, no subject and
+no text of its own, and a `reference` to the message with the action
+`forward` and its form. Whether it is there is looked up on the first
+page of `list_drafts`, a draft to exactly those addresses whose
+`reference` names the message. Measured 2026-11-27 at Stalwart over
+IMAP with `live/mailbox-agents/forwarding.py`, on the test account of
+the live setup: a user with `mail.read` and `drafts` makes a draft with
+a `reference`, the service sets the subject `Fwd: ...`, the original
+keeps its folders and keywords, and a forward as an `attachment`
+carries the original as `message/rfc822`. A draft keeps the action and
+the original of its `reference`, not its form: read back it names
+`inline` either way, so whether a forward is there is looked up by the
+action and the original alone. That an `inline` forward carries the
+attachments of the original is not measured **(to verify)**.
+An answer from `500` on and a `429` count as the service away: the pass
+ends and the runtime waits. A `501` with the code `not_supported` is
+not: it says what an account cannot do, a keyword on Gmail or POP3, a
+draft on an account without a drafts folder. It is a refusal of that
+request, logged as refused and not recorded, the message ends and the
+pass goes on (2026-11-27).
 `list_all_messages` without a folder lists the inbox alone (measured
 2026-11-17 against 0.7.5), so a backfill names each folder role it wants.
 
@@ -140,6 +161,7 @@ Rights. Each agent has a user of its own in the service:
 | `categorization` | `mail.read`, `mail.write` | `drafts`, send, `mail.delete` |
 | `counting` | `mail.read` | `mail.write`, `drafts`, send, `mail.delete` |
 | `filing` | `mail.read`, `mail.write` | `drafts`, send, `mail.delete` |
+| `forwarding` | `mail.read`, `drafts` | `mail.write`, send, `mail.delete` |
 
 `counting` changes nothing, so `mail.read` is all it needs. Measured
 2026-11-20 against 0.8.0 on the test account: `status`, `backfill`, `run`

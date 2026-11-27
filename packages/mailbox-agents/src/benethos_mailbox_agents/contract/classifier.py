@@ -6,16 +6,19 @@ docs/mailbox-agents/concept/agent-contract.md."""
 
 from __future__ import annotations
 
-from .agent import Agent
+from ..errors import ContractError
+from .agent import Action, Agent
 
 __all__ = ["Classifier"]
 
 
 class Classifier(Agent):
     """An agent that reads a message and answers a question about it, with
-    rules or with the model. It has no method of its own yet:
-    :meth:`validate_definition` is where a rule for every classifier goes."""
+    rules or with the model. A classifier drafts no forward: what it
+    reads may hold what a forward would carry away."""
 
     @classmethod
     def validate_definition(cls) -> None:
         super().validate_definition()
+        if Action.DRAFT_FORWARD in cls.actions:
+            raise ContractError(f"{cls.name}: a classifier drafts no forward")

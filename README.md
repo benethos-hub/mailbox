@@ -153,8 +153,9 @@ some folders, such as the invoices, and end after a week.
   the model marked as foreign text.
 - **Agents (alpha):** small processes that count mail, mark invoices,
   inquiries and mail awaiting a reply, and categorize and file mail by
-  sender, topic, recognizer or keyword. Each starts in `shadow`, and a model it
-  asks has no tools: [packages/mailbox-agents](packages/mailbox-agents/README.md).
+  sender, topic, recognizer or keyword, and draft a forward by keyword,
+  never sending it. Each starts in `shadow`, and a model it asks has no
+  tools: [packages/mailbox-agents](packages/mailbox-agents/README.md).
 - **Configuration UI** in the browser under `/ui`: accounts, users,
   rights, tokens, reading and writing mail, the send audit, the outbox,
   webhooks,

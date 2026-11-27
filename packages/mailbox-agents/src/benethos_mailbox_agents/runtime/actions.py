@@ -20,12 +20,10 @@ docs/mailbox-agents/concept/runtime.md and docs/mailbox-agents/concept/safety.md
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 from contextlib import suppress
-from dataclasses import dataclass, replace
+from dataclasses import replace
 from datetime import datetime
-from enum import StrEnum
-from typing import Any
 
 from ..contract import Action, ActionRequest, Agent
 from ..errors import (
@@ -39,7 +37,9 @@ from ..logbook import actions, record
 from ..records import DISCARD_ROLES, FolderRef, MailMessage, MessageRef
 from ..store import Store
 from ..telemetry import NO_SPANS, Spans
+from . import drafts
 from .metrics import Metrics
+from .outcomes import Outcome, Plan, in_another_case, well_formed
 from .writer import Writer
 
 __all__ = [
@@ -53,7 +53,11 @@ __all__ = [
 # What each stage carries out. The rest is recorded only.
 STAGE_ALLOWS: dict[str, frozenset[Action]] = {
     "shadow": frozenset(),
-    "suggest": frozenset({Action.ADD_KEYWORD, Action.REMOVE_KEYWORD}),
+    # What the owner sees and takes back in one step: a keyword, a forward
+    # in the drafts folder.
+    "suggest": frozenset(
+        {Action.ADD_KEYWORD, Action.REMOVE_KEYWORD, Action.DRAFT_FORWARD}
+    ),
     "full": frozenset(Action),
 }
 
@@ -65,33 +69,6 @@ FORBIDDEN_ROLES = DISCARD_ROLES
 _FOLDER_ACTIONS = frozenset({Action.CREATE_FOLDER, Action.MOVE_TO_FOLDER})
 
 
-# The names a folder path may not hold between its slashes.
-_NO_NAMES = frozenset({"", ".", ".."})
-
-
-def _well_formed(path: str) -> None:
-    """Refuse a folder path that is not names between slashes: one that
-    starts or ends with a slash, holds two in a row, or names ``.`` or
-    ``..``. The executor holds to it whatever the agent may make."""
-    if any(name in _NO_NAMES for name in path.split("/")):
-        raise ActionRefusedError("the folder path is not names between slashes")
-
-
-class Outcome(StrEnum):
-    """What became of one action."""
-
-    DONE = "done"  # the stage allows it, it was taken
-    PRESENT = "present"  # its result was already there
-    RECORDED = "recorded"  # the stage does not allow it, it was recorded only
-    REFUSED = "refused"  # the executor or the mailbox service refused it
-    # refused as the message lies in the trash, junk or spam, where the
-    # owner put it: no failure, and no action of an agent comes there
-    DISCARDED = "discarded"
-    # a folder for a move not taken, not made, or a move of a message the
-    # agent moved once before, where the owner's folder stands
-    SKIPPED = "skipped"
-
-
 class _DiscardedError(Exception):
     """The message lies in the trash, junk or spam, where the owner put
     it: no action of an agent is taken there."""
@@ -100,26 +77,6 @@ class _DiscardedError(Exception):
 class _OwnersChoiceError(Exception):
     """The message was moved by the agent once already: a move asked again
     is not taken, the folder it lies in now is the owner's choice."""
-
-
-def in_another_case(path: str, paths: Iterable[str]) -> bool:
-    """Whether one of ``paths`` is ``path`` in another case only. The
-    service would make such a folder as a second one (measured
-    2026-11-18), so the executor neither makes it nor moves into it, and
-    ``status`` names it."""
-    return any(p != path and p.casefold() == path.casefold() for p in paths)
-
-
-@dataclass(frozen=True)
-class Plan:
-    """One action as planned: the argument to record, what was there
-    before, the target to send, and whether it is recorded only, as below
-    a folder recorded and not made, whatever the stage."""
-
-    argument: str
-    before: dict[str, Any]
-    target: str
-    record_only: bool = False
 
 
 class Executor:
@@ -353,11 +310,13 @@ class Executor:
         if request.action is Action.MOVE_TO_FOLDER:
             if not request.folder:
                 raise ActionRefusedError("a move names no folder")
-            _well_formed(request.folder)
+            well_formed(request.folder)
         elif request.action is Action.CREATE_FOLDER:
             if not request.folder:
                 raise ActionRefusedError("a folder to make has no path")
-            _well_formed(request.folder)
+            well_formed(request.folder)
+        elif request.action is Action.DRAFT_FORWARD:
+            drafts.admissible(self.agent, request)
         elif not request.keyword or request.keyword not in self.agent.keywords():
             raise ActionRefusedError(
                 "an agent sets and takes off its own keywords only"
@@ -369,33 +328,44 @@ class Executor:
         account = request.ref.account_id
         if await self._in_forbidden(account, message):
             raise _DiscardedError
+        if request.action is Action.DRAFT_FORWARD:
+            return drafts.plan(self.agent, self._store, request, message, self._now())
         if request.action is Action.MOVE_TO_FOLDER:
-            path = request.folder or ""  # never empty, _admissible checked it
-            folder = await self._mailbox.folder_at(account, path)
-            before = [f.id for f in message.folders]
-            # Moved once already and not in the target: the owner's choice
-            # stands, also where the target is missing.
-            if self._moved_before(request.ref) and (
-                folder is None or before != [folder.id]
-            ):
-                raise _OwnersChoiceError
-            if folder is None and (account, path) in self._recorded_folders:
-                # Its folder was recorded only, by the stage or held: so is
-                # the move, which has no target to send.
-                return Plan(path, {"folders": before}, "", record_only=True)
-            if folder is None:
-                raise ActionRefusedError("the target folder does not exist")
-            if await self._forbidden(account, folder):
-                raise ActionRefusedError("no agent moves a message there")
-            if before == [folder.id]:
-                return None
-            return Plan(folder.path, {"folders": before}, folder.id)
+            return await self._plan_move(request, message)
         if request.action is Action.CREATE_FOLDER:
             return await self._plan_folder(account, request.folder)
         keyword = request.keyword or ""  # never empty, _admissible checked it
         if (request.action is Action.ADD_KEYWORD) == message.has_keyword(keyword):
             return None
         return Plan(keyword, {"keywords": list(message.keywords)}, keyword)
+
+    async def _plan_move(
+        self, request: ActionRequest, message: MailMessage
+    ) -> Plan | None:
+        """A move: refused into a folder that is not there or forbidden,
+        recorded only below a folder recorded only, None when the message
+        lies in its target already."""
+        account = request.ref.account_id
+        path = request.folder or ""  # never empty, _admissible checked it
+        folder = await self._mailbox.folder_at(account, path)
+        before = [f.id for f in message.folders]
+        # Moved once already and not in the target: the owner's choice
+        # stands, also where the target is missing.
+        if self._moved_before(request.ref) and (
+            folder is None or before != [folder.id]
+        ):
+            raise _OwnersChoiceError
+        if folder is None and (account, path) in self._recorded_folders:
+            # Its folder was recorded only, by the stage or held: so is
+            # the move, which has no target to send.
+            return Plan(path, {"folders": before}, "", record_only=True)
+        if folder is None:
+            raise ActionRefusedError("the target folder does not exist")
+        if await self._forbidden(account, folder):
+            raise ActionRefusedError("no agent moves a message there")
+        if before == [folder.id]:
+            return None
+        return Plan(folder.path, {"folders": before}, folder.id)
 
     def _recorded_before(self, request: ActionRequest, argument: str) -> bool:
         """Whether the same action is recorded for the message already, in
@@ -484,6 +454,8 @@ class Executor:
         if request.action is Action.CREATE_FOLDER:
             found = await self._mailbox.folder_at(request.ref.account_id, target)
             return found is not None
+        if request.action is Action.DRAFT_FORWARD:
+            return await self._mailbox.forward_drafted(request.ref, request.recipients)
         message = await self._mailbox.message(request.ref)
         if request.action is Action.MOVE_TO_FOLDER:
             return [f.id for f in message.folders] == [target]
@@ -496,5 +468,8 @@ class Executor:
             await self._mailbox.remove_keyword(request.ref, target)
         elif request.action is Action.CREATE_FOLDER:
             await self._mailbox.create_folder(request.ref.account_id, target)
+        elif request.action is Action.DRAFT_FORWARD:
+            form = request.forward_as or "inline"  # _admissible checked it
+            await self._mailbox.draft_forward(request.ref, request.recipients, form)
         else:
             await self._mailbox.move(request.ref, target)

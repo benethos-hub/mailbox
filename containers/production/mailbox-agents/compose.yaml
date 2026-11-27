@@ -129,6 +129,29 @@ services:
       start_period: 120s
       retries: 3
 
+  # An actor: asks no model, reads nothing of what a mail says, and only
+  # drafts a forward. Its user has mail.read and drafts, and no send.
+  forwarding:
+    <<: *agent
+    profiles: ["forwarding"]
+    command: ["worker", "--agent", "forwarding"]
+    env_file: ./agents/forwarding/.env
+    environment:
+      MAILBOX_AGENTS_SERVICE_TOKEN_FILE: /run/secrets/service_token
+      MAILBOX_AGENTS_FORWARDING_FILE: /config/forwarding.json
+    volumes:
+      - forwarding-data:/data
+      - ./agents/forwarding:/config:ro
+      - ./secrets/forwarding:/run/secrets:ro
+    ports:
+      - "127.0.0.1:${MAILBOX_AGENTS_FORWARDING_METRICS_PORT:-9475}:9464"
+    healthcheck:
+      test: ["CMD", "benethos-mailbox-agents", "health", "--agent", "forwarding"]
+      interval: 60s
+      timeout: 10s
+      start_period: 120s
+      retries: 3
+
   # Changes nothing and asks no model: a deployment checked end to end
   # before an agent that may change a message is started.
   counting:
@@ -156,3 +179,4 @@ volumes:
   categorization-data:
   counting-data:
   filing-data:
+  forwarding-data:

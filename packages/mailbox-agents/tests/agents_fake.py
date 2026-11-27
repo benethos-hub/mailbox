@@ -19,6 +19,8 @@ import httpx
 
 from benethos_mailbox_agents import __version__
 
+from . import agents_fake_drafts as drafts
+
 ACCOUNT = "acc1"
 
 # Invented messages, shared by the tests of the agents and the evaluation.
@@ -215,6 +217,8 @@ class FakeService:
             ("PATCH", "message"): self._update,
             ("POST", "folders"): self._create_folder,
             ("GET", "me"): self._me,
+            ("POST", "drafts"): lambda r, p: drafts.made(self.messages, p[1], r),
+            ("GET", "drafts"): lambda r, p: drafts.listed(self.messages, p[1]),
         }.get((request.method, _kind(parts)))
         if route is None:
             return _error(404, "not_found", "no such path")
@@ -392,6 +396,8 @@ def _kind(parts: list[str]) -> str:
         return "account_messages"
     if len(parts) == 3 and parts[0] == "accounts" and parts[2] == "folders":
         return "folders"
+    if len(parts) == 3 and parts[0] == "accounts" and parts[2] == "drafts":
+        return "drafts"
     if len(parts) == 4 and parts[0] == "accounts" and parts[2] == "messages":
         return "message"
     if len(parts) == 4 and parts[0] == "accounts" and parts[2] == "threads":

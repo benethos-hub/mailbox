@@ -3,6 +3,7 @@ the folders of its account, and the writes the executor may make."""
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Protocol
 
 from ..records import FolderRef, MailMessage, MessageRef
@@ -35,3 +36,12 @@ class Writer(Protocol):
 
     async def create_folder(self, account_id: str, path: str) -> FolderRef:
         """Make the folder at ``path``, its parent there already."""
+
+    async def draft_forward(
+        self, ref: MessageRef, recipients: Iterable[str], forward_as: str
+    ) -> str:
+        """Put a forward of the message into the drafts folder. Answers the
+        id of the draft."""
+
+    async def forward_drafted(self, ref: MessageRef, recipients: Iterable[str]) -> bool:
+        """Whether a forward of the message to ``recipients`` is a draft."""

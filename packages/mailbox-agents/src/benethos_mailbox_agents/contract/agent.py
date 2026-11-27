@@ -58,16 +58,19 @@ class Action(StrEnum):
     REMOVE_KEYWORD = "remove_keyword"
     MOVE_TO_FOLDER = "move_to_folder"
     CREATE_FOLDER = "create_folder"
+    DRAFT_FORWARD = "draft_forward"
 
 
 # How each action is taken back. A move is taken back by a move to the
 # folder recorded before it. A folder made is taken back by the owner, as
-# deleting a folder needs a right no agent has: None.
+# deleting a folder needs a right no agent has: None. So is a forward
+# drafted, which lies in the owner's drafts folder.
 REVERSED_BY: dict[Action, Action | None] = {
     Action.ADD_KEYWORD: Action.REMOVE_KEYWORD,
     Action.REMOVE_KEYWORD: Action.ADD_KEYWORD,
     Action.MOVE_TO_FOLDER: Action.MOVE_TO_FOLDER,
     Action.CREATE_FOLDER: None,
+    Action.DRAFT_FORWARD: None,
 }
 
 
@@ -100,7 +103,8 @@ class Trigger:
 
 @dataclass(frozen=True, slots=True)
 class Limits:
-    """Model calls an agent may make, per message and per day."""
+    """Model calls an agent may make, per message and per day, and the
+    forwards it may draft per day."""
 
     model_calls_per_message: int = 1
     model_calls_per_day: int = 2000
@@ -109,6 +113,9 @@ class Limits:
     # into the state file. Checked after parsing: the schema sent to the
     # model does not change.
     answer_text: int = 300
+    # The forwards the runtime drafts for the agent per day. Beyond them
+    # the action is refused.
+    drafts_per_day: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -129,6 +136,9 @@ class ActionRequest:
     and makes only a folder the agent may make, see :meth:`Agent.may_create`.
     ``held`` asks for the action to be recorded only, as in ``shadow``,
     whatever the stage: for a group or rule its configuration holds.
+    ``recipients`` and ``forward_as`` for a forward drafted: the
+    addresses, each one :meth:`Agent.recipients` names, and the form,
+    ``inline`` or ``attachment``.
     """
 
     action: Action
@@ -137,6 +147,8 @@ class ActionRequest:
     folder: str | None = None
     why: str = field(default="", compare=False)
     held: bool = False
+    recipients: tuple[str, ...] = ()
+    forward_as: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -317,6 +329,12 @@ class Agent(ABC):
         a list. Code only, never from an answer of the model. Its own by
         default."""
         return frozenset({self.keyword})
+
+    def recipients(self) -> frozenset[str]:
+        """The addresses the runtime may draft a forward to for this
+        agent, in lower case: from its configuration only, never from a
+        mail or an answer of the model. None by default."""
+        return frozenset()
 
     def trace_parts(self, decision: Decision) -> list[TracePart]:
         """The parts of ``decision`` a span of the decision names below it,

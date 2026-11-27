@@ -11,7 +11,7 @@ once released.
 | `passes` | when the loop last showed progress, after a message, a pass or a slice of a wait, for the health check |
 | `messages` | message id, account id, state, attempts, next attempt |
 | `steps` | message, step, prompt version, model alias and the model reported, result, tokens, duration. A baseline's prompt version is the agent version, with `/` and the prompt version after it when the agent has one, such as `5/v4` |
-| `actions` | message, action, its argument (the keyword or the path of the folder), what was there before, when, stage, whether it was carried out. A stage `keyword`, the former word of `suggest`, is written as `suggest` by migration 3 (2026-11-27) |
+| `actions` | message, action, its argument (the keyword, the path of the folder, or the form and the addresses of a forward drafted), what was there before, when, stage, whether it was carried out. A stage `keyword`, the former word of `suggest`, is written as `suggest` by migration 3 (2026-11-27) |
 | `open_items` | for an agent that follows a message, `awaiting_reply`, with a deadline (`invoices` kept them without one until it was removed on 2026-11-25): message, thread, due, whether the keyword is on the message, the stage its keyword was recorded in without being set, closed and why, for `awaiting_reply` `replied`, `followed_up`, `keyword_removed`, `message_gone` or `discarded`. The keyword counts as on the message until the runtime saw it taken off, also after the item closed |
 | `calls` | the full request and answer of a model call, only while `PROMPT_RETENTION_DAYS` keeps them |
 

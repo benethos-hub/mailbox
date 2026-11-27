@@ -111,12 +111,16 @@ class Settings(files.FileSettings):
     # --- filing, docs/mailbox-agents/concept/agent-filing.md -----------------
     filing_file: Path | None = None
 
+    # --- forwarding, docs/mailbox-agents/concept/agent-forwarding.md ---------
+    forwarding_file: Path | None = None
+
     @field_validator(
         "ca_file",
         "keyword",
         "instance",
         "categorization_file",
         "filing_file",
+        "forwarding_file",
         "inquiries_patterns_file",
         "otlp_endpoint",
         "otlp_headers_file",

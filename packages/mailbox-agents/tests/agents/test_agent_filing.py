@@ -171,6 +171,22 @@ async def test_mail_it_does_not_take_is_skipped(
         assert world.service.writes() == []
 
 
+async def test_an_account_that_cannot_do_it_leaves_the_pass_going(
+    tmp_path: Path,
+) -> None:
+    """Each write answers 501 not_supported: every message ends, refused,
+    and none waits for a service that is there."""
+    async with wired(tmp_path) as world:
+        for message_id in ("m1", "m2"):
+            world.service.add(wire_message(message_id, keywords=[PARTNER]), change=None)
+        world.service.write_refusal = (501, "not_supported")
+
+        assert await run(world, "m1", agent(tmp_path)) == "done"
+        assert await run(world, "m2", agent(tmp_path)) == "done"
+
+        assert world.store.actions() == []
+
+
 def test_a_list_that_waits_for_its_own_keyword_is_refused(tmp_path: Path) -> None:
     rules = {"on": {"keywords": ["agent-*"]}, "rules": RULES["rules"]}
 

@@ -41,7 +41,8 @@ leaves, decides one narrow question about it and takes one
 reversible action: a keyword, or a move to a folder. The first ones
 track sent mail that still waits for a reply, recognise project
 inquiries, and file mail into folders by its sender, by the topic of a
-group or as an invoice, or by the keywords it carries.
+group or as an invoice, or by the keywords it carries, and draft a
+forward of mail by its keywords, which they never send.
 
 Mailbox is self-hosted and has five packages. The agents do not work
 alone. They need the service, which runs on your own machine or server

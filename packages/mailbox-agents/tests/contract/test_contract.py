@@ -138,9 +138,11 @@ def test_a_missing_declaration_is_named() -> None:
 
 def test_every_action_has_a_way_back() -> None:
     assert set(REVERSED_BY) == set(Action)
-    # Only a folder made is taken back by the owner, not by an agent.
+    # Only a folder made and a forward drafted are taken back by the owner,
+    # not by an agent.
     assert [a for a, back in REVERSED_BY.items() if back is None] == [
-        Action.CREATE_FOLDER
+        Action.CREATE_FOLDER,
+        Action.DRAFT_FORWARD,
     ]
 
 
@@ -370,3 +372,19 @@ def test_a_recognizer_scored_alone_is_a_classifier() -> None:
     from benethos_mailbox_agents.agents.categorization.alone import InvoiceAlone
 
     assert issubclass(InvoiceAlone, Classifier)
+
+
+def test_a_classifier_drafts_no_forward() -> None:
+    from benethos_mailbox_agents.agents.counting.agent import Counting
+
+    class Forwarding(Counting):
+        actions = frozenset({Action.DRAFT_FORWARD})
+
+    with pytest.raises(ContractError, match="a classifier drafts no forward"):
+        Forwarding.validate_definition()
+
+
+def test_an_agent_names_no_recipient_by_default() -> None:
+    from benethos_mailbox_agents.agents.counting.agent import Counting
+
+    assert Counting(Settings()).recipients() == frozenset()

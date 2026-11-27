@@ -37,6 +37,7 @@ PATH_SETTINGS = (
     "data_dir",
     "categorization_file",
     "filing_file",
+    "forwarding_file",
     "inquiries_patterns_file",
     "ca_file",
     "service_token_file",
@@ -72,6 +73,7 @@ class _Paths(files.FileSettings):
     data_dir: str | None = None
     categorization_file: str | None = None
     filing_file: str | None = None
+    forwarding_file: str | None = None
     inquiries_patterns_file: str | None = None
     ca_file: str | None = None
     service_token_file: str | None = None

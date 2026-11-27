@@ -1,0 +1,19 @@
+{
+  "on": {
+    "keywords": [
+      "agent-invoice"
+    ]
+  },
+  "rules": [
+    {
+      "keywords": [
+        "agent-invoice"
+      ],
+      "to": [
+        "books@example.org"
+      ],
+      "forward_as": "attachment",
+      "sender_check": "required"
+    }
+  ]
+}
