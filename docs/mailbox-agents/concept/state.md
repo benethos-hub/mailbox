@@ -14,6 +14,7 @@ once released.
 | `actions` | message, action, its argument (the keyword, the path of the folder, or the form and the addresses of a forward drafted), what was there before, when, stage, whether it was carried out. A stage `keyword`, the former word of `suggest`, is written as `suggest` by migration 3 (2026-11-27) |
 | `open_items` | for an agent that follows a message, `awaiting_reply`, with a deadline (`invoices` kept them without one until it was removed on 2026-11-25): message, thread, due, whether the keyword is on the message, the stage its keyword was recorded in without being set, closed and why, for `awaiting_reply` `replied`, `followed_up`, `keyword_removed`, `message_gone` or `discarded`. The keyword counts as on the message until the runtime saw it taken off, also after the item closed |
 | `calls` | the full request and answer of a model call, only while `PROMPT_RETENTION_DAYS` keeps them |
+| `profile` | one row the worker writes when it starts, for a reader from outside such as the cockpit: the agent, its instance, the versions of the agent, the package and the prompt, the stage, the accounts, the keyword in effect, the poll and gateway seconds, the model alias and when it started. No secret, no text of a list and no address. Added by migration 4 (2026-11-27) |
 
 The schema version is the file's `user_version`. A reader opens the file
 read-only and refuses one newer than it knows.
