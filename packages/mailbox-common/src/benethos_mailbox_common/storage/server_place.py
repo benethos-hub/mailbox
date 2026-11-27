@@ -13,7 +13,7 @@ from __future__ import annotations
 import functools
 import threading
 import time
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Sequence
 from contextlib import AbstractContextManager, contextmanager, suppress
 from dataclasses import dataclass
 from pathlib import Path
@@ -21,7 +21,7 @@ from typing import Literal
 
 import sqlalchemy as sa
 
-from . import dialect, names, server_lock, tables
+from . import dialect, names, server_lock, server_rights, tables
 from .errors import Errors, StorageUnavailableError
 from .outage import LONGEST_PAUSE, Availability, Outage
 from .place import Opened, translated_by
@@ -77,6 +77,8 @@ class ServerPlace:
         server: Server,
         shape: Shape,
         clock: Callable[[], float] = time.monotonic,
+        *,
+        make_schema: bool = False,
     ) -> None:
         if not names.is_plain_name(server.schema_name):
             raise shape.errors.failed(
@@ -85,6 +87,8 @@ class ServerPlace:
             )
         self._server = server
         self._shape = shape
+        # The schema made at open where it is missing and the role may.
+        self._make_schema = make_schema
         self._errors = shape.errors
         self._engine: sa.Engine | None = None
         self._connection: sa.Connection | None = None
@@ -115,7 +119,26 @@ class ServerPlace:
             ).scalar()
             self._connection.rollback()
         supported(int(str(version)), self._errors)
+        if self._make_schema:
+            with self.translated():
+                server_rights.own_schema(
+                    self._connection, self._server.schema_name, self._errors
+                )
         return Opened(self._connection, None)
+
+    def secured(self, readers: Sequence[str], setting: str) -> server_rights.Rights:
+        """The database closed to every other role and given to
+        ``readers`` to read, as ``server_rights.secure`` says. ``setting``
+        names the readers in an error."""
+        connection = self._open()
+        with self.translated():
+            return server_rights.secure(
+                connection,
+                self._server.schema_name,
+                readers,
+                self._errors,
+                setting=setting,
+            )
 
     def _engine_of(self) -> sa.Engine:
         server = self._server
