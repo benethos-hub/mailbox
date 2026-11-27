@@ -27,6 +27,7 @@ from .calls import _Calls
 from .items import _Items
 from .messages import _Messages
 from .migrations import MIGRATIONS, SCHEMA_VERSION
+from .profile import _Profile
 from .rows import _sqlite, _text, _time
 from .steps import _Steps
 
@@ -99,7 +100,7 @@ def _unlock(held: ExitStack) -> None:
     held.close()
 
 
-class Store(_Messages, _Steps, _Actions, _Items, _Calls):
+class Store(_Messages, _Steps, _Actions, _Items, _Calls, _Profile):
     """The state file of one agent."""
 
     def __init__(
@@ -178,12 +179,6 @@ class Store(_Messages, _Steps, _Actions, _Items, _Calls):
         trace: TracebackType | None,
     ) -> None:
         self.close()
-
-    @property
-    def version(self) -> int:
-        with _sqlite(self._name):
-            found: int = self._db.execute("PRAGMA user_version").fetchone()[0]
-        return found
 
     def _check_version(self) -> None:
         if self.version > SCHEMA_VERSION:

@@ -46,6 +46,13 @@ class _Rows:
     _db: sqlite3.Connection
     _name: str
 
+    @property
+    def version(self) -> int:
+        """The schema version of the file, its ``user_version``."""
+        with _sqlite(self._name):
+            found: int = self._db.execute("PRAGMA user_version").fetchone()[0]
+        return found
+
     @contextmanager
     def _transaction(self) -> Iterator[None]:
         try:
