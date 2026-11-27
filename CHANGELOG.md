@@ -111,6 +111,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   `list_outbox`, `get_outbox_job` and `cancel_send` read and cancel the
   jobs. `send_message` and `send_draft` are unchanged. `SendRecord`
   names the job of an attempt in `outbox_job_id`.
+- The compose file of `containers/production/mailbox-agents` runs the
+  cockpit with the profile `cockpit`, started by hand and never again by
+  itself, on `127.0.0.1:9480` (`MAILBOX_AGENTS_COCKPIT_PORT`). It reads
+  the volume of each agent read-only, its secret from
+  `secrets/cockpit/cockpit_secret`, its settings from `cockpit/.env`.
 - `benethos-mailbox-agents`: the command `cockpit`, a page of what every
   agent did, read-only and started by hand. It reads the state files in
   `MAILBOX_AGENTS_DATA_DIR` and its folders: per instance its profile,
