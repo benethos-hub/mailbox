@@ -11,7 +11,11 @@ import httpx
 import pytest
 
 from benethos_mailbox_agents.contract import Action, ActionRequest, Limits
-from benethos_mailbox_agents.errors import ConfigError, GatewayUnavailableError
+from benethos_mailbox_agents.errors import (
+    ConfigError,
+    GatewayUnavailableError,
+    MailboxUnavailableError,
+)
 from benethos_mailbox_agents.records import MessageRef
 from benethos_mailbox_agents.runtime.steps import StepRunner, backoff
 
@@ -197,6 +201,27 @@ async def test_a_message_gone_while_the_model_answers_is_skipped(
 
     assert await runner(steps_world, effects=effects).process(REF) == "skipped"
     assert effects.requests == []
+
+
+async def test_a_message_cut_off_and_then_refused_is_not_kept(
+    steps_world: Wired,
+) -> None:
+    """A message whose effect an upstream away cut off goes on without
+    ``admit``. Refused when it is fetched again, it is not kept for that."""
+
+    class Away(Collected):
+        async def __call__(self, requests: list[ActionRequest]) -> None:
+            raise MailboxUnavailableError("away")
+
+    steps_world.fake_gateway.answer(MATCH)
+    steps = runner(steps_world, effects=Away())
+    with pytest.raises(MailboxUnavailableError):
+        await steps.process(REF)
+    assert REF in steps._cut_off
+
+    steps_world.service.messages.pop((ACCOUNT, "m1"))
+    assert await steps.process(REF) == "skipped"
+    assert REF not in steps._cut_off
 
 
 async def test_a_message_the_service_refuses_is_tried_again(steps_world: Wired) -> None:

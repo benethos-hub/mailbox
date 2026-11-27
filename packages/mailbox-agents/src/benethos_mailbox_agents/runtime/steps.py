@@ -306,7 +306,9 @@ class StepRunner:
     ) -> str:
         """A message the service refused in ``step``, to hand over or for
         what the agent read for its actions: skipped when it is gone, else
-        an attempt counted."""
+        an attempt counted. Either way the message is asked ``admit`` again
+        when it comes back."""
+        self._cut_off.discard(ref)
         self.failed(ref, step, exc)
         if isinstance(exc, MessageGoneError):
             return self._state(ref, "skipped")
@@ -329,7 +331,6 @@ class StepRunner:
             self._cut_off.add(ref)
             raise
         except MailboxRefusedError as exc:
-            self._cut_off.discard(ref)
             return self._refused(ref, attempts, exc, "effect")
         self._cut_off.discard(ref)
         return self._state(ref, "done")
