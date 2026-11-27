@@ -10,9 +10,10 @@ from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
 
+from benethos_mailbox_common.storage import rows as table_rows
+
 from ....common.clock import iso, parse_iso
 from ...models import Before, SendFilter, SendOutcome, SendRecord
-from .rows import changed
 from .schema import sends
 
 if TYPE_CHECKING:
@@ -26,7 +27,7 @@ class SqlSendLogRepository:
         self._db = db
 
     def add(self, record: SendRecord) -> None:
-        changed(
+        table_rows.rows_changed(
             self._db,
             sa.insert(sends).values(
                 id=record.id,

@@ -7,9 +7,10 @@ from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
 
+from benethos_mailbox_common.storage import rows as table_rows
+
 from ...models import Abilities, Account, AccountStatus
 from ..accounts import SettingsDict
-from .rows import SqlRows, changed, next_position
 from .schema import accounts
 
 if TYPE_CHECKING:
@@ -19,7 +20,7 @@ if TYPE_CHECKING:
 class SqlAccountRepository:
     def __init__(self, db: Database) -> None:
         self._db = db
-        self._rows = SqlRows(
+        self._rows = table_rows.SqlRows(
             db, accounts, "account", _account, order=[accounts.c.position]
         )
 
@@ -30,7 +31,7 @@ class SqlAccountRepository:
         return self._rows.get(account_id)
 
     def add(self, account: Account, settings: SettingsDict | None = None) -> None:
-        changed(
+        table_rows.rows_changed(
             self._db,
             sa.insert(accounts).values(
                 id=account.id,
@@ -39,7 +40,7 @@ class SqlAccountRepository:
                 display_name=account.display_name,
                 status=account.status.value,
                 settings=json.dumps(settings or {}),
-                position=next_position(accounts),
+                position=table_rows.next_position(accounts),
             ),
         )
 

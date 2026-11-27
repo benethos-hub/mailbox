@@ -1,6 +1,6 @@
 """What opening a database did to its schema, of no database in
-particular: the old steps of ``sqlite/`` say it, and the revisions of
-``sql/``."""
+particular: the steps a file took before the revisions say it, and the
+revisions."""
 
 from __future__ import annotations
 

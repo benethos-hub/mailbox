@@ -5,6 +5,7 @@ revision of a folder of its own."""
 
 from __future__ import annotations
 
+import dataclasses
 import shutil
 import sqlite3
 from collections.abc import Callable, Iterator
@@ -13,10 +14,13 @@ from pathlib import Path
 import pytest
 import sqlalchemy as sa
 
+from benethos_mailbox_common.storage import database as stored_database
+from benethos_mailbox_common.storage import revision
+from benethos_mailbox_common.storage.file_place import sqlite_engine
+from benethos_mailbox_common.storage.revisions import Revisions
 from benethos_mailbox_service.data.storage import Database
-from benethos_mailbox_service.data.storage.sql import database, revisions
-from benethos_mailbox_service.data.storage.sql.file_place import sqlite_engine
-from benethos_mailbox_service.data.storage.sql.revisions import revision
+from benethos_mailbox_service.data.storage.sql import revisions
+from benethos_mailbox_service.data.storage.sql.database import SHAPE
 from benethos_mailbox_service.errors import StorageError
 
 from ...revision_helpers import second, steps_in
@@ -60,11 +64,11 @@ def test_a_step_writes_its_number_into_meta(
         def steps(self):
             op.add_column("items", sa.Column("seen", sa.Integer))
     """)
-    revisions.upgrade(bare, 26, versions=folder)
+    Revisions(folder).upgrade(bare, 26)
     assert _held(bare) == "26"
-    revisions.upgrade(bare, 27, versions=folder)
+    Revisions(folder).upgrade(bare, 27)
     assert _held(bare) == "27"
-    assert revisions.mark(bare) == 27
+    assert Revisions.mark(bare) == 27
 
 
 def test_rows_are_worked_out_in_python_in_chunks(
@@ -78,8 +82,8 @@ def test_rows_are_worked_out_in_python_in_chunks(
                                 change=lambda row: {"folded": row["name"].casefold()})
             self.note(f"{done} items folded")
     """)
-    revisions.upgrade(bare, 26, versions=folder)
-    notes = revisions.upgrade(bare, 27, versions=folder)
+    Revisions(folder).upgrade(bare, 26)
+    notes = Revisions(folder).upgrade(bare, 27)
     assert notes == ["schema 27: 5 items folded"]
     assert _rows(bare, "SELECT id, folded FROM items ORDER BY id") == [
         (f"i{n}", f"name {n}") for n in range(5)
@@ -94,10 +98,10 @@ def test_a_change_must_give_the_columns_it_writes(
             self.rewrite("items", key=["id"], read=["name"], write=["folded"],
                          change=lambda row: {"name": "x"})
     """)
-    revisions.upgrade(bare, 26, versions=folder)
+    Revisions(folder).upgrade(bare, 26)
     with pytest.raises(StorageError, match="gave \\['name'\\], not \\['folded'\\]"):
-        revisions.upgrade(bare, 27, versions=folder)
-    assert revisions.mark(bare) == 26
+        Revisions(folder).upgrade(bare, 27)
+    assert Revisions.mark(bare) == 26
     assert _rows(bare, "SELECT DISTINCT name FROM items WHERE name = 'x'") == []
 
 
@@ -112,10 +116,10 @@ def test_a_failed_check_undoes_the_step(
             if not self.conn.execute(sa.select(ITEMS.c.id)).first():
                 self.refuse("no item left")
     """)
-    revisions.upgrade(bare, 26, versions=folder)
+    Revisions(folder).upgrade(bare, 26)
     with pytest.raises(StorageError, match="schema 27 cannot be reached: no item left"):
-        revisions.upgrade(bare, 27, versions=folder)
-    assert revisions.mark(bare) == 26
+        Revisions(folder).upgrade(bare, 27)
+    assert Revisions.mark(bare) == 26
     assert _held(bare) == "26"
     assert len(_rows(bare, "SELECT id FROM items")) == 5
 
@@ -128,10 +132,10 @@ def test_a_refused_step_leaves_nothing(
             op.create_table("half", sa.Column("id", sa.Text, primary_key=True))
             self.refuse("the items do not fit")
     """)
-    revisions.upgrade(bare, 26, versions=folder)
+    Revisions(folder).upgrade(bare, 26)
     with pytest.raises(StorageError, match="the items do not fit"):
-        revisions.upgrade(bare, 27, versions=folder)
-    assert revisions.mark(bare) == 26
+        Revisions(folder).upgrade(bare, 27)
+    assert Revisions.mark(bare) == 26
     assert "half" not in sa.inspect(bare).get_table_names()
 
 
@@ -147,10 +151,10 @@ def test_a_step_outside_a_transaction_stays_when_its_check_fails(
         def check(self):
             self.refuse("checked")
     """)
-    revisions.upgrade(bare, 26, versions=folder)
+    Revisions(folder).upgrade(bare, 26)
     with pytest.raises(StorageError, match="checked"):
-        revisions.upgrade(bare, 27, versions=folder)
-    assert revisions.mark(bare) == 26
+        Revisions(folder).upgrade(bare, 27)
+    assert Revisions.mark(bare) == 26
     assert _held(bare) == "26"
     indexes = [i["name"] for i in sa.inspect(bare).get_indexes("items")]
     assert "items_name" in indexes
@@ -174,9 +178,8 @@ def test_a_step_that_asks_for_a_copy_gets_one(
         """),
         encoding="utf-8",
     )
-    monkeypatch.setattr(revisions, "VERSIONS", folder)
-    monkeypatch.setattr(database, "SCHEMA_VERSION", 27)
-    db = Database(path)
+    shape = dataclasses.replace(SHAPE, versions=folder, newest=27)
+    db = stored_database.Database(shape, path)
     assert db.migrated is not None
     assert (db.migrated.before, db.migrated.after) == (26, 27)
     [kept] = path.parent.glob("mailbox.db.before-schema-27-*")

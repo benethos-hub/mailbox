@@ -10,13 +10,13 @@ from pathlib import Path
 
 import pytest
 
+from benethos_mailbox_common.storage.tables import BOOKKEEPING
 from benethos_mailbox_service.data.models import ChangeRecord
 from benethos_mailbox_service.data.storage import (
     Database,
     repositories_on,
 )
 from benethos_mailbox_service.data.storage.sql.schema import METADATA
-from benethos_mailbox_service.data.storage.sql.tables import BOOKKEEPING
 from benethos_mailbox_service.data.storage.sqlite import SCHEMA_VERSION
 from benethos_mailbox_service.errors import StorageError
 

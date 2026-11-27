@@ -49,8 +49,15 @@ paths = ["platformdirs>=4.3"]
 # The settings of a program from the environment and a settings file
 # (settings/files.py).
 settings = ["pydantic-settings>=2.10"]
+# The storage on SQLAlchemy Core for a file of SQLite and a schema on a
+# PostgreSQL server, the steps of a schema as revisions of Alembic
+# (storage/).
+storage = ["sqlalchemy>=2.1", "alembic>=1.14"]
+# PostgreSQL as the storage: the driver SQLAlchemy speaks to it through,
+# with libpq and OpenSSL in its wheel.
+postgres = ["psycopg[binary]>=3.3.9"]
 # Every group.
-all = ["benethos-mailbox-common[paths,settings]"]
+all = ["benethos-mailbox-common[paths,settings,storage,postgres]"]
 
 [project.urls]
 Homepage = "https://github.com/benethos-hub/mailbox/tree/main/packages/mailbox-common#readme"

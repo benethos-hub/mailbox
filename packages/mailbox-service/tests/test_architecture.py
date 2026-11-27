@@ -162,15 +162,15 @@ def test_the_database_stays_behind_the_storage_package() -> None:
 
 
 def test_sql_reaches_sqlite_in_one_place() -> None:
-    """``sql/`` speaks SQLAlchemy, ``sqlite/`` holds the file and its old
-    migrations: ``file_place``, the place of a database in a file, opens
-    it through ``sqlite/``, and no other module of ``sql/`` reaches
-    there."""
+    """``sql/`` speaks SQLAlchemy, ``sqlite/`` holds the old migrations of
+    the file: ``database``, which hands the storage of mailbox-common the
+    shape of the service, gives it the old steps, and no other module of
+    ``sql/`` reaches there."""
     sql = f"{PACKAGE}.data.storage.sql"
     violations = [
         f"{name}:{line} imports {imported}"
         for name, path in modules()
-        if name.startswith(f"{sql}.") and name != f"{sql}.file_place"
+        if name.startswith(f"{sql}.") and name != f"{sql}.database"
         for imported, line in imports(path)
         if imported.startswith(f"{PACKAGE}.data.storage.sqlite")
     ]

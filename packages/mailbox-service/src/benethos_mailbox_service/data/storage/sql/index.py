@@ -7,8 +7,9 @@ from typing import TYPE_CHECKING, Any
 
 import sqlalchemy as sa
 
+from benethos_mailbox_common.storage import dialect
+
 from ..index import IndexChanges, IndexEntry, ThreadChain
-from .dialect import in_chunks, insert_or_skip
 from .schema import folder_states, message_index, thread_links
 
 if TYPE_CHECKING:
@@ -58,7 +59,7 @@ class SqlMessageIndexRepository:
         """The entries of the account whose ``column`` is one of
         ``values``, chunk by chunk."""
         rows: list[sa.RowMapping] = []
-        for chunk in in_chunks(values):
+        for chunk in dialect.in_chunks(values):
             with self._db.connected() as conn:
                 rows += conn.execute(
                     sa.select(message_index).where(
@@ -134,7 +135,7 @@ class SqlMessageIndexRepository:
 
     def threads_of(self, account_id: str, message_ids: Iterable[str]) -> dict[str, str]:
         found: dict[str, str] = {}
-        for chunk in in_chunks(message_ids):
+        for chunk in dialect.in_chunks(message_ids):
             with self._db.connected() as conn:
                 rows = conn.execute(
                     sa.select(_m.id, _m.thread_id).where(
@@ -214,7 +215,7 @@ def _join(
             )
     if headers:
         conn.execute(
-            insert_or_skip(thread_links, conn.dialect),
+            dialect.insert_or_skip(thread_links, conn.dialect),
             [
                 {"account_id": account_id, "header": header, "thread_id": thread}
                 for header in headers
@@ -231,7 +232,7 @@ def _join(
 def _remove(conn: sa.Connection, account_id: str, message_ids: list[str]) -> None:
     """Entries go. A thread without a message left loses its links."""
     threads: set[str] = set()
-    for chunk in in_chunks(message_ids):
+    for chunk in dialect.in_chunks(message_ids):
         threads |= set(
             conn.execute(
                 sa.select(_m.thread_id)
@@ -312,7 +313,7 @@ def _insert(
         for e in entries
     ]
     if rows:
-        conn.execute(insert_or_skip(message_index, conn.dialect), rows)
+        conn.execute(dialect.insert_or_skip(message_index, conn.dialect), rows)
 
 
 def _entry(row: sa.RowMapping) -> IndexEntry:

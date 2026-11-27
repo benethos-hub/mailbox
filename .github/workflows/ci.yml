@@ -194,7 +194,7 @@ jobs:
       python-version: "3.11"
       editable: |
         packages/mailbox-service[postgres]
-        packages/mailbox-common[paths,settings]
+        packages/mailbox-common[paths,settings,storage]
       requirements: |
         pytest>=9.1.1
         pytest-asyncio>=1.4
@@ -229,7 +229,7 @@ jobs:
       editable: |
         packages/mailbox-client
         packages/mailbox-agents
-        packages/mailbox-common[paths,settings]
+        packages/mailbox-common[paths,settings,storage]
       requirements: |
         pytest>=9.1.1
         pytest-asyncio>=1.4
@@ -274,6 +274,7 @@ jobs:
       pytest-args: >-
         --ignore=packages/mailbox-common/tests/paths
         --ignore=packages/mailbox-common/tests/settings
+        --ignore=packages/mailbox-common/tests/storage
         packages/mailbox-common/tests
 
   # hadolint over every Dockerfile: an image without a tag, ADD where COPY would

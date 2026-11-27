@@ -13,13 +13,16 @@ from typing import Any
 
 import pytest
 
+from benethos_mailbox_common.storage import database as stored_database
+from benethos_mailbox_common.storage import export
+from benethos_mailbox_common.storage.export import Sink
+from benethos_mailbox_common.storage.tables import Fixed
 from benethos_mailbox_service.data.backup import (
     MAGIC,
     MAGIC_1,
     MAGIC_3,
     BackupError,
     Manifest,
-    backups,
     blocks,
     create_backup,
     read_backup,
@@ -27,7 +30,6 @@ from benethos_mailbox_service.data.backup import (
     verify_backup,
     write_backup,
 )
-from benethos_mailbox_service.data.export import Sink
 from benethos_mailbox_service.data.secrets import (
     cipher,
 )
@@ -36,7 +38,6 @@ from benethos_mailbox_service.data.storage import (
     Records,
     inspect_file,
 )
-from benethos_mailbox_service.data.storage.sql.tables import Fixed
 from benethos_mailbox_service.data.storage.sqlite import SCHEMA_VERSION
 
 from ..schema_helpers import at_schema, seed_25
@@ -286,7 +287,7 @@ def test_records_that_change_between_the_passes_remove_the_backup(
         out.write(b"pass %d" % len(passes))
         return {}
 
-    monkeypatch.setattr(backups, "write_export", changing)
+    monkeypatch.setattr(export, "export_records", changing)
     target = tmp_path / "three.bak"
     with pytest.raises(BackupError, match="records changed"):
         create_backup(source, cipher.new_key(), target, "9.9.9", format=3)
@@ -309,13 +310,13 @@ def test_reading_version_3_writes_nothing_in_plain(
     # Left by a crash of an earlier version, in plain.
     (folder / f"{staged}.export").write_bytes(b"left by a crash")
     seen: list[str] = []
-    fill = Database.fill
+    fill = stored_database.Database.fill
 
-    def watched(self: Database, *args: Any) -> int:
+    def watched(self: stored_database.Database, *args: Any) -> int:
         seen.extend(p.name for p in folder.iterdir())
         return fill(self, *args)
 
-    monkeypatch.setattr(Database, "fill", watched)
+    monkeypatch.setattr(stored_database.Database, "fill", watched)
     if staged.endswith("verifying"):
         verify_backup(backup, master, folder / staged)
     else:

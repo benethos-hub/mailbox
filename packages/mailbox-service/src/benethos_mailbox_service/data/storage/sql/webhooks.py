@@ -9,10 +9,11 @@ from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
 
+from benethos_mailbox_common.storage import rows as table_rows
+
 from ....common.clock import iso, parse_iso
 from ...models import ChangeKind, Webhook
 from ..webhooks import Attempt, Delivery, Sealed, WebhookRecord
-from .rows import SqlRows, changed
 from .schema import webhook_attempts, webhooks
 
 if TYPE_CHECKING:
@@ -25,13 +26,13 @@ _a = webhook_attempts.c
 class SqlWebhookRepository:
     def __init__(self, db: Database) -> None:
         self._db = db
-        self._rows = SqlRows(
+        self._rows = table_rows.SqlRows(
             db, webhooks, "webhook", _webhook, order=[_w.created_at, _w.id]
         )
 
     def add(self, record: WebhookRecord) -> None:
         hook, secret, delivery = record.webhook, record.secret, record.delivery
-        changed(
+        table_rows.rows_changed(
             self._db,
             sa.insert(webhooks).values(
                 id=hook.id,
@@ -68,7 +69,7 @@ class SqlWebhookRepository:
         events: builtins.list[ChangeKind],
         accounts: builtins.list[str] | None,
     ) -> None:
-        changed(
+        table_rows.rows_changed(
             self._db,
             sa.update(webhooks)
             .where(_w.id == webhook_id)
@@ -76,7 +77,7 @@ class SqlWebhookRepository:
         )
 
     def set_secret(self, webhook_id: str, secret: Sealed) -> None:
-        changed(
+        table_rows.rows_changed(
             self._db,
             sa.update(webhooks)
             .where(_w.id == webhook_id)
@@ -86,7 +87,9 @@ class SqlWebhookRepository:
         )
 
     def delete_for_user(self, user_id: str) -> int:
-        return changed(self._db, sa.delete(webhooks).where(_w.user_id == user_id))
+        return table_rows.rows_changed(
+            self._db, sa.delete(webhooks).where(_w.user_id == user_id)
+        )
 
     def update(
         self,
@@ -96,7 +99,7 @@ class SqlWebhookRepository:
         last_delivery_at: datetime | None,
         last_error: str | None,
     ) -> None:
-        changed(
+        table_rows.rows_changed(
             self._db,
             sa.update(webhooks)
             .where(_w.id == webhook_id)

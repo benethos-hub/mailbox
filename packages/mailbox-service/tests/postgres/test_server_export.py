@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 
 import sqlalchemy as sa
 
-from benethos_mailbox_service.data.export import read_export
+from benethos_mailbox_common.storage.export import import_records
 from benethos_mailbox_service.data.models import ChangeRecord
 from benethos_mailbox_service.data.storage import Database, repositories_on
 
@@ -22,7 +22,7 @@ def test_an_export_is_read_into_a_schema_table_for_table(source: Database) -> No
     with schema() as name:
         target = database(name)
         try:
-            counts = read_export(io.BytesIO(data), target)
+            counts = import_records(io.BytesIO(data), target, "service")
             assert all(counts.values()), "a table left empty"
             for table in source.tables():
                 assert list(target.rows(table.name)) == list(source.rows(table.name)), (
@@ -46,7 +46,7 @@ def test_a_purged_feed_counts_on_after_an_export(source: Database) -> None:
     with schema() as name:
         target = database(name)
         try:
-            read_export(io.BytesIO(data), target)
+            import_records(io.BytesIO(data), target, "service")
             repositories_on(target).changes.append([record])
             numbers = [row[0] for row in target.rows("changes")]
         finally:
@@ -62,7 +62,7 @@ def test_every_counting_key_counts_on_after_an_export(source: Database) -> None:
     with schema() as name:
         target = database(name)
         try:
-            read_export(io.BytesIO(data), target)
+            import_records(io.BytesIO(data), target, "service")
             with target.connected() as conn:
                 for table in sorted(counted):
                     top = conn.execute(

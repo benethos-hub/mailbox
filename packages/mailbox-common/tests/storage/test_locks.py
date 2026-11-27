@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from benethos_mailbox_common.paths.locks import LockedError, exclusive_lock
+from benethos_mailbox_common.storage.locks import LockedError, exclusive_lock
 
 
 def test_a_second_holder_is_refused_at_once(tmp_path: Path) -> None:

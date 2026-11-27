@@ -69,8 +69,8 @@ def expected() -> tuple[type[BaseException], ...]:
     from pydantic import ValidationError
 
     from ..data.backup import BackupError
-    from ..data.move import MoveError
     from ..data.secrets import KeyProviderError
+    from ..data.storage import MoveError
     from ..errors import MailboxServiceError
 
     return (

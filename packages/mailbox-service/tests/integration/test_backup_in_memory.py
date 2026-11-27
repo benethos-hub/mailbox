@@ -11,11 +11,11 @@ from pathlib import Path
 import pytest
 from pydantic import SecretStr
 
+from benethos_mailbox_common.storage import files
 from benethos_mailbox_service.assembly import build_services
 from benethos_mailbox_service.cli import main
 from benethos_mailbox_service.config import Settings
 from benethos_mailbox_service.data.backup import MAGIC_1, Manifest
-from benethos_mailbox_service.data.backup import backups as backup_module
 from benethos_mailbox_service.data.models import ProviderType
 from benethos_mailbox_service.data.secrets import cipher
 from benethos_mailbox_service.data.storage import inspect_file
@@ -90,7 +90,7 @@ def test_a_check_writes_no_file(
     capsys.readouterr()
     before = _files(tmp_path)
     made: list[Path] = []
-    monkeypatch.setattr(backup_module, "create_private", made.append)
+    monkeypatch.setattr(files, "create_private", made.append)
     assert main(["backup", "verify", str(backups[format])]) == 0
     assert f", format {format}, " in capsys.readouterr().err
     assert _files(tmp_path) == before

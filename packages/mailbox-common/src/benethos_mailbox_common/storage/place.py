@@ -14,12 +14,12 @@ from typing import TYPE_CHECKING, Protocol
 
 import sqlalchemy as sa
 
-from ....errors import ConflictError, StorageError, StorageUnavailableError
+from .errors import Errors, StorageUnavailableError
 
 if TYPE_CHECKING:
     import threading
 
-    from ..migrated import Migrated
+    from .migrated import Migrated
     from .outage import Availability
 
 
@@ -33,7 +33,7 @@ class Opened:
 
 
 class Place(Protocol):
-    """A database the service opens once and keeps open."""
+    """A database a program opens once and keeps open."""
 
     def open(self, schema: int, newest: int) -> Opened:
         """The one connection of the process. A place with steps of its
@@ -57,9 +57,9 @@ class Place(Protocol):
         ...
 
     def serving(self) -> AbstractContextManager[bool]:
-        """Mark the database as used by a running service while the block
-        runs. A file yields False when another service marked it
-        already, a server raises StorageInUseError."""
+        """Mark the database as used by a running program while the block
+        runs. A file yields False when another one marked it already, a
+        server raises StorageInUseError."""
         ...
 
     def snapshot_file(self, lock: threading.RLock) -> AbstractContextManager[Path]:
@@ -89,9 +89,9 @@ class Place(Protocol):
         ...
 
     def translated(self) -> AbstractContextManager[None]:
-        """The failures of the database as this project's errors: a
-        constraint as ConflictError, anything else as StorageError,
-        never with a value of a row."""
+        """The failures of the database as the errors of the shape: a
+        constraint as a conflict, anything else as a failure, never with
+        a value of a row."""
         ...
 
     def close(self) -> None: ...
@@ -101,24 +101,25 @@ class Place(Protocol):
 def translated_by(
     conflict: Callable[[BaseException | None], str],
     failure: Callable[[BaseException | None], str],
+    errors: Errors,
 ) -> Iterator[None]:
-    """The failures SQLAlchemy raises as this project's errors: a
-    constraint as ConflictError, named as ``conflict`` gives what the
-    driver said, anything else as StorageError, named as ``failure``
-    gives it. Never the text of SQLAlchemy, which holds the statement
-    and its values. A failure SQLAlchemy raises before the driver is
-    named by its kind alone."""
+    """The failures SQLAlchemy raises as ``errors`` names them: a
+    constraint as a conflict, named as ``conflict`` gives what the
+    driver said, anything else as a failure, named as ``failure`` gives
+    it. Never the text of SQLAlchemy, which holds the statement and its
+    values. A failure SQLAlchemy raises before the driver is named by
+    its kind alone."""
     try:
         yield
     except sa.exc.IntegrityError as exc:
-        raise ConflictError(
+        raise errors.conflict(
             f"conflicts with a stored record: {conflict(exc.orig)}"
         ) from None
     except sa.exc.DBAPIError as exc:
-        raise StorageError(f"the database failed: {failure(exc.orig)}") from None
+        raise errors.failed(f"the database failed: {failure(exc.orig)}") from None
     except sa.exc.SQLAlchemyError as exc:
         # Refused before the driver saw it, such as a value that does not
         # fit its column. Its text, and the one of its cause, can hold the
         # statement and the value: only the kind is named.
         cause = getattr(exc, "orig", None) or exc
-        raise StorageError(f"the database failed: {type(cause).__name__}") from None
+        raise errors.failed(f"the database failed: {type(cause).__name__}") from None

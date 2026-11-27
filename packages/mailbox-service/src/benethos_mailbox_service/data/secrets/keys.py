@@ -13,8 +13,9 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Protocol
 
+from benethos_mailbox_common.storage import files
+
 from ...common.chunks import batched
-from ..files import create_private
 from .cipher import KEY_BYTES
 
 KEYRING_SERVICE = "benethos-mailbox-service"
@@ -98,11 +99,11 @@ class FileKeyProvider:
         text = (encode_recovery(key) + "\n").encode("utf-8")
         try:
             if not replace:
-                create_private(self._path, text)
+                files.create_private(self._path, text)
                 return
             staged = self._path.with_name(self._path.name + ".new")
             staged.unlink(missing_ok=True)
-            create_private(staged, text)
+            files.create_private(staged, text)
             staged.replace(self._path)
         except OSError as exc:
             raise KeyProviderError(f"cannot write {self._path}: {exc}") from None

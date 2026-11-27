@@ -11,8 +11,7 @@ from typing import Literal
 import sqlalchemy as sa
 from sqlalchemy.pool import NullPool
 
-from ....common.hosts import is_loopback_host
-from .dialect import POSTGRESQL
+from . import dialect, names
 
 # Seconds an attempt to connect to a database server may take.
 CONNECT_SECONDS = 5
@@ -44,11 +43,11 @@ def server_engine(
     """An engine on PostgreSQL through psycopg, signed in as ``role``, its
     connections in the schema ``search_path``, a plain name, with what
     libpq is told of TLS in ``tls``. Each
-    connection is its own and closes when it is closed: the service keeps
+    connection is its own and closes when it is closed: a program keeps
     one for its life, and a view of one moment takes a second. No value
     of a statement reaches the text of an error."""
     url = sa.URL.create(
-        f"{POSTGRESQL}+psycopg",
+        f"{dialect.POSTGRESQL}+psycopg",
         username=role,
         password=password,
         host=host,
@@ -78,7 +77,7 @@ def tls_arguments(
     without the demand. With "off" never over TLS."""
     if tls == "off":
         return {"sslmode": "disable"}
-    if is_loopback_host(host):
+    if names.is_loopback_host(host):
         return {"sslmode": "prefer"}
     return {
         "sslmode": "verify-full",

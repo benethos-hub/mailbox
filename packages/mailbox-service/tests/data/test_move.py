@@ -10,16 +10,16 @@ from typing import Any
 
 import pytest
 
-from benethos_mailbox_common.paths import locks
-from benethos_mailbox_service.data.move import (
-    Misfit,
+from benethos_mailbox_common.storage import database as stored_database
+from benethos_mailbox_common.storage import locks
+from benethos_mailbox_common.storage.move import Misfit, misfit_error, misfits
+from benethos_mailbox_service.data.storage import (
+    Database,
     MoveError,
     check_move,
-    misfits,
     move_records,
-    refused,
+    service_lock,
 )
-from benethos_mailbox_service.data.storage import Database, service_lock
 from benethos_mailbox_service.errors import StorageError
 
 from ..schema_helpers import at_schema, exported, seed_25
@@ -55,7 +55,7 @@ def test_the_message_names_columns_and_counts_never_a_value(
             for v in row
             if isinstance(v, str)
         }
-        message = str(refused(misfits(records)))
+        message = str(misfit_error(misfits(records)))
     seeded.close()
     assert "webhook_attempts.events: 2" in message
     assert "passkeys.credential: 2" in message
@@ -133,14 +133,14 @@ def test_a_move_that_fails_halfway_leaves_a_target_the_service_refuses(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     seed_25(tmp_path / "from.db", fitting=True).close()
-    fill = Database.fill
+    fill = stored_database.Database.fill
 
-    def failing(self: Database, table: str, *args: Any) -> int:
+    def failing(self: stored_database.Database, table: str, *args: Any) -> int:
         if table == "users":
             raise StorageError("the disk is full")
         return fill(self, table, *args)
 
-    monkeypatch.setattr(Database, "fill", failing)
+    monkeypatch.setattr(stored_database.Database, "fill", failing)
     with pytest.raises(StorageError, match="the disk is full"):
         move_records(tmp_path / "from.db", tmp_path / "to.db")
     monkeypatch.undo()
@@ -173,7 +173,7 @@ def test_a_text_with_nul_does_not_fit(tmp_path: Path) -> None:
         found = misfits(records)
     db.close()
     assert found == [Misfit("users", "name", 1)]
-    assert "secret-name" not in str(refused(found))
+    assert "secret-name" not in str(misfit_error(found))
 
 
 def test_the_mark_of_a_move_is_no_record(tmp_path: Path) -> None:

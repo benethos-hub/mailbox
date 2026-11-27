@@ -1,15 +1,16 @@
 """A database server as the place of a database: one schema of it, owned
-by the role the service signs in as, reached through SQLAlchemy alone.
+by the role the program signs in as, reached through SQLAlchemy alone.
 
-The schema begins at 26, where the revisions begin: the old steps of
-SQLite have no counterpart here. There is no file, so no copy before a
-revision, no shrinking and no snapshot of a file. A view of one moment
-is a second connection in one transaction of REPEATABLE READ, which
-reads a fixed state and holds no writer up.
+The schema begins at the baseline of the shape, where the revisions
+begin: the steps of a file of SQLite have no counterpart here. There is
+no file, so no copy before a revision, no shrinking and no snapshot of
+a file. A view of one moment is a second connection in one transaction
+of REPEATABLE READ, which reads a fixed state and holds no writer up.
 """
 
 from __future__ import annotations
 
+import functools
 import threading
 import time
 from collections.abc import Callable, Iterator
@@ -20,31 +21,25 @@ from typing import Literal
 
 import sqlalchemy as sa
 
-from ....common.names import is_plain_name
-from ....errors import StorageError, StorageInUseError, StorageUnavailableError
-from . import revisions
-from .dialect import reading_fixed
+from . import dialect, names, server_lock, tables
+from .errors import Errors, StorageUnavailableError
 from .outage import LONGEST_PAUSE, Availability, Outage
 from .place import Opened, translated_by
-from .schema import meta
 from .server_engine import server_engine, tls_arguments
-from .server_lock import kept_key, lock_key, new_key, unlock
-from .tables import SERVICE_LOCK, stored_schema
+from .shape import Shape
 
-# The oldest server the service runs on (2026-11-25), as the server
-# writes its version as a number: major * 10000 + minor.
+# The oldest server the programs of Mailbox run on (2026-11-25), as the
+# server writes its version as a number: major * 10000 + minor.
 OLDEST_SERVER = 190000
 
 
 # A call before the place was opened, or after it was closed.
 NOT_OPEN = "the database is not open"
-# Another service took the lock while the server was away.
-TAKEN = "another service took this database while it was away"
 
 
 @dataclass(frozen=True, slots=True)
 class Server:
-    """Where the database is and who the service is there. ``schema``
+    """Where the database is and who the program is there. ``schema``
     is named after ``role`` unless given. ``tls``: "verify" talks to a
     host other than this one only over TLS with a checked certificate
     and name, against the authorities of ``ca_file`` or else those of
@@ -72,27 +67,33 @@ class Server:
 
 
 class ServerPlace:
-    """The schema ``server`` names, on the server it names. A server that
-    is away is kept so: every call fails at once until the next attempt
-    is due, by ``clock`` in seconds (``outage``)."""
+    """The schema ``server`` names, on the server it names, for the
+    database of ``shape``. A server that is away is kept so: every call
+    fails at once until the next attempt is due, by ``clock`` in seconds
+    (``outage``)."""
 
     def __init__(
-        self, server: Server, clock: Callable[[], float] = time.monotonic
+        self,
+        server: Server,
+        shape: Shape,
+        clock: Callable[[], float] = time.monotonic,
     ) -> None:
-        if not is_plain_name(server.schema_name):
-            raise StorageError(
+        if not names.is_plain_name(server.schema_name):
+            raise shape.errors.failed(
                 "the schema of the database is not a plain name:"
                 " lower case letters, digits and underscores"
             )
         self._server = server
+        self._shape = shape
+        self._errors = shape.errors
         self._engine: sa.Engine | None = None
         self._connection: sa.Connection | None = None
-        self._outage = Outage(clock)
+        self._outage = Outage(clock, shape.errors)
         self._reports: list[Callable[[Availability], None]] = []
         # The keys of the locks this session holds, taken again on a
         # new session.
         self._held: tuple[int, ...] = ()
-        # Set for good when another service took the lock while the
+        # Set for good when another program took the lock while the
         # server was away: this one only ends from then on.
         self._taken = False
 
@@ -101,9 +102,9 @@ class ServerPlace:
         second database on the same place, hands it on as it is."""
         if self._connection is not None:
             return Opened(self._connection, None)
-        if schema < revisions.BASELINE:
-            raise StorageError(
-                f"a database on a server begins at schema {revisions.BASELINE},"
+        if schema < self._shape.baseline:
+            raise self._errors.failed(
+                f"a database on a server begins at schema {self._shape.baseline},"
                 f" not {schema}"
             )
         self._engine = self._engine_of()
@@ -113,7 +114,7 @@ class ServerPlace:
                 sa.select(sa.func.current_setting("server_version_num"))
             ).scalar()
             self._connection.rollback()
-        supported(int(str(version)))
+        supported(int(str(version)), self._errors)
         return Opened(self._connection, None)
 
     def _engine_of(self) -> sa.Engine:
@@ -121,11 +122,12 @@ class ServerPlace:
         try:
             engine = self._driven(server)
         except ImportError:
-            raise StorageError(
-                "storage postgres needs the extra postgres of the service:"
-                " pip install 'benethos-mailbox-service[postgres]'"
-            ) from None
-        sa.event.listen(engine, "handle_error", _not_of_the_driver)
+            raise self._errors.failed(self._shape.extra) from None
+        sa.event.listen(
+            engine,
+            "handle_error",
+            functools.partial(_not_of_the_driver, self._errors),
+        )
         return engine
 
     @staticmethod
@@ -154,7 +156,7 @@ class ServerPlace:
                 driver.rollback()
 
     def keep_copy(self, held: int, before: int) -> str | None:
-        raise StorageError(
+        raise self._errors.failed(
             f"the revision {before} asks for a copy of the database first,"
             " which a database on a server does not keep: back it up, then"
             " migrate it with a version that does"
@@ -165,58 +167,63 @@ class ServerPlace:
 
     @contextmanager
     def serving(self) -> Iterator[bool]:
-        """Two services on one schema would lose changes of the feed, so
-        the second is refused: the lock of the session on its one
+        """Two programs on one schema would lose changes, so the second
+        is refused: the lock of the session on its one
         connection, held until the block ends or the connection closes.
         Its key is a random number the schema keeps in ``meta``, which
         only the role reads, so no other role of the server can take the
         lock ahead. A schema without a key gets one, made under the lock
-        keyed by the name of the schema, which a restore or a move into
-        the empty schema holds (``claimed``)."""
+        keyed by the names of the program and the schema, which a restore
+        or a move into the empty schema holds (``claimed``)."""
         connection = self._open()
         with self.translated():
-            key = self._service_key(connection)
+            key = self._program_key(connection)
         self._held = (key,)
         try:
             yield True
         finally:
             self._let_go(connection)
 
-    def _service_key(self, connection: sa.Connection) -> int:
+    def _program_key(self, connection: sa.Connection) -> int:
         """The key the schema keeps, its lock taken. Made first when
         there is none, under the lock keyed by the name."""
-        key = kept_key(connection)
+        key = server_lock.kept_key(connection, self._shape)
         if key is not None:
             self._take(connection, key)
             return key
-        named = lock_key(self._server.schema_name)
+        named = self._named_key()
         self._take(connection, named)
         try:
-            key = kept_key(connection)
+            key = server_lock.kept_key(connection, self._shape)
             if key is None:
-                key = new_key()
+                key = server_lock.drawn_key()
                 connection.execute(
-                    sa.insert(meta).values(key=SERVICE_LOCK, value=str(key))
+                    sa.insert(self._shape.meta).values(
+                        key=tables.LOCK_ROW, value=str(key)
+                    )
                 )
                 connection.commit()
             self._take(connection, key)
         finally:
-            unlock(connection, named)
+            server_lock.unlocked(connection, named)
         return key
+
+    def _named_key(self) -> int:
+        return server_lock.lock_key(self._shape.program, self._server.schema_name)
 
     @contextmanager
     def claimed(self) -> Iterator[None]:
         """The schema for a restore or a move, which works on it alone:
-        the lock keyed by its name, under which a service makes its key,
-        and the lock of a running service where the schema keeps a key.
-        Writes nothing. Refused while a service runs on the schema."""
+        the lock keyed by its name, under which a program makes its key,
+        and the lock of a running program where the schema keeps a key.
+        Writes nothing. Refused while a program runs on the schema."""
         connection = self._open()
-        named = lock_key(self._server.schema_name)
+        named = self._named_key()
         with self.translated():
             self._take(connection, named)
             self._held = (named,)
             try:
-                key = kept_key(connection)
+                key = server_lock.kept_key(connection, self._shape)
                 if key is not None:
                     self._take(connection, key)
                     self._held = (named, key)
@@ -231,19 +238,20 @@ class ServerPlace:
     def _open(self) -> sa.Connection:
         """The one connection, or the error of a place not opened."""
         if self._connection is None:
-            raise StorageError(NOT_OPEN)
+            raise self._errors.failed(NOT_OPEN)
         return self._connection
 
     def _engine_open(self) -> sa.Engine:
         """The engine, or the error of a place not opened."""
         if self._engine is None:
-            raise StorageError(NOT_OPEN)
+            raise self._errors.failed(NOT_OPEN)
         return self._engine
 
     def _take(self, connection: sa.Connection, key: int) -> None:
         if not self._locked(connection, key):
-            raise StorageInUseError(
-                "another service runs on this database: one service per"
+            noun = self._shape.noun
+            raise self._errors.in_use(
+                f"another {noun} runs on this database: one {noun} per"
                 " schema of a database server"
             )
 
@@ -251,7 +259,7 @@ class ServerPlace:
         held, self._held = self._held, ()
         with suppress(Exception), self.translated():
             for key in held:
-                unlock(connection, key)
+                server_lock.unlocked(connection, key)
 
     @staticmethod
     def _locked(connection: sa.Connection, key: int) -> bool:
@@ -265,10 +273,10 @@ class ServerPlace:
         """Before each call: at once a StorageUnavailableError while the
         server is away and the pause runs. When it is over, one attempt
         on a new session, as the first was: its search path from the
-        connecting, the lock of a running service taken again. Once
-        another service took that lock, every call fails."""
+        connecting, the lock of a running program taken again. Once
+        another program took that lock, every call fails."""
         if self._taken:
-            raise StorageError(TAKEN)
+            raise self._errors.failed(self._taken_text())
         if not self._outage.away:
             return
         if not self._outage.due():
@@ -287,18 +295,21 @@ class ServerPlace:
         self._taken = not got
         self._said(Availability(away=False, seconds=seconds, lock_lost=not got))
         if not got:
-            raise StorageError(TAKEN)
+            raise self._errors.failed(self._taken_text())
+
+    def _taken_text(self) -> str:
+        return f"another {self._shape.noun} took this database while it was away"
 
     def watch(self, report: Callable[[Availability], None]) -> None:
         self._reports.append(report)
 
     def unavailable(self) -> StorageUnavailableError | None:
         if self._taken:
-            return StorageUnavailableError(int(LONGEST_PAUSE), "lock taken")
+            return self._errors.unavailable(int(LONGEST_PAUSE), "lock taken")
         return self._outage.unavailable() if self._outage.away else None
 
     def _failed(self, exc: sa.exc.DBAPIError) -> None:
-        cause = _kind(exc.orig)
+        cause = _failure_of(exc.orig)
         if self._outage.failed(cause):
             self._said(Availability(away=True, cause=cause))
 
@@ -307,7 +318,7 @@ class ServerPlace:
             report(change)
 
     def snapshot_file(self, lock: threading.RLock) -> AbstractContextManager[Path]:
-        raise StorageError("a database on a server has no file")
+        raise self._errors.failed("a database on a server has no file")
 
     def tables(self) -> list[str]:
         """The tables of the schema, before a database on it is opened."""
@@ -322,7 +333,7 @@ class ServerPlace:
         one, read before a database on it is opened."""
         connection = self._open()
         with self.translated():
-            held = stored_schema(connection)
+            held = tables.stored_schema(connection, self._shape)
             connection.rollback()
         return held
 
@@ -347,19 +358,19 @@ class ServerPlace:
         engine = self._engine_open()
         self.ready()
         with self.translated():
-            conn = reading_fixed(engine.connect())
+            conn = dialect.reading_fixed(engine.connect())
         with conn, conn.begin():
             yield conn
 
     @contextmanager
     def translated(self) -> Iterator[None]:
-        """The failures of the database as this project's errors, and a
+        """The failures of the database as the errors of the shape, and a
         lost connection as the server going away."""
-        with translated():
+        with translated_server(self._errors):
             try:
                 yield
             except sa.exc.DBAPIError as exc:
-                if not _lost(exc):
+                if not _connection_lost(exc):
                     raise
                 self._failed(exc)
                 raise self._outage.unavailable() from None
@@ -372,21 +383,21 @@ class ServerPlace:
             self._engine.dispose()
 
 
-def translated() -> AbstractContextManager[None]:
-    """The failures of the database as this project's errors. The server's
+def translated_server(errors: Errors) -> AbstractContextManager[None]:
+    """The failures of the database as ``errors`` names them. The server's
     text of a violated key quotes the key and the first line of other
     failures can quote a value: of a conflict only the first line of the
     server, which names the constraint, of anything else only its kind."""
-    return translated_by(_first_line, _kind)
+    return translated_by(_first_line, _failure_of, errors)
 
 
 def _first_line(exc: BaseException | None) -> str:
     diag = getattr(exc, "diag", None)
     primary = getattr(diag, "message_primary", None)
-    return primary if isinstance(primary, str) else _kind(exc)
+    return primary if isinstance(primary, str) else _failure_of(exc)
 
 
-def _kind(exc: BaseException | None) -> str:
+def _failure_of(exc: BaseException | None) -> str:
     """The class of the failure and the code of five characters the
     server gives it, which names what went wrong and nothing it read."""
     code = getattr(exc, "sqlstate", None)
@@ -394,30 +405,33 @@ def _kind(exc: BaseException | None) -> str:
     return f"{kind} ({code})" if isinstance(code, str) else kind
 
 
-def _not_of_the_driver(context: sa.engine.ExceptionContext) -> BaseException | None:
+def _not_of_the_driver(
+    errors: Errors, context: sa.engine.ExceptionContext
+) -> BaseException | None:
     """A failure while a statement runs that is no error of the driver,
     such as a value the driver cannot bind, named by its kind alone:
     its text can hold the value."""
     if context.sqlalchemy_exception is None and isinstance(
         context.original_exception, Exception
     ):
-        return StorageError(
+        return errors.failed(
             f"the database failed: {type(context.original_exception).__name__}"
         )
     return None
 
 
-def supported(version: int) -> None:
+def supported(version: int, errors: Errors) -> None:
     """Refuse a server older than ``OLDEST_SERVER``, by the number it
     gives as ``server_version_num``."""
     if version < OLDEST_SERVER:
-        raise StorageError(
-            f"the database server is PostgreSQL {_shown(version)}:"
-            f" this version needs PostgreSQL {_shown(OLDEST_SERVER)} or newer"
+        raise errors.failed(
+            f"the database server is PostgreSQL {_version_shown(version)}:"
+            " this version needs PostgreSQL"
+            f" {_version_shown(OLDEST_SERVER)} or newer"
         )
 
 
-def _shown(version: int) -> str:
+def _version_shown(version: int) -> str:
     major, minor = divmod(version, 10000)
     return f"{major}.{minor}"
 
@@ -429,7 +443,7 @@ def _drop_all(connection: sa.Connection) -> None:
     connection.commit()
 
 
-def _lost(exc: sa.exc.DBAPIError) -> bool:
+def _connection_lost(exc: sa.exc.DBAPIError) -> bool:
     """Whether ``exc`` is the connection lost or not made: SQLAlchemy saw
     a disconnect, or the server gave a code of class 08 (connection) or
     57P (the server going down), or none, as a failure of the client to

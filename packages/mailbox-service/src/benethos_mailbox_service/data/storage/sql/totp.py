@@ -7,11 +7,12 @@ from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
 
+from benethos_mailbox_common.storage import rows as table_rows
+
 from ....common.clock import iso, parse_iso
 from ....errors import missing
 from ..totp import StoredTotpDevice
 from ..webhooks import Sealed
-from .rows import changed
 from .schema import totp_devices
 
 if TYPE_CHECKING:
@@ -34,7 +35,7 @@ class SqlTotpRepository:
             return [_device(row) for row in rows]
 
     def add(self, user_id: str, device: StoredTotpDevice) -> None:
-        changed(
+        table_rows.rows_changed(
             self._db,
             sa.insert(totp_devices).values(
                 id=device.id,
@@ -50,7 +51,7 @@ class SqlTotpRepository:
         )
 
     def rename(self, user_id: str, device_id: str, name: str) -> None:
-        if not changed(
+        if not table_rows.rows_changed(
             self._db,
             sa.update(totp_devices)
             .where(_t.user_id == user_id, _t.id == device_id)
@@ -62,7 +63,7 @@ class SqlTotpRepository:
         # One statement compares and sets, so two requests with the same
         # code cannot both pass.
         return bool(
-            changed(
+            table_rows.rows_changed(
                 self._db,
                 sa.update(totp_devices)
                 .where(
@@ -76,7 +77,7 @@ class SqlTotpRepository:
 
     def remove(self, user_id: str, device_id: str) -> bool:
         return bool(
-            changed(
+            table_rows.rows_changed(
                 self._db,
                 sa.delete(totp_devices).where(
                     _t.user_id == user_id, _t.id == device_id
@@ -88,7 +89,9 @@ class SqlTotpRepository:
         # ON DELETE CASCADE does this with the user. Said here, so both
         # stores agree.
         return bool(
-            changed(self._db, sa.delete(totp_devices).where(_t.user_id == user_id))
+            table_rows.rows_changed(
+                self._db, sa.delete(totp_devices).where(_t.user_id == user_id)
+            )
         )
 
 

@@ -95,7 +95,7 @@ dependencies = [
     # What the service shares with the MCP server, with the folders of
     # the system and its settings file. Released with this package under
     # the same version.
-    "benethos-mailbox-common[paths,settings]==0.11.1",
+    "benethos-mailbox-common[paths,settings,storage]==0.11.1",
     # The QR code a person scans to set up a second factor (web/pages/qr.py).
     "segno>=1.6",
     # Passkeys (WebAuthn), a method of the second factor

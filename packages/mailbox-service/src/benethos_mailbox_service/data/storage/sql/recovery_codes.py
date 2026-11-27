@@ -7,8 +7,9 @@ from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
 
+from benethos_mailbox_common.storage import rows as table_rows
+
 from ....common.clock import iso
-from .rows import changed
 from .schema import recovery_codes
 
 if TYPE_CHECKING:
@@ -35,7 +36,7 @@ class SqlRecoveryCodeRepository:
 
     def use(self, user_id: str, key_id: str, code: str, at: datetime) -> bool:
         return bool(
-            changed(
+            table_rows.rows_changed(
                 self._db,
                 sa.update(recovery_codes)
                 .where(
@@ -60,4 +61,6 @@ class SqlRecoveryCodeRepository:
     def delete(self, user_id: str) -> None:
         # ON DELETE CASCADE does this with the user. Said here, so both
         # stores agree.
-        changed(self._db, sa.delete(recovery_codes).where(_r.user_id == user_id))
+        table_rows.rows_changed(
+            self._db, sa.delete(recovery_codes).where(_r.user_id == user_id)
+        )

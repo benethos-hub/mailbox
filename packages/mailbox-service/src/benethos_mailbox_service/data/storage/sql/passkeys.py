@@ -7,10 +7,11 @@ from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
 
+from benethos_mailbox_common.storage import rows as table_rows
+
 from ....common.clock import iso, parse_iso
 from ....errors import ConflictError, missing
 from ..passkeys import StoredPasskey
-from .rows import changed
 from .schema import passkeys
 
 if TYPE_CHECKING:
@@ -34,7 +35,7 @@ class SqlPasskeyRepository:
 
     def add(self, user_id: str, passkey: StoredPasskey) -> None:
         try:
-            changed(
+            table_rows.rows_changed(
                 self._db,
                 sa.insert(passkeys).values(
                     id=passkey.id,
@@ -51,7 +52,7 @@ class SqlPasskeyRepository:
             raise ConflictError("this passkey is stored already") from None
 
     def rename(self, user_id: str, passkey_id: str, name: str) -> None:
-        if not changed(
+        if not table_rows.rows_changed(
             self._db,
             sa.update(passkeys)
             .where(_p.user_id == user_id, _p.id == passkey_id)
@@ -68,7 +69,7 @@ class SqlPasskeyRepository:
         if sign_count == 0:
             counted = sa.or_(counted, _p.sign_count == 0)
         return bool(
-            changed(
+            table_rows.rows_changed(
                 self._db,
                 sa.update(passkeys)
                 .where(_p.user_id == user_id, _p.id == passkey_id, counted)
@@ -78,7 +79,7 @@ class SqlPasskeyRepository:
 
     def remove(self, user_id: str, passkey_id: str) -> bool:
         return bool(
-            changed(
+            table_rows.rows_changed(
                 self._db,
                 sa.delete(passkeys).where(_p.user_id == user_id, _p.id == passkey_id),
             )
@@ -87,7 +88,11 @@ class SqlPasskeyRepository:
     def remove_all(self, user_id: str) -> bool:
         # ON DELETE CASCADE does this with the user. Said here, so both
         # stores agree.
-        return bool(changed(self._db, sa.delete(passkeys).where(_p.user_id == user_id)))
+        return bool(
+            table_rows.rows_changed(
+                self._db, sa.delete(passkeys).where(_p.user_id == user_id)
+            )
+        )
 
 
 def _passkey(row: sa.RowMapping) -> StoredPasskey:

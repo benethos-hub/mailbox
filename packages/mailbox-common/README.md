@@ -83,7 +83,8 @@ There is nothing to install. The service, the MCP server and the
 agents bring it, with the extras they need.
 
 On its own it needs the standard library alone. An extra is named
-after its group, and `all` brings every extra:
+after its group, `postgres` brings the driver of PostgreSQL for the
+group `storage`, and `all` brings every extra:
 
 ```sh
 uv add "benethos-mailbox-common[all]"      # or: pip install "benethos-mailbox-common[all]"

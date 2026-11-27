@@ -9,10 +9,11 @@ from typing import TYPE_CHECKING, Any
 
 import sqlalchemy as sa
 
+from benethos_mailbox_common.storage import rows as table_rows
+
 from ....common.clock import iso, parse_iso
 from ....errors import missing
 from ...models import OPEN_STATES, Before, OutboxJob, OutboxState
-from .rows import changed
 from .schema import outbox
 
 if TYPE_CHECKING:
@@ -26,7 +27,9 @@ class SqlOutboxRepository:
         self._db = db
 
     def add(self, job: OutboxJob) -> None:
-        changed(self._db, sa.insert(outbox).values(id=job.id, **_values(job)))
+        table_rows.rows_changed(
+            self._db, sa.insert(outbox).values(id=job.id, **_values(job))
+        )
 
     def get(self, job_id: str) -> OutboxJob:
         with self._db.connected() as conn:
@@ -43,7 +46,7 @@ class SqlOutboxRepository:
         # Only while the job is still in the state ``was``: so a job is
         # never sent twice.
         return bool(
-            changed(
+            table_rows.rows_changed(
                 self._db,
                 sa.update(outbox)
                 .where(_o.id == job.id, _o.state == was)
@@ -100,7 +103,7 @@ class SqlOutboxRepository:
             return counted
 
     def purge(self, before: datetime) -> int:
-        removed = changed(
+        removed = table_rows.rows_changed(
             self._db,
             sa.delete(outbox).where(
                 _o.state.not_in(OPEN_STATES),

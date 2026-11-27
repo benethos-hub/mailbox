@@ -6,10 +6,11 @@ from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
 
+from benethos_mailbox_common.storage import dialect
+from benethos_mailbox_common.storage import rows as table_rows
+
 from ....common.clock import iso, parse_iso, utc_now
 from ..credentials import EncryptedCredential, WrappedKey
-from .dialect import insert_or_update
-from .rows import changed
 from .schema import credentials, keys, meta
 
 if TYPE_CHECKING:
@@ -52,7 +53,7 @@ class SqlKeyRepository:
                 )
             )
             conn.execute(
-                insert_or_update(meta, ["key"], None, conn.dialect).values(
+                dialect.insert_or_update(meta, ["key"], None, conn.dialect).values(
                     key=_ACTIVE, value=key.key_id
                 )
             )
@@ -65,7 +66,7 @@ class SqlCredentialRepository:
     def put(self, credential: EncryptedCredential) -> None:
         with self._db.connected() as conn:
             conn.execute(
-                insert_or_update(
+                dialect.insert_or_update(
                     credentials, ["account_id", "field"], None, conn.dialect
                 ).values(
                     account_id=credential.account_id,
@@ -100,7 +101,9 @@ class SqlCredentialRepository:
             return [_credential(row) for row in rows]
 
     def forget_account(self, account_id: str) -> None:
-        changed(self._db, sa.delete(credentials).where(_c.account_id == account_id))
+        table_rows.rows_changed(
+            self._db, sa.delete(credentials).where(_c.account_id == account_id)
+        )
 
 
 def _credential(row: sa.RowMapping) -> EncryptedCredential:

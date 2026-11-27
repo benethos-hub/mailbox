@@ -8,6 +8,22 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `benethos-mailbox-common`: the group `storage`, the storage of a
+  program on SQLAlchemy Core for a file of SQLite and a schema on a
+  PostgreSQL server, with the extra `storage` (SQLAlchemy, Alembic) and
+  the extra `postgres` (the driver of PostgreSQL). `all` brings both.
+  It holds the whole layer the service stood on: the database on one
+  connection, the file of SQLite and a schema on a server as its
+  places, the revisions on Alembic, the export, the move and the stores
+  a tool opens, each handed a `shape.Shape` that says what a program's
+  database is. The service hands in its shape and keeps its tables, its
+  repositories, its revisions and the old steps of its file. The group
+  raises its own errors, or the subclasses a program names in
+  `errors.Errors`, as the service does with its own. The lock of one
+  writer, `locks`, moved from `paths` into it.
+- `benethos-mailbox-agents`: depends on the extra `storage` of
+  `benethos-mailbox-common`, which brings SQLAlchemy and Alembic, for the
+  lock of its state file.
 - PostgreSQL 19 as the storage of the service, beside SQLite, which
   stays the default: `MAILBOX_SERVICE_STORAGE=postgres` keeps the
   records in a schema on a PostgreSQL server, named after the role the

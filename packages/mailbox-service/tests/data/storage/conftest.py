@@ -9,13 +9,12 @@ from pathlib import Path
 
 import pytest
 
+from benethos_mailbox_common.storage import dialect, files, tables
 from benethos_mailbox_service.data.models import Account, ProviderType
 from benethos_mailbox_service.data.storage import (
     MessageIndexRepository,
     Repositories,
 )
-from benethos_mailbox_service.data.storage.sql import dialect, tables
-from benethos_mailbox_service.data.storage.sqlite import file
 
 from .disk_helpers import Disk
 from .index_helpers import ACC
@@ -65,4 +64,4 @@ def no_room_for_copy(monkeypatch: pytest.MonkeyPatch) -> None:
     def full(path: Path, data: bytes = b"") -> None:
         raise OSError(28, "No space left on device")
 
-    monkeypatch.setattr(file, "create_private", full)
+    monkeypatch.setattr(files, "create_private", full)

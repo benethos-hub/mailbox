@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 from ...common.clock import utc_now
 from ...data.models import Account, AccountStatus, Webhook
 from ...data.storage import OutboxRepository
-from ...errors import ForbiddenError, MailboxServiceError, StorageUnavailableError
+from ...errors import ForbiddenError, MailboxServiceError
 from ..accounts import AccountService
 from ..rights import Access
 from ..sync import SyncService, SyncState, SyncWorker, WorkerState
@@ -109,7 +109,7 @@ class StatusService:
         webhooks: WebhookService,
         outbox: OutboxRepository | None = None,
         clock: Callable[[], datetime] = utc_now,
-        storage: Callable[[], StorageUnavailableError | None] | None = None,
+        storage: Callable[[], Exception | None] | None = None,
         outages: Callable[[], int] | None = None,
     ) -> None:
         """``outbox`` holds the sends the counts of an account read.

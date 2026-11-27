@@ -10,8 +10,6 @@ from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 import sqlalchemy as sa
 
-from ....errors import missing
-
 if TYPE_CHECKING:
     from .database import Database
 
@@ -46,8 +44,8 @@ class SqlRows(Generic[T]):
         return self._of(self.row(row_id))
 
     def row(self, row_id: str) -> sa.RowMapping:
-        """The row itself, for a column the record does not carry.
-        NotFoundError when it is not there."""
+        """The row itself, for a column the record does not carry. The
+        error of a missing record when it is not there."""
         with self._db.connected() as conn:
             row = (
                 conn.execute(sa.select(self._table).where(self._id == row_id))
@@ -55,7 +53,7 @@ class SqlRows(Generic[T]):
                 .first()
             )
         if row is None:
-            raise missing(self._what, row_id)
+            raise self._db.errors.missing(self._what, row_id)
         return row
 
     def exists(self, row_id: str) -> bool:
@@ -69,17 +67,17 @@ class SqlRows(Generic[T]):
         self.must_change(sa.delete(self._table).where(self._id == row_id), row_id)
 
     def must_change(self, statement: sa.Executable, row_id: str) -> None:
-        """``statement`` about the row ``row_id``: NotFoundError when it
-        changed none."""
-        if not changed(self._db, statement):
-            raise missing(self._what, row_id)
+        """``statement`` about the row ``row_id``: the error of a missing
+        record when it changed none."""
+        if not rows_changed(self._db, statement):
+            raise self._db.errors.missing(self._what, row_id)
 
     @property
     def _id(self) -> sa.ColumnElement[Any]:
         return self._table.c.id
 
 
-def changed(db: Database, statement: sa.Executable) -> int:
+def rows_changed(db: Database, statement: sa.Executable) -> int:
     """``statement`` in a transaction of its own, or in the one open. The
     rows it changed."""
     with db.connected() as conn:

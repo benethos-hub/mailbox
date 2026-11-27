@@ -12,6 +12,11 @@ import re
 
 import idna
 
+from benethos_mailbox_common.storage import names
+
+# Whether a host is this computer: localhost or a loopback address.
+is_loopback_host = names.is_loopback_host
+
 # One label in ASCII: letters, digits, inner hyphens.
 _LABEL = re.compile(r"(?!-)[a-z0-9-]{1,63}(?<!-)")
 # The top-level label: letters, or an internationalised one in punycode.
@@ -112,14 +117,3 @@ def address_problem(email: str) -> str | None:
     if written is None or not is_host_name(written, dotted=False):
         return "not a valid email domain"
     return None
-
-
-def is_loopback_host(host: str) -> bool:
-    """Whether ``host`` is this computer: localhost or a loopback
-    address."""
-    if host.lower() == "localhost":
-        return True
-    try:
-        return ipaddress.ip_address(host).is_loopback
-    except ValueError:
-        return False

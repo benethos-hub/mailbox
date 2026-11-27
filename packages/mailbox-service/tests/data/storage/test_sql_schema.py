@@ -12,11 +12,11 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.schema import CreateTable
 
+from benethos_mailbox_common.storage.file_place import sqlite_engine
+from benethos_mailbox_common.storage.tables import BOOKKEEPING
 from benethos_mailbox_service.data.storage import Database
 from benethos_mailbox_service.data.storage.sql import revisions
-from benethos_mailbox_service.data.storage.sql.file_place import sqlite_engine
 from benethos_mailbox_service.data.storage.sql.schema import METADATA
-from benethos_mailbox_service.data.storage.sql.tables import BOOKKEEPING
 
 from ...schema_helpers import at_schema, shape
 
@@ -42,7 +42,7 @@ def test_the_baseline_is_the_schema_the_old_steps_end_at(tmp_path: Path) -> None
     driver = sqlite3.connect(tmp_path / "baseline.db", isolation_level=None)
     engine = sqlite_engine(lambda: driver)
     with engine.connect() as conn:
-        revisions.upgrade(conn, revisions.BASELINE)
+        revisions.REVISIONS.upgrade(conn, revisions.BASELINE)
     engine.dispose()
     driver.close()
     at_schema(tmp_path / "old.db", revisions.BASELINE).close()

@@ -1,7 +1,7 @@
 """What libpq is told of TLS, by the setting and the host: a host other
 than this one only with a checked certificate and name, this one where
 the server offers it, and none when it is switched off. Against the
-server in tests/postgres/test_server_tls.py."""
+server in the tests of the service, postgres/test_server_tls.py."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from benethos_mailbox_service.data.storage.sql.server_engine import tls_arguments
+from benethos_mailbox_common.storage.server_engine import tls_arguments
 
 
 @pytest.mark.parametrize("host", ["db.example.org", "192.0.2.7", "::ffff:192.0.2.7"])

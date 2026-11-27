@@ -42,8 +42,7 @@ def add(commands: Commands, option: argparse.ArgumentParser) -> None:
 
 def run(args: argparse.Namespace) -> None:
     from ..assembly import database_server
-    from ..data.move import check_move, move_records
-    from ..data.storage import Server
+    from ..data.storage import Server, check_move, move_records
 
     settings = load_settings(args.env_file)
     try:

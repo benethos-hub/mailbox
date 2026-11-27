@@ -15,10 +15,10 @@ from typing import Any
 
 import sqlalchemy as sa
 
-from benethos_mailbox_service.data.export import write_export
+from benethos_mailbox_common.storage import export, sqlite_file
 from benethos_mailbox_service.data.storage import Database, Records
-from benethos_mailbox_service.data.storage.sqlite.file import translated
 from benethos_mailbox_service.data.storage.sqlite.migrations import MIGRATIONS
+from benethos_mailbox_service.errors import STORAGE_ERRORS
 
 # Every table filled at schema 25, with two values an older version
 # wrote that do not fit their columns: a text for a number, texts for
@@ -46,7 +46,7 @@ def seed_25(path: Path, *, fitting: bool = False) -> Database:
 def exported(records: Records) -> bytes:
     """The export of ``records``, as bytes."""
     out = io.BytesIO()
-    write_export(records, out)
+    export.export_records(records, out)
     return out.getvalue()
 
 
@@ -66,14 +66,14 @@ def at_schema(path: Path, version: int) -> sqlite3.Connection:
 
 def select(db: Database, sql: str, params: Sequence[Any] = ()) -> list[Any]:
     """The rows ``sql`` reads from ``db``, each by name and by place."""
-    with translated():
+    with sqlite_file.translated_sqlite(STORAGE_ERRORS):
         rows: list[Any] = driver(db).execute(sql, tuple(params)).fetchall()
         return rows
 
 
 def value(db: Database, sql: str, params: Sequence[Any] = ()) -> Any:
     """The first value of the first row ``sql`` reads, or None."""
-    with translated():
+    with sqlite_file.translated_sqlite(STORAGE_ERRORS):
         row = driver(db).execute(sql, tuple(params)).fetchone()
     return None if row is None else row[0]
 
@@ -81,14 +81,14 @@ def value(db: Database, sql: str, params: Sequence[Any] = ()) -> Any:
 def run(db: Database, sql: str, params: Sequence[Any] = ()) -> int:
     """``sql`` on ``db``, in the transaction open or in one of its own.
     The rows it changed."""
-    with translated():
+    with sqlite_file.translated_sqlite(STORAGE_ERRORS):
         changed: int = driver(db).execute(sql, tuple(params)).rowcount
         return changed
 
 
 def run_many(db: Database, sql: str, rows: Iterable[Sequence[Any]]) -> None:
     """``sql`` once for each of ``rows``, in one transaction."""
-    with db.transaction(), translated():
+    with db.transaction(), sqlite_file.translated_sqlite(STORAGE_ERRORS):
         driver(db).executemany(sql, rows)
 
 

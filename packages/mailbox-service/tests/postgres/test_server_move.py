@@ -11,11 +11,13 @@ from typing import Any
 
 import pytest
 
+from benethos_mailbox_common.storage import database as stored_database
+from benethos_mailbox_common.storage import server_place as stored_place
 from benethos_mailbox_service.data.models import ChangeRecord
-from benethos_mailbox_service.data.move import MoveError, move_records
 from benethos_mailbox_service.data.storage import (
     Database,
-    ServerPlace,
+    MoveError,
+    move_records,
     repositories_on,
 )
 from benethos_mailbox_service.errors import StorageError, StorageUnavailableError
@@ -103,15 +105,15 @@ def test_a_move_that_fails_halfway_leaves_a_schema_the_service_refuses(
     source: Database, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     source.close()
-    fill = Database.fill
+    fill = stored_database.Database.fill
 
-    def failing(self: Database, table: str, *args: Any) -> int:
+    def failing(self: stored_database.Database, table: str, *args: Any) -> int:
         if table == "users":
             raise StorageError("the server went away")
         return fill(self, table, *args)
 
     with schema() as name:
-        monkeypatch.setattr(Database, "fill", failing)
+        monkeypatch.setattr(stored_database.Database, "fill", failing)
         with pytest.raises(StorageError, match="the server went away"):
             move_records(tmp_path / "source.db", server(name))
         monkeypatch.undo()
@@ -119,7 +121,7 @@ def test_a_move_that_fails_halfway_leaves_a_schema_the_service_refuses(
             database(name)
 
 
-def _away(place: ServerPlace) -> None:
+def _away(place: stored_place.ServerPlace) -> None:
     """A server that is gone while the lock is asked for."""
     raise StorageUnavailableError(1, "AdminShutdown (57P01)")
 
@@ -129,6 +131,6 @@ def test_a_server_away_at_the_lock_is_no_running_service(
 ) -> None:
     source.close()
     with schema() as name:
-        monkeypatch.setattr(ServerPlace, "claimed", _away)
+        monkeypatch.setattr(stored_place.ServerPlace, "claimed", _away)
         with pytest.raises(StorageUnavailableError):
             move_records(tmp_path / "source.db", server(name))

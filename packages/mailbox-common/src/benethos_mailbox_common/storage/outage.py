@@ -10,7 +10,7 @@ import math
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from ....errors import StorageUnavailableError
+from .errors import OWN, Errors, StorageUnavailableError
 
 # The pause after the first failure, and the longest one, in seconds.
 FIRST_PAUSE = 1.0
@@ -21,7 +21,7 @@ LONGEST_PAUSE = 30.0
 class Availability:
     """A change of whether the database can be reached, as a store
     reports it: away with the kind of the failure, back after so many
-    seconds, or reached again with its lock held by another service."""
+    seconds, or reached again with its lock held by another program."""
 
     away: bool
     cause: str = ""
@@ -30,10 +30,12 @@ class Availability:
 
 
 class Outage:
-    """Whether the server is away, by the clock ``clock`` in seconds."""
+    """Whether the server is away, by the clock ``clock`` in seconds.
+    ``errors``: what a call meets while it is away."""
 
-    def __init__(self, clock: Callable[[], float]) -> None:
+    def __init__(self, clock: Callable[[], float], errors: Errors = OWN) -> None:
         self._clock = clock
+        self._errors = errors
         self._since: float | None = None
         self._pause = FIRST_PAUSE
         self._next = 0.0
@@ -51,7 +53,7 @@ class Outage:
         """The error a call meets while the server is away: the seconds
         until the next attempt, at least one."""
         wait = max(1, math.ceil(self._next - self._clock()))
-        return StorageUnavailableError(wait, self.cause)
+        return self._errors.unavailable(wait, self.cause)
 
     def failed(self, cause: str) -> bool:
         """An attempt failed for ``cause``, the kind of the failure. True

@@ -11,13 +11,13 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql, sqlite
 from sqlalchemy.schema import CreateTable
 
-from benethos_mailbox_service.data.storage.sql.dialect import (
+from benethos_mailbox_common.storage.dialect import (
     BYTES,
     COUNTED,
     IN_CHUNK,
     NUMBER,
     TEXT,
-    begin,
+    begin_at_once,
     counter,
     greater,
     in_chunks,
@@ -25,8 +25,6 @@ from benethos_mailbox_service.data.storage.sql.dialect import (
     insert_or_skip,
     insert_or_update,
 )
-
-from ...schema_helpers import driver_of
 
 TABLE = sa.Table(
     "probe",
@@ -149,7 +147,7 @@ def test_in_chunks_keeps_each_value_once_in_its_order() -> None:
 def test_a_transaction_begins_as_a_writer_on_sqlite(engine: sa.Engine) -> None:
     said: list[str] = []
     with engine.connect() as conn:
-        driver_of(conn).set_trace_callback(said.append)
-        begin(conn)
+        conn.connection.driver_connection.set_trace_callback(said.append)
+        begin_at_once(conn)
         conn.exec_driver_sql("ROLLBACK")
     assert said[0] == "BEGIN IMMEDIATE"

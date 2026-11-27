@@ -9,17 +9,18 @@ from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
 
+from benethos_mailbox_common.storage import dialect
+from benethos_mailbox_common.storage import rows as table_rows
+
 from ....common.clock import iso, parse_iso
 from ...models import ApiToken, Grant, Role, User
-from .dialect import insert_or_update
-from .rows import SqlRows, changed, next_position
 from .schema import roles, tokens, users
 
 if TYPE_CHECKING:
     from .database import Database
 
 
-class SqlUserRepository(SqlRows[User]):
+class SqlUserRepository(table_rows.SqlRows[User]):
     def __init__(self, db: Database) -> None:
         super().__init__(db, users, "user", _user, order=[users.c.position])
 
@@ -27,7 +28,7 @@ class SqlUserRepository(SqlRows[User]):
         # A user saved again keeps its place.
         with self._db.connected() as conn:
             conn.execute(
-                insert_or_update(
+                dialect.insert_or_update(
                     users,
                     ["id"],
                     [
@@ -49,7 +50,7 @@ class SqlUserRepository(SqlRows[User]):
                     grants=_grants_json(user.grants),
                     disabled=int(user.disabled),
                     ui_sign_in=int(user.ui_sign_in),
-                    position=next_position(users),
+                    position=table_rows.next_position(users),
                 )
             )
 
@@ -83,7 +84,7 @@ def _user(row: sa.RowMapping) -> User:
     )
 
 
-class SqlRoleRepository(SqlRows[Role]):
+class SqlRoleRepository(table_rows.SqlRows[Role]):
     def __init__(self, db: Database) -> None:
         super().__init__(db, roles, "role", _role, order=[roles.c.position])
 
@@ -91,13 +92,13 @@ class SqlRoleRepository(SqlRows[Role]):
         # A role saved again keeps its place.
         with self._db.connected() as conn:
             conn.execute(
-                insert_or_update(
+                dialect.insert_or_update(
                     roles, ["id"], ["service", "grants"], conn.dialect
                 ).values(
                     id=role.id,
                     service=json.dumps(role.service),
                     grants=_grants_json(role.grants),
-                    position=next_position(roles),
+                    position=table_rows.next_position(roles),
                 )
             )
 
@@ -113,7 +114,7 @@ def _role(row: sa.RowMapping) -> Role:
 class SqlTokenRepository:
     def __init__(self, db: Database) -> None:
         self._db = db
-        self._rows = SqlRows(
+        self._rows = table_rows.SqlRows(
             db, tokens, "token", _api_token, order=[tokens.c.created_at, tokens.c.id]
         )
 
@@ -142,7 +143,7 @@ class SqlTokenRepository:
         # A token saved again keeps the time it was made.
         with self._db.connected() as conn:
             conn.execute(
-                insert_or_update(
+                dialect.insert_or_update(
                     tokens,
                     ["id"],
                     [
@@ -167,7 +168,7 @@ class SqlTokenRepository:
             )
 
     def touch(self, token_id: str, when: datetime) -> None:
-        changed(
+        table_rows.rows_changed(
             self._db,
             sa.update(tokens)
             .where(tokens.c.id == token_id)
@@ -175,7 +176,9 @@ class SqlTokenRepository:
         )
 
     def delete_for_user(self, user_id: str) -> None:
-        changed(self._db, sa.delete(tokens).where(tokens.c.user_id == user_id))
+        table_rows.rows_changed(
+            self._db, sa.delete(tokens).where(tokens.c.user_id == user_id)
+        )
 
 
 def _api_token(row: sa.RowMapping) -> ApiToken:

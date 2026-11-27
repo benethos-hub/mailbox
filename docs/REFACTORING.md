@@ -305,3 +305,20 @@ Decided 2026-10-10.
   exception stands in `ALLOWED` with its reason, and an entry that no
   longer matches fails. The tuples of the domain became `IssuedToken`,
   `OneTimePassword`, `TotpSetup` and `DeviceAdded`.
+
+## 17. The storage layer in `mailbox-common`
+
+On 2026-11-27 the layer beneath the repositories of the service moved
+into the group `storage` of `mailbox-common`, so the agents can stand
+on it too. The service keeps what is its own: its tables, its
+repositories, its revisions and the old steps of its file. What moved
+knows no program by name. It is handed a `Shape`, the description of a
+program's database, which the service builds at one place. The group
+raises its own errors, or the subclasses a program hands in, so every
+`except` and the status table of the service stayed as they were. A
+group of `mailbox-common` imports only inside itself, so the helpers
+the layer needs moved with it: the times as text, the plain names, the
+files for their owner alone and the lock of one writer, which the
+service now takes from there. Nothing a user or an operator sees
+changed: the key of the lock on a server, the row that keeps it and
+every text the service says.

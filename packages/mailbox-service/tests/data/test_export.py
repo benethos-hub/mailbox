@@ -11,7 +11,11 @@ from pathlib import Path
 
 import pytest
 
-from benethos_mailbox_service.data.export import ExportError, read_export, write_export
+from benethos_mailbox_common.storage.export import (
+    ExportError,
+    export_records,
+    import_records,
+)
 from benethos_mailbox_service.data.models import ChangeRecord
 from benethos_mailbox_service.data.storage import Database, repositories_on
 
@@ -40,7 +44,7 @@ def source(tmp_path: Path) -> Database:
 def test_an_export_is_read_back_table_for_table(source: Database) -> None:
     data = exported(source)
     target = Database()
-    counts = read_export(io.BytesIO(data), target)
+    counts = import_records(io.BytesIO(data), target, "service")
     assert counts == {t.name: len(list(source.rows(t.name))) for t in source.tables()}
     for table in source.tables():
         assert list(target.rows(table.name)) == list(source.rows(table.name)), table
@@ -64,7 +68,7 @@ def _by_table(data: bytes) -> dict[str, list[object]]:
 def test_an_export_of_the_version_before_is_read_back() -> None:
     data = EXPORTED.read_bytes()
     target = Database()
-    counts = read_export(io.BytesIO(data), target)
+    counts = import_records(io.BytesIO(data), target, "service")
     assert all(counts.values()), "a table left empty"
     written = _by_table(data)
     again = _by_table(exported(target))
@@ -85,7 +89,7 @@ def _joined(lines: list[object]) -> io.BytesIO:
 def _refused(lines: list[object], message: str) -> None:
     target = Database()
     with pytest.raises(ExportError, match=message) as refused:
-        read_export(_joined(lines), target)
+        import_records(_joined(lines), target, "service")
     target.close()
     assert MARK not in str(refused.value)
 
@@ -126,7 +130,7 @@ def test_an_export_cut_in_a_line_is_refused(source: Database) -> None:
     data = exported(source)
     target = Database()
     with pytest.raises(ExportError, match="ends early"):
-        read_export(io.BytesIO(data[: len(data) // 2]), target)
+        import_records(io.BytesIO(data[: len(data) // 2]), target, "service")
     target.close()
     source.close()
 
@@ -142,7 +146,7 @@ def test_a_purged_feed_counts_on_after_an_export(source: Database) -> None:
     feed.append([record, record])
     run(source, "DELETE FROM changes WHERE seq > 7")
     target = Database()
-    read_export(io.BytesIO(exported(source)), target)
+    import_records(io.BytesIO(exported(source)), target, "service")
     repositories_on(target).changes.append([record])
     assert [row[0] for row in target.rows("changes")] == [5, 7, 12]
     source.close()
@@ -166,7 +170,7 @@ def test_an_export_of_a_view_is_the_one_of_the_database(source: Database) -> Non
             ]
         )
         out = io.BytesIO()
-        write_export(records, out)
+        export_records(records, out)
     assert out.getvalue() == before
     assert exported(source) != before
     source.close()

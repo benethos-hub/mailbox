@@ -7,9 +7,10 @@ from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
 
+from benethos_mailbox_common.storage import rows as table_rows
+
 from ....common.clock import iso, parse_iso
 from ..links import StoredLink
-from .rows import changed
 from .schema import attachment_links
 
 if TYPE_CHECKING:
@@ -23,7 +24,7 @@ class SqlLinkRepository:
         self._db = db
 
     def add(self, link: StoredLink) -> None:
-        changed(
+        table_rows.rows_changed(
             self._db,
             sa.insert(attachment_links).values(
                 id=link.id,
@@ -51,7 +52,7 @@ class SqlLinkRepository:
 
     def redeem(self, link_id: str, at: datetime, by: str) -> bool:
         return bool(
-            changed(
+            table_rows.rows_changed(
                 self._db,
                 sa.update(attachment_links)
                 .where(
@@ -64,7 +65,7 @@ class SqlLinkRepository:
         )
 
     def release(self, link_id: str) -> None:
-        changed(
+        table_rows.rows_changed(
             self._db,
             sa.update(attachment_links)
             .where(_l.id == link_id)
@@ -72,7 +73,7 @@ class SqlLinkRepository:
         )
 
     def purge(self, now: datetime) -> int:
-        removed = changed(
+        removed = table_rows.rows_changed(
             self._db,
             sa.delete(attachment_links).where(
                 sa.or_(_l.redeemed_at.is_not(None), _l.expires_at <= iso(now))

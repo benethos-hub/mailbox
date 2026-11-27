@@ -208,8 +208,7 @@
   },
   "benethos_mailbox_common.paths": {
     "__all__": [
-      "folders",
-      "locks"
+      "folders"
     ]
   },
   "benethos_mailbox_common.paths.folders": {
@@ -260,16 +259,6 @@
       "signature": "(app: 'str') -> 'SystemFolders'"
     }
   },
-  "benethos_mailbox_common.paths.locks": {
-    "LockedError": {
-      "bases": [
-        "builtins.Exception"
-      ]
-    },
-    "exclusive_lock": {
-      "signature": "(path: 'Path') -> 'Iterator[None]'"
-    }
-  },
   "benethos_mailbox_common.settings": {
     "__all__": [
       "files"
@@ -308,6 +297,1111 @@
     },
     "secret_file": {
       "signature": "(path: 'Path') -> 'str'"
+    }
+  },
+  "benethos_mailbox_common.storage": {
+    "__all__": [
+      "clock",
+      "database",
+      "dialect",
+      "errors",
+      "export",
+      "file_place",
+      "files",
+      "locks",
+      "migrated",
+      "move",
+      "names",
+      "outage",
+      "place",
+      "revision",
+      "revisions",
+      "rows",
+      "server_engine",
+      "server_lock",
+      "server_place",
+      "shape",
+      "sqlite_file",
+      "stored",
+      "stores",
+      "tables"
+    ]
+  },
+  "benethos_mailbox_common.storage.clock": {
+    "iso": {
+      "signature": "(value: 'datetime | None') -> 'str | None'"
+    },
+    "parse_iso": {
+      "signature": "(value: 'str | None') -> 'datetime | None'"
+    },
+    "utc_now": {
+      "signature": "() -> 'datetime'"
+    }
+  },
+  "benethos_mailbox_common.storage.database": {
+    "Database": {
+      "bases": [
+        "builtins.object"
+      ],
+      "methods": {
+        "__init__": {
+          "signature": "(self, shape: 'Shape', path: 'Path | None' = None, *, keep_copy: 'bool' = True, schema: 'int | None' = None, place: 'Place | None' = None) -> 'None'"
+        },
+        "close": {
+          "signature": "(self) -> 'None'"
+        },
+        "connected": {
+          "signature": "(self) -> 'Iterator[sa.Connection]'"
+        },
+        "errors": {
+          "property": true
+        },
+        "fill": {
+          "signature": "(self, table: 'str', columns: 'Sequence[str]', rows: 'Iterable[Sequence[Any]]') -> 'int'"
+        },
+        "mark_move": {
+          "signature": "(self, started: 'str | None') -> 'None'"
+        },
+        "purge": {
+          "signature": "(self, table: 'sa.Table', column: 'str', before: 'datetime') -> 'int'"
+        },
+        "rows": {
+          "signature": "(self, table: 'str') -> 'Iterator[tuple[Any, ...]]'"
+        },
+        "schema_version": {
+          "signature": "(self) -> 'int'"
+        },
+        "serving": {
+          "signature": "(self) -> 'AbstractContextManager[bool]'"
+        },
+        "shrink": {
+          "signature": "(self) -> 'None'"
+        },
+        "snapshot_file": {
+          "signature": "(self) -> 'AbstractContextManager[Path]'"
+        },
+        "tables": {
+          "signature": "(self) -> 'list[Table]'"
+        },
+        "transaction": {
+          "signature": "(self) -> 'Iterator[None]'"
+        },
+        "unavailable": {
+          "signature": "(self) -> 'StorageUnavailableError | None'"
+        },
+        "view": {
+          "signature": "(self) -> 'Iterator[Fixed]'"
+        },
+        "watch": {
+          "signature": "(self, report: 'Callable[[Availability], None]') -> 'None'"
+        }
+      }
+    }
+  },
+  "benethos_mailbox_common.storage.dialect": {
+    "BYTES": {
+      "source": "sa.LargeBinary()"
+    },
+    "COUNTED": {
+      "source": "{\"sqlite_autoincrement\": True}"
+    },
+    "IN_CHUNK": {
+      "value": 500
+    },
+    "Insert": {
+      "source": "sqlite.Insert | postgresql.Insert"
+    },
+    "NUMBER": {
+      "source": "sa.Integer().with_variant(sa.BigInteger(), POSTGRESQL)"
+    },
+    "POSTGRESQL": {
+      "value": "postgresql"
+    },
+    "SQLITE": {
+      "value": "sqlite"
+    },
+    "T": {
+      "source": "TypeVar(\"T\")"
+    },
+    "TEXT": {
+      "source": "sa.Text().with_variant(sa.Text(collation=\"C\"), POSTGRESQL)"
+    },
+    "begin_at_once": {
+      "signature": "(connection: 'sa.Connection') -> 'None'"
+    },
+    "count_on_from": {
+      "signature": "(connection: 'sa.Connection', table: 'sa.Table', last: 'int') -> 'None'"
+    },
+    "counter": {
+      "signature": "(name: 'str') -> 'sa.Column[int]'"
+    },
+    "greater": {
+      "signature": "(first: 'sa.ColumnElement[Any]', second: 'sa.ColumnElement[Any]', dialect: 'sa.Dialect') -> 'sa.ColumnElement[Any]'"
+    },
+    "in_chunks": {
+      "signature": "(values: 'Iterable[T]') -> 'Iterator[list[T]]'"
+    },
+    "insert_or_set": {
+      "signature": "(table: 'sa.Table', key: 'Sequence[str]', values: 'Callable[[Any], Mapping[str, Any]]', dialect: 'sa.Dialect') -> 'Insert'"
+    },
+    "insert_or_skip": {
+      "signature": "(table: 'sa.Table', dialect: 'sa.Dialect') -> 'Insert'"
+    },
+    "insert_or_update": {
+      "signature": "(table: 'sa.Table', key: 'Sequence[str]', update: 'Sequence[str] | None', dialect: 'sa.Dialect') -> 'Insert'"
+    },
+    "reading_fixed": {
+      "signature": "(connection: 'sa.Connection') -> 'sa.Connection'"
+    }
+  },
+  "benethos_mailbox_common.storage.errors": {
+    "ConflictError": {
+      "bases": [
+        "builtins.Exception"
+      ]
+    },
+    "Errors": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "failed": {
+          "type": "Callable[[str], StorageError]",
+          "default": "<class 'benethos_mailbox_common.storage.errors.StorageError'>"
+        },
+        "conflict": {
+          "type": "Callable[[str], ConflictError]",
+          "default": "<class 'benethos_mailbox_common.storage.errors.ConflictError'>"
+        },
+        "missing": {
+          "type": "Callable[[str, str], NotFoundError]",
+          "default": "<bound method NotFoundError.of of <class 'benethos_mailbox_common.storage.errors.NotFoundError'>>"
+        },
+        "in_use": {
+          "type": "Callable[[str], StorageInUseError]",
+          "default": "<class 'benethos_mailbox_common.storage.errors.StorageInUseError'>"
+        },
+        "not_empty": {
+          "type": "Callable[[str], SchemaNotEmptyError]",
+          "default": "<class 'benethos_mailbox_common.storage.errors.SchemaNotEmptyError'>"
+        },
+        "unavailable": {
+          "type": "Callable[[int, str], StorageUnavailableError]",
+          "default": "<bound method StorageUnavailableError.after of <class 'benethos_mailbox_common.storage.errors.StorageUnavailableError'>>"
+        }
+      }
+    },
+    "NotFoundError": {
+      "bases": [
+        "builtins.Exception"
+      ],
+      "methods": {
+        "of": {
+          "signature": "(cls, what: 'str', name: 'str') -> 'NotFoundError'"
+        }
+      }
+    },
+    "OWN": {
+      "source": "Errors()"
+    },
+    "SchemaNotEmptyError": {
+      "bases": [
+        "benethos_mailbox_common.storage.errors.StorageError"
+      ]
+    },
+    "StorageError": {
+      "bases": [
+        "builtins.Exception"
+      ]
+    },
+    "StorageInUseError": {
+      "bases": [
+        "benethos_mailbox_common.storage.errors.StorageError"
+      ]
+    },
+    "StorageUnavailableError": {
+      "bases": [
+        "benethos_mailbox_common.storage.errors.StorageError"
+      ],
+      "annotations": {
+        "cause": "str",
+        "retry_after": "int"
+      },
+      "methods": {
+        "after": {
+          "signature": "(cls, retry_after: 'int', cause: 'str' = '') -> 'StorageUnavailableError'"
+        }
+      }
+    }
+  },
+  "benethos_mailbox_common.storage.export": {
+    "ExportError": {
+      "bases": [
+        "builtins.Exception"
+      ]
+    },
+    "FORMAT": {
+      "value": 1
+    },
+    "Sink": {
+      "bases": [
+        "typing.Protocol"
+      ],
+      "methods": {
+        "__init__": {
+          "signature": "(self, *args, **kwargs)"
+        },
+        "write": {
+          "signature": "(self, data: 'bytes', /) -> 'object'"
+        }
+      }
+    },
+    "export_records": {
+      "signature": "(store: 'Records', out: 'Sink') -> 'dict[str, int]'"
+    },
+    "import_records": {
+      "signature": "(source: 'IO[bytes]', store: 'Store', noun: 'str') -> 'dict[str, int]'"
+    },
+    "row_line": {
+      "signature": "(row: 'Sequence[Any]') -> 'bytes'"
+    }
+  },
+  "benethos_mailbox_common.storage.file_place": {
+    "FilePlace": {
+      "bases": [
+        "builtins.object"
+      ],
+      "methods": {
+        "__init__": {
+          "signature": "(self, path: 'Path | None', shape: 'Shape', *, keep_copy: 'bool' = True) -> 'None'"
+        },
+        "close": {
+          "signature": "(self) -> 'None'"
+        },
+        "fixed": {
+          "signature": "(self, lock: 'threading.RLock') -> 'Iterator[sa.Connection]'"
+        },
+        "keep_copy": {
+          "signature": "(self, held: 'int', before: 'int') -> 'str | None'"
+        },
+        "open": {
+          "signature": "(self, schema: 'int', newest: 'int') -> 'Opened'"
+        },
+        "ready": {
+          "signature": "(self) -> 'None'"
+        },
+        "serving": {
+          "signature": "(self) -> 'AbstractContextManager[bool]'"
+        },
+        "shrink": {
+          "signature": "(self) -> 'None'"
+        },
+        "snapshot_file": {
+          "signature": "(self, lock: 'threading.RLock') -> 'AbstractContextManager[Path]'"
+        },
+        "translated": {
+          "signature": "(self) -> 'AbstractContextManager[None]'"
+        },
+        "unavailable": {
+          "signature": "(self) -> 'StorageUnavailableError | None'"
+        },
+        "undo": {
+          "signature": "(self) -> 'None'"
+        },
+        "watch": {
+          "signature": "(self, report: 'Callable[[Availability], None]') -> 'None'"
+        }
+      }
+    },
+    "sqlite_engine": {
+      "signature": "(connect: 'Callable[[], Any]') -> 'sa.Engine'"
+    },
+    "translated_file": {
+      "signature": "(errors: 'Errors') -> 'Iterator[None]'"
+    }
+  },
+  "benethos_mailbox_common.storage.files": {
+    "create_private": {
+      "signature": "(path: 'Path', data: 'bytes' = b'') -> 'None'"
+    },
+    "free_path": {
+      "signature": "(path: 'Path') -> 'Path'"
+    }
+  },
+  "benethos_mailbox_common.storage.locks": {
+    "LockedError": {
+      "bases": [
+        "builtins.Exception"
+      ]
+    },
+    "exclusive_lock": {
+      "signature": "(path: 'Path') -> 'Iterator[None]'"
+    }
+  },
+  "benethos_mailbox_common.storage.migrated": {
+    "Migrated": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "before": {
+          "type": "int"
+        },
+        "after": {
+          "type": "int"
+        },
+        "notes": {
+          "type": "tuple[str, ...]",
+          "default": "()"
+        }
+      }
+    }
+  },
+  "benethos_mailbox_common.storage.move": {
+    "Misfit": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "table": {
+          "type": "str"
+        },
+        "column": {
+          "type": "str"
+        },
+        "count": {
+          "type": "int"
+        }
+      }
+    },
+    "MoveError": {
+      "bases": [
+        "builtins.Exception"
+      ]
+    },
+    "Moved": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "tables": {
+          "type": "int"
+        },
+        "rows": {
+          "type": "int"
+        }
+      }
+    },
+    "check_move": {
+      "signature": "(shape: 'Shape', source: 'Path | Server') -> 'Moved'"
+    },
+    "misfit_error": {
+      "signature": "(found: 'list[Misfit]') -> 'MoveError'"
+    },
+    "misfits": {
+      "signature": "(records: 'Records') -> 'list[Misfit]'"
+    },
+    "move_records": {
+      "signature": "(shape: 'Shape', source: 'Path | Server', target: 'Path | Server') -> 'Moved'"
+    }
+  },
+  "benethos_mailbox_common.storage.names": {
+    "is_loopback_host": {
+      "signature": "(host: 'str') -> 'bool'"
+    },
+    "is_plain_name": {
+      "signature": "(text: 'str') -> 'bool'"
+    }
+  },
+  "benethos_mailbox_common.storage.outage": {
+    "Availability": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "away": {
+          "type": "bool"
+        },
+        "cause": {
+          "type": "str",
+          "default": "''"
+        },
+        "seconds": {
+          "type": "float",
+          "default": "0.0"
+        },
+        "lock_lost": {
+          "type": "bool",
+          "default": "False"
+        }
+      }
+    },
+    "FIRST_PAUSE": {
+      "value": 1.0
+    },
+    "LONGEST_PAUSE": {
+      "value": 30.0
+    },
+    "Outage": {
+      "bases": [
+        "builtins.object"
+      ],
+      "methods": {
+        "__init__": {
+          "signature": "(self, clock: 'Callable[[], float]', errors: 'Errors' = Errors(failed=<class 'benethos_mailbox_common.storage.errors.StorageError'>, conflict=<class 'benethos_mailbox_common.storage.errors.ConflictError'>, missing=<bound method NotFoundError.of of <class 'benethos_mailbox_common.storage.errors.NotFoundError'>>, in_use=<class 'benethos_mailbox_common.storage.errors.StorageInUseError'>, not_empty=<class 'benethos_mailbox_common.storage.errors.SchemaNotEmptyError'>, unavailable=<bound method StorageUnavailableError.after of <class 'benethos_mailbox_common.storage.errors.StorageUnavailableError'>>)) -> 'None'"
+        },
+        "away": {
+          "property": true
+        },
+        "due": {
+          "signature": "(self) -> 'bool'"
+        },
+        "failed": {
+          "signature": "(self, cause: 'str') -> 'bool'"
+        },
+        "mended": {
+          "signature": "(self) -> 'float | None'"
+        },
+        "unavailable": {
+          "signature": "(self) -> 'StorageUnavailableError'"
+        }
+      }
+    }
+  },
+  "benethos_mailbox_common.storage.place": {
+    "Opened": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "connection": {
+          "type": "sa.Connection"
+        },
+        "migrated": {
+          "type": "Migrated | None"
+        }
+      }
+    },
+    "Place": {
+      "bases": [
+        "typing.Protocol"
+      ],
+      "methods": {
+        "__init__": {
+          "signature": "(self, *args, **kwargs)"
+        },
+        "close": {
+          "signature": "(self) -> 'None'"
+        },
+        "fixed": {
+          "signature": "(self, lock: 'threading.RLock') -> 'AbstractContextManager[sa.Connection]'"
+        },
+        "keep_copy": {
+          "signature": "(self, held: 'int', before: 'int') -> 'str | None'"
+        },
+        "open": {
+          "signature": "(self, schema: 'int', newest: 'int') -> 'Opened'"
+        },
+        "ready": {
+          "signature": "(self) -> 'None'"
+        },
+        "serving": {
+          "signature": "(self) -> 'AbstractContextManager[bool]'"
+        },
+        "shrink": {
+          "signature": "(self) -> 'None'"
+        },
+        "snapshot_file": {
+          "signature": "(self, lock: 'threading.RLock') -> 'AbstractContextManager[Path]'"
+        },
+        "translated": {
+          "signature": "(self) -> 'AbstractContextManager[None]'"
+        },
+        "unavailable": {
+          "signature": "(self) -> 'StorageUnavailableError | None'"
+        },
+        "undo": {
+          "signature": "(self) -> 'None'"
+        },
+        "watch": {
+          "signature": "(self, report: 'Callable[[Availability], None]') -> 'None'"
+        }
+      }
+    },
+    "translated_by": {
+      "signature": "(conflict: 'Callable[[BaseException | None], str]', failure: 'Callable[[BaseException | None], str]', errors: 'Errors') -> 'Iterator[None]'"
+    }
+  },
+  "benethos_mailbox_common.storage.revision": {
+    "NOTES": {
+      "value": "notes"
+    },
+    "REWRITE_CHUNK": {
+      "value": 500
+    },
+    "Revision": {
+      "bases": [
+        "abc.ABC"
+      ],
+      "annotations": {
+        "baseline": "ClassVar[int]",
+        "errors": "ClassVar[Errors]",
+        "in_transaction": "ClassVar[bool]",
+        "keeps_copy": "ClassVar[bool]",
+        "version": "ClassVar[int]"
+      },
+      "methods": {
+        "alembic": {
+          "signature": "(cls) -> 'tuple[str, str | None, Callable[[], None]]'"
+        },
+        "check": {
+          "signature": "(self) -> 'None'"
+        },
+        "conn": {
+          "property": true
+        },
+        "note": {
+          "signature": "(self, text: 'str') -> 'None'"
+        },
+        "refuse": {
+          "signature": "(self, text: 'str') -> 'None'"
+        },
+        "rewrite": {
+          "signature": "(self, table: 'str', *, key: 'Sequence[str]', read: 'Sequence[str]', write: 'Sequence[str]', change: 'Callable[[Mapping[str, Any]], Mapping[str, Any]]') -> 'int'"
+        },
+        "steps": {
+          "signature": "(self) -> 'None'"
+        },
+        "upgrade": {
+          "signature": "(self) -> 'None'"
+        }
+      }
+    },
+    "name_of": {
+      "signature": "(version: 'int') -> 'str'"
+    }
+  },
+  "benethos_mailbox_common.storage.revisions": {
+    "ENVIRONMENT": {
+      "source": "Path(__file__).parent / \"_alembic\""
+    },
+    "Revisions": {
+      "bases": [
+        "builtins.object"
+      ],
+      "methods": {
+        "__init__": {
+          "signature": "(self, versions: 'Path') -> 'None'"
+        },
+        "mark": {
+          "signature": "(conn: 'sa.Connection') -> 'int | None'"
+        },
+        "numbers": {
+          "signature": "(self) -> 'list[int]'"
+        },
+        "pending": {
+          "signature": "(self, after: 'int', upto: 'int') -> 'list[type[Revision]]'"
+        },
+        "stamp": {
+          "signature": "(self, conn: 'sa.Connection', version: 'int') -> 'None'"
+        },
+        "upgrade": {
+          "signature": "(self, conn: 'sa.Connection', version: 'int') -> 'list[str]'"
+        }
+      }
+    }
+  },
+  "benethos_mailbox_common.storage.rows": {
+    "SqlRows": {
+      "bases": [
+        "typing.Generic"
+      ],
+      "methods": {
+        "__init__": {
+          "signature": "(self, db: 'Database', table: 'sa.Table', what: 'str', of: 'Callable[[sa.RowMapping], T]', *, order: 'Sequence[sa.ColumnElement[Any]]') -> 'None'"
+        },
+        "delete": {
+          "signature": "(self, row_id: 'str') -> 'None'"
+        },
+        "exists": {
+          "signature": "(self, row_id: 'str') -> 'bool'"
+        },
+        "get": {
+          "signature": "(self, row_id: 'str') -> 'T'"
+        },
+        "list": {
+          "signature": "(self) -> 'list[T]'"
+        },
+        "must_change": {
+          "signature": "(self, statement: 'sa.Executable', row_id: 'str') -> 'None'"
+        },
+        "row": {
+          "signature": "(self, row_id: 'str') -> 'sa.RowMapping'"
+        }
+      }
+    },
+    "T": {
+      "source": "TypeVar(\"T\")"
+    },
+    "next_position": {
+      "signature": "(table: 'sa.Table') -> 'sa.ScalarSelect[Any]'"
+    },
+    "rows_changed": {
+      "signature": "(db: 'Database', statement: 'sa.Executable') -> 'int'"
+    }
+  },
+  "benethos_mailbox_common.storage.server_engine": {
+    "CONNECT_SECONDS": {
+      "value": 5
+    },
+    "SILENCE": {
+      "source": "{\n    \"keepalives\": 1,\n    \"keepalives_idle\": 10,\n    \"keepalives_interval\": 5,\n    \"keepalives_count\": 3,\n    \"tcp_user_timeout\": 15000,\n}"
+    },
+    "server_engine": {
+      "signature": "(*, host: 'str', port: 'int', database: 'str', role: 'str', password: 'str', search_path: 'str', tls: 'Mapping[str, str] | None' = None) -> 'sa.Engine'"
+    },
+    "tls_arguments": {
+      "signature": "(host: 'str', tls: \"Literal['verify', 'off']\", ca_file: 'Path | None') -> 'dict[str, str]'"
+    }
+  },
+  "benethos_mailbox_common.storage.server_lock": {
+    "drawn_key": {
+      "signature": "() -> 'int'"
+    },
+    "kept_key": {
+      "signature": "(connection: 'sa.Connection', shape: 'Shape') -> 'int | None'"
+    },
+    "lock_key": {
+      "signature": "(program: 'str', schema: 'str') -> 'int'"
+    },
+    "unlocked": {
+      "signature": "(connection: 'sa.Connection', key: 'int') -> 'None'"
+    }
+  },
+  "benethos_mailbox_common.storage.server_place": {
+    "NOT_OPEN": {
+      "value": "the database is not open"
+    },
+    "OLDEST_SERVER": {
+      "value": 190000
+    },
+    "Server": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "host": {
+          "type": "str"
+        },
+        "port": {
+          "type": "int"
+        },
+        "database": {
+          "type": "str"
+        },
+        "role": {
+          "type": "str"
+        },
+        "password": {
+          "type": "str"
+        },
+        "schema": {
+          "type": "str | None",
+          "default": "None"
+        },
+        "tls": {
+          "type": "Literal['verify', 'off']",
+          "default": "'verify'"
+        },
+        "ca_file": {
+          "type": "Path | None",
+          "default": "None"
+        }
+      },
+      "methods": {
+        "schema_name": {
+          "property": true
+        }
+      }
+    },
+    "ServerPlace": {
+      "bases": [
+        "builtins.object"
+      ],
+      "methods": {
+        "__init__": {
+          "signature": "(self, server: 'Server', shape: 'Shape', clock: 'Callable[[], float]' = <built-in function monotonic>) -> 'None'"
+        },
+        "claimed": {
+          "signature": "(self) -> 'Iterator[None]'"
+        },
+        "close": {
+          "signature": "(self) -> 'None'"
+        },
+        "drop_tables": {
+          "signature": "(self) -> 'None'"
+        },
+        "fixed": {
+          "signature": "(self, lock: 'threading.RLock') -> 'Iterator[sa.Connection]'"
+        },
+        "held_schema": {
+          "signature": "(self) -> 'int'"
+        },
+        "keep_copy": {
+          "signature": "(self, held: 'int', before: 'int') -> 'str | None'"
+        },
+        "open": {
+          "signature": "(self, schema: 'int', newest: 'int') -> 'Opened'"
+        },
+        "ready": {
+          "signature": "(self) -> 'None'"
+        },
+        "serving": {
+          "signature": "(self) -> 'Iterator[bool]'"
+        },
+        "shrink": {
+          "signature": "(self) -> 'None'"
+        },
+        "snapshot_file": {
+          "signature": "(self, lock: 'threading.RLock') -> 'AbstractContextManager[Path]'"
+        },
+        "tables": {
+          "signature": "(self) -> 'list[str]'"
+        },
+        "translated": {
+          "signature": "(self) -> 'Iterator[None]'"
+        },
+        "unavailable": {
+          "signature": "(self) -> 'StorageUnavailableError | None'"
+        },
+        "undo": {
+          "signature": "(self) -> 'None'"
+        },
+        "watch": {
+          "signature": "(self, report: 'Callable[[Availability], None]') -> 'None'"
+        }
+      }
+    },
+    "supported": {
+      "signature": "(version: 'int', errors: 'Errors') -> 'None'"
+    },
+    "translated_server": {
+      "signature": "(errors: 'Errors') -> 'AbstractContextManager[None]'"
+    }
+  },
+  "benethos_mailbox_common.storage.shape": {
+    "FileSteps": {
+      "bases": [
+        "typing.Protocol"
+      ],
+      "methods": {
+        "__init__": {
+          "signature": "(self, *args, **kwargs)"
+        },
+        "last": {
+          "property": true
+        },
+        "run": {
+          "signature": "(self, connection: 'sqlite3.Connection', path: 'Path | None', upto: 'int', newest: 'int', keep: 'bool', rewritten: 'bool') -> 'Migrated | None'"
+        }
+      }
+    },
+    "Shape": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "program": {
+          "type": "str"
+        },
+        "noun": {
+          "type": "str"
+        },
+        "metadata": {
+          "type": "sa.MetaData"
+        },
+        "versions": {
+          "type": "Path"
+        },
+        "newest": {
+          "type": "int"
+        },
+        "baseline": {
+          "type": "int"
+        },
+        "errors": {
+          "type": "Errors",
+          "default": "Errors(failed=<class 'benethos_mailbox_common.storage.errors.StorageError'>, conflict=<class 'benethos_mailbox_common.storage.errors.ConflictError'>, missing=<bound method NotFoundError.of of <class 'benethos_mailbox_common.storage.errors.NotFoundError'>>, in_use=<class 'benethos_mailbox_common.storage.errors.StorageInUseError'>, not_empty=<class 'benethos_mailbox_common.storage.errors.SchemaNotEmptyError'>, unavailable=<bound method StorageUnavailableError.after of <class 'benethos_mailbox_common.storage.errors.StorageUnavailableError'>>)"
+        },
+        "extra": {
+          "type": "str",
+          "default": "\"storage postgres needs the extra postgres: pip install 'benethos-mailbox-common[postgres]'\""
+        },
+        "set_aside": {
+          "type": "str",
+          "default": "''"
+        },
+        "file_steps": {
+          "type": "FileSteps | None",
+          "default": "None"
+        },
+        "filled": {
+          "type": "Callable[[sa.Connection], None] | None",
+          "default": "None"
+        }
+      },
+      "methods": {
+        "meta": {
+          "property": true
+        }
+      }
+    }
+  },
+  "benethos_mailbox_common.storage.sqlite_file": {
+    "OpenedFile": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "connection": {
+          "type": "sqlite3.Connection"
+        },
+        "migrated": {
+          "type": "Migrated | None"
+        }
+      }
+    },
+    "SIDECARS": {
+      "source": "(\"-journal\", \"-wal\", \"-shm\")"
+    },
+    "file_serving": {
+      "signature": "(path: 'Path | None') -> 'Iterator[bool]'"
+    },
+    "has_meta": {
+      "signature": "(connection: 'sqlite3.Connection', errors: 'Errors') -> 'bool'"
+    },
+    "in_step": {
+      "signature": "(connection: 'sqlite3.Connection', errors: 'Errors') -> 'Iterator[sqlite3.Connection]'"
+    },
+    "inspect_bytes": {
+      "signature": "(data: 'bytes', noun: 'str') -> 'int'"
+    },
+    "inspect_file": {
+      "signature": "(path: 'Path', noun: 'str') -> 'int'"
+    },
+    "keep_copy": {
+      "signature": "(connection: 'sqlite3.Connection', path: 'Path', current: 'int', before: 'int', errors: 'Errors') -> 'str'"
+    },
+    "lock_file": {
+      "signature": "(path: 'Path') -> 'Path'"
+    },
+    "move_sidecars": {
+      "signature": "(target: 'Path', kept: 'Path') -> 'None'"
+    },
+    "open_file": {
+      "signature": "(path: 'Path | None', shape: 'Shape', *, keep_copy: 'bool', schema: 'int', newest: 'int') -> 'OpenedFile'"
+    },
+    "remove_database_file": {
+      "signature": "(path: 'Path') -> 'None'"
+    },
+    "schema_version": {
+      "signature": "(connection: 'sqlite3.Connection', errors: 'Errors') -> 'int'"
+    },
+    "shrink": {
+      "signature": "(connection: 'sqlite3.Connection', errors: 'Errors') -> 'None'"
+    },
+    "snapshot": {
+      "signature": "(connection: 'sqlite3.Connection', path: 'Path | None', lock: 'threading.RLock', errors: 'Errors') -> 'Iterator[Path]'"
+    },
+    "translated_sqlite": {
+      "signature": "(errors: 'Errors') -> 'Iterator[None]'"
+    }
+  },
+  "benethos_mailbox_common.storage.stored": {
+    "Records": {
+      "bases": [
+        "typing.Protocol"
+      ],
+      "methods": {
+        "__init__": {
+          "signature": "(self, *args, **kwargs)"
+        },
+        "rows": {
+          "signature": "(self, table: 'str') -> 'Iterator[tuple[Any, ...]]'"
+        },
+        "schema_version": {
+          "signature": "(self) -> 'int'"
+        },
+        "tables": {
+          "signature": "(self) -> 'list[Table]'"
+        }
+      }
+    },
+    "Store": {
+      "bases": [
+        "benethos_mailbox_common.storage.stored.Records",
+        "typing.Protocol"
+      ],
+      "methods": {
+        "close": {
+          "signature": "(self) -> 'None'"
+        },
+        "fill": {
+          "signature": "(self, table: 'str', columns: 'Sequence[str]', rows: 'Iterable[Sequence[Any]]') -> 'int'"
+        },
+        "mark_move": {
+          "signature": "(self, started: 'str | None') -> 'None'"
+        },
+        "migrated": {
+          "property": true
+        },
+        "serving": {
+          "signature": "(self) -> 'AbstractContextManager[bool]'"
+        },
+        "snapshot_file": {
+          "signature": "(self) -> 'AbstractContextManager[Path]'"
+        },
+        "transaction": {
+          "signature": "(self) -> 'AbstractContextManager[object]'"
+        },
+        "unavailable": {
+          "signature": "(self) -> 'StorageUnavailableError | None'"
+        },
+        "view": {
+          "signature": "(self) -> 'AbstractContextManager[Records]'"
+        },
+        "watch": {
+          "signature": "(self, report: 'Callable[[Availability], None]') -> 'None'"
+        }
+      }
+    }
+  },
+  "benethos_mailbox_common.storage.stores": {
+    "Claim": {
+      "bases": [
+        "builtins.object"
+      ],
+      "methods": {
+        "__init__": {
+          "signature": "(self, server: 'Server', place: 'ServerPlace', shape: 'Shape') -> 'None'"
+        },
+        "drop_tables": {
+          "signature": "(self) -> 'None'"
+        },
+        "held_schema": {
+          "signature": "(self) -> 'int'"
+        },
+        "store": {
+          "signature": "(self, schema: 'int | None' = None) -> 'Database'"
+        },
+        "tables": {
+          "signature": "(self) -> 'list[str]'"
+        }
+      }
+    },
+    "claimed": {
+      "signature": "(shape: 'Shape', server: 'Server', *, schema: 'int | None' = None, empty: 'str | None' = None) -> 'Iterator[Claim]'"
+    },
+    "file_claimed": {
+      "signature": "(path: 'Path', errors: 'Errors', noun: 'str') -> 'Iterator[None]'"
+    },
+    "file_store": {
+      "signature": "(shape: 'Shape', path: 'Path | None' = None, *, schema: 'int | None' = None, keep_copy: 'bool' = True) -> 'Database'"
+    },
+    "migrate_file": {
+      "signature": "(shape: 'Shape', path: 'Path') -> 'None'"
+    }
+  },
+  "benethos_mailbox_common.storage.tables": {
+    "BOOKKEEPING": {
+      "source": "frozenset({\"alembic_version\"})"
+    },
+    "Fixed": {
+      "bases": [
+        "builtins.object"
+      ],
+      "methods": {
+        "__init__": {
+          "signature": "(self, conn: 'sa.Connection', shape: 'Shape') -> 'None'"
+        },
+        "rows": {
+          "signature": "(self, table: 'str') -> 'Iterator[tuple[Any, ...]]'"
+        },
+        "schema_version": {
+          "signature": "(self) -> 'int'"
+        },
+        "tables": {
+          "signature": "(self) -> 'list[Table]'"
+        }
+      }
+    },
+    "LOCK_ROW": {
+      "value": "service_lock"
+    },
+    "MOVING": {
+      "value": "move_started"
+    },
+    "ROWS_CHUNK": {
+      "value": 500
+    },
+    "Table": {
+      "bases": [
+        "builtins.object"
+      ],
+      "frozen": true,
+      "fields": {
+        "name": {
+          "type": "str"
+        },
+        "columns": {
+          "type": "tuple[str, ...]"
+        },
+        "key": {
+          "type": "tuple[str, ...]"
+        },
+        "kinds": {
+          "type": "tuple[str, ...]"
+        }
+      }
+    },
+    "UNRECORDED": {
+      "source": "(MOVING, LOCK_ROW)"
+    },
+    "align_counter": {
+      "signature": "(conn: 'sa.Connection', table: 'Table', shape: 'Shape') -> 'None'"
+    },
+    "chunked_rows": {
+      "signature": "(table: 'Table', read: 'Callable[[Table, Sequence[Any] | None, int], list[tuple[Any, ...]]]') -> 'Iterator[tuple[Any, ...]]'"
+    },
+    "fill_table": {
+      "signature": "(conn: 'sa.Connection', table: 'Table', columns: 'Sequence[str]', rows: 'Iterable[Sequence[Any]]', shape: 'Shape') -> 'int'"
+    },
+    "mark_moving": {
+      "signature": "(conn: 'sa.Connection', shape: 'Shape', started: 'str | None') -> 'None'"
+    },
+    "move_begun": {
+      "signature": "(conn: 'sa.Connection', shape: 'Shape') -> 'bool'"
+    },
+    "read_chunk": {
+      "signature": "(conn: 'sa.Connection', table: 'Table', after: 'Sequence[Any] | None', size: 'int', *, meta: 'str' = 'meta') -> 'list[tuple[Any, ...]]'"
+    },
+    "read_tables": {
+      "signature": "(conn: 'sa.Connection', shape: 'Shape') -> 'list[Table]'"
+    },
+    "stored_schema": {
+      "signature": "(conn: 'sa.Connection', shape: 'Shape') -> 'int'"
+    },
+    "table_named": {
+      "signature": "(tables: 'Iterable[Table]', name: 'str', shape: 'Shape') -> 'Table'"
     }
   },
   "benethos_mailbox_common.values": {

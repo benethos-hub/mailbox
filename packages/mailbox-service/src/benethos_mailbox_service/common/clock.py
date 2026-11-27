@@ -3,12 +3,14 @@ parameter with this as the default, so tests can set the time."""
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime, time
-from typing import overload
+from datetime import date, datetime, time
 
+from benethos_mailbox_common.storage import clock
 
-def utc_now() -> datetime:
-    return datetime.now(UTC)
+# As a database keeps a time, in UTC, so that times compare as text.
+iso = clock.iso
+parse_iso = clock.parse_iso
+utc_now = clock.utc_now
 
 
 def start_of_day(day: date) -> datetime:
@@ -29,31 +31,3 @@ def parse_local(value: str) -> datetime | None:
     ``2026-10-07T18:30``: without a zone, the local time of this machine.
     None for no value. Raises ``ValueError`` for text that names none."""
     return datetime.fromisoformat(value).astimezone() if value else None
-
-
-@overload
-def iso(value: datetime) -> str: ...
-@overload
-def iso(value: None) -> None: ...
-@overload
-def iso(value: datetime | None) -> str | None: ...
-def iso(value: datetime | None) -> str | None:
-    """A time as text, in UTC, so that times compare as text: in a
-    column of the database, a cursor or a stored state. A time without a
-    zone is refused."""
-    if value is None:
-        return None
-    if value.tzinfo is None:
-        raise ValueError("a time without a zone cannot be stored")
-    return value.astimezone(UTC).isoformat()
-
-
-@overload
-def parse_iso(value: str) -> datetime: ...
-@overload
-def parse_iso(value: None) -> None: ...
-@overload
-def parse_iso(value: str | None) -> datetime | None: ...
-def parse_iso(value: str | None) -> datetime | None:
-    """The time ``iso`` wrote, None for none."""
-    return datetime.fromisoformat(value) if value else None
