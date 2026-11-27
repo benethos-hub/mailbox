@@ -106,6 +106,7 @@ def test_run_and_status_with_a_state_file(
     assert main(["status"]) == 0
     out = capsys.readouterr().out
     assert "counting 1: ready" in out
+    assert "  state: " in out and "counting.db" in out
     assert "done=2" in out
     assert "last progress: 20" in out
 

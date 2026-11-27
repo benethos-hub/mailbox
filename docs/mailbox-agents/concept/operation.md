@@ -23,7 +23,9 @@ Part of the [concept](../CONCEPT.md).
   of progress, written to the state file after each message and at the end
   of each pass, is younger than three poll intervals plus one model call
   (`3 * POLL_SECONDS + GATEWAY_TIMEOUT_SECONDS`), and 1 otherwise. It reads
-  the state file beside the running agent. A process that is alive and
+  the state file beside the running agent, or with `STORAGE=postgres` its
+  database on the server, the same command in the container. A database
+  no agent started on yet, or one it cannot reach, is unhealthy. A process that is alive and
   stuck is unhealthy. One whose gateway is away is not, its loop goes on.
   One whose database of the state on a server is away is, since the loop
   can write no progress while it waits for it.

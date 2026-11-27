@@ -25,6 +25,7 @@ from ..errors import (
     MailboxAgentError,
     ServiceVersionError,
     StateFileError,
+    UnavailableError,
 )
 from ..evaluation.gold import GoldItem, load_gold
 from ..evaluation.report import build, render, write
@@ -44,6 +45,8 @@ from .session import (
     mailbox_for,
     now,
     session,
+    state_place,
+    state_reader,
     upstreams,
 )
 
@@ -234,6 +237,8 @@ def status(args: argparse.Namespace, settings: Settings) -> int:
     service = _service(settings)
     if service is not None:
         _say(service)
+    on_server = settings.storage == "postgres"
+    shown = _server_state(settings) if on_server else {}
     for cls in discover().values():
         found = readiness(cls, settings)
         if found.ready:
@@ -247,7 +252,9 @@ def status(args: argparse.Namespace, settings: Settings) -> int:
         if found.agent is not None:
             for line in _folders(found.agent, settings):
                 _say(f"  {line}")
-        for line in _state(cls.name, settings):
+        for line in (
+            shown.get(cls.name, []) if on_server else _state(cls.name, settings)
+        ):
             _say(f"  {line}")
         former = former_file(settings.data_dir, cls, settings.instance)
         if former is not None:
@@ -270,17 +277,45 @@ def _state(name: str, settings: Settings) -> list[str]:
         return []
     try:
         with Store.open(path, read_only=True) as store:
-            last = store.progress()
-            counts = _counts(store)
+            lines = _lines(store)
     except (StateFileError, ConfigError) as exc:
         return [f"state file unreadable: {exc.message}"]
-    return [counts, f"last progress: {last.isoformat() if last else 'none'}"]
+    return [f"state: {path.resolve()}", *lines]
+
+
+def _lines(store: Store) -> list[str]:
+    last = store.progress()
+    return [_counts(store), f"last progress: {last.isoformat() if last else 'none'}"]
+
+
+def _server_state(settings: Settings) -> dict[str, list[str]]:
+    """The state on the server the settings name, read once: where it
+    lies, said at once, and its lines under the agent whose profile it
+    holds."""
+    _say(f"state: {state_place('', settings)}")
+    try:
+        reader = state_reader("", settings)
+        if reader is None:
+            _say("  nothing yet: no agent has started on it")
+            return {}
+        with reader as store:
+            profile = store.profile()
+            lines = _lines(store)
+    except (StateFileError, ConfigError, UnavailableError) as exc:
+        _say(f"  unreadable: {exc.message}")
+        return {}
+    if profile is None:
+        return {}
+    return {profile.agent: lines}
 
 
 def paths(args: argparse.Namespace, settings: Settings) -> int:
     env = folders(args.env_file).env_file
     print(f"settings: {env.resolve()} ({'found' if env.is_file() else 'missing'})")
     print(f"data: {settings.data_dir.resolve()}")
+    if settings.storage == "postgres":
+        print(f"state: {state_place('', settings)}")
+        return 0
     for name in discover():
         path = path_for(settings.data_dir, state_name(name, settings.instance))
         print(
@@ -349,14 +384,14 @@ def health(args: argparse.Namespace, settings: Settings) -> int:
     name = agent.name
     if settings.instance:
         name = f"{name}/{settings.instance}"
-    path = path_for(settings.data_dir, state_name(agent.name, settings.instance))
-    if not path.is_file():
-        print(f"{name}: unhealthy, no progress yet")
-        return 1
     try:
-        with Store.open(path, read_only=True) as store:
+        reader = state_reader(agent.name, settings)
+        if reader is None:
+            print(f"{name}: unhealthy, no progress yet")
+            return 1
+        with reader as store:
             found = check(store, settings, now())
-    except (StateFileError, ConfigError) as exc:
+    except (StateFileError, ConfigError, UnavailableError) as exc:
         print(f"{name}: unhealthy, {exc.message}")
         return 1
     print(f"{name}: {'healthy' if found.healthy else 'unhealthy'}, {found.reason}")

@@ -137,9 +137,9 @@ changed until the evaluation was run again.
 | `eval --agent <name> --gold <file> [--recognizer R] [--reports DIR]` | [evaluation](evaluation.md), with `--recognizer` one part of the agent scored alone |
 | `check --agent <name> INSTANCE=FILE...` | reads the configuration of several instances together and names each circle of lists that set each other off, exit code 1 when there is one, else 0 |
 | `health --agent <name>` | exit 0 while the loop makes progress, [operation](operation.md) |
-| `status` | the version of the mailbox service and whether it matches the agents', then for each agent whether it is ready, which setting it misses, the folders that matter to it and a folder it expects that is missing or there in another case only, in each account `ACCOUNTS` names or else in each account the user is granted, its counts and its last progress |
+| `status` | the version of the mailbox service and whether it matches the agents', then for each agent whether it is ready, which setting it misses, the folders that matter to it and a folder it expects that is missing or there in another case only, in each account `ACCOUNTS` names or else in each account the user is granted, where its state lies, its counts and its last progress. With `STORAGE=postgres` it reads the database once, says where it lies first, and shows the counts under the agent whose profile it holds |
 | `cockpit` | the read-only pages of what every agent did, until SIGINT or SIGTERM, only with its secret ([cockpit](cockpit.md)) |
-| `paths` | the settings file, the data folder and each state file, and a state file at the place before ([configuration](configuration.md#where-the-settings-and-the-state-files-are)) |
+| `paths` | the settings file, the data folder and each state file, and a state file at the place before ([configuration](configuration.md#where-the-settings-and-the-state-files-are)). With `STORAGE=postgres` the database of the state in place of the files: its name, host, port and schema, never a password |
 | `storage provision --agent <name> [--apply --admin-url URL --admin-password-file FILE]` | prints what an administrator of the PostgreSQL server runs once for the database of the agent and instance: a role that signs in, without its password, a database it owns, closed to every other role, and once per server the role `agents_read`, without sign-in, with the role `agents_cockpit` as its member. Role and database are those of `DATABASE_URL`, or else `agent_<agent>` and `agent_<agent>_<instance>`, the dashes of the instance as underscores (2026-11-27). A name longer than the 63 characters of PostgreSQL is refused, never shortened. With `--apply` it runs that itself, as the administrator the two options name for this call alone, and sets the password the file `DATABASE_PASSWORD_FILE` holds: the agent then starts on it. A role or a database of the names that exists already stops it |
 | `storage move --agent <name> [--check]` | copies the state file of the agent and instance into the database `DATABASE_URL` names, in the schema of its role, made where it is missing, and compares every table on both sides by its rows and their sum. The database must hold no table yet, and neither side may be in use by a running agent: stop it first. The file stays as it was. `STORAGE=postgres` then starts the agent on the database. With `--check` it only holds every value of the file to its column and writes nothing |
 
@@ -170,6 +170,7 @@ no group that wrote most often, and the senders two groups name alike.
 These counts cover the messages shown. When the state file holds more,
 in `--state` if named, a line before them says how many of how many they
 count and which `--limit` counts all (2026-11-22). It opens the state file
-read-only, so it runs beside the agent.
-`--offline` reads the state file alone, without subject and sender. What
+read-only, or with `STORAGE=postgres` the database of the state, so it
+runs beside the agent. Without a state there it stops with exit code 2.
+`--offline` reads the state alone, without subject and sender. What
 it prints goes to stdout for the person who asked and never to the log.

@@ -209,6 +209,27 @@ class Store(_Messages, _Steps, _Actions, _Items, _Calls, _Profile):
         store.rights = rights
         return store
 
+    @classmethod
+    def read_server(cls, server: server_place.Server) -> Store | None:
+        """The state in the schema of the role of ``server`` for a reader
+        beside the running agent, at the schema of this version. None
+        while it holds nothing: no agent has started on it yet."""
+        name = f"{server.database}/{server.schema_name}"
+        place = server_place.ServerPlace(server, SHAPE)
+        try:
+            with _named(name):
+                place.open(SHAPE.newest, SHAPE.newest)
+                held = place.held_schema()
+                if not held:
+                    place.close()
+                    return None
+                _at_this_schema(held)
+                db = database.Database(SHAPE, place=place)
+        except BaseException:
+            place.close()
+            raise
+        return cls(db, True, None, name)
+
     def close(self) -> None:
         # The lock first: on a server it is let go on the connection.
         if self._lock is not None:

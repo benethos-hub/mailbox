@@ -51,6 +51,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   `MAILBOX_AGENTS_DATABASE_URL` names and compares every table on both
   sides. The file stays as it was. With `--check` it only checks that
   every value fits its column.
+- `benethos-mailbox-agents`: `status`, `paths`, `health` and `report`
+  read the state on the server with `MAILBOX_AGENTS_STORAGE=postgres`
+  and say where it lies: the database, its host, port and schema, never
+  a password. `status` names the state file of each agent as well.
 - `benethos-mailbox-agents`: the state file stands on the storage of
   `benethos-mailbox-common`, as the database of the service does. A
   state file is brought to schema 5 when its agent starts, with a copy

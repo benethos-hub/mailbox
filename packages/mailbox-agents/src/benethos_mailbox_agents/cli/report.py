@@ -13,11 +13,12 @@ from benethos_mailbox_common.mail import addresses
 from benethos_mailbox_common.values import text as text_values
 
 from ..contract import Action, Agent, Shown, ShownAction
+from ..errors import ConfigError
 from ..records import Decision, MailMessage
 from ..runtime.review import Entry, collect
 from ..settings import Settings
-from ..store import ActionRow, Store, path_for
-from .session import mailbox_for
+from ..store import ActionRow
+from .session import mailbox_for, state_place, state_reader
 
 __all__ = ["render", "report", "summary"]
 
@@ -111,9 +112,15 @@ def summary(agent: Agent, entries: list[Entry], total: int | None = None) -> lis
 async def report(
     agent: Agent, settings: Settings, *, limit: int, state: str | None, offline: bool
 ) -> list[str]:
-    """The report of ``agent``, read beside the running agent."""
-    path = path_for(settings.data_dir, agent.state_name)
-    with Store.open(path, read_only=True) as store:
+    """The report of ``agent``, read beside the running agent, from its
+    state file or its database on a server, which must hold its state."""
+    reader = state_reader(agent.name, settings)
+    if reader is None:
+        place = state_place(agent.name, settings)
+        if settings.storage == "postgres":
+            raise ConfigError(f"no state in {place} yet: start the agent once")
+        raise ConfigError(f"no state file at {place}: start the agent once")
+    with reader as store:
         counts = store.counts()
         total = counts.get(state, 0) if state else sum(counts.values())
         if offline:
