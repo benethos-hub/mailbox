@@ -316,6 +316,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   first and counts the draft as made.
 - `benethos-mailbox-agents`: whether a forward is drafted already is
   looked up in every page of the drafts, not in the first alone.
+- `benethos-mailbox-agents`: `filing` files mail under the owner's
+  folder with a `below` of two names or more, such as `Archive/2026`.
+  Before, the folder in between was refused and the mail stayed where
+  it was.
 - `restore` and `backup verify` refuse a backup whose manifest holds a
   field of the wrong type, such as the schema as a text, with a message
   instead of a traceback.

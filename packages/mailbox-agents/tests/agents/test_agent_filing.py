@@ -150,6 +150,23 @@ async def test_below_the_folder_of_the_owner_it_lies_in(tmp_path: Path) -> None:
         assert _folder_of(world, "m1") == ["Invoices/Telco/Invoices"]
 
 
+async def test_a_below_of_two_names_is_made_under_the_owner_s_folder(
+    tmp_path: Path,
+) -> None:
+    rules = {"rules": [{"keywords": [INVOICE], "below": "Archive/2026"}]}
+    async with wired(tmp_path) as world:
+        world.service.add(
+            wire_message("m1", folder_ids=["inv-telco"], keywords=[INVOICE]),
+            change=None,
+        )
+
+        assert await run(world, "m1", agent(tmp_path, rules=rules)) == "done"
+
+        assert [f["name"] for f in world.service.made()] == ["Archive", "2026"]
+        assert _folder_of(world, "m1") == ["Invoices/Telco/Archive/2026"]
+        assert "agent-filed" in mail(world, "m1")["keywords"]
+
+
 @pytest.mark.parametrize(
     ("folder", "keywords"),
     [

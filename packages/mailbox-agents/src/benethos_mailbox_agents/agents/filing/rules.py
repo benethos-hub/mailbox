@@ -175,8 +175,13 @@ class Rules(BaseModel):
         return frozenset(found)
 
     def belows(self) -> frozenset[str]:
-        """Every folder a below names."""
-        return frozenset(rule.below for rule in self.rules if rule.below)
+        """Every folder a below names, with those above it, relative to
+        the folder it is made in."""
+        found: set[str] = set()
+        for rule in self.rules:
+            if rule.below:
+                found.update(from_top(rule.below))
+        return frozenset(found)
 
 
 def load_rules(path: Path) -> Rules:
