@@ -101,7 +101,7 @@ def newer(path: Path) -> Path:
     """A state file of a schema this program does not know."""
     filled(path)
     with closing(sqlite3.connect(path)) as raw, raw:
-        raw.execute("PRAGMA user_version = 99")
+        raw.execute("UPDATE meta SET value = '99' WHERE key = 'schema_version'")
     return path
 
 

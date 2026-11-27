@@ -49,8 +49,8 @@ def test_every_file_is_a_row_and_none_is_an_error(tmp_path: Path) -> None:
     )
     assert ("done", 1) in {(c.name, c.count) for c in counting.counts}
     assert [(c.name, c.count) for c in counting.labels] == [("invoice", 1)]
-    assert rows["inquiries"].facts == ()
-    assert rows["inquiries"].state == "stopped"
+    assert rows["inquiries"].state == "unreadable"
+    assert "start the agent once" in (rows["inquiries"].problem or "")
     assert rows["broken"].state == "unreadable"
     assert "broken.db" in (rows["broken"].problem or "")
     assert str(tmp_path) not in (rows["broken"].problem or "")

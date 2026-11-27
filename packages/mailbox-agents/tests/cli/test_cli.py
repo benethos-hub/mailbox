@@ -168,7 +168,7 @@ def test_a_state_file_of_a_newer_schema_is_named_and_unhealthy(
     assert main(["run", "--agent", "counting"]) == 0
     capsys.readouterr()
     with sqlite3.connect(DATA_DIR / "counting.db") as db:
-        db.execute("PRAGMA user_version = 99")
+        db.execute("UPDATE meta SET value = '99' WHERE key = 'schema_version'")
     db.close()
 
     assert main(["status"]) == 0

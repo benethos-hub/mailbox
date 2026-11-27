@@ -63,14 +63,16 @@ each agent.
   `runtime/`, or in `contract/` and `records/` where an agent needs it.
 - **A prompt has a version.** Changing a prompt changes its version, and
   the step runner treats it as new work.
-- **A migration of the state file is never changed once released.** A
-  change of the schema is a new migration: a class `VNNNN<Subject>` of
-  `Migration` in a module `vNNNN_<subject>.py` in
-  `store/migrations/versions/` with the next number, added to
-  `MIGRATIONS` in `store/migrations/__init__.py`. Its docstring says what
-  it does and why. Each statement stands alone, a step in Python is the
-  method `before`. A release freezes its new migrations: the fingerprint
-  of each goes into `RELEASED` in `tests/store/test_store.py`.
+- **A step of the state file is never changed once released.** A change
+  of the schema is a new revision: a class `RNNNN<Subject>` of the base
+  `Revision` (`store/revisions/revision.py`) in a module
+  `rNNNN_<subject>.py` in `store/revisions/versions/` with the next
+  number, `SCHEMA_VERSION` in `store/revisions/__init__.py` its number,
+  and `store/schema.py` changed with it. Its docstring says what it does
+  and why. It runs on SQLite and on PostgreSQL, and only forward. The
+  old steps up to schema 5 in `store/migrations/` are closed. A release
+  freezes what it brought: the fingerprint of each old step goes into
+  `RELEASED` in `tests/store/test_store_steps.py`.
 - **The concept moves with the code.** `docs/mailbox-agents/CONCEPT.md`
   is the overview, and `docs/mailbox-agents/concept/` holds one file per
   topic and one per agent. A change that departs from them changes them

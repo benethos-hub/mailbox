@@ -7,8 +7,13 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
+import sqlalchemy as sa
+
 from ..records import MessageRef
 from .rows import _Rows, _text
+from .schema import actions
+
+_a = actions.c
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,69 +42,74 @@ class _Actions(_Rows):
         now: datetime,
     ) -> int:
         """Record an action. Answers its id."""
-        return self._insert(
-            "INSERT INTO actions (account_id, message_id, action, argument, before, "
-            "stage, executed, at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            ref.account_id,
-            ref.message_id,
-            action,
-            argument,
-            json.dumps(before, sort_keys=True, ensure_ascii=False),
-            stage,
-            int(executed),
-            _text(now),
+        statement = (
+            sa.insert(actions)
+            .values(
+                account_id=ref.account_id,
+                message_id=ref.message_id,
+                action=action,
+                argument=argument,
+                before=json.dumps(before, sort_keys=True, ensure_ascii=False),
+                stage=stage,
+                executed=int(executed),
+                at=_text(now),
+            )
+            .returning(_a.id)
         )
+        with self._conn() as conn:
+            return int(conn.execute(statement).scalar_one())
 
     def mark_action_executed(self, action_id: int) -> None:
         """Note that the action recorded as ``action_id`` was taken."""
-        self._write("UPDATE actions SET executed = 1 WHERE id = ?", action_id)
+        with self._conn() as conn:
+            conn.execute(
+                sa.update(actions).where(_a.id == action_id).values(executed=1)
+            )
 
     def mark_taken(self, ref: MessageRef, action: str) -> None:
         """Note that the actions ``action`` of a message, recorded and not
         taken, were taken after all: their answer did not come."""
-        self._write(
-            "UPDATE actions SET executed = 1 WHERE account_id = ? "
-            "AND message_id = ? AND action = ? AND executed = 0",
-            ref.account_id,
-            ref.message_id,
-            action,
-        )
+        with self._conn() as conn:
+            conn.execute(
+                sa.update(actions)
+                .where(*_of(ref), _a.action == action, _a.executed == 0)
+                .values(executed=1)
+            )
 
     def drop_action(self, action_id: int) -> None:
         """Remove an action recorded before it was taken that the mailbox
         service then refused."""
-        self._write("DELETE FROM actions WHERE id = ?", action_id)
+        with self._conn() as conn:
+            conn.execute(sa.delete(actions).where(_a.id == action_id))
 
     def executed_since(self, action: str, since: datetime) -> int:
         """How many actions ``action`` were carried out from ``since`` on."""
-        row = self._one(
-            "SELECT COUNT(*) FROM actions WHERE action = ? AND executed = 1 "
-            "AND at >= ?",
-            action,
-            _text(since),
+        query = sa.select(sa.func.count()).where(
+            _a.action == action, _a.executed == 1, _a.at >= _text(since)
         )
-        return int(row[0])
+        with self._conn() as conn:
+            return int(conn.execute(query).scalar_one())
 
     def actions(self, ref: MessageRef | None = None) -> list[ActionRow]:
         """The actions of a message, or of all, in the order they ran."""
-        rows = (
-            self._all(
-                _ACTION_SQL + " WHERE account_id = ? AND message_id = ? ORDER BY id",
-                ref.account_id,
-                ref.message_id,
-            )
-            if ref
-            else self._all(_ACTION_SQL + " ORDER BY id")
-        )
-        return [_action(row) for row in rows]
+        query = sa.select(
+            _a.account_id,
+            _a.message_id,
+            _a.action,
+            _a.argument,
+            _a.before,
+            _a.stage,
+            _a.executed,
+            _a.at,
+        ).order_by(_a.id)
+        if ref:
+            query = query.where(*_of(ref))
+        with self._conn() as conn:
+            return [_action(row) for row in conn.execute(query)]
 
 
-# The columns each kind of row is read with, in the order of its reader
-# below.
-_ACTION_SQL = (
-    "SELECT account_id, message_id, action, argument, before, stage, "
-    "executed, at FROM actions"
-)
+def _of(ref: MessageRef) -> tuple[sa.ColumnElement[bool], ...]:
+    return (_a.account_id == ref.account_id, _a.message_id == ref.message_id)
 
 
 def _action(row: Any) -> ActionRow:

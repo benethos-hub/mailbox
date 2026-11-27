@@ -8,6 +8,9 @@ from contextlib import closing
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
+
+from benethos_mailbox_agents.errors import ConfigError
 from benethos_mailbox_agents.records import Profile
 from benethos_mailbox_agents.store import MIGRATIONS, Store, path_for
 
@@ -48,9 +51,11 @@ def test_a_second_profile_takes_the_place_of_the_first(tmp_path: Path) -> None:
         assert store.profile() == later
 
 
-def test_a_file_older_than_the_profile_reads_as_none(tmp_path: Path) -> None:
-    """A reader does not refuse an older file: one of schema 3, before the
-    table, has no profile, and that is no error."""
+def test_a_file_older_than_the_profile_is_refused_to_a_reader(
+    tmp_path: Path,
+) -> None:
+    """A reader refuses an older file: one of schema 3, before the table,
+    is brought forward when its agent starts."""
     path = path_for(tmp_path, "counting")
     with closing(sqlite3.connect(path)) as raw, raw:
         for number in (1, 2, 3):
@@ -58,6 +63,5 @@ def test_a_file_older_than_the_profile_reads_as_none(tmp_path: Path) -> None:
                 raw.execute(inspect.cleandoc(statement))
         raw.execute("PRAGMA user_version = 3")
 
-    with Store.open(path, read_only=True) as reader:
-        assert reader.version == 3
-        assert reader.profile() is None
+    with pytest.raises(ConfigError, match="start the agent once"):
+        Store.open(path, read_only=True)
