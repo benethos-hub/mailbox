@@ -36,12 +36,16 @@ A forward is drafted with `create_draft`: the addresses, no subject and
 no text of its own, and a `reference` to the message with the action
 `forward` and its form. Whether it is there is looked up on the first
 page of `list_drafts`, a draft to exactly those addresses whose
-`reference` names the message. Assumed until a live check has shown
-it: a user with `mail.read` and `drafts` may make a draft with a
-`reference` **(to verify)**, the service sets the subject `Fwd: ...` and
-carries the attachments of the original when `inline` **(to verify)**,
-and the original stays unchanged until the draft is sent **(to
-verify)**.
+`reference` names the message. Measured 2026-11-27 at Stalwart over
+IMAP with `live/mailbox-agents/forwarding.py`, on the test account of
+the live setup: a user with `mail.read` and `drafts` makes a draft with
+a `reference`, the service sets the subject `Fwd: ...`, the original
+keeps its folders and keywords, and a forward as an `attachment`
+carries the original as `message/rfc822`. A draft keeps the action and
+the original of its `reference`, not its form: read back it names
+`inline` either way, so whether a forward is there is looked up by the
+action and the original alone. That an `inline` forward carries the
+attachments of the original is not measured **(to verify)**.
 An answer from `500` on and a `429` count as the service away: the pass
 ends and the runtime waits. A `501` with the code `not_supported` is
 not: it says what an account cannot do, a keyword on Gmail or POP3, a
