@@ -9,7 +9,7 @@ does not fit stops the move. The message names the table, the column and
 how many, never a value.
 
 The target must be empty: a file that is not there yet, or a schema
-without tables. Both sides are locked as a running service locks them,
+without tables. Both sides are locked as a running program locks them,
 so neither runs meanwhile. A mark in ``meta`` says a move is writing, and
 a database with it is not opened. The tables are copied from a view of
 the source at one moment, in the order of their references, then each is
@@ -25,20 +25,14 @@ from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
-from ..common.clock import iso, utc_now
-from ..errors import SchemaNotEmptyError, StorageInUseError
+from . import sqlite_file
+from .clock import iso, utc_now
+from .errors import SchemaNotEmptyError, StorageInUseError
 from .export import row_line
-from .storage import (
-    SCHEMA_VERSION,
-    Claim,
-    Records,
-    Server,
-    Store,
-    claimed,
-    file_claimed,
-    file_store,
-    inspect_file,
-)
+from .server_place import Server
+from .shape import Shape
+from .stored import Records, Store
+from .stores import Claim, claimed, file_claimed, file_store
 
 _FITS: dict[str, type] = {"text": str, "number": int, "bytes": bytes}
 
@@ -84,7 +78,7 @@ def _fits(value: object, kind: type) -> bool:
     return not (isinstance(value, str) and "\x00" in value)
 
 
-def refused(found: list[Misfit]) -> MoveError:
+def misfit_error(found: list[Misfit]) -> MoveError:
     """The error that stops a move for ``found``, one line per column."""
     lines = [f"  {f.table}.{f.column}: {f.count}" for f in found]
     return MoveError(
@@ -107,30 +101,31 @@ class _Sum:
     sha256: str
 
 
-def check_move(source: Path | Server) -> Moved:
-    """Hold every value of ``source`` to its column, writing nothing.
-    MoveError names what does not fit."""
-    with _source(source) as db, db.view() as records:
+def check_move(shape: Shape, source: Path | Server) -> Moved:
+    """Hold every value of the database of ``shape`` at ``source`` to its
+    column, writing nothing. MoveError names what does not fit."""
+    with _move_source(shape, source) as db, db.view() as records:
         found = misfits(records)
         if found:
-            raise refused(found)
+            raise misfit_error(found)
         sums = _sums(records)
     return _moved(sums)
 
 
-def move_records(source: Path | Server, target: Path | Server) -> Moved:
-    """Every record of ``source`` into ``target``, which holds none yet,
-    checked first and compared after. MoveError when it cannot be made or
-    did not hold: then the target keeps the mark and is not opened."""
+def move_records(shape: Shape, source: Path | Server, target: Path | Server) -> Moved:
+    """Every record of the database of ``shape`` at ``source`` into
+    ``target``, which holds none yet, checked first and compared after.
+    MoveError when it cannot be made or did not hold: then the target
+    keeps the mark and is not opened."""
     if isinstance(target, Path):
-        _not_there(target)
+        _target_free(target)
     with ExitStack() as held:
-        db = held.enter_context(_source(source))
+        db = held.enter_context(_move_source(shape, source))
         records = held.enter_context(db.view())
         found = misfits(records)
         if found:
-            raise refused(found)
-        made = held.enter_context(_target(target))
+            raise misfit_error(found)
+        made = held.enter_context(_target_of_move(shape, target))
         made.mark_move(iso(utc_now()))
         for table in records.tables():
             made.fill(table.name, table.columns, records.rows(table.name))
@@ -148,46 +143,46 @@ def move_records(source: Path | Server, target: Path | Server) -> Moved:
 
 
 @contextmanager
-def _source(side: Path | Server) -> Iterator[Store]:
+def _move_source(shape: Shape, side: Path | Server) -> Iterator[Store]:
     """The database at ``side``, at this version's schema, locked."""
     if isinstance(side, Path):
         if not side.exists():
             raise MoveError(f"there is no database at {side}")
         try:
-            _current(inspect_file(side))
+            _at_this_version(shape, sqlite_file.inspect_file(side, shape.noun))
         except ValueError as exc:
             raise MoveError(f"the database at {side} is unsound: {exc}") from None
-        with _file_locked(side):
-            db = file_store(side, keep_copy=False)
+        with _file_locked(shape, side):
+            db = file_store(shape, side, keep_copy=False)
             try:
                 yield db
             finally:
                 db.close()
         return
-    with _server(side) as claim:
+    with _claimed_server(shape, side) as claim:
         if not claim.tables():
             raise MoveError(f"the schema {side.schema_name} holds no database")
-        _current(claim.held_schema())
+        _at_this_version(shape, claim.held_schema())
         yield claim.store()
 
 
 @contextmanager
-def _target(side: Path | Server) -> Iterator[Store]:
+def _target_of_move(shape: Shape, side: Path | Server) -> Iterator[Store]:
     """A new database at ``side``, empty, locked."""
     if isinstance(side, Path):
-        _not_there(side)
-        with _file_locked(side):
-            db = file_store(side, keep_copy=False)
+        _target_free(side)
+        with _file_locked(shape, side):
+            db = file_store(shape, side, keep_copy=False)
             try:
                 yield db
             finally:
                 db.close()
         return
-    with _server(side, empty="a move") as claim:
+    with _claimed_server(shape, side, empty="a move") as claim:
         yield claim.store()
 
 
-def _not_there(path: Path) -> None:
+def _target_free(path: Path) -> None:
     if path.exists():
         raise MoveError(
             f"{path} exists: a move goes into a new database only."
@@ -195,47 +190,50 @@ def _not_there(path: Path) -> None:
         )
 
 
-def _current(schema: int) -> None:
-    if schema < SCHEMA_VERSION:
+def _at_this_version(shape: Shape, schema: int) -> None:
+    newest, noun = shape.newest, shape.noun
+    if schema < newest:
         raise MoveError(
-            f"the database has schema {schema}, this version {SCHEMA_VERSION}:"
-            " start the service on it once, then move"
+            f"the database has schema {schema}, this version {newest}:"
+            f" start the {noun} on it once, then move"
         )
-    if schema > SCHEMA_VERSION:
+    if schema > newest:
         raise MoveError(
             f"the database has schema {schema}, this version supports up to"
-            f" {SCHEMA_VERSION}: update the service first"
+            f" {newest}: update the {noun} first"
         )
 
 
 @contextmanager
-def _file_locked(path: Path) -> Iterator[None]:
-    """The lock a running service holds beside its file."""
+def _file_locked(shape: Shape, path: Path) -> Iterator[None]:
+    """The lock a running program holds beside its file."""
     with ExitStack() as held:
         try:
-            held.enter_context(file_claimed(path))
+            held.enter_context(file_claimed(path, shape.errors, shape.noun))
         except StorageInUseError:
-            raise _running() from None
+            raise _move_running(shape) from None
         yield
 
 
 @contextmanager
-def _server(side: Server, *, empty: str | None = None) -> Iterator[Claim]:
+def _claimed_server(
+    shape: Shape, side: Server, *, empty: str | None = None
+) -> Iterator[Claim]:
     """The schema of ``side``, connected alone, with the lock a running
-    service holds on it, empty when ``empty`` names what goes into it. A
+    program holds on it, empty when ``empty`` names what goes into it. A
     database opened on it closes with it."""
     with ExitStack() as held:
         try:
-            claim = held.enter_context(claimed(side, empty=empty))
+            claim = held.enter_context(claimed(shape, side, empty=empty))
         except StorageInUseError:
-            raise _running() from None
+            raise _move_running(shape) from None
         except SchemaNotEmptyError as exc:
             raise MoveError(str(exc)) from None
         yield claim
 
 
-def _running() -> MoveError:
-    return MoveError("the service is running on this database: stop it first")
+def _move_running(shape: Shape) -> MoveError:
+    return MoveError(f"the {shape.noun} is running on this database: stop it first")
 
 
 def _sums(records: Records) -> dict[str, _Sum]:

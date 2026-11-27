@@ -4,9 +4,9 @@ thirty, and the server answering again ends it."""
 
 from __future__ import annotations
 
-from benethos_mailbox_service.data.storage.sql.outage import Outage
+from benethos_mailbox_common.storage.outage import Outage
 
-from ...clocks import Seconds
+from .clocks import Seconds
 
 
 def test_a_server_that_answers_is_not_away() -> None:
@@ -39,8 +39,7 @@ def test_while_away_the_error_says_the_seconds_left_and_the_cause() -> None:
     error = outage.unavailable()
     assert error.retry_after == 2
     assert error.cause == "OperationalError (08001)"
-    assert error.code == "service_unavailable"
-    assert "08001" not in error.message
+    assert "08001" not in str(error)
 
 
 def test_the_server_back_ends_it_and_says_how_long() -> None:

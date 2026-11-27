@@ -27,11 +27,10 @@ from dataclasses import replace
 from pathlib import Path
 from typing import BinaryIO
 
-from benethos_mailbox_common.storage import files
+from benethos_mailbox_common.storage import export, files
 
 from ...common.clock import iso, utc_now
 from ...errors import MailboxServiceError, SchemaNotEmptyError, StorageInUseError
-from ..export import ExportError, read_export, write_export
 from ..storage import (
     SCHEMA_VERSION,
     Claim,
@@ -110,11 +109,11 @@ def _write_export(
     manifest, a second one over the same records encrypts it into
     ``target``. A second sum that differs removes the backup."""
     summed = _Summed()
-    rows = write_export(records, summed)
+    rows = export.export_records(records, summed)
     manifest = replace(manifest, sha256=summed.hexdigest(), rows=rows)
 
     def written(out: Sealing) -> None:
-        write_export(records, out)
+        export.export_records(records, out)
 
     if _sealed(manifest, master_key, target, written) != manifest.sha256:
         target.unlink(missing_ok=True)
@@ -301,8 +300,8 @@ def _records_into(
     failures as a backup's."""
     plain = Decrypting(file, header, key, source)
     try:
-        rows = read_export(io.BufferedReader(plain, BLOCK), store)
-    except (ExportError, MailboxServiceError) as exc:
+        rows = export.import_records(io.BufferedReader(plain, BLOCK), store, "service")
+    except (export.ExportError, MailboxServiceError) as exc:
         raise BackupError(f"the backup cannot be read back: {exc}") from None
     plain.finish(manifest.sha256)
     if rows != manifest.rows:

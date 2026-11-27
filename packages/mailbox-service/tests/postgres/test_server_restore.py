@@ -11,6 +11,8 @@ from typing import Any
 
 import pytest
 
+from benethos_mailbox_common.storage import database as stored_database
+from benethos_mailbox_common.storage import server_place as stored_place
 from benethos_mailbox_service.data.backup import (
     BackupError,
     Manifest,
@@ -116,22 +118,22 @@ def test_a_restore_while_a_service_runs_is_refused(
 def test_a_restore_that_dies_half_way_is_not_opened(
     source: Database, backup: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    fill = Database.fill
+    fill = stored_database.Database.fill
     filled: list[str] = []
 
-    def dying(self: Database, table: str, *args: Any) -> int:
+    def dying(self: stored_database.Database, table: str, *args: Any) -> int:
         if len(filled) == 4:
             raise SystemExit("killed")
         filled.append(table)
         return fill(self, table, *args)
 
-    monkeypatch.setattr(Database, "fill", dying)
+    monkeypatch.setattr(stored_database.Database, "fill", dying)
     # A process that is killed cleans nothing up.
-    monkeypatch.setattr(ServerPlace, "drop_tables", lambda self: None)
+    monkeypatch.setattr(stored_place.ServerPlace, "drop_tables", lambda self: None)
     with role() as server:
         with pytest.raises(SystemExit):
             restore_on_server(backup, MASTER, server)
-        monkeypatch.setattr(Database, "fill", fill)
+        monkeypatch.setattr(stored_database.Database, "fill", fill)
         with pytest.raises(StorageError, match="a move or restore into this database"):
             Database(place=ServerPlace(server))
     source.close()
@@ -154,10 +156,10 @@ def test_a_failed_restore_names_its_cause(source: Database, backup: Path) -> Non
 def test_a_server_away_at_the_lock_is_no_running_service(
     source: Database, backup: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    def away(place: ServerPlace) -> None:
+    def away(place: stored_place.ServerPlace) -> None:
         raise StorageUnavailableError(1, "AdminShutdown (57P01)")
 
-    monkeypatch.setattr(ServerPlace, "claimed", away)
+    monkeypatch.setattr(stored_place.ServerPlace, "claimed", away)
     with role() as server:
         with pytest.raises(StorageUnavailableError):
             restore_on_server(backup, MASTER, server)

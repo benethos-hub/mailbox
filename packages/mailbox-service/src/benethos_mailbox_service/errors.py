@@ -183,3 +183,15 @@ class OutcomeUnknownError(ProviderUnavailableError):
     """The request went out and the answer did not come: whether the
     provider did what it asked cannot be told. A caller sees the same as
     for a provider away. The outbox does not simply send again."""
+
+
+# What the storage of mailbox-common raises for the service: its own
+# classes, each a subclass of the one of the storage.
+STORAGE_ERRORS = storage_errors.Errors(
+    failed=StorageError,
+    conflict=ConflictError,
+    missing=missing,
+    in_use=StorageInUseError,
+    not_empty=SchemaNotEmptyError,
+    unavailable=StorageUnavailableError,
+)

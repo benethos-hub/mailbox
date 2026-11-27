@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import pytest
 
+from benethos_mailbox_common.storage.server_lock import lock_key
 from benethos_mailbox_service.data.storage import ServerPlace
-from benethos_mailbox_service.data.storage.sql.server_lock import lock_key
 from benethos_mailbox_service.errors import StorageError
 
 from ..postgres_helpers import connect, database, schema, server
@@ -87,7 +87,7 @@ def test_the_lock_is_keyed_by_a_number_the_schema_keeps() -> None:
             with db.serving():
                 kept = _kept(name)
             assert kept is not None
-            assert int(kept) != lock_key(name)
+            assert int(kept) != lock_key("benethos-mailbox-service", name)
             with db.serving():
                 assert _kept(name) == kept
             assert "service_lock" not in {row[0] for row in db.rows("meta")}
@@ -103,7 +103,10 @@ def test_a_lock_keyed_by_the_name_does_not_stop_a_service() -> None:
                 pass
             with connect() as other:
                 # Another session, as any role of the server could.
-                other.execute("SELECT pg_advisory_lock(%s)", (lock_key(name),))
+                other.execute(
+                    "SELECT pg_advisory_lock(%s)",
+                    (lock_key("benethos-mailbox-service", name),),
+                )
                 with db.serving() as held:
                     assert held is True
         finally:

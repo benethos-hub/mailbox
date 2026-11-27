@@ -21,7 +21,7 @@ import json
 from collections.abc import Iterator, Sequence
 from typing import IO, Any, Protocol
 
-from .storage import Records, Store
+from .stored import Records, Store
 
 FORMAT = 1
 
@@ -37,7 +37,7 @@ class ExportError(Exception):
     a value of it."""
 
 
-def write_export(store: Records, out: Sink) -> dict[str, int]:
+def export_records(store: Records, out: Sink) -> dict[str, int]:
     """Every record of ``store`` to ``out``. The rows of each table."""
     counts: dict[str, int] = {}
     _line(out, {"export": FORMAT, "schema": store.schema_version()})
@@ -53,14 +53,15 @@ def write_export(store: Records, out: Sink) -> dict[str, int]:
     return counts
 
 
-def read_export(source: IO[bytes], store: Store) -> dict[str, int]:
+def import_records(source: IO[bytes], store: Store, noun: str) -> dict[str, int]:
     """The export in ``source`` into ``store``, whose tables hold nothing
     yet and whose schema is the export's. The rows of each table.
-    ExportError when the export does not fit or ends early."""
+    ExportError when the export does not fit or ends early, or is no
+    export of this ``noun``, the program."""
     lines = _Lines(source)
     head = lines.next()
     if not isinstance(head, dict) or head.get("export") != FORMAT:
-        raise ExportError("not an export of this service")
+        raise ExportError(f"not an export of this {noun}")
     if head.get("schema") != store.schema_version():
         raise ExportError(
             f"the export has schema {head.get('schema')},"
@@ -129,12 +130,12 @@ class _Rows:
             if not isinstance(line, list) or len(line) != self._width:
                 raise ExportError(f"a row of the table {self._table} does not fit")
             self.count += 1
-            yield [_stored(v, self._table) for v in line]
+            yield [_value_read(v, self._table) for v in line]
 
 
 def row_line(row: Sequence[Any]) -> bytes:
     """A row as its line of the export."""
-    return _encoded([_value(v) for v in row])
+    return _encoded([_value_written(v) for v in row])
 
 
 def _line(out: Sink, value: object) -> None:
@@ -145,13 +146,13 @@ def _encoded(value: object) -> bytes:
     return json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode() + b"\n"
 
 
-def _value(value: object) -> object:
+def _value_written(value: object) -> object:
     if isinstance(value, bytes):
         return {"b": base64.b64encode(value).decode("ascii")}
     return value
 
 
-def _stored(value: Any, table: str) -> Any:
+def _value_read(value: Any, table: str) -> Any:
     if isinstance(value, dict):
         try:
             return base64.b64decode(value["b"], validate=True)

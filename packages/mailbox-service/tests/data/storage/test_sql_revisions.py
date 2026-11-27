@@ -15,9 +15,11 @@ from pathlib import Path
 import pytest
 import sqlalchemy as sa
 
+from benethos_mailbox_common.storage import revision
+from benethos_mailbox_common.storage.file_place import sqlite_engine
+from benethos_mailbox_common.storage.revisions import Revisions
 from benethos_mailbox_service.data.storage import Database
 from benethos_mailbox_service.data.storage.sql import revisions
-from benethos_mailbox_service.data.storage.sql.file_place import sqlite_engine
 from benethos_mailbox_service.data.storage.sqlite.migrations import MIGRATIONS
 from benethos_mailbox_service.errors import StorageError
 
@@ -75,9 +77,9 @@ def test_a_revision_that_fails_leaves_nothing_half_done(
     conn: sa.Connection, versions: Path
 ) -> None:
     with pytest.raises(sa.exc.OperationalError, match="nowhere"):
-        revisions.upgrade(conn, 2, versions=versions)
+        Revisions(versions).upgrade(conn, 2)
     assert not conn.in_transaction()
-    assert revisions.mark(conn) == 1
+    assert Revisions.mark(conn) == 1
     assert "half" not in _tables(conn)
     assert "kept" in _tables(conn)
 
@@ -85,23 +87,23 @@ def test_a_revision_that_fails_leaves_nothing_half_done(
 def test_a_database_is_marked_without_a_step_run(
     conn: sa.Connection, versions: Path
 ) -> None:
-    assert revisions.mark(conn) is None
-    revisions.stamp(conn, 1, versions=versions)
-    assert revisions.mark(conn) == 1
+    assert Revisions.mark(conn) is None
+    Revisions(versions).stamp(conn, 1)
+    assert Revisions.mark(conn) == 1
     assert "kept" not in _tables(conn)
 
 
 def test_the_revisions_go_on_where_the_old_steps_end() -> None:
-    numbers = revisions.numbers()
+    numbers = revisions.REVISIONS.numbers()
     assert numbers[0] == revisions.BASELINE == MIGRATIONS.schema_version
     assert numbers == list(range(numbers[0], numbers[-1] + 1))
     assert numbers[-1] == revisions.SCHEMA_VERSION
 
 
 def test_every_revision_writes_its_number_into_meta(conn: sa.Connection) -> None:
-    for number in revisions.numbers():
-        revisions.upgrade(conn, number)
-        assert revisions.mark(conn) == number
+    for number in revisions.REVISIONS.numbers():
+        revisions.REVISIONS.upgrade(conn, number)
+        assert Revisions.mark(conn) == number
         with conn.begin():
             held = conn.exec_driver_sql(
                 "SELECT value FROM meta WHERE key = 'schema_version'"
@@ -175,7 +177,7 @@ def test_a_released_revision_is_never_changed() -> None:
 
 
 def test_every_revision_is_a_class_named_after_its_number() -> None:
-    for number in revisions.numbers():
+    for number in revisions.REVISIONS.numbers():
         path = _module(number)
         assert re.fullmatch(rf"r{number:04d}_\w+\.py", path.name), path.name
         spec = importlib.util.spec_from_file_location(path.stem, path)
@@ -191,4 +193,4 @@ def test_every_revision_is_a_class_named_after_its_number() -> None:
         ]
         assert step.version == number, path.name
         assert step.__name__.startswith(f"R{number:04d}"), path.name
-        assert module.revision == revisions.name_of(number), path.name
+        assert module.revision == revision.name_of(number), path.name

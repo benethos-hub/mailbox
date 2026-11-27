@@ -1,350 +1,78 @@
-"""The database file and what hangs on ``sqlite3``: the connection and its
-PRAGMAs, the file readable by its owner alone, the files SQLite keeps
-beside it, the file rewritten once to shrink, the schema migrated
-forward on open by the old steps of ``migrations/``, up to schema 26,
-with a copy kept before schema ``COPY_BEFORE``, a snapshot of the file,
-the lock of a running service. A new database is left to the revisions
-the caller runs after. Every failure of sqlite3 leaves as a MailboxServiceError: a
-constraint as ConflictError, anything else as StorageError.
+"""The old steps of the schema of the service's database file, up to
+schema 26, closed: a file of an older schema is brought there by them
+when it opens, with a copy kept before schema ``COPY_BEFORE``. A new
+database is left to the revisions. The file itself, its connection and
+what SQLite keeps beside it are the storage of mailbox-common
+(``sqlite_file``), which runs these steps as the ``file_steps`` of the
+service's shape.
 """
 
 from __future__ import annotations
 
-import os
-import shutil
 import sqlite3
-import stat
-import tempfile
-import threading
-from collections.abc import Iterator
-from contextlib import ExitStack, contextmanager, suppress
 from pathlib import Path
 
-from benethos_mailbox_common.paths import locks
-from benethos_mailbox_common.storage import files, migrated
+from benethos_mailbox_common.storage import migrated, sqlite_file
 
-from ....common.clock import utc_now
-from ....errors import ConflictError, StorageError
+from ....errors import STORAGE_ERRORS
 from .migrations import MIGRATIONS, SCHEMA_VERSION
-
-# The connection of the driver, for the one place under sql/ that holds it.
-Driver = sqlite3.Connection
-
-# What SQLite keeps beside a database: its rollback journal, its write
-# ahead log and the index of the shared memory.
-SIDECARS = ("-journal", "-wal", "-shm")
 
 # Opening a database of an older schema keeps a copy of it first: the
 # step to this schema rebuilds tables (docs/mailbox-service/concept/security.md 7.8).
 COPY_BEFORE = 26
 
-# PRAGMA auto_vacuum: 0 none, 1 full, 2 incremental.
-_INCREMENTAL = 2
 
+class OldSteps:
+    """The steps of a file of the service up to schema 26."""
 
-def open_file(
-    path: Path | None, *, keep_copy: bool, schema: int, newest: int
-) -> tuple[sqlite3.Connection, migrated.Migrated | None]:
-    """The connection to the database at ``path``, readable by its owner
-    alone, in memory without a path, its schema migrated by the old steps
-    to ``schema``, or to their last, schema ``SCHEMA_VERSION``, when
-    ``schema`` lies beyond. A new database for such a schema stays empty.
-    What opening did to the schema, None when nothing. ``keep_copy``: a
-    file before ``COPY_BEFORE`` is copied before it is migrated.
-    ``newest``: the schema of this version, a file beyond it is refused."""
-    if path is not None:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        _owner_only(path)
-    connection = sqlite3.connect(
-        str(path) if path is not None else ":memory:",
-        check_same_thread=False,
-        isolation_level=None,
-    )
-    connection.row_factory = sqlite3.Row
-    connection.execute("PRAGMA foreign_keys = ON")
-    # Freed pages are overwritten, so deleted secrets do not linger.
-    connection.execute("PRAGMA secure_delete = ON")
-    try:
-        rewritten = _shrinkable(connection)
-        migrated = _migrate(connection, path, schema, newest, keep_copy, rewritten)
-    except BaseException:
-        connection.close()
-        raise
-    return connection, migrated
+    last = SCHEMA_VERSION
 
-
-def _shrinkable(connection: sqlite3.Connection) -> bool:
-    """Freed pages are handed back to the file system by ``shrink``,
-    which needs ``auto_vacuum`` in its incremental mode. A new database
-    takes the mode as it is. One made without it is rewritten once,
-    which VACUUM does outside any transaction: then True."""
-    with translated():
-        mode = connection.execute("PRAGMA auto_vacuum").fetchone()[0]
-        if mode == _INCREMENTAL:
-            return False
-        connection.execute("PRAGMA auto_vacuum = INCREMENTAL")
-        has_tables = connection.execute(
-            "SELECT 1 FROM sqlite_master LIMIT 1"
-        ).fetchone()
-        if has_tables is None:
-            return False
-        connection.execute("VACUUM")
-        return True
-
-
-def shrink(connection: sqlite3.Connection) -> None:
-    """Give the pages a deletion freed back to the file system, so the
-    file follows what it holds. Cheap when there is nothing to give
-    back. Not inside a transaction: the caller waits for the next call."""
-    with translated():
-        # The pragma gives one page back per step. ``executescript``
-        # steps until it is done. ``execute`` stops after the first
-        # step on Python 3.11, and nothing to speak of happens.
-        connection.executescript("PRAGMA incremental_vacuum;")
-
-
-@contextmanager
-def _step(connection: sqlite3.Connection) -> Iterator[sqlite3.Connection]:
-    """One transaction of a step of the schema."""
-    with translated():
-        connection.execute("BEGIN IMMEDIATE")
-    try:
-        with translated():
-            yield connection
-            connection.execute("COMMIT")
-    except BaseException:
-        # Undo as far as possible. A failure here would only hide the
-        # one being raised.
-        with suppress(sqlite3.Error):
-            connection.execute("ROLLBACK")
-        raise
-
-
-def _migrate(
-    connection: sqlite3.Connection,
-    path: Path | None,
-    upto: int,
-    newest: int,
-    keep: bool,
-    rewritten: bool,
-) -> migrated.Migrated | None:
-    """``rewritten``: the file was rewritten to shrink from now on,
-    said with the notes of the schema."""
-    if upto >= SCHEMA_VERSION and not _has_meta(connection):
-        # A new database: the revisions make it, from their baseline on.
-        if upto > newest:
-            raise StorageError(f"there is no way from schema 0 to {upto}")
+    def run(
+        self,
+        connection: sqlite3.Connection,
+        path: Path | None,
+        upto: int,
+        newest: int,
+        keep: bool,
+        rewritten: bool,
+    ) -> migrated.Migrated | None:
+        """``rewritten``: the file was rewritten to shrink from now on,
+        said with the notes of the schema."""
+        errors = STORAGE_ERRORS
+        if upto >= SCHEMA_VERSION and not sqlite_file.has_meta(connection, errors):
+            # A new database: the revisions make it, from their baseline on.
+            if upto > newest:
+                raise errors.failed(f"there is no way from schema 0 to {upto}")
+            return None
+        with sqlite_file.in_step(connection, errors) as db:
+            MIGRATIONS.prepare(db)
+        with sqlite_file.translated_sqlite(errors):
+            current = MIGRATIONS.version_of(connection)
+        if current > newest:
+            raise errors.failed(
+                f"database schema {current} is newer than this version supports "
+                f"({newest}): run a newer version of the service"
+            )
+        if not current <= upto <= newest:
+            raise errors.failed(f"there is no way from schema {current} to {upto}")
+        upto = min(upto, SCHEMA_VERSION)
+        kept = None
+        if keep and path is not None and 0 < current < COPY_BEFORE:
+            kept = sqlite_file.keep_copy(connection, path, current, COPY_BEFORE, errors)
+        notes: list[str] = []
+        for step in MIGRATIONS.pending(current)[: max(upto - current, 0)]:
+            with sqlite_file.in_step(connection, errors) as db:
+                notes += MIGRATIONS.apply(db, step)
+        if kept is not None:
+            notes.append(f"a copy of the database at schema {current} is kept: {kept}")
+        if rewritten:
+            notes.append(
+                "the file was rewritten once: from now on it shrinks after deletions"
+            )
+        if current < upto or rewritten:
+            return migrated.Migrated(current, upto, tuple(notes))
         return None
-    with _step(connection) as db:
-        MIGRATIONS.prepare(db)
-    current = schema_version(connection)
-    if current > newest:
-        raise StorageError(
-            f"database schema {current} is newer than this version supports "
-            f"({newest}): run a newer version of the service"
-        )
-    if not current <= upto <= newest:
-        raise StorageError(f"there is no way from schema {current} to {upto}")
-    upto = min(upto, SCHEMA_VERSION)
-    kept = None
-    if keep and path is not None and 0 < current < COPY_BEFORE:
-        kept = keep_copy(connection, path, current)
-    notes: list[str] = []
-    for migration in MIGRATIONS.pending(current)[: max(upto - current, 0)]:
-        with _step(connection) as db:
-            notes += MIGRATIONS.apply(db, migration)
-    if kept is not None:
-        notes.append(f"a copy of the database at schema {current} is kept: {kept}")
-    if rewritten:
-        notes.append(
-            "the file was rewritten once: from now on it shrinks after deletions"
-        )
-    if current < upto or rewritten:
-        return migrated.Migrated(current, upto, tuple(notes))
-    return None
 
 
-def _has_meta(connection: sqlite3.Connection) -> bool:
-    with translated():
-        found = connection.execute(
-            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'meta'"
-        ).fetchone()
-    return found is not None
-
-
-def keep_copy(
-    connection: sqlite3.Connection,
-    path: Path,
-    current: int,
-    before: int = COPY_BEFORE,
-) -> str:
-    """A copy of the database at schema ``current`` beside ``path``,
-    readable by its owner alone, before the step to schema ``before``
-    changes it. It is never removed by the service. Answers its name.
-    StorageError when it cannot be written, and then nothing is
-    migrated."""
-    stamp = utc_now().strftime("%Y%m%dT%H%M%SZ")
-    kept = files.free_path(
-        path.with_name(f"{path.name}.before-schema-{before}-{stamp}")
-    )
-    try:
-        files.create_private(kept)
-    except OSError as exc:
-        raise _not_copied(current, before, exc) from None
-    try:
-        with translated():
-            _copy(connection, kept)
-    except (OSError, StorageError) as exc:
-        remove_database_file(kept)
-        raise _not_copied(current, before, exc) from None
-    return kept.name
-
-
-def _not_copied(current: int, before: int, exc: Exception) -> StorageError:
-    return StorageError(
-        f"the database at schema {current} was not migrated: its copy"
-        f" before schema {before} could not be written: {exc}"
-    )
-
-
-def _copy(connection: sqlite3.Connection, target: Path) -> None:
-    copy = sqlite3.connect(str(target))
-    try:
-        connection.backup(copy)
-    finally:
-        copy.close()
-
-
-def schema_version(connection: sqlite3.Connection) -> int:
-    with translated():
-        return MIGRATIONS.version_of(connection)
-
-
-@contextmanager
-def snapshot(
-    connection: sqlite3.Connection, path: Path | None, lock: threading.RLock
-) -> Iterator[Path]:
-    """A consistent copy of the whole database at ``path``, taken while it
-    is in use, as a file beside it, readable by its owner alone. It is
-    gone when the block ends. A copy left by a crash is replaced. Another
-    process making one at the same time is refused. ``lock`` keeps the
-    connection to the copy for the time it takes."""
-    if path is None:
-        folder = Path(tempfile.mkdtemp())
-        target = folder / "snapshot.db"
-    else:
-        folder = None
-        target = path.with_name(path.name + ".snapshot")
-    try:
-        with locks.exclusive_lock(target.with_name(target.name + ".lock")):
-            remove_database_file(target)
-            files.create_private(target)
-            try:
-                with lock, translated():
-                    _copy(connection, target)
-                yield target
-            finally:
-                remove_database_file(target)
-    except locks.LockedError:
-        raise StorageError("another backup of this database is running") from None
-    finally:
-        if folder is not None:
-            shutil.rmtree(folder, ignore_errors=True)
-
-
-@contextmanager
-def serving(path: Path | None) -> Iterator[bool]:
-    """Mark the database at ``path`` as used by a running service, for as
-    long as the block runs, so that a restore refuses to replace it.
-    Yields False when another service marked it already."""
-    with ExitStack() as held:
-        if path is not None:
-            try:
-                held.enter_context(locks.exclusive_lock(service_lock(path)))
-            except locks.LockedError:
-                yield False
-                return
-        yield True
-
-
-@contextmanager
-def translated() -> Iterator[None]:
-    """sqlite3's failures as this project's errors. A violated constraint
-    is a conflict with what is stored, the rest is the storage failing."""
-    try:
-        yield
-    except sqlite3.IntegrityError as exc:
-        raise ConflictError(f"conflicts with a stored record: {exc}") from None
-    except sqlite3.Error as exc:
-        raise StorageError(f"the database failed: {exc}") from None
-
-
-def remove_database_file(path: Path) -> None:
-    """Remove a database file and its ``-journal``, where they exist."""
-    for leftover in (path, path.with_name(path.name + SIDECARS[0])):
-        leftover.unlink(missing_ok=True)
-
-
-def move_sidecars(target: Path, kept: Path) -> None:
-    """Move what SQLite left beside the database at ``target`` to beside
-    ``kept``, a copy of it: a journal left by a crash belongs to the old
-    file, and beside a new one SQLite would roll it into that."""
-    for suffix in SIDECARS:
-        sidecar = target.with_name(target.name + suffix)
-        if sidecar.exists():
-            sidecar.replace(kept.with_name(kept.name + suffix))
-
-
-def service_lock(path: Path) -> Path:
-    """The lock file a running service holds beside its database."""
-    return path.with_name(path.name + ".lock")
-
-
-def _owner_only(path: Path) -> None:
-    """The file readable by its owner alone (0600): it holds the encrypted
-    credentials and the token hashes. Created so when missing. An existing
-    one that others may read is narrowed. SQLite gives its journal files
-    the mode of the database. Windows has no such modes."""
-    if not path.exists():
-        files.create_private(path)
-    if os.name == "posix" and stat.S_IMODE(path.stat().st_mode) & 0o077:
-        path.chmod(0o600)
-
-
-def inspect_file(path: Path) -> int:
-    """Check the integrity of the database file at ``path``, opened to
-    read only, and return its schema version."""
-    try:
-        copy = sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True)
-    except sqlite3.Error as exc:
-        raise ValueError(f"not a database: {exc}") from None
-    return _inspected(copy)
-
-
-def inspect_bytes(data: bytes) -> int:
-    """As ``inspect_file``, for the bytes of a database file held in
-    memory: nothing of it is written to a disk."""
-    copy = sqlite3.connect(":memory:")
-    try:
-        copy.deserialize(data)
-    except sqlite3.Error as exc:
-        copy.close()
-        raise ValueError(f"not a database: {exc}") from None
-    return _inspected(copy)
-
-
-def _inspected(copy: sqlite3.Connection) -> int:
-    """The integrity of the database ``copy`` checked, its schema version,
-    and ``copy`` closed."""
-    try:
-        result = copy.execute("PRAGMA integrity_check").fetchone()[0]
-        if result != "ok":
-            raise ValueError(f"database integrity check failed: {result}")
-        version = MIGRATIONS.version_of(copy)
-    except sqlite3.DatabaseError as exc:
-        raise ValueError(f"not a database: {exc}") from None
-    finally:
-        copy.close()
-    if not version:
-        raise ValueError("not a database of this service")
-    return version
+# The steps of every file of the service.
+OLD_STEPS = OldSteps()

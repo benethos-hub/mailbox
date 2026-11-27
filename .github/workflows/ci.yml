@@ -229,7 +229,7 @@ jobs:
       editable: |
         packages/mailbox-client
         packages/mailbox-agents
-        packages/mailbox-common[paths,settings]
+        packages/mailbox-common[paths,settings,storage]
       requirements: |
         pytest>=9.1.1
         pytest-asyncio>=1.4

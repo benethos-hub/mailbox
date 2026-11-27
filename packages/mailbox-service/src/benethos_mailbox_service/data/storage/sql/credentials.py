@@ -7,10 +7,10 @@ from typing import TYPE_CHECKING
 import sqlalchemy as sa
 
 from benethos_mailbox_common.storage import dialect
+from benethos_mailbox_common.storage import rows as table_rows
 
 from ....common.clock import iso, parse_iso, utc_now
 from ..credentials import EncryptedCredential, WrappedKey
-from .rows import changed
 from .schema import credentials, keys, meta
 
 if TYPE_CHECKING:
@@ -101,7 +101,9 @@ class SqlCredentialRepository:
             return [_credential(row) for row in rows]
 
     def forget_account(self, account_id: str) -> None:
-        changed(self._db, sa.delete(credentials).where(_c.account_id == account_id))
+        table_rows.rows_changed(
+            self._db, sa.delete(credentials).where(_c.account_id == account_id)
+        )
 
 
 def _credential(row: sa.RowMapping) -> EncryptedCredential:

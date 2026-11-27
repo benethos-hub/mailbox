@@ -317,37 +317,29 @@ packages/mailbox-service/
                         #   memory: store.py what it holds, where
                         #   tests look, messages, folders, drafts
       storage/          # own records, one module per subject, table.py
-                        #   for the in-memory ones, sqlite/ the file of
-                        #   the database, its connection, the steps of
-                        #   its schema and the files SQLite keeps beside
-                        #   it (file.py), sqlite/migrations/ the base, the registry,
-                        #   versions/ one class per schema version,
+                        #   for the in-memory ones. The database itself
+                        #   is the group storage of mailbox-common,
+                        #   handed the shape of the service.
+                        #   sqlite/ the old steps of the schema of the
+                        #   file up to 26 (file.py), sqlite/migrations/
+                        #   the base, the registry, versions/ one class
+                        #   per schema version,
                         #   sql/ what is spoken through SQLAlchemy
-                        #   Core, its types from storage of
-                        #   mailbox-common, the tables of
-                        #   schema 26 (schema.py), the database the
-                        #   repositories use, an engine on the one
-                        #   connection (database.py), where a database
-                        #   lies (place.py), the file of SQLite as one
-                        #   place (file_place.py), a schema on a
-                        #   PostgreSQL server as another
-                        #   (server_place.py), how it is reached
-                        #   (server_engine.py), a server that is away
-                        #   and when to try again (outage.py), the
-                        #   keys of the lock
-                        #   of a running service there
-                        #   (server_lock.py), the tables for an
-                        #   export and a view of one moment
-                        #   (tables.py), the rows of a table keyed by
-                        #   id (rows.py) and the repositories, one
+                        #   Core: the tables of schema 26 (schema.py),
+                        #   the shape of the service and the database
+                        #   and the place on a server with it
+                        #   (database.py), what of the export is the
+                        #   service's own, the counter of the feed
+                        #   (tables.py), and the repositories, one
                         #   module per subject,
                         #   sql/revisions/ the steps of the schema from
-                        #   schema 26 on, as revisions of Alembic, run
-                        #   in the process. repositories.py opens one
-                        #   of them
+                        #   schema 26 on, as revisions of Alembic, with
+                        #   their base (revision.py). repositories.py
+                        #   opens one of them
                         #   stores.py the stores a backup, a restore
-                        #   and a move open on their own, and the
-                        #   locks they take
+                        #   and a move open on their own, the locks
+                        #   they take, and the move between SQLite and
+                        #   PostgreSQL, with the shape of the service
       secrets/          # envelope encryption, key providers, password
                         #   hashes, the vault of the credentials, TOTP,
                         #   passkeys (fido2)
@@ -356,11 +348,6 @@ packages/mailbox-service/
                         #   its magic and manifest (manifest.py),
                         #   writing, reading, checking and restoring
                         #   them (backups.py)
-      export.py         # the records of a store as lines of JSON and
-                        #   back, the logical export
-      move.py           # the move of the records between SQLite and
-                        #   PostgreSQL: every value held to its column
-                        #   first, then copied, compared and marked
       logbook.py        # the newest log lines in memory, for the log page
       discovery/        # autodiscovery sources and their helpers:
                         #   base.py the protocol of a source, the

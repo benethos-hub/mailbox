@@ -7,9 +7,10 @@ from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
 
+from benethos_mailbox_common.storage import rows as table_rows
+
 from ....common.clock import iso, parse_iso
 from ...models import ActivityFilter, ActivityRecord, Before
-from .rows import changed
 from .schema import activity
 
 if TYPE_CHECKING:
@@ -23,7 +24,7 @@ class SqlAuditRepository:
         self._db = db
 
     def add(self, record: ActivityRecord) -> None:
-        changed(
+        table_rows.rows_changed(
             self._db,
             sa.insert(activity).values(
                 id=record.id,

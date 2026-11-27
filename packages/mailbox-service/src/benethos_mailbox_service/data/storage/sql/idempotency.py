@@ -8,10 +8,10 @@ from typing import TYPE_CHECKING
 import sqlalchemy as sa
 
 from benethos_mailbox_common.storage import dialect
+from benethos_mailbox_common.storage import rows as table_rows
 
 from ....common.clock import iso, parse_iso
 from ..idempotency import StoredResult
-from .rows import changed
 from .schema import idempotency
 
 if TYPE_CHECKING:
@@ -69,4 +69,6 @@ class SqlIdempotencyRepository:
 
     def forget_account(self, account_id: str) -> None:
         # ON DELETE CASCADE does this as well. Said here, so both stores agree.
-        changed(self._db, sa.delete(idempotency).where(_i.account_id == account_id))
+        table_rows.rows_changed(
+            self._db, sa.delete(idempotency).where(_i.account_id == account_id)
+        )

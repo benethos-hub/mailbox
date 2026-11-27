@@ -1,6 +1,6 @@
 """What Alembic runs for a command: the revisions on the connection the
 database hands over in ``attributes``, each in a transaction of its own.
-No ``alembic.ini`` and no configuration of the log: the service sets
+No ``alembic.ini`` and no configuration of the log: the program sets
 both."""
 
 from __future__ import annotations

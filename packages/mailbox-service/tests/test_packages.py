@@ -158,8 +158,7 @@ LINES = {
         {"paging"},
     ),
     "data": (
-        {"backup", "move"},
-        {"export"},
+        {"backup"},
         {"secrets"},
         {"storage", "providers", "discovery"},
         {"protocols"},

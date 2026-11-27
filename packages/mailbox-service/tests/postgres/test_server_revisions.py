@@ -5,6 +5,7 @@ none. A database of a schema newer than this version is refused."""
 
 from __future__ import annotations
 
+import dataclasses
 import shutil
 from collections.abc import Iterator
 from pathlib import Path
@@ -12,12 +13,15 @@ from pathlib import Path
 import pytest
 import sqlalchemy as sa
 
-from benethos_mailbox_service.data.storage.sql import database as database_module
+from benethos_mailbox_common.storage import database as stored_database
+from benethos_mailbox_common.storage import server_place as stored_place
+from benethos_mailbox_common.storage.revisions import Revisions
+from benethos_mailbox_common.storage.server_engine import server_engine
 from benethos_mailbox_service.data.storage.sql import revisions
-from benethos_mailbox_service.data.storage.sql.server_engine import server_engine
+from benethos_mailbox_service.data.storage.sql.database import SHAPE
 from benethos_mailbox_service.errors import StorageError
 
-from ..postgres_helpers import admin, connect, database, schema
+from ..postgres_helpers import admin, connect, database, schema, server
 from ..revision_helpers import second, steps_in
 
 
@@ -62,10 +66,10 @@ def test_a_refused_step_leaves_nothing(bare: sa.Connection, tmp_path: Path) -> N
             self.refuse("the items do not fit")
         """,
     )
-    revisions.upgrade(bare, 26, versions=folder)
+    Revisions(folder).upgrade(bare, 26)
     with pytest.raises(StorageError, match="the items do not fit"):
-        revisions.upgrade(bare, 27, versions=folder)
-    assert revisions.mark(bare) == 26
+        Revisions(folder).upgrade(bare, 27)
+    assert Revisions.mark(bare) == 26
     assert _held(bare) == "26"
     assert _tables(bare) == {"meta", "items", "alembic_version"}
 
@@ -81,11 +85,11 @@ def test_a_concurrent_index_is_refused_inside_a_transaction(
                             postgresql_concurrently=True)
         """,
     )
-    revisions.upgrade(bare, 26, versions=folder)
+    Revisions(folder).upgrade(bare, 26)
     with pytest.raises(sa.exc.DBAPIError, match="inside a transaction block"):
-        revisions.upgrade(bare, 27, versions=folder)
+        Revisions(folder).upgrade(bare, 27)
     bare.rollback()
-    assert revisions.mark(bare) == 26
+    assert Revisions.mark(bare) == 26
 
 
 def test_a_concurrent_index_runs_outside_a_transaction(
@@ -101,9 +105,9 @@ def test_a_concurrent_index_runs_outside_a_transaction(
                             postgresql_concurrently=True)
         """,
     )
-    revisions.upgrade(bare, 26, versions=folder)
-    revisions.upgrade(bare, 27, versions=folder)
-    assert revisions.mark(bare) == 27
+    Revisions(folder).upgrade(bare, 26)
+    Revisions(folder).upgrade(bare, 27)
+    assert Revisions.mark(bare) == 27
     assert _held(bare) == "27"
 
 
@@ -123,10 +127,10 @@ def test_outside_a_transaction_the_index_stays_when_the_check_fails(
             self.refuse("checked")
         """,
     )
-    revisions.upgrade(bare, 26, versions=folder)
+    Revisions(folder).upgrade(bare, 26)
     with pytest.raises(StorageError, match="checked"):
-        revisions.upgrade(bare, 27, versions=folder)
-    assert revisions.mark(bare) == 26
+        Revisions(folder).upgrade(bare, 27)
+    assert Revisions.mark(bare) == 26
     assert _held(bare) == "26"
     with bare.begin():
         indexes = [i["name"] for i in sa.inspect(bare).get_indexes("items")]
@@ -153,12 +157,9 @@ def test_a_revision_that_asks_for_a_copy_is_refused(
     )
     with schema() as name:
         database(name).close()
-        monkeypatch.setattr(revisions, "VERSIONS", folder)
-        monkeypatch.setattr(database_module, "SCHEMA_VERSION", 27)
         with pytest.raises(StorageError, match="asks for a copy"):
-            database(name)
-        monkeypatch.setattr(database_module, "SCHEMA_VERSION", 26)
-        again = database(name)
+            _of(name, dataclasses.replace(SHAPE, versions=folder, newest=27))
+        again = _of(name, dataclasses.replace(SHAPE, versions=folder, newest=26))
         try:
             assert again.schema_version() == 26
         finally:
@@ -184,3 +185,10 @@ def test_a_database_of_a_newer_schema_is_refused() -> None:
         with pytest.raises(StorageError, match="schema 27 is newer") as refused:
             database(name)
         assert f"({revisions.SCHEMA_VERSION})" in str(refused.value)
+
+
+def _of(name: str, shape: stored_database.Shape) -> stored_database.Database:
+    """The database of ``shape`` in the schema ``name``."""
+    return stored_database.Database(
+        shape, place=stored_place.ServerPlace(server(name), shape)
+    )

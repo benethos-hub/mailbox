@@ -8,10 +8,10 @@ from typing import TYPE_CHECKING
 import sqlalchemy as sa
 
 from benethos_mailbox_common.storage import dialect
+from benethos_mailbox_common.storage import rows as table_rows
 
 from ....common.clock import iso, parse_iso
 from ..passwords import StoredPassword
-from .rows import changed
 from .schema import passwords
 
 if TYPE_CHECKING:
@@ -53,7 +53,7 @@ class SqlPasswordRepository:
             )
 
     def signed_in(self, user_id: str, at: datetime) -> None:
-        changed(
+        table_rows.rows_changed(
             self._db,
             sa.update(passwords)
             .where(passwords.c.user_id == user_id)
@@ -63,4 +63,6 @@ class SqlPasswordRepository:
     def delete(self, user_id: str) -> None:
         # ON DELETE CASCADE does this with the user. Said here, so both
         # stores agree.
-        changed(self._db, sa.delete(passwords).where(passwords.c.user_id == user_id))
+        table_rows.rows_changed(
+            self._db, sa.delete(passwords).where(passwords.c.user_id == user_id)
+        )

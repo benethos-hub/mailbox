@@ -35,8 +35,6 @@ packages/mailbox-common/
       folders.py        # named_file, system_folders: SystemFolders
                         #   program_folders: Folders, where a
                         #   program looks, first found first
-      locks.py          # exclusive_lock, LockedError: one writer
-                        #   at a time, the standard library alone
     settings/           # a program's settings (pydantic-settings)
       files.py          # FileSettings, the base of a program's
                         #   Settings, and load: the command line, the
@@ -46,16 +44,46 @@ packages/mailbox-common/
                         #   secret_file: a secret from a file
                         #   Names: a list of names between commas
     storage/            # the storage of a program (SQLAlchemy, Alembic)
+      shape.py          # Shape: what a program's database is, handed to
+                        #   everything here; FileSteps: the steps of a
+                        #   file before the revisions
+      errors.py         # the errors of the storage, and Errors: which
+                        #   classes a program has it raise, its own
+                        #   subclasses of them
       dialect.py        # the types of the columns, and where SQLite and
                         #   PostgreSQL write differently: upserts,
                         #   greater, in_chunks, begin_at_once,
                         #   count_on_from, reading_fixed
+      database.py       # Database: an engine on the one connection,
+                        #   transactions, the revisions on open, purge,
+                        #   the rows of an export and a fill
+      place.py          # Place, where a database lies, and translated_by
+      file_place.py     # the file of SQLite as a place, sqlite_engine
+      sqlite_file.py    # the file on sqlite3: its PRAGMAs, its steps,
+                        #   a copy, a snapshot, the lock of a running
+                        #   program, inspect_file
+      server_place.py   # Server, ServerPlace: a schema on PostgreSQL,
+                        #   its version, its lock, away and back
+      server_engine.py  # the engine on psycopg, tls_arguments
+      server_lock.py    # the keys of the advisory locks of a schema
+      outage.py         # Availability, Outage: a server away, the pause
+      tables.py         # Table, the tables of the schema for an export,
+                        #   read in chunks and written back, Fixed
+      rows.py           # SqlRows: the rows of a table keyed by id
+      revision.py       # Revision: the base of a step of the schema
+      revisions.py      # Revisions: the steps of a folder, run by
+                        #   Alembic inside the process
+      stored.py         # Records, Store: what holds the records
+      stores.py         # the stores a tool opens on its own, and the
+                        #   locks it takes: file_store, claimed
+      export.py         # the records as lines of JSON and back
+      move.py           # the move between SQLite and PostgreSQL, held
+                        #   to the columns, compared after
       migrated.py       # Migrated: what opening did to a schema
-      errors.py         # the errors of the storage, and Errors: which
-                        #   classes a program has it raise, its own
-                        #   subclasses of them
       files.py          # create_private, free_path: files for their
                         #   owner alone (0600), never over another
+      locks.py          # exclusive_lock, LockedError: one writer
+                        #   at a time, the standard library alone
       clock.py          # utc_now, iso and parse_iso: a time as text,
                         #   in UTC, as a database keeps it
       names.py          # is_plain_name: a role or schema a server takes
@@ -92,8 +120,8 @@ packages/mailbox-common/
 - **The pin is exact.** The service, the MCP server and the agents
   depend on `benethos-mailbox-common[...]==X.Y.Z`, the version of the
   release, with the extras each needs: the service
-  `[paths,settings,storage]`, the MCP server and the agents
-  `[paths,settings]`. The extra `postgres` is the driver of PostgreSQL
+  `[paths,settings,storage]`, the MCP server `[paths,settings]` and
+  the agents `[paths,settings,storage]`. The extra `postgres` is the driver of PostgreSQL
   for the group `storage`, named after the database, not the library.
   So groups, paths and extras may change inside a release, and an
   operator never types an extra.

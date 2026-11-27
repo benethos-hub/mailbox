@@ -76,7 +76,16 @@ from .sqlite import (
     remove_database_file,
     service_lock,
 )
-from .stores import Claim, claimed, file_claimed, file_store, migrate_file
+from .stores import (
+    Claim,
+    MoveError,
+    check_move,
+    claimed,
+    file_claimed,
+    file_store,
+    migrate_file,
+    move_records,
+)
 from .totp import InMemoryTotpRepository, StoredTotpDevice, TotpRepository
 from .users import (
     InMemoryRoleRepository,
@@ -176,6 +185,9 @@ __all__ = [
     "inspect_file",
     "migrate_file",
     "Claim",
+    "MoveError",
+    "check_move",
+    "move_records",
     "claimed",
     "file_claimed",
     "file_store",

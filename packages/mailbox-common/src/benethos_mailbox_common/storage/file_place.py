@@ -1,6 +1,7 @@
-"""The file of SQLite as the place of a database: the one module under
-``sql/`` that reaches into ``sqlite/``, where the file, its connection,
-the old steps of its schema up to 26 and the files beside it live."""
+"""The file of SQLite as the place of a database: the one module beside
+``sqlite_file`` that reaches into it, where the file, its connection,
+the steps of its schema before the revisions and the files beside it
+live."""
 
 from __future__ import annotations
 
@@ -13,34 +14,41 @@ from typing import Any
 import sqlalchemy as sa
 from sqlalchemy.pool import StaticPool
 
-from benethos_mailbox_common.storage import dialect
-
-from ....errors import StorageError, StorageUnavailableError
-from ..sqlite import file
+from . import dialect, sqlite_file
+from .errors import Errors, StorageUnavailableError
 from .outage import Availability
 from .place import Opened, translated_by
+from .shape import Shape
 
 
 class FilePlace:
-    """The database in the file at ``path``, readable by its owner alone,
-    in memory without one. ``keep_copy``: a file of an older schema is
-    copied before a step that asks for it."""
+    """The database of ``shape`` in the file at ``path``, readable by its
+    owner alone, in memory without one. ``keep_copy``: a file of an older
+    schema is copied before a step that asks for it."""
 
-    def __init__(self, path: Path | None, *, keep_copy: bool = True) -> None:
+    def __init__(
+        self, path: Path | None, shape: Shape, *, keep_copy: bool = True
+    ) -> None:
         self.path = path
+        self._shape = shape
         self._keep_copy = keep_copy
-        self._driver: file.Driver | None = None
+        self._driver: sqlite_file.Driver | None = None
         self._engine: sa.Engine | None = None
         self._newest = 0
 
     def open(self, schema: int, newest: int) -> Opened:
         self._newest = newest
-        driver, migrated = file.open_file(
-            self.path, keep_copy=self._keep_copy, schema=schema, newest=newest
+        opened = sqlite_file.open_file(
+            self.path,
+            self._shape,
+            keep_copy=self._keep_copy,
+            schema=schema,
+            newest=newest,
         )
+        driver = opened.connection
         self._driver = driver
         self._engine = sqlite_engine(lambda: driver)
-        return Opened(self._engine.connect(), migrated)
+        return Opened(self._engine.connect(), opened.migrated)
 
     def undo(self) -> None:
         with suppress(Exception):
@@ -50,31 +58,33 @@ class FilePlace:
     def keep_copy(self, held: int, before: int) -> str | None:
         if not self._keep_copy or self.path is None or self._driver is None:
             return None
-        return file.keep_copy(self._driver, self.path, held, before)
+        return sqlite_file.keep_copy(
+            self._driver, self.path, held, before, self._shape.errors
+        )
 
     def shrink(self) -> None:
         if self._driver is not None:
-            file.shrink(self._driver)
+            sqlite_file.shrink(self._driver, self._shape.errors)
 
     def serving(self) -> AbstractContextManager[bool]:
-        return file.serving(self.path)
+        return sqlite_file.file_serving(self.path)
 
     def snapshot_file(self, lock: threading.RLock) -> AbstractContextManager[Path]:
         if self._driver is None:
-            raise StorageError("the database is not open")
-        return file.snapshot(self._driver, self.path, lock)
+            raise self._shape.errors.failed("the database is not open")
+        return sqlite_file.snapshot(self._driver, self.path, lock, self._shape.errors)
 
     @contextmanager
     def fixed(self, lock: threading.RLock) -> Iterator[sa.Connection]:
         """The snapshot of the file, checked whole, opened on its own."""
         with self.snapshot_file(lock) as snapshot:
             try:
-                file.inspect_file(snapshot)
+                sqlite_file.inspect_file(snapshot, self._shape.noun)
             except ValueError as exc:
-                raise StorageError(
+                raise self._shape.errors.failed(
                     f"the copy of the database is unsound: {exc}"
                 ) from None
-            snap = FilePlace(snapshot, keep_copy=False)
+            snap = FilePlace(snapshot, self._shape, keep_copy=False)
             try:
                 conn = snap.open(self._newest, self._newest).connection
                 with conn, conn.begin():
@@ -92,7 +102,7 @@ class FilePlace:
         return None
 
     def translated(self) -> AbstractContextManager[None]:
-        return translated()
+        return translated_file(self._shape.errors)
 
     def close(self) -> None:
         if self._engine is not None:
@@ -102,19 +112,19 @@ class FilePlace:
 
 
 @contextmanager
-def translated() -> Iterator[None]:
-    """The failures of the database as this project's errors, with the
+def translated_file(errors: Errors) -> Iterator[None]:
+    """The failures of the database as ``errors`` names them, with the
     text of the driver, which names a table and a column, never a value.
     The driver's own errors, from the connection used directly, are
-    translated by ``file``."""
-    with translated_by(str, str), file.translated():
+    translated by ``sqlite_file``."""
+    with translated_by(str, str, errors), sqlite_file.translated_sqlite(errors):
         yield
 
 
 def sqlite_engine(connect: Callable[[], Any]) -> sa.Engine:
     """An engine on the one SQLite connection ``connect`` gives, for the
-    whole process. A transaction begins as ``dialect.begin_at_once`` says. No value of a
-    statement reaches the text of an error."""
+    whole process. A transaction begins as ``dialect.begin_at_once``
+    says. No value of a statement reaches the text of an error."""
     engine = sa.create_engine(
         f"{dialect.SQLITE}://",
         creator=connect,

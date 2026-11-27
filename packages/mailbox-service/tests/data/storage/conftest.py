@@ -9,13 +9,12 @@ from pathlib import Path
 
 import pytest
 
-from benethos_mailbox_common.storage import dialect, files
+from benethos_mailbox_common.storage import dialect, files, tables
 from benethos_mailbox_service.data.models import Account, ProviderType
 from benethos_mailbox_service.data.storage import (
     MessageIndexRepository,
     Repositories,
 )
-from benethos_mailbox_service.data.storage.sql import tables
 
 from .disk_helpers import Disk
 from .index_helpers import ACC

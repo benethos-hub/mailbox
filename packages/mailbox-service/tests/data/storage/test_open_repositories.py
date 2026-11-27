@@ -9,9 +9,9 @@ from typing import Any, cast
 
 import pytest
 
+from benethos_mailbox_common.storage.server_place import supported
 from benethos_mailbox_service.data.storage import Server, open_repositories
-from benethos_mailbox_service.data.storage.sql.server_place import supported
-from benethos_mailbox_service.errors import StorageError
+from benethos_mailbox_service.errors import STORAGE_ERRORS, StorageError
 
 
 def test_an_unknown_storage_opens_nothing(tmp_path: Path) -> None:
@@ -47,9 +47,9 @@ def test_memory_and_sqlite_by_their_names(tmp_path: Path) -> None:
 def test_a_server_older_than_19_is_refused(version: int, refused: bool) -> None:
     if refused:
         with pytest.raises(StorageError, match="needs PostgreSQL 19.0 or newer"):
-            supported(version)
+            supported(version, STORAGE_ERRORS)
     else:
-        supported(version)
+        supported(version, STORAGE_ERRORS)
 
 
 def test_without_its_driver_postgres_names_the_extra(

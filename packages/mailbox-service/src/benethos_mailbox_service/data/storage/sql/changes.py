@@ -11,11 +11,11 @@ from typing import TYPE_CHECKING, Any
 import sqlalchemy as sa
 
 from benethos_mailbox_common.storage import dialect
+from benethos_mailbox_common.storage import rows as table_rows
 
 from ....common.clock import iso, parse_iso
 from ...models import ChangeRecord
 from ..changes import LoggedChange
-from .rows import changed
 from .schema import changes, meta
 from .tables import CHANGES_LAST
 
@@ -107,7 +107,9 @@ class SqlChangeLogRepository:
 
     def forget_account(self, account_id: str) -> None:
         # ON DELETE CASCADE does this as well. Said here, so both stores agree.
-        changed(self._db, sa.delete(changes).where(_c.account_id == account_id))
+        table_rows.rows_changed(
+            self._db, sa.delete(changes).where(_c.account_id == account_id)
+        )
 
 
 def _never_less(key: str, value: Any, spoken: sa.Dialect) -> sa.Executable:

@@ -20,9 +20,28 @@ LIBRARY_HOMES: dict[str, set[str]] = {
     "pydantic": {"settings.files"},
     "pydantic_settings": {"settings.files"},
     # The group storage checks for its libraries first, then each module
-    # that speaks SQL.
-    "sqlalchemy": {"storage.__init__", "storage.dialect"},
-    "alembic": {"storage.__init__"},
+    # that speaks SQL, and the revisions run by Alembic.
+    "sqlalchemy": {
+        "storage.__init__",
+        "storage.database",
+        "storage.dialect",
+        "storage.file_place",
+        "storage.place",
+        "storage.revision",
+        "storage.revisions",
+        "storage.rows",
+        "storage.server_engine",
+        "storage.server_lock",
+        "storage.server_place",
+        "storage.shape",
+        "storage.tables",
+    },
+    "alembic": {
+        "storage.__init__",
+        "storage._alembic.env",
+        "storage.revision",
+        "storage.revisions",
+    },
 }
 
 

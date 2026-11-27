@@ -19,7 +19,7 @@ from pathlib import Path
 from types import TracebackType
 from typing import TypeVar
 
-from benethos_mailbox_common.paths import locks
+from benethos_mailbox_common.storage import locks
 
 from ..errors import ConfigError, StateFileError
 from .actions import _Actions
