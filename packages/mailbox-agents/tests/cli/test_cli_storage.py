@@ -25,8 +25,10 @@ def test_the_statements_of_two_instances(
     second = _plan(capsys, "categorization")
 
     assert first[:3] == [
-        "CREATE ROLE agent_counting LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE"
-        " NOINHERIT;",
+        (
+            "CREATE ROLE agent_counting LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE"
+            " NOINHERIT;"
+        ),
         "CREATE DATABASE agent_counting OWNER agent_counting;",
         "REVOKE CONNECT, TEMPORARY ON DATABASE agent_counting FROM PUBLIC;",
     ]
@@ -37,8 +39,10 @@ def test_the_statements_of_two_instances(
     assert first[3:6] == second[3:6]
     assert first[4:6] == [
         "CREATE ROLE agents_read NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE;",
-        "CREATE ROLE agents_cockpit LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE"
-        " IN ROLE agents_read;",
+        (
+            "CREATE ROLE agents_cockpit LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE"
+            " IN ROLE agents_read;"
+        ),
     ]
     assert (
         f"--   {PREFIX}DATABASE_URL=postgresql://agent_counting@<host>:<port>"
