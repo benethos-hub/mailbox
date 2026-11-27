@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
-from typing import ClassVar
+from typing import ClassVar, Literal
 
 from ..errors import ConfigError, ContractError
 from ..records import (
@@ -38,6 +38,7 @@ __all__ = [
     "Action",
     "ActionRequest",
     "Agent",
+    "ForwardForm",
     "Limits",
     "Requires",
     "Route",
@@ -126,6 +127,11 @@ class Requires:
     settings: tuple[str, ...] = ()
 
 
+# The forms of a forward drafted: the message quoted with its attachments,
+# or the message as a file.
+ForwardForm = Literal["inline", "attachment"]
+
+
 @dataclass(frozen=True, slots=True)
 class ActionRequest:
     """One action an agent asks the runtime to take.
@@ -148,7 +154,7 @@ class ActionRequest:
     why: str = field(default="", compare=False)
     held: bool = False
     recipients: tuple[str, ...] = ()
-    forward_as: str | None = None
+    forward_as: ForwardForm | None = None
 
 
 @dataclass(frozen=True, slots=True)

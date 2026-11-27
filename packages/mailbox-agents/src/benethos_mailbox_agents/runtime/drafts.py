@@ -13,8 +13,9 @@ text.
 from __future__ import annotations
 
 from datetime import datetime
+from typing import get_args
 
-from ..contract import Action, ActionRequest, Agent
+from ..contract import Action, ActionRequest, Agent, ForwardForm
 from ..errors import ActionRefusedError
 from ..records import OWN_ROLES, MailMessage
 from ..store import Store
@@ -25,7 +26,7 @@ from .writer import Writer
 __all__ = ["FORMS", "admissible", "before", "plan"]
 
 # The forms of a forward, as the mailbox service takes them.
-FORMS = frozenset({"inline", "attachment"})
+FORMS = frozenset(get_args(ForwardForm))
 
 
 def admissible(agent: Agent, request: ActionRequest) -> None:
