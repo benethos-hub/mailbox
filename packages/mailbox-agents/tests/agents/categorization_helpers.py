@@ -1,5 +1,5 @@
-"""What the tests of categorization share: a list from its entries, and a list
-refused."""
+"""What the tests of categorization share: a list from its entries, the
+one dimension a list of groups is read as, and a list refused."""
 
 from __future__ import annotations
 
@@ -9,12 +9,20 @@ from typing import Any
 
 import pytest
 
-from benethos_mailbox_agents.agents.categorization.groups import Groups, load_groups
+from benethos_mailbox_agents.agents.categorization.dimensions import Dimension
+from benethos_mailbox_agents.agents.categorization.groups import Groups
+from benethos_mailbox_agents.agents.categorization.lists import load_chain, read_chain
 from benethos_mailbox_agents.errors import ConfigError
 
 
 def groups(*entries: dict[str, Any]) -> Groups:
     return Groups.model_validate({"groups": list(entries)})
+
+
+def dimension(*entries: dict[str, Any]) -> Dimension:
+    """The list of groups of ``entries`` as the agent reads it: a chain of
+    one dimension, each group a category."""
+    return read_chain({"groups": list(entries)}).chain.dimensions[0]
 
 
 def refused(tmp_path: Path, entries: list[dict[str, Any]], says: str) -> None:
@@ -24,7 +32,7 @@ def refused(tmp_path: Path, entries: list[dict[str, Any]], says: str) -> None:
     path.write_text(json.dumps({"groups": entries}), encoding="utf-8")
 
     with pytest.raises(ConfigError, match="categorization.json") as raised:
-        load_groups(path)
+        load_chain(path)
 
     assert says in raised.value.message
     for entry in entries:

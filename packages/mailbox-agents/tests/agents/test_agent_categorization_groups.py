@@ -10,38 +10,45 @@ from typing import Any
 
 import pytest
 
+from benethos_mailbox_agents.agents.categorization.dimensions import Dimension
 from benethos_mailbox_agents.agents.categorization.groups import (
     MAX_ADDRESS,
     Groups,
     Kind,
-    load_groups,
 )
-from benethos_mailbox_agents.agents.categorization.lists import list_digest
+from benethos_mailbox_agents.agents.categorization.lists import (
+    list_digest,
+    load_chain,
+    read_chain,
+)
 from benethos_mailbox_agents.errors import ConfigError
 
-from .categorization_helpers import groups, refused
+from .categorization_helpers import dimension, groups, refused
+
+# The groups of the fixture listed.
+ENTRIES = [
+    {
+        "name": "Bank",
+        "folder": "Providers/Bank",
+        "senders": ["service@bank-two.example", "*@bank-one.example"],
+        "hold": True,
+    },
+    {
+        "name": "CloudHost",
+        "folder": "Providers/CloudHost",
+        "senders": ["*@cloudhost.example", "mailbox*@telco.example"],
+    },
+    {
+        "name": "Shop",
+        "folder": "Shop",
+        "senders": ["*@*.shop.example", "Orders@Shop.Example"],
+    },
+]
 
 
 @pytest.fixture
-def listed() -> Groups:
-    return groups(
-        {
-            "name": "Bank",
-            "folder": "Providers/Bank",
-            "senders": ["service@bank-two.example", "*@bank-one.example"],
-            "hold": True,
-        },
-        {
-            "name": "CloudHost",
-            "folder": "Providers/CloudHost",
-            "senders": ["*@cloudhost.example", "mailbox*@telco.example"],
-        },
-        {
-            "name": "Shop",
-            "folder": "Shop",
-            "senders": ["*@*.shop.example", "Orders@Shop.Example"],
-        },
-    )
+def listed() -> Dimension:
+    return dimension(*ENTRIES)
 
 
 @pytest.mark.parametrize(
@@ -57,7 +64,7 @@ def listed() -> Groups:
     ],
 )
 def test_a_sender_finds_its_group(
-    listed: Groups, address: str, group: str, kind: Kind
+    listed: Dimension, address: str, group: str, kind: Kind
 ) -> None:
     found = listed.match(address)
 
@@ -76,12 +83,12 @@ def test_a_sender_finds_its_group(
         None,
     ],
 )
-def test_a_sender_in_no_group(listed: Groups, address: str | None) -> None:
+def test_a_sender_in_no_group(listed: Dimension, address: str | None) -> None:
     assert listed.match(address) is None
 
 
 def test_an_address_wins_over_a_pattern() -> None:
-    found = groups(
+    found = dimension(
         {"name": "A", "folder": "A", "senders": ["*@telco.example"]},
         {"name": "B", "folder": "B", "senders": ["billing@telco.example"]},
     ).match("billing@telco.example")
@@ -91,7 +98,7 @@ def test_an_address_wins_over_a_pattern() -> None:
 
 
 def test_a_pattern_wins_over_one_for_subdomains() -> None:
-    found = groups(
+    found = dimension(
         {"name": "A", "folder": "A", "senders": ["*@*.shop.example"]},
         {"name": "B", "folder": "B", "senders": ["*@eu.shop.example"]},
     ).match("news@eu.shop.example")
@@ -101,7 +108,7 @@ def test_a_pattern_wins_over_one_for_subdomains() -> None:
 
 
 def test_two_groups_alike_leave_the_sender_to_none() -> None:
-    found = groups(
+    found = dimension(
         {"name": "A", "folder": "A", "senders": ["*@telco.example"]},
         {"name": "B", "folder": "B", "senders": ["bill*@telco.example"]},
     ).match("billing@telco.example")
@@ -111,17 +118,15 @@ def test_two_groups_alike_leave_the_sender_to_none() -> None:
     assert [g.name for g in found.groups] == ["A", "B"]
 
 
-def test_the_folders_a_group_may_have_made(listed: Groups) -> None:
-    assert listed.may_create("Providers")
-    assert listed.may_create("Providers/Bank")
-    assert listed.may_create("Shop")
-    assert not listed.may_create("Providers/Other")
-    assert not listed.may_create("providers")
-    assert not listed.may_create("Elsewhere")
+def test_the_folders_a_group_may_have_made() -> None:
+    folders = read_chain({"groups": ENTRIES}).chain.folders()
+
+    assert {"Providers", "Providers/Bank", "Shop"} <= folders
+    assert not {"Providers/Other", "providers", "Elsewhere"} & folders
 
 
-def test_a_group_is_moved_unless_it_is_held(listed: Groups) -> None:
-    assert [g.hold for g in listed.groups] == [True, False, False]
+def test_a_group_is_moved_unless_it_is_held(listed: Dimension) -> None:
+    assert [c.hold for c in listed.categories] == [True, False, False]
 
 
 @pytest.mark.parametrize(
@@ -236,7 +241,7 @@ def test_a_wrong_sender_is_named_by_its_group_and_place(tmp_path: Path) -> None:
     path.write_text(json.dumps({"groups": entries}), encoding="utf-8")
 
     with pytest.raises(ConfigError) as raised:
-        load_groups(path)
+        load_chain(path)
 
     assert "group 'B', sender 2 is a domain" in raised.value.message
 
@@ -256,7 +261,7 @@ def test_a_doubled_sender_is_named_by_its_place_not_its_address(
     path.write_text(json.dumps({"groups": entries}), encoding="utf-8")
 
     with pytest.raises(ConfigError) as raised:
-        load_groups(path)
+        load_chain(path)
 
     assert "group 'B', sender 2 is named by group 'A'" in raised.value.message
     assert "@" not in raised.value.message
@@ -267,7 +272,7 @@ def test_a_list_is_read_from_its_file(tmp_path: Path) -> None:
     entry = {"name": "Bank", "folder": "Bank", "senders": ["*@bank-one.example"]}
     path.write_text(json.dumps({"groups": [entry]}), encoding="utf-8")
 
-    assert [g.name for g in load_groups(path).groups] == ["Bank"]
+    assert [c.name for c in load_chain(path).chain.dimensions[0].categories] == ["Bank"]
 
 
 def test_a_list_that_is_no_json_is_refused(tmp_path: Path) -> None:
@@ -275,7 +280,7 @@ def test_a_list_that_is_no_json_is_refused(tmp_path: Path) -> None:
     path.write_text("{groups: [", encoding="utf-8")
 
     with pytest.raises(ConfigError, match="categorization.json"):
-        load_groups(path)
+        load_chain(path)
 
 
 def test_a_list_of_another_format_is_refused(tmp_path: Path) -> None:
@@ -283,12 +288,12 @@ def test_a_list_of_another_format_is_refused(tmp_path: Path) -> None:
     path.write_text("groups: []", encoding="utf-8")
 
     with pytest.raises(ConfigError, match="no .json file"):
-        load_groups(path)
+        load_chain(path)
 
 
 def test_a_list_that_cannot_be_read_is_refused(tmp_path: Path) -> None:
     with pytest.raises(ConfigError, match="cannot be read"):
-        load_groups(tmp_path / "missing.json")
+        load_chain(tmp_path / "missing.json")
 
 
 def test_a_list_with_the_mark_of_utf8_is_read(tmp_path: Path) -> None:
@@ -296,7 +301,7 @@ def test_a_list_with_the_mark_of_utf8_is_read(tmp_path: Path) -> None:
     entry = {"name": "Bank", "folder": "Bank", "senders": ["*@bank-one.example"]}
     path.write_text(json.dumps({"groups": [entry]}), encoding="utf-8-sig")
 
-    assert [g.name for g in load_groups(path).groups] == ["Bank"]
+    assert [c.name for c in load_chain(path).chain.dimensions[0].categories] == ["Bank"]
 
 
 def test_a_list_in_another_encoding_than_utf8_is_refused(tmp_path: Path) -> None:
@@ -305,7 +310,7 @@ def test_a_list_in_another_encoding_than_utf8_is_refused(tmp_path: Path) -> None
     path.write_text(json.dumps({"groups": [entry]}, ensure_ascii=False), "cp1252")
 
     with pytest.raises(ConfigError) as raised:
-        load_groups(path)
+        load_chain(path)
 
     assert raised.value.message == (
         "the categorization list categorization.json cannot be read "
@@ -314,7 +319,7 @@ def test_a_list_in_another_encoding_than_utf8_is_refused(tmp_path: Path) -> None
 
 
 def test_an_address_longer_than_any_mail_allows_matches_nothing() -> None:
-    listed = groups(
+    listed = dimension(
         {"name": "A", "folder": "A", "senders": ["*a*a*a*b@shop.example"]},
     )
     address = "a" * 100_000 + "@shop.example"
@@ -326,7 +331,7 @@ def test_an_address_longer_than_any_mail_allows_matches_nothing() -> None:
 
 
 def test_a_pattern_of_many_stars_is_matched_in_linear_time() -> None:
-    listed = groups(
+    listed = dimension(
         {"name": "A", "folder": "A", "senders": ["x*x*x*x*x*x*y@shop.example"]},
     )
     address = "x" * (MAX_ADDRESS - len("@shop.example")) + "@shop.example"
@@ -375,7 +380,9 @@ def _by_regex(local: str, found: str) -> bool:
 def test_a_pattern_matches_as_its_regular_expression_did(
     local: str, found: str
 ) -> None:
-    listed = groups({"name": "A", "folder": "A", "senders": [f"{local}@shop.example"]})
+    listed = dimension(
+        {"name": "A", "folder": "A", "senders": [f"{local}@shop.example"]}
+    )
 
     matched = listed.match(f"{found}@shop.example") is not None
 

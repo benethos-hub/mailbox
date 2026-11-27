@@ -26,20 +26,18 @@ wins: an address before a pattern before a pattern for the subdomains. Two
 groups whose rules of the same kind both match leave the sender to no
 group, so neither is guessed. See docs/mailbox-agents/concept/agent-categorization.md.
 
-The file is JSON. A reader is chosen by the file's suffix, so another
-format is one entry in :data:`READERS`.
+The file is JSON, read by :func:`.lists.load_chain`, which turns a list of
+groups into a chain of one dimension.
 """
 
 from __future__ import annotations
 
-import json
 import re
 import unicodedata
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import IntEnum
-from pathlib import Path
-from typing import Any, Generic, Literal, TypeVar
+from typing import Generic, Literal, TypeVar
 
 from pydantic import (
     BaseModel,
@@ -52,13 +50,11 @@ from pydantic import (
 )
 
 from ...contract import folder_path, from_top
-from ...errors import ConfigError, describe_invalid
 
 __all__ = [
     "MAX_TOPIC",
     "MAX_TOPICS",
     "NONE",
-    "READERS",
     "Entry",
     "Group",
     "Groups",
@@ -66,7 +62,6 @@ __all__ = [
     "Match",
     "candidates_in",
     "check_rules",
-    "load_groups",
     "match_in",
 ]
 
@@ -378,64 +373,3 @@ class Groups(BaseModel):
         _spelt_alike(value)
         check_rules(value)
         return value
-
-    def match(self, address: str | None) -> Match[Group] | None:
-        """The groups ``address`` belongs to by their most specific rules,
-        or None when no rule matches."""
-        return match_in(self.groups, address)
-
-    def candidates(self, address: str | None) -> tuple[Group, ...]:
-        """The groups a model chooses among for a message from ``address``,
-        see :func:`candidates_in`."""
-        return candidates_in(self.groups, address)
-
-    @property
-    def topical(self) -> tuple[Group, ...]:
-        """The groups with a topic, in the order of the list."""
-        return tuple(group for group in self.groups if group.topic is not None)
-
-    @property
-    def asks_model(self) -> bool:
-        """Whether a group has a topic, so a model may be asked."""
-        return bool(self.topical)
-
-    def named(self, name: str) -> Group | None:
-        """The group called ``name``, or None."""
-        return next((group for group in self.groups if group.name == name), None)
-
-    def may_create(self, path: str) -> bool:
-        """Whether ``path`` is the folder of a group or one above it."""
-        return any(path in group.folders for group in self.groups)
-
-
-def _read_json(text: str) -> Any:
-    return json.loads(text)
-
-
-# The readers by suffix. JSON, as the other lists of this project.
-READERS: dict[str, Callable[[str], Any]] = {".json": _read_json}
-
-
-def load_groups(path: Path) -> Groups:
-    """The list at ``path``, or a :class:`ConfigError` that says what is
-    wrong with it."""
-    reader = READERS.get(path.suffix.lower())
-    if reader is None:
-        raise ConfigError(
-            f"the categorization list {path.name} is no "
-            f"{', '.join(sorted(READERS))} file"
-        )
-    try:
-        # utf-8-sig: an editor may start the file with the mark of UTF-8.
-        text = path.read_text(encoding="utf-8-sig")
-    except (OSError, ValueError) as exc:
-        # A ValueError: a file in another encoding than UTF-8.
-        raise ConfigError(
-            f"the categorization list {path.name} cannot be read ({type(exc).__name__})"
-        ) from None
-    try:
-        return Groups.model_validate(reader(text))
-    except ValueError as exc:
-        raise ConfigError(
-            f"the categorization list {path.name}: {describe_invalid(exc)}"
-        ) from None
