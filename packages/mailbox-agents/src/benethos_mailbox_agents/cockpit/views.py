@@ -20,7 +20,7 @@ from urllib.parse import quote
 from benethos_mailbox_common.values import text as text_values
 
 from ..contract import Actor, Reader, discover
-from ..errors import ConfigError, StateFileError
+from ..errors import ConfigError, StateFileError, UnavailableError
 from ..records import Decision, MailMessage, MessageRef, OpenItem, Profile
 from ..runtime.health import window_of
 from ..runtime.review import Entry, collect, entry
@@ -228,7 +228,7 @@ def row(file: Instance, now: datetime) -> Row:
             calls = store.model_calls_since(day)
             due = len(store.due_items(now))
             items = tuple(_item(item) for item in store.open_items())
-    except (ConfigError, StateFileError) as exc:
+    except (ConfigError, StateFileError, UnavailableError) as exc:
         return Row(
             name=_e(file.name),
             link=_link(file.name),

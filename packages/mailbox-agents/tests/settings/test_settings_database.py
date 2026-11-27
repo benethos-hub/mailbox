@@ -61,6 +61,7 @@ def test_the_server_is_named_and_its_password_masked(
         ("DATABASE_URL", "postgresql://Role@db.example.org/db", "lower case"),
         ("DATABASE_READERS", "agents-read", "database_readers"),
         ("PROMPT_RETENTION_DAYS", "3", "prompt_retention_days"),
+        ("COCKPIT_DATABASE_URLS", "postgresql://a:pw@db.example.org/x", "password"),
     ],
 )
 def test_what_does_not_fit_a_server_is_refused_by_its_rule(
@@ -93,3 +94,25 @@ def test_an_empty_password_file_stops_the_start(on_a_server: Path) -> None:
 
     with pytest.raises(errors.ConfigError, match="names an empty file"):
         load_settings().database_server()
+
+
+def test_the_cockpit_reads_each_server_with_one_password(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv(
+        f"{PREFIX}COCKPIT_DATABASE_URLS",
+        "postgresql://agents_cockpit@db.example.org/postgres,"
+        "postgresql://agents_cockpit@other.example.org:5433/postgres",
+    )
+    with pytest.raises(errors.ConfigError, match="cockpit_database_password_file"):
+        load_settings()
+    password = tmp_path / "cockpit_password"
+    password.write_text(PASSWORD, encoding="utf-8")
+    monkeypatch.setenv(f"{PREFIX}COCKPIT_DATABASE_PASSWORD_FILE", str(password))
+
+    found = load_settings().cockpit_servers()
+
+    assert [(s.host, s.port, s.role, s.password) for s in found] == [
+        ("db.example.org", 5432, "agents_cockpit", PASSWORD),
+        ("other.example.org", 5433, "agents_cockpit", PASSWORD),
+    ]

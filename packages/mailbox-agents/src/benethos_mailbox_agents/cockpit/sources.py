@@ -4,7 +4,13 @@ says whether its writer stopped. The pages do not know which source an
 instance comes from.
 
 The first source is the state files: in the data folder and in its
-direct folders, one folder per volume of an agent.
+direct folders, one folder per volume of an agent. The second is the
+PostgreSQL servers the settings name: each state there its role may
+read, found by the store, read on a short connection that only reads,
+without a lock and without a step of the schema. A database that
+answers with another schema, or a server that is away, is an instance
+whose page says why. No file says whether a writer there stopped: an
+instance without fresh progress is silent.
 
 A page never takes a path or an address from its own address. It names
 an instance, and the name is looked up among those the sources found,
@@ -18,11 +24,15 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
+from ..errors import ConfigError, MailboxAgentError
 from ..store import Store
+from ..store.catalogue import Server, states_on
 
 __all__ = [
     "Files",
     "Instance",
+    "OnServer",
+    "Servers",
     "Source",
     "StateFile",
     "every",
@@ -82,6 +92,43 @@ class Files:
 
     def found(self) -> Sequence[Instance]:
         return found(self.data_dir)
+
+
+@dataclass(frozen=True, slots=True)
+class OnServer:
+    """A state on a server, or what could not be read there: ``server``
+    reaches it, ``error`` says why there is none."""
+
+    name: str
+    server: Server | None = None
+    error: MailboxAgentError | None = None
+
+    def open(self) -> Store:
+        if self.error is not None:
+            raise self.error
+        if self.server is None:
+            raise ConfigError("the state was not found")
+        found = Store.read_server(self.server)
+        if found is None:
+            raise ConfigError("the database holds no state yet")
+        return found
+
+    def stopped(self) -> bool:
+        return False
+
+
+@dataclass(frozen=True, slots=True)
+class Servers:
+    """The states the role of each of ``servers`` may read on it."""
+
+    servers: tuple[Server, ...]
+
+    def found(self) -> Sequence[Instance]:
+        return [
+            OnServer(item.name, item.server, item.error)
+            for server in self.servers
+            for item in states_on(server)
+        ]
 
 
 def every(sources: Sequence[Source]) -> list[Instance]:

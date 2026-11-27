@@ -69,6 +69,7 @@ class _Paths(files.FileSettings):
     cockpit_secret_file: str | None = None
     database_password_file: str | None = None
     database_ca_file: str | None = None
+    cockpit_database_password_file: str | None = None
 
 
 # The settings that hold a path. A relative one counts from the folder of

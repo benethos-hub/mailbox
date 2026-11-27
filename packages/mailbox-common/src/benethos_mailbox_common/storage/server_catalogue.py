@@ -1,0 +1,67 @@
+"""What a role finds on a server it reads: the databases it may connect
+to, and in one of them the schemas where it may read a table of a name.
+A program that reads the databases of others, such as a cockpit, finds
+them so, signed in with its own role, without a right beyond reading.
+
+Each call takes a short connection of its own, in transactions that
+only read. A failure is named by its kind, never by a value.
+"""
+
+from __future__ import annotations
+
+import sqlalchemy as sa
+
+from .server_engine import server_engine, tls_arguments
+from .server_place import Server, translated_server
+from .shape import Shape
+
+_DATABASES = sa.text(
+    "SELECT datname FROM pg_database"
+    " WHERE NOT datistemplate AND datallowconn"
+    " AND has_database_privilege(datname, 'CONNECT')"
+    " ORDER BY datname"
+)
+_SCHEMAS = sa.text(
+    "SELECT n.nspname FROM pg_class c"
+    " JOIN pg_namespace n ON n.oid = c.relnamespace"
+    " WHERE c.relname = :table AND c.relkind IN ('r', 'p')"
+    " AND has_schema_privilege(n.oid, 'USAGE')"
+    " AND has_table_privilege(c.oid, 'SELECT')"
+    " ORDER BY n.nspname"
+)
+
+
+def readable_databases(server: Server, shape: Shape) -> list[str]:
+    """The databases on ``server`` its role may connect to, by name,
+    templates left out. The errors are those of ``shape``."""
+    return [str(name) for name in _rows(server, shape, _DATABASES, {})]
+
+
+def schemas_holding(server: Server, table: str, shape: Shape) -> list[str]:
+    """The schemas of the database of ``server`` where its role may read
+    a table named ``table``, by name."""
+    return [str(name) for name in _rows(server, shape, _SCHEMAS, {"table": table})]
+
+
+def _rows(
+    server: Server, shape: Shape, query: sa.TextClause, values: dict[str, str]
+) -> list[object]:
+    errors = shape.errors
+    try:
+        engine = server_engine(
+            host=server.host,
+            port=server.port,
+            database=server.database,
+            role=server.role,
+            password=server.password,
+            search_path=server.schema_name,
+            tls=tls_arguments(server.host, server.tls, server.ca_file),
+            read_only=True,
+        )
+    except ImportError:
+        raise errors.failed(shape.extra) from None
+    try:
+        with translated_server(errors), engine.connect() as connection:
+            return list(connection.execute(query, values).scalars())
+    finally:
+        engine.dispose()

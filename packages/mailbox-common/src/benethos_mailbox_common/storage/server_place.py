@@ -70,7 +70,7 @@ class ServerPlace:
     """The schema ``server`` names, on the server it names, for the
     database of ``shape``. A server that is away is kept so: every call
     fails at once until the next attempt is due, by ``clock`` in seconds
-    (``outage``)."""
+    (``outage``). With ``read_only`` every transaction only reads."""
 
     def __init__(
         self,
@@ -79,6 +79,7 @@ class ServerPlace:
         clock: Callable[[], float] = time.monotonic,
         *,
         make_schema: bool = False,
+        read_only: bool = False,
     ) -> None:
         if not names.is_plain_name(server.schema_name):
             raise shape.errors.failed(
@@ -89,6 +90,8 @@ class ServerPlace:
         self._shape = shape
         # The schema made at open where it is missing and the role may.
         self._make_schema = make_schema
+        # Every transaction only reads: a reader beside a running program.
+        self._read_only = read_only
         self._errors = shape.errors
         self._engine: sa.Engine | None = None
         self._connection: sa.Connection | None = None
@@ -160,10 +163,10 @@ class ServerPlace:
         )
         return engine
 
-    @staticmethod
-    def _driven(server: Server) -> sa.Engine:
+    def _driven(self, server: Server) -> sa.Engine:
         """The engine, which loads the driver."""
         return server_engine(
+            read_only=self._read_only,
             host=server.host,
             port=server.port,
             database=server.database,

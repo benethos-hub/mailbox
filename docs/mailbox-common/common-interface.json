@@ -317,6 +317,7 @@
       "revision",
       "revisions",
       "rows",
+      "server_catalogue",
       "server_engine",
       "server_lock",
       "server_place",
@@ -959,6 +960,14 @@
       "signature": "(db: 'Database', statement: 'sa.Executable') -> 'int'"
     }
   },
+  "benethos_mailbox_common.storage.server_catalogue": {
+    "readable_databases": {
+      "signature": "(server: 'Server', shape: 'Shape') -> 'list[str]'"
+    },
+    "schemas_holding": {
+      "signature": "(server: 'Server', table: 'str', shape: 'Shape') -> 'list[str]'"
+    }
+  },
   "benethos_mailbox_common.storage.server_engine": {
     "CONNECT_SECONDS": {
       "value": 5
@@ -967,7 +976,7 @@
       "source": "{\n    \"keepalives\": 1,\n    \"keepalives_idle\": 10,\n    \"keepalives_interval\": 5,\n    \"keepalives_count\": 3,\n    \"tcp_user_timeout\": 15000,\n}"
     },
     "server_engine": {
-      "signature": "(*, host: 'str', port: 'int', database: 'str', role: 'str', password: 'str', search_path: 'str', tls: 'Mapping[str, str] | None' = None) -> 'sa.Engine'"
+      "signature": "(*, host: 'str', port: 'int', database: 'str', role: 'str', password: 'str', search_path: 'str', tls: 'Mapping[str, str] | None' = None, read_only: 'bool' = False) -> 'sa.Engine'"
     },
     "tls_arguments": {
       "signature": "(host: 'str', tls: \"Literal['verify', 'off']\", ca_file: 'Path | None') -> 'dict[str, str]'"
@@ -1040,7 +1049,7 @@
       ],
       "methods": {
         "__init__": {
-          "signature": "(self, server: 'Server', shape: 'Shape', clock: 'Callable[[], float]' = <built-in function monotonic>, *, make_schema: 'bool' = False) -> 'None'"
+          "signature": "(self, server: 'Server', shape: 'Shape', clock: 'Callable[[], float]' = <built-in function monotonic>, *, make_schema: 'bool' = False, read_only: 'bool' = False) -> 'None'"
         },
         "claimed": {
           "signature": "(self) -> 'Iterator[None]'"

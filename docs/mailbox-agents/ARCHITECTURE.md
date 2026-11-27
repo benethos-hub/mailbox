@@ -150,6 +150,7 @@ packages/mailbox-agents/src/benethos_mailbox_agents/
   store/          # the state file, one database per agent on the
                   # storage of mailbox-common: store.py opens it,
                   # reader.py to read alone, shape.py what it is,
+                  # catalogue.py the states a reader finds on a server,
                   # schema.py its tables, rows.py what its parts stand
                   # on, messages.py, steps.py, actions.py, items.py,
                   # calls.py and profile.py are a part each, file.py the

@@ -69,6 +69,8 @@ packages/mailbox-common/
                         #   reaches a program's database on a server
       server_url.py     # URL_FORM, url_problem, server_at: the address of a
                         #   server in a setting
+      server_catalogue.py  # readable_databases, schemas_holding: what
+                        #   a reading role finds on a server
       server_provision.py  # Instance, Provided, instance_statements,
                         #   reading_statements, make_instance: the role and
                         #   the database of an instance, made by an
