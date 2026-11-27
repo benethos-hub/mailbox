@@ -6,7 +6,8 @@ it, and the agent's effect is never asked. A decision the worker stored
 for the message under the same prompt version and model is taken as it
 is, refreshed like the worker refreshes it. Otherwise the agent decides,
 its evidence checked, and its model calls are kept in its state file as
-the worker keeps them, where they count against its limits of the day.
+the worker keeps them, where they count against its limits of the day:
+the calls for one message in a day against its limit per message.
 Nothing else is written: the decision is not stored, and an open item
 the agent would open is refused. One message
 at a time. See docs/mailbox-agents/concept/a2a.md.
@@ -18,7 +19,7 @@ import asyncio
 from collections.abc import Callable, Sequence
 from datetime import datetime
 
-from ..contract import Agent, Reader
+from ..contract import PASSED_BY, Agent, Reader
 from ..errors import (
     AnswerRefusedError,
     ContractError,
@@ -38,7 +39,7 @@ from ..records import (
 )
 from ..store import Store
 from .items import StoredItems
-from .model import Asker
+from .model import Asker, start_of_day
 from .reader import ReadOnlyMailbox
 from .steps import decide_checked, make_calls, make_context
 
@@ -75,16 +76,19 @@ class _ReadItems:
 
 
 def told(agent: Agent, decision: Decision) -> Classified:
-    """What a peer is told of ``decision``: no quote, no detail."""
+    """What a peer is told of ``decision``: no quote, no detail. Its
+    fields only when they are categories of the owner's list, never a
+    value taken from the mail."""
     found = {item.field: item.found is True for item in decision.evidence}
+    fields = dict(decision.fields) if agent.peer_fields else {}
     return Classified(
         agent=agent.label,
         version=agent.prompt_version or agent.version,
         label=decision.label,
         source=decision.source,
-        fields=dict(decision.fields),
+        fields=fields,
         found={LABEL: found.get(LABEL, True)}
-        | {name: found.get(name, True) for name in decision.fields},
+        | {name: found.get(name, True) for name in fields},
         refused=decision.refused,
     )
 
@@ -143,12 +147,29 @@ class Classifier:
         )
 
     async def _decision(self, ref: MessageRef) -> Decision:
+        accounts = self.agent.settings.accounts
+        if accounts and ref.account_id not in accounts:
+            raise MailboxRefusedError(
+                "the account is not one the agent works on", reason="not_admitted"
+            )
         message = await self._reader.message(ref)
+        passed = any(folder.role in PASSED_BY for folder in message.folders)
+        if passed and not self.agent.admit(message):
+            raise MailboxRefusedError(
+                "the message is not one the agent takes", reason="not_admitted"
+            )
         stored = self._store.step(
             ref, "decision", self.agent.prompt_version, self._gateway.model
         )
         if stored is not None:
             return self.agent.refresh(Decision.model_validate(stored.result), message)
+        # A decision for a peer is not stored: its calls of the day count
+        # against the limit per message, as one message's would.
+        made = self._store.model_calls_for(ref, start_of_day(self._now()))
+        if made >= self.agent.limits.model_calls_per_message:
+            raise LimitReachedError(
+                "the message had the model calls it may have today", per_day=False
+            )
         calls = make_calls(
             self.agent, gateway=self._gateway, store=self._store, ref=ref, now=self._now
         )

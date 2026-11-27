@@ -103,6 +103,9 @@ class Categorization(Classifier):
     # A category's name is the owner's own text: an evaluation report shows
     # it as label-<n>.
     report_labels = frozenset({NONE})
+    # Its fields are categories of the list, chosen per dimension: a peer
+    # may be told them.
+    peer_fields = True
 
     # -- what it reads besides its settings -----------------------------------
 

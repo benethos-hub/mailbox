@@ -65,6 +65,18 @@ class _Steps(_Rows):
         )
         return int(row[0])
 
+    def model_calls_for(self, ref: MessageRef, since: datetime) -> int:
+        """How many model calls were made for one message since ``since``."""
+        row = self._one(
+            "SELECT COUNT(*) FROM steps WHERE account_id = ? AND message_id = ? "
+            "AND step = ? AND at >= ?",
+            ref.account_id,
+            ref.message_id,
+            "model",
+            _text(since),
+        )
+        return int(row[0])
+
 
 # The columns each kind of row is read with, in the order of its reader
 # below.

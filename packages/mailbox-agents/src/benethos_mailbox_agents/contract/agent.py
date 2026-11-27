@@ -215,6 +215,10 @@ class Agent(ABC):
     # default.
     report_labels: ClassVar[frozenset[str]] = frozenset()
     report_fields: ClassVar[frozenset[str]] = frozenset()
+    # Whether the fields of a decision are categories of the owner's list,
+    # which a peer may be told. Off by default: a field may hold a value
+    # taken from the mail.
+    peer_fields: ClassVar[bool] = False
 
     def __init__(self, settings: Settings) -> None:
         self.validate_definition()

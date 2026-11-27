@@ -64,6 +64,8 @@ dependencies = [
     "opentelemetry-exporter-otlp-proto-http>=1.45.2",
     "opentelemetry-sdk>=1.45.2",
     "prometheus-client>=0.26.0",
+    # The session of the OTLP exporter, kept from the environment.
+    "requests>=2.34.2",
     "pydantic>=2.14.3",
     "uvicorn>=0.54.0",
 ]

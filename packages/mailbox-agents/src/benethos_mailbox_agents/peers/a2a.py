@@ -35,7 +35,7 @@ from a2a.types import (
     SecurityScheme,
     StringList,
 )
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse
 
@@ -69,6 +69,18 @@ class _Asked(BaseModel):
 
     account_id: str = Field(min_length=1, max_length=256)
     message_id: str = Field(min_length=1, max_length=1024)
+
+    @field_validator("account_id", "message_id")
+    @classmethod
+    def _one_part(cls, value: str) -> str:
+        """An id is one part of a path: never ``.`` or ``..``, which the
+        HTTP client would drop from the path it asks the service for, and
+        no slash, backslash or control character."""
+        if value in (".", ".."):
+            raise ValueError("an id is not a part of a path")
+        if any(c in "/\\\x7f" or ord(c) < 32 for c in value):
+            raise ValueError("an id holds no slash and no control character")
+        return value
 
 
 class _Executor(AgentExecutor):

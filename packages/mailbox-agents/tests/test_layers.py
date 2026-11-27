@@ -109,6 +109,7 @@ CONFINED: dict[str, frozenset[str]] = {
     "httpx": frozenset({"sources/mailbox.py", "llm/gateway.py"}),
     "prometheus_client": frozenset({"runtime/metrics.py"}),
     "opentelemetry": frozenset({"telemetry/otlp.py"}),
+    "requests": frozenset({"telemetry/otlp.py"}),
     # The entrance over A2A and the server that opens its port, the one
     # socket besides the metrics, which prometheus_client opens.
     **dict.fromkeys(("a2a", "starlette", "uvicorn"), frozenset({"peers/a2a.py"})),

@@ -230,7 +230,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 - `benethos-mailbox-agents`: every agent is a classifier, a subclass
   of `Classifier`, which reads a message and answers a question about
-  it. An agent of its own keeps working: `Agent` is unchanged.
+  it, or an actor, a subclass of `Actor`. An agent of its own is one of
+  the two: the registry refuses one built on `Agent` alone.
 - `benethos-mailbox-agents`: the middle stage is called `suggest`:
   `MAILBOX_AGENTS_STAGE=suggest`. It does what `keyword` did, and
   `keyword` is still taken and read as `suggest`.
@@ -292,6 +293,23 @@ adheres to [Semantic Versioning](https://semver.org/).
   mailbox service, what an account cannot do such as a keyword on
   Gmail or POP3, is a refusal of that action. Before, it counted as
   the service away, ended the pass and came again with every message.
+- `benethos-mailbox-agents`: a peer over A2A is told the fields of a
+  decision only by an agent whose fields are categories of the list,
+  `categorization`. `inquiries` tells the label alone. Before, it told
+  values taken from the mail, such as a rate or a client.
+- `benethos-mailbox-agents`: a peer over A2A is refused a message of an
+  account outside `MAILBOX_AGENTS_ACCOUNTS`, before anything is read,
+  and one in the trash, junk, spam, drafts or sent mail that the agent
+  itself would not take. Both are told `message_refused`. Before, the
+  agent read and classified any mail the service user could read.
+- `benethos-mailbox-agents`: a peer that asks for the same message
+  again is held to the agent's model calls per message for the day,
+  then told `limit_reached`. Before, each question was a new call, and
+  a peer could use up the worker's calls of the day.
+- `benethos-mailbox-agents`: the export of spans over OTLP takes no
+  proxy and no bundle of authorities from the environment, as the
+  client and the gateway take none. Before, `HTTPS_PROXY` held for it
+  and `REQUESTS_CA_BUNDLE` took the place of `MAILBOX_AGENTS_CA_FILE`.
 - `restore` and `backup verify` refuse a backup whose manifest holds a
   field of the wrong type, such as the schema as a text, with a message
   instead of a traceback.
