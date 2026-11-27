@@ -201,10 +201,9 @@ class Executor:
             and not planned.record_only
         )
         argument, target = planned.argument, planned.target
-        if not executed and self._recorded_before(request, argument):
-            if request.action is Action.CREATE_FOLDER:
-                self._recorded_folders.add((request.ref.account_id, argument))
-            return Outcome.RECORDED
+        before = await self._before(request, argument, executed=executed)
+        if before is not None:
+            return before
         recorded = self._store.add_action(
             request.ref,
             action=request.action.value,
@@ -366,6 +365,31 @@ class Executor:
         if before == [folder.id]:
             return None
         return Plan(folder.path, {"folders": before}, folder.id)
+
+    async def _before(
+        self, request: ActionRequest, argument: str, *, executed: bool
+    ) -> Outcome | None:
+        """What became of the action in an earlier pass, when that settles
+        it: a forward drafted after all, or the same action recorded."""
+        if executed:
+            return Outcome.PRESENT if await self._drafted_unseen(request) else None
+        if not self._recorded_before(request, argument):
+            return None
+        if request.action is Action.CREATE_FOLDER:
+            self._recorded_folders.add((request.ref.account_id, argument))
+        return Outcome.RECORDED
+
+    async def _drafted_unseen(self, request: ActionRequest) -> bool:
+        """Whether a forward recorded and not taken was drafted after all,
+        its answer lost: then it counts as taken and is not drafted again."""
+        if request.action is not Action.DRAFT_FORWARD:
+            return False
+        if not drafts.unsettled(self._store, request):
+            return False
+        if not await self._mailbox.forward_drafted(request.ref, request.recipients):
+            return False
+        self._store.mark_taken(request.ref, Action.DRAFT_FORWARD.value)
+        return True
 
     def _recorded_before(self, request: ActionRequest, argument: str) -> bool:
         """Whether the same action is recorded for the message already, in

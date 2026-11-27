@@ -310,6 +310,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   proxy and no bundle of authorities from the environment, as the
   client and the gateway take none. Before, `HTTPS_PROXY` held for it
   and `REQUESTS_CA_BUNDLE` took the place of `MAILBOX_AGENTS_CA_FILE`.
+- `benethos-mailbox-agents`: a forward whose draft was made while the
+  answer did not come, and the service could not be asked right after,
+  is no longer drafted a second time. The next pass asks the service
+  first and counts the draft as made.
 - `restore` and `backup verify` refuse a backup whose manifest holds a
   field of the wrong type, such as the schema as a text, with a message
   instead of a traceback.

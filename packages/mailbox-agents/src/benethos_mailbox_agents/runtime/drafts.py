@@ -21,7 +21,7 @@ from ..store import Store
 from .model import start_of_day
 from .outcomes import Plan
 
-__all__ = ["FORMS", "admissible", "plan"]
+__all__ = ["FORMS", "admissible", "plan", "unsettled"]
 
 # The forms of a forward, as the mailbox service takes them.
 FORMS = frozenset({"inline", "attachment"})
@@ -42,6 +42,16 @@ def admissible(agent: Agent, request: ActionRequest) -> None:
         raise ActionRefusedError("a forward goes only to the agent's recipients")
     if request.forward_as not in FORMS:
         raise ActionRefusedError("a forward is inline or an attachment")
+
+
+def unsettled(store: Store, request: ActionRequest) -> bool:
+    """Whether a forward of the message is recorded and not taken: one
+    whose answer may not have come, so the service is asked before a
+    second draft."""
+    return any(
+        row.action == Action.DRAFT_FORWARD.value and not row.executed
+        for row in store.actions(request.ref)
+    )
 
 
 def plan(

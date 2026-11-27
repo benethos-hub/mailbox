@@ -159,6 +159,35 @@ async def test_a_draft_whose_answer_did_not_come_counts_once(
     assert len(drafted(actions_world)) == 1
 
 
+async def test_a_draft_whose_answer_and_check_were_lost_is_not_made_again(
+    actions_world: Wired, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    mailbox = actions_world.mailbox
+    made = mailbox.draft_forward
+
+    async def lost(*args: object, **kwargs: object) -> str:
+        await made(*args, **kwargs)  # type: ignore[arg-type]
+        raise MailboxUnavailableError("the answer did not come")
+
+    async def away(*args: object, **kwargs: object) -> bool:
+        raise MailboxUnavailableError("the service is away")
+
+    monkeypatch.setattr(mailbox, "draft_forward", lost)
+    monkeypatch.setattr(mailbox, "forward_drafted", away)
+    run = executor(actions_world)
+    with pytest.raises(MailboxUnavailableError):
+        await run([forward()])
+    monkeypatch.undo()
+    [row] = actions_world.store.actions(REF)
+    assert not row.executed
+
+    assert await run([forward()]) == [Outcome.PRESENT]
+
+    [row] = actions_world.store.actions(REF)
+    assert row.executed
+    assert len(drafted(actions_world)) == 1
+
+
 async def test_no_log_line_names_an_address(
     actions_world: Wired, caplog: pytest.LogCaptureFixture
 ) -> None:
