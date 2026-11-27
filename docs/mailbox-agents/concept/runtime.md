@@ -113,7 +113,7 @@ changed until the evaluation was run again.
 |---|---|
 | `worker --agent <name>` | runs one agent pass after pass until SIGTERM or SIGINT |
 | `run --agent <name>` | one pass, then the counts per state |
-| `backfill --agent <name> [--days N]` | takes the messages of the last days up anew and runs them: those of the inbox and of sent mail, and those of the folders the agent wants besides, such as the folders an instance of `categorization` with `"on": {"arrival": "folders"}` takes up. It runs until no message is due, and stops with exit code 1 after the first round that found the gateway away |
+| `backfill --agent <name> [--days N]` | takes the messages of the last days up anew and runs them: those of the inbox and of sent mail, and those of the folders the agent wants besides, such as the folders an instance of `categorization` with `"on": {"arrival": "folders"}` takes up. A message the agent only observes when it arrives is taken up when it carries a keyword the agent waits for already, as an update would take it up. It runs until no message is due, and stops with exit code 1 after the first round that found the gateway away |
 | `report --agent <name> [--limit N] [--state S] [--offline]` | [report](#report) |
 | `eval --agent <name> --gold <file> [--recognizer R] [--reports DIR]` | [evaluation](evaluation.md), with `--recognizer` one part of the agent scored alone |
 | `check --agent <name> INSTANCE=FILE...` | reads the configuration of several instances together and names each circle of lists that set each other off, exit code 1 when there is one, else 0 |

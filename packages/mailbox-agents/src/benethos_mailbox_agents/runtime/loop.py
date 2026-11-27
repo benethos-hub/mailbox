@@ -398,11 +398,23 @@ class Worker:
         refs = await self._mailbox.recent(since, self.accounts, roles=BACKFILL_ROLES)
         refs += await self._in_folders(since)
         for ref in dict.fromkeys(refs):
-            event = Event(type="message.created", ref=ref, at=now)
-            if self._route(event) is Route.DECIDE:
+            route = self._route(Event(type="message.created", ref=ref, at=now))
+            if route is Route.DECIDE or (
+                route is Route.OBSERVE and await self._waited_for(ref)
+            ):
                 added += self.store.enqueue(ref, now, again=again)
         record(feed.Backfilled(agent=self.agent.label, messages=added, days=days))
         return added
+
+    async def _waited_for(self, ref: MessageRef) -> bool:
+        """Whether a message the agent only observes when it arrives is to
+        be decided now, as an update would have it: one that carries a
+        keyword it waits for already. One gone is not."""
+        try:
+            message = await self._mailbox.message(ref)
+        except MessageGoneError:
+            return False
+        return self.agent.decide_again(message)
 
     async def _in_folders(self, since: date) -> list[MessageRef]:
         """The messages of the folders the agent wants in a backfill besides

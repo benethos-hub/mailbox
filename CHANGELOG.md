@@ -320,6 +320,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   folder with a `below` of two names or more, such as `Archive/2026`.
   Before, the folder in between was refused and the mail stayed where
   it was.
+- `benethos-mailbox-agents`: `backfill`, and the backfill after an
+  expired feed, take up the mail an instance of `categorization` that
+  waits for keywords alone waits for, when it carries them already.
+  Before, such an instance took up nothing in a backfill.
 - `restore` and `backup verify` refuse a backup whose manifest holds a
   field of the wrong type, such as the schema as a text, with a message
   instead of a traceback.
