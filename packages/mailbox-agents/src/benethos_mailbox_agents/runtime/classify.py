@@ -43,7 +43,7 @@ from .model import Asker, start_of_day
 from .reader import ReadOnlyMailbox
 from .steps import decide_checked, make_calls, make_context
 
-__all__ = ["Classifier", "told"]
+__all__ = ["PeerClassifier", "told"]
 
 
 class _ReadItems:
@@ -93,7 +93,7 @@ def told(agent: Agent, decision: Decision) -> Classified:
     )
 
 
-class Classifier:
+class PeerClassifier:
     """Classifies one message at a time for a peer."""
 
     def __init__(

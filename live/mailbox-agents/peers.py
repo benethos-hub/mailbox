@@ -61,7 +61,7 @@ from agents_common import (  # beside this script
 from benethos_mailbox_agents.agents.categorization.agent import Categorization
 from benethos_mailbox_agents.peers import Card, Server, app
 from benethos_mailbox_agents.records import MessageRef
-from benethos_mailbox_agents.runtime.classify import Classifier
+from benethos_mailbox_agents.runtime.classify import PeerClassifier
 from benethos_mailbox_agents.settings import Settings
 from benethos_mailbox_agents.sources.mailbox import Mailbox
 from benethos_mailbox_agents.store import Store
@@ -306,7 +306,7 @@ async def run(settings: Settings, host: str) -> int:
             httpx.AsyncClient(base_url=base, timeout=180)
         )
         live = Live(settings, mailbox, host, token, gateway, _master())
-        classifier = Classifier(
+        classifier = PeerClassifier(
             agent,
             reader=mailbox,
             gateway=model,
