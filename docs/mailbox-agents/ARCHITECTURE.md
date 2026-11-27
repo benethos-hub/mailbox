@@ -120,6 +120,7 @@ packages/mailbox-agents/src/benethos_mailbox_agents/
   sources/
     mailbox.py    # the only module importing benethos_mailbox_client
     versions.py   # which versions of the service the agents take
+    answers.py    # an answer made sound, a record of what the API describes
   llm/
     gateway.py    # the only module that talks to the model gateway
     evidence.py   # whether a quote is in the mail the model was given

@@ -32,6 +32,16 @@ stated about the domain of its sender: `pass`, `fail` or `unknown`,
 and `unknown` when the answer has none. Another value is an answer that
 is not what the API describes, a refusal (2026-11-27). No agent acts on
 it yet.
+A forward is drafted with `create_draft`: the addresses, no subject and
+no text of its own, and a `reference` to the message with the action
+`forward` and its form. Whether it is there is looked up on the first
+page of `list_drafts`, a draft to exactly those addresses whose
+`reference` names the message. Assumed until a live check has shown
+it: a user with `mail.read` and `drafts` may make a draft with a
+`reference` **(to verify)**, the service sets the subject `Fwd: ...` and
+carries the attachments of the original when `inline` **(to verify)**,
+and the original stays unchanged until the draft is sent **(to
+verify)**.
 An answer from `500` on and a `429` count as the service away: the pass
 ends and the runtime waits. A `501` with the code `not_supported` is
 not: it says what an account cannot do, a keyword on Gmail or POP3, a
