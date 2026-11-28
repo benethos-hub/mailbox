@@ -160,13 +160,18 @@ def _database_exists(connection: sa.Connection, database: str) -> bool:
 def _password_of_role(
     connection: sa.Connection, role: str, password: str, errors: Errors
 ) -> None:
-    """The password of ``role``, on the connection of the driver itself:
-    the statement holds the password as a constant, and a statement
-    handed on without parameters is read as it is, a percent sign
-    included. A failure is named by its kind alone."""
-    statement = f"ALTER ROLE {_QUOTE(role)} PASSWORD {_constant(password)}"
+    """The password of ``role``, on the connection of the driver itself.
+    The driver hashes it first, so the statement holds the verifier of
+    SCRAM-SHA-256 and never the password: no log of the server, and no
+    view of what runs, can show it. A statement handed on without
+    parameters is read as it is, a percent sign included. A failure is
+    named by its kind alone."""
     driver: Any = connection.connection.driver_connection
     try:
+        verifier = driver.pgconn.encrypt_password(
+            password.encode(), role.encode(), b"scram-sha-256"
+        ).decode()
+        statement = f"ALTER ROLE {_QUOTE(role)} PASSWORD {_constant(verifier)}"
         driver.execute(statement)
     except Exception as exc:
         raise errors.failed(

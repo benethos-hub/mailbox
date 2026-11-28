@@ -44,7 +44,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   every other role, and the roles `agents_read` and `agents_cockpit` the
   cockpit reads with. With `--apply`, `--admin-url` and
   `--admin-password-file` it runs that itself and sets the password of
-  the role, so the agent starts on it. Role and database are those of
+  the role, hashed as SCRAM-SHA-256 before it is sent, so the agent
+  starts on it. Role and database are those of
   `MAILBOX_AGENTS_DATABASE_URL`, or else `agent_<agent>_<instance>`.
 - `benethos-mailbox-agents`: `storage move --agent <name>` copies the
   state file of an agent and instance into the empty database
