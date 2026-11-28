@@ -23,6 +23,7 @@ from .agent import (
     ShownAction,
     TracePart,
     Trigger,
+    label_of,
     state_name,
 )
 from .classifier import Classifier
@@ -64,6 +65,7 @@ __all__ = [
     "list_version",
     "load_agent",
     "load_prompt",
+    "label_of",
     "state_name",
     "waits_for",
 ]

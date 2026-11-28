@@ -35,6 +35,9 @@ __all__ = [
     "former_file",
     "now",
     "session",
+    "server_place_shown",
+    "server_reader",
+    "state_file",
     "state_place",
     "state_reader",
     "upstreams",
@@ -114,13 +117,31 @@ async def upstreams(
         yield mailbox, gateway
 
 
+def state_file(name: str, settings: Settings) -> Path:
+    """The state file of the agent ``name`` in the instance of the
+    settings."""
+    return path_for(settings.data_dir, state_name(name, settings.instance))
+
+
+def server_reader(settings: Settings) -> Store | None:
+    """The state in the database on the server the settings name, for a
+    reader beside the running agent. None while there is none yet."""
+    return Store.read_server(settings.database_server())
+
+
+def server_place_shown(settings: Settings) -> str:
+    """The database on the server the settings name, never a password:
+    for storage postgres, whose settings name it."""
+    return shown_database(settings.database_url or "")
+
+
 def state_reader(name: str, settings: Settings) -> Store | None:
     """The state of the agent ``name`` for a reader beside the running
     agent: in its database on a server for storage postgres, else in its
     state file. None while there is none yet."""
     if settings.storage == "postgres":
-        return Store.read_server(settings.database_server())
-    path = path_for(settings.data_dir, state_name(name, settings.instance))
+        return server_reader(settings)
+    path = state_file(name, settings)
     if not path.is_file():
         return None
     return Store.open(path, read_only=True)
@@ -129,9 +150,8 @@ def state_reader(name: str, settings: Settings) -> Store | None:
 def state_place(name: str, settings: Settings) -> str:
     """Where the state of the agent ``name`` lies, never a password."""
     if settings.storage == "postgres" and settings.database_url:
-        return shown_database(settings.database_url)
-    path = path_for(settings.data_dir, state_name(name, settings.instance))
-    return str(path.resolve())
+        return server_place_shown(settings)
+    return str(state_file(name, settings).resolve())
 
 
 def _store_of(agent: Agent, settings: Settings) -> Store:

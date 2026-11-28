@@ -181,7 +181,7 @@ class Agent(ABC):
     def label(self) -> str:
         """The agent as a log line, a metric and a command name it: its
         name, and its instance after a slash when it has one."""
-        return f"{self.name}/{self.instance}" if self.instance else self.name
+        return label_of(self.name, self.instance)
 
     @property
     def state_name(self) -> str:
@@ -345,6 +345,12 @@ class Agent(ABC):
                 raise ContractError(f"{cls.__name__}: {attr} must be declared")
         _check_identity(cls)
         _check_declarations(cls)
+
+
+def label_of(name: str, instance: str | None) -> str:
+    """Agent ``name`` in ``instance`` as a line names it: its name, and
+    its instance after a slash when it has one."""
+    return f"{name}/{instance}" if instance else name
 
 
 def state_name(name: str, instance: str | None) -> str:
