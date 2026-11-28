@@ -62,9 +62,10 @@ packages/mailbox-common/
       sqlite_file.py    # the file on sqlite3: its PRAGMAs, its steps,
                         #   a copy, a snapshot, the lock of a running
                         #   program, inspect_file
-      server_place.py   # Server, ServerPlace: a schema on PostgreSQL,
-                        #   its version, its lock, away and back
-      server_engine.py  # the engine on psycopg, tls_arguments
+      server_place.py   # ServerPlace: a schema on PostgreSQL, its
+                        #   version, its lock, away and back
+      server_engine.py  # Server, engine_for: the engine on psycopg,
+                        #   tls_arguments
       server_rights.py  # Rights, own_schema, secure, close_database: who
                         #   reaches a program's database on a server
       server_url.py     # URL_FORM, url_problem, server_at: the address of a

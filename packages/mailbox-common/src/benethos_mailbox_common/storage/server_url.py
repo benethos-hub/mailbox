@@ -8,7 +8,7 @@ from typing import Literal
 from urllib.parse import urlsplit
 
 from . import names
-from .server_place import Server
+from .server_engine import Server
 
 # The address of a database server, without its password.
 URL_FORM = "postgresql://<role>@<host>:<port>/<database>"
