@@ -25,8 +25,7 @@ from pathlib import Path
 from typing import Protocol
 
 from ..errors import ConfigError
-from ..store import Store
-from ..store.catalogue import Found, Server, states_on
+from ..store import Found, Server, Store, states_on
 
 __all__ = [
     "Files",

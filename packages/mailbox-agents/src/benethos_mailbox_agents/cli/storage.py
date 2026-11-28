@@ -33,10 +33,8 @@ from benethos_mailbox_common.storage import (
 
 from ..contract import label_of, load_agent
 from ..errors import STATE_ERRORS, ConfigError, StateFileError
-from ..settings import PREFIX, Settings
-from ..settings.database import server_of
-from ..store.catalogue import LOGIN, READER
-from ..store.shape import SHAPE
+from ..settings import PREFIX, Settings, server_of
+from ..store import LOGIN, READER, SHAPE
 from .session import state_file
 
 __all__ = ["add", "move", "provision", "suggested_name"]

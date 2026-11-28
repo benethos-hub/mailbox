@@ -23,8 +23,7 @@ from ..records import Profile
 from ..runtime.loop import Worker
 from ..runtime.model import NoModel
 from ..runtime.readiness import start
-from ..settings import PREFIX, Settings
-from ..settings.database import shown_database
+from ..settings import PREFIX, Settings, shown_database
 from ..sources.mailbox import Mailbox, connect
 from ..store import Store, earlier_file, path_for
 from ..telemetry.otlp import open_spans

@@ -196,6 +196,29 @@ def test_a_row_allows_no_layer_unused() -> None:
     assert unused == {}
 
 
+# The layers that offer their names in their __init__.py: a module of
+# another layer imports the layer, never one of its modules.
+OFFERING = frozenset(
+    {"contract", "records", "errors", "logbook", "settings", "store"}
+    | {"telemetry", "peers", "cli"}
+)
+# The one deep import on purpose: the spans are opened by the command
+# line alone.
+THROUGH = frozenset({("cli/session.py", f"{PACKAGE}.telemetry.otlp")})
+
+
+def test_a_layer_that_offers_its_names_is_imported_through_them() -> None:
+    deep = {
+        (path.relative_to(SOURCE).as_posix(), module)
+        for path in modules()
+        for module, _ in imports_of(path)
+        if len(parts := module.split(".")) > 2
+        and parts[1] in OFFERING
+        and parts[1] != layer_of(path)
+    }
+    assert deep == THROUGH
+
+
 def test_every_layer_has_a_row() -> None:
     """A module or subpackage added without deciding where it sits fails here."""
     layers = {layer_of(path) for path in modules()} - {"__init__"}

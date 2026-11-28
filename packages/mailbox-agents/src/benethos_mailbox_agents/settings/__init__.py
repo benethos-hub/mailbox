@@ -11,6 +11,7 @@ docs/mailbox-agents/concept/configuration.md.
 
 from __future__ import annotations
 
+from .database import server_of, shown_database
 from .folders import DATA_DIR, DEFAULT_ENV_FILE, Folders, folders
 from .model import (
     FORMER_STAGES,
@@ -32,4 +33,6 @@ __all__ = [
     "Stage",
     "folders",
     "load_settings",
+    "server_of",
+    "shown_database",
 ]

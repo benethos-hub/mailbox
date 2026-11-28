@@ -91,8 +91,10 @@ the agents too, with four differences of their own design:
   names them.
 - **Imports through `__init__.py` (5.3).** `contract`, `records`,
   `errors`, `logbook`, `settings`, `store`, `telemetry`, `peers` and `cli` offer
-  their names there. `runtime`, `llm`, `sources` and `evaluation` offer none, and
-  their callers import the module.
+  their names there, and another layer imports them through it alone,
+  but `cli/session.py`, which opens the spans with `telemetry.otlp`.
+  `runtime`, `llm`, `sources`, `evaluation` and `cockpit` offer none, and
+  their callers import the module. `test_layers.py` holds both.
 - **The architecture test (13).** It is `tests/test_layers.py`, the
   layers and the confined dependencies, and `tests/test_layer_rules.py`,
   what a live script, an agent and a module beside the upstreams may do,
