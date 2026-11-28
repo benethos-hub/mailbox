@@ -34,7 +34,6 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import os
 import secrets
 import subprocess
 import sys
@@ -53,14 +52,15 @@ from agents_common import (  # beside this script
     live_settings,
     run_checks,
 )
-from agents_common.test_database import (
+from agents_common.test_database import dropped
+from common.accounts import read_env
+from common.test_database import (
     Administrator,
     administrator,
     connected,
-    dropped,
+    docker_command,
     stopped,
 )
-from common.accounts import read_env
 
 from benethos_mailbox_agents.cockpit import sources
 from benethos_mailbox_agents.settings import Settings
@@ -294,7 +294,7 @@ def _progress(live: Live) -> datetime | None:
 
 
 async def away(live: Live) -> str:
-    docker = os.environ.get("LIVE_DOCKER") or read_env().get("LIVE_DOCKER") or "docker"
+    docker = docker_command(read_env())
     log = live.folder / "worker.log"
     with log.open("w", encoding="utf-8") as sink:
         worker = subprocess.Popen(
@@ -340,7 +340,7 @@ CHECKS: list[tuple[str, Callable[[Live], Awaitable[str]]]] = [
 
 
 async def run(settings: Settings, env_file: Path) -> int:
-    admin = administrator()
+    admin = administrator(read_env())
     print(f"live: test database {admin.host}:{admin.port}")
     with tempfile.TemporaryDirectory() as folder:
         live = Live(settings, env_file.resolve(), Path(folder), admin)

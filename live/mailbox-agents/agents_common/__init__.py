@@ -18,8 +18,9 @@ account and the service are printed before the check reads or writes.
   labels a state file holds.
 - ``processes``: a command of the agents as a process, its environment
   without a setting of the shell.
-- ``test_database``: the test database of containers/test-database/, its
-  administrator, what a check made dropped, and its container stopped.
+- ``test_database``: the databases and roles a check made on the test
+  database of containers/test-database/ dropped, beside what
+  ``common.test_database`` holds.
   Imported as ``agents_common.test_database`` by the check that needs it.
 
 The live scripts import this package beside them, as ``agents_common``,
