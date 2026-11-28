@@ -17,6 +17,7 @@ from benethos_mailbox_agents.errors import (
 )
 from benethos_mailbox_agents.records import MessageRef
 from benethos_mailbox_agents.store import Store
+from benethos_mailbox_common.storage.server_engine import server_engine, tls_arguments
 
 from ..postgres_helpers import connect, instance
 
@@ -74,3 +75,27 @@ def test_a_lock_taken_while_away_ends_the_work() -> None:
             clock.now += 1.5
             with pytest.raises(StateFileError, match="took this database"):
                 store.due(NOW, 10)
+
+
+def test_the_server_ends_a_session_whose_client_went_silent() -> None:
+
+    with instance() as server:
+        engine = server_engine(
+            host=server.host,
+            port=server.port,
+            database=server.database,
+            role=server.role,
+            password=server.password,
+            search_path=server.schema_name,
+            tls=tls_arguments(server.host, server.tls, server.ca_file),
+        )
+        try:
+            with engine.connect() as conn:
+                shown = {
+                    name: conn.exec_driver_sql(f"SHOW {name}").scalar()
+                    for name in ("tcp_keepalives_idle", "tcp_user_timeout")
+                }
+        finally:
+            engine.dispose()
+
+    assert shown == {"tcp_keepalives_idle": "10", "tcp_user_timeout": "15000"}
