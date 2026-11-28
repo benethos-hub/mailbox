@@ -59,15 +59,20 @@ top-level module.
 - `evaluation` stands on `runtime` and `store`.
 - `peers`, the entrance for peers over A2A, stands on `errors`,
   `records` and `settings`: it is handed what classifies a message.
+- `cockpit`, the pages of what every agent did, stands on `contract`,
+  `store` and the layers below them, and on `runtime`: it reads the
+  states through the store, and the command line hands it the reader of
+  the mailbox service.
 - `cli` wires everything on top, and `__main__` calls it.
 
 Of the other packages of the repository, the agents take the client,
 in `sources/mailbox.py` alone, and `mailbox-common` with its extras
-`paths` and `settings`: the lines of the log, the masking of secrets,
-the digest of a secret, text, pauses, the plain text and the addresses
-of a mail, settings from a file, the folders of the operating system for
-settings and state files and the lock of a state file, as the service
-and the MCP server have them. The
+`paths`, `settings` and `storage`: the lines of the log, the masking of
+secrets, the digest of a secret, text, pauses, the plain text and the
+addresses of a mail, settings from a file, the folders of the operating
+system for settings and state files, as the service and the MCP server
+have them, and the storage of the state, its lock among it, on SQLite
+and on PostgreSQL. The
 table `CONFINED` of `test_layers.py` names the modules that import each.
 
 ## The rules of the repository
@@ -100,8 +105,8 @@ for the tests (13).
 ```
 packages/mailbox-agents/src/benethos_mailbox_agents/
   cli/            # the console script: worker, run, backfill, report, eval,
-                  # check, status, paths, health, cockpit, and the wiring
-                  # of one session
+                  # check, status, paths, health, cockpit, storage, and
+                  # the wiring of one session
   __main__.py     # enables `python -m benethos_mailbox_agents`
   errors/         # the error hierarchy, one module per error, its texts
                   #   masked with redact of mailbox-common
@@ -197,7 +202,9 @@ live/mailbox-agents/    # run by hand, outside testpaths, against the test
                         # agents_smoke.py read-only, categorization.py,
                         # chain.py the instances, filing.py and
                         # forwarding.py the actors, peers.py
-                        # the entrance over A2A, cockpit.py the cockpit, gold.py the gold files from its
+                        # the entrance over A2A, cockpit.py the cockpit,
+                        # postgres_state.py the state on PostgreSQL,
+                        # gold.py the gold files from its
                         # labels, agents_common/ what they share
 containers/
   images/mailbox-agents/Dockerfile

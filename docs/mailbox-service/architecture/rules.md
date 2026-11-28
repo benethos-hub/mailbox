@@ -99,7 +99,7 @@ noticing. Every change is measured against that.
 | Sending | `data/protocols/smtp.py` (`SmtpSession`), and `data/providers/sender.py` (`SmtpSender`), which adapters without sending of their own (IMAP, POP3) hold | stdlib smtplib | e.g. aiosmtplib |
 | Web layer | `web/` | FastAPI, Jinja2 for the UI | another framework, as long as the OpenAPI document stays the same |
 | Account and user store | `data/storage/` (`AccountRepository`, `UserRepository`, `RoleRepository`, `TokenRepository`, `PasswordRepository`, `KeyRepository`, `CredentialRepository`, `MessageIndexRepository`, `IdempotencyRepository`, `SendLogRepository`, `OutboxRepository`, `ChangeLogRepository`, `WebhookRepository`, `AuditRepository`, `LinkRepository`, `TotpRepository`, `RecoveryCodeRepository`, `PasskeyRepository`) | in-memory, SQLite and PostgreSQL through SQLAlchemy Core (`data/storage/sql/`: the shape of the service in `database.py`, the tables in `schema.py`, the repositories), the old steps of the schema of the file on `sqlite3` (`data/storage/sqlite/`), the layer beneath them in the group `storage` of `mailbox-common` (the types and what differs between databases in `dialect.py`, the file of SQLite in `sqlite_file.py`), PostgreSQL through psycopg | another database |
-| Where a database lies | `Place` in `storage/place.py` of `mailbox-common`: the one connection, undoing a failed transaction, the copy before a revision, shrinking, the mark of a running service, a view of one moment, the snapshot file, whether the database can be reached (`ready`, `watch`, `unavailable`), translating the failures of the driver, closing | the file of SQLite (`FilePlace` in `storage/file_place.py`), a schema on a PostgreSQL server (`ServerPlace` in `storage/server_place.py`), both of `mailbox-common`. `data/storage/sql/database.py` is the one module of the service's `sql/` that reaches its `sqlite/`, for the old steps | another database server |
+| Where a database lies | `Place` in `storage/place.py` of `mailbox-common`: the one connection, undoing a failed transaction, the copy before a revision, shrinking, the mark of a running service, a view of one moment, the snapshot file, whether the database can be reached (`ready`, `watch`, `unavailable`), translating the failures of the driver, closing | the file of SQLite (`FilePlace` in `storage/file_place.py`), a schema on a PostgreSQL server (`ServerPlace` in `storage/server_place.py`), both of `mailbox-common`, and a state file of the agents read beside its writer (`ReadPlace` in `store/reader.py` of `mailbox-agents`). `data/storage/sql/database.py` is the one module of the service's `sql/` that reaches its `sqlite/`, for the old steps | another database server |
 | Autodiscovery source | `data/discovery/` (`DiscoverySource`) | presets, ISP autoconfig, JMAP well-known and SRV, ISPDB, MX (planned: Microsoft realm, SRV for IMAP and SMTP, guessing) | any further lookup, or one switched off |
 | HTTP | `data/protocols/http/` (`SafeFetcher`, `ApiClient`, `ServerClient`) | httpx | another HTTP client |
 | OAuth token source | `TokenSource` in `data/providers/base.py`, made in `data/protocols/oauth/tokens.py`, each OAuth provider's endpoints and scopes in its own directory, reached through `sign_in` in the registry | refresh token in the vault, access token in memory | another token store |
@@ -132,8 +132,11 @@ table after an import. How each database is reached lies with its
 place: the engine of SQLite in `file_place.py`, the engine of
 PostgreSQL, its TLS and its time limits in `server_engine.py`, its lock
 in `server_lock.py`, and the rest of the server in `server_place.py`.
-The names of the server itself, its functions, its codes of failure,
-its TLS and the connection of its driver, stand in these alone.
+Who may reach a database stands in `server_rights.py`, what an
+administrator makes for a program in `server_provision.py`, and what a
+role finds on a server in `server_catalogue.py`. The names of the
+server itself, its functions, its catalogues, its codes of failure,
+its TLS and the connection of its driver, stand in these six alone.
 Since 2026-11-26 `Database` reaches the file through its place
 (`place.py` of the group). Everything above the place, the
 transactions, the revisions from schema 26 on, the repositories and

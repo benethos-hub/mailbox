@@ -1,9 +1,10 @@
-"""What a page of the cockpit shows, read from the state files.
+"""What a page of the cockpit shows, read from the states of the
+instances, in files or on a server.
 
-Each state file is opened read-only for one request and closed after it,
-and read through the methods of the store alone. A file that cannot be
+Each state is opened read-only for one request and closed after it, and
+read through the methods of the store alone. A state that cannot be
 read, or is of a newer schema, is a row with its reason, never an error
-of the page. Everything from a state file or a mail is foreign text:
+of the page. Everything from a state or a mail is foreign text:
 each such value passes ``text_values.escaped`` here, before a page draws
 it, and the pages escape it once more as HTML.
 """

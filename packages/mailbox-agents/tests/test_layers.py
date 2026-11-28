@@ -90,7 +90,7 @@ CONFINED: dict[str, frozenset[str]] = {
     "alembic": frozenset({_STORE(_BASELINE)}),
     "benethos_mailbox_client": frozenset({"sources/mailbox.py"}),
     # What the programs of Mailbox share: the lines of the log, the masking
-    # of secrets, text and settings.
+    # of secrets, text, settings and the storage of the state.
     "benethos_mailbox_common": frozenset(
         {
             "errors/base.py",

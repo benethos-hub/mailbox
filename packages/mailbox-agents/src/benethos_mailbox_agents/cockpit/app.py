@@ -1,9 +1,9 @@
 """The app of the cockpit: its pages, the sign-in with its secret, and
 the headers on every answer.
 
-Each page reads the state files anew. A page never takes a word of its
+Each page reads the states anew. A page never takes a word of its
 address into its text: a notice is chosen by a key from a fixed list,
-and an instance by a name among the files found.
+and an instance by a name among those the sources found.
 """
 
 from __future__ import annotations

@@ -104,7 +104,12 @@ database and one role for each agent and instance
 ([state.md](../../../docs/mailbox-agents/concept/state.md)). This
 compose file brings no server, as it brings no mailbox service.
 
-1. Make the role and the database of the agent. `storage provision`
+1. Put the password of the role into `secrets/<agent>/database_password`,
+   readable by uid 10001 alone as the token is, and the lines of
+   `agents/<agent>/.env.example` under "On PostgreSQL" into its `.env`.
+   `MAILBOX_AGENTS_PROMPT_RETENTION_DAYS` stays `0`: the text of a model
+   call is never kept on a server.
+2. Make the role and the database of the agent. `storage provision`
    prints what an administrator of the server runs once, with the
    names `agent_<agent>`, or those of `MAILBOX_AGENTS_DATABASE_URL`
    when its `.env` names one, and once per server the read role
@@ -116,14 +121,9 @@ compose file brings no server, as it brings no mailbox service.
 
    With `--apply --admin-url postgresql://<admin>@<host>:<port>/postgres
    --admin-password-file /run/secrets/database_admin_password` it runs
-   them itself and sets the password of the role. Put the file of the
-   administrator into `secrets/<agent>/` for that one call, and take it
-   out again after it.
-2. Put the password of the role into `secrets/<agent>/database_password`,
-   readable by uid 10001 alone as the token is, and the lines of
-   `agents/<agent>/.env.example` under "On PostgreSQL" into its `.env`.
-   `MAILBOX_AGENTS_PROMPT_RETENTION_DAYS` stays `0`: the text of a model
-   call is never kept on a server.
+   them itself and sets the password of step 1 for the role. Put the
+   file of the administrator into `secrets/<agent>/` for that one call,
+   and take it out again after it.
 3. An agent that ran on its volume moves its state over. Stop it, check
    that every value fits, move it, and start it on the database:
 
@@ -146,8 +146,8 @@ compose file brings no server, as it brings no mailbox service.
 
 At each start the agent closes its database to every other role of the
 server and gives the read to the roles `MAILBOX_AGENTS_DATABASE_READERS`
-names, `agents_read` for the cockpit, and takes it from a role it no
-longer names. `status` and `paths` say where the state lies, and
+names, `agents_read` for the cockpit. From a role it no longer names it
+takes `CONNECT`, which shuts it out, where its role owns the database. `status` and `paths` say where the state lies, and
 `health` reads it there.
 
 For the cockpit, give `agents_cockpit` a password as the administrator,

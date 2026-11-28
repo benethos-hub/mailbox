@@ -19,8 +19,9 @@ an advisory lock, so a second writer is refused. At each start a role
 that owns its database takes `CONNECT` and `TEMPORARY` from `PUBLIC`,
 closing it to every other role of the server, and gives `CONNECT`,
 `USAGE` of its schema and `SELECT` on its tables, those to come
-included, to the roles `DATABASE_READERS` names. It takes them from a
-role it no longer names. Name there only roles trusted as much as the
+included, to the roles `DATABASE_READERS` names. From a role it no
+longer names it takes `CONNECT`, which shuts it out, and only where its
+role owns the database. Name there only roles trusted as much as the
 agent, such as the cockpit's: a reader can never change the state, but
 any role that may connect to the database sees the key of the agent's
 lock in `pg_locks` and can hold it, and then the agent does not start
