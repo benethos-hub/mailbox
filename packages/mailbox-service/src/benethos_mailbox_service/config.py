@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Literal, Self
-from urllib.parse import SplitResult, urlsplit
+from urllib.parse import urlsplit
 
 from pydantic import Field, SecretStr, field_validator, model_validator
 
@@ -277,11 +277,6 @@ class Settings(files.FileSettings):
             host = parts.netloc.rsplit("@", 1)[-1]
             return f"{parts.scheme}://{parts.username}@{host}{parts.path}"
         return str(self.database_path)
-
-
-def database_url_parts(url: str) -> SplitResult:
-    """The parts of ``database_url``, which the settings checked."""
-    return urlsplit(url)
 
 
 def _database_settings(url: str | None, password_file: Path | None) -> None:
