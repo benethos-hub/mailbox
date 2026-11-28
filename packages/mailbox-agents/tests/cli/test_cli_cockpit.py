@@ -154,3 +154,21 @@ def test_a_database_on_a_server_goes_before_a_file_of_its_name(
 
     kinds = [type(place) for place in served[0].places]
     assert kinds == [sources.Servers, sources.Files]
+
+
+def test_ctrl_c_ends_the_cockpit_without_a_traceback(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # uvicorn raises the interrupt again once it has shut down.
+    monkeypatch.setenv(f"{PREFIX}COCKPIT_SECRET", SECRET)
+    monkeypatch.setenv(f"{PREFIX}DATA_DIR", str(tmp_path))
+
+    async def interrupted(*args: object, **kwargs: object) -> None:
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(commands, "serve", interrupted)
+
+    assert main(["cockpit"]) == 0
+    assert "Traceback" not in capsys.readouterr().err
