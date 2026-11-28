@@ -35,15 +35,14 @@ from ..contract import label_of, load_agent
 from ..errors import STATE_ERRORS, ConfigError, StateFileError
 from ..settings import PREFIX, Settings
 from ..settings.database import server_of
+from ..store.catalogue import LOGIN, READER
 from ..store.shape import SHAPE
 from .session import state_file
 
-__all__ = ["LOGIN", "READER", "add", "move", "provision", "suggested_name"]
+__all__ = ["add", "move", "provision", "suggested_name"]
 
 # The role that may read the database of every instance, without
 # signing in, and the role the cockpit signs in with, a member of it.
-READER = "agents_read"
-LOGIN = "agents_cockpit"
 
 
 def add(sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:

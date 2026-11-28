@@ -59,13 +59,11 @@ from common.accounts import read_env
 from benethos_mailbox_agents.cockpit import sources
 from benethos_mailbox_agents.settings import PREFIX, Settings
 from benethos_mailbox_agents.store import Store
+from benethos_mailbox_agents.store.catalogue import LOGIN, READER
 from benethos_mailbox_common.storage.server_place import Server
 from benethos_mailbox_service.data.storage import open_repositories
 
 DAYS = "30"
-# The read role and the role of the cockpit storage provision makes.
-READER = "agents_read"
-LOGIN = "agents_cockpit"
 # How long the test database stays stopped, and how long the worker may
 # take to write its progress once it is back.
 AWAY_SECONDS = 15
@@ -158,8 +156,15 @@ def _provisioned(live: Live, letter: str) -> str:
     return said
 
 
+def _state(live: Live, letter: str) -> Store:
+    found = Store.read_server(live.server(letter))
+    if found is None:
+        raise AssertionError(f"instance {letter} holds no state yet")
+    return found
+
+
 def _rows(live: Live, letter: str) -> int:
-    with Store.read_server(live.server(letter)) as store:  # type: ignore[union-attr]
+    with _state(live, letter) as store:
         return sum(store.counts().values())
 
 
@@ -273,7 +278,7 @@ async def move(live: Live) -> str:
         before = store.counts()
     _provisioned(live, "c")
     said = _agents(live, "c", "storage", "move", "--agent", "counting")
-    with Store.read_server(live.server("c")) as moved:  # type: ignore[union-attr]
+    with _state(live, "c") as moved:
         after = moved.counts()
     if before != after or "compared table by table" not in said:
         raise AssertionError(f"the move does not hold: {before} != {after}")
@@ -281,7 +286,7 @@ async def move(live: Live) -> str:
 
 
 def _progress(live: Live) -> datetime | None:
-    with Store.read_server(live.server("a")) as store:  # type: ignore[union-attr]
+    with _state(live, "a") as store:
         return store.progress()
 
 
