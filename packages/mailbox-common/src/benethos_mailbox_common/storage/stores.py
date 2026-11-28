@@ -16,7 +16,7 @@ from pathlib import Path
 
 from . import locks, sqlite_file
 from .database import Database
-from .errors import ConflictError, Errors, StorageError
+from .errors import ConflictError, StorageError
 from .server_place import Server, ServerPlace
 from .shape import Shape
 
@@ -43,15 +43,15 @@ def migrate_file(shape: Shape, path: Path) -> None:
 
 
 @contextmanager
-def file_claimed(path: Path, errors: Errors, noun: str) -> Iterator[None]:
-    """The lock a running program, the ``noun``, holds beside the file
+def file_claimed(shape: Shape, path: Path) -> Iterator[None]:
+    """The lock a running program of ``shape`` holds beside the file
     at ``path``, for a tool, for the time of the block."""
     try:
         with locks.exclusive_lock(sqlite_file.lock_file(path)):
             yield
     except locks.LockedError:
-        raise errors.in_use(
-            f"the {noun} is running on this database: stop it first"
+        raise shape.errors.in_use(
+            f"the {shape.noun} is running on this database: stop it first"
         ) from None
 
 

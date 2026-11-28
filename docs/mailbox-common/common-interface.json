@@ -1423,7 +1423,7 @@
       "signature": "(shape: 'Shape', server: 'Server', *, schema: 'int | None' = None, empty: 'str | None' = None) -> 'Iterator[Claim]'"
     },
     "file_claimed": {
-      "signature": "(path: 'Path', errors: 'Errors', noun: 'str') -> 'Iterator[None]'"
+      "signature": "(shape: 'Shape', path: 'Path') -> 'Iterator[None]'"
     },
     "file_store": {
       "signature": "(shape: 'Shape', path: 'Path | None' = None, *, schema: 'int | None' = None, keep_copy: 'bool' = True) -> 'Database'"
