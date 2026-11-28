@@ -95,3 +95,35 @@ def test_a_reader_the_server_does_not_know_stops_the_start() -> None:
                 readers=("nobody_here",),
                 setting="MAILBOX_AGENTS_DATABASE_READERS",
             )
+
+
+def test_a_role_that_does_not_own_its_database_says_no_reader_was_given() -> None:
+    from psycopg import sql
+
+    with role() as reader, role() as agent:
+        made = sql.Identifier(agent.role)
+        with connect() as admin:
+            admin.execute(sql.SQL("CREATE DATABASE {}").format(made))
+            admin.execute(
+                sql.SQL("REVOKE CONNECT ON DATABASE {} FROM PUBLIC").format(made)
+            )
+            admin.execute(
+                sql.SQL("GRANT CONNECT, CREATE ON DATABASE {} TO {}").format(made, made)
+            )
+        try:
+            server = Server(
+                host=agent.host,
+                port=agent.port,
+                database=agent.role,
+                role=agent.role,
+                password=agent.password,
+            )
+            with Store.open_server(server, readers=(reader.role,)) as store:
+                assert store.rights is not None
+                assert (store.rights.owner, store.rights.readers) == (False, ())
+            assert not _connects(reader, server.database)
+        finally:
+            with connect() as admin:
+                admin.execute(
+                    sql.SQL("DROP DATABASE IF EXISTS {} WITH (FORCE)").format(made)
+                )
