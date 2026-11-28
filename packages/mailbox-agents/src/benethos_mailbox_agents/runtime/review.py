@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from pydantic import ValidationError
+
 from ..contract import Reader
 from ..errors import MailboxRefusedError
 from ..records import Decision, MailMessage, StepResult
@@ -31,11 +33,16 @@ class Entry:
 
 
 def _latest(steps: list[StepResult], step: str) -> tuple[Decision | None, str]:
-    """The decision of the last ``step`` of ``steps``, and its model."""
+    """The decision of the last ``step`` of ``steps``, and its model. One
+    that does not fit, such as a decision of a newer version, is none: the
+    message shows without it."""
     found = [s for s in steps if s.step == step]
     if not found:
         return None, ""
-    return Decision.model_validate(found[-1].result), found[-1].model
+    try:
+        return Decision.model_validate(found[-1].result), found[-1].model
+    except ValidationError:
+        return None, found[-1].model
 
 
 async def entry(store: Store, mailbox: Reader | None, row: MessageRow) -> Entry:

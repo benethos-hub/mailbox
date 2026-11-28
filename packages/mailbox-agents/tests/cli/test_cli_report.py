@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import UTC, datetime
+from pathlib import Path
 
 import pytest
 
@@ -16,9 +18,10 @@ from benethos_mailbox_agents.records import (
     Evidence,
     MailMessage,
     MessageRef,
+    StepResult,
 )
 from benethos_mailbox_agents.runtime.review import Entry
-from benethos_mailbox_agents.store import ActionRow, MessageRow
+from benethos_mailbox_agents.store import ActionRow, MessageRow, Store
 
 from ..agents_fake import ACCOUNT, FakeService, wire_message
 from ..agents_helpers import configure
@@ -242,3 +245,37 @@ def test_no_control_character_reaches_the_terminal() -> None:
     )
     assert "  subject: Invoice 42\\x1b]0;owned\\x07\\x1b[2K\\r subject:" in lines[2]
     assert not any(line.startswith("action: fake") for line in lines)
+
+
+def test_a_decision_of_a_newer_version_is_shown_without_it(
+    service: FakeService,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    configure(monkeypatch)
+    main(["run", "--agent", "counting"])
+    service.add(wire_message("m1"))
+    main(["run", "--agent", "counting"])
+    with Store.open(next(tmp_path.rglob("counting.db"))) as store:
+        ref = store.messages(None, 1)[0].ref
+        store.add_step(
+            ref,
+            StepResult(
+                step="decision",
+                prompt_version="v9",
+                model="newer-model",
+                result={"label": "counted", "source": "model", "flavour": "Hello Ann"},
+                at=datetime.now(UTC),
+            ),
+            "alias",
+        )
+    capsys.readouterr()
+    caplog.set_level(logging.DEBUG)
+
+    assert main(["report", "--agent", "counting", "--offline"]) == 0
+
+    out = capsys.readouterr().out
+    assert "m1" in out
+    assert "Hello Ann" not in out + caplog.text

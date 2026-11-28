@@ -7,6 +7,7 @@ import re
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import timedelta
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -21,9 +22,10 @@ from benethos_mailbox_agents.errors import (
     MailboxUnavailableError,
     StateFileError,
 )
-from benethos_mailbox_agents.records import MailMessage, MessageRef, Thread
+from benethos_mailbox_agents.records import MailMessage, MessageRef, StepResult, Thread
+from benethos_mailbox_agents.store import Store
 
-from .cockpit_helpers import NOW, SECRET, signed_in
+from .cockpit_helpers import NOW, REF, SECRET, signed_in
 
 PAGES = ("/", "/agents/counting", "/agents/counting/messages/acc1/m1")
 
@@ -265,3 +267,31 @@ def test_an_error_no_page_expects_is_a_page_with_the_headers(
     assert answer.headers["cache-control"] == "no-store"
     assert "cockpit failed to answer a page: RuntimeError" in caplog.text
     assert "Your invoice" not in caplog.text + answer.text
+
+
+def test_a_decision_of_a_newer_version_is_a_page_without_it(
+    client: TestClient,
+    cockpit: Cockpit,
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    with Store.open(tmp_path / "counting" / "counting.db") as store:
+        store.add_step(
+            REF,
+            StepResult(
+                step="decision",
+                prompt_version="v9",
+                model="newer-model",
+                result={"label": "invoice", "source": "model", "flavour": "Hello Ann"},
+                at=NOW,
+            ),
+            "alias",
+        )
+    signed_in(client)
+    caplog.set_level(logging.DEBUG)
+
+    instance = client.get("/agents/counting")
+    message = client.get("/agents/counting/messages/acc1/m1")
+
+    assert instance.status_code == message.status_code == 200
+    assert "Hello Ann" not in instance.text + message.text + caplog.text
