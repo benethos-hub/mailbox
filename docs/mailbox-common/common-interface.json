@@ -1444,7 +1444,7 @@
       }
     },
     "LOCK_ROW": {
-      "value": "service_lock"
+      "value": "program_lock"
     },
     "MOVING": {
       "value": "move_started"
