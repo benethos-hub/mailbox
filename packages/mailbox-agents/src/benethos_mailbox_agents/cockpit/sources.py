@@ -71,8 +71,8 @@ class Source(Protocol):
 @dataclass(frozen=True, slots=True)
 class StateFile:
     """A state file and the name the cockpit shows it under: its name
-    without the ending, with the folder before it when two folders hold a
-    file of the same name."""
+    without the ending. A later file of a name taken gets its folder
+    before it, and a number after it while that is taken too."""
 
     name: str
     path: Path
@@ -168,7 +168,12 @@ def found(data_dir: Path) -> list[StateFile]:
         name = path.stem
         if name in names:
             name = f"{path.parent.name}-{path.stem}"
-        names.add(name)
+        shown, number = name, 1
+        while shown in names:
+            number += 1
+            shown = f"{name}-{number}"
+        names.add(shown)
+        name = shown
         files.append(StateFile(name, path))
     return sorted(files, key=lambda file: file.name)
 

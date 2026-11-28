@@ -156,3 +156,14 @@ def test_any_error_of_the_agents_is_a_row_with_its_reason() -> None:
 
     assert found.state == "unreadable"
     assert found.problem == "the state was written by another version"
+
+
+def test_two_files_never_share_a_name(tmp_path: Path) -> None:
+    filled(tmp_path / "a.db")
+    filled(tmp_path / "x-a.db")
+    filled(tmp_path / "x" / "a.db")
+
+    found = sources.found(tmp_path)
+
+    assert [file.name for file in found] == ["a", "x-a", "x-a-2"]
+    assert len(sources.every((sources.Files(tmp_path),))) == 3

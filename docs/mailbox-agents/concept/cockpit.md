@@ -36,8 +36,9 @@ Decided on 2026-11-27:
 
 Every `*.db` in `DATA_DIR` and in its direct folders, so a folder per
 volume of an agent needs no setting of its own. An instance is named by
-its file without the ending, with the name of its folder before it when
-two folders hold a file of the same name. A page names an instance and
+its file without the ending. A later file of a name already taken has
+the name of its folder before it, and a number after it while that name
+is taken too, such as `x-a-2`. A page names an instance and
 never takes a path from its address: a name it does not find is a page
 of 404.
 
