@@ -15,6 +15,7 @@ failure names a statement or a value.
 
 from __future__ import annotations
 
+from contextlib import suppress
 from dataclasses import dataclass
 from typing import Any
 
@@ -57,6 +58,8 @@ def make_instance(
     names, signed in to its database, and set ``password`` for the role.
     A role or a database of the names that exists already stops it before
     anything is made. The reading roles are made where they are missing.
+    A run that fails on the way drops what it made, so a second run
+    finds nothing in its way.
     The errors are those of ``shape``, a driver not installed said as its
     ``extra`` says."""
     errors = shape.errors
@@ -94,17 +97,12 @@ def make_instance(
                     f"{' and '.join(taken)} exist already: provision makes new ones"
                 )
             conn.exec_driver_sql("SET standard_conforming_strings = on")
-            for line in instance_statements(instance, errors):
-                conn.exec_driver_sql(line)
-            _password_of_role(conn, instance.role, password, errors)
-            for role, line in zip(
-                (instance.reader, instance.login),
-                reading_statements(instance),
-                strict=True,
-            ):
-                if not _role_exists(conn, role):
-                    conn.exec_driver_sql(line)
-                    made.append(f"role {role}")
+            undo: list[str] = []
+            try:
+                _instance_made(conn, instance, password, errors, made, undo)
+            except Exception:
+                _undone(conn, undo)
+                raise
     finally:
         engine.dispose()
     return Provided(made=tuple(made))
@@ -125,6 +123,43 @@ def instance_statements(instance: Instance, errors: Errors) -> list[str]:
         f"CREATE DATABASE {database} OWNER {role}",
         f"REVOKE CONNECT, TEMPORARY ON DATABASE {database} FROM PUBLIC",
     ]
+
+
+def _instance_made(
+    conn: sa.Connection,
+    instance: Instance,
+    password: str,
+    errors: Errors,
+    made: list[str],
+    undo: list[str],
+) -> None:
+    """The role with its password, its database, and the reading
+    roles where they are missing. ``undo`` gathers what drops each
+    as it is made, the last first."""
+    role, database, closed = instance_statements(instance, errors)
+    conn.exec_driver_sql(role)
+    undo.insert(0, f"DROP ROLE IF EXISTS {_QUOTE(instance.role)}")
+    _password_of_role(conn, instance.role, password, errors)
+    conn.exec_driver_sql(database)
+    undo.insert(0, f"DROP DATABASE IF EXISTS {_QUOTE(instance.database)} WITH (FORCE)")
+    conn.exec_driver_sql(closed)
+    for name, line in zip(
+        (instance.reader, instance.login),
+        reading_statements(instance),
+        strict=True,
+    ):
+        if not _role_exists(conn, name):
+            conn.exec_driver_sql(line)
+            undo.insert(0, f"DROP ROLE IF EXISTS {_QUOTE(name)}")
+            made.append(f"role {name}")
+
+
+def _undone(conn: sa.Connection, undo: list[str]) -> None:
+    """What a failed run made, dropped as far as the server lets it:
+    the first failure is the one said."""
+    for line in undo:
+        with suppress(sa.exc.SQLAlchemyError):
+            conn.exec_driver_sql(line)
 
 
 def reading_statements(instance: Instance) -> list[str]:

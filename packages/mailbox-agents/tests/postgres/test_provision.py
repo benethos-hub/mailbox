@@ -13,10 +13,19 @@ import pytest
 
 from benethos_mailbox_agents.cli import main
 from benethos_mailbox_agents.cli.storage import LOGIN, READER
+from benethos_mailbox_agents.errors import StateFileError
 from benethos_mailbox_agents.settings import PREFIX, load_settings
 from benethos_mailbox_agents.store import Store
+from benethos_mailbox_agents.store.shape import SHAPE
+from benethos_mailbox_common.storage.server_provision import Instance, make_instance
 
-from ..postgres_helpers import admin_password_file, admin_url, connect, fresh_name
+from ..postgres_helpers import (
+    admin_password_file,
+    admin_url,
+    connect,
+    fresh_name,
+    role,
+)
 
 
 @pytest.fixture
@@ -76,3 +85,25 @@ def test_the_agent_starts_on_what_provision_made(
 
     assert _apply(tmp_path) == 1
     assert "exist already" in capsys.readouterr().err
+
+
+def test_a_run_that_fails_leaves_nothing_behind(named: str, tmp_path: Path) -> None:
+    # An administrator who may make roles and no database: the database
+    # fails after the role was made.
+    from psycopg import sql
+
+    with role() as limited:
+        with connect() as conn:
+            conn.execute(
+                sql.SQL("ALTER ROLE {} CREATEROLE").format(sql.Identifier(limited.role))
+            )
+        wanted = Instance(role=named, database=named, reader=READER, login=LOGIN)
+        with pytest.raises(StateFileError):
+            make_instance(limited, wanted, "a password", SHAPE)
+        with connect() as conn:
+            left = conn.execute(
+                "SELECT rolname FROM pg_roles WHERE rolname = %s", (named,)
+            ).fetchall()
+        assert left == []
+
+    assert _apply(tmp_path) == 0
