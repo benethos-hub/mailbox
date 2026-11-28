@@ -4,12 +4,16 @@ needs."""
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+from pathlib import Path
+
 import pytest
 
 from benethos_mailbox_agents.cli import main
 from benethos_mailbox_agents.cli.storage import suggested_name
 from benethos_mailbox_agents.errors import ConfigError
 from benethos_mailbox_agents.settings import PREFIX
+from benethos_mailbox_agents.store import Store
 
 
 def _plan(capsys: pytest.CaptureFixture[str], agent: str) -> list[str]:
@@ -104,3 +108,17 @@ def test_a_move_needs_the_database_it_goes_into(
     assert main(["storage", "move", "--agent", "counting"]) == 2
 
     assert f"{PREFIX}DATABASE_URL names" in capsys.readouterr().err
+
+
+def test_a_check_before_a_move_needs_no_server(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setenv(f"{PREFIX}DATA_DIR", str(tmp_path))
+    with Store.open(tmp_path / "counting.db") as store:
+        store.set_cursor("token-1", datetime.now(UTC))
+
+    assert main(["storage", "move", "--agent", "counting", "--check"]) == 0
+
+    assert "fits its column" in capsys.readouterr().out
