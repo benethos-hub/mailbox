@@ -88,9 +88,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   while the server cannot be reached. Any other refusal ends it at once.
   A server older than PostgreSQL 19 is refused, and so are a database a
   newer version made and a second service on the same schema. The lock
-  that refuses it is keyed by a random number the schema keeps, so
-  another role of the server cannot hold it ahead. A second `serve`
-  ends at once with the reason. The driver comes with
+  that refuses it is keyed by a random number the schema keeps, so a
+  role that cannot connect to the database cannot hold it ahead. A
+  second `serve` ends at once with the reason. The driver comes with
   the extra `postgres`:
   `pip install 'benethos-mailbox-service[postgres]'`. The image of the
   service has it. On SQLite nothing changes but the fixes below, which hold for a
