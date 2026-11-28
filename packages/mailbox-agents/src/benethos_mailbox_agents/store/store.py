@@ -28,6 +28,7 @@ from benethos_mailbox_common.storage import (
     migrated,
     server_place,
     server_rights,
+    sqlite_file,
 )
 
 from ..errors import ConfigError, StateFileError
@@ -79,7 +80,7 @@ def _lock(path: Path) -> ExitStack:
     """An exclusive lock on ``<path>.lock``, held until the stack is
     closed: one writer per state file. Another writer is refused at once."""
     held = ExitStack()
-    lock = locks.exclusive_lock(path.with_name(path.name + ".lock"))
+    lock = locks.exclusive_lock(sqlite_file.lock_file(path))
     try:
         _made(path, lambda: held.enter_context(lock))
     except locks.LockedError:
