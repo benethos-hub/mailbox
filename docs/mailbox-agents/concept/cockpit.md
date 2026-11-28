@@ -117,10 +117,11 @@ state files hold, the quotes of mail among it.
   a browser in.
 - A session lives in the memory of the process, for 8 hours without a
   request and 24 hours at most. A restart signs everyone out. Its cookie
-  is `HttpOnly`, `SameSite=strict`, `Secure` under https, and ends with
-  the browser.
+  is `HttpOnly`, `SameSite=strict`, `Secure` when the cockpit itself
+  serves https, and ends with the browser.
 - Ten failed sign-ins from one address in 15 minutes hold it for 15
-  minutes. The page names only the wait.
+  minutes. The page names only the wait. The address is that of the
+  connection: no `X-Forwarded-For` is believed.
 - Signing out is a form with a token of the session.
 - A page says nothing it takes from its address: a notice is chosen by a
   key from a fixed list.

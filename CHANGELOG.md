@@ -185,7 +185,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   state, counts, decisions and open items, the newest results, and one
   message with its evidence, steps and actions. It starts only with
   `MAILBOX_AGENTS_COCKPIT_SECRET` or `MAILBOX_AGENTS_COCKPIT_SECRET_FILE`,
-  which a person signs in with, and serves on
+  which a person signs in with, failed sign-ins counted by the address
+  of the connection, and serves on
   `MAILBOX_AGENTS_COCKPIT_HOST` and `MAILBOX_AGENTS_COCKPIT_PORT`
   (`127.0.0.1:9480`). Subject and sender show only with the settings of
   the mailbox service, else the ids. The package depends on `fastapi`,
