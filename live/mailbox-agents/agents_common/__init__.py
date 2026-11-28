@@ -16,6 +16,8 @@ account and the service are printed before the check reads or writes.
 - ``checks``: the run of the checks, a check skipped, the agent
   ``categorization`` over the test account and the keywords it sets, and the
   labels a state file holds.
+- ``processes``: a command of the agents as a process, its environment
+  without a setting of the shell.
 - ``test_database``: the test database of containers/test-database/, its
   administrator, what a check made dropped, and its container stopped.
   Imported as ``agents_common.test_database`` by the check that needs it.
@@ -30,6 +32,7 @@ from __future__ import annotations
 import sys
 
 from .checks import Skip, categorization_keywords, labels, run_checks, sort_test_account
+from .processes import agents_command, clean_environment
 from .settings import (
     DAYS,
     ENV,
@@ -58,6 +61,8 @@ __all__ = [
     "ROOT",
     "Skip",
     "Snapshot",
+    "agents_command",
+    "clean_environment",
     "connect_mailbox",
     "inbox_snapshot",
     "labels",

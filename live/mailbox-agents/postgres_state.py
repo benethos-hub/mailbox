@@ -46,7 +46,13 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import psycopg
-from agents_common import ENV, live_settings, run_checks  # beside this script
+from agents_common import (  # beside this script
+    ENV,
+    agents_command,
+    clean_environment,
+    live_settings,
+    run_checks,
+)
 from agents_common.test_database import (
     Administrator,
     administrator,
@@ -57,7 +63,7 @@ from agents_common.test_database import (
 from common.accounts import read_env
 
 from benethos_mailbox_agents.cockpit import sources
-from benethos_mailbox_agents.settings import PREFIX, Settings
+from benethos_mailbox_agents.settings import Settings
 from benethos_mailbox_agents.store import Store
 from benethos_mailbox_agents.store.catalogue import LOGIN, READER
 from benethos_mailbox_common.storage.server_place import Server
@@ -103,7 +109,6 @@ class Live:
 def _environment(live: Live, letter: str, **values: str) -> dict[str, str]:
     """The environment of a process of instance ``letter``: no setting of
     this shell, its state on the test database, and ``values``."""
-    found = {k: v for k, v in os.environ.items() if not k.upper().startswith(PREFIX)}
     name = live.name(letter)
     password = live.folder / f"password-{letter}"
     password.write_text(live.passwords[letter], encoding="utf-8")
@@ -118,16 +123,14 @@ def _environment(live: Live, letter: str, **values: str) -> dict[str, str]:
         "database_readers": READER,
         **values,
     }
-    found.update({f"{PREFIX}{key.upper()}": value for key, value in settings.items()})
-    return found
+    return clean_environment(**settings)
 
 
 def _agents(live: Live, letter: str, *args: str, **values: str) -> str:
     """A command of the agents for instance ``letter``. Answers what it
     printed, and fails with what it said on an exit code other than 0."""
     done = subprocess.run(
-        [sys.executable, "-m", "benethos_mailbox_agents", "--env-file"]
-        + [str(live.env_file), *args],
+        agents_command(live.env_file, *args),
         env=_environment(live, letter, **values),
         capture_output=True,
         text=True,
@@ -295,8 +298,7 @@ async def away(live: Live) -> str:
     log = live.folder / "worker.log"
     with log.open("w", encoding="utf-8") as sink:
         worker = subprocess.Popen(
-            [sys.executable, "-m", "benethos_mailbox_agents", "--env-file"]
-            + [str(live.env_file), "worker", "--agent", "counting"],
+            agents_command(live.env_file, "worker", "--agent", "counting"),
             env=_environment(live, "a", poll_seconds="2", backoff_ceiling_seconds="4"),
             stdout=sink,
             stderr=sink,

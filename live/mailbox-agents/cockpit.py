@@ -21,9 +21,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import html
-import os
 import re
-import socket
 import subprocess
 import sys
 import tempfile
@@ -37,13 +35,16 @@ import httpx
 from agents_common import (  # beside this script
     DAYS,
     ENV,
+    agents_command,
+    clean_environment,
     connect_mailbox,
     live_settings,
     run_checks,
 )
+from common.processes import free_port
 
 from benethos_mailbox_agents.records import MessageRef
-from benethos_mailbox_agents.settings import PREFIX, Settings
+from benethos_mailbox_agents.settings import Settings
 from benethos_mailbox_agents.store import Store
 
 SECRET = "live-cockpit-secret-value"  # pragma: allowlist secret
@@ -64,35 +65,18 @@ class Live:
 def _environment(live: Live, **values: str) -> dict[str, str]:
     """The environment of a process of the agents: no setting of this
     shell, the folder of the check, and ``values``."""
-    found = {k: v for k, v in os.environ.items() if not k.upper().startswith(PREFIX)}
-    found[f"{PREFIX}DATA_DIR"] = str(live.folder / "data")
-    found.update({f"{PREFIX}{name.upper()}": value for name, value in values.items()})
-    return found
+    return clean_environment(data_dir=str(live.folder / "data"), **values)
 
 
 def _command(live: Live, *args: str) -> list[str]:
-    return [
-        sys.executable,
-        "-m",
-        "benethos_mailbox_agents",
-        "--env-file",
-        str(live.env_file),
-        *args,
-    ]
-
-
-def _free_port() -> int:
-    with socket.socket() as probe:
-        probe.bind(("127.0.0.1", 0))
-        port: int = probe.getsockname()[1]
-        return port
+    return agents_command(live.env_file, *args)
 
 
 @contextmanager
 def _cockpit(live: Live, **values: str) -> Iterator[str]:
     """The command cockpit as a process, until the block ends. Answers
     its address."""
-    port = _free_port()
+    port = free_port()
     secret = live.folder / "cockpit_secret"
     secret.write_text(SECRET, encoding="utf-8")
     process = subprocess.Popen(
