@@ -23,7 +23,7 @@ import sqlalchemy as sa
 
 from . import dialect, names, server_lock, server_rights, tables
 from .errors import Errors, StorageUnavailableError
-from .outage import LONGEST_PAUSE, Availability, Outage
+from .outage import LOCK_GRACE, LONGEST_PAUSE, Availability, Outage
 from .place import Opened, translated_by
 from .server_engine import server_engine, tls_arguments
 from .shape import Shape
@@ -307,8 +307,11 @@ class ServerPlace:
         """Before each call: at once a StorageUnavailableError while the
         server is away and the pause runs. When it is over, one attempt
         on a new session, as the first was: its search path from the
-        connecting, the lock of a running program taken again. Once
-        another program took that lock, every call fails."""
+        connecting, the lock of a running program taken again. A lock
+        held by another session counts as the server still away for a
+        minute since it went, as the old session of this program may
+        still hold it. Past that another program took it, and every
+        call fails."""
         if self._taken:
             raise self._errors.failed(self._taken_text())
         if not self._outage.away:
@@ -325,6 +328,13 @@ class ServerPlace:
         except sa.exc.DBAPIError as exc:
             self._failed(exc)
             raise self._outage.unavailable() from None
+        if not got and self._outage.away_for() < LOCK_GRACE:
+            # The new session lets go of what it took, so the next
+            # attempt starts from nothing.
+            with suppress(sa.exc.SQLAlchemyError):
+                connection.invalidate()
+            self._outage.failed("lock held")
+            raise self._outage.unavailable()
         seconds = self._outage.mended() or 0.0
         self._taken = not got
         self._said(Availability(away=False, seconds=seconds, lock_lost=not got))

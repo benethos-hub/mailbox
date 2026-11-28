@@ -8,7 +8,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from benethos_mailbox_agents.errors import ConfigError, StateInUseError
+from benethos_mailbox_agents.errors import StateInUseError
 from benethos_mailbox_agents.records import MessageRef, Profile, StepResult
 from benethos_mailbox_agents.store import SCHEMA_VERSION, Store
 
@@ -64,7 +64,9 @@ def test_the_store_on_a_server_keeps_what_a_file_keeps() -> None:
             store.set_progress(NOW)
             store.set_profile(_profile())
 
-        with Store.open_server(server, read_only=True) as reader:
+        found = Store.read_server(server)
+        assert found is not None
+        with found as reader:
             assert reader.cursor() == "token-1"
             assert reader.progress() == NOW
             assert reader.labels_since(NOW) == {"invoice": 1}
@@ -90,10 +92,9 @@ def test_the_schema_of_the_role_is_made_by_the_instance() -> None:
         assert owner == (server.role,)
 
 
-def test_a_reader_needs_a_state_there() -> None:
+def test_a_reader_finds_no_state_before_the_first_start() -> None:
     with instance() as server:
-        with pytest.raises(ConfigError, match="schema version 0"):
-            Store.open_server(server, read_only=True)
+        assert Store.read_server(server) is None
 
 
 def _profile() -> Profile:

@@ -64,9 +64,12 @@ an upstream away, logged as `worker.upstream_away`. While it waits it
 writes no progress, so the health check fails. The storage of
 mailbox-common tries the server again after a pause of one second,
 doubled after each failed attempt up to thirty, on a new session that
-takes the lock of the writer again. When another agent took that lock
-in the meantime, the worker ends with a `StateFileError`, as for a state
-file that fails (2026-11-27).
+takes the lock of the writer again. A lock held by another session
+counts as the server still away for a minute since it went, as the old
+session of the worker may still hold it until the server ends it
+(2026-11-28). When another agent still holds that lock after the
+minute, the worker ends with a `StateFileError`, as for a state file
+that fails (2026-11-27).
 
 Message states: `pending`, `skipped` (not admitted, marked before the
 state file for an agent that declares `skip_marked`, which an update
@@ -141,7 +144,7 @@ changed until the evaluation was run again.
 | `cockpit` | the read-only pages of what every agent did, until SIGINT or SIGTERM, only with its secret ([cockpit](cockpit.md)) |
 | `paths` | the settings file, the data folder and each state file, and a state file at the place before ([configuration](configuration.md#where-the-settings-and-the-state-files-are)). With `STORAGE=postgres` the database of the state in place of the files: its name, host, port and schema, never a password |
 | `storage provision --agent <name> [--apply --admin-url URL --admin-password-file FILE]` | prints what an administrator of the PostgreSQL server runs once for the database of the agent and instance: a role that signs in, without its password, a database it owns, closed to every other role, and once per server the role `agents_read`, without sign-in, with the role `agents_cockpit` as its member. Role and database are those of `DATABASE_URL`, or else `agent_<agent>` and `agent_<agent>_<instance>`, the dashes of the instance as underscores (2026-11-27). A name longer than the 63 characters of PostgreSQL is refused, never shortened. With `--apply` it runs that itself, as the administrator the two options name for this call alone, and sets the password the file `DATABASE_PASSWORD_FILE` holds: the agent then starts on it. A role or a database of the names that exists already stops it |
-| `storage move --agent <name> [--check]` | copies the state file of the agent and instance into the database `DATABASE_URL` names, in the schema of its role, made where it is missing, and compares every table on both sides by its rows and their sum. The database must hold no table yet, and neither side may be in use by a running agent: stop it first. The file stays as it was. `STORAGE=postgres` then starts the agent on the database. With `--check` it only holds every value of the file to its column and writes nothing |
+| `storage move --agent <name> [--check]` | copies the state file of the agent and instance into the database `DATABASE_URL` names, in the schema of its role, made where it is missing, and compares every table on both sides by its rows and their sum. The database must hold no table yet, and neither side may be in use by a running agent: stop it first. The file stays as it was. `STORAGE=postgres` then starts the agent on the database. With `--check` it only holds every value of the file to its column, writes nothing and needs no server |
 
 `--env-file` names the settings file for every command. An error to
 correct ends with exit code 2, a mailbox service of another version

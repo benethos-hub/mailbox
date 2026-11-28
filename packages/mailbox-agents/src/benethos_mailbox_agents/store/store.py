@@ -167,29 +167,23 @@ class Store(_Messages, _Steps, _Actions, _Items, _Calls, _Profile):
         cls,
         server: server_place.Server,
         *,
-        read_only: bool = False,
         readers: tuple[str, ...] = (),
         setting: str = "",
         clock: Callable[[], float] = time.monotonic,
     ) -> Store:
         """Open the state in the schema of the role of ``server``, in a
-        database of its own. A writer makes the schema where it is
-        missing, brings it to the schema of this version, takes the lock
-        of a running agent, so a second writer is refused, and gives the
+        database of its own, as its writer: make the schema where it is
+        missing, bring it to the schema of this version, take the lock
+        of a running agent, so a second writer is refused, and give the
         database to ``readers`` alone, ``setting`` naming them in an
-        error. A reader needs it at the schema of this version. A server
+        error. A reader opens it with :meth:`read_server`. A server
         that is away is kept so by ``clock`` in seconds: every call fails
         at once with ``StateUnavailableError`` until the next attempt is
         due."""
         name = f"{server.database}/{server.schema_name}"
-        place = server_place.ServerPlace(
-            server, SHAPE, clock, make_schema=not read_only
-        )
+        place = server_place.ServerPlace(server, SHAPE, clock, make_schema=True)
         try:
             with _named(name):
-                if read_only:
-                    place.open(SHAPE.newest, SHAPE.newest)
-                    _at_this_schema(place.held_schema())
                 db = database.Database(SHAPE, place=place)
         except BaseException:
             place.close()
@@ -198,14 +192,13 @@ class Store(_Messages, _Steps, _Actions, _Items, _Calls, _Profile):
         rights = None
         try:
             with _named(name):
-                if not read_only:
-                    lock.enter_context(db.serving())
-                    rights = place.secured(readers, setting)
+                lock.enter_context(db.serving())
+                rights = place.secured(readers, setting)
         except BaseException:
             lock.close()
             db.close()
             raise
-        store = cls(db, read_only, lock, name)
+        store = cls(db, False, lock, name)
         store.rights = rights
         return store
 

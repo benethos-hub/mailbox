@@ -748,6 +748,9 @@
     "FIRST_PAUSE": {
       "value": 1.0
     },
+    "LOCK_GRACE": {
+      "value": 60.0
+    },
     "LONGEST_PAUSE": {
       "value": 30.0
     },
@@ -761,6 +764,9 @@
         },
         "away": {
           "property": true
+        },
+        "away_for": {
+          "signature": "(self) -> 'float'"
         },
         "due": {
           "signature": "(self) -> 'bool'"
@@ -972,11 +978,17 @@
     "CONNECT_SECONDS": {
       "value": 5
     },
+    "SERVER_SILENCE": {
+      "value": "-ctcp_keepalives_idle=10 -ctcp_keepalives_interval=5 -ctcp_keepalives_count=3 -ctcp_user_timeout=15000"
+    },
     "SILENCE": {
       "source": "{\n    \"keepalives\": 1,\n    \"keepalives_idle\": 10,\n    \"keepalives_interval\": 5,\n    \"keepalives_count\": 3,\n    \"tcp_user_timeout\": 15000,\n}"
     },
     "server_engine": {
       "signature": "(*, host: 'str', port: 'int', database: 'str', role: 'str', password: 'str', search_path: 'str', tls: 'Mapping[str, str] | None' = None, read_only: 'bool' = False) -> 'sa.Engine'"
+    },
+    "server_options": {
+      "signature": "(search_path: 'str', *, read_only: 'bool' = False) -> 'str'"
     },
     "tls_arguments": {
       "signature": "(host: 'str', tls: \"Literal['verify', 'off']\", ca_file: 'Path | None') -> 'dict[str, str]'"
@@ -1495,6 +1507,9 @@
     },
     "read_tables": {
       "signature": "(conn: 'sa.Connection', shape: 'Shape') -> 'list[Table]'"
+    },
+    "schema_number": {
+      "signature": "(stored: 'object', errors: 'Errors') -> 'int'"
     },
     "stored_schema": {
       "signature": "(conn: 'sa.Connection', shape: 'Shape') -> 'int'"

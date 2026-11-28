@@ -4,16 +4,28 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from datetime import timedelta
+from pathlib import Path
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 
-from benethos_mailbox_agents.cockpit import security
+from benethos_mailbox_agents.cockpit import security, views
 from benethos_mailbox_agents.cockpit.app import Cockpit
 from benethos_mailbox_agents.cockpit.templates import STATIC_DIR, TEMPLATE_DIR
+from benethos_mailbox_agents.contract import Reader
+from benethos_mailbox_agents.errors import (
+    ConfigError,
+    MailboxUnavailableError,
+    StateFileError,
+)
+from benethos_mailbox_agents.records import MailMessage, MessageRef, StepResult, Thread
+from benethos_mailbox_agents.store import Store
 
-from .cockpit_helpers import NOW, SECRET, signed_in
+from .cockpit_helpers import NOW, REF, SECRET, signed_in
 
 PAGES = ("/", "/agents/counting", "/agents/counting/messages/acc1/m1")
 
@@ -177,3 +189,109 @@ def test_the_sessions_end_when_idle_or_too_old() -> None:
     assert sessions.get(first.id, NOW + timedelta(hours=14)) is first
     assert sessions.get(first.id, NOW + timedelta(hours=25)) is None
     assert sessions.get(None, NOW) is None
+
+
+class _Away:
+    async def message(self, ref: MessageRef) -> MailMessage:
+        raise MailboxUnavailableError("the mailbox service did not answer")
+
+    async def thread(self, account_id: str, thread_id: str) -> Thread:
+        raise NotImplementedError
+
+
+@asynccontextmanager
+async def _away() -> AsyncIterator[Reader]:
+    yield _Away()
+
+
+@asynccontextmanager
+async def _misconfigured() -> AsyncIterator[Reader]:
+    raise ConfigError("MAILBOX_AGENTS_SERVICE_URL is http://: set it to https://")
+    yield _Away()  # pragma: no cover
+
+
+@pytest.mark.parametrize("factory", [_away, _misconfigured])
+def test_a_mailbox_service_that_does_not_answer_leaves_the_ids(
+    client: TestClient, cockpit: Cockpit, factory: Any
+) -> None:
+    cockpit.mailbox = factory
+    signed_in(client)
+
+    instance = client.get("/agents/counting")
+    message = client.get("/agents/counting/messages/acc1/m1")
+
+    for answer in (instance, message):
+        assert answer.status_code == 200
+        assert "script-src 'none'" in answer.headers["content-security-policy"]
+        assert "The mailbox service did not answer" in answer.text
+    assert ">m1<" in instance.text
+    assert "billing@example.org" not in instance.text + message.text
+
+
+def test_a_state_that_fails_after_its_row_is_a_page_with_the_reason(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def failing(*args: object, **kwargs: object) -> list[object]:
+        raise StateFileError("the state file could not be read")
+
+    monkeypatch.setattr(views, "collect", failing)
+    monkeypatch.setattr(views, "entry", failing)
+    signed_in(client)
+
+    instance = client.get("/agents/counting")
+    message = client.get("/agents/counting/messages/acc1/m1")
+
+    for answer in (instance, message):
+        assert answer.status_code == 200
+        assert "the state file could not be read" in answer.text
+        assert "script-src 'none'" in answer.headers["content-security-policy"]
+
+
+def test_an_error_no_page_expects_is_a_page_with_the_headers(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    def failing(*args: object, **kwargs: object) -> object:
+        raise RuntimeError("Your invoice of the mail")
+
+    monkeypatch.setattr(views, "row", failing)
+    signed_in(client)
+    caplog.set_level(logging.INFO)
+
+    answer = client.get("/")
+
+    assert answer.status_code == 500
+    assert answer.headers["content-type"].startswith("text/html")
+    assert "script-src 'none'" in answer.headers["content-security-policy"]
+    assert answer.headers["cache-control"] == "no-store"
+    assert "cockpit failed to answer a page: RuntimeError" in caplog.text
+    assert "Your invoice" not in caplog.text + answer.text
+
+
+def test_a_decision_of_a_newer_version_is_a_page_without_it(
+    client: TestClient,
+    cockpit: Cockpit,
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    with Store.open(tmp_path / "counting" / "counting.db") as store:
+        store.add_step(
+            REF,
+            StepResult(
+                step="decision",
+                prompt_version="v9",
+                model="newer-model",
+                result={"label": "invoice", "source": "model", "flavour": "Hello Ann"},
+                at=NOW,
+            ),
+            "alias",
+        )
+    signed_in(client)
+    caplog.set_level(logging.DEBUG)
+
+    instance = client.get("/agents/counting")
+    message = client.get("/agents/counting/messages/acc1/m1")
+
+    assert instance.status_code == message.status_code == 200
+    assert "Hello Ann" not in instance.text + message.text + caplog.text

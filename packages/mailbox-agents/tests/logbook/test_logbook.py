@@ -142,6 +142,10 @@ LINES: list[tuple[Activity, str]] = [
         "the mailbox service is set",
     ),
     (
+        process.CockpitFailed(agent="cockpit", error=RuntimeError("x")),
+        "cockpit failed to answer a page: RuntimeError",
+    ),
+    (
         worker.PassDone(agent="a", seconds=0.5, pending=1),
         "a finished a pass in 0.50s with 1 message pending",
     ),

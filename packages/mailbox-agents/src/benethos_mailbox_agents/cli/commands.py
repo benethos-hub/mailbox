@@ -409,18 +409,22 @@ def cockpit(args: argparse.Namespace, settings: Settings) -> int:
     mailbox = None
     if not settings.missing(MAILBOX_SETTINGS):
         mailbox = functools.partial(mailbox_for, settings)
+    # The servers first: a file left by storage move does not hide
+    # the database of its name.
     places: tuple[Source, ...] = (Files(settings.data_dir),)
     if settings.cockpit_database_urls:
-        places += (Servers(tuple(settings.cockpit_servers())),)
+        places = (Servers(tuple(settings.cockpit_servers())), *places)
     found = Cockpit(places=places, secret=given, mailbox=mailbox, now=now)
-    asyncio.run(
-        serve(
-            make_app(found),
-            settings.cockpit_host,
-            settings.cockpit_port,
-            named=mailbox is not None,
+    # Ctrl+C ends it: uvicorn raises the interrupt again once it closed.
+    with suppress(KeyboardInterrupt):
+        asyncio.run(
+            serve(
+                make_app(found),
+                settings.cockpit_host,
+                settings.cockpit_port,
+                named=mailbox is not None,
+            )
         )
-    )
     return 0
 
 

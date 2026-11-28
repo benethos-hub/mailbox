@@ -23,7 +23,7 @@ from .errors import Errors
 @dataclass(frozen=True, slots=True)
 class Rights:
     """What a start did to the database: whether the role owns it and so
-    closed it, and the roles that may read it."""
+    closed it, and the roles it named that may connect to it now."""
 
     owner: bool
     readers: tuple[str, ...]
@@ -57,8 +57,9 @@ def secure(
     """The database closed and given to ``readers`` alone, the default of
     its future tables too. A role that owns the database takes CONNECT and
     TEMPORARY from PUBLIC and CONNECT from every other role it did not
-    name. One that does not own it gives the read alone. A reader that is
-    no role of the server stops it, named by ``setting``."""
+    name. One that does not own it gives the read alone, and a reader
+    counts only where it may connect. A reader that is no role of the
+    server stops it, named by ``setting``."""
     for name in (schema, *readers):
         _plain(name, errors)
     missing = sorted(set(readers) - _roles(connection, readers))
@@ -91,8 +92,11 @@ def secure(
         ]
     for statement in statements:
         connection.exec_driver_sql(statement)
+    # A GRANT of CONNECT by a role that does not own the database gives
+    # nothing, with a warning alone: count what holds.
+    given = tuple(role for role in readers if _connects(connection, role))
     connection.commit()
-    return Rights(owner, tuple(readers), tuple(revoked))
+    return Rights(owner, given, tuple(revoked))
 
 
 def close_database(connection: sa.Connection) -> bool:
@@ -127,6 +131,18 @@ def _may(privilege: str, connection: sa.Connection) -> bool:
             sa.select(
                 sa.func.has_database_privilege(
                     sa.func.current_database(), sa.literal(privilege)
+                )
+            )
+        ).scalar()
+    )
+
+
+def _connects(connection: sa.Connection, role: str) -> bool:
+    return bool(
+        connection.execute(
+            sa.select(
+                sa.func.has_database_privilege(
+                    sa.literal(role), sa.func.current_database(), sa.literal("CONNECT")
                 )
             )
         ).scalar()

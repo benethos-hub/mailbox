@@ -36,8 +36,9 @@ Decided on 2026-11-27:
 
 Every `*.db` in `DATA_DIR` and in its direct folders, so a folder per
 volume of an agent needs no setting of its own. An instance is named by
-its file without the ending, with the name of its folder before it when
-two folders hold a file of the same name. A page names an instance and
+its file without the ending. A later file of a name already taken has
+the name of its folder before it, and a number after it while that name
+is taken too, such as `x-a-2`. A page names an instance and
 never takes a path from its address: a name it does not find is a page
 of 404.
 
@@ -49,7 +50,10 @@ than the profile, or one whose worker has not started since the update,
 shows its name and counts and says "no profile yet".
 
 A file that cannot be read, is no state file, or is of a newer schema, is
-a row with its reason, never an error of the page.
+a row with its reason, never an error of the page. So is a state that
+fails while its page reads it. An error no page expects is a page of
+its own with the headers below, and a line in the log names its class
+alone.
 
 ### On a PostgreSQL server
 
@@ -136,7 +140,9 @@ The state file holds ids. The cockpit fetches subject and sender from the
 mailbox service when `SERVICE_URL` and `SERVICE_TOKEN` or
 `SERVICE_TOKEN_FILE` are set, and shows the ids alone otherwise. Its
 token is best one of a user of its own with `mail.read` alone. Its line
-in the log says when it shows the ids alone.
+in the log says when it shows the ids alone. A mailbox service that
+does not answer, or whose settings are wrong, leaves the ids alone as
+well, and the page says so.
 
 ## Every answer
 

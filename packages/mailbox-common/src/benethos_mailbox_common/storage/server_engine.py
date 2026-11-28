@@ -28,6 +28,19 @@ SILENCE = {
     "keepalives_count": 3,
     "tcp_user_timeout": 15000,
 }
+# The same limits for the server's side of the session, so that a session
+# whose client vanished ends within half a minute and lets go of its
+# advisory lock. Without them the server waits on its own keepalives,
+# two hours by default (measured on PostgreSQL 19, 2026-11-27).
+SERVER_SILENCE = " ".join(
+    f"-c{name}={value}"
+    for name, value in (
+        ("tcp_keepalives_idle", SILENCE["keepalives_idle"]),
+        ("tcp_keepalives_interval", SILENCE["keepalives_interval"]),
+        ("tcp_keepalives_count", SILENCE["keepalives_count"]),
+        ("tcp_user_timeout", SILENCE["tcp_user_timeout"]),
+    )
+)
 
 
 def server_engine(
@@ -48,9 +61,7 @@ def server_engine(
     one for its life, and a view of one moment takes a second. With
     ``read_only`` every transaction of a connection only reads. No value
     of a statement reaches the text of an error."""
-    options = f"-csearch_path={search_path}"
-    if read_only:
-        options += " -cdefault_transaction_read_only=on"
+    options = server_options(search_path, read_only=read_only)
     url = sa.URL.create(
         f"{dialect.POSTGRESQL}+psycopg",
         username=role,
@@ -70,6 +81,16 @@ def server_engine(
             **(tls or {}),
         },
     )
+
+
+def server_options(search_path: str, *, read_only: bool = False) -> str:
+    """What the server is told at the start of a session: the schema, the
+    limits of a silent network on its side, and with ``read_only`` that
+    every transaction only reads."""
+    options = f"-csearch_path={search_path} {SERVER_SILENCE}"
+    if read_only:
+        options += " -cdefault_transaction_read_only=on"
+    return options
 
 
 def tls_arguments(

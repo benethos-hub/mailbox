@@ -18,6 +18,7 @@ from typing import Any
 import sqlalchemy as sa
 
 from . import dialect
+from .errors import Errors
 from .shape import Shape
 
 # The tables that keep account of the database itself and hold no
@@ -73,7 +74,15 @@ def stored_schema(conn: sa.Connection, shape: Shape) -> int:
     stored = conn.execute(
         sa.select(meta.c.value).where(meta.c.key == "schema_version")
     ).scalar()
-    return 0 if stored is None else int(stored)
+    return 0 if stored is None else schema_number(stored, shape.errors)
+
+
+def schema_number(stored: object, errors: Errors) -> int:
+    """The schema ``meta`` holds as text, a failure when it is no number."""
+    try:
+        return int(str(stored))
+    except ValueError:
+        raise errors.failed("the schema_version in meta is no number") from None
 
 
 class Fixed:

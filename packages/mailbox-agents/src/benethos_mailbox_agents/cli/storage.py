@@ -178,6 +178,17 @@ def _print_plan(found: server_provision.Instance, settings: Settings) -> None:
 def move(args: argparse.Namespace, settings: Settings) -> int:
     agent = load_agent(args.agent)
     source = path_for(settings.data_dir, state_name(agent.name, settings.instance))
+    if args.check:
+        # The values of the file alone: no server is reached.
+        try:
+            found = moving.check_move(SHAPE, source)
+        except moving.MoveError as exc:
+            raise StateFileError(str(exc)) from None
+        print(
+            f"Every value of {source} fits its column: {found.rows} rows"
+            f" in {found.tables} tables. Nothing was written."
+        )
+        return 0
     if not settings.database_url:
         raise ConfigError(
             f"storage move goes into the database {PREFIX}DATABASE_URL names:"
@@ -189,13 +200,6 @@ def move(args: argparse.Namespace, settings: Settings) -> int:
     target = settings.database_server()
     where = f"the database {target.database} on {target.host}:{target.port}"
     try:
-        if args.check:
-            found = moving.check_move(SHAPE, source)
-            print(
-                f"Every value of {source} fits its column: {found.rows} rows"
-                f" in {found.tables} tables. Nothing was written."
-            )
-            return 0
         _schema_made(target)
         moved = moving.move_records(SHAPE, source, target)
     except moving.MoveError as exc:

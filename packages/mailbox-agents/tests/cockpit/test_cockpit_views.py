@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from benethos_mailbox_agents.cockpit import sources, views
+from benethos_mailbox_agents.errors import ServiceVersionError
 from benethos_mailbox_agents.store import Store
 
 from .cockpit_helpers import NOW, PROFILE, REF, filled, mailbox, newer, older
@@ -108,8 +109,8 @@ async def test_a_subject_is_escaped_and_without_a_service_only_ids_show(
 ) -> None:
     file = sources.StateFile("counting", filled(tmp_path / "counting.db"))
 
-    shown = await views.results(file, mailbox, limit=10)
-    bare = await views.results(file, None, limit=10)
+    shown = (await views.results(file, mailbox, limit=10)).items
+    bare = (await views.results(file, None, limit=10)).items
 
     assert shown[0].subject == "Your invoice\\x1b[2J <script>alert(1)</script>"
     assert shown[0].sender == "Billing\\u202e <billing@example.org>"
@@ -136,3 +137,33 @@ async def test_one_message_shows_its_evidence_steps_and_actions(tmp_path: Path) 
     assert [(a.action, a.executed) for a in found.result.actions] == [
         ("add_keyword", False)
     ]
+
+
+class _Failing:
+    """An instance whose state fails with an error of the agents' own."""
+
+    name = "failing"
+
+    def open(self) -> Store:
+        raise ServiceVersionError("the state was written by another version")
+
+    def stopped(self) -> bool:
+        return False
+
+
+def test_any_error_of_the_agents_is_a_row_with_its_reason() -> None:
+    found = views.row(_Failing(), NOW)
+
+    assert found.state == "unreadable"
+    assert found.problem == "the state was written by another version"
+
+
+def test_two_files_never_share_a_name(tmp_path: Path) -> None:
+    filled(tmp_path / "a.db")
+    filled(tmp_path / "x-a.db")
+    filled(tmp_path / "x" / "a.db")
+
+    found = sources.found(tmp_path)
+
+    assert [file.name for file in found] == ["a", "x-a", "x-a-2"]
+    assert len(sources.every((sources.Files(tmp_path),))) == 3

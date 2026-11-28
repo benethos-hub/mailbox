@@ -13,14 +13,19 @@ from __future__ import annotations
 import functools
 from collections.abc import Callable
 from contextlib import AbstractAsyncContextManager
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 from urllib.parse import quote
 
 from benethos_mailbox_common.values import text as text_values
 
 from ..contract import Actor, Reader, discover
-from ..errors import ConfigError, StateFileError, UnavailableError
+from ..errors import (
+    ConfigError,
+    MailboxAgentError,
+    StateFileError,
+    UnavailableError,
+)
 from ..records import Decision, MailMessage, MessageRef, OpenItem, Profile
 from ..runtime.health import window_of
 from ..runtime.review import Entry, collect, entry
@@ -35,12 +40,15 @@ __all__ = [
     "Item",
     "MailboxFactory",
     "Quote",
+    "UNREADABLE",
     "Result",
+    "Results",
     "Row",
     "StepLine",
     "message",
     "results",
     "row",
+    "unreadable",
 ]
 
 # Opens the mailbox service for the length of one request.
@@ -48,6 +56,8 @@ MailboxFactory = Callable[[], AbstractAsyncContextManager[Reader]]
 
 # How far back the overview counts the decisions per label.
 LABELS_SINCE = timedelta(hours=24)
+# What a state that cannot be read raises: a row with its reason.
+UNREADABLE = (ConfigError, StateFileError, UnavailableError)
 
 
 def _e(text: str | None) -> str:
@@ -135,6 +145,16 @@ class Result:
 
 
 @dataclass(frozen=True, slots=True)
+class Results:
+    """The newest messages of an instance. ``unanswered``: the mailbox
+    service was asked and did not answer, so they show their ids
+    alone."""
+
+    items: tuple[Result, ...]
+    unanswered: bool = False
+
+
+@dataclass(frozen=True, slots=True)
 class Quote:
     field: str
     value: str
@@ -162,6 +182,7 @@ class Detail:
     details: tuple[Fact, ...]
     evidence: tuple[Quote, ...]
     steps: tuple[StepLine, ...]
+    unanswered: bool = False
 
 
 @functools.cache
@@ -228,7 +249,7 @@ def row(file: Instance, now: datetime) -> Row:
             calls = store.model_calls_since(day)
             due = len(store.due_items(now))
             items = tuple(_item(item) for item in store.open_items())
-    except (ConfigError, StateFileError, UnavailableError) as exc:
+    except MailboxAgentError as exc:
         return Row(
             name=_e(file.name),
             link=_link(file.name),
@@ -296,13 +317,26 @@ def _result(entry: Entry) -> Result:
     )
 
 
+def unreadable(found: Row, exc: MailboxAgentError) -> Row:
+    """``found``, whose state failed after its row was read, with the
+    reason."""
+    return replace(found, state="unreadable", problem=_e(exc.message))
+
+
 async def _entries(
     store: Store, mailbox: MailboxFactory | None, *, limit: int, state: str | None
-) -> list[Entry]:
-    if mailbox is None:
-        return await collect(store, None, limit=limit, state=state)
-    async with mailbox() as reader:
-        return await collect(store, reader, limit=limit, state=state)
+) -> tuple[list[Entry], bool]:
+    """The entries, and whether the mailbox service was asked and did
+    not answer: then they are read again with their ids alone."""
+    if mailbox is not None:
+        try:
+            async with mailbox() as reader:
+                found = await collect(store, reader, limit=limit, state=state)
+            return found, False
+        except MailboxAgentError:
+            pass
+    found = await collect(store, None, limit=limit, state=state)
+    return found, mailbox is not None
 
 
 async def results(
@@ -311,15 +345,16 @@ async def results(
     *,
     limit: int,
     state: str | None = None,
-) -> list[Result]:
+) -> Results:
     """The newest ``limit`` messages of ``file``, in ``state`` if named,
-    with subject and sender only when ``mailbox`` is given."""
+    with subject and sender only when ``mailbox`` is given and
+    answers."""
     with file.open() as store:
-        entries = await _entries(store, mailbox, limit=limit, state=state)
-    return [_result(entry) for entry in entries]
+        entries, unanswered = await _entries(store, mailbox, limit=limit, state=state)
+    return Results(tuple(_result(entry) for entry in entries), unanswered)
 
 
-def _detail(entry: Entry, steps: list[StepLine]) -> Detail:
+def _detail(entry: Entry, steps: list[StepLine], unanswered: bool) -> Detail:
     decision = entry.decision
     fields = (
         ()
@@ -341,7 +376,7 @@ def _detail(entry: Entry, steps: list[StepLine]) -> Detail:
             for item in decision.evidence
         )
     )
-    return Detail(_result(entry), fields, details, evidence, tuple(steps))
+    return Detail(_result(entry), fields, details, evidence, tuple(steps), unanswered)
 
 
 async def message(
@@ -365,9 +400,13 @@ async def message(
             )
             for step in store.steps(ref)
         ]
-        if mailbox is None:
+        taken, unanswered = None, False
+        if mailbox is not None:
+            try:
+                async with mailbox() as reader:
+                    taken = await entry(store, reader, found)
+            except MailboxAgentError:
+                unanswered = True
+        if taken is None:
             taken = await entry(store, None, found)
-        else:
-            async with mailbox() as reader:
-                taken = await entry(store, reader, found)
-    return _detail(taken, steps)
+    return _detail(taken, steps, unanswered)

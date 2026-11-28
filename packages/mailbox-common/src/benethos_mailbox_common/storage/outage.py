@@ -15,6 +15,11 @@ from .errors import OWN, Errors, StorageUnavailableError
 # The pause after the first failure, and the longest one, in seconds.
 FIRST_PAUSE = 1.0
 LONGEST_PAUSE = 30.0
+# How long after the server went away a lock held by another
+# session counts as the server still away: the old session of
+# the program, whose client vanished, ends on the server's side
+# within half a minute (decided 2026-11-28).
+LOCK_GRACE = 60.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,6 +49,10 @@ class Outage:
     @property
     def away(self) -> bool:
         return self._since is not None
+
+    def away_for(self) -> float:
+        """The seconds since the server went away, 0 while it is not."""
+        return 0.0 if self._since is None else self._clock() - self._since
 
     def due(self) -> bool:
         """Whether the pause is over and another attempt may go out."""

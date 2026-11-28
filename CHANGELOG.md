@@ -36,8 +36,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   does not start with it. The driver comes with the extra `postgres` of
   the agents, and their image brings it. A server that is away is
   waited for as an upstream (`StateUnavailableError`), and the health
-  check fails while it is. A worker whose database another agent took
-  in the meantime ends.
+  check fails while it is. A worker whose lock another agent still holds
+  a minute after the server went away ends.
 - `benethos-mailbox-agents`: `storage provision --agent <name>` prints
   what an administrator of a PostgreSQL server runs once for the
   database of an agent and instance: its role, its database, closed to
@@ -88,9 +88,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   while the server cannot be reached. Any other refusal ends it at once.
   A server older than PostgreSQL 19 is refused, and so are a database a
   newer version made and a second service on the same schema. The lock
-  that refuses it is keyed by a random number the schema keeps, so
-  another role of the server cannot hold it ahead. A second `serve`
-  ends at once with the reason. The driver comes with
+  that refuses it is keyed by a random number the schema keeps, so a
+  role that cannot connect to the database cannot hold it ahead. A
+  second `serve` ends at once with the reason. The driver comes with
   the extra `postgres`:
   `pip install 'benethos-mailbox-service[postgres]'`. The image of the
   service has it. On SQLite nothing changes but the fixes below, which hold for a
@@ -191,8 +191,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   of the connection, and serves on
   `MAILBOX_AGENTS_COCKPIT_HOST` and `MAILBOX_AGENTS_COCKPIT_PORT`
   (`127.0.0.1:9480`). Subject and sender show only with the settings of
-  the mailbox service, else the ids. The package depends on `fastapi`,
-  `jinja2` and `python-multipart` for it.
+  the mailbox service and while it answers, else the ids. The package
+  depends on `fastapi`, `jinja2` and `python-multipart` for it.
 - `benethos-mailbox-agents`: the state file keeps the profile of its
   agent: `worker`, `run` and `backfill` write the stage, the accounts,
   the keyword, the poll and gateway seconds, the model alias and the
