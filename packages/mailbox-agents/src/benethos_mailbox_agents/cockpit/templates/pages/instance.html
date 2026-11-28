@@ -53,7 +53,7 @@
       {% for name in states %}<a href="/agents/{{ row.link }}?state={{ name }}">{{ name }}</a>{% endfor %}
     </div>
   </header>
-  {% if not named %}<div class="body"><div class="notice warn" role="status">Subject and sender are shown with a token of the mailbox service only. Without it, the ids.</div></div>{% endif %}
+  {% if unanswered %}<div class="body"><div class="notice warn" role="status">The mailbox service did not answer: the ids alone.</div></div>{% elif not named %}<div class="body"><div class="notice warn" role="status">Subject and sender are shown with a token of the mailbox service only. Without it, the ids.</div></div>{% endif %}
   <div class="body tight">
     {% if results %}
     <div class="table-scroll">

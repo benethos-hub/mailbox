@@ -20,6 +20,7 @@ from fastapi.staticfiles import StaticFiles
 
 from benethos_mailbox_common.values import secret
 
+from ..logbook import process, record
 from ..records import MessageRef
 from ..store import STATES
 from . import security, sources, views
@@ -127,18 +128,32 @@ async def instance(
     cockpit = _cockpit(request)
     file = _file(request, name)
     row = views.row(file, cockpit.now())
-    results = []
+    found = views.Results(())
     if row.problem is None:
         shown = min(max(limit, 1), MAX_LIMIT)
-        results = await views.results(file, cockpit.mailbox, limit=shown, state=state)
+        try:
+            found = await views.results(file, cockpit.mailbox, limit=shown, state=state)
+        except views.UNREADABLE as exc:
+            row = views.unreadable(row, exc)
+    return _instance_page(request, session, row, found, state)
+
+
+def _instance_page(
+    request: Request,
+    session: security.Session,
+    row: views.Row,
+    found: views.Results,
+    state: str | None,
+) -> HTMLResponse:
     return render(
         request,
         "pages/instance.html",
         row=row,
-        results=results,
+        results=found.items,
         state=state,
         states=STATES,
-        named=cockpit.mailbox is not None,
+        named=_cockpit(request).mailbox is not None and not found.unanswered,
+        unanswered=found.unanswered,
         session=session,
     )
 
@@ -152,7 +167,11 @@ async def message(
     if row.problem is not None:
         raise HTTPException(404)
     ref = MessageRef(account_id=account_id, message_id=message_id)
-    found = await views.message(file, ref, cockpit.mailbox)
+    try:
+        found = await views.message(file, ref, cockpit.mailbox)
+    except views.UNREADABLE as exc:
+        failed = views.unreadable(row, exc)
+        return _instance_page(request, session, failed, views.Results(()), None)
     if found is None:
         raise HTTPException(404)
     return render(
@@ -160,7 +179,7 @@ async def message(
         "pages/message.html",
         row=row,
         detail=found,
-        named=cockpit.mailbox is not None,
+        named=cockpit.mailbox is not None and not found.unanswered,
         session=session,
     )
 
@@ -262,7 +281,14 @@ def make_app(cockpit: Cockpit) -> FastAPI:
     async def _guarded(
         request: Request, call_next: Callable[[Request], Any]
     ) -> Response:
-        response: Response = await call_next(request)
+        try:
+            response: Response = await call_next(request)
+        except Exception as exc:
+            # An error page with the headers, never a bare 500. The
+            # line names the class alone: the text of an error may
+            # quote what a state or a mail holds.
+            record(process.CockpitFailed(agent="cockpit", error=exc))
+            response = _error(request, 500)
         static = request.url.path.startswith(f"{STATIC}/")
         response.headers.update(security.headers(static))
         return response

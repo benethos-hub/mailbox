@@ -108,8 +108,8 @@ async def test_a_subject_is_escaped_and_without_a_service_only_ids_show(
 ) -> None:
     file = sources.StateFile("counting", filled(tmp_path / "counting.db"))
 
-    shown = await views.results(file, mailbox, limit=10)
-    bare = await views.results(file, None, limit=10)
+    shown = (await views.results(file, mailbox, limit=10)).items
+    bare = (await views.results(file, None, limit=10)).items
 
     assert shown[0].subject == "Your invoice\\x1b[2J <script>alert(1)</script>"
     assert shown[0].sender == "Billing\\u202e <billing@example.org>"

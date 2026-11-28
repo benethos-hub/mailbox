@@ -6,7 +6,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar
 
-from ..activity import Activity
+from ..activity import Activity, Failure
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -112,3 +112,14 @@ class CockpitServing(Activity):
         if self.named:
             return None
         return "ids only, as no token of the mailbox service is set"
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class CockpitFailed(Failure):
+    """A page of the cockpit met an error no page expects. The page says
+    so, the line names the error by its class alone."""
+
+    name: ClassVar[str] = "cockpit_failed"
+
+    def says(self) -> str:
+        return "failed to answer a page"

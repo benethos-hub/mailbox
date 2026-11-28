@@ -191,8 +191,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   of the connection, and serves on
   `MAILBOX_AGENTS_COCKPIT_HOST` and `MAILBOX_AGENTS_COCKPIT_PORT`
   (`127.0.0.1:9480`). Subject and sender show only with the settings of
-  the mailbox service, else the ids. The package depends on `fastapi`,
-  `jinja2` and `python-multipart` for it.
+  the mailbox service and while it answers, else the ids. The package
+  depends on `fastapi`, `jinja2` and `python-multipart` for it.
 - `benethos-mailbox-agents`: the state file keeps the profile of its
   agent: `worker`, `run` and `backfill` write the stage, the accounts,
   the keyword, the poll and gateway seconds, the model alias and the

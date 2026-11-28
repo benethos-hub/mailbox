@@ -8,6 +8,7 @@
 <section class="card">
   <header><h2>Message</h2></header>
   <div class="body">
+    {% if detail.unanswered %}<div class="notice warn" role="status">The mailbox service did not answer: the ids alone.</div>{% endif %}
     <dl class="facts">
       <dt>Account</dt><dd class="mono">{{ result.account_id }}</dd>
       <dt>Message</dt><dd class="mono">{{ result.message_id }}</dd>
