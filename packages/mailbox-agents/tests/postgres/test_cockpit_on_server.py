@@ -91,6 +91,25 @@ def test_the_cockpit_finds_what_it_was_given_and_writes_nothing() -> None:
             store.set_progress(NOW)
 
 
+def test_a_table_open_to_everyone_is_no_instance() -> None:
+    # A table of the name that PUBLIC alone may read, as another
+    # application might leave it, was given to no reader.
+    with ExitStack() as held:
+        reader, cockpit = held.enter_context(_cockpit())
+        server = held.enter_context(instance())
+        _started(server, (reader,))
+        with connect(server.database) as conn:
+            conn.execute("CREATE SCHEMA open_to_all")
+            conn.execute("CREATE TABLE open_to_all.profile (id integer)")
+            conn.execute("GRANT USAGE ON SCHEMA open_to_all TO PUBLIC")
+            conn.execute("GRANT SELECT ON open_to_all.profile TO PUBLIC")
+
+        names = {item.name for item in sources.Servers((cockpit,)).found()}
+
+    assert not [name for name in names if name.endswith("open_to_all")]
+    assert server.database in names
+
+
 def test_a_server_that_is_away_is_an_instance_with_its_reason() -> None:
     with _cockpit() as (_, cockpit):
         away = replace(cockpit, port=1)

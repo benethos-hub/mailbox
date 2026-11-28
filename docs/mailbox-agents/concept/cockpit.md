@@ -58,9 +58,11 @@ well, signed in with a role of its own, such as `agents_cockpit`, a
 member of the read role `agents_read` that `storage provision` makes
 (2026-11-27). On each server it finds every database the role may
 connect to, and in it each schema where it may read the table
-`profile`: that is an instance. Only an owner gives it that, by naming
-the read role in `DATABASE_READERS`, which the agent grants at each
-start. A database whose owner did not, or the database of the service,
+`profile`: that is an instance. The cockpit shows what its role may
+read. An owner gives it that by naming the read role in
+`DATABASE_READERS`, which the agent grants at each start, and any role
+that owns such a table could give it as well. A table that only
+`PUBLIC` may read is left out. A database whose owner did not, or the database of the service,
 which it closes to every other role, is not found. The instance is
 named by its database, with its schema after it where the database
 holds several.

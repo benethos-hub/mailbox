@@ -1,5 +1,6 @@
 """What a role finds on a server it reads: the databases it may connect
-to, and in one of them the schemas where it may read a table of a name.
+to, and in one of them the schemas where it may read a table of a name,
+given to a role it holds and not to PUBLIC alone.
 A program that reads the databases of others, such as a cockpit, finds
 them so, signed in with its own role, without a right beyond reading.
 
@@ -27,6 +28,11 @@ _SCHEMAS = sa.text(
     " WHERE c.relname = :table AND c.relkind IN ('r', 'p')"
     " AND has_schema_privilege(n.oid, 'USAGE')"
     " AND has_table_privilege(c.oid, 'SELECT')"
+    # Given to a role it holds, not to PUBLIC alone: a table open to
+    # everyone is no state given to this reader.
+    " AND EXISTS (SELECT 1 FROM aclexplode(c.relacl) a"
+    " WHERE a.privilege_type = 'SELECT' AND a.grantee <> 0"
+    " AND pg_has_role(a.grantee, 'USAGE'))"
     " ORDER BY n.nspname"
 )
 

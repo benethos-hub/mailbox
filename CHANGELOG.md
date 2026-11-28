@@ -56,7 +56,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   PostgreSQL servers `MAILBOX_AGENTS_COCKPIT_DATABASE_URLS` names, with
   the password of its role in `MAILBOX_AGENTS_COCKPIT_DATABASE_PASSWORD_FILE`:
   each database whose owner gave its read role the read, on a
-  connection that only reads. A server that is away is a row with its
+  connection that only reads. A table only `PUBLIC` may read is no
+  instance. A server that is away is a row with its
   reason.
 - `benethos-mailbox-agents`: `status`, `paths`, `health` and `report`
   read the state on the server with `MAILBOX_AGENTS_STORAGE=postgres`
