@@ -1,10 +1,12 @@
-"""How a database server is reached: the engine of SQLAlchemy on
-PostgreSQL through psycopg, what libpq is told of TLS, and how long a
-connection may wait. Part of the place of a server (``server_place``)."""
+"""How a database server is reached: where it is and who the program
+is there, the engine of SQLAlchemy on PostgreSQL through psycopg, what
+libpq is told of TLS, and how long a connection may wait. Part of the
+place of a server (``server_place``)."""
 
 from __future__ import annotations
 
 from collections.abc import Mapping
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
@@ -12,6 +14,7 @@ import sqlalchemy as sa
 from sqlalchemy.pool import NullPool
 
 from . import dialect, names
+from .shape import Shape
 
 # Seconds an attempt to connect to a database server may take.
 CONNECT_SECONDS = 5
@@ -41,6 +44,54 @@ SERVER_SILENCE = " ".join(
         ("tcp_user_timeout", SILENCE["tcp_user_timeout"]),
     )
 )
+
+
+@dataclass(frozen=True, slots=True)
+class Server:
+    """Where the database is and who the program is there. ``schema``
+    is named after ``role`` unless given. ``tls``: "verify" talks to a
+    host other than this one only over TLS with a checked certificate
+    and name, against the authorities of ``ca_file`` or else those of
+    the system. "off" goes without TLS."""
+
+    host: str
+    port: int
+    database: str
+    role: str
+    password: str
+    schema: str | None = None
+    tls: Literal["verify", "off"] = "verify"
+    ca_file: Path | None = None
+
+    @property
+    def schema_name(self) -> str:
+        return self.role if self.schema is None else self.schema
+
+    def __repr__(self) -> str:
+        # Never the password, also not in a traceback.
+        return (
+            f"Server({self.host}:{self.port}/{self.database},"
+            f" role {self.role}, schema {self.schema_name})"
+        )
+
+
+def engine_for(server: Server, shape: Shape, *, read_only: bool = False) -> sa.Engine:
+    """The engine on ``server``, which loads the driver: one not installed
+    is the failure of ``shape`` its ``extra`` says. With ``read_only``
+    every transaction only reads."""
+    try:
+        return server_engine(
+            host=server.host,
+            port=server.port,
+            database=server.database,
+            role=server.role,
+            password=server.password,
+            search_path=server.schema_name,
+            tls=tls_arguments(server.host, server.tls, server.ca_file),
+            read_only=read_only,
+        )
+    except ImportError:
+        raise shape.errors.failed(shape.extra) from None
 
 
 def server_engine(

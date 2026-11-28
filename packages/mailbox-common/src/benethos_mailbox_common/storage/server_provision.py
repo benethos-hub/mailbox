@@ -24,8 +24,8 @@ from sqlalchemy.dialects import postgresql
 
 from . import names
 from .errors import Errors
-from .server_engine import server_engine, tls_arguments
-from .server_place import Server, translated_server
+from .server_engine import Server, engine_for
+from .server_place import translated_server
 from .shape import Shape
 
 _QUOTE = postgresql.dialect().identifier_preparer.quote
@@ -66,18 +66,7 @@ def make_instance(
     if not password or "\0" in password:
         raise errors.failed("the password of the role is empty or holds NUL")
     made = [f"role {instance.role}", f"database {instance.database}"]
-    try:
-        engine = server_engine(
-            host=admin.host,
-            port=admin.port,
-            database=admin.database,
-            role=admin.role,
-            password=admin.password,
-            search_path=admin.schema_name,
-            tls=tls_arguments(admin.host, admin.tls, admin.ca_file),
-        )
-    except ImportError:
-        raise errors.failed(shape.extra) from None
+    engine = engine_for(admin, shape)
     try:
         with translated_server(errors), engine.connect() as connection:
             conn = connection.execution_options(isolation_level="AUTOCOMMIT")

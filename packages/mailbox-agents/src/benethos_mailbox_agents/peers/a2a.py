@@ -11,14 +11,12 @@ docs/mailbox-agents/concept/a2a.md.
 
 from __future__ import annotations
 
-import asyncio
 import hmac
-from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
-from contextlib import asynccontextmanager, contextmanager
+from collections.abc import AsyncIterator, Awaitable, Callable
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Any
 
-import uvicorn
 from a2a.helpers.proto_helpers import get_data_parts, new_data_message
 from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue
@@ -39,8 +37,8 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_valida
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse
 
-from ..errors import ConfigError
 from ..records import Classified, MessageRef, NotClassified
+from ..serving.port import Port
 from ..settings import PREFIX
 
 __all__ = ["Card", "Classify", "Server", "app"]
@@ -186,56 +184,24 @@ def app(classify: Classify, card: Card, token: str) -> Any:
     return _Bearer(Starlette(routes=routes), token)
 
 
-class _Uvicorn(uvicorn.Server):
-    """uvicorn's server, which leaves SIGINT and SIGTERM to the worker:
-    the worker stops, and the entrance with it."""
-
-    @contextmanager
-    def capture_signals(self) -> Iterator[None]:
-        yield
-
-
 class Server:
     """The application on a port, run in the event loop of the worker."""
 
     def __init__(self, application: Any, host: str, port: int) -> None:
-        self._port = port
-        self._server = _Uvicorn(
-            uvicorn.Config(
-                application,
-                host=host,
-                port=port,
-                log_config=None,
-                access_log=False,
-                lifespan="off",
-            )
+        # SIGINT and SIGTERM stay with the worker: it stops, and the
+        # entrance with it.
+        self._port = Port(
+            application,
+            host,
+            port,
+            f"the entrance for peers cannot be served on port {port}: "
+            f"correct {PREFIX}A2A_PORT",
+            own_signals=False,
         )
 
     @asynccontextmanager
     async def serving(self) -> AsyncIterator[None]:
         """Serve from when the port is open until the block ends. A port
         that cannot be opened is a ConfigError."""
-        task = asyncio.create_task(self._serve())
-        while not self._server.started:
-            if task.done():
-                await task
-                raise self._refused()
-            await asyncio.sleep(0.02)
-        try:
+        async with self._port.serving():
             yield
-        finally:
-            self._server.should_exit = True
-            await task
-
-    async def _serve(self) -> None:
-        try:
-            await self._server.serve()
-        except SystemExit:
-            # uvicorn ends the process when it cannot open the port.
-            raise self._refused() from None
-
-    def _refused(self) -> ConfigError:
-        return ConfigError(
-            f"the entrance for peers cannot be served on port {self._port}: "
-            f"correct {PREFIX}A2A_PORT"
-        )

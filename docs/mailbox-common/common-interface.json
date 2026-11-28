@@ -619,7 +619,7 @@
       }
     },
     "sqlite_engine": {
-      "signature": "(connect: 'Callable[[], Any]') -> 'sa.Engine'"
+      "signature": "(connect: 'Callable[[], Any]', *, writer: 'bool' = True) -> 'sa.Engine'"
     },
     "translated_file": {
       "signature": "(errors: 'Errors') -> 'Iterator[None]'"
@@ -984,37 +984,6 @@
     "SILENCE": {
       "source": "{\n    \"keepalives\": 1,\n    \"keepalives_idle\": 10,\n    \"keepalives_interval\": 5,\n    \"keepalives_count\": 3,\n    \"tcp_user_timeout\": 15000,\n}"
     },
-    "server_engine": {
-      "signature": "(*, host: 'str', port: 'int', database: 'str', role: 'str', password: 'str', search_path: 'str', tls: 'Mapping[str, str] | None' = None, read_only: 'bool' = False) -> 'sa.Engine'"
-    },
-    "server_options": {
-      "signature": "(search_path: 'str', *, read_only: 'bool' = False) -> 'str'"
-    },
-    "tls_arguments": {
-      "signature": "(host: 'str', tls: \"Literal['verify', 'off']\", ca_file: 'Path | None') -> 'dict[str, str]'"
-    }
-  },
-  "benethos_mailbox_common.storage.server_lock": {
-    "drawn_key": {
-      "signature": "() -> 'int'"
-    },
-    "kept_key": {
-      "signature": "(connection: 'sa.Connection', shape: 'Shape') -> 'int | None'"
-    },
-    "lock_key": {
-      "signature": "(program: 'str', schema: 'str') -> 'int'"
-    },
-    "unlocked": {
-      "signature": "(connection: 'sa.Connection', key: 'int') -> 'None'"
-    }
-  },
-  "benethos_mailbox_common.storage.server_place": {
-    "NOT_OPEN": {
-      "value": "the database is not open"
-    },
-    "OLDEST_SERVER": {
-      "value": 190000
-    },
     "Server": {
       "bases": [
         "builtins.object"
@@ -1054,6 +1023,40 @@
           "property": true
         }
       }
+    },
+    "engine_for": {
+      "signature": "(server: 'Server', shape: 'Shape', *, read_only: 'bool' = False) -> 'sa.Engine'"
+    },
+    "server_engine": {
+      "signature": "(*, host: 'str', port: 'int', database: 'str', role: 'str', password: 'str', search_path: 'str', tls: 'Mapping[str, str] | None' = None, read_only: 'bool' = False) -> 'sa.Engine'"
+    },
+    "server_options": {
+      "signature": "(search_path: 'str', *, read_only: 'bool' = False) -> 'str'"
+    },
+    "tls_arguments": {
+      "signature": "(host: 'str', tls: \"Literal['verify', 'off']\", ca_file: 'Path | None') -> 'dict[str, str]'"
+    }
+  },
+  "benethos_mailbox_common.storage.server_lock": {
+    "drawn_key": {
+      "signature": "() -> 'int'"
+    },
+    "kept_key": {
+      "signature": "(connection: 'sa.Connection', shape: 'Shape') -> 'int | None'"
+    },
+    "lock_key": {
+      "signature": "(program: 'str', schema: 'str') -> 'int'"
+    },
+    "unlocked": {
+      "signature": "(connection: 'sa.Connection', key: 'int') -> 'None'"
+    }
+  },
+  "benethos_mailbox_common.storage.server_place": {
+    "NOT_OPEN": {
+      "value": "the database is not open"
+    },
+    "OLDEST_SERVER": {
+      "value": 190000
     },
     "ServerPlace": {
       "bases": [

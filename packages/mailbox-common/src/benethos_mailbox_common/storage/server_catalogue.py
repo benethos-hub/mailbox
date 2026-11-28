@@ -12,8 +12,8 @@ from __future__ import annotations
 
 import sqlalchemy as sa
 
-from .server_engine import server_engine, tls_arguments
-from .server_place import Server, translated_server
+from .server_engine import Server, engine_for
+from .server_place import translated_server
 from .shape import Shape
 
 _DATABASES = sa.text(
@@ -53,19 +53,7 @@ def _rows(
     server: Server, shape: Shape, query: sa.TextClause, values: dict[str, str]
 ) -> list[object]:
     errors = shape.errors
-    try:
-        engine = server_engine(
-            host=server.host,
-            port=server.port,
-            database=server.database,
-            role=server.role,
-            password=server.password,
-            search_path=server.schema_name,
-            tls=tls_arguments(server.host, server.tls, server.ca_file),
-            read_only=True,
-        )
-    except ImportError:
-        raise errors.failed(shape.extra) from None
+    engine = engine_for(server, shape, read_only=True)
     try:
         with translated_server(errors), engine.connect() as connection:
             return list(connection.execute(query, values).scalars())

@@ -15,9 +15,7 @@ import threading
 import time
 from collections.abc import Callable, Iterator, Sequence
 from contextlib import AbstractContextManager, contextmanager, suppress
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
 
 import sqlalchemy as sa
 
@@ -25,7 +23,7 @@ from . import dialect, names, server_lock, server_rights, tables
 from .errors import Errors, StorageUnavailableError
 from .outage import LOCK_GRACE, LONGEST_PAUSE, Availability, Outage
 from .place import Opened, translated_by
-from .server_engine import server_engine, tls_arguments
+from .server_engine import Server, engine_for
 from .shape import Shape
 
 # The oldest server the programs of Mailbox run on (2026-11-25), as the
@@ -35,35 +33,6 @@ OLDEST_SERVER = 190000
 
 # A call before the place was opened, or after it was closed.
 NOT_OPEN = "the database is not open"
-
-
-@dataclass(frozen=True, slots=True)
-class Server:
-    """Where the database is and who the program is there. ``schema``
-    is named after ``role`` unless given. ``tls``: "verify" talks to a
-    host other than this one only over TLS with a checked certificate
-    and name, against the authorities of ``ca_file`` or else those of
-    the system. "off" goes without TLS."""
-
-    host: str
-    port: int
-    database: str
-    role: str
-    password: str
-    schema: str | None = None
-    tls: Literal["verify", "off"] = "verify"
-    ca_file: Path | None = None
-
-    @property
-    def schema_name(self) -> str:
-        return self.role if self.schema is None else self.schema
-
-    def __repr__(self) -> str:
-        # Never the password, also not in a traceback.
-        return (
-            f"Server({self.host}:{self.port}/{self.database},"
-            f" role {self.role}, schema {self.schema_name})"
-        )
 
 
 class ServerPlace:
@@ -151,30 +120,13 @@ class ServerPlace:
             )
 
     def _engine_of(self) -> sa.Engine:
-        server = self._server
-        try:
-            engine = self._driven(server)
-        except ImportError:
-            raise self._errors.failed(self._shape.extra) from None
+        engine = engine_for(self._server, self._shape, read_only=self._read_only)
         sa.event.listen(
             engine,
             "handle_error",
             functools.partial(_not_of_the_driver, self._errors),
         )
         return engine
-
-    def _driven(self, server: Server) -> sa.Engine:
-        """The engine, which loads the driver."""
-        return server_engine(
-            read_only=self._read_only,
-            host=server.host,
-            port=server.port,
-            database=server.database,
-            role=server.role,
-            password=server.password,
-            search_path=server.schema_name,
-            tls=tls_arguments(server.host, server.tls, server.ca_file),
-        )
 
     def undo(self) -> None:
         """The transaction of the driver rolled back. A connection that

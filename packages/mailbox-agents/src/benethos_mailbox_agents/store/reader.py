@@ -16,7 +16,6 @@ from contextlib import AbstractContextManager, nullcontext, suppress
 from pathlib import Path
 
 import sqlalchemy as sa
-from sqlalchemy.pool import StaticPool
 
 from benethos_mailbox_common.storage import errors as storage_errors
 from benethos_mailbox_common.storage import file_place, outage, place, sqlite_file
@@ -96,13 +95,7 @@ class ReadPlace:
         with sqlite_file.translated_sqlite(STATE_ERRORS):
             driver.execute("PRAGMA busy_timeout = 5000")
         at_this_schema(_schema_of(driver), newest, "state file")
-        # A plain BEGIN: a reader asks for no lock to write.
-        self._engine = sa.create_engine(
-            "sqlite://",
-            creator=lambda: driver,
-            poolclass=StaticPool,
-            hide_parameters=True,
-        )
+        self._engine = file_place.sqlite_engine(lambda: driver, writer=False)
         return place.Opened(self._engine.connect(), None)
 
     def undo(self) -> None:

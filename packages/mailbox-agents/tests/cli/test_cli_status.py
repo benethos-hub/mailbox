@@ -11,7 +11,7 @@ import pytest
 
 from benethos_mailbox_agents.agents.categorization import agent as categorization_agent
 from benethos_mailbox_agents.agents.categorization.lists import Listed
-from benethos_mailbox_agents.cli import commands, main
+from benethos_mailbox_agents.cli import main, status
 from benethos_mailbox_agents.records import FolderRef
 from benethos_mailbox_agents.settings import PREFIX
 
@@ -39,7 +39,7 @@ class Watching(Echo):
 def watching(monkeypatch: pytest.MonkeyPatch, *needed: str) -> None:
     """Status lists this agent alone, expecting ``needed``."""
     agent = type("Watched", (Watching,), {"needed": needed})
-    monkeypatch.setattr(commands, "discover", lambda: {"echo": agent})
+    monkeypatch.setattr(status, "discover", lambda: {"echo": agent})
 
 
 def test_status_names_a_folder_that_is_missing(

@@ -26,7 +26,7 @@ from ..errors import (
     ServiceVersionError,
 )
 from ..settings import DEFAULT_ENV_FILE, PREFIX, load_settings
-from . import commands, storage
+from . import commands, status, storage
 
 __all__ = ["PROG", "build_parser", "main"]
 
@@ -87,7 +87,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="whether each agent is ready, the folders that matter to it, "
         "and its counts",
     )
-    found.set_defaults(handler=commands.status)
+    found.set_defaults(handler=status.status)
 
     found = sub.add_parser(
         "eval", help="run an agent over a gold set, beside its rules, and report"
@@ -135,7 +135,7 @@ def build_parser() -> argparse.ArgumentParser:
     found.set_defaults(handler=commands.cockpit)
 
     found = sub.add_parser("paths", help="where the settings and the state files are")
-    found.set_defaults(handler=commands.paths)
+    found.set_defaults(handler=status.paths)
 
     storage.add(sub)
     return parser

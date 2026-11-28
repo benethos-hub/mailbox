@@ -122,15 +122,18 @@ def translated_file(errors: Errors) -> Iterator[None]:
         yield
 
 
-def sqlite_engine(connect: Callable[[], Any]) -> sa.Engine:
+def sqlite_engine(connect: Callable[[], Any], *, writer: bool = True) -> sa.Engine:
     """An engine on the one SQLite connection ``connect`` gives, for the
-    whole process. A transaction begins as ``dialect.begin_at_once``
-    says. No value of a statement reaches the text of an error."""
+    whole process. A transaction of a ``writer`` begins as
+    ``dialect.begin_at_once`` says, one of a reader plainly, asking for
+    no lock to write. No value of a statement reaches the text of an
+    error."""
     engine = sa.create_engine(
         f"{dialect.SQLITE}://",
         creator=connect,
         poolclass=StaticPool,
         hide_parameters=True,
     )
-    sa.event.listen(engine, "begin", dialect.begin_at_once)
+    if writer:
+        sa.event.listen(engine, "begin", dialect.begin_at_once)
     return engine

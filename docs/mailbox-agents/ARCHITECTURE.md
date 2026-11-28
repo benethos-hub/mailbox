@@ -51,18 +51,19 @@ top-level module.
   `settings` stands on `errors`.
 - `contract` and `store` stand on these. `sources` and `llm`, the two
   upstreams, stand on `errors` and `records` alone. `telemetry`, the
-  spans, stands on `errors`, `records` and `settings`.
+  spans, stands on `errors` and `settings`.
 - `runtime` holds everything below it but `sources`, `telemetry` among
   it.
 - `agents` see `contract`, `records`, `settings` and `errors`, never
   `sources`, `llm`, `store` or `runtime`.
 - `evaluation` stands on `runtime` and `store`.
-- `peers`, the entrance for peers over A2A, stands on `errors`,
-  `records` and `settings`: it is handed what classifies a message.
+- `serving`, an application on a port of its own, stands on `errors`.
+- `peers`, the entrance for peers over A2A, stands on `records`,
+  `settings` and `serving`: it is handed what classifies a message.
 - `cockpit`, the pages of what every agent did, stands on `contract`,
-  `store` and the layers below them, and on `runtime`: it reads the
-  states through the store, and the command line hands it the reader of
-  the mailbox service.
+  `store` and the layers below them, and on `runtime` and `serving`:
+  it reads the states through the store, and the command line hands it
+  the reader of the mailbox service.
 - `cli` wires everything on top, and `__main__` calls it.
 
 Of the other packages of the repository, the agents take the client,
@@ -91,9 +92,15 @@ the agents too, with four differences of their own design:
   names them.
 - **Imports through `__init__.py` (5.3).** `contract`, `records`,
   `errors`, `logbook`, `settings`, `store`, `telemetry`, `peers` and `cli` offer
-  their names there. `runtime`, `llm`, `sources` and `evaluation` offer none, and
-  their callers import the module.
-- **The architecture test (13).** It is `tests/test_layers.py`, beside
+  their names there, and another layer imports them through it alone,
+  but `cli/session.py`, which opens the spans with `telemetry.otlp`.
+  `runtime`, `llm`, `sources`, `evaluation`, `cockpit` and `serving`
+  offer none, and
+  their callers import the module. `test_layers.py` holds both.
+- **The architecture test (13).** It is `tests/test_layers.py`, the
+  layers and the confined dependencies, and `tests/test_layer_rules.py`,
+  what a live script, an agent and a module beside the upstreams may do,
+  both reading the source through `tests/layers_helpers.py`, beside
   `tests/test_code_rules.py` for the size of modules and classes (15).
 
 The tests at the root check the agents as they check the other
@@ -138,9 +145,12 @@ packages/mailbox-agents/src/benethos_mailbox_agents/
     spans.py      # the spans as the rest sees them, off by default
     otlp.py       # the only module importing opentelemetry: OTLP over
                   # HTTP when an endpoint is set
+  serving/
+    port.py       # the only module importing uvicorn: an application
+                  # on a port of its own, until the block ends
   peers/
-    a2a.py        # the only module importing a2a-sdk, Starlette and
-                  # uvicorn: the entrance over A2A, served when a port
+    a2a.py        # the only module importing a2a-sdk and Starlette:
+                  # the entrance over A2A, served on a port when one
                   # is set
   cockpit/        # the pages of what every agent did, read-only, started
                   # by hand: sources.py the seam of the sources of the
@@ -149,9 +159,9 @@ packages/mailbox-agents/src/benethos_mailbox_agents/
                   # and the sign-in, with templates.py the only modules
                   # importing FastAPI, templates.py the only one importing
                   # Jinja2, security.py the sessions, the count of failed
-                  # sign-ins and the headers, server.py the only module
-                  # importing uvicorn, templates/ the pages, static/ a
-                  # copy of the stylesheet of the service
+                  # sign-ins and the headers, server.py the cockpit on
+                  # its port, templates/ the pages, static/ a copy of
+                  # the stylesheet of the service
   store/          # the state file, one database per agent on the
                   # storage of mailbox-common: store.py opens it,
                   # reader.py to read alone, shape.py what it is,
