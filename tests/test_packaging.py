@@ -62,6 +62,19 @@ def test_the_stylesheet_of_the_cockpit_is_the_services() -> None:
     assert (cockpit / sheet).read_bytes() == (service / sheet).read_bytes()
 
 
+def test_the_sign_in_of_the_cockpit_counts_like_the_services() -> None:
+    """The cockpit keeps its sessions and counts failed sign-ins with the
+    numbers of the pages of the service."""
+    cockpit = importlib.import_module("benethos_mailbox_agents.cockpit.security")
+    throttle = importlib.import_module("benethos_mailbox_service.domain.auth.throttle")
+    session = importlib.import_module("benethos_mailbox_service.web.pages.session")
+    assert (cockpit.IDLE, cockpit.MAX_AGE) == (session.IDLE, session.MAX_AGE)
+    names = ("LIMIT", "WINDOW", "LOCKOUT", "MAX_SOURCES")
+    assert [getattr(cockpit, name) for name in names] == [
+        getattr(throttle, name) for name in names
+    ]
+
+
 def test_the_packages_share_one_version() -> None:
     versions = {project_of(package)["version"] for package in PACKAGES}
     assert len(versions) == 1, versions
