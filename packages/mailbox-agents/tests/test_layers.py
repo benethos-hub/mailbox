@@ -47,7 +47,7 @@ MAY_IMPORT: dict[str, frozenset[str]] = {
     # The model gateway, behind one module, and the evidence check.
     "llm": frozenset({"errors", "records"}),
     # The spans, behind one module.
-    "telemetry": frozenset({"errors", "records", "settings"}),
+    "telemetry": frozenset({"errors", "settings"}),
     # The runtime holds every piece below it and hands an agent its context.
     "runtime": _BASE | {"llm", "telemetry"},
     # An agent sees the contract and the records, never the client, the
@@ -59,7 +59,7 @@ MAY_IMPORT: dict[str, frozenset[str]] = {
     # The entrance over A2A: it is handed what classifies a message.
     "peers": frozenset({"errors", "records", "settings"}),
     # The pages of what every agent did, read through the store and runtime.
-    "cockpit": _BASE | {"sources", "runtime"},
+    "cockpit": _BASE | {"runtime"},
     # The top: it wires the upstreams, the state file and the runtime.
     "cli": _BASE
     | {"sources", "llm", "runtime", "evaluation", "telemetry", "peers", "cockpit"},
@@ -176,6 +176,24 @@ def test_an_agent_imports_no_other_agent(path: Path) -> None:
             assert own is not None and (
                 module == own or module.startswith(f"{own}.")
             ), f"line {line}: {module}"
+
+
+def test_a_row_allows_no_layer_unused() -> None:
+    """A row allows what its layer imports and no more: a right left over
+    would let a later import through unseen."""
+    used: dict[str, set[str]] = {}
+    for path in modules():
+        own = layer_of(path)
+        for module, _ in imports_of(path):
+            target = layer(module)
+            if target not in ("", "__version__", own):
+                used.setdefault(own, set()).add(target)
+    unused = {
+        row: sorted(allowed - used.get(row, set()))
+        for row, allowed in MAY_IMPORT.items()
+        if allowed - used.get(row, set())
+    }
+    assert unused == {}
 
 
 def test_every_layer_has_a_row() -> None:

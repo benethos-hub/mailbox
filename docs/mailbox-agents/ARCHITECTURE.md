@@ -51,7 +51,7 @@ top-level module.
   `settings` stands on `errors`.
 - `contract` and `store` stand on these. `sources` and `llm`, the two
   upstreams, stand on `errors` and `records` alone. `telemetry`, the
-  spans, stands on `errors`, `records` and `settings`.
+  spans, stands on `errors` and `settings`.
 - `runtime` holds everything below it but `sources`, `telemetry` among
   it.
 - `agents` see `contract`, `records`, `settings` and `errors`, never
