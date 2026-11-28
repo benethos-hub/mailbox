@@ -7,23 +7,19 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from contextlib import contextmanager
-from datetime import UTC, datetime
 
 import sqlalchemy as sa
 
-from benethos_mailbox_common.storage import database
+from benethos_mailbox_common.storage import clock, database
 
 from ..errors import StateFileError
 
+# What the parts of the store take from here.
+__all__ = ["_Rows", "_named", "_text", "_time"]
 
-def _text(moment: datetime) -> str:
-    if moment.tzinfo is None:
-        raise ValueError("a time stored must carry its zone")
-    return moment.astimezone(UTC).isoformat()
-
-
-def _time(text: str | None) -> datetime | None:
-    return datetime.fromisoformat(text) if text else None
+# A time as the storage of mailbox-common writes and reads it, in UTC.
+_text = clock.iso
+_time = clock.parse_iso
 
 
 @contextmanager

@@ -165,7 +165,7 @@ def _message_row(row: Any) -> MessageRow:
         ref=MessageRef(account_id=row[0], message_id=row[1]),
         state=row[2],
         attempts=row[3],
-        next_attempt=datetime.fromisoformat(row[4]),
-        created=datetime.fromisoformat(row[5]),
-        updated=datetime.fromisoformat(row[6]),
+        next_attempt=_time(row[4]),
+        created=_time(row[5]),
+        updated=_time(row[6]),
     )

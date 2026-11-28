@@ -6,7 +6,7 @@ from __future__ import annotations
 import re
 import ssl
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, get_args
 
 from pydantic import Field, SecretStr, ValidationError, field_validator, model_validator
 
@@ -31,6 +31,8 @@ PREFIX = "MAILBOX_AGENTS_"
 INSTANCE_FORM = re.compile(r"[a-z][a-z0-9-]{0,39}")
 
 Stage = Literal["shadow", "suggest", "full"]
+# The settings that hold a secret, each with a _FILE beside it.
+SecretName = Literal["service_token", "gateway_key", "a2a_token", "cockpit_secret"]
 
 # The word the middle stage had before 2026-11-27, still taken and read as
 # suggest, so a deployment written before goes on unchanged.
@@ -215,7 +217,7 @@ class Settings(files.FileSettings):
         with the mark of UTF-8 an editor puts there. A secret is printable
         ASCII, as a header of HTTP carries it: any other is refused by the
         name of its setting, never with its value."""
-        for name in ("service_token", "gateway_key", "a2a_token", "cockpit_secret"):
+        for name in get_args(SecretName):
             setting = f"{PREFIX}{name.upper()}"
             given: SecretStr | None = getattr(self, name)
             if given is not None and not given.get_secret_value():
@@ -300,7 +302,7 @@ class Settings(files.FileSettings):
 
     def secret(
         self,
-        name: Literal["service_token", "gateway_key", "a2a_token", "cockpit_secret"],
+        name: SecretName,
     ) -> str:
         """The value of a secret, or a :class:`ConfigError` naming it."""
         found: SecretStr | None = getattr(self, name)

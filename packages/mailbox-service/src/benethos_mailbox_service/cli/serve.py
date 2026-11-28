@@ -13,7 +13,9 @@ import time
 from collections.abc import Callable
 from typing import Any, TypeVar
 
-from ..config import Settings, database_url_parts, load_settings, settings_file
+from benethos_mailbox_common.storage import server_url
+
+from ..config import Settings, load_settings, settings_file
 from .common import Commands
 
 T = TypeVar("T")
@@ -142,12 +144,13 @@ def _again(
             return build()
         except StorageUnavailableError as exc:
             if clock() + START_RETRY > end:
-                parts = database_url_parts(settings.database_url or "")
+                # The names alone: no password is read for a text.
+                found = server_url.server_at(settings.database_url or "", "")
                 failed = (
                     f"the database failed: {exc.cause}" if exc.cause else exc.message
                 )
                 raise StorageError(
-                    f"the database on {parts.hostname} as {parts.username} could not"
+                    f"the database on {found.host} as {found.role} could not"
                     f" be opened within {settings.database_start_wait} seconds:"
                     f" {failed}"
                 ) from None

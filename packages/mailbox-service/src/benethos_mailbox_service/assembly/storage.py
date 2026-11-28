@@ -10,8 +10,9 @@ from datetime import datetime
 from functools import partial
 
 from benethos_mailbox_common.log import redact
+from benethos_mailbox_common.storage import server_url
 
-from ..config import Settings, database_url_parts
+from ..config import Settings
 from ..data.storage import Availability, Repositories, Server
 from ..domain.activity import SERVICE, ActivityLog, Audit
 from ..domain.activity import system as said
@@ -80,15 +81,12 @@ def database_server(settings: Settings) -> Server:
     """The database server the settings name, whatever the storage says,
     with the password of its role read now and kept from every log line.
     ValueError when the settings lack it or break one of its rules."""
-    parts = database_url_parts(settings.check_database_server())
+    url = settings.check_database_server()
     password = settings.database_password().get_secret_value()
     redact.note(password)
-    return Server(
-        host=parts.hostname or "",
-        port=parts.port or 5432,
-        database=parts.path.removeprefix("/"),
-        role=parts.username or "",
-        password=password,
+    return server_url.server_at(
+        url,
+        password,
         tls=settings.database_tls,
         ca_file=settings.database_ca_file,
     )

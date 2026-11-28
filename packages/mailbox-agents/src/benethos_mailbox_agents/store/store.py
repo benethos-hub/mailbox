@@ -28,6 +28,7 @@ from benethos_mailbox_common.storage import (
     migrated,
     server_place,
     server_rights,
+    sqlite_file,
 )
 
 from ..errors import ConfigError, StateFileError
@@ -36,7 +37,7 @@ from .calls import _Calls
 from .items import _Items
 from .messages import _Messages
 from .profile import _Profile
-from .reader import ReadPlace
+from .reader import ReadPlace, at_this_schema
 from .rows import _named, _text, _time
 from .schema import cursor, passes
 from .shape import SHAPE
@@ -79,7 +80,7 @@ def _lock(path: Path) -> ExitStack:
     """An exclusive lock on ``<path>.lock``, held until the stack is
     closed: one writer per state file. Another writer is refused at once."""
     held = ExitStack()
-    lock = locks.exclusive_lock(path.with_name(path.name + ".lock"))
+    lock = locks.exclusive_lock(sqlite_file.lock_file(path))
     try:
         _made(path, lambda: held.enter_context(lock))
     except locks.LockedError:
@@ -104,20 +105,6 @@ def _made(path: Path, make: Callable[[], T]) -> T:
 
 def _unlock(held: ExitStack) -> None:
     held.close()
-
-
-def _at_this_schema(held: int) -> None:
-    """A reader takes the state at the schema of this version alone."""
-    newest = SHAPE.newest
-    if held > newest:
-        raise ConfigError(
-            f"the state is at schema version {held}, this program knows {newest}"
-        )
-    if held < newest:
-        raise ConfigError(
-            f"the state is at schema version {held}, this program reads {newest}:"
-            " start the agent once, which brings it forward"
-        )
 
 
 class Store(_Messages, _Steps, _Actions, _Items, _Calls, _Profile):
@@ -216,7 +203,7 @@ class Store(_Messages, _Steps, _Actions, _Items, _Calls, _Profile):
                 if not held:
                     place.close()
                     return None
-                _at_this_schema(held)
+                at_this_schema(held, SHAPE.newest, "state")
                 db = database.Database(SHAPE, place=place)
         except BaseException:
             place.close()

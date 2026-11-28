@@ -46,14 +46,13 @@ from common.admin import bootstrap
 from common.mail import sweep
 from common.processes import free_port, new_master_key, program, service_env, started
 from common.run import Run, polled
-from service_common.test_database import (
+from common.test_database import (
     Administrator,
-    Role,
     administrator,
-    role,
-    rows_in,
+    docker_command,
     stopped,
 )
+from service_common.test_database import Role, role, rows_in
 from service_common.test_server import (
     HOST,
     IMAP_TLS,
@@ -263,7 +262,7 @@ def away(
     base: str,
     send: Callable[[], str],
 ) -> None:
-    with stopped(env):
+    with stopped(docker_command(env)):
         answer = polled(lambda: _health(host, 503), tries=90, pause=1.0)
         polled(lambda: host.said(AWAY) > 0, tries=30, pause=1.0)
         alive = host.process is not None and host.process.poll() is None

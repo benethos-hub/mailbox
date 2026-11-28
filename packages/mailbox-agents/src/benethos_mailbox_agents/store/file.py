@@ -50,11 +50,7 @@ class OldSteps:
             connection.execute("PRAGMA journal_mode = WAL")
             connection.execute("PRAGMA synchronous = NORMAL")
             current: int = connection.execute("PRAGMA user_version").fetchone()[0]
-        notes = (
-            ["the file was rewritten once: from now on it shrinks after deletions"]
-            if rewritten
-            else []
-        )
+        notes = [sqlite_file.REWRITTEN] if rewritten else []
         if sqlite_file.has_meta(connection, errors):
             held = sqlite_file.schema_version(connection, errors)
             if held > newest:

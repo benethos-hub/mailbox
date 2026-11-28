@@ -9,7 +9,7 @@ from typing import Any
 import sqlalchemy as sa
 
 from ..records import MessageRef, Step, StepResult
-from .rows import _Rows, _text
+from .rows import _Rows, _text, _time
 from .schema import steps
 
 _s = steps.c
@@ -116,5 +116,5 @@ def _step(row: Any) -> StepResult:
         tokens_in=row[4],
         tokens_out=row[5],
         duration_ms=row[6],
-        at=datetime.fromisoformat(row[7]),
+        at=_time(row[7]),
     )

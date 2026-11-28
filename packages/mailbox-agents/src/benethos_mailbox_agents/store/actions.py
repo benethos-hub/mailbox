@@ -10,7 +10,7 @@ from typing import Any
 import sqlalchemy as sa
 
 from ..records import MessageRef
-from .rows import _Rows, _text
+from .rows import _Rows, _text, _time
 from .schema import actions
 
 _a = actions.c
@@ -120,5 +120,5 @@ def _action(row: Any) -> ActionRow:
         before=json.loads(row[4]),
         stage=row[5],
         executed=bool(row[6]),
-        at=datetime.fromisoformat(row[7]),
+        at=_time(row[7]),
     )

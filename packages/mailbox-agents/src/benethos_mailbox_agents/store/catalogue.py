@@ -17,7 +17,13 @@ from .shape import SHAPE
 # The server a state lies on, for those who hold one without the storage.
 Server = server_place.Server
 
-__all__ = ["Found", "Server", "states_on"]
+__all__ = ["LOGIN", "READER", "Found", "Server", "states_on"]
+
+# The read role an owner names in DATABASE_READERS, and the role of
+# the cockpit, a member of it, that signs in: storage provision makes
+# them once per server.
+READER = "agents_read"
+LOGIN = "agents_cockpit"
 
 # The table every state holds, which its owner gives to read with it.
 _MARK = "profile"

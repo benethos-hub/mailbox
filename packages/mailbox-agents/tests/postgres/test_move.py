@@ -17,7 +17,7 @@ from benethos_mailbox_agents.settings import PREFIX
 from benethos_mailbox_agents.store import Store, path_for
 from benethos_mailbox_common.storage.server_place import Server
 
-from ..postgres_helpers import instance
+from ..postgres_helpers import instance, settings_at
 
 NOW = datetime(2026, 11, 27, 9, 0, tzinfo=UTC)
 
@@ -27,14 +27,8 @@ def server(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[Server]:
     """The settings of a state file of counting and of a database of its
     own on the server, as a move takes them."""
     with instance() as found:
-        password = tmp_path / "database_password"
-        password.write_text(found.password, encoding="utf-8")
         monkeypatch.setenv(f"{PREFIX}DATA_DIR", str(tmp_path / "data"))
-        monkeypatch.setenv(
-            f"{PREFIX}DATABASE_URL",
-            f"postgresql://{found.role}@{found.host}:{found.port}/{found.database}",
-        )
-        monkeypatch.setenv(f"{PREFIX}DATABASE_PASSWORD_FILE", str(password))
+        settings_at(monkeypatch, found, tmp_path)
         yield found
 
 

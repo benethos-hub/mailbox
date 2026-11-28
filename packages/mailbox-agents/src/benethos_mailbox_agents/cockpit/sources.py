@@ -24,9 +24,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
-from ..errors import ConfigError, MailboxAgentError
+from ..errors import ConfigError
 from ..store import Store
-from ..store.catalogue import Server, states_on
+from ..store.catalogue import Found, Server, states_on
 
 __all__ = [
     "Files",
@@ -96,19 +96,21 @@ class Files:
 
 @dataclass(frozen=True, slots=True)
 class OnServer:
-    """A state on a server, or what could not be read there: ``server``
-    reaches it, ``error`` says why there is none."""
+    """A state on a server as the store found it, or what could not be
+    read there."""
 
-    name: str
-    server: Server | None = None
-    error: MailboxAgentError | None = None
+    found: Found
+
+    @property
+    def name(self) -> str:
+        return self.found.name
 
     def open(self) -> Store:
-        if self.error is not None:
-            raise self.error
-        if self.server is None:
+        if self.found.error is not None:
+            raise self.found.error
+        if self.found.server is None:
             raise ConfigError("the state was not found")
-        found = Store.read_server(self.server)
+        found = Store.read_server(self.found.server)
         if found is None:
             raise ConfigError("the database holds no state yet")
         return found
@@ -124,11 +126,7 @@ class Servers:
     servers: tuple[Server, ...]
 
     def found(self) -> Sequence[Instance]:
-        return [
-            OnServer(item.name, item.server, item.error)
-            for server in self.servers
-            for item in states_on(server)
-        ]
+        return [OnServer(item) for server in self.servers for item in states_on(server)]
 
 
 def every(sources: Sequence[Source]) -> list[Instance]:

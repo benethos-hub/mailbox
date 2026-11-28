@@ -16,6 +16,8 @@ imports from here, and from the folder of shared code beside it, with
   this one.
 - ``mail``: finding a test mail through the API, its change feed and its
   thread, and deleting test mail for good.
+- ``test_database``: the test database of containers/test-database/,
+  its administrator, the command of Docker, and its container stopped.
 
 What a check does with mail on the way, it does through the Python
 client, ``benethos_mailbox_client``. What a check asks of the API itself,

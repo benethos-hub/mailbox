@@ -12,10 +12,10 @@ from pathlib import Path
 import pytest
 
 from benethos_mailbox_agents.cli import main
-from benethos_mailbox_agents.cli.storage import LOGIN, READER
 from benethos_mailbox_agents.errors import StateFileError
 from benethos_mailbox_agents.settings import PREFIX, load_settings
 from benethos_mailbox_agents.store import Store
+from benethos_mailbox_agents.store.catalogue import LOGIN, READER
 from benethos_mailbox_agents.store.shape import SHAPE
 from benethos_mailbox_common.storage.server_provision import Instance, make_instance
 

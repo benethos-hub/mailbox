@@ -167,8 +167,8 @@ def _item(row: Any) -> OpenItem:
     return OpenItem(
         ref=MessageRef(account_id=row[0], message_id=row[1]),
         thread_id=row[2],
-        opened=datetime.fromisoformat(row[3]),
-        due=datetime.fromisoformat(row[4]),
+        opened=_time(row[3]),
+        due=_time(row[4]),
         keyword_set=bool(row[5]),
         closed=_time(row[6]),
         reason=row[7],

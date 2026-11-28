@@ -34,7 +34,6 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import os
 import secrets
 import subprocess
 import sys
@@ -46,26 +45,31 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import psycopg
-from agents_common import ENV, live_settings, run_checks  # beside this script
-from agents_common.test_database import (
+from agents_common import (  # beside this script
+    ENV,
+    agents_command,
+    clean_environment,
+    live_settings,
+    run_checks,
+)
+from agents_common.test_database import dropped
+from common.accounts import read_env
+from common.test_database import (
     Administrator,
     administrator,
     connected,
-    dropped,
+    docker_command,
     stopped,
 )
-from common.accounts import read_env
 
 from benethos_mailbox_agents.cockpit import sources
-from benethos_mailbox_agents.settings import PREFIX, Settings
+from benethos_mailbox_agents.settings import Settings
 from benethos_mailbox_agents.store import Store
+from benethos_mailbox_agents.store.catalogue import LOGIN, READER
 from benethos_mailbox_common.storage.server_place import Server
 from benethos_mailbox_service.data.storage import open_repositories
 
 DAYS = "30"
-# The read role and the role of the cockpit storage provision makes.
-READER = "agents_read"
-LOGIN = "agents_cockpit"
 # How long the test database stays stopped, and how long the worker may
 # take to write its progress once it is back.
 AWAY_SECONDS = 15
@@ -105,7 +109,6 @@ class Live:
 def _environment(live: Live, letter: str, **values: str) -> dict[str, str]:
     """The environment of a process of instance ``letter``: no setting of
     this shell, its state on the test database, and ``values``."""
-    found = {k: v for k, v in os.environ.items() if not k.upper().startswith(PREFIX)}
     name = live.name(letter)
     password = live.folder / f"password-{letter}"
     password.write_text(live.passwords[letter], encoding="utf-8")
@@ -120,16 +123,14 @@ def _environment(live: Live, letter: str, **values: str) -> dict[str, str]:
         "database_readers": READER,
         **values,
     }
-    found.update({f"{PREFIX}{key.upper()}": value for key, value in settings.items()})
-    return found
+    return clean_environment(**settings)
 
 
 def _agents(live: Live, letter: str, *args: str, **values: str) -> str:
     """A command of the agents for instance ``letter``. Answers what it
     printed, and fails with what it said on an exit code other than 0."""
     done = subprocess.run(
-        [sys.executable, "-m", "benethos_mailbox_agents", "--env-file"]
-        + [str(live.env_file), *args],
+        agents_command(live.env_file, *args),
         env=_environment(live, letter, **values),
         capture_output=True,
         text=True,
@@ -158,8 +159,15 @@ def _provisioned(live: Live, letter: str) -> str:
     return said
 
 
+def _state(live: Live, letter: str) -> Store:
+    found = Store.read_server(live.server(letter))
+    if found is None:
+        raise AssertionError(f"instance {letter} holds no state yet")
+    return found
+
+
 def _rows(live: Live, letter: str) -> int:
-    with Store.read_server(live.server(letter)) as store:  # type: ignore[union-attr]
+    with _state(live, letter) as store:
         return sum(store.counts().values())
 
 
@@ -273,7 +281,7 @@ async def move(live: Live) -> str:
         before = store.counts()
     _provisioned(live, "c")
     said = _agents(live, "c", "storage", "move", "--agent", "counting")
-    with Store.read_server(live.server("c")) as moved:  # type: ignore[union-attr]
+    with _state(live, "c") as moved:
         after = moved.counts()
     if before != after or "compared table by table" not in said:
         raise AssertionError(f"the move does not hold: {before} != {after}")
@@ -281,17 +289,16 @@ async def move(live: Live) -> str:
 
 
 def _progress(live: Live) -> datetime | None:
-    with Store.read_server(live.server("a")) as store:  # type: ignore[union-attr]
+    with _state(live, "a") as store:
         return store.progress()
 
 
 async def away(live: Live) -> str:
-    docker = os.environ.get("LIVE_DOCKER") or read_env().get("LIVE_DOCKER") or "docker"
+    docker = docker_command(read_env())
     log = live.folder / "worker.log"
     with log.open("w", encoding="utf-8") as sink:
         worker = subprocess.Popen(
-            [sys.executable, "-m", "benethos_mailbox_agents", "--env-file"]
-            + [str(live.env_file), "worker", "--agent", "counting"],
+            agents_command(live.env_file, "worker", "--agent", "counting"),
             env=_environment(live, "a", poll_seconds="2", backoff_ceiling_seconds="4"),
             stdout=sink,
             stderr=sink,
@@ -333,7 +340,7 @@ CHECKS: list[tuple[str, Callable[[Live], Awaitable[str]]]] = [
 
 
 async def run(settings: Settings, env_file: Path) -> int:
-    admin = administrator()
+    admin = administrator(read_env())
     print(f"live: test database {admin.host}:{admin.port}")
     with tempfile.TemporaryDirectory() as folder:
         live = Live(settings, env_file.resolve(), Path(folder), admin)

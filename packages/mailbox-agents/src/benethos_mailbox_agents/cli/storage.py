@@ -31,19 +31,18 @@ from benethos_mailbox_common.storage import (
     server_url,
 )
 
-from ..contract import load_agent, state_name
+from ..contract import label_of, load_agent
 from ..errors import STATE_ERRORS, ConfigError, StateFileError
 from ..settings import PREFIX, Settings
 from ..settings.database import server_of
-from ..store import path_for
+from ..store.catalogue import LOGIN, READER
 from ..store.shape import SHAPE
+from .session import state_file
 
-__all__ = ["LOGIN", "READER", "add", "move", "provision", "suggested_name"]
+__all__ = ["add", "move", "provision", "suggested_name"]
 
 # The role that may read the database of every instance, without
 # signing in, and the role the cockpit signs in with, a member of it.
-READER = "agents_read"
-LOGIN = "agents_cockpit"
 
 
 def add(sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
@@ -118,7 +117,7 @@ def _instance(agent: str, settings: Settings) -> server_provision.Instance:
 
 def provision(args: argparse.Namespace, settings: Settings) -> int:
     agent = load_agent(args.agent)
-    label = f"{agent.name}/{settings.instance}" if settings.instance else agent.name
+    label = label_of(agent.name, settings.instance)
     found = _instance(agent.name, settings)
     if not args.apply:
         _print_plan(found, settings)
@@ -177,7 +176,7 @@ def _print_plan(found: server_provision.Instance, settings: Settings) -> None:
 
 def move(args: argparse.Namespace, settings: Settings) -> int:
     agent = load_agent(args.agent)
-    source = path_for(settings.data_dir, state_name(agent.name, settings.instance))
+    source = state_file(agent.name, settings)
     if args.check:
         # The values of the file alone: no server is reached.
         try:

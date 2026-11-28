@@ -9,7 +9,6 @@ import functools
 
 from benethos_mailbox_common.storage import move, stores
 
-from ...errors import STORAGE_ERRORS
 from .sql import SHAPE
 
 Claim = stores.Claim
@@ -18,9 +17,7 @@ file_store = functools.partial(stores.file_store, SHAPE)
 # A database file from a backup brought to this version's schema.
 migrate_file = functools.partial(stores.migrate_file, SHAPE)
 # The lock a running service holds beside its file, for a tool.
-file_claimed = functools.partial(
-    stores.file_claimed, errors=STORAGE_ERRORS, noun="service"
-)
+file_claimed = functools.partial(stores.file_claimed, SHAPE)
 # A schema on a server, held by a tool alone.
 claimed = functools.partial(stores.claimed, SHAPE)
 

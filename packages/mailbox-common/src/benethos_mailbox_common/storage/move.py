@@ -209,7 +209,7 @@ def _file_locked(shape: Shape, path: Path) -> Iterator[None]:
     """The lock a running program holds beside its file."""
     with ExitStack() as held:
         try:
-            held.enter_context(file_claimed(path, shape.errors, shape.noun))
+            held.enter_context(file_claimed(shape, path))
         except StorageInUseError:
             raise _move_running(shape) from None
         yield

@@ -20,7 +20,7 @@ from .. import peers
 from ..cockpit.app import Cockpit, make_app
 from ..cockpit.server import serve
 from ..cockpit.sources import Files, Servers, Source
-from ..contract import Agent, discover, load_agent, state_name
+from ..contract import Agent, discover, label_of, load_agent, state_name
 from ..errors import (
     ConfigError,
     MailboxAgentError,
@@ -38,15 +38,17 @@ from ..runtime.health import check
 from ..runtime.readiness import MAILBOX_SETTINGS, folder_lines, readiness, start
 from ..settings import PREFIX, Settings, folders
 from ..sources.versions import matches, shown, taken
-from ..store import STATES, Store, earlier_file, path_for
+from ..store import STATES, Store, earlier_file
 from .report import report as make_report
 from .session import (
     Session,
     former_file,
     mailbox_for,
     now,
+    server_place_shown,
+    server_reader,
     session,
-    state_place,
+    state_file,
     state_reader,
     upstreams,
 )
@@ -248,8 +250,7 @@ def status(args: argparse.Namespace, settings: Settings) -> int:
             state = "misses " + ", ".join(found.missing)
         else:
             state = f"not ready: {found.problem}"
-        name = f"{found.name}/{settings.instance}" if settings.instance else found.name
-        _say(f"{name} {found.version}: {state}")
+        _say(f"{label_of(found.name, settings.instance)} {found.version}: {state}")
         if found.agent is not None:
             for line in _folders(found.agent, settings):
                 _say(f"  {line}")
@@ -269,7 +270,7 @@ def status(args: argparse.Namespace, settings: Settings) -> int:
 def _state(name: str, settings: Settings) -> list[str]:
     """What the state file of agent ``name`` says, and where one lies at
     the place before."""
-    path = path_for(settings.data_dir, state_name(name, settings.instance))
+    path = state_file(name, settings)
     earlier = earlier_file(settings.data_dir, state_name(name, settings.instance))
     if earlier is not None:
         where = path.resolve()
@@ -293,9 +294,9 @@ def _server_state(settings: Settings) -> dict[str, list[str]]:
     """The state on the server the settings name, read once: where it
     lies, said at once, and its lines under the agent whose profile it
     holds."""
-    _say(f"state: {state_place('', settings)}")
+    _say(f"state: {server_place_shown(settings)}")
     try:
-        reader = state_reader("", settings)
+        reader = server_reader(settings)
         if reader is None:
             _say("  nothing yet: no agent has started on it")
             return {}
@@ -315,10 +316,10 @@ def paths(args: argparse.Namespace, settings: Settings) -> int:
     print(f"settings: {env.resolve()} ({'found' if env.is_file() else 'missing'})")
     print(f"data: {settings.data_dir.resolve()}")
     if settings.storage == "postgres":
-        print(f"state: {state_place('', settings)}")
+        print(f"state: {server_place_shown(settings)}")
         return 0
     for name in discover():
-        path = path_for(settings.data_dir, state_name(name, settings.instance))
+        path = state_file(name, settings)
         print(
             f"  {name}: {path.resolve()} ({'found' if path.is_file() else 'none yet'})"
         )
