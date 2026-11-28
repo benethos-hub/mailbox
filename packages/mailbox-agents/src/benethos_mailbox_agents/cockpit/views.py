@@ -18,6 +18,7 @@ from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 from urllib.parse import quote
 
+from benethos_mailbox_common.mail import addresses
 from benethos_mailbox_common.values import text as text_values
 
 from ..contract import Actor, Reader, discover
@@ -289,8 +290,7 @@ def row(file: Instance, now: datetime) -> Row:
 def _sender(message: MailMessage | None) -> str | None:
     if message is None or message.sender is None:
         return None
-    sender = message.sender
-    return _e(f"{sender.name} <{sender.email}>" if sender.name else sender.email)
+    return _e(addresses.readable(message.sender.name, message.sender.email))
 
 
 def _act(row: ActionRow) -> Act:
