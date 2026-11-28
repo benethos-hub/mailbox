@@ -1496,6 +1496,9 @@
     "read_tables": {
       "signature": "(conn: 'sa.Connection', shape: 'Shape') -> 'list[Table]'"
     },
+    "schema_number": {
+      "signature": "(stored: 'object', errors: 'Errors') -> 'int'"
+    },
     "stored_schema": {
       "signature": "(conn: 'sa.Connection', shape: 'Shape') -> 'int'"
     },

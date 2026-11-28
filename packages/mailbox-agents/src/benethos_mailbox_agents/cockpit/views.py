@@ -249,7 +249,7 @@ def row(file: Instance, now: datetime) -> Row:
             calls = store.model_calls_since(day)
             due = len(store.due_items(now))
             items = tuple(_item(item) for item in store.open_items())
-    except UNREADABLE as exc:
+    except MailboxAgentError as exc:
         return Row(
             name=_e(file.name),
             link=_link(file.name),

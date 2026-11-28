@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from benethos_mailbox_agents.cockpit import sources, views
+from benethos_mailbox_agents.errors import ServiceVersionError
 from benethos_mailbox_agents.store import Store
 
 from .cockpit_helpers import NOW, PROFILE, REF, filled, mailbox, newer, older
@@ -136,3 +137,22 @@ async def test_one_message_shows_its_evidence_steps_and_actions(tmp_path: Path) 
     assert [(a.action, a.executed) for a in found.result.actions] == [
         ("add_keyword", False)
     ]
+
+
+class _Failing:
+    """An instance whose state fails with an error of the agents' own."""
+
+    name = "failing"
+
+    def open(self) -> Store:
+        raise ServiceVersionError("the state was written by another version")
+
+    def stopped(self) -> bool:
+        return False
+
+
+def test_any_error_of_the_agents_is_a_row_with_its_reason() -> None:
+    found = views.row(_Failing(), NOW)
+
+    assert found.state == "unreadable"
+    assert found.problem == "the state was written by another version"

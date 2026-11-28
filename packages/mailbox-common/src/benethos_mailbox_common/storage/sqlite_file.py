@@ -21,7 +21,7 @@ from contextlib import ExitStack, contextmanager, suppress
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import files, locks
+from . import files, locks, tables
 from .clock import utc_now
 from .errors import Errors, StorageError
 from .migrated import Migrated
@@ -222,7 +222,7 @@ def schema_version(connection: sqlite3.Connection, errors: Errors) -> int:
         return 0
     with translated_sqlite(errors):
         row = connection.execute(_VERSION).fetchone()
-    return int(row[0]) if row else 0
+    return tables.schema_number(row[0], errors) if row else 0
 
 
 @contextmanager
