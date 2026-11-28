@@ -81,3 +81,24 @@ def test_the_production_setup_has_a_service_for_every_agent() -> None:
     for name in named - {"cockpit"}:
         assert (setup / "agents" / name / ".env.example").is_file(), name
     assert (setup / "cockpit" / ".env.example").is_file()
+
+
+AGENT_SETTINGS = ROOT / "containers" / "production" / "mailbox-agents" / "agents"
+POSTGRES_BLOCK = "# The state in a database of its own on a PostgreSQL server"
+
+
+def _postgres_block(agent: str) -> str:
+    """The lines of ``agent``'s .env.example from its PostgreSQL block to
+    its end, the name of the agent replaced."""
+    text = (AGENT_SETTINGS / agent / ".env.example").read_text(encoding="utf-8")
+    assert POSTGRES_BLOCK in text, agent
+    return text[text.index(POSTGRES_BLOCK) :].replace(agent, "<agent>")
+
+
+def test_the_postgresql_block_of_every_agent_is_the_same() -> None:
+    """Each agent has a settings file of its own, and the block of a state
+    on PostgreSQL in each differs by the name of the agent alone."""
+    agents = sorted(path.name for path in AGENT_SETTINGS.iterdir() if path.is_dir())
+    assert len(agents) >= 6
+    blocks = {agent: _postgres_block(agent) for agent in agents}
+    assert len(set(blocks.values())) == 1, blocks
