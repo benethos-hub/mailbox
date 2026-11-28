@@ -14,6 +14,9 @@ from benethos_mailbox_common.storage import clock, database
 
 from ..errors import StateFileError
 
+# What the parts of the store take from here.
+__all__ = ["_Rows", "_named", "_text", "_time"]
+
 # A time as the storage of mailbox-common writes and reads it, in UTC.
 _text = clock.iso
 _time = clock.parse_iso
