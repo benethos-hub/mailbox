@@ -1291,6 +1291,9 @@
         }
       }
     },
+    "REWRITTEN": {
+      "value": "the file was rewritten once: from now on it shrinks after deletions"
+    },
     "SIDECARS": {
       "source": "(\"-journal\", \"-wal\", \"-shm\")"
     },

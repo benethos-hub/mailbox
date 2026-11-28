@@ -66,9 +66,7 @@ class OldSteps:
         if kept is not None:
             notes.append(f"a copy of the database at schema {current} is kept: {kept}")
         if rewritten:
-            notes.append(
-                "the file was rewritten once: from now on it shrinks after deletions"
-            )
+            notes.append(sqlite_file.REWRITTEN)
         if current < upto or rewritten:
             return migrated.Migrated(current, upto, tuple(notes))
         return None

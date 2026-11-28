@@ -36,6 +36,8 @@ _INCREMENTAL = 2
 
 # The schema a database says it is in, as the revisions write it.
 _VERSION = "SELECT value FROM meta WHERE key = 'schema_version'"
+# The note of a file rewritten so it shrinks after deletions.
+REWRITTEN = "the file was rewritten once: from now on it shrinks after deletions"
 
 
 @dataclass(frozen=True, slots=True)
@@ -103,7 +105,7 @@ def _no_steps(
         return Migrated(
             current,
             current,
-            ("the file was rewritten once: from now on it shrinks after deletions",),
+            (REWRITTEN,),
         )
     return None
 
