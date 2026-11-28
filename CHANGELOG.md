@@ -36,8 +36,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   does not start with it. The driver comes with the extra `postgres` of
   the agents, and their image brings it. A server that is away is
   waited for as an upstream (`StateUnavailableError`), and the health
-  check fails while it is. A worker whose database another agent took
-  in the meantime ends.
+  check fails while it is. A worker whose lock another agent still holds
+  a minute after the server went away ends.
 - `benethos-mailbox-agents`: `storage provision --agent <name>` prints
   what an administrator of a PostgreSQL server runs once for the
   database of an agent and instance: its role, its database, closed to

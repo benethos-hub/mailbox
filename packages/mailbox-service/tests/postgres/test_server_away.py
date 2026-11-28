@@ -8,6 +8,7 @@ from __future__ import annotations
 import pytest
 import sqlalchemy as sa
 
+from benethos_mailbox_common.storage.outage import LOCK_GRACE
 from benethos_mailbox_service.data.models import User
 from benethos_mailbox_service.data.storage import (
     Availability,
@@ -94,6 +95,10 @@ def test_a_lock_taken_meanwhile_is_reported() -> None:
                     users.list()
                 with other.serving():
                     clock.now += 1
+                    # For a minute the lock may still be the old session's.
+                    with pytest.raises(StorageUnavailableError):
+                        users.list()
+                    clock.now += LOCK_GRACE
                     with pytest.raises(StorageError, match="another service took"):
                         users.list()
                     # From then on nothing goes through, and the routes

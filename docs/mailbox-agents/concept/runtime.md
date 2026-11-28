@@ -64,9 +64,12 @@ an upstream away, logged as `worker.upstream_away`. While it waits it
 writes no progress, so the health check fails. The storage of
 mailbox-common tries the server again after a pause of one second,
 doubled after each failed attempt up to thirty, on a new session that
-takes the lock of the writer again. When another agent took that lock
-in the meantime, the worker ends with a `StateFileError`, as for a state
-file that fails (2026-11-27).
+takes the lock of the writer again. A lock held by another session
+counts as the server still away for a minute since it went, as the old
+session of the worker may still hold it until the server ends it
+(2026-11-28). When another agent still holds that lock after the
+minute, the worker ends with a `StateFileError`, as for a state file
+that fails (2026-11-27).
 
 Message states: `pending`, `skipped` (not admitted, marked before the
 state file for an agent that declares `skip_marked`, which an update

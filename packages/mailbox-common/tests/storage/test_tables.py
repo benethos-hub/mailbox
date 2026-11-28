@@ -12,23 +12,8 @@ import sqlalchemy as sa
 
 from benethos_mailbox_common.storage import sqlite_file, tables
 from benethos_mailbox_common.storage.errors import OWN, StorageError
-from benethos_mailbox_common.storage.shape import Shape
 
-METADATA = sa.MetaData()
-sa.Table(
-    "meta",
-    METADATA,
-    sa.Column("key", sa.Text, primary_key=True),
-    sa.Column("value", sa.Text, nullable=False),
-)
-SHAPE = Shape(
-    program="benethos-mailbox-test",
-    noun="test",
-    metadata=METADATA,
-    versions=Path("versions"),
-    newest=1,
-    baseline=1,
-)
+from .shape_helpers import SHAPE
 
 
 def _file(path: Path, value: str) -> Path:

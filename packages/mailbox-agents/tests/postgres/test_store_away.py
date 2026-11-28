@@ -17,6 +17,7 @@ from benethos_mailbox_agents.errors import (
 )
 from benethos_mailbox_agents.records import MessageRef
 from benethos_mailbox_agents.store import Store
+from benethos_mailbox_common.storage.outage import LOCK_GRACE
 from benethos_mailbox_common.storage.server_engine import server_engine, tls_arguments
 
 from ..postgres_helpers import connect, instance
@@ -73,8 +74,29 @@ def test_a_lock_taken_while_away_ends_the_work() -> None:
 
         with Store.open_server(server):
             clock.now += 1.5
+            # For a minute the lock may still be the old session's.
+            with pytest.raises(StateUnavailableError):
+                store.due(NOW, 10)
+            clock.now += LOCK_GRACE
             with pytest.raises(StateFileError, match="took this database"):
                 store.due(NOW, 10)
+
+
+def test_a_lock_let_go_within_the_minute_is_taken_again() -> None:
+    clock = _Seconds()
+    with instance() as server, Store.open_server(server, clock=clock) as store:
+        store.enqueue(REF, NOW)
+        _end(server.role)
+        with pytest.raises(StateUnavailableError):
+            store.due(NOW, 10)
+
+        with Store.open_server(server):
+            clock.now += 1.5
+            with pytest.raises(StateUnavailableError):
+                store.due(NOW, 10)
+        clock.now += 2.5
+
+        assert [row.ref for row in store.due(NOW, 10)] == [REF]
 
 
 def test_the_server_ends_a_session_whose_client_went_silent() -> None:

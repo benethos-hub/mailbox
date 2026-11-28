@@ -748,6 +748,9 @@
     "FIRST_PAUSE": {
       "value": 1.0
     },
+    "LOCK_GRACE": {
+      "value": 60.0
+    },
     "LONGEST_PAUSE": {
       "value": 30.0
     },
@@ -761,6 +764,9 @@
         },
         "away": {
           "property": true
+        },
+        "away_for": {
+          "signature": "(self) -> 'float'"
         },
         "due": {
           "signature": "(self) -> 'bool'"
