@@ -9,12 +9,13 @@ import re
 import socket
 import sys
 from pathlib import Path
+from typing import Any
 
 import httpx
 import pytest
 
-from benethos_mailbox_agents.cli import build_parser, main
-from benethos_mailbox_agents.cockpit import security
+from benethos_mailbox_agents.cli import build_parser, commands, main
+from benethos_mailbox_agents.cockpit import security, sources
 from benethos_mailbox_agents.cockpit.app import Cockpit, make_app
 from benethos_mailbox_agents.cockpit.server import serve
 from benethos_mailbox_agents.settings import PREFIX
@@ -126,3 +127,30 @@ async def test_a_forwarded_address_is_not_believed(tmp_path: Path) -> None:
 
     assert answers[: security.LIMIT] == [303] * security.LIMIT
     assert answers[-1] == 429
+
+
+def test_a_database_on_a_server_goes_before_a_file_of_its_name(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    # After storage move the file stays: the database the agent now
+    # writes is the one its name shows.
+    password = tmp_path / "cockpit_password"
+    password.write_text("a password", encoding="utf-8")
+    monkeypatch.setenv(f"{PREFIX}COCKPIT_SECRET", SECRET)
+    monkeypatch.setenv(f"{PREFIX}DATA_DIR", str(tmp_path))
+    monkeypatch.setenv(
+        f"{PREFIX}COCKPIT_DATABASE_URLS",
+        "postgresql://agents_cockpit@db.example.test/postgres",
+    )
+    monkeypatch.setenv(f"{PREFIX}COCKPIT_DATABASE_PASSWORD_FILE", str(password))
+    served: list[Cockpit] = []
+
+    async def caught(application: Any, host: str, port: int, *, named: bool) -> None:
+        served.append(application.state.cockpit)
+
+    monkeypatch.setattr(commands, "serve", caught)
+
+    assert main(["cockpit"]) == 0
+
+    kinds = [type(place) for place in served[0].places]
+    assert kinds == [sources.Servers, sources.Files]

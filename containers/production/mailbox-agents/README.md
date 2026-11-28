@@ -136,7 +136,13 @@ compose file brings no server, as it brings no mailbox service.
 
    The move compares every table on both sides and leaves the volume as
    it was. `MAILBOX_AGENTS_STORAGE=postgres` must be in the `.env` for
-   the start, not for the move.
+   the start, not for the move. Once the agent runs on the database,
+   rename the file on the volume, so that the cockpit no longer shows it
+   as a stopped agent beside the running one:
+
+   ```sh
+   docker compose --profile counting run --rm --no-deps --entrypoint mv counting /data/counting.db /data/counting.db.moved
+   ```
 
 At each start the agent closes its database to every other role of the
 server and gives the read to the roles `MAILBOX_AGENTS_DATABASE_READERS`
@@ -150,7 +156,8 @@ put it into `secrets/cockpit/database_password`, and name the server in
 database whose agent gives `agents_read` the read, and shows the state
 files of the volumes beside them.
 
-The volume of an agent on a server holds no state. Back up each
+The volume of an agent on a server holds no state but the file it
+moved, renamed. Back up each
 database on its own, with `pg_dump --format=custom` as its role or as
 the administrator, and keep the dumps as you keep the volumes.
 
