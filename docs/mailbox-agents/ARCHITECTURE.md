@@ -93,7 +93,10 @@ the agents too, with four differences of their own design:
   `errors`, `logbook`, `settings`, `store`, `telemetry`, `peers` and `cli` offer
   their names there. `runtime`, `llm`, `sources` and `evaluation` offer none, and
   their callers import the module.
-- **The architecture test (13).** It is `tests/test_layers.py`, beside
+- **The architecture test (13).** It is `tests/test_layers.py`, the
+  layers and the confined dependencies, and `tests/test_layer_rules.py`,
+  what a live script, an agent and a module beside the upstreams may do,
+  both reading the source through `tests/layers_helpers.py`, beside
   `tests/test_code_rules.py` for the size of modules and classes (15).
 
 The tests at the root check the agents as they check the other
