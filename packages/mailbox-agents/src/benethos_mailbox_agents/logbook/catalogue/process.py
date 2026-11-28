@@ -111,7 +111,7 @@ class CockpitServing(Activity):
     def why(self) -> str | None:
         if self.named:
             return None
-        return "ids only, as no token of the mailbox service is set"
+        return "ids only, as no mailbox service is set"
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

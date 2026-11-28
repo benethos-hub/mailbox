@@ -138,8 +138,8 @@ LINES: list[tuple[Activity, str]] = [
     ),
     (
         process.CockpitServing(agent="cockpit", port=9480, named=False),
-        "cockpit began serving its pages on port 9480: ids only, as no token of "
-        "the mailbox service is set",
+        "cockpit began serving its pages on port 9480: ids only, as no mailbox "
+        "service is set",
     ),
     (
         process.CockpitFailed(agent="cockpit", error=RuntimeError("x")),

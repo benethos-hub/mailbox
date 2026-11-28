@@ -174,7 +174,7 @@ operator's filters. It writes under the logger
 | `process.database_closed` | INFO | on a server: the database closed to every other role where the agent's role owns it, and how many roles may read it, or that it does not own it |
 | `process.metrics_serving` | INFO | the metrics are served on a port |
 | `process.a2a_serving` | INFO | the entrance for peers over A2A is served on a port |
-| `process.cockpit_serving` | INFO | the cockpit is served on a port, and whether it shows ids alone as no token of the mailbox service is set |
+| `process.cockpit_serving` | INFO | the cockpit is served on a port, and whether it shows ids alone as no mailbox service is set, its address or its token |
 | `process.cockpit_failed` | WARNING | a page of the cockpit met an error no page expects, named by its class alone, and the page says so |
 | `worker.pass_done` | DEBUG | a pass ended, with its duration and the messages pending |
 | `worker.pass_failed` | ERROR | a pass failed with an error of the agent's own, and the loop waits as after an upstream away |
