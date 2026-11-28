@@ -57,9 +57,11 @@ MAY_IMPORT: dict[str, frozenset[str]] = {
     # Scores an agent the way the runtime runs it, on a state file of its own.
     "evaluation": frozenset({"errors", "records", "contract", "store", "runtime"}),
     # The entrance over A2A: it is handed what classifies a message.
-    "peers": frozenset({"errors", "records", "settings"}),
+    # An application on a port of its own, behind one module.
+    "serving": frozenset({"errors"}),
+    "peers": frozenset({"records", "settings", "serving"}),
     # The pages of what every agent did, read through the store and runtime.
-    "cockpit": _BASE | {"runtime"},
+    "cockpit": _BASE | {"runtime", "serving"},
     # The top: it wires the upstreams, the state file and the runtime.
     "cli": _BASE
     | {"sources", "llm", "runtime", "evaluation", "telemetry", "peers", "cockpit"},
@@ -121,7 +123,7 @@ CONFINED: dict[str, frozenset[str]] = {
     # The entrance over A2A and the server that opens its port, the one
     # socket besides the metrics, which prometheus_client opens.
     **dict.fromkeys(("a2a", "starlette"), frozenset({"peers/a2a.py"})),
-    "uvicorn": frozenset({"peers/a2a.py", "cockpit/server.py"}),
+    "uvicorn": frozenset({"serving/port.py"}),
     # The pages of the cockpit, on the framework of the mailbox service.
     "fastapi": frozenset({"cockpit/app.py", "cockpit/templates.py"}),
     "jinja2": frozenset({"cockpit/templates.py"}),
