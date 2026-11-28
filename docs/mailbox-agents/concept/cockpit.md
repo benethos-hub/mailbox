@@ -58,9 +58,11 @@ well, signed in with a role of its own, such as `agents_cockpit`, a
 member of the read role `agents_read` that `storage provision` makes
 (2026-11-27). On each server it finds every database the role may
 connect to, and in it each schema where it may read the table
-`profile`: that is an instance. Only an owner gives it that, by naming
-the read role in `DATABASE_READERS`, which the agent grants at each
-start. A database whose owner did not, or the database of the service,
+`profile`: that is an instance. The cockpit shows what its role may
+read. An owner gives it that by naming the read role in
+`DATABASE_READERS`, which the agent grants at each start, and any role
+that owns such a table could give it as well. A table that only
+`PUBLIC` may read is left out. A database whose owner did not, or the database of the service,
 which it closes to every other role, is not found. The instance is
 named by its database, with its schema after it where the database
 holds several.
@@ -72,7 +74,11 @@ that is away, is a row with its reason. No file says whether a writer
 there stopped: an instance without fresh progress is `silent`.
 
 Every role of a server sees the names of all its databases. The read
-role sees no row of a database it was not given.
+role sees no row of a database it was not given. It can never change a
+state, but in a database it may connect to it sees the key of the
+agent's lock in `pg_locks` and could hold it, so that the agent does
+not start: give the read role only to the cockpit and to roles trusted
+as much as the agent.
 
 ## The state of an instance
 
@@ -113,10 +119,11 @@ state files hold, the quotes of mail among it.
   a browser in.
 - A session lives in the memory of the process, for 8 hours without a
   request and 24 hours at most. A restart signs everyone out. Its cookie
-  is `HttpOnly`, `SameSite=strict`, `Secure` under https, and ends with
-  the browser.
+  is `HttpOnly`, `SameSite=strict`, `Secure` when the cockpit itself
+  serves https, and ends with the browser.
 - Ten failed sign-ins from one address in 15 minutes hold it for 15
-  minutes. The page names only the wait.
+  minutes. The page names only the wait. The address is that of the
+  connection: no `X-Forwarded-For` is believed.
 - Signing out is a form with a token of the session.
 - A page says nothing it takes from its address: a notice is chosen by a
   key from a fixed list.

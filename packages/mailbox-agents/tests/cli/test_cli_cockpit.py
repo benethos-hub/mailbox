@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import re
 import socket
 import sys
 from pathlib import Path
@@ -13,6 +14,7 @@ import httpx
 import pytest
 
 from benethos_mailbox_agents.cli import build_parser, main
+from benethos_mailbox_agents.cockpit import security
 from benethos_mailbox_agents.cockpit.app import Cockpit, make_app
 from benethos_mailbox_agents.cockpit.server import serve
 from benethos_mailbox_agents.settings import PREFIX
@@ -90,3 +92,37 @@ async def test_the_cockpit_serves_its_pages_and_says_so(
     with socket.socket() as again:
         again.bind(("127.0.0.1", port))
     assert SECRET not in caplog.text
+
+
+async def test_a_forwarded_address_is_not_believed(tmp_path: Path) -> None:
+    # The cockpit serves on 127.0.0.1, where uvicorn would believe
+    # X-Forwarded-For: a local caller must not dodge the throttle by it.
+    port = _free_port()
+    app = make_app(Cockpit(tmp_path, SECRET, None, Clock()))
+    task = asyncio.create_task(serve(app, "127.0.0.1", port, named=False))
+    base = f"http://127.0.0.1:{port}"
+    try:
+        async with httpx.AsyncClient() as client:
+            for _ in range(250):
+                with contextlib.suppress(httpx.ConnectError):
+                    await client.get(f"{base}/login")
+                    break
+                await asyncio.sleep(0.02)
+            answers = []
+            for number in range(security.LIMIT + 1):
+                page = await client.get(f"{base}/login")
+                nonce = re.search(r'name="nonce" value="([^"]+)"', page.text)
+                assert nonce is not None
+                answer = await client.post(
+                    f"{base}/login",
+                    data={"secret": "wrong", "nonce": nonce[1]},
+                    headers={"X-Forwarded-For": f"192.0.2.{number + 1}"},
+                )
+                answers.append(answer.status_code)
+    finally:
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
+
+    assert answers[: security.LIMIT] == [303] * security.LIMIT
+    assert answers[-1] == 429

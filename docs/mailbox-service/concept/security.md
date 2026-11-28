@@ -68,8 +68,13 @@ one of the service.
 
 One service runs on a schema at a time. The lock that ensures this is an
 advisory lock of PostgreSQL, which needs no right. Its key is a random
-number the schema keeps in `meta`, which only its role reads (decided
-2026-11-26). While a schema keeps no key yet, the key is drawn from the
+number the schema keeps in `meta` (decided 2026-11-26). It keeps off
+every role that cannot connect to the database. A role that can, a
+reader of the agents included, sees a held key in `pg_locks` and can
+hold it while the program is away, and then the program does not
+start. The read of `meta` is no wall either: the readers of an agent
+are given `SELECT` on all its tables. While a schema keeps no key yet,
+the key is drawn from the
 name of the schema: a restore or a move into the empty schema holds it,
 and a starting service holds it while it makes its key. Any role of the
 same database can work that key out and hold it, and then the first

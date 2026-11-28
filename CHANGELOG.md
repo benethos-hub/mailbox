@@ -44,7 +44,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   every other role, and the roles `agents_read` and `agents_cockpit` the
   cockpit reads with. With `--apply`, `--admin-url` and
   `--admin-password-file` it runs that itself and sets the password of
-  the role, so the agent starts on it. Role and database are those of
+  the role, hashed as SCRAM-SHA-256 before it is sent, so the agent
+  starts on it. Role and database are those of
   `MAILBOX_AGENTS_DATABASE_URL`, or else `agent_<agent>_<instance>`.
 - `benethos-mailbox-agents`: `storage move --agent <name>` copies the
   state file of an agent and instance into the empty database
@@ -55,7 +56,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   PostgreSQL servers `MAILBOX_AGENTS_COCKPIT_DATABASE_URLS` names, with
   the password of its role in `MAILBOX_AGENTS_COCKPIT_DATABASE_PASSWORD_FILE`:
   each database whose owner gave its read role the read, on a
-  connection that only reads. A server that is away is a row with its
+  connection that only reads. A table only `PUBLIC` may read is no
+  instance. A server that is away is a row with its
   reason.
 - `benethos-mailbox-agents`: `status`, `paths`, `health` and `report`
   read the state on the server with `MAILBOX_AGENTS_STORAGE=postgres`
@@ -185,7 +187,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   state, counts, decisions and open items, the newest results, and one
   message with its evidence, steps and actions. It starts only with
   `MAILBOX_AGENTS_COCKPIT_SECRET` or `MAILBOX_AGENTS_COCKPIT_SECRET_FILE`,
-  which a person signs in with, and serves on
+  which a person signs in with, failed sign-ins counted by the address
+  of the connection, and serves on
   `MAILBOX_AGENTS_COCKPIT_HOST` and `MAILBOX_AGENTS_COCKPIT_PORT`
   (`127.0.0.1:9480`). Subject and sender show only with the settings of
   the mailbox service, else the ids. The package depends on `fastapi`,

@@ -32,6 +32,9 @@ async def serve(application: Any, host: str, port: int, *, named: bool) -> None:
             log_config=None,
             access_log=False,
             lifespan="off",
+            # The address of the throttle is the connection's own: a
+            # caller on the same host never names it by a header.
+            proxy_headers=False,
         )
     )
     task = asyncio.create_task(_serve(server, port))

@@ -30,7 +30,7 @@ MOVING = "move_started"
 # The key in ``meta`` that holds the key of the lock of a running program
 # on a database server. It belongs to the schema it was made in: no
 # export, backup or move takes it along.
-LOCK_ROW = "service_lock"
+LOCK_ROW = "program_lock"
 # The rows of ``meta`` that keep account of the database itself and hold
 # no record: not in an export, a backup or the sums of a move.
 UNRECORDED = (MOVING, LOCK_ROW)

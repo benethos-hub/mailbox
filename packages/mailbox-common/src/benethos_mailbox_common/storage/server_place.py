@@ -203,9 +203,10 @@ class ServerPlace:
         """Two programs on one schema would lose changes, so the second
         is refused: the lock of the session on its one
         connection, held until the block ends or the connection closes.
-        Its key is a random number the schema keeps in ``meta``, which
-        only the role reads, so no other role of the server can take the
-        lock ahead. A schema without a key gets one, made under the lock
+        Its key is a random number the schema keeps in ``meta``, so a
+        role that cannot connect to the database cannot take the lock
+        ahead. One that can sees the key in ``pg_locks`` while it is
+        held. A schema without a key gets one, made under the lock
         keyed by the names of the program and the schema, which a restore
         or a move into the empty schema holds (``claimed``)."""
         connection = self._open()

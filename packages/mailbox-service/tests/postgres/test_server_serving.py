@@ -73,7 +73,7 @@ def _kept(name: str) -> str | None:
 
     with connect() as conn:
         row = conn.execute(
-            sql.SQL("SELECT value FROM {}.meta WHERE key = 'service_lock'").format(
+            sql.SQL("SELECT value FROM {}.meta WHERE key = 'program_lock'").format(
                 sql.Identifier(name)
             )
         ).fetchone()
@@ -90,7 +90,7 @@ def test_the_lock_is_keyed_by_a_number_the_schema_keeps() -> None:
             assert int(kept) != lock_key("benethos-mailbox-service", name)
             with db.serving():
                 assert _kept(name) == kept
-            assert "service_lock" not in {row[0] for row in db.rows("meta")}
+            assert "program_lock" not in {row[0] for row in db.rows("meta")}
         finally:
             db.close()
 
