@@ -22,7 +22,6 @@ from benethos_mailbox_common.storage import errors as storage_errors
 from benethos_mailbox_common.storage import file_place, outage, place, sqlite_file
 
 from ..errors import STATE_ERRORS, ConfigError
-from .file import newer
 
 
 def connect_reading(path: Path) -> sqlite3.Connection:
@@ -55,6 +54,20 @@ def _read_only(uri: str) -> sqlite3.Connection:
     return sqlite3.connect(uri, uri=True, isolation_level=None, check_same_thread=False)
 
 
+def at_this_schema(held: int, newest: int, what: str) -> None:
+    """A reader takes ``what``, a state or a state file, at the schema of
+    this version alone: ``held`` must be ``newest``."""
+    if held > newest:
+        raise ConfigError(
+            f"the {what} is at schema version {held}, this program knows {newest}"
+        )
+    if held < newest:
+        raise ConfigError(
+            f"the {what} is at schema version {held}, this program reads"
+            f" {newest}: start the agent once, which brings it forward"
+        )
+
+
 def _schema_of(connection: sqlite3.Connection) -> int:
     """The schema the file is at: in ``meta`` from schema 5 on, before in
     its ``user_version``."""
@@ -82,14 +95,7 @@ class ReadPlace:
         self._driver = driver
         with sqlite_file.translated_sqlite(STATE_ERRORS):
             driver.execute("PRAGMA busy_timeout = 5000")
-        held = _schema_of(driver)
-        if held > newest:
-            raise newer(held, newest)
-        if held < newest:
-            raise ConfigError(
-                f"the state file is at schema version {held}, this program reads"
-                f" {newest}: start the agent once, which brings it forward"
-            )
+        at_this_schema(_schema_of(driver), newest, "state file")
         # A plain BEGIN: a reader asks for no lock to write.
         self._engine = sa.create_engine(
             "sqlite://",
