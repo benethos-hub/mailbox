@@ -619,7 +619,7 @@
       }
     },
     "sqlite_engine": {
-      "signature": "(connect: 'Callable[[], Any]') -> 'sa.Engine'"
+      "signature": "(connect: 'Callable[[], Any]', *, writer: 'bool' = True) -> 'sa.Engine'"
     },
     "translated_file": {
       "signature": "(errors: 'Errors') -> 'Iterator[None]'"
