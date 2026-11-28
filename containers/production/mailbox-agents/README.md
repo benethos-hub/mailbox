@@ -146,8 +146,8 @@ compose file brings no server, as it brings no mailbox service.
 
 At each start the agent closes its database to every other role of the
 server and gives the read to the roles `MAILBOX_AGENTS_DATABASE_READERS`
-names, `agents_read` for the cockpit, and takes it from a role it no
-longer names. `status` and `paths` say where the state lies, and
+names, `agents_read` for the cockpit. From a role it no longer names it
+takes `CONNECT`, which shuts it out, where its role owns the database. `status` and `paths` say where the state lies, and
 `health` reads it there.
 
 For the cockpit, give `agents_cockpit` a password as the administrator,
