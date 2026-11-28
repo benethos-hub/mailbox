@@ -41,7 +41,15 @@ def or_missing(value: Any) -> Any:
     return MISSING if value is None or value == "" else value
 
 
-templates.env.filters.update(when=when, or_missing=or_missing)
+def found(value: bool | None) -> str:
+    """Whether a quote was found in the mail, as the page of a message says
+    it."""
+    if value is None:
+        return "not checked"
+    return "found" if value else "not found"
+
+
+templates.env.filters.update(when=when, or_missing=or_missing, found=found)
 templates.env.globals.update(APP_NAME="Mailbox agents", VERSION=__version__)
 
 

@@ -49,7 +49,7 @@
         <thead><tr><th>Field</th><th>Value</th><th>Quote</th><th>Found in the mail</th></tr></thead>
         <tbody>
           {% for quote in detail.evidence %}
-          <tr><td>{{ quote.field }}</td><td>{{ quote.value | or_missing }}</td><td>{{ quote.quote | or_missing }}</td><td>{{ {True: "found", False: "not found"}.get(quote.found, "not checked") }}</td></tr>
+          <tr><td>{{ quote.field }}</td><td>{{ quote.value | or_missing }}</td><td>{{ quote.quote | or_missing }}</td><td>{{ quote.found | found }}</td></tr>
           {% endfor %}
         </tbody>
       </table>
