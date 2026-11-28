@@ -99,7 +99,7 @@ CONFINED: dict[str, frozenset[str]] = {
             "runtime/steps.py",
             *("settings/folders.py", "settings/model.py"),
             "sources/mailbox.py",
-            *("errors/state_file.py", "settings/database.py"),
+            *("errors/state_file.py", "settings/database.py", "cli/session.py"),
             *map(_STORE, ("catalogue", "file", "items", "messages", "profile")),
             *map(_STORE, ("reader", "rows", "schema", "shape", "store")),
             *map(_STORE, ("revisions/__init__", "revisions/revision")),

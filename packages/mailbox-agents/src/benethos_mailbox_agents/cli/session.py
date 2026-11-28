@@ -9,9 +9,10 @@ from contextlib import (
     AsyncExitStack,
     asynccontextmanager,
 )
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
+from benethos_mailbox_common.storage import clock
 
 from .. import __version__
 from ..contract import Agent, state_name
@@ -44,8 +45,7 @@ __all__ = [
 TRANSPORTS: dict[str, Any] = {}
 
 
-def now() -> datetime:
-    return datetime.now(UTC)
+now = clock.utc_now
 
 
 class Session:
