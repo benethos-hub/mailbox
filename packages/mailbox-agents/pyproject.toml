@@ -53,8 +53,9 @@ classifiers = [
 dependencies = [
     # The REST client. Released with this package under the same version.
     "benethos-mailbox-client==0.11.1",
-    # The lines of the log, the masking of secrets, text, settings and the
-    # folders of the system, as the other programs of Mailbox have them.
+    # The lines of the log, the masking of secrets, text, settings, the
+    # folders of the system and the storage of the state on SQLite and
+    # PostgreSQL, as the other programs of Mailbox have them.
     # Released with this package under the same version.
     "benethos-mailbox-common[paths,settings,storage]==0.11.1",
     # The entrance for peers over A2A, served only when a port is set.
