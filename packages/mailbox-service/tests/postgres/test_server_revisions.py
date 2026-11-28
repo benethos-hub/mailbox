@@ -22,7 +22,7 @@ from benethos_mailbox_service.data.storage.sql.database import SHAPE
 from benethos_mailbox_service.errors import StorageError
 
 from ..postgres_helpers import admin, connect, database, schema, server
-from ..revision_helpers import second, steps_in
+from .revision_helpers import second, steps_in
 
 
 @pytest.fixture

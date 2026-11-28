@@ -1,13 +1,13 @@
-"""What the base of the revisions offers a step: the number into meta, a
-check, a refusal, notes for the start, rows worked out in Python, a step
-outside a transaction, a copy of the file before it. Each with a
-revision of a folder of its own."""
+"""The revisions of Alembic, run inside the process on a connection of
+the database, and what their base offers a step: each in a transaction
+of its own, so one that fails leaves nothing half done, the number into
+meta, rows worked out in Python, a check, a refusal and a copy. Each on
+a folder of revisions of its own."""
 
 from __future__ import annotations
 
-import dataclasses
-import shutil
 import sqlite3
+import textwrap
 from collections.abc import Callable, Iterator
 from pathlib import Path
 
@@ -16,14 +16,79 @@ import sqlalchemy as sa
 
 from benethos_mailbox_common.storage import database as stored_database
 from benethos_mailbox_common.storage import revision
+from benethos_mailbox_common.storage.errors import StorageError
 from benethos_mailbox_common.storage.file_place import sqlite_engine
 from benethos_mailbox_common.storage.revisions import Revisions
-from benethos_mailbox_service.data.storage import Database
-from benethos_mailbox_service.data.storage.sql import revisions
-from benethos_mailbox_service.data.storage.sql.database import SHAPE
-from benethos_mailbox_service.errors import StorageError
 
-from ...revision_helpers import second, steps_in
+from .revision_helpers import first_in, program, second, steps_in
+
+# Two revisions of a folder of their own: the second fails after its
+# first statement.
+STEPS = {
+    "r0001_first.py": '''
+        """A table."""
+        import sqlalchemy as sa
+        from alembic import op
+        revision = "0001"
+        down_revision = None
+        def upgrade():
+            op.create_table("kept", sa.Column("id", sa.Text, primary_key=True))
+    ''',
+    "r0002_broken.py": '''
+        """A table, then a statement that fails."""
+        import sqlalchemy as sa
+        from alembic import op
+        revision = "0002"
+        down_revision = "0001"
+        def upgrade():
+            op.create_table("half", sa.Column("id", sa.Text, primary_key=True))
+            op.execute("INSERT INTO nowhere VALUES (1)")
+    ''',
+}
+
+
+@pytest.fixture
+def versions(tmp_path: Path) -> Path:
+    folder = tmp_path / "versions"
+    folder.mkdir()
+    for name, body in STEPS.items():
+        (folder / name).write_text(textwrap.dedent(body), encoding="utf-8")
+    return folder
+
+
+@pytest.fixture
+def conn() -> Iterator[sa.Connection]:
+    driver = sqlite3.connect(":memory:", check_same_thread=False, isolation_level=None)
+    engine = sqlite_engine(lambda: driver)
+    with engine.connect() as connection:
+        yield connection
+    engine.dispose()
+    driver.close()
+
+
+def _tables(conn: sa.Connection) -> set[str]:
+    return set(sa.inspect(conn).get_table_names())
+
+
+def test_a_revision_that_fails_leaves_nothing_half_done(
+    conn: sa.Connection, versions: Path
+) -> None:
+    with pytest.raises(sa.exc.OperationalError, match="nowhere"):
+        Revisions(versions).upgrade(conn, 2)
+    assert not conn.in_transaction()
+    assert Revisions.mark(conn) == 1
+    assert "half" not in _tables(conn)
+    assert "kept" in _tables(conn)
+
+
+def test_a_database_is_marked_without_a_step_run(
+    conn: sa.Connection, versions: Path
+) -> None:
+    assert Revisions.mark(conn) is None
+    Revisions(versions).stamp(conn, 1)
+    assert Revisions.mark(conn) == 1
+    assert "kept" not in _tables(conn)
+
 
 Steps = Callable[[str], Path]
 
@@ -164,22 +229,19 @@ def test_a_step_that_asks_for_a_copy_gets_one(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     path = tmp_path / "data" / "mailbox.db"
-    Database(path).close()
-    folder = tmp_path / "versions"
-    folder.mkdir()
-    for baseline in revisions.VERSIONS.glob("r0026_*.py"):
-        shutil.copy(baseline, folder / baseline.name)
+    path.parent.mkdir()
+    folder = first_in(tmp_path / "versions")
+    stored_database.Database(program(folder), path).close()
     (folder / "r0027_copied.py").write_text(
         second("""
             keeps_copy = True
 
             def steps(self):
-                op.add_column("roles", sa.Column("note", sa.Text))
+                op.add_column("items", sa.Column("note", sa.Text))
         """),
         encoding="utf-8",
     )
-    shape = dataclasses.replace(SHAPE, versions=folder, newest=27)
-    db = stored_database.Database(shape, path)
+    db = stored_database.Database(program(folder, newest=27), path)
     assert db.migrated is not None
     assert (db.migrated.before, db.migrated.after) == (26, 27)
     [kept] = path.parent.glob("mailbox.db.before-schema-27-*")

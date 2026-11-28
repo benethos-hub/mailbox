@@ -1,6 +1,7 @@
-"""The revisions of Alembic, run inside the process on a connection of
-the database: each in a transaction of its own, so one that fails
-leaves nothing half done."""
+"""The revisions of the service: they go on where its old steps end,
+each writes its number, a database the old steps made is kept, and
+none released is changed. How a revision runs is held by the tests of
+mailbox-common (``tests/storage/test_revisions.py``)."""
 
 from __future__ import annotations
 
@@ -8,7 +9,6 @@ import hashlib
 import importlib.util
 import re
 import sqlite3
-import textwrap
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -25,39 +25,6 @@ from benethos_mailbox_service.errors import StorageError
 
 from ...schema_helpers import at_schema, run, select, value
 
-# Two revisions of a folder of their own: the second fails after its
-# first statement.
-STEPS = {
-    "r0001_first.py": '''
-        """A table."""
-        import sqlalchemy as sa
-        from alembic import op
-        revision = "0001"
-        down_revision = None
-        def upgrade():
-            op.create_table("kept", sa.Column("id", sa.Text, primary_key=True))
-    ''',
-    "r0002_broken.py": '''
-        """A table, then a statement that fails."""
-        import sqlalchemy as sa
-        from alembic import op
-        revision = "0002"
-        down_revision = "0001"
-        def upgrade():
-            op.create_table("half", sa.Column("id", sa.Text, primary_key=True))
-            op.execute("INSERT INTO nowhere VALUES (1)")
-    ''',
-}
-
-
-@pytest.fixture
-def versions(tmp_path: Path) -> Path:
-    folder = tmp_path / "versions"
-    folder.mkdir()
-    for name, body in STEPS.items():
-        (folder / name).write_text(textwrap.dedent(body), encoding="utf-8")
-    return folder
-
 
 @pytest.fixture
 def conn() -> Iterator[sa.Connection]:
@@ -67,30 +34,6 @@ def conn() -> Iterator[sa.Connection]:
         yield connection
     engine.dispose()
     driver.close()
-
-
-def _tables(conn: sa.Connection) -> set[str]:
-    return set(sa.inspect(conn).get_table_names())
-
-
-def test_a_revision_that_fails_leaves_nothing_half_done(
-    conn: sa.Connection, versions: Path
-) -> None:
-    with pytest.raises(sa.exc.OperationalError, match="nowhere"):
-        Revisions(versions).upgrade(conn, 2)
-    assert not conn.in_transaction()
-    assert Revisions.mark(conn) == 1
-    assert "half" not in _tables(conn)
-    assert "kept" in _tables(conn)
-
-
-def test_a_database_is_marked_without_a_step_run(
-    conn: sa.Connection, versions: Path
-) -> None:
-    assert Revisions.mark(conn) is None
-    Revisions(versions).stamp(conn, 1)
-    assert Revisions.mark(conn) == 1
-    assert "kept" not in _tables(conn)
 
 
 def test_the_revisions_go_on_where_the_old_steps_end() -> None:
