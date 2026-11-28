@@ -11,12 +11,13 @@ from pathlib import Path
 import pytest
 
 from benethos_mailbox_agents.cli import main
-from benethos_mailbox_agents.records import MessageRef, Profile
+from benethos_mailbox_agents.records import MessageRef
 from benethos_mailbox_agents.settings import PREFIX
 from benethos_mailbox_agents.store import Store
 from benethos_mailbox_common.storage.server_place import Server
 
-from ..postgres_helpers import instance
+from ..agents_helpers import profile
+from ..postgres_helpers import instance, settings_at
 
 NOW = datetime.now(UTC)
 
@@ -24,14 +25,8 @@ NOW = datetime.now(UTC)
 @pytest.fixture
 def server(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[Server]:
     with instance() as found:
-        password = tmp_path / "database_password"
-        password.write_text(found.password, encoding="utf-8")
         monkeypatch.setenv(f"{PREFIX}STORAGE", "postgres")
-        monkeypatch.setenv(
-            f"{PREFIX}DATABASE_URL",
-            f"postgresql://{found.role}@{found.host}:{found.port}/{found.database}",
-        )
-        monkeypatch.setenv(f"{PREFIX}DATABASE_PASSWORD_FILE", str(password))
+        settings_at(monkeypatch, found, tmp_path)
         yield found
 
 
@@ -39,22 +34,7 @@ def _started(server: Server) -> None:
     """The state as a worker of counting leaves it: its profile, one
     message, its progress now."""
     with Store.open_server(server) as store:
-        store.set_profile(
-            Profile(
-                agent="counting",
-                instance=None,
-                agent_version="1",
-                package_version="0.11.1",
-                stage="shadow",
-                accounts=(),
-                keyword="agent-counted",
-                poll_seconds=60.0,
-                gateway_timeout_seconds=120.0,
-                model_alias="",
-                prompt_version="",
-                started=NOW,
-            )
-        )
+        store.set_profile(profile(NOW))
         store.enqueue(MessageRef(account_id="acc", message_id="m1"), NOW)
         store.set_progress(NOW)
 

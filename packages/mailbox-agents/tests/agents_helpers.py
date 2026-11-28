@@ -10,6 +10,7 @@ import sys
 from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from types import ModuleType
 from typing import Any, Literal
@@ -34,6 +35,7 @@ from benethos_mailbox_agents.records import (
     MailMessage,
     MessageRef,
     OpenItem,
+    Profile,
 )
 from benethos_mailbox_agents.runtime.loop import Worker
 from benethos_mailbox_agents.settings import Settings
@@ -177,6 +179,25 @@ async def wired(tmp_path: Path) -> AsyncIterator[Wired]:
     ):
         with Store.open(tmp_path / "echo.db") as store:
             yield Wired(service, fake_gateway, mailbox, gateway, store, Clock())
+
+
+def profile(started: datetime) -> Profile:
+    """The profile of ``counting`` in shadow, as its worker writes it when
+    it starts at ``started``."""
+    return Profile(
+        agent="counting",
+        instance=None,
+        agent_version="1",
+        package_version="0.11.1",
+        stage="shadow",
+        accounts=(),
+        keyword="agent-counted",
+        poll_seconds=60.0,
+        gateway_timeout_seconds=120.0,
+        model_alias="",
+        prompt_version="",
+        started=started,
+    )
 
 
 def settings(**values: object) -> Settings:

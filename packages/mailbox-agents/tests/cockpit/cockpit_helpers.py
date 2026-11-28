@@ -24,6 +24,8 @@ from benethos_mailbox_agents.records import (
 )
 from benethos_mailbox_agents.store import MIGRATIONS, Store
 
+from ..agents_helpers import profile
+
 NOW = datetime(2026, 11, 27, 12, 0, tzinfo=UTC)
 REF = MessageRef(account_id="acc1", message_id="m1")
 # The secret of the cockpit in the tests.
@@ -32,20 +34,7 @@ SECRET = "cockpit-secret-value"  # pragma: allowlist secret
 # as it is.
 SUBJECT = "Your invoice\x1b[2J <script>alert(1)</script>"
 
-PROFILE = Profile(
-    agent="counting",
-    instance=None,
-    agent_version="1",
-    package_version="0.11.1",
-    stage="shadow",
-    accounts=(),
-    keyword="agent-counted",
-    poll_seconds=60.0,
-    gateway_timeout_seconds=120.0,
-    model_alias="",
-    prompt_version="",
-    started=NOW - timedelta(hours=1),
-)
+PROFILE = profile(NOW - timedelta(hours=1))
 
 
 def filled(path: Path, profile: Profile | None = PROFILE) -> Path:

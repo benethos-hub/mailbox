@@ -13,10 +13,10 @@ import pytest
 
 from benethos_mailbox_agents.cockpit import sources, views
 from benethos_mailbox_agents.errors import StateFileError
-from benethos_mailbox_agents.records import Profile
 from benethos_mailbox_agents.store import Store
 from benethos_mailbox_common.storage.server_place import Server
 
+from ..agents_helpers import profile
 from ..postgres_helpers import connect, fresh_name, instance, role
 
 NOW = datetime.now(UTC)
@@ -46,22 +46,7 @@ def _cockpit() -> Iterator[tuple[str, Server]]:
 
 def _started(server: Server, readers: tuple[str, ...]) -> None:
     with Store.open_server(server, readers=readers) as store:
-        store.set_profile(
-            Profile(
-                agent="counting",
-                instance=None,
-                agent_version="1",
-                package_version="0.11.1",
-                stage="shadow",
-                accounts=(),
-                keyword="agent-counted",
-                poll_seconds=60.0,
-                gateway_timeout_seconds=120.0,
-                model_alias="",
-                prompt_version="",
-                started=NOW,
-            )
-        )
+        store.set_profile(profile(NOW))
         store.set_progress(NOW)
 
 

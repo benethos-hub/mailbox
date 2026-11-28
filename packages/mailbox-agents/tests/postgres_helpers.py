@@ -17,10 +17,12 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from benethos_mailbox_agents.settings import PREFIX
 from benethos_mailbox_common.storage.server_place import Server
 
 if TYPE_CHECKING:
     import psycopg
+    import pytest
 
 SWITCH = "MAILBOX_POSTGRES_TESTS"
 _numbers = itertools.count()
@@ -119,6 +121,21 @@ def instance() -> Iterator[Server]:
                 conn.execute(
                     sql.SQL("DROP DATABASE IF EXISTS {} WITH (FORCE)").format(made)
                 )
+
+
+def url_of(server: Server) -> str:
+    """The address of the database and the role of ``server``, without
+    the password."""
+    return f"postgresql://{server.role}@{server.host}:{server.port}/{server.database}"
+
+
+def settings_at(monkeypatch: pytest.MonkeyPatch, server: Server, folder: Path) -> None:
+    """The settings of a state in the database of ``server``, its
+    password in a file in ``folder``."""
+    password = folder / "database_password"
+    password.write_text(server.password, encoding="utf-8")
+    monkeypatch.setenv(f"{PREFIX}DATABASE_URL", url_of(server))
+    monkeypatch.setenv(f"{PREFIX}DATABASE_PASSWORD_FILE", str(password))
 
 
 def admin_url() -> str:

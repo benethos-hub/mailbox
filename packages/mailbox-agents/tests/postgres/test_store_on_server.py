@@ -9,9 +9,10 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from benethos_mailbox_agents.errors import StateInUseError
-from benethos_mailbox_agents.records import MessageRef, Profile, StepResult
+from benethos_mailbox_agents.records import MessageRef, StepResult
 from benethos_mailbox_agents.store import SCHEMA_VERSION, Store
 
+from ..agents_helpers import profile
 from ..postgres_helpers import connect, instance
 
 NOW = datetime(2026, 11, 27, 9, 0, tzinfo=UTC)
@@ -62,7 +63,7 @@ def test_the_store_on_a_server_keeps_what_a_file_keeps() -> None:
             assert store.purge_calls(NOW + timedelta(days=1)) == 1
             store.set_cursor("token-1", NOW)
             store.set_progress(NOW)
-            store.set_profile(_profile())
+            store.set_profile(profile(NOW))
 
         found = Store.read_server(server)
         assert found is not None
@@ -71,7 +72,7 @@ def test_the_store_on_a_server_keeps_what_a_file_keeps() -> None:
             assert reader.progress() == NOW
             assert reader.labels_since(NOW) == {"invoice": 1}
             assert reader.counts()["pending"] == 1
-            assert reader.profile() == _profile()
+            assert reader.profile() == profile(NOW)
             assert [a.argument for a in reader.actions(REF)] == ["agent-x", "agent-y"]
 
 
@@ -95,20 +96,3 @@ def test_the_schema_of_the_role_is_made_by_the_instance() -> None:
 def test_a_reader_finds_no_state_before_the_first_start() -> None:
     with instance() as server:
         assert Store.read_server(server) is None
-
-
-def _profile() -> Profile:
-    return Profile(
-        agent="counting",
-        instance=None,
-        agent_version="1",
-        package_version="0.11.1",
-        stage="shadow",
-        accounts=(),
-        keyword="agent-counted",
-        poll_seconds=60.0,
-        gateway_timeout_seconds=120.0,
-        model_alias="",
-        prompt_version="",
-        started=NOW,
-    )
