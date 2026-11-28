@@ -72,7 +72,11 @@ that is away, is a row with its reason. No file says whether a writer
 there stopped: an instance without fresh progress is `silent`.
 
 Every role of a server sees the names of all its databases. The read
-role sees no row of a database it was not given.
+role sees no row of a database it was not given. It can never change a
+state, but in a database it may connect to it sees the key of the
+agent's lock in `pg_locks` and could hold it, so that the agent does
+not start: give the read role only to the cockpit and to roles trusted
+as much as the agent.
 
 ## The state of an instance
 

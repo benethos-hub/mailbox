@@ -1,7 +1,9 @@
 """The lock of a running program on a database server: the keys of
 advisory locks of the session. A schema keeps a random key in ``meta``,
-which only its role reads. The key drawn from the names of the program
-and the schema stands in while it keeps none."""
+which keeps off every role that cannot connect to the database. A role
+that can sees a held key in ``pg_locks`` and can hold it ahead. The key
+drawn from the names of the program and the schema stands in while it
+keeps none."""
 
 from __future__ import annotations
 

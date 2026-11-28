@@ -20,7 +20,12 @@ that owns its database takes `CONNECT` and `TEMPORARY` from `PUBLIC`,
 closing it to every other role of the server, and gives `CONNECT`,
 `USAGE` of its schema and `SELECT` on its tables, those to come
 included, to the roles `DATABASE_READERS` names. It takes them from a
-role it no longer names. A reader, such as `status`, `health`, `report`
+role it no longer names. Name there only roles trusted as much as the
+agent, such as the cockpit's: a reader can never change the state, but
+any role that may connect to the database sees the key of the agent's
+lock in `pg_locks` and can hold it, and then the agent does not start
+([security](../../mailbox-service/concept/security.md)). A reader,
+such as `status`, `health`, `report`
 or the cockpit, reads at the schema of its version alone, without a
 lock and without a step, on a connection whose transactions only read.
 A server that is away is waited for as an upstream
